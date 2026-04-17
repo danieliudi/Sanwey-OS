@@ -1,0 +1,34 @@
+export const SKU_CATALOG = {
+  comercial: [
+    { id: "sb-food-lacrado", name: "Sanbag Lacrado Alimentos", unitPrice: 145 },
+    { id: "sb-food-laminado", name: "Sanbag Laminado Alimentos", unitPrice: 168 },
+    { id: "sb-quim-typeb", name: "Sanbag Type B Químico", unitPrice: 210 },
+    { id: "sb-quim-typec", name: "Sanbag Type C Condutivo", unitPrice: 285 },
+    { id: "sb-min-standard", name: "Sanbag Mineração Standard", unitPrice: 125 },
+    { id: "sb-export-cubico", name: "Sanbag Exportação Cúbico", unitPrice: 195 },
+    { id: "sb-atm-modificada", name: "Sanbag Atmosfera Modificada", unitPrice: 240 },
+    { id: "sandbox", name: "Sandbox (estrutura rígida)", unitPrice: 320 },
+  ],
+  industria: [
+    { id: "sb-homol-onu", name: "Sanbag Homologado ONU", unitPrice: 290 },
+    { id: "sb-anp-offshore", name: "Sanbag Certificado ANP Off-shore", unitPrice: 420 },
+    { id: "sb-type-b", name: "Sanbag Type B Industrial", unitPrice: 225 },
+    { id: "sb-type-c-liner", name: "Sanbag Type C + Liner Condutivo", unitPrice: 340 },
+    { id: "sb-custom", name: "Sanbag Sob Encomenda (custom)", unitPrice: 380 },
+    { id: "sb-fs-8-1", name: "Sanbag Fator Segurança 8:1", unitPrice: 265 },
+  ],
+  resibag: [
+    { id: "rb-classe1-homol", name: "Resibag Classe I Homologado", unitPrice: 310 },
+    { id: "rb-classe1-nao", name: "Resibag Classe I Não-Homologado", unitPrice: 185 },
+    { id: "rb-filtrante", name: "Resibag Filtrante", unitPrice: 220 },
+    { id: "rb-verde", name: "Resibag Resíduo Verde", unitPrice: 165 },
+    { id: "rb-classe2", name: "Resibag Classe II", unitPrice: 175 },
+  ],
+  montemor: [
+    { id: "mm-tecido-pp", name: "Tecido Polipropileno (kg)", unitPrice: 12 },
+    { id: "mm-linha-reforc", name: "Linha Reforçada (bobina)", unitPrice: 45 },
+    { id: "mm-alcas-jogo", name: "Jogo de Alças (4un)", unitPrice: 28 },
+    { id: "mm-bigbag-simples", name: "Big Bag Simples Standard", unitPrice: 95 },
+    { id: "mm-bigbag-tubular", name: "Big Bag Tubular Básico", unitPrice: 85 },
+  ],
+};

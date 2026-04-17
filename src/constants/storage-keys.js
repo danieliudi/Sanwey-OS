@@ -1,0 +1,15 @@
+// Namespace every key with a version so schema changes invalidate old data.
+const V = "v4";
+
+export const STORAGE_KEYS = {
+  currentUser: `gs_${V}_current_user`,
+  users: `gs_${V}_users`,
+  leads: `gs_${V}_leads`,
+  pipelines: `gs_${V}_pipelines`,
+  notifications: `gs_${V}_notifications`,
+  settings: `gs_${V}_settings`,
+  starred: `gs_${V}_starred`,
+  crossReferrals: `gs_${V}_cross_referrals`,
+  crossReferralOverrides: `gs_${V}_cross_referral_overrides`,
+  userSettings: `gs_${V}_user_settings`,
+};
