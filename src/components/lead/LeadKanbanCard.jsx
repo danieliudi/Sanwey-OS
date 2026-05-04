@@ -60,15 +60,3 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
 
 export const LeadKanbanCard = memo(LeadKanbanCardImpl);
 export default LeadKanbanCard;
-          style={{ borderColor: "#EFEFEF", color: NEUTRAL.slate }}
-        >
-          <span>{ownerName || "—"}</span>
-          {isGroupView && <CompanyTag companyId={lead.companyId} />}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export const LeadKanbanCard = memo(LeadKanbanCardImpl);
-export default LeadKanbanCard;
