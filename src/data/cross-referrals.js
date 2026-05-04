@@ -2,19 +2,6 @@
 // from leads), kept so they can be approved/rejected individually.
 export const SYNTHETIC_CROSS_SUGGESTIONS = [
   {
-    id: "cross_suggest_1",
-    companyName: "BASF Brasil",
-    sector: "Química Fina",
-    city: "Guaratinguetá/SP",
-    presentIn: ["resibag"],
-    suggestedFor: "comercial",
-    reason: "Cliente Resibag com importação de insumos químicos — fit forte para linha Químico/Petroquímico da Sanwey Comercial",
-    confidence: 85,
-    type: "suggestion",
-    status: "pending",
-    totalValue: 0,
-  },
-  {
     id: "cross_suggest_2",
     companyName: "Yara Brasil Fertilizantes",
     sector: "Agroquímica",

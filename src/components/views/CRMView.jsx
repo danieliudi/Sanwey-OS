@@ -16,7 +16,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
 
   const usersById = useUsersById(users);
 
-  const companyForPipeline = isGroupView ? (user.companies[0] || "comercial") : activeCompany;
+  const companyForPipeline = isGroupView ? (user.companies[0] || "industria") : activeCompany;
   const allStages = pipelines[companyForPipeline] || DEFAULT_PIPELINE_STAGES;
   const stages = useMemo(() => (
     visibleStages && visibleStages.length > 0

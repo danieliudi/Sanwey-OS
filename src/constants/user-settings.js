@@ -20,9 +20,8 @@ export const DENSITY_OPTIONS = [
   { value: "compact", label: "Compacto" },
 ];
 
-// Default: Sanwey Comercial disabled until ready. User can toggle in Settings.
 export const DEFAULT_USER_SETTINGS = {
-  enabledCompanies: COMPANY_IDS.filter(id => id !== "comercial"),
+  enabledCompanies: [...COMPANY_IDS],
   visibleDashboardWidgets: DASHBOARD_WIDGETS.map(w => w.id),
   visibleKanbanStages: DEFAULT_PIPELINE_STAGES.map(s => s.id),
   notifications: NOTIFICATION_PREFS.reduce((acc, n) => {

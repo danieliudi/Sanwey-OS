@@ -42,7 +42,7 @@ export function LoginScreen({
             </div>
           </div>
           <p className="text-white/80 text-sm mt-4 max-w-sm mx-auto">
-            Plataforma unificada de inteligência comercial para as 4 empresas do Grupo
+            Plataforma unificada de inteligência comercial para as empresas do Grupo
           </p>
         </div>
 

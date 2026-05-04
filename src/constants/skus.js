@@ -1,14 +1,4 @@
 export const SKU_CATALOG = {
-  comercial: [
-    { id: "sb-food-lacrado", name: "Sanbag Lacrado Alimentos", unitPrice: 145 },
-    { id: "sb-food-laminado", name: "Sanbag Laminado Alimentos", unitPrice: 168 },
-    { id: "sb-quim-typeb", name: "Sanbag Type B Químico", unitPrice: 210 },
-    { id: "sb-quim-typec", name: "Sanbag Type C Condutivo", unitPrice: 285 },
-    { id: "sb-min-standard", name: "Sanbag Mineração Standard", unitPrice: 125 },
-    { id: "sb-export-cubico", name: "Sanbag Exportação Cúbico", unitPrice: 195 },
-    { id: "sb-atm-modificada", name: "Sanbag Atmosfera Modificada", unitPrice: 240 },
-    { id: "sandbox", name: "Sandbox (estrutura rígida)", unitPrice: 320 },
-  ],
   industria: [
     { id: "sb-homol-onu", name: "Sanbag Homologado ONU", unitPrice: 290 },
     { id: "sb-anp-offshore", name: "Sanbag Certificado ANP Off-shore", unitPrice: 420 },

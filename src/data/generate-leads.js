@@ -15,69 +15,6 @@ function mulberry32(seed) {
 
 const LEAD_SEED = 42;
 
-const COMERCIAL_DATA = [
-  { company: "Nestlé Brasil S.A.", sector: "Alimentício", city: "São Paulo/SP",
-    trigger: "Expansão", triggerLabel: "Expansão de linha de processados",
-    evidence: "Anúncio de nova planta em Araras/SP com início de operação Q3/2026",
-    decisionMaker: { name: "Ricardo Almeida", role: "Gerente de Supply Chain" }, owner: "u_carlos" },
-  { company: "Cargill Agrícola", sector: "Alimentício", city: "Uberlândia/MG",
-    trigger: "ANTT 5947", triggerLabel: "Adequação transporte",
-    evidence: "Mudança na frota de transporte exige big bags homologados para insumos",
-    decisionMaker: { name: "Fernanda Costa", role: "Diretora Logística" }, owner: "u_beatriz" },
-  { company: "Vale S.A.", sector: "Mineração", city: "Nova Lima/MG",
-    trigger: "Licitação", triggerLabel: "Licitação embalagens 2026",
-    evidence: "Edital para fornecimento de big bags homologados para minério de ferro concentrado",
-    decisionMaker: { name: "João Beltrão", role: "Coordenador Compras" }, owner: "u_carlos" },
-  { company: "CSN Companhia Siderúrgica", sector: "Siderurgia", city: "Volta Redonda/RJ",
-    trigger: "Nova planta", triggerLabel: "Nova linha de aço especial",
-    evidence: "Expansão da unidade com demanda adicional de embalagens industriais",
-    decisionMaker: { name: "Patrícia Monteiro", role: "Gerente Procurement" }, owner: null },
-  { company: "Braskem S.A.", sector: "Químico/Petroquímico", city: "Camaçari/BA",
-    trigger: "ANTT 5947", triggerLabel: "Revisão compliance",
-    evidence: "Auditoria interna revela necessidade de substituição de embalagens atuais",
-    decisionMaker: { name: "Bruno Salles", role: "Gerente EHS" }, owner: "u_beatriz" },
-  { company: "Petrobras E&P Bacia de Santos", sector: "Off-shore", city: "Santos/SP",
-    trigger: "Licitação", triggerLabel: "Pregão off-shore Q2",
-    evidence: "Licitação para big bags certificados ANP para plataformas",
-    decisionMaker: { name: "Letícia Vargas", role: "Compras Estratégicas" }, owner: "u_carlos" },
-  { company: "Bunge Brasil", sector: "Alimentício", city: "Gaspar/SC",
-    trigger: "Expansão", triggerLabel: "Capacidade de esmagamento",
-    evidence: "Ampliação da unidade com aumento de 30% na demanda de embalagens",
-    decisionMaker: { name: "André Ferraz", role: "Logística Industrial" }, owner: "u_beatriz" },
-  { company: "Anglo American", sector: "Mineração", city: "Conceição do Mato Dentro/MG",
-    trigger: "ANTT 5947", triggerLabel: "Transporte minério",
-    evidence: "Revisão de fornecedores de embalagem para minério Classe IV",
-    decisionMaker: { name: "Claudia Ribeiro", role: "Procurement Sênior" }, owner: null },
-  { company: "Usiminas", sector: "Siderurgia", city: "Ipatinga/MG",
-    trigger: "Nova planta", triggerLabel: "Modernização frota",
-    evidence: "Programa de modernização da cadeia de suprimentos",
-    decisionMaker: { name: "Henrique Dias", role: "Diretor Supply Chain" }, owner: "u_carlos" },
-  { company: "Dow Brasil", sector: "Químico/Petroquímico", city: "Aratu/BA",
-    trigger: "ANTT 5947", triggerLabel: "Compliance transporte",
-    evidence: "Adequação às novas exigências de transporte de precursores",
-    decisionMaker: { name: "Mariana Souto", role: "Gerente Regulatório" }, owner: null },
-  { company: "Tigre S.A.", sector: "Construção Civil", city: "Joinville/SC",
-    trigger: "Expansão", triggerLabel: "Nova linha de PVC",
-    evidence: "Expansão de capacidade exige embalagens industriais",
-    decisionMaker: { name: "Paulo Henrique", role: "Suprimentos" }, owner: "u_beatriz" },
-  { company: "Petrobras Transpetro", sector: "Off-shore", city: "Rio de Janeiro/RJ",
-    trigger: "Licitação", triggerLabel: "Contrato operacional",
-    evidence: "Renovação de contrato anual para fornecimento embarcado",
-    decisionMaker: { name: "Rogério Pinto", role: "Gerente Compras Marítimas" }, owner: "u_carlos" },
-  { company: "ArcelorMittal Brasil", sector: "Siderurgia", city: "Timóteo/MG",
-    trigger: "Nova planta", triggerLabel: "Greenfield Tubarão",
-    evidence: "Projeto de nova aciaria com demanda logística associada",
-    decisionMaker: { name: "Giovana Teles", role: "Head de Procurement" }, owner: null },
-  { company: "BRF - Brasil Foods", sector: "Alimentício", city: "Itajaí/SC",
-    trigger: "Expansão", triggerLabel: "Capacidade frigorífica",
-    evidence: "Ampliação exige embalagens FDA e ANTT",
-    decisionMaker: { name: "Thiago Mendes", role: "Gerente Logística" }, owner: "u_beatriz" },
-  { company: "CBMM Nióbio", sector: "Mineração", city: "Araxá/MG",
-    trigger: "Licitação", triggerLabel: "Fornecimento regular",
-    evidence: "Cotação anual para embalagem de nióbio e derivados",
-    decisionMaker: { name: "Sandra Oliveira", role: "Compras Técnicas" }, owner: "u_carlos" },
-];
-
 const INDUSTRIA_DATA = [
   { company: "Braskem S.A.", sector: "Químico/Petroquímico", city: "Camaçari/BA",
     trigger: "Licenciamento", triggerLabel: "Renovação licença fabril",
@@ -85,7 +22,7 @@ const INDUSTRIA_DATA = [
     decisionMaker: { name: "Bruno Salles", role: "Gerente EHS" }, owner: "u_juliana" },
   { company: "Petrobras E&P Bacia de Santos", sector: "Off-shore", city: "Santos/SP",
     trigger: "ANP", triggerLabel: "Certificação ANP off-shore",
-    evidence: "Lead compartilhado com Comercial — contrato de fornecimento de big bags certificados",
+    evidence: "Contrato de fornecimento de big bags certificados ANP para plataformas",
     decisionMaker: { name: "Letícia Vargas", role: "Compras Estratégicas" }, owner: "u_juliana" },
   { company: "Shell Brasil", sector: "Off-shore", city: "Rio de Janeiro/RJ",
     trigger: "Licitação", triggerLabel: "Contrato de fornecimento",
@@ -288,7 +225,6 @@ export function generateLeadsForAllCompanies() {
     };
   };
 
-  COMERCIAL_DATA.forEach(d => out.push(createLead("comercial", { ...d, fitMin: 55, fitMax: 95 })));
   INDUSTRIA_DATA.forEach(d => out.push(createLead("industria", { ...d, fitMin: 60, fitMax: 95 })));
   RESIBAG_DATA.forEach(d => out.push(createLead("resibag", { ...d, fitMin: 65, fitMax: 95 })));
   MONTEMOR_DATA.forEach(d => out.push(createLead("montemor", { ...d, fitMin: 50, fitMax: 90 })));

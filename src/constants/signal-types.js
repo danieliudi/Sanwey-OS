@@ -6,13 +6,6 @@ export const SIGNAL_TYPES_BY_COMPANY = {
     { type: "RAPP", label: "Prazo RAPP", urgency: "critico" },
     { type: "Fiscalização", label: "Auto IBAMA", urgency: "alto" },
   ],
-  comercial: [
-    { type: "ANTT 5947", label: "ANTT Transporte Perigosos", urgency: "alto" },
-    { type: "NORMAM 05", label: "NORMAM 05 Marítimo", urgency: "medio" },
-    { type: "Nova planta", label: "Anúncio de nova planta industrial", urgency: "medio" },
-    { type: "Licitação", label: "Licitação setor alimentício/mineração", urgency: "alto" },
-    { type: "Expansão", label: "Cliente grande anunciou expansão", urgency: "medio" },
-  ],
   industria: [
     { type: "ANP", label: "Atualização ANP Off-shore", urgency: "alto" },
     { type: "Licitação", label: "Licitação off-shore / siderurgia", urgency: "critico" },

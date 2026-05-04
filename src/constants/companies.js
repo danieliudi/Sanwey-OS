@@ -22,18 +22,6 @@ export const COMPANIES = {
     description: "Big bags homologados para resíduos perigosos (Classe I, filtrante, verde)",
     focus: "Compliance ambiental",
   },
-  comercial: {
-    id: "comercial",
-    name: "Sanwey Comercial",
-    short: "Comercial",
-    primary: "#1E4D8C",
-    dark: "#0F2A52",
-    light: "#E6EDF7",
-    active: "#2F6BBF",
-    accent: "#1E4D8C",
-    description: "Comercialização de Sanbags para múltiplos setores industriais",
-    focus: "Vendas B2B consultivas",
-  },
   industria: {
     id: "industria",
     name: "Sanwey Indústria",
@@ -71,4 +59,4 @@ export const NEUTRAL = {
   success: "#2D9B52",
 };
 
-export const COMPANY_IDS = ["comercial", "industria", "resibag", "montemor"];
+export const COMPANY_IDS = ["industria", "resibag", "montemor"];

@@ -13,7 +13,6 @@ export const DEFAULT_PIPELINE_STAGES = Object.freeze([
 export function defaultPipelines() {
   const clone = () => DEFAULT_PIPELINE_STAGES.map(s => ({ ...s }));
   return {
-    comercial: clone(),
     industria: clone(),
     resibag: clone(),
     montemor: clone(),
