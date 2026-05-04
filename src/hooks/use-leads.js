@@ -42,6 +42,8 @@ function rowToLead(r) {
     decisionMaker: r.decision_maker || { name: "—", role: "—" },
     starred: Boolean(r.starred),
     notes: Array.isArray(r.notes) ? r.notes : [],
+    clientClassification: r.client_classification ?? null,
+    orderCount: r.order_count ?? 0,
     createdAt: r.created_at,
     lastActivity: r.last_activity,
     stageChangedAt: r.stage_changed_at,
@@ -86,6 +88,8 @@ function leadToRow(l, extras = {}) {
     decision_maker: l.decisionMaker ?? {},
     starred: Boolean(l.starred),
     notes: l.notes ?? [],
+    client_classification: l.clientClassification ?? null,
+    order_count: l.orderCount ?? 0,
     ...extras,
   };
 }
@@ -95,6 +99,8 @@ function patchToRow(patch) {
     companyId: "company_id",
     razaoSocial: "razao_social",
     capitalSocial: "capital_social",
+    clientClassification: "client_classification",
+    orderCount: "order_count",
     contactEmail: "contact_email",
     triggerLabel: "trigger_label",
     fitScore: "fit_score",

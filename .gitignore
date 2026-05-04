@@ -6,3 +6,5 @@ dist
 .env
 .env.local
 .env.*.local
+vite.config.js.timestamp-*.mjs
+vite.config.ts.timestamp-*.mjs

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog, Settings as SettingsIcon,
+  LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog, Settings as SettingsIcon, Bot, Presentation,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -25,6 +25,8 @@ import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
 import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { UserManagementView } from "./components/views/UserManagementView";
 import { SettingsView } from "./components/views/SettingsView";
+import { AgentActionsView } from "./components/views/AgentActionsView";
+import { FairImportView } from "./components/views/FairImportView";
 
 const INITIAL_SIGNALS = generateMarketSignals();
 
@@ -170,11 +172,13 @@ export default function App() {
       { id: "signals", label: "Sinais", icon: Bell },
       { id: "explorer", label: "Explorador", icon: Globe2 },
       { id: "crm", label: "CRM", icon: Layers },
+      { id: "agents", label: "Agentes", icon: Bot },
     ];
     if (isManager) {
       base.push(
         { id: "executive", label: "Executivo", icon: BarChart3 },
         { id: "crossref", label: "Cross-sell", icon: Shuffle },
+        { id: "fair-import", label: "Import Feira", icon: Presentation },
         { id: "users", label: "Usuários", icon: UserCog },
         { id: "settings", label: "Configurações", icon: SettingsIcon },
       );
@@ -184,7 +188,7 @@ export default function App() {
 
   // Keep vendedor off restricted sections even if state was stale.
   useEffect(() => {
-    if (!isManager && ["executive", "crossref", "users", "settings"].includes(section)) {
+    if (!isManager && ["executive", "crossref", "fair-import", "users", "settings"].includes(section)) {
       setSection("dashboard");
     }
   }, [isManager, section]);
@@ -310,6 +314,17 @@ export default function App() {
             visibleStages={settings.visibleKanbanStages}
           />
         )}
+        {section === "agents" && (
+          <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} />
+        )}
+        {section === "fair-import" && isManager && (
+          <FairImportView
+            addLead={addLead}
+            leads={leads}
+            users={users}
+            currentUser={currentUser}
+          />
+        )}
         {section === "executive" && isManager && (
           <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} />
         )}
@@ -345,6 +360,7 @@ export default function App() {
           />
         )}
       </div>
+
 
       <LeadDetailDrawer
         lead={selectedLead}

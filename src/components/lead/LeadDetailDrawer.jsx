@@ -11,6 +11,7 @@ import { UrgencyTag } from "../ui/UrgencyTag";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
+import { ClassificationBadge, CLASSIFICATION_OPTIONS } from "../ui/ClassificationBadge";
 import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
@@ -23,13 +24,19 @@ const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.
 // hook ordering is stable when `lead` toggles between object and null.
 export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isManager, currentUser }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
+  const [classification, setClassification] = useState(lead?.clientClassification ?? "");
+  const [orderCount, setOrderCount] = useState(lead?.orderCount ?? 0);
   const { loading: enriching, error: enrichError, data: enrichData, lookup, reset: resetEnrich } = useCnpjLookup();
 
   useEffect(() => { resetEnrich(); }, [lead?.id, resetEnrich]);
 
   useEffect(() => {
-    if (lead) setStage(lead.stage);
-  }, [lead?.id, lead?.stage]);
+    if (lead) {
+      setStage(lead.stage);
+      setClassification(lead.clientClassification ?? "");
+      setOrderCount(lead.orderCount ?? 0);
+    }
+  }, [lead?.id, lead?.stage, lead?.clientClassification, lead?.orderCount]);
 
   const overlaps = useMemo(() => {
     if (!isManager || !lead) return [];
@@ -91,6 +98,18 @@ ${company.name}`;
 
   const handleOwnerChange = (e) => {
     onUpdate(lead.id, { owner: e.target.value || null });
+  };
+
+  const handleClassificationChange = (e) => {
+    const newClass = e.target.value || null;
+    setClassification(newClass ?? "");
+    onUpdate(lead.id, { clientClassification: newClass, orderCount: newClass === "A" ? orderCount : 0 });
+  };
+
+  const handleOrderCountChange = (e) => {
+    const count = parseInt(e.target.value, 10) || 0;
+    setOrderCount(count);
+    onUpdate(lead.id, { orderCount: count });
   };
 
   const handleStartOutreach = () => {
@@ -367,6 +386,55 @@ ${company.name}`;
                 options={sellerOptions}
               />
             </div>
+          </div>
+
+          {/* ── Classificação ABCD ──────────────────────────────────── */}
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <label
+                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
+                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+              >
+                Classificação de cliente
+              </label>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={classification}
+                  onChange={handleClassificationChange}
+                  options={CLASSIFICATION_OPTIONS}
+                  placeholder="Sem classificação"
+                />
+                {classification && (
+                  <ClassificationBadge
+                    classification={classification}
+                    orderCount={orderCount}
+                    size="md"
+                  />
+                )}
+              </div>
+            </div>
+            {classification === "A" && (
+              <div>
+                <label
+                  className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
+                  style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+                >
+                  Qtd. pedidos (A-#)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={orderCount}
+                  onChange={handleOrderCountChange}
+                  className="w-full text-sm rounded-sm border px-3 py-2 outline-none focus:ring-1"
+                  style={{
+                    borderColor: "#DCDCDC",
+                    color: NEUTRAL.graphite,
+                    background: "#FFFFFF",
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div className="p-5 rounded-sm" style={{ background: company.dark, color: "#FFFFFF" }}>

@@ -2,6 +2,7 @@ import React, { memo } from "react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { CompanyTag } from "../ui/CompanyTag";
+import { ClassificationBadge } from "../ui/ClassificationBadge";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 
@@ -22,7 +23,16 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
         <div className="font-semibold text-xs leading-snug flex-1" style={{ color: NEUTRAL.graphite }}>
           {lead.company}
         </div>
-        <FitScoreCircle score={lead.fitScore} size={30} />
+        <div className="flex items-center gap-1.5 shrink-0">
+          {lead.clientClassification && (
+            <ClassificationBadge
+              classification={lead.clientClassification}
+              orderCount={lead.orderCount}
+              size="sm"
+            />
+          )}
+          <FitScoreCircle score={lead.fitScore} size={30} />
+        </div>
       </div>
       <div className="text-xs mb-2 line-clamp-1" style={{ color: NEUTRAL.slate }}>
         {lead.skuName}
@@ -38,6 +48,18 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
       {showOwnerFooter && lead.owner && (
         <div
           className="mt-2 pt-2 border-t text-[10px] flex items-center justify-between"
+          style={{ borderColor: "#EFEFEF", color: NEUTRAL.slate }}
+        >
+          <span>{ownerName || "—"}</span>
+          {isGroupView && <CompanyTag companyId={lead.companyId} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export const LeadKanbanCard = memo(LeadKanbanCardImpl);
+export default LeadKanbanCard;
           style={{ borderColor: "#EFEFEF", color: NEUTRAL.slate }}
         >
           <span>{ownerName || "—"}</span>
