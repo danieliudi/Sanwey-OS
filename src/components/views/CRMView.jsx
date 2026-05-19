@@ -16,6 +16,7 @@ function QuickAddForm({ stageId, companyId, currentUser, users, usersById, onAdd
   const [value, setValue] = useState("");
   const [ownerId, setOwnerId] = useState(currentUser?.id || "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const inputRef = useRef(null);
 
   React.useEffect(() => { inputRef.current?.focus(); }, []);
@@ -25,31 +26,48 @@ function QuickAddForm({ stageId, companyId, currentUser, users, usersById, onAdd
     return visible.map(u => ({ value: u.id, label: u.name }));
   }, [users, companyId]);
 
+  // crypto.randomUUID isn't available in every browser/context (older Safari,
+  // non-secure contexts). Fall back to a Math.random-based v4-ish id so the
+  // "Novo card" flow keeps working everywhere.
+  const newId = () => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return "lead_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!company.trim()) return;
     setSaving(true);
+    setError(null);
     try {
+      const now = new Date();
+      const closeDate = new Date(now.getTime() + 30 * 86400000);
       const lead = {
-        id: crypto.randomUUID(),
+        id: newId(),
         company: company.trim(),
         companyId,
         stage: stageId,
+        status: stageId,
         owner: ownerId || currentUser?.id || null,
         value: parseFloat(value) || 0,
         fitScore: 0,
         starred: false,
         notes: [],
         daysAgo: 0,
-        dateDetected: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        lastActivity: new Date().toISOString(),
-        stageChangedAt: new Date().toISOString(),
+        dateDetected: now.toISOString(),
+        createdAt: now.toISOString(),
+        lastActivity: now.toISOString(),
+        stageChangedAt: now.toISOString(),
+        closeDate: closeDate.toISOString(),
         probability: 10,
         decisionMaker: { name: "—", role: "—" },
       };
       await onAdd(lead);
       onCancel();
+    } catch (err) {
+      setError(err?.message || "Não foi possível criar o card.");
     } finally {
       setSaving(false);
     }
@@ -119,6 +137,14 @@ function QuickAddForm({ stageId, companyId, currentUser, users, usersById, onAdd
           <X size={12} />
         </button>
       </div>
+      {error && (
+        <div
+          className="text-[11px] rounded-md px-2 py-1.5"
+          style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+        >
+          {error}
+        </div>
+      )}
     </form>
   );
 }
