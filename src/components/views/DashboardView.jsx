@@ -107,7 +107,7 @@ export function DashboardView({ user, activeCompany, leads, signals, onNavigate,
           <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
             {isGroupView
               ? `${scopedLeads.length} leads em 4 empresas · ${scopedSignals.length} sinais ativos`
-              : `${companyData.name} · ${scopedLeads.length} leads · ${scopedSignals.length} sinais`}
+              : `${companyData?.name || "—"} · ${scopedLeads.length} leads · ${scopedSignals.length} sinais`}
             {totalTasks > 0 && ` · ${totalTasks} pendência${totalTasks !== 1 ? "s" : ""}`}
           </p>
         </div>

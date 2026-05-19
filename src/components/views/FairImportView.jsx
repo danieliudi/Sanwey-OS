@@ -102,8 +102,9 @@ function isInternal(email) {
 
 // ── Size normalization ───────────────────────────────────────────────────────
 function normalizeSize(raw) {
-  if (!raw) return null;
-  const r = raw.toLowerCase();
+  if (raw == null || raw === "") return null;
+  // XLSX pode entregar número/Date — converter para string antes de lower.
+  const r = String(raw).toLowerCase();
   if (r.includes("grande")) return "Grande";
   if (r.includes("média") || r.includes("media")) return "Média";
   if (r.includes("pequena") || r.includes("micro")) return "Pequena";

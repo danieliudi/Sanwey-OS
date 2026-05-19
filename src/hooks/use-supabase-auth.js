@@ -22,13 +22,19 @@ export function useSupabaseAuth() {
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let active = true;
+    // Listener pode disparar antes da Promise inicial resolver. Marcamos
+    // após a primeira notificação para não sobrescrever sessão mais nova
+    // com o valor stale do getSession().
+    let listenerHasFired = false;
 
     supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
+      if (!active || listenerHasFired) return;
       setSession(data.session);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!active) return;
+      listenerHasFired = true;
       setSession(newSession);
     });
 

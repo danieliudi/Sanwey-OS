@@ -81,7 +81,14 @@ export function UserManagementView({
   }, []);
 
   const save = useCallback(async () => {
-    if (!form.name || form.companies.length === 0) return;
+    if (!form.name?.trim()) {
+      setModalError("Informe o nome.");
+      return;
+    }
+    if (!Array.isArray(form.companies) || form.companies.length === 0) {
+      setModalError("Selecione ao menos uma empresa.");
+      return;
+    }
     const initials = form.initials
       || form.name.split(" ").map(n => n[0]).filter(Boolean).join("").slice(0, 2).toUpperCase();
 
@@ -218,7 +225,7 @@ export function UserManagementView({
                     </div>
                     <div className="text-xs mb-1" style={{ color: NEUTRAL.slate }}>{u.email}</div>
                     <div className="flex flex-wrap gap-1">
-                      {u.companies.length === 0 ? (
+                      {!Array.isArray(u.companies) || u.companies.length === 0 ? (
                         <span className="text-[11px] italic" style={{ color: NEUTRAL.slate }}>
                           Sem empresas atribuídas
                         </span>
