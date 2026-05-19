@@ -481,38 +481,51 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                 onDragOver={e => handleDragOver(e, stage.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={() => handleDrop(stage.id, colCompanyId)}
-                className="flex flex-col rounded-xl border transition-all duration-150"
+                className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
                 style={{
                   width: 272,
                   minWidth: 272,
-                  background: isBlocked ? "#FEF2F2" : isOver ? "#F8FAFF" : "#F9F9F8",
-                  borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "60" : isOver && !canAccept ? "#FECACA" : "#E8E8E8",
-                  borderTopWidth: 3,
-                  borderTopColor: stage.color,
-                  boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "none",
+                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "#F0F7FF" : "#F4F6FA",
+                  borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "70" : isOver && !canAccept ? "#FECACA" : "#E5E7EB",
+                  boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
                 }}
               >
-                {/* Column header */}
-                <div className="px-3.5 py-3 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
-                      {stage.name}
+                {/* Column header — top color band like HubSpot */}
+                <div
+                  style={{
+                    height: 4,
+                    background: stage.color,
+                    flexShrink: 0,
+                  }}
+                />
+                <div
+                  className="px-3.5 pt-3 pb-2.5 flex items-center justify-between"
+                  style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}
+                >
+                  <div className="min-w-0">
+                    <div
+                      className="font-semibold flex items-center gap-1.5"
+                      style={{
+                        color: NEUTRAL.graphite,
+                        fontSize: 11,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      <span>{stage.name}</span>
+                      <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>
+                        ({bucket.leads.length})
+                      </span>
                     </div>
                     {isBlocked ? (
-                      <div className="text-xs mt-0.5 font-semibold" style={{ color: "#B91C1C" }}>
+                      <div className="text-xs mt-1 font-semibold" style={{ color: "#B91C1C" }}>
                         Transição bloqueada
                       </div>
-                    ) : bucket.total > 0 && (
-                      <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
-                        {formatK(bucket.total)}
+                    ) : (
+                      <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate, fontWeight: 600 }}>
+                        {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}
                       </div>
                     )}
-                  </div>
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                    style={{ background: stage.color + "18", color: stage.color }}
-                  >
-                    {bucket.leads.length}
                   </div>
                 </div>
 
