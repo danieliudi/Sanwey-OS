@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Shield, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
 // Two modes:
@@ -24,16 +24,16 @@ export function LoginScreen({
         {/* Brand header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+            <img
+              src="/sanwey-logo.svg"
+              alt="Sanwey"
+              className="w-14 h-14 rounded-2xl"
               style={{
-                background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+                background: "#FFFFFF",
+                padding: 6,
+                boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
               }}
-            >
-              <Shield size={28} color="#FFFFFF" strokeWidth={2} />
-            </div>
+            />
             <div className="text-left">
               <div className="font-bold text-white" style={{ fontSize: 24, letterSpacing: "-0.02em" }}>
                 Grupo Sanwey

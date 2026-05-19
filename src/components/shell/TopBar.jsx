@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Bell, HelpCircle, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
 /**
@@ -51,13 +51,15 @@ export function TopBar({
         />
         <input
           type="text"
-          placeholder="Buscar empresas, leads, oportunidades…"
-          className="w-full text-sm rounded-lg border outline-none transition-colors duration-150"
+          placeholder="Busca global em breve — use os filtros de cada tela"
+          disabled
+          aria-disabled="true"
+          className="w-full text-sm rounded-lg border outline-none transition-colors duration-150 cursor-not-allowed"
           style={{
             padding: "8px 12px 8px 36px",
             borderColor: "#E5E7EB",
-            background: "#F8FAFB",
-            color: NEUTRAL.graphite,
+            background: "#F3F4F6",
+            color: NEUTRAL.slate,
           }}
           onFocus={(e) => {
             e.target.style.borderColor = "#3B82F6";
@@ -109,45 +111,8 @@ export function TopBar({
           </div>
         )}
 
-        <IconButton title="Insights" icon={Sparkles} />
-        <IconButton title="Ajuda" icon={HelpCircle} />
-        <IconButton title="Notificações" icon={Bell} dot />
       </div>
     </div>
-  );
-}
-
-function IconButton({ icon: Icon, title, dot }) {
-  return (
-    <button
-      title={title}
-      className="p-2 rounded-lg transition-colors relative"
-      style={{ color: NEUTRAL.slate, background: "transparent" }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = "#F3F4F6";
-        e.currentTarget.style.color = NEUTRAL.graphite;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = "transparent";
-        e.currentTarget.style.color = NEUTRAL.slate;
-      }}
-    >
-      <Icon size={16} strokeWidth={2} />
-      {dot && (
-        <span
-          style={{
-            position: "absolute",
-            top: 6,
-            right: 6,
-            width: 7,
-            height: 7,
-            borderRadius: 4,
-            background: "#EF4444",
-            border: "1.5px solid #FFFFFF",
-          }}
-        />
-      )}
-    </button>
   );
 }
 

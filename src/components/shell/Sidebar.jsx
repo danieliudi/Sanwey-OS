@@ -1,15 +1,18 @@
 import React from "react";
 import { ChevronRight, LogOut } from "lucide-react";
 
+// Paleta vermelho-Sanwey (NEUTRAL.red = #CC2936). Tons mais escuros para o
+// fundo do sidebar e mais claros para acento, mantendo bom contraste do texto
+// branco sobre vermelho.
 const PALETTE = {
-  bg: "#0B1E3F",
-  bgHover: "#162D55",
-  bgActive: "#1F3A6B",
-  border: "rgba(255,255,255,0.06)",
-  textDim: "#A1ADC6",
-  textMuted: "#7889A6",
+  bg: "#7A1820",        // vermelho escuro profundo (fundo principal)
+  bgHover: "#9B1F2A",   // vermelho médio (hover)
+  bgActive: "#BC2533",  // vermelho saturado (item ativo)
+  border: "rgba(255,255,255,0.08)",
+  textDim: "#F5C7CB",   // rosa claro para items inativos
+  textMuted: "#E0989E", // ainda mais apagado para labels de grupo
   textBright: "#FFFFFF",
-  accent: "#4F8EF7",
+  accent: "#FFD166",    // amarelo dourado pra strip de "ativo" — contrasta no vermelho
 };
 
 const ROLE_LABEL = { admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor" };
@@ -38,23 +41,18 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         className="flex items-center gap-2.5 px-4 shrink-0"
         style={{ height: 56, borderBottom: `1px solid ${PALETTE.border}` }}
       >
-        <div
+        <img
+          src="/sanwey-logo.svg"
+          alt="Sanwey"
           style={{
             width: 30,
             height: 30,
             borderRadius: 8,
-            background: "linear-gradient(135deg, #2D9B52 0%, #1A6E35 60%, #0F4A23 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#FFF",
-            fontWeight: 800,
-            fontSize: 14,
+            background: "#FFFFFF",
+            padding: 2,
             boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
           }}
-        >
-          S
-        </div>
+        />
         <div className="leading-tight min-w-0">
           <div className="truncate" style={{ color: PALETTE.textBright, fontWeight: 700, fontSize: 13 }}>
             Grupo Sanwey
