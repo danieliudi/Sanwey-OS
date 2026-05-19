@@ -31,7 +31,15 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
 
   const ownerOptions = useMemo(() => {
     const visible = (users || []).filter(u => u.companies?.includes(companyId) || u.role !== "vendedor");
-    return visible.map(u => ({ value: u.id, label: u.name }));
+    // Label curto pra caber no select estreito do form (ex.: "Daniel I.").
+    // Nome completo continua visível no dropdown aberto via title.
+    return visible.map(u => {
+      const parts = (u.name || "").trim().split(/\s+/);
+      const short = parts.length <= 1
+        ? (parts[0] || u.name || "")
+        : `${parts[0]} ${parts[parts.length - 1][0] || ""}.`;
+      return { value: u.id, label: short, fullName: u.name };
+    });
   }, [users, companyId]);
 
   // crypto.randomUUID isn't available in every browser/context (older Safari,
@@ -123,12 +131,28 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
           <select
             value={ownerId}
             onChange={e => setOwnerId(e.target.value)}
-            className="flex-1 min-w-0 text-xs rounded-lg border px-2 py-1.5 outline-none"
-            style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            title={ownerOptions.find(o => o.value === ownerId)?.fullName || "Responsável"}
+            className="flex-1 min-w-0 text-xs rounded-lg border py-1.5 outline-none truncate"
+            style={{
+              borderColor: "#D1D5DB",
+              color: NEUTRAL.graphite,
+              background: "#FFFFFF",
+              padding: "6px 22px 6px 8px",
+              maxWidth: "100%",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              appearance: "none",
+              WebkitAppearance: "none",
+              backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23636E72' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 6px center",
+              backgroundSize: "12px",
+            }}
           >
             <option value="">Responsável</option>
             {ownerOptions.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value} title={o.fullName}>{o.label}</option>
             ))}
           </select>
         )}

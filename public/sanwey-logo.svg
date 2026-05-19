@@ -1,13 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
-  <!-- Sanwey: círculo vermelho com 6 listras brancas paralelas na metade inferior -->
-  <circle cx="100" cy="100" r="92" fill="#CC2936"/>
-  <!-- Stripe band: 6 listras brancas com espessuras crescentes -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Sanwey: círculo vermelho com 4 listras brancas chunky para legibilidade em favicon 16/32 -->
+  <circle cx="32" cy="32" r="30" fill="#CC2936"/>
   <g fill="#FFFFFF">
-    <rect x="22" y="98"  width="156" height="3"/>
-    <rect x="22" y="108" width="156" height="4"/>
-    <rect x="22" y="119" width="156" height="5"/>
-    <rect x="22" y="131" width="156" height="6"/>
-    <rect x="22" y="144" width="156" height="7"/>
-    <rect x="22" y="158" width="156" height="8"/>
+    <rect x="6"  y="33" width="52" height="3" rx="1"/>
+    <rect x="6"  y="39" width="52" height="4" rx="1"/>
+    <rect x="6"  y="46" width="52" height="5" rx="1"/>
+    <rect x="10" y="54" width="44" height="5" rx="1"/>
   </g>
 </svg>

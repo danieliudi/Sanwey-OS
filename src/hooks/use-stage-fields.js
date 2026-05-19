@@ -87,8 +87,11 @@ export function useStageFields() {
     activeRef.current = true;
     if (!isSupabaseConfigured) { setLoading(false); return; }
     fetchAll();
+    // Nome de canal único por instância — evita colisão quando o hook é
+    // usado por múltiplos componentes ao mesmo tempo (CRMView + Drawer).
+    const channelName = `pipeline-stage-fields-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("pipeline-stage-fields")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "pipeline_stage_fields" }, (payload) => {
         if (!activeRef.current) return;
         if (payload.eventType === "DELETE") {
