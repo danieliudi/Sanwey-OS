@@ -42,7 +42,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         style={{ height: 56, borderBottom: `1px solid ${PALETTE.border}` }}
       >
         <img
-          src="/sanwey-logo.svg"
+          src="/sanwey-logo.png"
           alt="Sanwey"
           style={{
             width: 30,
@@ -50,6 +50,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             borderRadius: 8,
             background: "#FFFFFF",
             padding: 2,
+            objectFit: "contain",
             boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
           }}
         />
