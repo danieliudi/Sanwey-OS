@@ -87,7 +87,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                   </div>
                 </div>
                 <div className="mt-4 space-y-2">
-                  {o.leads.map(l => {
+                  {(Array.isArray(o.leads) ? o.leads : []).map(l => {
                     const u = usersById.get(l.owner);
                     return (
                       <div
@@ -158,7 +158,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                   className="mb-3 p-3 rounded-xl flex items-center gap-3"
                   style={{ background: "#F5F5F3" }}
                 >
-                  <CompanyTag companyId={s.presentIn[0]} />
+                  <CompanyTag companyId={Array.isArray(s.presentIn) ? s.presentIn[0] : null} />
                   <ArrowRight size={14} color={NEUTRAL.slate} />
                   <CompanyTag companyId={s.suggestedFor} />
                 </div>

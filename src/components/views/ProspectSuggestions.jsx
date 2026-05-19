@@ -60,7 +60,10 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
     return preferred || accessibleCompanies[0] || null;
   });
   const [added, setAdded] = useState(false);
-  const alreadyInTarget = target && existingCnpjByCompany.has(`${seed.cnpj}::${target}`);
+  // Set é populado com cnpj só-dígitos (linha 216); aqui também precisamos
+  // normalizar, senão a chave nunca casa quando o seed traz cnpj formatado.
+  const seedDigits = (seed.cnpj || "").replace(/\D/g, "");
+  const alreadyInTarget = target && seedDigits && existingCnpjByCompany.has(`${seedDigits}::${target}`);
 
   const handleAdd = useCallback(() => {
     if (!target || alreadyInTarget) return;

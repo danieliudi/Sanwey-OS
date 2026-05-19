@@ -92,6 +92,16 @@ export default function App() {
   const [section, setSection] = useState("dashboard");
   const [selectedLead, setSelectedLead] = useState(null);
 
+  // Mantém o drawer em sync quando o lead aberto muda via realtime
+  // (outra sessão editou) ou via update otimista local.
+  useEffect(() => {
+    if (!selectedLead) return;
+    const fresh = leads.find(l => l.id === selectedLead.id);
+    if (!fresh) return;
+    if (fresh === selectedLead) return;
+    setSelectedLead(fresh);
+  }, [leads, selectedLead]);
+
   // Lifted to App so the parsed file, fair name, and import status survive
   // tab switches. (Switching tabs unmounts FairImportView, which would
   // otherwise reset its local useState.)
