@@ -25,10 +25,11 @@ export function snapshotStagesAt(history, timestamps) {
 }
 
 /**
- * Fetches lead stage-change history from Supabase `lead_history` table.
+ * Fetches lead stage-change history from Supabase `lead_stage_history` table.
  *
  * Expected table schema:
- *   lead_history(id uuid, lead_id uuid, from_stage text, to_stage text, changed_at timestamptz)
+ *   lead_stage_history(id bigint, lead_id text, company_id text, from_stage text,
+ *                      to_stage text, changed_at timestamptz, changed_by uuid, note text)
  *
  * In mock mode (Supabase not configured) returns an empty Map so the view
  * renders gracefully — all snapshot cells show "—".
@@ -53,7 +54,7 @@ export function useLeadHistory({ enabled = true } = {}) {
 
     try {
       const { data, error: sbError } = await supabase
-        .from("lead_history")
+        .from("lead_stage_history")
         .select("lead_id, from_stage, to_stage, changed_at")
         .order("changed_at", { ascending: true });
 
