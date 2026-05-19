@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
-import { defaultPipelines } from "./constants/pipelines";
+import { defaultPipelines, DEFAULT_PIPELINE_STAGES } from "./constants/pipelines";
 import { generateMarketSignals } from "./data/generate-signals";
 import { usePersistentState } from "./hooks/use-persistent-state";
 import { useCrossReferrals } from "./hooks/use-cross-referrals";
@@ -63,7 +63,34 @@ export default function App() {
     deleteUser,
     setFallbackUsers: setUsers,
   } = useProfiles({ enabled: Boolean(currentUser) && (supabaseEnabled ? isManagerRole : true) });
-  const [pipelines] = usePersistentState(STORAGE_KEYS.pipelines, defaultPipelines());
+  const [rawPipelines] = usePersistentState(STORAGE_KEYS.pipelines, defaultPipelines());
+  // Forward-migration: ensure every company pipeline contains all current
+  // default stages, in default order. Users who saved older 5-stage pipelines
+  // would otherwise see a kanban missing the newly-added stages.
+  const pipelines = useMemo(() => {
+    const mergeStages = (stored) => {
+      const storedById = new Map(
+        Array.isArray(stored) ? stored.map(s => [s.id, s]) : []
+      );
+      return DEFAULT_PIPELINE_STAGES.map(def => {
+        const existing = storedById.get(def.id);
+        if (!existing) return { ...def };
+        return {
+          ...def,
+          ...existing,
+          code: def.code,
+          terminal: def.terminal,
+          won: def.won,
+          lost: def.lost,
+        };
+      });
+    };
+    const out = {};
+    for (const key of ["industria", "resibag", "montemor"]) {
+      out[key] = mergeStages(rawPipelines?.[key]);
+    }
+    return out;
+  }, [rawPipelines]);
 
   const {
     leads,
