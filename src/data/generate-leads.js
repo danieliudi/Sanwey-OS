@@ -155,8 +155,8 @@ const MONTEMOR_DATA = [
 ];
 
 function pickStage(rand) {
-  const stages = ["prospeccao", "contato", "qualificacao", "proposta", "negociacao", "ganho", "perdido"];
-  const weights = [0.22, 0.15, 0.22, 0.18, 0.13, 0.07, 0.03];
+  const stages = ["prospeccao", "qualificacao", "visitas", "amostras", "negociacao", "ganho", "perdido"];
+  const weights = [0.22, 0.20, 0.16, 0.15, 0.14, 0.10, 0.03];
   let r = rand(), acc = 0;
   for (let i = 0; i < stages.length; i++) {
     acc += weights[i];

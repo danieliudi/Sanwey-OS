@@ -209,7 +209,7 @@ export default function App() {
       {
         label: null,
         items: [
-          { id: "dashboard", label: "Painel de Controle", icon: LayoutDashboard },
+          { id: "dashboard", label: "Início", icon: LayoutDashboard },
         ],
       },
       {
