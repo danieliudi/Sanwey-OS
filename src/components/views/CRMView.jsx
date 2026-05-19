@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Plus, X, ChevronDown, TrendingUp } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { Select } from "../ui/Select";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
@@ -379,7 +379,10 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
 
   const usersById = useUsersById(users);
 
-  const companyForPipeline = isGroupView ? (user.companies[0] || "industria") : activeCompany;
+  // user.companies may still contain legacy ids ("comercial") that the DB
+  // check constraint rejects — pick the first one that's actually valid.
+  const firstValidCompany = (user.companies || []).find(c => COMPANY_IDS.includes(c)) || "industria";
+  const companyForPipeline = isGroupView ? firstValidCompany : activeCompany;
   const allStages = pipelines[companyForPipeline] || DEFAULT_PIPELINE_STAGES;
   const stages = useMemo(() => (
     visibleStages && visibleStages.length > 0
@@ -496,7 +499,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
             const bucket = byStage[stage.id] || { leads: [], total: 0 };
             const isOver    = dragOverStage === stage.id;
             const isBlocked = blockedDrop === stage.id;
-            const colCompanyId = isGroupView ? (user.companies?.[0] || "industria") : activeCompany;
+            const colCompanyId = isGroupView ? firstValidCompany : activeCompany;
             const canAccept = !draggedLead || !pipelineTransitions
               ? true
               : pipelineTransitions.isTransitionAllowed(colCompanyId, draggedLead?.stage, stage.id);
@@ -591,7 +594,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                 {addingInStage === stage.id && !stage.terminal ? (
                   <QuickAddForm
                     stageId={stage.id}
-                    companyId={isGroupView ? (user.companies?.[0] || "industria") : activeCompany}
+                    companyId={isGroupView ? firstValidCompany : activeCompany}
                     currentUser={user}
                     users={users}
                     usersById={usersById}
