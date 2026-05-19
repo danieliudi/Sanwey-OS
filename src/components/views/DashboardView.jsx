@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import {
   Target, HandCoins, CheckCircle2, Gauge, ArrowRight, RefreshCcw, Download,
+  Clock, CalendarClock, AlertTriangle,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { StatCard } from "../ui/StatCard";
@@ -10,8 +11,11 @@ import { CompanyTag } from "../ui/CompanyTag";
 import { UrgencyTag } from "../ui/UrgencyTag";
 import { LeadCard } from "../lead/LeadCard";
 import { formatK } from "../../utils/currency";
+import { formatDateBR, daysSince } from "../../utils/date";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
+const STALE_THRESHOLD_DAYS = 14;
+const CLOSING_HORIZON_DAYS = 7;
 
 export function DashboardView({ user, activeCompany, leads, signals, onNavigate, onLeadClick, visibleWidgets }) {
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
@@ -53,18 +57,58 @@ export function DashboardView({ user, activeCompany, leads, signals, onNavigate,
       .slice(0, 6)
   ), [scopedLeads]);
 
+  // Derived from CRM leads — surfaces what needs attention this week.
+  const tasks = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const horizon = new Date(today.getTime() + CLOSING_HORIZON_DAYS * 86400000);
+
+    const closing = [];
+    const stale = [];
+    const overdue = [];
+
+    for (const l of scopedLeads) {
+      if (TERMINAL.has(l.stage)) continue;
+
+      if (l.closeDate) {
+        const close = new Date(l.closeDate);
+        if (!Number.isNaN(close.getTime())) {
+          if (close < today) {
+            overdue.push({ lead: l, close });
+          } else if (close <= horizon) {
+            closing.push({ lead: l, close });
+          }
+        }
+      }
+
+      const idle = daysSince(l.lastActivity || l.stageChangedAt);
+      if (idle >= STALE_THRESHOLD_DAYS) {
+        stale.push({ lead: l, idle });
+      }
+    }
+
+    closing.sort((a, b) => a.close - b.close);
+    overdue.sort((a, b) => a.close - b.close);
+    stale.sort((a, b) => b.idle - a.idle);
+
+    return { closing, stale, overdue };
+  }, [scopedLeads]);
+
+  const totalTasks = tasks.closing.length + tasks.stale.length + tasks.overdue.length;
+
   return (
     <div className="space-y-7">
       {/* Page header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
-            {isGroupView ? (isManager ? "Visão consolidada" : "Dashboard") : companyData.name}
+            {greetingFor(user)}
           </h1>
           <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
             {isGroupView
               ? `${scopedLeads.length} leads em 4 empresas · ${scopedSignals.length} sinais ativos`
-              : `${companyData.focus} · ${scopedLeads.length} leads · ${scopedSignals.length} sinais`}
+              : `${companyData.name} · ${scopedLeads.length} leads · ${scopedSignals.length} sinais`}
+            {totalTasks > 0 && ` · ${totalTasks} pendência${totalTasks !== 1 ? "s" : ""}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -92,6 +136,85 @@ export function DashboardView({ user, activeCompany, leads, signals, onNavigate,
         {widgetVisible("avg_fit") && (
           <StatCard icon={Gauge} value={stats.avgFit} label="Fit score médio"
             sublabel={`${stats.newCount} novos em 48h`} compact />
+        )}
+      </div>
+
+      {/* Tarefas e prazos — derivado dos negócios do CRM */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+              Tarefas e prazos
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+              Pendências dos seus negócios · próximos 7 dias e leads parados
+            </p>
+          </div>
+          {totalTasks > 0 && (
+            <button
+              onClick={() => onNavigate("crm")}
+              className="text-xs font-semibold flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all duration-150"
+              style={{ color: accent, background: accent + "0D" }}
+              onMouseEnter={e => { e.currentTarget.style.background = accent + "18"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = accent + "0D"; }}
+            >
+              Abrir pipeline <ArrowRight size={12} />
+            </button>
+          )}
+        </div>
+
+        {totalTasks === 0 ? (
+          <div
+            className="p-5 rounded-xl border text-center text-sm"
+            style={{ background: "#FFFFFF", borderColor: "#E8E8E8", color: NEUTRAL.slate }}
+          >
+            Nada urgente por aqui. Seus negócios estão em dia.
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-3">
+            <TaskBucket
+              icon={AlertTriangle}
+              tone="#DC2626"
+              title="Fechamento atrasado"
+              empty="Nenhum vencido"
+              items={tasks.overdue.slice(0, 4).map(({ lead, close }) => ({
+                key: lead.id,
+                lead,
+                primary: lead.company,
+                secondary: `Fechamento ${formatDateBR(close)}`,
+                badge: `${daysSince(close)}d`,
+                onClick: onLeadClick,
+              }))}
+            />
+            <TaskBucket
+              icon={CalendarClock}
+              tone="#1E3A8A"
+              title="Fecham nesta semana"
+              empty="Sem fechamentos próximos"
+              items={tasks.closing.slice(0, 4).map(({ lead, close }) => ({
+                key: lead.id,
+                lead,
+                primary: lead.company,
+                secondary: `${formatK(lead.value)} · ${formatDateBR(close)}`,
+                badge: stageLabel(lead.stage),
+                onClick: onLeadClick,
+              }))}
+            />
+            <TaskBucket
+              icon={Clock}
+              tone="#B45309"
+              title="Leads parados"
+              empty="Tudo com atividade recente"
+              items={tasks.stale.slice(0, 4).map(({ lead, idle }) => ({
+                key: lead.id,
+                lead,
+                primary: lead.company,
+                secondary: `${stageLabel(lead.stage)} · ${formatK(lead.value)}`,
+                badge: `${idle}d sem atividade`,
+                onClick: onLeadClick,
+              }))}
+            />
+          </div>
         )}
       </div>
 
@@ -184,6 +307,94 @@ export function DashboardView({ user, activeCompany, leads, signals, onNavigate,
       </div>
     </div>
   );
+}
+
+function TaskBucket({ icon: Icon, tone, title, empty, items }) {
+  return (
+    <div
+      className="rounded-xl border"
+      style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+    >
+      <div
+        className="px-3.5 py-2.5 flex items-center gap-2"
+        style={{ borderBottom: "1px solid #F1F3F5" }}
+      >
+        <div
+          className="rounded-md flex items-center justify-center"
+          style={{ width: 24, height: 24, background: tone + "14", color: tone }}
+        >
+          <Icon size={13} strokeWidth={2.4} />
+        </div>
+        <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite, letterSpacing: "0.01em" }}>
+          {title}
+        </div>
+        <div className="ml-auto text-xs font-semibold" style={{ color: tone }}>
+          {items.length}
+        </div>
+      </div>
+      <div className="p-1.5">
+        {items.length === 0 ? (
+          <div className="px-2 py-3 text-xs" style={{ color: NEUTRAL.slate }}>
+            {empty}
+          </div>
+        ) : (
+          items.map(it => (
+            <button
+              key={it.key}
+              onClick={() => it.onClick?.(it.lead)}
+              className="w-full text-left flex items-start gap-2 px-2.5 py-2 rounded-lg transition-colors duration-150"
+              style={{ background: "transparent" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#F8FAFB"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <span
+                className="mt-1.5 shrink-0 rounded-full"
+                style={{ width: 6, height: 6, background: tone }}
+              />
+              <div className="flex-1 min-w-0">
+                <div
+                  className="text-[13px] font-semibold truncate"
+                  style={{ color: NEUTRAL.graphite }}
+                >
+                  {it.primary}
+                </div>
+                <div className="text-xs truncate" style={{ color: NEUTRAL.slate }}>
+                  {it.secondary}
+                </div>
+              </div>
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0"
+                style={{ background: tone + "14", color: tone }}
+              >
+                {it.badge}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+const STAGE_LABELS = {
+  prospeccao: "Prospecção",
+  qualificacao: "Qualificação",
+  visitas: "Visitas/Apresentação",
+  amostras: "Amostras/Maturação",
+  negociacao: "Negociação",
+  ganho: "Negócio Fechado",
+  perdido: "Perdido",
+};
+
+function stageLabel(id) {
+  return STAGE_LABELS[id] || id;
+}
+
+function greetingFor(user) {
+  const hour = new Date().getHours();
+  const period = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const first = (user?.name || "").split(" ")[0];
+  return first ? `${period}, ${first}` : period;
 }
 
 export default DashboardView;
