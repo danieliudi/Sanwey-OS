@@ -27,13 +27,8 @@ export function LoginScreen({
             <img
               src="/sanwey-logo.png"
               alt="Sanwey"
-              className="w-14 h-14 rounded-2xl"
-              style={{
-                background: "#FFFFFF",
-                padding: 6,
-                objectFit: "contain",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
-              }}
+              className="w-14 h-14"
+              style={{ objectFit: "contain" }}
             />
             <div className="text-left">
               <div className="font-bold text-white" style={{ fontSize: 24, letterSpacing: "-0.02em" }}>
