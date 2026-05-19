@@ -1,23 +1,31 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, Settings } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { Select } from "../ui/Select";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
+import { StageFieldsEditor } from "../lead/StageFieldsEditor";
+import { DynamicField, validateFields } from "../ui/DynamicField";
 import { useUsersById } from "../../hooks/use-users-by-id";
+import { useStageFields } from "../../hooks/use-stage-fields";
 import { formatK } from "../../utils/currency";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 
 // ── Quick-add form ────────────────────────────────────────────────────────────
 
-function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById, onAdd, onCancel }) {
+function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById, onAdd, onCancel, customFieldsDef = [] }) {
   const [company, setCompany] = useState("");
   const [value, setValue] = useState("");
   const [ownerId, setOwnerId] = useState(currentUser?.id || "");
+  const [customValues, setCustomValues] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
+
+  const updateCustom = useCallback((key, val) => {
+    setCustomValues(prev => ({ ...prev, [key]: val }));
+  }, []);
 
   React.useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -39,6 +47,12 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!company.trim()) return;
+    // Validar obrigatórios dos campos customizados antes do insert.
+    const validationErrors = validateFields(customFieldsDef, customValues);
+    if (validationErrors.length > 0) {
+      setError(validationErrors[0]);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -66,6 +80,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         // "Valor ponderado".
         probability: Number.isFinite(stage?.probability) ? stage.probability : 10,
         decisionMaker: { name: "—", role: "—" },
+        customFields: customValues,
       };
       await onAdd(lead);
       onCancel();
@@ -118,6 +133,19 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
           </select>
         )}
       </div>
+      {customFieldsDef.length > 0 && (
+        <div className="space-y-2 pt-1 mt-1 border-t" style={{ borderColor: "#F0F0F0" }}>
+          {customFieldsDef.map(f => (
+            <DynamicField
+              key={f.id}
+              field={f}
+              value={customValues[f.fieldKey]}
+              onChange={(v) => updateCustom(f.fieldKey, v)}
+              users={users}
+            />
+          ))}
+        </div>
+      )}
       <div className="flex gap-1.5">
         <button
           type="submit"
@@ -374,13 +402,16 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions }) {
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
+  const isAdmin = user.role === "admin";
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
   const [addingInStage, setAddingInStage] = useState(null);
+  const [editingFieldsStage, setEditingFieldsStage] = useState(null);
 
   const usersById = useUsersById(users);
+  const stageFields = useStageFields();
 
   // user.companies may still contain legacy ids ("comercial") that the DB
   // check constraint rejects — pick the first one that's actually valid.
@@ -531,10 +562,10 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                   }}
                 />
                 <div
-                  className="px-3.5 pt-3 pb-2.5 flex items-center justify-between"
+                  className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
                   style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div
                       className="font-semibold flex items-center gap-1.5"
                       style={{
@@ -559,6 +590,19 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                       </div>
                     )}
                   </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setEditingFieldsStage({ stageId: stage.id, stageName: stage.name, companyId: colCompanyId })}
+                      className="p-1.5 rounded-lg cursor-pointer transition-colors"
+                      style={{ color: NEUTRAL.slate, background: "transparent" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                      title="Configurar campos desta etapa"
+                      aria-label="Configurar etapa"
+                    >
+                      <Settings size={13} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Cards */}
@@ -604,6 +648,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                     usersById={usersById}
                     onAdd={onAddLead}
                     onCancel={() => setAddingInStage(null)}
+                    customFieldsDef={stageFields.getFields(isGroupView ? firstValidCompany : activeCompany, stage.id)}
                   />
                 ) : !stage.terminal && onAddLead && (
                   <button
@@ -631,6 +676,19 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
       <p className="text-xs text-center" style={{ color: NEUTRAL.slate }}>
         Arraste para mover entre etapas · Clique no card para ver detalhes
       </p>
+
+      <StageFieldsEditor
+        open={!!editingFieldsStage}
+        onClose={() => setEditingFieldsStage(null)}
+        companyId={editingFieldsStage?.companyId}
+        stageId={editingFieldsStage?.stageId}
+        stageName={editingFieldsStage?.stageName}
+        getFields={stageFields.getFields}
+        addField={stageFields.addField}
+        updateField={stageFields.updateField}
+        deleteField={stageFields.deleteField}
+        reorderFields={stageFields.reorderFields}
+      />
     </div>
   );
 }

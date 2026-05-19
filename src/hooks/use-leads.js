@@ -44,6 +44,7 @@ function rowToLead(r) {
     notes: Array.isArray(r.notes) ? r.notes : [],
     clientClassification: r.client_classification ?? null,
     orderCount: r.order_count ?? 0,
+    customFields: r.custom_fields && typeof r.custom_fields === "object" ? r.custom_fields : {},
     createdAt: r.created_at,
     lastActivity: r.last_activity,
     stageChangedAt: r.stage_changed_at,
@@ -90,6 +91,7 @@ function leadToRow(l, extras = {}) {
     notes: l.notes ?? [],
     client_classification: l.clientClassification ?? null,
     order_count: l.orderCount ?? 0,
+    custom_fields: l.customFields && typeof l.customFields === "object" ? l.customFields : {},
     ...extras,
   };
 }
@@ -112,6 +114,7 @@ function patchToRow(patch) {
     decisionMaker: "decision_maker",
     lastActivity: "last_activity",
     stageChangedAt: "stage_changed_at",
+    customFields: "custom_fields",
   };
   const out = {};
   for (const [k, v] of Object.entries(patch)) {

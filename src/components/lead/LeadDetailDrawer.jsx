@@ -15,6 +15,7 @@ import { ClassificationBadge, CLASSIFICATION_OPTIONS } from "../ui/Classificatio
 import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
+import { useStageFields } from "../../hooks/use-stage-fields";
 import { isSupabaseConfigured } from "../../lib/supabase";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
@@ -28,6 +29,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
   const [copied, setCopied] = useState(false);
 
   const { loading: enriching, error: enrichError, data: enrichData, lookup, reset: resetEnrich } = useCnpjLookup();
+  const stageFields = useStageFields();
+  const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
+  const customValues = lead?.customFields || {};
 
   useEffect(() => { resetEnrich(); }, [lead?.id, resetEnrich]);
 
@@ -337,6 +341,33 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
             <InfoTile label="Probabilidade" value={`${probDisplay}%`} />
             <InfoTile label="Fechamento" value={formatDateBR(lead.closeDate)} />
           </div>
+
+          {/* Campos customizados da etapa */}
+          {customDefs.length > 0 && (
+            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+              <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
+                Detalhes da etapa
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {customDefs.map(f => {
+                  const v = customValues[f.fieldKey];
+                  const display = v === undefined || v === null || v === ""
+                    ? "—"
+                    : f.fieldType === "checkbox" ? (v ? "Sim" : "Não")
+                    : f.fieldType === "currency" && Number.isFinite(Number(v)) ? formatBRL(Number(v))
+                    : f.fieldType === "date" ? formatDateBR(v)
+                    : f.fieldType === "user" ? (users.find(u => u.id === v)?.name || v)
+                    : String(v);
+                  return (
+                    <div key={f.id}>
+                      <div className="text-[11px] font-semibold mb-0.5" style={{ color: NEUTRAL.slate }}>{f.label}</div>
+                      <div className="text-sm" style={{ color: NEUTRAL.graphite, wordBreak: "break-word" }}>{display}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Produto — só mostra se tiver SKU */}
           {(lead.skuName || lead.quantity > 0) && (
