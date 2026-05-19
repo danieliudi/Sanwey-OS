@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Presentation, GitBranch, Workflow, Zap,
+  Briefcase, Brain, Sliders,
 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "./constants/companies";
+import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { defaultPipelines } from "./constants/pipelines";
 import { generateMarketSignals } from "./data/generate-signals";
@@ -17,7 +18,8 @@ import { usePipelineTransitions } from "./hooks/use-pipeline-transitions";
 import { useAutomations } from "./hooks/use-automations";
 import { LoginScreen } from "./components/shell/LoginScreen";
 import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScreen";
-import { AppHeader } from "./components/shell/AppHeader";
+import { Sidebar } from "./components/shell/Sidebar";
+import { TopBar } from "./components/shell/TopBar";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
@@ -202,28 +204,59 @@ export default function App() {
     }
   }, [accessibleCompanies, activeCompany]);
 
-  const navItems = useMemo(() => {
-    const base = [
-      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { id: "signals", label: "Sinais", icon: Bell },
-      { id: "explorer", label: "Explorador", icon: Globe2 },
-      { id: "crm", label: "CRM", icon: Layers },
+  const navGroups = useMemo(() => {
+    const groups = [
+      {
+        label: null,
+        items: [
+          { id: "dashboard", label: "Painel de Controle", icon: LayoutDashboard },
+        ],
+      },
+      {
+        label: "CRM",
+        icon: Briefcase,
+        items: [
+          { id: "crm",       label: "Negócios",   icon: Layers },
+          { id: "signals",   label: "Sinais",     icon: Bell },
+          { id: "explorer",  label: "Explorador", icon: Globe2 },
+          ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
+        ],
+      },
+    ];
+
+    const intelligenceItems = [
       { id: "agents", label: "Agentes", icon: Bot },
     ];
     if (isManager) {
-      base.push(
-        { id: "executive", label: "Executivo", icon: BarChart3 },
-        { id: "crossref", label: "Cross-sell", icon: Shuffle },
-        { id: "funnel-history", label: "Histórico", icon: GitBranch },
-        { id: "pipeline-builder", label: "Pipeline", icon: Workflow },
-        { id: "automations", label: "Automações", icon: Zap },
-        { id: "fair-import", label: "Import Feira", icon: Presentation },
-        { id: "users", label: "Usuários", icon: UserCog },
-        { id: "settings", label: "Configurações", icon: SettingsIcon },
-      );
+      intelligenceItems.unshift({ id: "executive", label: "Executivo", icon: BarChart3 });
+      intelligenceItems.push({ id: "funnel-history", label: "Histórico do funil", icon: GitBranch });
     }
-    return base;
+    groups.push({ label: "Inteligência", icon: Brain, items: intelligenceItems });
+
+    if (isManager) {
+      groups.push({
+        label: "Configuração",
+        icon: Sliders,
+        items: [
+          { id: "pipeline-builder", label: "Construtor de pipeline", icon: Workflow },
+          { id: "automations",      label: "Automações",              icon: Zap },
+          { id: "fair-import",      label: "Importar feira",          icon: Presentation },
+          { id: "users",            label: "Usuários",                icon: UserCog },
+          { id: "settings",         label: "Configurações",           icon: SettingsIcon },
+        ],
+      });
+    }
+    return groups;
   }, [isManager]);
+
+  // Title shown in the slim top bar, derived from the active section.
+  const sectionTitle = useMemo(() => {
+    for (const g of navGroups) {
+      const hit = g.items.find(i => i.id === section);
+      if (hit) return hit.label;
+    }
+    return "";
+  }, [navGroups, section]);
 
   // Keep vendedor off restricted sections even if state was stale.
   useEffect(() => {
@@ -277,41 +310,34 @@ export default function App() {
     );
   }
 
-  const activeCompanyData = COMPANIES[activeCompany];
-  const accent = activeCompanyData?.primary || NEUTRAL.graphite;
-
   return (
     <div
       style={{
-        background: NEUTRAL.warmWhite,
+        background: "#F4F6FA",
         fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
         color: NEUTRAL.graphite,
         minHeight: "100vh",
+        display: "flex",
+        alignItems: "stretch",
       }}
     >
-      <div
-        className="border-b sticky top-0 z-30 backdrop-blur-md"
-        style={{
-          background: "rgba(250,250,248,0.95)",
-          borderColor: "#EFEFEF",
-          borderBottomColor: accent + "30",
-          borderBottomWidth: 2,
-        }}
-      >
-        <AppHeader
-          currentUser={currentUser}
+      <Sidebar
+        navGroups={navGroups}
+        section={section}
+        onSectionChange={setSection}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopBar
+          title={sectionTitle}
           activeCompany={activeCompany}
           accessibleCompanies={accessibleCompanies}
           onCompanyChange={setActiveCompany}
-          onLogout={handleLogout}
-          navItems={navItems}
-          section={section}
-          onSectionChange={setSection}
-          accent={accent}
         />
-      </div>
 
-      <div className="px-4 md:px-6 py-6 max-w-[1400px] mx-auto">
+        <div className="px-6 py-6 flex-1 min-w-0">
         {section === "dashboard" && (
           <DashboardView
             user={currentUser}
@@ -422,8 +448,20 @@ export default function App() {
             onClearAllLeads={clearAllLeads}
           />
         )}
-      </div>
+        </div>
 
+        <footer
+          className="px-6 py-4 border-t text-xs flex items-center justify-between flex-wrap gap-2"
+          style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
+        >
+          <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
+            Grupo Sanwey · Commercial Intelligence v4.0
+          </div>
+          <div style={{ color: NEUTRAL.slate }}>
+            Maio 2026
+          </div>
+        </footer>
+      </div>
 
       <LeadDetailDrawer
         lead={selectedLead}
@@ -434,18 +472,6 @@ export default function App() {
         isManager={isManager}
         currentUser={currentUser}
       />
-
-      <footer
-        className="px-4 md:px-6 py-5 border-t text-xs flex items-center justify-between flex-wrap gap-2"
-        style={{ background: NEUTRAL.warmWhite, borderColor: "#EFEFEF", color: NEUTRAL.slate }}
-      >
-        <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
-          Grupo Sanwey · Commercial Intelligence v4.0
-        </div>
-        <div style={{ color: NEUTRAL.slate }}>
-          Abril 2026
-        </div>
-      </footer>
     </div>
   );
 }
