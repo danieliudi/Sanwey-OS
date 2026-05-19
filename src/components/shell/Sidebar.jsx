@@ -47,11 +47,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
           style={{
             width: 30,
             height: 30,
-            borderRadius: 8,
-            background: "#FFFFFF",
-            padding: 2,
             objectFit: "contain",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
           }}
         />
         <div className="leading-tight min-w-0">
