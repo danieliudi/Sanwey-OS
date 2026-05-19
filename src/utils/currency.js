@@ -20,9 +20,26 @@ export function formatBRLCompact(value, { decimals = 0 } = {}) {
   return brlFull.format(value);
 }
 
+// Compact pt-BR currency. Tiers:
+//   < 1k          → "R$ 850"
+//   1k – 999k     → "R$ 12k" (or "R$ 12,5k" when decimals > 0)
+//   ≥ 1M          → "R$ 1,23M"
+// Uses pt-BR separators (ponto para milhar, vírgula para decimal).
+const ptBRNumber = (decimals) => new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: decimals,
+  maximumFractionDigits: decimals,
+});
 export function formatK(value, decimals = 0) {
   if (!Number.isFinite(value)) return "R$ 0";
-  return `R$ ${(value / 1000).toFixed(decimals)}k`;
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) {
+    const d = decimals === 0 ? 2 : decimals;
+    return `R$ ${ptBRNumber(d).format(value / 1_000_000)}M`;
+  }
+  if (abs >= 1_000) {
+    return `R$ ${ptBRNumber(decimals).format(value / 1_000)}k`;
+  }
+  return brlFull.format(value);
 }
 
 export function formatM(value, decimals = 2) {

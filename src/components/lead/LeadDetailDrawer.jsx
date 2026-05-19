@@ -42,19 +42,20 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
   }, [lead?.id, lead?.stage, lead?.clientClassification, lead?.orderCount]);
 
   const overlaps = useMemo(() => {
-    if (!isManager || !lead) return [];
-    const key = lead.company.replace(/\s*\(.*\)\s*/g, "").trim().toLowerCase();
+    if (!isManager || !lead || !lead.company) return [];
+    const norm = (s) => (s || "").replace(/\s*\(.*\)\s*/g, "").trim().toLowerCase();
+    const key = norm(lead.company);
     return allLeads.filter(l => (
       l.id !== lead.id &&
-      l.company.replace(/\s*\(.*\)\s*/g, "").trim().toLowerCase() === key &&
+      norm(l.company) === key &&
       l.companyId !== lead.companyId
     ));
   }, [lead, allLeads, isManager]);
 
   const sellerOptions = useMemo(() => {
     if (!lead) return [];
-    return users
-      .filter(u => u.role === "vendedor" && u.companies.includes(lead.companyId))
+    return (users || [])
+      .filter(u => u.role === "vendedor" && Array.isArray(u.companies) && u.companies.includes(lead.companyId))
       .map(u => ({ value: u.id, label: u.name }));
   }, [lead, users]);
 
@@ -210,11 +211,12 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
                 {lead.company}
               </h2>
               <div className="flex items-center gap-2 text-sm flex-wrap" style={{ color: NEUTRAL.slate }}>
-                <span className="font-mono text-xs">{lead.cnpj}</span>
-                <span>·</span>
-                <span>{lead.sector}</span>
-                <span>·</span>
-                <span className="flex items-center gap-1"><MapPin size={12} />{lead.city}</span>
+                {lead.cnpj && <span className="font-mono text-xs">{lead.cnpj}</span>}
+                {lead.cnpj && (lead.sector || lead.city) && <span>·</span>}
+                {lead.sector && <span>{lead.sector}</span>}
+                {lead.sector && lead.city && <span>·</span>}
+                {lead.city && <span className="flex items-center gap-1"><MapPin size={12} />{lead.city}</span>}
+                {!lead.cnpj && !lead.sector && !lead.city && <span className="text-xs italic">Sem dados de cadastro</span>}
               </div>
             </div>
             <FitScoreCircle score={lead.fitScore} size={60} />
@@ -307,48 +309,54 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
             </div>
           )}
 
-          {/* Trigger */}
-          <div
-            className="p-3.5 rounded-xl border-l-4"
-            style={{
-              background: company.light,
-              borderLeftColor: company.primary,
-              border: `1px solid ${company.primary}20`,
-              borderLeft: `4px solid ${company.primary}`,
-            }}
-          >
-            <div className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: company.dark }}>
-              <AlertTriangle size={12} />
-              Gatilho · {lead.triggerLabel}
+          {/* Trigger — only render if there's an actual trigger */}
+          {(lead.triggerLabel || lead.evidence) && (
+            <div
+              className="p-3.5 rounded-xl border-l-4"
+              style={{
+                background: company.light,
+                borderLeftColor: company.primary,
+                border: `1px solid ${company.primary}20`,
+                borderLeft: `4px solid ${company.primary}`,
+              }}
+            >
+              <div className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: company.dark }}>
+                <AlertTriangle size={12} />
+                Gatilho{lead.triggerLabel ? ` · ${lead.triggerLabel}` : ""}
+              </div>
+              {lead.evidence && (
+                <div className="text-sm" style={{ color: NEUTRAL.graphite }}>{lead.evidence}</div>
+              )}
             </div>
-            <div className="text-sm" style={{ color: NEUTRAL.graphite }}>{lead.evidence}</div>
-          </div>
+          )}
 
           {/* Info tiles */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <InfoTile label="Porte" value={lead.size} />
-            <InfoTile label="Quantidade" value={`${lead.quantity} un`} />
+            <InfoTile label="Porte" value={lead.size || "—"} />
+            <InfoTile label="Quantidade" value={lead.quantity ? `${lead.quantity} un` : "—"} />
             <InfoTile label="Probabilidade" value={`${probDisplay}%`} />
             <InfoTile label="Fechamento" value={formatDateBR(lead.closeDate)} />
           </div>
 
-          {/* Produto */}
-          <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
-            <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
-              <Package size={12} />Produto vinculado
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{lead.skuName}</div>
-                <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
-                  {lead.quantity} un × {formatBRL(lead.unitPrice)}
+          {/* Produto — só mostra se tiver SKU */}
+          {(lead.skuName || lead.quantity > 0) && (
+            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+              <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
+                <Package size={12} />Produto vinculado
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{lead.skuName || "—"}</div>
+                  <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+                    {lead.quantity || 0} un × {formatBRL(lead.unitPrice)}
+                  </div>
+                </div>
+                <div className="font-bold text-lg" style={{ color: NEUTRAL.graphite }}>
+                  {formatK(lead.value, 1)}
                 </div>
               </div>
-              <div className="font-bold text-lg" style={{ color: NEUTRAL.graphite }}>
-                {formatK(lead.value, 1)}
-              </div>
             </div>
-          </div>
+          )}
 
           {/* Decisor */}
           <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>

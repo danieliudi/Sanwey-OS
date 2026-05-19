@@ -21,6 +21,7 @@ import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScr
 import { Sidebar } from "./components/shell/Sidebar";
 import { TopBar } from "./components/shell/TopBar";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
+import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
 import { ExplorerView } from "./components/views/ExplorerView";
@@ -463,15 +464,17 @@ export default function App() {
         </footer>
       </div>
 
-      <LeadDetailDrawer
-        lead={selectedLead}
-        onClose={closeDrawer}
-        onUpdate={updateLead}
-        allLeads={leads}
-        users={users}
-        isManager={isManager}
-        currentUser={currentUser}
-      />
+      <ErrorBoundary>
+        <LeadDetailDrawer
+          lead={selectedLead}
+          onClose={closeDrawer}
+          onUpdate={updateLead}
+          allLeads={leads}
+          users={users}
+          isManager={isManager}
+          currentUser={currentUser}
+        />
+      </ErrorBoundary>
     </div>
   );
 }
