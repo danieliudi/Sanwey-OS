@@ -25,12 +25,13 @@ export function LoginScreen({
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
             <img
-              src="/sanwey-logo.svg"
+              src="/sanwey-logo.png"
               alt="Sanwey"
               className="w-14 h-14 rounded-2xl"
               style={{
                 background: "#FFFFFF",
                 padding: 6,
+                objectFit: "contain",
                 boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
               }}
             />
