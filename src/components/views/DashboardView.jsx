@@ -20,7 +20,7 @@ const CLOSING_HORIZON_DAYS = 7;
 export function DashboardView({ user, activeCompany, leads, signals, onNavigate, onLeadClick, visibleWidgets }) {
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
   const isGroupView = activeCompany === "all";
-  const isManager = user.role === "gerente";
+  const isManager = user.role === "gerente" || user.role === "admin";
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
   const accent = companyData?.primary || NEUTRAL.graphite;
 

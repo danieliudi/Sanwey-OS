@@ -11,7 +11,7 @@ const TERMINAL = new Set(["ganho", "perdido"]);
 
 // ── Quick-add form ────────────────────────────────────────────────────────────
 
-function QuickAddForm({ stageId, companyId, currentUser, users, usersById, onAdd, onCancel }) {
+function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById, onAdd, onCancel }) {
   const [company, setCompany] = useState("");
   const [value, setValue] = useState("");
   const [ownerId, setOwnerId] = useState(currentUser?.id || "");
@@ -61,7 +61,10 @@ function QuickAddForm({ stageId, companyId, currentUser, users, usersById, onAdd
         lastActivity: now.toISOString(),
         stageChangedAt: now.toISOString(),
         closeDate: closeDate.toISOString(),
-        probability: 10,
+        // probabilidade default vem da etapa em que o card está sendo criado
+        // (10% em prospecção, 80% em negociação, etc.) — usado pelo KPI
+        // "Valor ponderado".
+        probability: Number.isFinite(stage?.probability) ? stage.probability : 10,
         decisionMaker: { name: "—", role: "—" },
       };
       await onAdd(lead);
@@ -370,7 +373,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions }) {
   const isGroupView = activeCompany === "all";
-  const isManager = user.role === "gerente";
+  const isManager = user.role === "gerente" || user.role === "admin";
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
@@ -594,6 +597,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                 {addingInStage === stage.id && !stage.terminal ? (
                   <QuickAddForm
                     stageId={stage.id}
+                    stage={stage}
                     companyId={isGroupView ? firstValidCompany : activeCompany}
                     currentUser={user}
                     users={users}

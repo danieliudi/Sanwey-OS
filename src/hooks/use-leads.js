@@ -233,7 +233,9 @@ export function useLeads({ userId, role, companies } = {}) {
   }, [leads, updateLead]);
 
   const changeStage = useCallback(async (id, stage) => {
-    await updateLead(id, { stage, stageChangedAt: new Date().toISOString() });
+    // status espelha stage no banco (mesmo CHECK, default igual). Sem este
+    // patch, status fica defasado e relatórios baseados em status quebram.
+    await updateLead(id, { stage, status: stage, stageChangedAt: new Date().toISOString() });
   }, [updateLead]);
 
   const loadDemoLeads = useCallback(async () => {
