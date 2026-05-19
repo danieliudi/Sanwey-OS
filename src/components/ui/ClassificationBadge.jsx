@@ -36,14 +36,14 @@ export function ClassificationBadge({ classification, orderCount, size = "md" })
 
   return (
     <span
-      className="inline-flex items-center font-bold rounded-sm border"
+      className="inline-flex items-center font-bold rounded-md border"
       style={{
         background: cfg.bg,
         color: cfg.color,
         borderColor: cfg.border,
         fontSize: isSm ? "9px" : "11px",
         padding: isSm ? "1px 5px" : "2px 7px",
-        letterSpacing: "0.08em",
+        letterSpacing: "0.04em",
         lineHeight: "1.4",
       }}
       title={cfg.description}

@@ -26,28 +26,43 @@ export function SignalsView({ activeCompany, signals }) {
 
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
             Sinais de Mercado
           </h1>
-          <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
             {scopedSignals.length} sinais monitorados · adaptado ao contexto de cada empresa
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+
+        {/* Urgency filter pills */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           {URGENCY_FILTERS.map(f => {
             const active = urgencyFilter === f.key;
             return (
               <button
                 key={f.key}
                 onClick={() => setUrgencyFilter(f.key)}
-                className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-sm border"
+                className="px-3.5 py-1.5 text-sm font-medium rounded-full border transition-all duration-150"
                 style={{
                   background: active ? NEUTRAL.graphite : "#FFFFFF",
                   color: active ? "#FFFFFF" : NEUTRAL.slate,
-                  borderColor: active ? NEUTRAL.graphite : "#EFEFEF",
-                  letterSpacing: "0.08em",
+                  borderColor: active ? NEUTRAL.graphite : "#E0E0E0",
+                  boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
+                }}
+                onMouseEnter={e => {
+                  if (!active) {
+                    e.currentTarget.style.borderColor = "#B0B0B0";
+                    e.currentTarget.style.background = "#F5F5F5";
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!active) {
+                    e.currentTarget.style.borderColor = "#E0E0E0";
+                    e.currentTarget.style.background = "#FFFFFF";
+                  }
                 }}
               >
                 {f.label}
@@ -57,16 +72,26 @@ export function SignalsView({ activeCompany, signals }) {
         </div>
       </div>
 
+      {/* Signal cards grid */}
       <div className="grid md:grid-cols-2 gap-3">
         {scopedSignals.map(s => (
           <div
             key={s.id}
-            className="p-5 rounded-sm border transition-all hover:shadow-md"
+            className="p-5 rounded-xl border transition-all duration-150 cursor-default"
             style={{
               background: "#FFFFFF",
-              borderColor: "#EFEFEF",
+              borderColor: "#E8E8E8",
               borderLeftWidth: 4,
               borderLeftColor: COMPANIES[s.company]?.primary || NEUTRAL.slate,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+              e.currentTarget.style.borderColor = "#D0D0D0";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
+              e.currentTarget.style.borderColor = "#E8E8E8";
             }}
           >
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -76,7 +101,7 @@ export function SignalsView({ activeCompany, signals }) {
               </div>
               <UrgencyTag urgency={s.urgency} />
             </div>
-            <h3 className="font-bold mb-2 leading-snug" style={{ fontSize: 14, color: NEUTRAL.graphite }}>
+            <h3 className="font-semibold mb-2 leading-snug" style={{ fontSize: 14, color: NEUTRAL.graphite }}>
               {s.title}
             </h3>
             <p className="text-sm leading-relaxed mb-3" style={{ color: NEUTRAL.slate }}>
@@ -84,7 +109,7 @@ export function SignalsView({ activeCompany, signals }) {
             </p>
             <div
               className="flex items-center justify-between text-xs pt-3 border-t"
-              style={{ borderColor: "#EFEFEF", color: NEUTRAL.slate }}
+              style={{ borderColor: "#F0F0F0", color: NEUTRAL.slate }}
             >
               <span>{s.affectedCount} afetad{s.affectedCount === 1 ? "a" : "as"}</span>
               <span>{s.date}</span>

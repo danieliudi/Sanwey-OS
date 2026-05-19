@@ -21,27 +21,29 @@ export function LoginScreen({
       style={{ background: `linear-gradient(135deg, ${NEUTRAL.graphite} 0%, ${NEUTRAL.graphite}dd 100%)` }}
     >
       <div className="w-full max-w-md">
+        {/* Brand header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
             <div
-              className="w-14 h-14 rounded-sm flex items-center justify-center"
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
               style={{
-                background: "linear-gradient(135deg, #FFFFFF20 0%, #FFFFFF10 100%)",
+                background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%)",
                 border: "1px solid rgba(255,255,255,0.2)",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
               }}
             >
-              <Shield size={28} color="#FFFFFF" strokeWidth={2.5} />
+              <Shield size={28} color="#FFFFFF" strokeWidth={2} />
             </div>
             <div className="text-left">
               <div className="font-bold text-white" style={{ fontSize: 24, letterSpacing: "-0.02em" }}>
                 Grupo Sanwey
               </div>
-              <div className="text-white/70 uppercase text-xs" style={{ letterSpacing: "0.14em" }}>
+              <div className="text-white/60 text-xs font-medium" style={{ letterSpacing: "0.06em" }}>
                 Comercial Intelligence
               </div>
             </div>
           </div>
-          <p className="text-white/80 text-sm mt-4 max-w-sm mx-auto">
+          <p className="text-white/70 text-sm mt-2 max-w-sm mx-auto leading-relaxed">
             Plataforma unificada de inteligência comercial para as empresas do Grupo
           </p>
         </div>
@@ -62,7 +64,7 @@ export function LoginScreen({
 }
 
 function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
-  const [mode, setMode] = useState("signin"); // "signin" | "signup"
+  const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -89,15 +91,20 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
   const err = localError || authError;
 
   return (
-    <div className="rounded-sm p-6" style={{ background: "#FFFFFF" }}>
-      <div
-        className="text-[10px] uppercase font-bold tracking-widest mb-4"
-        style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-      >
-        {mode === "signin" ? "Acessar sua conta" : "Criar conta"}
+    <div
+      className="rounded-2xl p-7"
+      style={{ background: "#FFFFFF", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}
+    >
+      <div className="mb-5">
+        <h2 className="font-bold" style={{ fontSize: 18, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+          {mode === "signin" ? "Acessar sua conta" : "Criar conta"}
+        </h2>
+        <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+          {mode === "signin" ? "Entre com e-mail e senha." : "Preencha os dados para criar um acesso."}
+        </p>
       </div>
 
-      <form onSubmit={submit} className="space-y-3">
+      <form onSubmit={submit} className="space-y-4">
         {mode === "signup" && (
           <Field
             label="Nome"
@@ -129,7 +136,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
 
         {err && (
           <div
-            className="text-xs px-3 py-2 rounded-sm"
+            className="text-xs px-3.5 py-2.5 rounded-lg"
             style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FCA5A5" }}
           >
             {err.message || "Não foi possível autenticar. Tente novamente."}
@@ -139,8 +146,12 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
         <button
           type="submit"
           disabled={authLoading}
-          className="w-full p-3 rounded-sm font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60"
-          style={{ background: NEUTRAL.graphite, fontSize: 13, letterSpacing: "0.02em" }}
+          className="w-full p-3 rounded-lg font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+          style={{ background: NEUTRAL.graphite, fontSize: 14 }}
+          onMouseEnter={e => { if (!authLoading) e.currentTarget.style.filter = "brightness(0.88)"; }}
+          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+          onMouseDown={e => { e.currentTarget.style.filter = "brightness(0.80)"; }}
+          onMouseUp={e => { e.currentTarget.style.filter = "brightness(0.88)"; }}
         >
           {authLoading ? <Loader2 size={16} className="animate-spin" /> : null}
           {mode === "signin" ? "Entrar" : "Criar conta"}
@@ -149,7 +160,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
 
       <div
         className="mt-5 pt-4 border-t text-xs text-center"
-        style={{ borderColor: "#EFEFEF", color: NEUTRAL.slate }}
+        style={{ borderColor: "#F0F0F0", color: NEUTRAL.slate }}
       >
         {mode === "signin" ? (
           <>
@@ -157,7 +168,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
             <button
               type="button"
               onClick={() => { setMode("signup"); setLocalError(null); }}
-              className="font-semibold underline"
+              className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
               style={{ color: NEUTRAL.graphite }}
             >
               Criar conta
@@ -169,7 +180,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
             <button
               type="button"
               onClick={() => { setMode("signin"); setLocalError(null); }}
-              className="font-semibold underline"
+              className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
               style={{ color: NEUTRAL.graphite }}
             >
               Entrar
@@ -182,12 +193,10 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
 }
 
 function Field({ label, type, value, onChange, placeholder, autoComplete, required }) {
+  const [focused, setFocused] = useState(false);
   return (
     <label className="block">
-      <div
-        className="text-[10px] uppercase font-bold tracking-widest mb-1"
-        style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-      >
+      <div className="text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.slate }}>
         {label}
       </div>
       <input
@@ -197,8 +206,15 @@ function Field({ label, type, value, onChange, placeholder, autoComplete, requir
         placeholder={placeholder}
         autoComplete={autoComplete}
         required={required}
-        className="w-full px-3 py-2 rounded-sm border text-sm outline-none transition-all focus:ring-2"
-        style={{ borderColor: "#EFEFEF", color: NEUTRAL.graphite, background: "#FAFAF8" }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        className="w-full px-3.5 py-2.5 rounded-lg border text-sm outline-none transition-all"
+        style={{
+          borderColor: focused ? NEUTRAL.graphite : "#D4D4D4",
+          boxShadow: focused ? `0 0 0 3px ${NEUTRAL.graphite}18` : "none",
+          color: NEUTRAL.graphite,
+          background: "#FAFAF8",
+        }}
       />
     </label>
   );
@@ -206,12 +222,17 @@ function Field({ label, type, value, onChange, placeholder, autoComplete, requir
 
 function MockLoginCard({ users, onMockLogin }) {
   return (
-    <div className="rounded-sm p-6" style={{ background: "#FFFFFF" }}>
-      <div
-        className="text-[10px] uppercase font-bold tracking-widest mb-4"
-        style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-      >
-        Selecione seu perfil
+    <div
+      className="rounded-2xl p-7"
+      style={{ background: "#FFFFFF", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}
+    >
+      <div className="mb-5">
+        <h2 className="font-bold" style={{ fontSize: 18, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+          Selecione seu perfil
+        </h2>
+        <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+          Modo demo — configure Supabase para autenticação real.
+        </p>
       </div>
       <div className="space-y-2">
         {users.map(u => {
@@ -220,11 +241,25 @@ function MockLoginCard({ users, onMockLogin }) {
             <button
               key={u.id}
               onClick={() => onMockLogin(u)}
-              className="w-full p-3 rounded-sm border flex items-center gap-3 transition-all text-left hover:shadow-md"
-              style={{ borderColor: "#EFEFEF", background: "#FFFFFF" }}
+              className="w-full p-3.5 rounded-xl border flex items-center gap-3 transition-all duration-150 text-left"
+              style={{
+                borderColor: "#E8E8E8",
+                background: "#FFFFFF",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+                e.currentTarget.style.borderColor = "#D0D0D0";
+                e.currentTarget.style.transform = "translateY(-1px)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
+                e.currentTarget.style.borderColor = "#E8E8E8";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
             >
               <div
-                className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0"
+                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0"
                 style={{ background: u.avatarBg, fontSize: 13 }}
               >
                 {u.initials}
@@ -233,21 +268,15 @@ function MockLoginCard({ users, onMockLogin }) {
                 <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
                   {u.name}
                 </div>
-                <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+                <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
                   {u.role === "gerente" ? "Gerente Comercial" : "Vendedor"} ·{" "}
                   {u.role === "gerente" ? "Acesso total" : companies.join(" · ")}
                 </div>
               </div>
-              <ChevronRight size={16} color={NEUTRAL.slate} />
+              <ChevronRight size={15} color={NEUTRAL.slate} style={{ opacity: 0.5 }} />
             </button>
           );
         })}
-      </div>
-      <div
-        className="mt-5 pt-4 border-t text-xs text-center"
-        style={{ borderColor: "#EFEFEF", color: NEUTRAL.slate }}
-      >
-        Login simulado — configure Supabase para autenticação real.
       </div>
     </div>
   );

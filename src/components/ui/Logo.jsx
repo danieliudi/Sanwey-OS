@@ -8,7 +8,7 @@ export function Logo({ size = "normal", company = "all" }) {
   return (
     <div className="flex items-center gap-2.5">
       <div
-        className="rounded-sm flex items-center justify-center shrink-0"
+        className="rounded-xl flex items-center justify-center shrink-0"
         style={{
           width: dim, height: dim,
           background: `linear-gradient(135deg, ${c.primary} 0%, ${c.dark} 100%)`,

@@ -95,12 +95,12 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
 
   return (
     <div
-      className="p-5 rounded-sm border"
+      className="p-5 rounded-xl border"
       style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}
     >
       <div className="flex items-center gap-2 mb-4">
         <div
-          className="w-8 h-8 rounded-sm flex items-center justify-center"
+          className="w-8 h-8 rounded-xl flex items-center justify-center"
           style={{ background: NEUTRAL.graphite + "10" }}
         >
           <Building2 size={16} color={NEUTRAL.graphite} />
@@ -147,7 +147,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
 
       {error && (
         <div
-          className="p-3 rounded-sm flex items-start gap-2 text-xs"
+          className="p-3 rounded-xl flex items-start gap-2 text-xs"
           style={{ background: "#FEF2F2", color: "#B91C1C" }}
         >
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
@@ -158,7 +158,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
       {data && (
         <div className="space-y-3">
           <div
-            className="p-4 rounded-sm border"
+            className="p-4 rounded-xl border"
             style={{ background: NEUTRAL.warmWhite, borderColor: "#EFEFEF" }}
           >
             <div className="flex items-start justify-between gap-3 mb-2">
@@ -175,7 +175,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
               </div>
               {data.situacao && (
                 <div
-                  className="px-2 py-0.5 rounded-sm text-[10px] uppercase font-semibold"
+                  className="px-2 py-0.5 rounded-xl text-[10px] uppercase font-semibold"
                   style={{
                     background: data.situacao.toUpperCase() === "ATIVA" ? "#E8F2EC" : "#FEF2F2",
                     color: data.situacao.toUpperCase() === "ATIVA" ? NEUTRAL.success : "#B91C1C",
@@ -238,7 +238,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
 
           {added ? (
             <div
-              className="p-3 rounded-sm flex items-center gap-2 text-xs"
+              className="p-3 rounded-xl flex items-center gap-2 text-xs"
               style={{ background: "#E8F2EC", color: NEUTRAL.success }}
             >
               <CheckCircle2 size={14} />
@@ -262,7 +262,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
                         key={id}
                         type="button"
                         onClick={() => setTargetCompany(id)}
-                        className="px-2.5 py-1.5 text-xs rounded-sm border transition-all flex items-center gap-1.5"
+                        className="px-2.5 py-1.5 text-xs rounded-xl border transition-all flex items-center gap-1.5"
                         style={{
                           background: active ? c.light : "#FFFFFF",
                           borderColor: active ? c.primary : "#EFEFEF",

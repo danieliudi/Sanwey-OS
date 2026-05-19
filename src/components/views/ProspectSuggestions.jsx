@@ -70,19 +70,19 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
 
   return (
     <div
-      className="p-4 rounded-sm border flex flex-col gap-3"
-      style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}
+      className="p-4 rounded-xl border flex flex-col gap-3 transition-all duration-150"
+      style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span
-              className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-sm"
-              style={{ background: NEUTRAL.graphite, color: "#FFFFFF", letterSpacing: "0.15em" }}
+              className="px-2 py-0.5 text-[10px] font-semibold rounded-full"
+              style={{ background: NEUTRAL.graphite, color: "#FFFFFF" }}
             >
               {seed.source === "curadoria" ? "Curadoria" : seed.source}
             </span>
-            <span className="text-[10px] uppercase font-semibold" style={{ color: NEUTRAL.slate }}>
+            <span className="text-[10px] font-medium" style={{ color: NEUTRAL.slate }}>
               {seed.sector}
             </span>
           </div>
@@ -120,7 +120,7 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
 
       {seed.evidence && (
         <div
-          className="text-xs p-2 rounded-sm flex gap-2"
+          className="text-xs p-2.5 rounded-lg flex gap-2"
           style={{ background: NEUTRAL.warmWhite, color: NEUTRAL.graphite }}
         >
           <Flame size={12} className="shrink-0 mt-0.5" color={NEUTRAL.amber} />
@@ -131,8 +131,8 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
       {Array.isArray(seed.public_signals) && seed.public_signals.length > 0 && (
         <div className="space-y-1">
           <div
-            className="text-[9px] uppercase font-bold tracking-widest flex items-center gap-1"
-            style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+            className="text-[10px] font-semibold flex items-center gap-1"
+            style={{ color: NEUTRAL.slate }}
           >
             <Database size={10} />
             Sinais de bases públicas
@@ -141,8 +141,8 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
             {seed.public_signals.map((sig, idx) => (
               <span
                 key={idx}
-                className="px-1.5 py-0.5 rounded-sm border text-[10px] flex items-center gap-1"
-                style={{ borderColor: "#EFEFEF", background: "#FFFFFF", color: NEUTRAL.graphite }}
+                className="px-2 py-0.5 rounded-lg border text-[10px] flex items-center gap-1"
+                style={{ borderColor: "#E8E8E8", background: "#FAFAF8", color: NEUTRAL.graphite }}
                 title={sig.detail || ""}
               >
                 <strong style={{ color: NEUTRAL.graphite }}>{sig.source}</strong>
@@ -157,7 +157,7 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
 
       {added ? (
         <div
-          className="p-2 rounded-sm flex items-center gap-2 text-xs"
+          className="p-2.5 rounded-lg flex items-center gap-2 text-xs"
           style={{ background: "#E8F2EC", color: NEUTRAL.success }}
         >
           <CheckCircle2 size={14} />
@@ -176,7 +176,7 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
                   key={id}
                   type="button"
                   onClick={() => setTarget(id)}
-                  className="px-2 py-1 text-[11px] rounded-sm border transition-all flex items-center gap-1"
+                  className="px-2.5 py-1 text-[11px] rounded-full border transition-all flex items-center gap-1"
                   style={{
                     background: active ? c.light : "#FFFFFF",
                     borderColor: active ? c.primary : "#EFEFEF",
@@ -243,27 +243,24 @@ export function ProspectSuggestions({ filters, leads, accessibleCompanies, onAdd
 
   return (
     <div
-      className="rounded-sm border overflow-hidden"
-      style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}
+      className="rounded-xl border overflow-hidden"
+      style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div
-        className="px-4 py-3 border-b flex items-center justify-between gap-3"
-        style={{ background: "#F5F5F3", borderColor: "#EFEFEF" }}
+        className="px-4 py-3.5 border-b flex items-center justify-between gap-3 flex-wrap"
+        style={{ background: "#F7F7F5", borderColor: "#F0F0F0" }}
       >
         <div className="flex items-center gap-2">
           <Sparkles size={14} color={NEUTRAL.graphite} />
-          <span
-            className="uppercase font-bold tracking-widest"
-            style={{ color: NEUTRAL.graphite, fontSize: 11, letterSpacing: "0.15em" }}
-          >
+          <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
             Sugestões de prospecção
           </span>
           <span className="text-xs" style={{ color: NEUTRAL.slate }}>
-            · {filtered.length} empresas candidatas
+            · {filtered.length} candidatas
           </span>
         </div>
         <div className="text-[11px]" style={{ color: NEUTRAL.slate }}>
-          Cruzamento CNAE/UF + sinais públicos · ComexStat · BNDES · IBGE · IBAMA · ANP · ANDA · SNIC
+          CNAE/UF · ComexStat · BNDES · IBGE · IBAMA · ANP · ANDA · SNIC
         </div>
       </div>
 
@@ -301,7 +298,7 @@ export function ProspectSuggestions({ filters, leads, accessibleCompanies, onAdd
           {filtered.length > 30 && (
             <div
               className="px-4 py-3 text-center text-xs border-t"
-              style={{ color: NEUTRAL.slate, background: "#F5F5F3", borderColor: "#EFEFEF" }}
+              style={{ color: NEUTRAL.slate, background: "#F7F7F5", borderColor: "#F0F0F0" }}
             >
               Mostrando 30 de {filtered.length} sugestões · refine os filtros
             </div>

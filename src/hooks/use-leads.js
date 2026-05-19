@@ -189,10 +189,13 @@ export function useLeads({ userId, role, companies } = {}) {
   const leads = isSupabaseConfigured ? remoteLeads : fallbackLeads;
 
   const addLead = useCallback(async (lead) => {
-    // Deduplicate on CNPJ + companyId (same rule as before).
+    // Deduplicate on CNPJ + companyId — only when the lead actually has a CNPJ.
+    // Leads created manually (no CNPJ) must always be inserted.
     const digits = (lead.cnpj || "").replace(/\D/g, "");
-    const dup = leads.find(l => (l.cnpj || "").replace(/\D/g, "") === digits && l.companyId === lead.companyId);
-    if (dup) return dup;
+    if (digits) {
+      const dup = leads.find(l => (l.cnpj || "").replace(/\D/g, "") === digits && l.companyId === lead.companyId);
+      if (dup) return dup;
+    }
 
     if (!isSupabaseConfigured) {
       setFallbackLeads(prev => [lead, ...prev]);

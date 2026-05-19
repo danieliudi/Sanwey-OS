@@ -9,8 +9,6 @@ const TERMINAL = new Set(["ganho", "perdido"]);
 const STALE_DAYS = 14;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-// FIX P1/P4: single-pass aggregation per company. Also memoizes maxPipeline
-// OUTSIDE the bar map instead of recomputing once per bar.
 export function ExecutiveDashboard({ leads, crossReferrals }) {
   const metricsByCompany = useMemo(() => {
     const now = Date.now();
@@ -89,14 +87,15 @@ export function ExecutiveDashboard({ leads, crossReferrals }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+        <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
           Dashboard Executivo
         </h1>
-        <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+        <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
           Visão consolidada do Grupo · performance por empresa · alertas gerenciais
         </p>
       </div>
 
+      {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard icon={HandCoins} value={formatM(totals.pipeline)}
           label="Pipeline do Grupo" sublabel="Todas empresas · aberto" accent={NEUTRAL.graphite} />
@@ -109,33 +108,34 @@ export function ExecutiveDashboard({ leads, crossReferrals }) {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5">
-        <div className="rounded-sm border p-5" style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}>
-          <h3 className="font-bold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+        {/* Pipeline por empresa */}
+        <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
             Pipeline por empresa
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {metricsByCompany.map(m => {
               const pct = (m.pipeline / maxPipeline) * 100;
               return (
                 <div key={m.id}>
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-sm" style={{ background: m.company.primary }} />
-                      <span className="text-sm font-semibold" style={{ color: NEUTRAL.graphite }}>
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: m.company.primary }} />
+                      <span className="text-sm font-medium" style={{ color: NEUTRAL.graphite }}>
                         {m.company.name}
                       </span>
                     </div>
-                    <span className="text-sm font-mono font-semibold" style={{ color: NEUTRAL.graphite }}>
+                    <span className="text-sm font-semibold font-mono" style={{ color: NEUTRAL.graphite }}>
                       {formatK(m.pipeline)}
                     </span>
                   </div>
-                  <div className="h-2 rounded-sm overflow-hidden" style={{ background: "#F5F5F3" }}>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "#F0F0EE" }}>
                     <div
-                      className="h-full transition-all"
+                      className="h-full rounded-full transition-all"
                       style={{ width: `${pct}%`, background: m.company.primary }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-xs mt-1" style={{ color: NEUTRAL.slate }}>
+                  <div className="flex items-center justify-between text-xs mt-1.5" style={{ color: NEUTRAL.slate }}>
                     <span>{m.open} ativo{m.open !== 1 ? "s" : ""}</span>
                     <span>{m.won} ganho · {m.lost} perdido</span>
                   </div>
@@ -145,22 +145,23 @@ export function ExecutiveDashboard({ leads, crossReferrals }) {
           </div>
         </div>
 
-        <div className="rounded-sm border p-5" style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}>
-          <h3 className="font-bold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+        {/* Funil de conversão */}
+        <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
             Funil de conversão (Grupo)
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {funnelStages.map(({ stage, count, pct }) => (
               <div key={stage.id}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold" style={{ color: NEUTRAL.graphite }}>
+                  <span className="text-sm font-medium" style={{ color: NEUTRAL.graphite }}>
                     {stage.name}
                   </span>
                   <span className="text-xs" style={{ color: NEUTRAL.slate }}>{count} leads</span>
                 </div>
-                <div className="h-5 rounded-sm overflow-hidden" style={{ background: "#F5F5F3" }}>
+                <div className="h-5 rounded-lg overflow-hidden" style={{ background: "#F0F0EE" }}>
                   <div
-                    className="h-full transition-all flex items-center justify-end pr-2"
+                    className="h-full rounded-lg transition-all flex items-center justify-end pr-2"
                     style={{ width: `${Math.max(pct, 5)}%`, background: stage.color }}
                   >
                     <span className="text-[10px] font-bold text-white">{pct.toFixed(0)}%</span>
@@ -172,35 +173,33 @@ export function ExecutiveDashboard({ leads, crossReferrals }) {
         </div>
       </div>
 
-      <div className="rounded-sm border p-5" style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}>
-        <h3 className="font-bold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+      {/* Matriz por empresa */}
+      <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
           Desempenho por empresa · matriz
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b" style={{ borderColor: "#EFEFEF" }}>
-                <th className="text-left py-2 pr-3 text-xs uppercase font-semibold tracking-wider"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.1em" }}>Empresa</th>
-                <th className="text-right py-2 px-3 text-xs uppercase font-semibold tracking-wider"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.1em" }}>Leads</th>
-                <th className="text-right py-2 px-3 text-xs uppercase font-semibold tracking-wider"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.1em" }}>Pipeline</th>
-                <th className="text-right py-2 px-3 text-xs uppercase font-semibold tracking-wider"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.1em" }}>Ganho</th>
-                <th className="text-right py-2 px-3 text-xs uppercase font-semibold tracking-wider"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.1em" }}>Ativação</th>
-                <th className="text-right py-2 pl-3 text-xs uppercase font-semibold tracking-wider"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.1em" }}>Parados</th>
+              <tr className="border-b" style={{ borderColor: "#F0F0F0" }}>
+                {["Empresa", "Leads", "Pipeline", "Ganho", "Ativação", "Parados"].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`py-2.5 text-xs font-semibold ${i === 0 ? "text-left pr-3" : "text-right px-3"}`}
+                    style={{ color: NEUTRAL.slate }}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {metricsByCompany.map(m => (
-                <tr key={m.id} className="border-b" style={{ borderColor: "#EFEFEF" }}>
+                <tr key={m.id} className="border-b" style={{ borderColor: "#F5F5F5" }}>
                   <td className="py-3 pr-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-sm shrink-0" style={{ background: m.company.primary }} />
-                      <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: m.company.primary }} />
+                      <span className="font-medium" style={{ color: NEUTRAL.graphite }}>
                         {m.company.name}
                       </span>
                     </div>

@@ -4,29 +4,33 @@ import { NEUTRAL } from "../../constants/companies";
 export function StatCard({ icon: Icon, value, label, sublabel, accent, compact = false, trend }) {
   return (
     <div
-      className={`${compact ? "p-4" : "p-5"} rounded-sm border transition-all hover:shadow-md`}
+      className="p-5 rounded-xl border transition-all duration-150 hover:shadow-md cursor-default"
       style={{
         background: accent ? accent : "#FFFFFF",
-        borderColor: accent ? accent : "#EFEFEF",
+        borderColor: accent ? "transparent" : "#E8E8E8",
+        boxShadow: accent ? "none" : "0 1px 3px rgba(0,0,0,0.04)",
       }}
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div
-          className="rounded-sm flex items-center justify-center"
+          className="rounded-lg flex items-center justify-center"
           style={{
-            width: compact ? 32 : 36, height: compact ? 32 : 36,
-            background: accent ? "rgba(255,255,255,0.12)" : "#F5F5F3",
+            width: 36, height: 36,
+            background: accent ? "rgba(255,255,255,0.15)" : "#F1F3F5",
           }}
         >
-          <Icon size={compact ? 16 : 18} color={accent ? "#FFFFFF" : NEUTRAL.graphite} strokeWidth={2} />
+          <Icon size={18} color={accent ? "#FFFFFF" : NEUTRAL.graphite} strokeWidth={2} />
         </div>
         {trend !== undefined && (
           <span
-            className="text-xs font-semibold"
+            className="text-xs font-semibold px-2 py-0.5 rounded-full"
             style={{
+              background: accent
+                ? "rgba(255,255,255,0.15)"
+                : (trend > 0 ? "#EDFAF2" : trend < 0 ? "#FFF0F0" : "#F1F3F5"),
               color: accent
                 ? (trend > 0 ? "#A3E6B4" : "#FFB8B8")
-                : (trend > 0 ? NEUTRAL.success : trend < 0 ? NEUTRAL.red : NEUTRAL.slate),
+                : (trend > 0 ? "#1A7A3C" : trend < 0 ? "#B91C1C" : NEUTRAL.slate),
             }}
           >
             {trend > 0 ? "↑" : trend < 0 ? "↓" : "·"} {Math.abs(trend)}%
@@ -36,26 +40,23 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
       <div
         className="font-bold leading-none mb-1.5"
         style={{
-          fontSize: compact ? 22 : 28,
+          fontSize: compact ? 24 : 28,
           color: accent ? "#FFFFFF" : NEUTRAL.graphite,
-          letterSpacing: "-0.02em",
+          letterSpacing: "-0.03em",
         }}
       >
         {value}
       </div>
       <div
-        className="font-semibold"
-        style={{
-          color: accent ? "rgba(255,255,255,0.95)" : NEUTRAL.graphite,
-          fontSize: compact ? 12 : 13,
-        }}
+        className="font-medium text-sm"
+        style={{ color: accent ? "rgba(255,255,255,0.9)" : NEUTRAL.graphite }}
       >
         {label}
       </div>
       {sublabel && (
         <div
-          className="mt-0.5"
-          style={{ color: accent ? "rgba(255,255,255,0.7)" : NEUTRAL.slate, fontSize: 11 }}
+          className="text-xs mt-0.5"
+          style={{ color: accent ? "rgba(255,255,255,0.65)" : NEUTRAL.slate }}
         >
           {sublabel}
         </div>

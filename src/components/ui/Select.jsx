@@ -8,12 +8,15 @@ export function Select({ value, onChange, options, placeholder, className = "" }
       <select
         value={value}
         onChange={onChange}
-        className="w-full appearance-none py-2.5 pl-3 pr-10 text-sm rounded-sm border transition-all focus:outline-none cursor-pointer"
+        className="w-full appearance-none py-2 pl-3 pr-9 text-sm rounded-lg border transition-colors duration-150 focus:outline-none focus:ring-2 cursor-pointer"
         style={{
-          borderColor: "#E5E5E5",
+          borderColor: "#D4D4D4",
           background: "#FFFFFF",
           color: value ? NEUTRAL.graphite : NEUTRAL.slate,
+          "--tw-ring-color": NEUTRAL.graphite + "30",
         }}
+        onFocus={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite + "70"; }}
+        onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map(opt => (
@@ -26,7 +29,7 @@ export function Select({ value, onChange, options, placeholder, className = "" }
         ))}
       </select>
       <ChevronDown
-        size={16}
+        size={14}
         className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
         color={NEUTRAL.slate}
       />

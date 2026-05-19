@@ -6,10 +6,13 @@ import { CompanyTag } from "../ui/CompanyTag";
 import { formatK } from "../../utils/currency";
 
 function LeadRowImpl({ lead, striped, onClick, onStarToggle }) {
+  const base = striped ? "#FAFAF8" : "#FFFFFF";
   return (
     <div
-      className="grid md:grid-cols-12 gap-4 px-4 py-3 border-b transition-colors cursor-pointer items-center"
-      style={{ borderColor: "#EFEFEF", background: striped ? "#FAFAF8" : "#FFFFFF" }}
+      className="grid md:grid-cols-12 gap-4 px-4 py-3 border-b cursor-pointer items-center"
+      style={{ borderColor: "#EFEFEF", background: base, transition: "background 120ms" }}
+      onMouseEnter={e => { e.currentTarget.style.background = "#F0F4FF"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = base; }}
       onClick={() => onClick?.(lead)}
     >
       <div className="col-span-4 flex items-center gap-2">

@@ -8,3 +8,4 @@ dist
 .env.*.local
 vite.config.js.timestamp-*.mjs
 vite.config.ts.timestamp-*.mjs
+.claude/

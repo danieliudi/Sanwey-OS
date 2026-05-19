@@ -12,4 +12,6 @@ export const STORAGE_KEYS = {
   crossReferrals: `gs_${V}_cross_referrals`,
   crossReferralOverrides: `gs_${V}_cross_referral_overrides`,
   userSettings: `gs_${V}_user_settings`,
+  pipelineTransitions: `gs_${V}_pipeline_transitions`,
+  automations: `gs_${V}_automations`,
 };

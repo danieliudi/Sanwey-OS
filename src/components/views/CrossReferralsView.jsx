@@ -59,7 +59,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
             {overlaps.map(o => (
               <div
                 key={o.id}
-                className="p-5 rounded-sm border"
+                className="p-5 rounded-xl border"
                 style={{ background: "#FFFFFF", borderColor: NEUTRAL.amber + "40", borderLeftWidth: 4 }}
               >
                 <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -92,7 +92,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                     return (
                       <div
                         key={l.id}
-                        className="p-3 rounded-sm flex items-center justify-between flex-wrap gap-2"
+                        className="p-3 rounded-xl flex items-center justify-between flex-wrap gap-2"
                         style={{ background: "#F5F5F3" }}
                       >
                         <div className="flex items-center gap-3">
@@ -115,7 +115,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                   })}
                 </div>
                 <div
-                  className="mt-3 text-xs p-2 rounded-sm"
+                  className="mt-3 text-xs p-2 rounded-xl"
                   style={{ background: NEUTRAL.amber + "15", color: NEUTRAL.amber }}
                 >
                   ⚠️ Atenção: risco de canibalização. Alinhe com os vendedores antes de avançar.
@@ -138,7 +138,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
             {suggestions.map(s => (
               <div
                 key={s.id}
-                className="p-5 rounded-sm border"
+                className="p-5 rounded-xl border"
                 style={{ background: "#FFFFFF", borderColor: NEUTRAL.success + "40", borderLeftWidth: 4 }}
               >
                 <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
@@ -155,7 +155,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                   </div>
                 </div>
                 <div
-                  className="mb-3 p-3 rounded-sm flex items-center gap-3"
+                  className="mb-3 p-3 rounded-xl flex items-center gap-3"
                   style={{ background: "#F5F5F3" }}
                 >
                   <CompanyTag companyId={s.presentIn[0]} />

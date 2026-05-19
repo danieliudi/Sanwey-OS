@@ -160,7 +160,7 @@ export function UserManagementView({
 
       {supabaseEnabled && (
         <div
-          className="p-3 rounded-sm border flex items-start gap-2 text-xs"
+          className="p-3 rounded-xl border flex items-start gap-2 text-xs"
           style={{ background: "#EEF5FC", borderColor: "#CFE2F3", color: "#264C7A" }}
         >
           <Info size={14} className="shrink-0 mt-0.5" />
@@ -183,7 +183,7 @@ export function UserManagementView({
             return (
               <div
                 key={u.id}
-                className="p-4 rounded-sm border flex items-center justify-between gap-4 flex-wrap"
+                className="p-4 rounded-xl border flex items-center justify-between gap-4 flex-wrap"
                 style={{ background: "#FFFFFF", borderColor: pending ? NEUTRAL.gold : "#EFEFEF" }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -201,7 +201,7 @@ export function UserManagementView({
                       </Badge>
                       {u.id === currentUser?.id && (
                         <span
-                          className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-sm"
+                          className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-xl"
                           style={{ background: NEUTRAL.gold + "20", color: "#8A6A00", letterSpacing: "0.15em" }}
                         >
                           Você
@@ -209,7 +209,7 @@ export function UserManagementView({
                       )}
                       {pending && (
                         <span
-                          className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-sm"
+                          className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-xl"
                           style={{ background: "#FEF9E7", color: "#8A6A00", letterSpacing: "0.15em" }}
                         >
                           Aguardando liberação
@@ -322,13 +322,13 @@ export function UserManagementView({
                     key={id}
                     type="button"
                     onClick={() => toggleCompany(id)}
-                    className="p-3 rounded-sm border flex items-center gap-2 transition-all"
+                    className="p-3 rounded-xl border flex items-center gap-2 transition-all"
                     style={{
                       background: selected ? c.light : "#FFFFFF",
                       borderColor: selected ? c.primary : "#EFEFEF",
                     }}
                   >
-                    <div className="w-3 h-3 rounded-sm" style={{ background: c.primary }} />
+                    <div className="w-3 h-3 rounded-xl" style={{ background: c.primary }} />
                     <span
                       className="font-semibold text-sm flex-1 text-left"
                       style={{ color: selected ? c.dark : NEUTRAL.graphite }}
@@ -342,7 +342,7 @@ export function UserManagementView({
             </div>
           </div>
           {modalError && (
-            <div className="p-2 rounded-sm text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+            <div className="p-2 rounded-xl text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
               {modalError}
             </div>
           )}

@@ -6,7 +6,7 @@ export function Input({ value, onChange, placeholder, icon: Icon, type = "text",
     <div className={`relative ${className}`}>
       {Icon && (
         <Icon
-          size={16}
+          size={15}
           className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
           color={NEUTRAL.slate}
           strokeWidth={2}
@@ -17,14 +17,17 @@ export function Input({ value, onChange, placeholder, icon: Icon, type = "text",
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full py-2.5 text-sm rounded-sm border transition-all focus:outline-none focus:ring-2"
+        className="w-full py-2 text-sm rounded-lg border transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-0"
         style={{
-          paddingLeft: Icon ? 40 : 14,
-          paddingRight: 14,
-          borderColor: "#E5E5E5",
+          paddingLeft: Icon ? 38 : 12,
+          paddingRight: 12,
+          borderColor: "#D4D4D4",
           background: "#FFFFFF",
           color: NEUTRAL.graphite,
+          "--tw-ring-color": NEUTRAL.graphite + "30",
         }}
+        onFocus={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite + "70"; }}
+        onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
       />
     </div>
   );

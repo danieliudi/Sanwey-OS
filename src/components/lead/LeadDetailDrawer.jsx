@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   X, MapPin, AlertTriangle, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
-  Building2, RefreshCw,
+  Building2, RefreshCw, Check,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -19,13 +19,14 @@ import { isSupabaseConfigured } from "../../lib/supabase";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-// FIX B1 — Rules of Hooks: hooks run unconditionally on every render.
-// The early-return guard is rendered AFTER all hook calls so React's
-// hook ordering is stable when `lead` toggles between object and null.
 export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isManager, currentUser }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [classification, setClassification] = useState(lead?.clientClassification ?? "");
   const [orderCount, setOrderCount] = useState(lead?.orderCount ?? 0);
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [showFollowUpInput, setShowFollowUpInput] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   const { loading: enriching, error: enrichError, data: enrichData, lookup, reset: resetEnrich } = useCnpjLookup();
 
   useEffect(() => { resetEnrich(); }, [lead?.id, resetEnrich]);
@@ -35,6 +36,8 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
       setStage(lead.stage);
       setClassification(lead.clientClassification ?? "");
       setOrderCount(lead.orderCount ?? 0);
+      setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
+      setShowFollowUpInput(false);
     }
   }, [lead?.id, lead?.stage, lead?.clientClassification, lead?.orderCount]);
 
@@ -56,7 +59,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
   }, [lead, users]);
 
   const company = lead ? COMPANIES[lead.companyId] : null;
-
   const decisionMakerName = lead?.decisionMaker?.name || "—";
   const decisionMakerRole = lead?.decisionMaker?.role || "—";
   const decisionMakerInitials = useMemo(() => {
@@ -65,28 +67,26 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
   }, [decisionMakerName]);
   const firstName = decisionMakerName?.split(" ")[0] || "time";
 
+  // Normalize probability for display (handle both 0–1 and 0–100 formats)
+  const probDisplay = lead
+    ? (lead.probability > 1 ? Math.round(lead.probability) : Math.round(lead.probability * 100))
+    : 0;
+
   const emailDraft = useMemo(() => {
     if (!lead || !company) return "";
     const senderName = currentUser?.name || "[Seu nome]";
     const senderEmail = currentUser?.email ? `\n${currentUser.email}` : "";
-    return `Olá ${firstName},
-
-Identifiquei que a ${lead.company} teve ${(lead.evidence || "").toLowerCase()}.
-
-Sou da ${company.name} e gostaria de entender melhor como podemos apoiar nesse momento.
-
-Podemos agendar 20 minutos esta semana?
-
-Abraço,
-${senderName}${senderEmail}
-${company.name}`;
+    return `Olá ${firstName},\n\nIdentifiquei que a ${lead.company} teve ${(lead.evidence || "").toLowerCase()}.\n\nSou da ${company.name} e gostaria de entender melhor como podemos apoiar nesse momento.\n\nPodemos agendar 20 minutos esta semana?\n\nAbraço,\n${senderName}${senderEmail}\n${company.name}`;
   }, [lead, company, firstName, currentUser]);
 
   if (!lead || !company) return null;
 
   const handleCopyDraft = () => {
     if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(emailDraft);
+      navigator.clipboard.writeText(emailDraft).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
     }
   };
 
@@ -138,16 +138,17 @@ ${company.name}`;
     if (Object.keys(patch).length > 0) onUpdate(lead.id, patch);
   };
 
-  const handleScheduleFollowUp = () => {
-    const current = lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "";
-    const answer = window.prompt("Data do follow-up (AAAA-MM-DD):", current);
-    if (!answer) return;
-    const d = new Date(answer);
-    if (Number.isNaN(d.getTime())) {
-      window.alert("Data inválida. Use o formato AAAA-MM-DD.");
-      return;
-    }
+  const handleSaveFollowUp = () => {
+    if (!followUpDate) return;
+    const d = new Date(followUpDate);
+    if (Number.isNaN(d.getTime())) return;
     onUpdate(lead.id, { nextFollowUp: d.toISOString() });
+    setShowFollowUpInput(false);
+  };
+
+  const handleCancelFollowUp = () => {
+    setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
+    setShowFollowUpInput(false);
   };
 
   const researchLinks = useMemo(() => {
@@ -166,34 +167,46 @@ ${company.name}`;
   return (
     <div
       className="fixed inset-0 z-40 flex"
-      style={{ background: "rgba(0,0,0,0.35)", backdropFilter: "blur(2px)" }}
+      style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div className="flex-1" onClick={onClose} />
       <div
-        className="w-full max-w-2xl h-full overflow-y-auto shadow-2xl"
-        style={{ background: NEUTRAL.warmWhite }}
+        className="w-full max-w-xl h-full overflow-y-auto"
+        style={{
+          background: "#FAFAF8",
+          boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
+        }}
         onClick={e => e.stopPropagation()}
       >
+        {/* Drawer header */}
         <div
-          className="sticky top-0 z-10 px-6 py-4 border-b flex items-center justify-between backdrop-blur"
-          style={{ background: "rgba(250,250,248,0.95)", borderColor: "#EFEFEF" }}
+          className="sticky top-0 z-10 px-5 py-3.5 border-b flex items-center justify-between"
+          style={{ background: "rgba(250,250,248,0.97)", borderColor: "#E8E8E8", backdropFilter: "blur(8px)" }}
         >
           <div className="flex items-center gap-2">
             <CompanyTag companyId={lead.companyId} />
             <UrgencyTag urgency={lead.urgency} />
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-gray-100" aria-label="Fechar">
-            <X size={20} color={NEUTRAL.slate} />
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
+            style={{ color: NEUTRAL.slate }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            aria-label="Fechar"
+          >
+            <X size={18} />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-5 space-y-4">
+          {/* Lead title */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h2 className="font-bold mb-1" style={{ fontSize: 22, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+              <h2 className="font-bold mb-1" style={{ fontSize: 20, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
                 {lead.company}
               </h2>
               <div className="flex items-center gap-2 text-sm flex-wrap" style={{ color: NEUTRAL.slate }}>
@@ -204,21 +217,29 @@ ${company.name}`;
                 <span className="flex items-center gap-1"><MapPin size={12} />{lead.city}</span>
               </div>
             </div>
-            <FitScoreCircle score={lead.fitScore} size={64} />
+            <FitScoreCircle score={lead.fitScore} size={60} />
           </div>
 
+          {/* ── Pipeline stage progress bar ───────────────────────────────── */}
+          <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
+
+          {/* ── Hero metrics ─────────────────────────────────────────────── */}
+          <div className="grid grid-cols-3 gap-2">
+            <HeroMetric label="VALOR" value={formatK(lead.value, 1)} />
+            <HeroMetric label="PROB." value={`${probDisplay}%`} color={company.primary} />
+            <HeroMetric label="FECHAMENTO" value={formatDateBR(lead.closeDate) || "—"} />
+          </div>
+
+          {/* Enriquecimento RF */}
           {isSupabaseConfigured && (
             <div
-              className="p-3 rounded-sm border flex items-start justify-between gap-3 flex-wrap"
-              style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}
+              className="p-3.5 rounded-xl border flex items-start justify-between gap-3 flex-wrap"
+              style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}
             >
               <div className="flex-1 min-w-0">
-                <div
-                  className="text-[10px] uppercase font-bold tracking-widest mb-1 flex items-center gap-1"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-                >
-                  <Building2 size={11} />
-                  Enriquecimento Receita Federal
+                <div className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: NEUTRAL.slate }}>
+                  <Building2 size={12} />
+                  Receita Federal
                 </div>
                 {enrichData ? (
                   <div className="text-xs" style={{ color: NEUTRAL.graphite }}>
@@ -234,9 +255,6 @@ ${company.name}`;
                         {enrichData.email && <>✉ {enrichData.email}</>}
                       </div>
                     )}
-                    {enrichData.cached && (
-                      <div className="text-[10px] mt-0.5" style={{ color: NEUTRAL.slate }}>cache</div>
-                    )}
                   </div>
                 ) : enrichError ? (
                   <div className="text-xs" style={{ color: "#B91C1C" }}>
@@ -244,32 +262,25 @@ ${company.name}`;
                   </div>
                 ) : (
                   <div className="text-xs" style={{ color: NEUTRAL.slate }}>
-                    Busca dados oficiais (CNAE, porte, capital social, contatos) na Receita Federal e atualiza o lead.
+                    Busca CNAE, porte, capital social e contatos.
                   </div>
                 )}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={enriching ? RefreshCw : Building2}
-                onClick={handleEnrich}
-                disabled={enriching || !lead.cnpj}
-              >
+              <Button variant="ghost" size="sm" icon={enriching ? RefreshCw : Building2}
+                onClick={handleEnrich} disabled={enriching || !lead.cnpj}>
                 {enriching ? "Buscando…" : enrichData ? "Re-buscar" : "Enriquecer"}
               </Button>
             </div>
           )}
 
+          {/* Overlap (gerente) */}
           {isManager && overlaps.length > 0 && (
             <div
-              className="p-4 rounded-sm border-l-4"
-              style={{ background: NEUTRAL.amber + "15", borderLeftColor: NEUTRAL.amber }}
+              className="p-3.5 rounded-xl border-l-4"
+              style={{ background: "#FFFBE6", borderLeftColor: NEUTRAL.amber, borderTop: "1px solid #FFE680", borderRight: "1px solid #FFE680", borderBottom: "1px solid #FFE680" }}
             >
-              <div
-                className="text-xs uppercase font-bold tracking-widest mb-2"
-                style={{ color: NEUTRAL.amber, letterSpacing: "0.15em" }}
-              >
-                <Network size={11} className="inline mr-1" />
+              <div className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "#9A7A00" }}>
+                <Network size={12} />
                 Overlap detectado · visível só para gerente
               </div>
               <div className="text-sm mb-2" style={{ color: NEUTRAL.graphite }}>
@@ -280,14 +291,14 @@ ${company.name}`;
                 return (
                   <div
                     key={o.id}
-                    className="text-xs p-2 rounded-sm mb-1 flex items-center justify-between"
+                    className="text-xs p-2 rounded-lg mb-1 flex items-center justify-between"
                     style={{ background: "#FFFFFF" }}
                   >
                     <div className="flex items-center gap-2">
                       <CompanyTag companyId={o.companyId} />
                       <span style={{ color: NEUTRAL.graphite }}>{u?.name || "—"}</span>
                     </div>
-                    <span className="font-mono" style={{ color: NEUTRAL.graphite }}>
+                    <span className="font-mono" style={{ color: NEUTRAL.slate }}>
                       {formatK(o.value)} · {o.stage}
                     </span>
                   </div>
@@ -296,87 +307,78 @@ ${company.name}`;
             </div>
           )}
 
+          {/* Trigger */}
           <div
-            className="p-4 rounded-sm border-l-4"
-            style={{ background: company.light, borderLeftColor: company.primary }}
+            className="p-3.5 rounded-xl border-l-4"
+            style={{
+              background: company.light,
+              borderLeftColor: company.primary,
+              border: `1px solid ${company.primary}20`,
+              borderLeft: `4px solid ${company.primary}`,
+            }}
           >
-            <div
-              className="text-xs uppercase font-bold tracking-widest mb-1"
-              style={{ color: company.dark, letterSpacing: "0.15em" }}
-            >
-              <AlertTriangle size={11} className="inline mr-1" />
+            <div className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: company.dark }}>
+              <AlertTriangle size={12} />
               Gatilho · {lead.triggerLabel}
             </div>
             <div className="text-sm" style={{ color: NEUTRAL.graphite }}>{lead.evidence}</div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Info tiles */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <InfoTile label="Porte" value={lead.size} />
             <InfoTile label="Quantidade" value={`${lead.quantity} un`} />
-            <InfoTile label="Probabilidade" value={`${Math.round(lead.probability * 100)}%`} />
+            <InfoTile label="Probabilidade" value={`${probDisplay}%`} />
             <InfoTile label="Fechamento" value={formatDateBR(lead.closeDate)} />
           </div>
 
-          <div className="p-4 rounded-sm border" style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}>
-            <div
-              className="text-[10px] uppercase font-bold tracking-widest mb-3"
-              style={{ color: company.primary, letterSpacing: "0.15em" }}
-            >
-              <Package size={11} className="inline mr-1" />Produto vinculado
+          {/* Produto */}
+          <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+            <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
+              <Package size={12} />Produto vinculado
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-semibold" style={{ color: NEUTRAL.graphite }}>{lead.skuName}</div>
-                <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+                <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{lead.skuName}</div>
+                <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
                   {lead.quantity} un × {formatBRL(lead.unitPrice)}
                 </div>
               </div>
-              <div className="text-right">
-                <div className="font-bold text-lg" style={{ color: NEUTRAL.graphite }}>
-                  {formatK(lead.value, 1)}
-                </div>
+              <div className="font-bold text-lg" style={{ color: NEUTRAL.graphite }}>
+                {formatK(lead.value, 1)}
               </div>
             </div>
           </div>
 
-          <div className="p-4 rounded-sm border" style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}>
-            <div
-              className="text-[10px] uppercase font-bold tracking-widest mb-3"
-              style={{ color: company.primary, letterSpacing: "0.15em" }}
-            >
-              <Users size={11} className="inline mr-1" />Decisor
+          {/* Decisor */}
+          <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+            <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
+              <Users size={12} />Decisor
             </div>
             <div className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0"
+                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0 text-sm"
                 style={{ background: company.primary }}
               >
                 {decisionMakerInitials}
               </div>
               <div>
-                <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
-                  {decisionMakerName}
-                </div>
+                <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{decisionMakerName}</div>
                 <div className="text-xs" style={{ color: NEUTRAL.slate }}>{decisionMakerRole}</div>
               </div>
             </div>
           </div>
 
+          {/* Etapa + Responsável */}
           <div className="grid md:grid-cols-2 gap-3">
             <div>
-              <label
-                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-              >
+              <label className="text-xs font-semibold mb-1.5 block" style={{ color: NEUTRAL.slate }}>
                 Etapa do funil
               </label>
               <Select value={stage || ""} onChange={handleStageChange} options={STAGE_OPTIONS} />
             </div>
             <div>
-              <label
-                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-              >
+              <label className="text-xs font-semibold mb-1.5 block" style={{ color: NEUTRAL.slate }}>
                 Responsável
               </label>
               <Select
@@ -388,13 +390,10 @@ ${company.name}`;
             </div>
           </div>
 
-          {/* ── Classificação ABCD ──────────────────────────────────── */}
+          {/* Classificação ABCD */}
           <div className="grid md:grid-cols-2 gap-3">
             <div>
-              <label
-                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-              >
+              <label className="text-xs font-semibold mb-1.5 block" style={{ color: NEUTRAL.slate }}>
                 Classificação de cliente
               </label>
               <div className="flex items-center gap-2">
@@ -405,20 +404,13 @@ ${company.name}`;
                   placeholder="Sem classificação"
                 />
                 {classification && (
-                  <ClassificationBadge
-                    classification={classification}
-                    orderCount={orderCount}
-                    size="md"
-                  />
+                  <ClassificationBadge classification={classification} orderCount={orderCount} size="md" />
                 )}
               </div>
             </div>
             {classification === "A" && (
               <div>
-                <label
-                  className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-                >
+                <label className="text-xs font-semibold mb-1.5 block" style={{ color: NEUTRAL.slate }}>
                   Qtd. pedidos (A-#)
                 </label>
                 <input
@@ -426,65 +418,97 @@ ${company.name}`;
                   min="0"
                   value={orderCount}
                   onChange={handleOrderCountChange}
-                  className="w-full text-sm rounded-sm border px-3 py-2 outline-none focus:ring-1"
-                  style={{
-                    borderColor: "#DCDCDC",
-                    color: NEUTRAL.graphite,
-                    background: "#FFFFFF",
-                  }}
+                  className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
+                  style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                  onFocus={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite + "70"; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
                 />
               </div>
             )}
           </div>
 
-          <div className="p-5 rounded-sm" style={{ background: company.dark, color: "#FFFFFF" }}>
+          {/* Email draft */}
+          <div className="p-4 rounded-xl" style={{ background: company.dark, color: "#FFFFFF" }}>
             <div className="flex items-center justify-between mb-3">
-              <div
-                className="text-[10px] uppercase font-bold tracking-widest flex items-center gap-1"
-                style={{ color: "#FFE9A8", letterSpacing: "0.15em" }}
-              >
-                <Sparkles size={11} />Rascunho de abordagem
+              <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "#FFE9A8" }}>
+                <Sparkles size={12} />Rascunho de abordagem
               </div>
               <button
                 onClick={handleCopyDraft}
-                className="text-xs flex items-center gap-1 text-white/80 hover:text-white"
+                className="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all duration-150"
+                style={{ background: "rgba(255,255,255,0.12)", color: copied ? "#A3E6B4" : "rgba(255,255,255,0.8)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
               >
-                <Copy size={11} />Copiar
+                {copied ? <Check size={11} /> : <Copy size={11} />}
+                {copied ? "Copiado!" : "Copiar"}
               </button>
             </div>
             <div
-              className="text-sm leading-relaxed whitespace-pre-line text-white/95 p-3 rounded-sm"
-              style={{ background: "rgba(0,0,0,0.2)" }}
+              className="text-sm leading-relaxed whitespace-pre-line p-3 rounded-lg"
+              style={{ background: "rgba(0,0,0,0.18)", color: "rgba(255,255,255,0.92)" }}
             >
               {emailDraft}
             </div>
           </div>
 
-          {lead.nextFollowUp && (
-            <div
-              className="text-xs px-3 py-2 rounded-sm border flex items-center gap-2"
-              style={{ borderColor: "#EFEFEF", background: "#FFFFFF", color: NEUTRAL.slate }}
-            >
-              <Calendar size={12} />
-              Follow-up agendado para <strong style={{ color: NEUTRAL.graphite }}>{formatDateBR(lead.nextFollowUp)}</strong>
+          {/* Follow-up inline */}
+          <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: NEUTRAL.slate }}>
+                <Calendar size={13} />
+                Follow-up agendado
+              </div>
+              {!showFollowUpInput && (
+                <button
+                  onClick={() => setShowFollowUpInput(true)}
+                  className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
+                  style={{ color: company.primary, background: company.light }}
+                  onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+                >
+                  {lead.nextFollowUp ? "Alterar" : "Agendar"}
+                </button>
+              )}
             </div>
-          )}
 
-          <div className="pt-3 border-t space-y-3" style={{ borderColor: "#EFEFEF" }}>
+            {lead.nextFollowUp && !showFollowUpInput && (
+              <div className="text-sm font-semibold mt-1" style={{ color: NEUTRAL.graphite }}>
+                {formatDateBR(lead.nextFollowUp)}
+              </div>
+            )}
+
+            {showFollowUpInput && (
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="date"
+                  value={followUpDate}
+                  onChange={e => setFollowUpDate(e.target.value)}
+                  className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors cursor-pointer"
+                  style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FAFAF8" }}
+                  onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
+                />
+                <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveFollowUp}>
+                  Salvar
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleCancelFollowUp}>
+                  Cancelar
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="pt-1 space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
               <Button variant="primary" icon={Send} accent={company.primary} onClick={handleStartOutreach}>
                 Iniciar abordagem
               </Button>
-              <Button variant="secondary" icon={Calendar} onClick={handleScheduleFollowUp}>
-                Agendar follow-up
-              </Button>
             </div>
             <div>
-              <div
-                className="text-[10px] uppercase font-bold tracking-widest mb-2"
-                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-              >
-                Pesquisar a empresa em
+              <div className="text-xs font-semibold mb-2" style={{ color: NEUTRAL.slate }}>
+                Pesquisar empresa em
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {researchLinks.map(l => {
@@ -495,8 +519,10 @@ ${company.name}`;
                       href={l.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-xs font-semibold transition-all hover:shadow-sm"
-                      style={{ borderColor: "#EFEFEF", background: "#FFFFFF", color: NEUTRAL.graphite }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-150 cursor-pointer"
+                      style={{ borderColor: "#E8E8E8", background: "#FFFFFF", color: NEUTRAL.graphite }}
+                      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"; e.currentTarget.style.borderColor = "#D0D0D0"; }}
+                      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "#E8E8E8"; }}
                     >
                       <Icon size={12} strokeWidth={2} />
                       {l.label}
@@ -513,13 +539,197 @@ ${company.name}`;
   );
 }
 
+// ── Pipeline stage bar ────────────────────────────────────────────────────────
+
+function PipelineStageBar({ currentStage, companyColor }) {
+  const nonTerminal = DEFAULT_PIPELINE_STAGES.filter(s => !s.terminal);
+  const currentIdx = nonTerminal.findIndex(s => s.id === currentStage);
+  const stageData = DEFAULT_PIPELINE_STAGES.find(s => s.id === currentStage);
+  const isWon  = Boolean(stageData?.won);
+  const isLost = Boolean(stageData?.lost);
+  const isTerminal = isWon || isLost;
+
+  return (
+    <div
+      className="p-4 rounded-xl border"
+      style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}
+    >
+      <div
+        className="text-[10px] font-semibold mb-3 tracking-widest uppercase"
+        style={{ color: NEUTRAL.slate }}
+      >
+        Etapa atual
+      </div>
+      <div className="flex items-start">
+        {nonTerminal.map((s, idx) => {
+          const done   = isTerminal || idx < currentIdx;
+          const active = !isTerminal && idx === currentIdx;
+          const lineColor = done ? companyColor : "#E8E8E8";
+
+          return (
+            <React.Fragment key={s.id}>
+              {idx > 0 && (
+                <div
+                  style={{
+                    flex: 1,
+                    height: 2,
+                    marginTop: 9,
+                    background: lineColor,
+                    transition: "background 0.2s",
+                  }}
+                />
+              )}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 44 }}>
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    background: done ? companyColor : active ? companyColor : "#F1F3F5",
+                    border: `2px solid ${done || active ? companyColor : "#D4D4D8"}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  {done && (
+                    <svg width="10" height="10" viewBox="0 0 10 10">
+                      <polyline
+                        points="1.5,5 4,7.5 8.5,2"
+                        stroke="white"
+                        strokeWidth="1.8"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                  {active && (
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: "white" }} />
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: 9,
+                    marginTop: 4,
+                    textAlign: "center",
+                    color: active ? companyColor : done ? NEUTRAL.slate : "#C4C4C8",
+                    fontWeight: active ? 700 : 400,
+                    maxWidth: 42,
+                    lineHeight: 1.2,
+                    transition: "color 0.2s",
+                  }}
+                >
+                  {s.name}
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        })}
+
+        {/* Terminal node */}
+        <div
+          style={{
+            flex: 1,
+            height: 2,
+            marginTop: 9,
+            background: isWon ? "#16A34A" : isLost ? "#B91C1C" : "#E8E8E8",
+            transition: "background 0.2s",
+          }}
+        />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 44 }}>
+          <div
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              background: isWon ? "#16A34A" : isLost ? "#B91C1C" : "#F1F3F5",
+              border: `2px solid ${isWon ? "#16A34A" : isLost ? "#B91C1C" : "#D4D4D8"}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s",
+            }}
+          >
+            {isTerminal && (
+              <svg width="10" height="10" viewBox="0 0 10 10">
+                <polyline
+                  points="1.5,5 4,7.5 8.5,2"
+                  stroke="white"
+                  strokeWidth="1.8"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </div>
+          <div
+            style={{
+              fontSize: 9,
+              marginTop: 4,
+              textAlign: "center",
+              color: isWon ? "#16A34A" : isLost ? "#B91C1C" : "#C4C4C8",
+              fontWeight: isTerminal ? 700 : 400,
+              maxWidth: 42,
+              lineHeight: 1.2,
+            }}
+          >
+            {isWon ? "Ganho" : isLost ? "Perdido" : "Fechado"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Hero metric card ──────────────────────────────────────────────────────────
+
+function HeroMetric({ label, value, color }) {
+  return (
+    <div
+      style={{
+        background: color ? color + "0D" : "#FFFFFF",
+        borderRadius: 12,
+        border: `1px solid ${color ? color + "22" : "#E8E8E8"}`,
+        padding: "10px 14px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 9,
+          fontWeight: 700,
+          color: NEUTRAL.slate,
+          letterSpacing: "0.10em",
+          marginBottom: 3,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          color: color || NEUTRAL.graphite,
+          letterSpacing: "-0.02em",
+          lineHeight: 1.2,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+// ── Info tile ─────────────────────────────────────────────────────────────────
+
 function InfoTile({ label, value }) {
   return (
-    <div className="p-3 rounded-sm" style={{ background: "#F5F5F3" }}>
-      <div
-        className="text-[10px] uppercase font-bold tracking-widest mb-1"
-        style={{ color: NEUTRAL.slate, letterSpacing: "0.1em" }}
-      >
+    <div className="p-3 rounded-xl" style={{ background: "#F1F3F5" }}>
+      <div className="text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.slate }}>
         {label}
       </div>
       <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{value}</div>

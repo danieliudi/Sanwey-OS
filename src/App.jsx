@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog, Settings as SettingsIcon, Bot, Presentation,
+  LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
+  Settings as SettingsIcon, Bot, Presentation, GitBranch, Workflow, Zap,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -12,10 +13,11 @@ import { useUserSettings } from "./hooks/use-user-settings";
 import { useSupabaseAuth } from "./hooks/use-supabase-auth";
 import { useLeads } from "./hooks/use-leads";
 import { useProfiles } from "./hooks/use-profiles";
+import { usePipelineTransitions } from "./hooks/use-pipeline-transitions";
+import { useAutomations } from "./hooks/use-automations";
 import { LoginScreen } from "./components/shell/LoginScreen";
 import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScreen";
-import { TopBar } from "./components/shell/TopBar";
-import { NavTabs } from "./components/shell/NavTabs";
+import { AppHeader } from "./components/shell/AppHeader";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
@@ -27,6 +29,9 @@ import { UserManagementView } from "./components/views/UserManagementView";
 import { SettingsView } from "./components/views/SettingsView";
 import { AgentActionsView } from "./components/views/AgentActionsView";
 import { FairImportView } from "./components/views/FairImportView";
+import { FunnelHistoryView } from "./components/views/FunnelHistoryView";
+import { PipelineBuilderView } from "./components/views/PipelineBuilderView";
+import { AutomationsView } from "./components/views/AutomationsView";
 
 const INITIAL_SIGNALS = generateMarketSignals();
 
@@ -77,10 +82,23 @@ export default function App() {
 
   const { crossReferrals, approve: approveCross, reject: rejectCross } = useCrossReferrals(leads);
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
+  const pipelineTransitions = usePipelineTransitions();
+  const { evaluateAutomations } = useAutomations();
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [section, setSection] = useState("dashboard");
   const [selectedLead, setSelectedLead] = useState(null);
+
+  // Lifted to App so the parsed file, fair name, and import status survive
+  // tab switches. (Switching tabs unmounts FairImportView, which would
+  // otherwise reset its local useState.)
+  const [fairImportState, setFairImportState] = useState({
+    fairName: "",
+    phase: "idle",
+    rows: [],
+    importResult: null,
+    importing: false,
+  });
 
   const clearLocalData = useCallback(() => {
     try {
@@ -138,8 +156,26 @@ export default function App() {
   }, [updateLeadRemote]);
 
   const handleStageChange = useCallback(async (id, stage) => {
+    const prev = leads.find(l => l.id === id);
     await changeStage(id, stage);
-  }, [changeStage]);
+    // Run automation rules for stage_change event (non-blocking)
+    if (prev && prev.stage !== stage) {
+      const updated = { ...prev, stage, stageChangedAt: new Date().toISOString() };
+      const { patches } = evaluateAutomations(updated, prev, "stage_change");
+      for (const p of patches) {
+        await updateLeadRemote(p.leadId, p.patch).catch(() => {});
+      }
+    }
+  }, [changeStage, leads, evaluateAutomations, updateLeadRemote]);
+
+  // Wrapped addLead that fires lead_created automations after creation
+  const handleAddLead = useCallback(async (lead) => {
+    await addLead(lead);
+    const { patches } = evaluateAutomations(lead, null, "lead_created");
+    for (const p of patches) {
+      await updateLeadRemote(p.leadId, p.patch).catch(() => {});
+    }
+  }, [addLead, evaluateAutomations, updateLeadRemote]);
 
   const closeDrawer = useCallback(() => setSelectedLead(null), []);
 
@@ -178,6 +214,9 @@ export default function App() {
       base.push(
         { id: "executive", label: "Executivo", icon: BarChart3 },
         { id: "crossref", label: "Cross-sell", icon: Shuffle },
+        { id: "funnel-history", label: "Histórico", icon: GitBranch },
+        { id: "pipeline-builder", label: "Pipeline", icon: Workflow },
+        { id: "automations", label: "Automações", icon: Zap },
         { id: "fair-import", label: "Import Feira", icon: Presentation },
         { id: "users", label: "Usuários", icon: UserCog },
         { id: "settings", label: "Configurações", icon: SettingsIcon },
@@ -188,7 +227,8 @@ export default function App() {
 
   // Keep vendedor off restricted sections even if state was stale.
   useEffect(() => {
-    if (!isManager && ["executive", "crossref", "fair-import", "users", "settings"].includes(section)) {
+    const managerOnly = ["executive", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users", "settings"];
+    if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
   }, [isManager, section]);
@@ -254,22 +294,19 @@ export default function App() {
         style={{
           background: "rgba(250,250,248,0.95)",
           borderColor: "#EFEFEF",
-          borderBottomColor: accent + "20",
+          borderBottomColor: accent + "30",
           borderBottomWidth: 2,
         }}
       >
-        <TopBar
+        <AppHeader
           currentUser={currentUser}
-          isManager={isManager}
           activeCompany={activeCompany}
           accessibleCompanies={accessibleCompanies}
           onCompanyChange={setActiveCompany}
           onLogout={handleLogout}
-        />
-        <NavTabs
-          items={navItems}
+          navItems={navItems}
           section={section}
-          onChange={setSection}
+          onSectionChange={setSection}
           accent={accent}
         />
       </div>
@@ -298,7 +335,7 @@ export default function App() {
             onStarToggle={toggleStar}
             onLoadDemoLeads={loadDemoLeads}
             onGoToSettings={() => setSection("settings")}
-            onAddLead={addLead}
+            onAddLead={handleAddLead}
             accessibleCompanies={accessibleCompanies}
           />
         )}
@@ -311,7 +348,9 @@ export default function App() {
             users={users}
             onLeadClick={setSelectedLead}
             onStageChange={handleStageChange}
+            onAddLead={handleAddLead}
             visibleStages={settings.visibleKanbanStages}
+            pipelineTransitions={pipelineTransitions}
           />
         )}
         {section === "agents" && (
@@ -319,14 +358,38 @@ export default function App() {
         )}
         {section === "fair-import" && isManager && (
           <FairImportView
-            addLead={addLead}
+            addLead={handleAddLead}
             leads={leads}
             users={users}
             currentUser={currentUser}
+            state={fairImportState}
+            setState={setFairImportState}
           />
         )}
         {section === "executive" && isManager && (
           <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} />
+        )}
+        {section === "funnel-history" && isManager && (
+          <FunnelHistoryView
+            user={currentUser}
+            activeCompany={activeCompany}
+            leads={leads}
+            users={users}
+          />
+        )}
+        {section === "pipeline-builder" && isManager && (
+          <PipelineBuilderView
+            pipelines={pipelines}
+            transitions={pipelineTransitions}
+            accessibleCompanies={accessibleCompanies}
+          />
+        )}
+        {section === "automations" && isManager && (
+          <AutomationsView
+            leads={leads}
+            pipelines={pipelines}
+            activeCompany={activeCompany}
+          />
         )}
         {section === "crossref" && isManager && (
           <CrossReferralsView
@@ -376,10 +439,10 @@ export default function App() {
         className="px-4 md:px-6 py-5 border-t text-xs flex items-center justify-between flex-wrap gap-2"
         style={{ background: NEUTRAL.warmWhite, borderColor: "#EFEFEF", color: NEUTRAL.slate }}
       >
-        <div className="uppercase tracking-widest" style={{ letterSpacing: "0.15em" }}>
+        <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
           Grupo Sanwey · Commercial Intelligence v4.0
         </div>
-        <div className="uppercase tracking-widest" style={{ letterSpacing: "0.15em" }}>
+        <div style={{ color: NEUTRAL.slate }}>
           Abril 2026
         </div>
       </footer>

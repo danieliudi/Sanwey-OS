@@ -12,13 +12,14 @@ export function TopBar({
 }) {
   const roleLabel = ROLE_LABEL[currentUser.role] || "Vendedor";
   return (
-    <div className="px-4 md:px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
-      <div className="flex items-center gap-4">
+    <div className="px-4 md:px-6 py-2.5 flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex items-center gap-3">
         <Logo size="small" company={activeCompany} />
+
         {accessibleCompanies.length > 1 && (
           <div
-            className="flex items-center gap-1 rounded-sm p-0.5 border"
-            style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}
+            className="flex items-center gap-1 rounded-xl p-1 border"
+            style={{ background: "#F5F5F3", borderColor: "#E5E5E5" }}
           >
             {accessibleCompanies.map(id => {
               const c = COMPANIES[id];
@@ -27,16 +28,17 @@ export function TopBar({
                 <button
                   key={id}
                   onClick={() => onCompanyChange(id)}
-                  className="px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded-sm transition-all flex items-center gap-1.5"
+                  className="px-3 py-1 text-xs font-semibold rounded-lg transition-all duration-150 flex items-center gap-1.5 cursor-pointer select-none"
                   style={{
-                    background: active ? c.primary : "transparent",
-                    color: active ? "#FFFFFF" : NEUTRAL.slate,
-                    letterSpacing: "0.06em",
+                    background: active ? "#FFFFFF" : "transparent",
+                    color: active ? NEUTRAL.graphite : NEUTRAL.slate,
+                    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
+                    border: active ? "1px solid #E5E5E5" : "1px solid transparent",
                   }}
                 >
-                  <div
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: active ? "#FFFFFF" : c.primary }}
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ background: c.primary }}
                   />
                   {c.short}
                 </button>
@@ -45,22 +47,20 @@ export function TopBar({
           </div>
         )}
       </div>
+
       <div className="flex items-center gap-2">
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2.5">
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+            className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs shrink-0"
             style={{ background: currentUser.avatarBg }}
           >
             {currentUser.initials}
           </div>
           <div className="hidden lg:block">
-            <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+            <div className="text-sm font-semibold leading-tight" style={{ color: NEUTRAL.graphite }}>
               {currentUser.name}
             </div>
-            <div
-              className="text-[10px] uppercase tracking-wider"
-              style={{ color: NEUTRAL.slate, letterSpacing: "0.1em" }}
-            >
+            <div className="text-xs" style={{ color: NEUTRAL.slate }}>
               {roleLabel}
             </div>
           </div>

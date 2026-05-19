@@ -35,12 +35,13 @@ export function ExplorerView({
 
   return (
     <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
             Explorador de Mercado
           </h1>
-          <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
             Descubra novos prospects · cruze sinais públicos · adicione ao CRM com um clique
           </p>
         </div>
@@ -61,13 +62,11 @@ export function ExplorerView({
         />
       )}
 
-      <div className="p-5 rounded-sm border" style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}>
+      {/* Filter card */}
+      <div className="p-5 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <div className="flex items-center gap-2 mb-4">
           <Filter size={14} color={NEUTRAL.graphite} />
-          <span
-            className="uppercase font-bold tracking-widest"
-            style={{ color: NEUTRAL.graphite, fontSize: 11, letterSpacing: "0.15em" }}
-          >
+          <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
             Filtros da curadoria
           </span>
         </div>
@@ -98,10 +97,10 @@ export function ExplorerView({
             options={SIZE_OPTIONS}
           />
         </div>
-        <div className="flex items-center gap-4 flex-wrap pt-3 border-t" style={{ borderColor: "#EFEFEF" }}>
+        <div className="flex items-center gap-4 flex-wrap pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
           <div className="flex-1 min-w-[200px]">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs uppercase font-semibold" style={{ color: NEUTRAL.slate }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-medium" style={{ color: NEUTRAL.slate }}>
                 Fit mínimo
               </span>
               <span className="font-bold text-sm" style={{ color: NEUTRAL.graphite }}>{filters.fitMin}</span>
@@ -127,12 +126,13 @@ export function ExplorerView({
         onAddLead={onAddLead}
       />
 
+      {/* Empty CRM banner */}
       {leads.length === 0 && onLoadDemoLeads && (
         <div
-          className="p-4 rounded-sm border flex items-center justify-between gap-3 flex-wrap"
-          style={{ background: NEUTRAL.warmWhite, borderColor: "#EFEFEF" }}
+          className="p-4 rounded-xl border flex items-center justify-between gap-3 flex-wrap"
+          style={{ background: NEUTRAL.warmWhite || "#FAFAF8", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
         >
-          <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <div className="text-sm" style={{ color: NEUTRAL.slate }}>
             CRM ainda vazio. Carregue dados de demonstração para ver o pipeline completo.
           </div>
           <div className="flex gap-2">

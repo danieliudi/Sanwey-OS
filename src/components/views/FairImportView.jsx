@@ -204,14 +204,17 @@ const COMPANY_OPTIONS = [
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────
-export function FairImportView({ addLead, leads: existingLeads, users, currentUser }) {
+export function FairImportView({ addLead, leads: existingLeads, users, currentUser, state, setState }) {
   const fileRef = useRef(null);
-  const [fairName, setFairName] = useState("");
-  const [phase, setPhase] = useState("idle"); // idle | preview | importing | done
-  const [rows, setRows] = useState([]);
-  const [importResult, setImportResult] = useState(null);
+  // Persistent across tab switches — held in App.jsx
+  const { fairName, phase, rows, importResult, importing } = state;
+  const setFairName    = (v) => setState(s => ({ ...s, fairName: typeof v === "function" ? v(s.fairName) : v }));
+  const setPhase       = (v) => setState(s => ({ ...s, phase: typeof v === "function" ? v(s.phase) : v }));
+  const setRows        = (v) => setState(s => ({ ...s, rows: typeof v === "function" ? v(s.rows) : v }));
+  const setImportResult = (v) => setState(s => ({ ...s, importResult: typeof v === "function" ? v(s.importResult) : v }));
+  const setImporting   = (v) => setState(s => ({ ...s, importing: typeof v === "function" ? v(s.importing) : v }));
+  // Ephemeral UI state — fine to reset on remount
   const [expandedRow, setExpandedRow] = useState(null);
-  const [importing, setImporting] = useState(false);
 
   // Build seller options for dropdown
   const sellerOptions = useMemo(() => [
@@ -330,7 +333,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           </div>
         </div>
         {importResult.errors.length > 0 && (
-          <div className="p-4 rounded-sm border border-red-200 bg-red-50 text-sm max-w-md w-full">
+          <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-sm max-w-md w-full">
             <div className="font-semibold text-red-800 mb-2">Erros:</div>
             {importResult.errors.map((e, i) => (
               <div key={i} className="text-red-700">{e.company}: {e.err}</div>
@@ -369,7 +372,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
             placeholder="Ex: Intermodal 2026"
             value={fairName}
             onChange={e => setFairName(e.target.value)}
-            className="w-full text-sm rounded-sm border px-3 py-2 outline-none focus:ring-1"
+            className="w-full text-sm rounded-xl border px-3 py-2 outline-none focus:ring-1"
             style={{ borderColor: "#DCDCDC", color: NEUTRAL.graphite, background: "#FFFFFF" }}
           />
         </div>
@@ -381,7 +384,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
               Planilha (.xlsx)
             </label>
             <div
-              className="border-2 border-dashed rounded-sm p-6 flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-gray-50"
+              className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-gray-50"
               style={{ borderColor: "#DCDCDC", background: "#FAFAF8" }}
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
@@ -406,7 +409,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           <div className="flex items-end">
             <button
               onClick={reset}
-              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-sm border transition-colors hover:bg-gray-50"
+              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border transition-colors hover:bg-gray-50"
               style={{ borderColor: "#DCDCDC", color: NEUTRAL.slate }}
             >
               <RefreshCw size={14} />Trocar arquivo
@@ -417,7 +420,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
 
       {/* Stats bar */}
       {phase !== "idle" && (
-        <div className="flex flex-wrap gap-4 p-4 rounded-sm border" style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}>
+        <div className="flex flex-wrap gap-4 p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}>
           <Stat label="Total parseado" value={rows.length} />
           <Stat label="Selecionados" value={selectedRows.length} color={NEUTRAL.success} />
           <Stat label="Duplicados" value={dupCount} color={dupCount > 0 ? NEUTRAL.amber : undefined} />
@@ -429,14 +432,14 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
       {phase === "preview" && rows.length > 0 && (
         <>
           {unassignedCount > 0 && (
-            <div className="flex items-center gap-2 p-3 rounded-sm border-l-4 text-sm"
+            <div className="flex items-center gap-2 p-3 rounded-xl border-l-4 text-sm"
               style={{ background: "#FFF9EC", borderLeftColor: NEUTRAL.amber, color: NEUTRAL.graphite }}>
               <TriangleAlert size={14} style={{ color: NEUTRAL.amber, flexShrink: 0 }} />
               {unassignedCount} lead{unassignedCount > 1 ? "s" : ""} sem vendedor atribuído — defina antes de importar ou deixe para o gerente redistribuir depois.
             </div>
           )}
 
-          <div className="rounded-sm border overflow-hidden" style={{ borderColor: "#EFEFEF" }}>
+          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#EFEFEF" }}>
             {/* Table header */}
             <div className="grid text-[10px] uppercase font-bold tracking-widest px-3 py-2 border-b"
               style={{ gridTemplateColumns: "32px 1fr 120px 140px 160px 100px 32px", background: "#F5F5F3", borderColor: "#EFEFEF", color: NEUTRAL.slate, letterSpacing: "0.12em" }}>
@@ -467,7 +470,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           </div>
 
           {/* Import CTA */}
-          <div className="flex items-center justify-between p-4 rounded-sm border sticky bottom-4"
+          <div className="flex items-center justify-between p-4 rounded-xl border sticky bottom-4"
             style={{ background: "#FFFFFF", borderColor: "#EFEFEF", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
             <div className="text-sm" style={{ color: NEUTRAL.slate }}>
               <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>{selectedRows.length} leads</span> serão adicionados ao pipeline em <strong>Prospecção</strong>
@@ -556,7 +559,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             value={row.companyId}
             onChange={e => onUpdate({ companyId: e.target.value })}
             disabled={isDup || !row._selected}
-            className="text-xs rounded-sm border px-2 py-1 w-full"
+            className="text-xs rounded-xl border px-2 py-1 w-full"
             style={{ borderColor: "#DCDCDC", color: NEUTRAL.graphite, background: "#FFFFFF" }}
           >
             {companyOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -569,7 +572,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             value={row.owner || ""}
             onChange={e => onUpdate({ owner: e.target.value || null })}
             disabled={isDup || !row._selected}
-            className="text-xs rounded-sm border px-2 py-1 w-full"
+            className="text-xs rounded-xl border px-2 py-1 w-full"
             style={{
               borderColor: !row.owner && row._selected ? NEUTRAL.amber : "#DCDCDC",
               color: NEUTRAL.graphite,
