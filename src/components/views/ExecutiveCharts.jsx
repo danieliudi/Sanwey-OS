@@ -1,23 +1,14 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, LabelList,
 } from "recharts";
-import { Crown, Printer, Calendar } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { weightedValue } from "../../utils/pipeline-metrics";
-import { formatK, formatM } from "../../utils/currency";
+import { formatK } from "../../utils/currency";
 
-// Painel da Presidência — visão consolidada com gráficos profissionais.
-// Foco em "abrir e mostrar" — gerente/diretor compartilha tela ou imprime
-// pra reunião. Não substitui o Dashboard Executivo: complementa.
-
-const PERIODS = [
-  { id: "all",  label: "Todo período" },
-  { id: "30d",  label: "Últimos 30 dias" },
-  { id: "90d",  label: "Últimos 90 dias" },
-  { id: "ytd",  label: "YTD" },
-];
+// Gráficos profissionais (recharts) que vivem dentro da tab "Gráficos"
+// do Painel Executivo. Recebe leads já filtrados por período do parent.
 
 const STAGE_COLORS = {
   prospeccao:   "#B45309",
@@ -39,45 +30,14 @@ const STAGE_NAMES = {
   perdido: "Perdido",
 };
 
-export function PresidencyDashboard({ leads, pipelines, users }) {
-  const [period, setPeriod] = useState("all");
-
-  // Filtro temporal usa stageChangedAt como referência (movimentação
-  // recente). Períodos curtos focam no que está acontecendo agora.
-  const filtered = useMemo(() => {
-    if (period === "all") return leads;
-    const now = Date.now();
-    let cutoff;
-    if (period === "30d") cutoff = now - 30 * 86400000;
-    else if (period === "90d") cutoff = now - 90 * 86400000;
-    else if (period === "ytd") cutoff = new Date(new Date().getFullYear(), 0, 1).getTime();
-    return leads.filter(l => {
-      const ts = new Date(l.stageChangedAt || l.createdAt).getTime();
-      return !Number.isNaN(ts) && ts >= cutoff;
-    });
-  }, [leads, period]);
-
-  // ── KPIs ──────────────────────────────────────────────────────────────────
-  const kpis = useMemo(() => {
-    let pipeline = 0, forecast = 0, wonValue = 0, wonCount = 0, totalCount = 0;
-    for (const l of filtered) {
-      totalCount++;
-      if (l.stage === "ganho") { wonCount++; wonValue += l.value || 0; }
-      else if (l.stage === "perdido") { /* skip */ }
-      else {
-        pipeline += l.value || 0;
-        forecast += weightedValue(l, pipelines?.[l.companyId]);
-      }
-    }
-    const conversion = totalCount > 0 ? Math.round((wonCount / totalCount) * 100) : 0;
-    return { pipeline, forecast, wonValue, wonCount, conversion };
-  }, [filtered, pipelines]);
-
+export function ExecutiveCharts({ leads, pipelines, users }) {
   // ── Pipeline por empresa ─────────────────────────────────────────────────
   const pipelineByCompany = useMemo(() => {
     const m = {};
-    for (const id of COMPANY_IDS) m[id] = { id, name: COMPANIES[id]?.short || id, valor: 0, forecast: 0, color: COMPANIES[id]?.primary };
-    for (const l of filtered) {
+    for (const id of COMPANY_IDS) {
+      m[id] = { id, name: COMPANIES[id]?.short || id, valor: 0, forecast: 0 };
+    }
+    for (const l of leads) {
       if (l.stage === "ganho" || l.stage === "perdido") continue;
       const row = m[l.companyId];
       if (!row) continue;
@@ -85,21 +45,21 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
       row.forecast += weightedValue(l, pipelines?.[l.companyId]);
     }
     return COMPANY_IDS.map(id => m[id]);
-  }, [filtered, pipelines]);
+  }, [leads, pipelines]);
 
   // ── Funil de conversão ───────────────────────────────────────────────────
   const funnelData = useMemo(() => {
     const order = ["prospeccao", "qualificacao", "visitas", "amostras", "negociacao", "ganho"];
     const counts = Object.fromEntries(order.map(id => [id, 0]));
-    for (const l of filtered) {
+    for (const l of leads) {
       if (counts[l.stage] != null) counts[l.stage]++;
     }
     return order.map(id => ({ stage: STAGE_NAMES[id], count: counts[id], fill: STAGE_COLORS[id] }));
-  }, [filtered]);
+  }, [leads]);
 
   // ── Top 10 leads em aberto ───────────────────────────────────────────────
   const topLeads = useMemo(() => {
-    return filtered
+    return leads
       .filter(l => l.stage !== "ganho" && l.stage !== "perdido")
       .filter(l => (l.value || 0) > 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0))
@@ -110,28 +70,30 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
         empresa: COMPANIES[l.companyId]?.short || l.companyId,
         fill: COMPANIES[l.companyId]?.primary || NEUTRAL.graphite,
       }));
-  }, [filtered]);
+  }, [leads]);
 
   // ── Performance por vendedor ─────────────────────────────────────────────
   const sellerPerf = useMemo(() => {
     const byOwner = new Map();
-    for (const l of filtered) {
+    for (const l of leads) {
       if (!l.owner) continue;
       const u = users?.find(u => u.id === l.owner);
       if (!u) continue;
       const key = u.id;
-      if (!byOwner.has(key)) byOwner.set(key, { name: (u.name || u.email || "—").split(" ")[0], aberto: 0, ganho: 0, ganhoValor: 0 });
+      if (!byOwner.has(key)) {
+        byOwner.set(key, { name: (u.name || u.email || "—").split(" ")[0], aberto: 0, ganho: 0, ganhoValor: 0 });
+      }
       const row = byOwner.get(key);
       if (l.stage === "ganho") { row.ganho++; row.ganhoValor += l.value || 0; }
       else if (l.stage !== "perdido") row.aberto++;
     }
     return Array.from(byOwner.values()).sort((a, b) => b.ganhoValor - a.ganhoValor).slice(0, 8);
-  }, [filtered, users]);
+  }, [leads, users]);
 
   // ── Receita por mês ──────────────────────────────────────────────────────
   const revenueByMonth = useMemo(() => {
     const m = new Map();
-    for (const l of filtered) {
+    for (const l of leads) {
       if (l.stage !== "ganho") continue;
       const ref = l.stageChangedAt || l.updatedAt || l.createdAt;
       if (!ref) continue;
@@ -147,12 +109,12 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
         const [y, mo] = k.split("-");
         return { mes: `${mo}/${y.slice(2)}`, valor: v };
       });
-  }, [filtered]);
+  }, [leads]);
 
   // ── Distribuição do pipeline ─────────────────────────────────────────────
   const pipelineDistribution = useMemo(() => {
     const counts = { aberto: 0, ganho: 0, perdido: 0 };
-    for (const l of filtered) {
+    for (const l of leads) {
       if (l.stage === "ganho") counts.ganho++;
       else if (l.stage === "perdido") counts.perdido++;
       else counts.aberto++;
@@ -162,62 +124,10 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
       { name: "Ganhos",    value: counts.ganho,  fill: "#1A6E35" },
       { name: "Perdidos",  value: counts.perdido, fill: "#B91C1C" },
     ].filter(r => r.value > 0);
-  }, [filtered]);
+  }, [leads]);
 
   return (
-    <div className="space-y-5">
-      {/* Header com filtros */}
-      <div className="flex items-start justify-between flex-wrap gap-3 print:hidden">
-        <div>
-          <div className="flex items-center gap-2">
-            <Crown size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
-              Painel da Presidência
-            </h1>
-          </div>
-          <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
-            Visão executiva consolidada · {filtered.length} leads · {PERIODS.find(p => p.id === period)?.label}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "#D4D4D4", background: "#FFFFFF" }}>
-            {PERIODS.map(p => (
-              <button
-                key={p.id}
-                onClick={() => setPeriod(p.id)}
-                className="px-2.5 py-1.5 text-xs font-semibold cursor-pointer transition-colors"
-                style={{
-                  background: period === p.id ? "#1E4D8C" : "#FFFFFF",
-                  color: period === p.id ? "#FFFFFF" : NEUTRAL.slate,
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-            style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
-            title="Imprimir / salvar como PDF"
-          >
-            <Printer size={11} />
-            Exportar PDF
-          </button>
-        </div>
-      </div>
-
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Kpi label="Pipeline aberto" value={formatM(kpis.pipeline)} sublabel="Valor total de leads ativos" tone="#1E3A8A" />
-        <Kpi label="Forecast ponderado" value={formatM(kpis.forecast)} sublabel="Por probabilidade de etapa" tone="#0F766E" />
-        <Kpi label="Receita realizada" value={formatM(kpis.wonValue)} sublabel={`${kpis.wonCount} ganhos`} tone="#1A6E35" />
-        <Kpi label="Taxa de conversão" value={`${kpis.conversion}%`} sublabel="Leads → ganhos" tone="#C2410C" />
-      </div>
-
-      {/* Linha 1: pipeline por empresa + funil */}
+    <div className="space-y-4">
       <div className="grid lg:grid-cols-2 gap-4">
         <ChartCard title="Pipeline por empresa" subtitle="Valor total e forecast ponderado">
           <ResponsiveContainer width="100%" height={260}>
@@ -227,8 +137,8 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
               <YAxis tick={{ fontSize: 10 }} tickFormatter={formatK} />
               <Tooltip formatter={(v) => formatK(v)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="valor"    name="Pipeline"  fill="#1E4D8C" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="forecast" name="Forecast"  fill="#10B981" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="valor"    name="Pipeline" fill="#1E4D8C" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="forecast" name="Forecast" fill="#10B981" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -249,7 +159,6 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
         </ChartCard>
       </div>
 
-      {/* Top leads */}
       <ChartCard title="Top 10 leads em aberto" subtitle="Ordenado por valor">
         {topLeads.length === 0 ? (
           <EmptyState />
@@ -269,7 +178,6 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
         )}
       </ChartCard>
 
-      {/* Linha 3: vendedores + receita mensal */}
       <div className="grid lg:grid-cols-2 gap-4">
         <ChartCard title="Performance por vendedor" subtitle="Top 8 · ganhos vs em aberto">
           {sellerPerf.length === 0 ? (
@@ -282,14 +190,14 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="aberto" name="Em aberto" stackId="a" fill="#93C5FD" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="aberto" name="Em aberto" stackId="a" fill="#93C5FD" />
                 <Bar dataKey="ganho"  name="Ganhos"    stackId="a" fill="#1A6E35" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </ChartCard>
 
-        <ChartCard title="Receita por mês" subtitle="Valor de fechamentos mensais (últimos 12 meses)">
+        <ChartCard title="Receita por mês" subtitle="Fechamentos mensais (últimos 12 meses)">
           {revenueByMonth.length === 0 ? (
             <EmptyState />
           ) : (
@@ -306,7 +214,6 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
         </ChartCard>
       </div>
 
-      {/* Distribuição donut */}
       <ChartCard title="Distribuição do pipeline" subtitle="Em aberto · ganhos · perdidos">
         {pipelineDistribution.length === 0 ? (
           <EmptyState />
@@ -337,24 +244,6 @@ export function PresidencyDashboard({ leads, pipelines, users }) {
   );
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function Kpi({ label, value, sublabel, tone }) {
-  return (
-    <div className="rounded-xl border p-4" style={{ borderColor: "#E8E8E8", background: "#FFFFFF" }}>
-      <div className="text-[10px] font-bold uppercase mb-1" style={{ color: NEUTRAL.slate, letterSpacing: "0.06em" }}>
-        {label}
-      </div>
-      <div className="text-xl font-bold leading-none" style={{ color: tone }}>
-        {value}
-      </div>
-      <div className="text-[11px] mt-1.5" style={{ color: NEUTRAL.slate }}>
-        {sublabel}
-      </div>
-    </div>
-  );
-}
-
 function ChartCard({ title, subtitle, children }) {
   return (
     <div className="rounded-xl border p-4" style={{ borderColor: "#E8E8E8", background: "#FFFFFF" }}>
@@ -377,4 +266,4 @@ function EmptyState() {
   );
 }
 
-export default PresidencyDashboard;
+export default ExecutiveCharts;
