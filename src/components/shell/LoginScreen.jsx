@@ -77,7 +77,7 @@ export function LoginScreen({
 function LeftPanel() {
   return (
     <div
-      className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
+      className="hidden lg:flex lg:w-[30%] flex-col justify-between p-12 relative overflow-hidden"
       style={{ background: DARK_BG, color: "#FFFFFF" }}
     >
       {/* Watermark grande do símbolo no fundo (atrás de tudo, opacidade baixa).
@@ -99,16 +99,6 @@ function LeftPanel() {
           filter: "grayscale(1) brightness(2)",
         }}
       />
-
-      {/* Top: símbolo + wordmark (logo completo tem texto preto que sumiria
-          no painel escuro, então recriamos manualmente aqui). */}
-      <div className="relative z-10 flex items-center gap-3">
-        <img src="/sanwey-simbolo.png" alt="Sanwey" className="w-11 h-11" style={{ objectFit: "contain" }} />
-        <span className="text-2xl italic font-light tracking-tight text-white" style={{ fontFamily: "Georgia, serif" }}>
-          Sanwey
-        </span>
-        <span style={{ width: 60, height: 1.5, background: ACCENT_RED, marginLeft: 4 }} />
-      </div>
 
       {/* Middle: headline + features */}
       <div className="relative z-10 max-w-md">
