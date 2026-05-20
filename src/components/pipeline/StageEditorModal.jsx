@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, GripVertical, RotateCcw, Save } from "lucide-react";
+import { X, GripVertical, RotateCcw, Save, Plus, Trash2 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
 // Editor de etapas por empresa. Permite renomear, mudar código (letra
-// que o presidente quer no sistema), cor, probabilidade e reordenar via
-// drag. NÃO permite adicionar nem deletar etapas em v1 — IDs precisam
-// ser estáveis pra leads existentes continuarem funcionando, e
-// criar/remover requer migração que ainda não foi desenhada.
+// que o presidente quer no sistema), cor, probabilidade, SLA em dias,
+// reordenar via drag, adicionar e remover etapas.
+//
+// Trabalha sobre draft local; só persiste no Save via replacePipeline.
 
 const PALETTE = [
   "#B45309", "#DC2626", "#EAB308", "#16A34A", "#10B981",
@@ -14,18 +14,17 @@ const PALETTE = [
   "#64748B", "#475569",
 ];
 
+const NEW_STAGE_DEFAULTS = { code: "?", name: "Nova etapa", color: "#64748B", probability: 50, slaDays: 14 };
+
 export function StageEditorModal({
   open,
   onClose,
   companyId,
   stages,
   leads,
-  onUpdateStage,
-  onReorderStages,
+  onReplacePipeline,
   onResetPipeline,
 }) {
-  // Editamos sobre um draft local; só persiste no Save. Evita re-render
-  // do kanban a cada keystroke e dá um cancel funcional.
   const [draft, setDraft] = useState(() => stages.map(s => ({ ...s })));
   const [dragIdx, setDragIdx] = useState(null);
 
@@ -33,8 +32,6 @@ export function StageEditorModal({
     if (open) setDraft(stages.map(s => ({ ...s })));
   }, [open, stages]);
 
-  // Conta leads por etapa pra avisar antes de mudanças que afetam o
-  // operacional (renomear "Negociação" durante uma reunião confunde).
   const countsByStage = useMemo(() => {
     const m = {};
     for (const l of leads || []) {
@@ -51,10 +48,14 @@ export function StageEditorModal({
 
   const patch = (idx, p) => setDraft(d => d.map((s, i) => i === idx ? { ...s, ...p } : s));
 
-  const handleDragStart = (i) => setDragIdx(i);
+  const handleDragStart = (i) => {
+    if (draft[i]?.terminal) return;
+    setDragIdx(i);
+  };
   const handleDragOver = (e) => e.preventDefault();
   const handleDrop = (targetIdx) => {
     if (dragIdx == null || dragIdx === targetIdx) return;
+    if (draft[targetIdx]?.terminal) { setDragIdx(null); return; }
     setDraft(d => {
       const next = [...d];
       const [moved] = next.splice(dragIdx, 1);
@@ -64,11 +65,37 @@ export function StageEditorModal({
     setDragIdx(null);
   };
 
+  const handleAdd = () => {
+    const id = `custom_${Date.now().toString(36)}`;
+    const newStage = { id, ...NEW_STAGE_DEFAULTS };
+    // Insere antes das terminais pra manter ganho/perdido no fim.
+    setDraft(d => {
+      const firstTerminal = d.findIndex(s => s.terminal);
+      const insertAt = firstTerminal === -1 ? d.length : firstTerminal;
+      const next = [...d];
+      next.splice(insertAt, 0, newStage);
+      return next;
+    });
+  };
+
+  const handleDelete = (idx) => {
+    const stage = draft[idx];
+    const count = countsByStage[stage.id] || 0;
+    if (count > 0) {
+      alert(`Não dá pra remover "${stage.name}": ${count} lead${count !== 1 ? "s" : ""} ainda está${count !== 1 ? "ão" : ""} nessa etapa. Mova ou feche esses leads antes.`);
+      return;
+    }
+    if (!confirm(`Remover a etapa "${stage.name}"?`)) return;
+    setDraft(d => d.filter((_, i) => i !== idx));
+  };
+
   const handleSave = () => {
-    // 1. Aplica patches em campos
-    for (const s of draft) onUpdateStage(companyId, s.id, s);
-    // 2. Aplica nova ordem
-    onReorderStages(companyId, draft.map(s => s.id));
+    // Validação básica: códigos não vazios, nomes não vazios.
+    for (const s of draft) {
+      if (!s.name?.trim()) { alert("Toda etapa precisa de um nome."); return; }
+      if (!s.code?.trim()) { alert(`Etapa "${s.name}" precisa de um código (letra).`); return; }
+    }
+    onReplacePipeline(companyId, draft);
     onClose();
   };
 
@@ -85,7 +112,7 @@ export function StageEditorModal({
       onClick={onClose}
     >
       <div
-        className="rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col"
+        className="rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col"
         style={{ background: "#FFFFFF", maxHeight: "90vh" }}
         onClick={e => e.stopPropagation()}
       >
@@ -114,11 +141,31 @@ export function StageEditorModal({
           className="px-5 py-2.5 text-xs border-b"
           style={{ background: "#FFFBEB", borderColor: "#FDE68A", color: "#92400E" }}
         >
-          Renomear ou recolorir uma etapa afeta imediatamente o Kanban e todos os relatórios. Adicionar/remover etapas chega em uma próxima atualização.
+          Alterações afetam o Kanban e relatórios imediatamente. Não dá pra remover etapas com leads ativos.
+        </div>
+
+        {/* Header row */}
+        <div
+          className="px-4 py-2 border-b grid items-center gap-2 text-[10px] font-bold uppercase"
+          style={{
+            borderColor: "#E5E7EB",
+            color: NEUTRAL.slate,
+            letterSpacing: "0.06em",
+            gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
+          }}
+        >
+          <span />
+          <span>Código</span>
+          <span>Nome</span>
+          <span className="text-right">Prob.</span>
+          <span className="text-right">SLA (dias)</span>
+          <span>Cor</span>
+          <span className="text-right">Leads</span>
+          <span />
         </div>
 
         {/* Lista de etapas */}
-        <div className="overflow-y-auto flex-1 p-4 space-y-2">
+        <div className="overflow-y-auto flex-1 p-2 space-y-1.5">
           {draft.map((stage, idx) => {
             const count = countsByStage[stage.id] || 0;
             const isTerminal = !!stage.terminal;
@@ -126,69 +173,82 @@ export function StageEditorModal({
               <div
                 key={stage.id}
                 draggable={!isTerminal}
-                onDragStart={() => !isTerminal && handleDragStart(idx)}
+                onDragStart={() => handleDragStart(idx)}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(idx)}
-                className="rounded-lg border p-3 flex items-center gap-3"
+                className="rounded-lg border p-2 grid items-center gap-2"
                 style={{
                   borderColor: dragIdx === idx ? accent : "#E5E7EB",
                   background: isTerminal ? "#FAFAFA" : "#FFFFFF",
                   opacity: dragIdx != null && dragIdx !== idx ? 0.7 : 1,
+                  gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
                 }}
               >
+                {/* Grip */}
                 <span
                   className="shrink-0"
                   style={{ color: isTerminal ? "#D1D5DB" : NEUTRAL.slate, cursor: isTerminal ? "not-allowed" : "grab" }}
-                  title={isTerminal ? "Etapa terminal não pode ser reordenada" : "Arraste pra reordenar"}
+                  title={isTerminal ? "Terminal não reordena" : "Arraste pra reordenar"}
                 >
                   <GripVertical size={16} />
                 </span>
 
-                {/* Código (letra) */}
+                {/* Código */}
                 <input
                   value={stage.code || ""}
                   onChange={e => patch(idx, { code: e.target.value.toUpperCase().slice(0, 2) })}
-                  className="w-12 text-center font-bold rounded border px-1 py-1 text-sm"
-                  style={{
-                    borderColor: "#E5E7EB",
-                    color: stage.color,
-                    background: "#FFFFFF",
-                  }}
+                  className="w-full text-center font-bold rounded border px-1 py-1 text-sm"
+                  style={{ borderColor: "#E5E7EB", color: stage.color, background: "#FFFFFF" }}
                   maxLength={2}
-                  title="Código interno da etapa (1-2 letras)"
                 />
 
                 {/* Nome */}
                 <input
                   value={stage.name}
                   onChange={e => patch(idx, { name: e.target.value })}
-                  className="flex-1 rounded border px-2 py-1 text-sm"
+                  className="w-full rounded border px-2 py-1 text-sm"
                   style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
                 />
 
                 {/* Probabilidade */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center justify-end gap-1">
                   <input
                     type="number"
                     min={0}
                     max={100}
                     value={stage.probability ?? ""}
-                    onChange={e => {
-                      const v = e.target.value === "" ? null : Number(e.target.value);
-                      patch(idx, { probability: v });
-                    }}
+                    onChange={e => patch(idx, { probability: e.target.value === "" ? null : Number(e.target.value) })}
                     className="w-14 rounded border px-1 py-1 text-xs text-right"
                     style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
-                    title="Probabilidade de fechamento (%) — alimentará o forecast"
                   />
                   <span className="text-xs" style={{ color: NEUTRAL.slate }}>%</span>
+                </div>
+
+                {/* SLA */}
+                <div className="flex items-center justify-end gap-1">
+                  {isTerminal ? (
+                    <span className="text-xs italic" style={{ color: NEUTRAL.slate }}>—</span>
+                  ) : (
+                    <>
+                      <input
+                        type="number"
+                        min={0}
+                        value={stage.slaDays ?? ""}
+                        onChange={e => patch(idx, { slaDays: e.target.value === "" ? null : Number(e.target.value) })}
+                        className="w-14 rounded border px-1 py-1 text-xs text-right"
+                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                        title="Dias máximos esperados na etapa antes de virar 'parado'"
+                      />
+                      <span className="text-xs" style={{ color: NEUTRAL.slate }}>d</span>
+                    </>
+                  )}
                 </div>
 
                 {/* Cor */}
                 <ColorPicker value={stage.color} onChange={c => patch(idx, { color: c })} />
 
-                {/* Badges */}
-                <div className="flex flex-col items-end gap-0.5 shrink-0" style={{ minWidth: 70 }}>
+                {/* Contagem + badge terminal */}
+                <div className="flex flex-col items-end gap-0.5 shrink-0">
                   {isTerminal && (
                     <span
                       className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
@@ -202,13 +262,41 @@ export function StageEditorModal({
                   )}
                   {count > 0 && (
                     <span className="text-[10px]" style={{ color: NEUTRAL.slate }}>
-                      {count} lead{count !== 1 ? "s" : ""}
+                      {count}
                     </span>
                   )}
                 </div>
+
+                {/* Delete */}
+                {isTerminal ? (
+                  <span />
+                ) : (
+                  <button
+                    onClick={() => handleDelete(idx)}
+                    className="p-1 rounded cursor-pointer"
+                    style={{ color: count > 0 ? "#D1D5DB" : NEUTRAL.slate }}
+                    title={count > 0 ? `Não dá pra remover: ${count} lead${count !== 1 ? "s" : ""} aqui` : "Remover etapa"}
+                    onMouseEnter={e => { if (count === 0) { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.background = "#FEF2F2"; } }}
+                    onMouseLeave={e => { e.currentTarget.style.color = count > 0 ? "#D1D5DB" : NEUTRAL.slate; e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
             );
           })}
+
+          {/* Adicionar etapa */}
+          <button
+            onClick={handleAdd}
+            className="w-full flex items-center justify-center gap-1.5 p-2.5 text-xs font-semibold rounded-lg border-2 border-dashed cursor-pointer"
+            style={{ borderColor: "#D1D5DB", color: NEUTRAL.slate, background: "#FAFAFA" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; e.currentTarget.style.background = accent + "08"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.background = "#FAFAFA"; }}
+          >
+            <Plus size={13} />
+            Adicionar etapa
+          </button>
         </div>
 
         {/* Footer */}
@@ -268,11 +356,7 @@ function ColorPicker({ value, onChange }) {
               key={c}
               onClick={() => { onChange(c); setOpen(false); }}
               className="w-6 h-6 rounded-full cursor-pointer"
-              style={{
-                background: c,
-                outline: value === c ? "2px solid #1E40AF" : "none",
-                outlineOffset: 1,
-              }}
+              style={{ background: c, outline: value === c ? "2px solid #1E40AF" : "none", outlineOffset: 1 }}
               type="button"
             />
           ))}

@@ -14,12 +14,12 @@ import { formatK } from "../../utils/currency";
 import { formatDateBR, daysSince } from "../../utils/date";
 import { exportLeadsToCSV } from "../../utils/export-csv";
 import { useUsersById } from "../../hooks/use-users-by-id";
+import { isStale, daysIdle } from "../../utils/pipeline-metrics";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
-const STALE_THRESHOLD_DAYS = 14;
 const CLOSING_HORIZON_DAYS = 7;
 
-export function DashboardView({ user, activeCompany, leads, users = [], signals, onNavigate, onLeadClick, visibleWidgets }) {
+export function DashboardView({ user, activeCompany, leads, users = [], signals, onNavigate, onLeadClick, visibleWidgets, pipelines }) {
   const usersById = useUsersById(users);
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
   const isGroupView = activeCompany === "all";
@@ -94,9 +94,11 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
         }
       }
 
-      const idle = daysSince(l.lastActivity || l.stageChangedAt);
-      if (idle >= STALE_THRESHOLD_DAYS) {
-        stale.push({ lead: l, idle });
+      // Usa SLA por etapa configurado no Pipeline Builder (com fallback
+      // pro default global). Substitui o threshold único de 14 dias.
+      const companyStages = pipelines?.[l.companyId];
+      if (isStale(l, companyStages)) {
+        stale.push({ lead: l, idle: daysIdle(l) });
       }
     }
 
@@ -106,7 +108,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
     followUps.sort((a, b) => a.when - b.when);
 
     return { closing, stale, overdue, followUps };
-  }, [scopedLeads]);
+  }, [scopedLeads, pipelines]);
 
   const totalTasks = tasks.closing.length + tasks.stale.length + tasks.overdue.length + tasks.followUps.length;
 

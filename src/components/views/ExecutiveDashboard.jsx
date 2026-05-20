@@ -4,14 +4,10 @@ import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
 import { formatK, formatM } from "../../utils/currency";
+import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 
-const TERMINAL = new Set(["ganho", "perdido"]);
-const STALE_DAYS = 14;
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
-
-export function ExecutiveDashboard({ leads, crossReferrals }) {
+export function ExecutiveDashboard({ leads, crossReferrals, pipelines }) {
   const metricsByCompany = useMemo(() => {
-    const now = Date.now();
     const byId = Object.create(null);
     for (const id of COMPANY_IDS) {
       byId[id] = {
@@ -22,6 +18,7 @@ export function ExecutiveDashboard({ leads, crossReferrals }) {
         won: 0,
         lost: 0,
         pipeline: 0,
+        forecast: 0,        // valor ponderado por probability da etapa
         wonValue: 0,
         lostValue: 0,
         activated: 0,
@@ -31,14 +28,15 @@ export function ExecutiveDashboard({ leads, crossReferrals }) {
     for (const l of leads) {
       const m = byId[l.companyId];
       if (!m) continue;
+      const companyStages = pipelines?.[l.companyId];
       m.leadsCount++;
       if (l.stage === "ganho") { m.won++; m.wonValue += l.value; }
       else if (l.stage === "perdido") { m.lost++; m.lostValue += l.value; }
       else {
         m.open++;
         m.pipeline += l.value;
-        const ts = new Date(l.stageChangedAt || l.createdAt).getTime();
-        if (!Number.isNaN(ts) && (now - ts) / MS_PER_DAY > STALE_DAYS) m.stale++;
+        m.forecast += weightedValue(l, companyStages);
+        if (isStale(l, companyStages)) m.stale++;
       }
       if (l.stage !== "prospeccao") m.activated++;
     }
@@ -47,17 +45,18 @@ export function ExecutiveDashboard({ leads, crossReferrals }) {
       m.activationRate = m.leadsCount > 0 ? Math.round((m.activated / m.leadsCount) * 100) : 0;
       return m;
     });
-  }, [leads]);
+  }, [leads, pipelines]);
 
   const totals = useMemo(() => {
-    let pipeline = 0, wonValue = 0, wonCount = 0, stale = 0;
+    let pipeline = 0, forecast = 0, wonValue = 0, wonCount = 0, stale = 0;
     for (const m of metricsByCompany) {
       pipeline += m.pipeline;
+      forecast += m.forecast;
       wonValue += m.wonValue;
       wonCount += m.won;
       stale += m.stale;
     }
-    return { pipeline, wonValue, wonCount, stale };
+    return { pipeline, forecast, wonValue, wonCount, stale };
   }, [metricsByCompany]);
 
   const maxPipeline = useMemo(
@@ -98,11 +97,11 @@ export function ExecutiveDashboard({ leads, crossReferrals }) {
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard icon={HandCoins} value={formatM(totals.pipeline)}
-          label="Pipeline do Grupo" sublabel="Todas empresas · aberto" accent={NEUTRAL.graphite} />
+          label="Pipeline do Grupo" sublabel={`Aberto · forecast ${formatK(totals.forecast)}`} accent={NEUTRAL.graphite} />
         <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)}
           label="Fechado no período" sublabel={`${totals.wonCount} ganhos`} />
         <StatCard icon={AlertCircle} value={totals.stale} label="Leads parados"
-          sublabel={`Sem movimento > ${STALE_DAYS} dias`} />
+          sublabel="SLA por etapa estourado" />
         <StatCard icon={Shuffle} value={pendingCross} label="Cross-sell pendente"
           sublabel="Indicações aguardando" />
       </div>

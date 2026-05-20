@@ -66,7 +66,7 @@ export default function App() {
     deleteUser,
     setFallbackUsers: setUsers,
   } = useProfiles({ enabled: Boolean(currentUser) && (supabaseEnabled ? isManagerRole : true) });
-  const { pipelines, updateStage, reorderStages, resetCompanyPipeline } = usePipelines();
+  const { pipelines, updateStage, reorderStages, resetCompanyPipeline, replacePipeline } = usePipelines();
 
   const {
     leads,
@@ -398,6 +398,7 @@ export default function App() {
               leads={leads}
               users={users}
               signals={signals}
+              pipelines={pipelines}
               onNavigate={setSection}
               onLeadClick={setSelectedLead}
               visibleWidgets={settings.visibleDashboardWidgets}
@@ -452,7 +453,7 @@ export default function App() {
           } />
           <Route path={ROUTES.executive} element={
             isManager
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["funnel-history"]} element={
@@ -471,8 +472,7 @@ export default function App() {
                 pipelines={pipelines}
                 transitions={pipelineTransitions}
                 accessibleCompanies={accessibleCompanies}
-                onUpdateStage={updateStage}
-                onReorderStages={reorderStages}
+                onReplacePipeline={replacePipeline}
                 onResetPipeline={resetCompanyPipeline}
                 leads={leads}
               />
