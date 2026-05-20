@@ -2,10 +2,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Bot, RefreshCw, CheckCircle2, XCircle, EyeOff, ChevronDown, ChevronUp,
   Clock, AlertTriangle, TrendingUp, Mail, Zap, Target, Telescope, Repeat2,
-  Shield, GitMerge,
+  Shield, GitMerge, Settings,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { useAgentConfig } from "../../hooks/use-agent-config";
+import { AgentConfigModal } from "../agents/AgentConfigModal";
 
 // ── Agent metadata ─────────────────────────────────────────────────────────
 const AGENTS = {
@@ -267,8 +269,10 @@ export function AgentActionsView({ currentUser, activeCompany }) {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [resolving, setResolving] = useState(null); // action id being resolved
   const [resolveError, setResolveError] = useState(null);
+  const [configOpen, setConfigOpen] = useState(false);
 
   const isManager = currentUser?.role === "gerente" || currentUser?.role === "admin";
+  const { isAgentEnabled, toggleAgent } = useAgentConfig();
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchActions = useCallback(async () => {
@@ -334,13 +338,27 @@ export function AgentActionsView({ currentUser, activeCompany }) {
 
   // ── Group by agent ────────────────────────────────────────────────────────
   const agentOrder = ["cadencia", "sentinela", "sdr_q", "scout", "cross"];
+
+  // Filtra ações pelos agentes habilitados na configuração. Quando
+  // activeCompany === "all", uma ação aparece se o agente estiver
+  // ativo em PELO MENOS uma empresa (gerente vê tudo). Quando filtrado
+  // por empresa, respeita só aquela empresa.
+  const visibleActions = actions.filter(a => {
+    const companyId = a.leads?.company_id || a.company_id;
+    if (!companyId) return true;
+    if (activeCompany && activeCompany !== "all") {
+      return isAgentEnabled(activeCompany, a.agent_id);
+    }
+    return isAgentEnabled(companyId, a.agent_id);
+  });
+
   const grouped = agentOrder.reduce((acc, agentId) => {
-    const list = actions.filter(a => a.agent_id === agentId);
+    const list = visibleActions.filter(a => a.agent_id === agentId);
     if (list.length > 0) acc[agentId] = list;
     return acc;
   }, {});
   // catch unknown agent_ids
-  actions.forEach(a => {
+  visibleActions.forEach(a => {
     if (!agentOrder.includes(a.agent_id) && !grouped[a.agent_id]) {
       grouped[a.agent_id] = [];
     }
@@ -349,7 +367,7 @@ export function AgentActionsView({ currentUser, activeCompany }) {
     }
   });
 
-  const totalPending = actions.filter(a => a.status === "pending").length;
+  const totalPending = visibleActions.filter(a => a.status === "pending").length;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -374,20 +392,34 @@ export function AgentActionsView({ currentUser, activeCompany }) {
               : "Nenhuma sugestão pendente — pipeline em dia"}
           </p>
         </div>
-        <button
-          onClick={fetchActions}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl border transition-opacity"
-          style={{
-            borderColor: "#D1D5DB",
-            color: NEUTRAL.slate,
-            background: "#FFFFFF",
-            opacity: loading ? 0.5 : 1,
-          }}
-        >
-          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          {isManager && (
+            <button
+              onClick={() => setConfigOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl border cursor-pointer"
+              style={{ borderColor: "#D1D5DB", color: NEUTRAL.slate, background: "#FFFFFF" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            >
+              <Settings size={12} />
+              Configurar agentes
+            </button>
+          )}
+          <button
+            onClick={fetchActions}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl border transition-opacity"
+            style={{
+              borderColor: "#D1D5DB",
+              color: NEUTRAL.slate,
+              background: "#FFFFFF",
+              opacity: loading ? 0.5 : 1,
+            }}
+          >
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+            Atualizar
+          </button>
+        </div>
       </div>
 
       {/* Filter tabs */}
@@ -482,6 +514,15 @@ export function AgentActionsView({ currentUser, activeCompany }) {
           ))}
         </div>
       )}
+
+      <AgentConfigModal
+        open={configOpen}
+        onClose={() => setConfigOpen(false)}
+        agents={AGENTS}
+        agentOrder={agentOrder}
+        isAgentEnabled={isAgentEnabled}
+        toggleAgent={toggleAgent}
+      />
     </div>
   );
 }
