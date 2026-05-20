@@ -1,11 +1,12 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, Settings } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { Select } from "../ui/Select";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { StageFieldsEditor } from "../lead/StageFieldsEditor";
 import { DynamicField, validateFields } from "../ui/DynamicField";
+import { PipelineCalendarView } from "./PipelineCalendarView";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { formatK } from "../../utils/currency";
@@ -428,6 +429,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
   const isManager = user.role === "gerente" || user.role === "admin";
   const isAdmin = user.role === "admin";
   const [ownerFilter, setOwnerFilter] = useState("all");
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "calendar"
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
@@ -532,22 +534,50 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
             {summary.lost > 0 && ` · ${summary.lost} perdido${summary.lost !== 1 ? "s" : ""}`}
           </p>
         </div>
-        {isManager && (
-          <Select
-            value={ownerFilter}
-            onChange={e => setOwnerFilter(e.target.value)}
-            options={ownerOptions}
-            className="w-52"
-          />
-        )}
+        <div className="flex items-center gap-2">
+          {/* Toggle Kanban / Calendário */}
+          <div
+            className="inline-flex rounded-lg border overflow-hidden"
+            style={{ borderColor: "#D4D4D4", background: "#FFFFFF" }}
+            role="tablist"
+          >
+            <ViewToggleButton
+              active={viewMode === "kanban"}
+              onClick={() => setViewMode("kanban")}
+              icon={LayoutGrid}
+              label="Kanban"
+            />
+            <ViewToggleButton
+              active={viewMode === "calendar"}
+              onClick={() => setViewMode("calendar")}
+              icon={CalendarIcon}
+              label="Calendário"
+            />
+          </div>
+          {isManager && viewMode === "kanban" && (
+            <Select
+              value={ownerFilter}
+              onChange={e => setOwnerFilter(e.target.value)}
+              options={ownerOptions}
+              className="w-52"
+            />
+          )}
+        </div>
       </div>
 
-      {/* ── KPI bar ── */}
-      {scopedLeads.length > 0 && (
+      {/* ── KPI bar (apenas no kanban) ── */}
+      {viewMode === "kanban" && scopedLeads.length > 0 && (
         <KpiBar scopedLeads={scopedLeads} />
       )}
 
-      {/* ── Kanban ── */}
+      {viewMode === "calendar" ? (
+        <PipelineCalendarView
+          leads={leads}
+          user={user}
+          activeCompany={activeCompany}
+          onLeadClick={onLeadClick}
+        />
+      ) : (
       <div className="overflow-x-auto -mx-4 px-4 md:-mx-6 md:px-6 pb-4" style={{ scrollbarWidth: "thin" }}>
         <div
           className="flex gap-3"
@@ -691,15 +721,18 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
           })}
         </div>
       </div>
+      )}
 
-      {/* ── Analytics panel ── */}
-      {scopedLeads.length > 0 && (
+      {/* ── Analytics panel (apenas no kanban) ── */}
+      {viewMode === "kanban" && scopedLeads.length > 0 && (
         <AnalyticsPanel scopedLeads={scopedLeads} stages={stages} />
       )}
 
-      <p className="text-xs text-center" style={{ color: NEUTRAL.slate }}>
-        Arraste para mover entre etapas · Clique no card para ver detalhes
-      </p>
+      {viewMode === "kanban" && (
+        <p className="text-xs text-center" style={{ color: NEUTRAL.slate }}>
+          Arraste para mover entre etapas · Clique no card para ver detalhes
+        </p>
+      )}
 
       <StageFieldsEditor
         open={!!editingFieldsStage}
@@ -714,6 +747,26 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
         reorderFields={stageFields.reorderFields}
       />
     </div>
+  );
+}
+
+function ViewToggleButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+      style={{
+        background: active ? "#1E4D8C" : "#FFFFFF",
+        color: active ? "#FFFFFF" : NEUTRAL.slate,
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#F3F4F6"; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "#FFFFFF"; }}
+    >
+      <Icon size={13} />
+      {label}
+    </button>
   );
 }
 

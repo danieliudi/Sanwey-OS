@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import {
   Target, HandCoins, CheckCircle2, Gauge, ArrowRight, RefreshCcw, Download,
-  Clock, CalendarClock, AlertTriangle,
+  Clock, CalendarClock, AlertTriangle, CalendarCheck,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { StatCard } from "../ui/StatCard";
@@ -69,6 +69,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
     const closing = [];
     const stale = [];
     const overdue = [];
+    const followUps = [];
 
     for (const l of scopedLeads) {
       if (TERMINAL.has(l.stage)) continue;
@@ -84,6 +85,15 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
         }
       }
 
+      // Follow-ups: vencidos OU dentro do horizonte de 7 dias. Quem agendou
+      // pra mês que vem aparece no Calendário, não aqui.
+      if (l.nextFollowUp) {
+        const fu = new Date(l.nextFollowUp);
+        if (!Number.isNaN(fu.getTime()) && fu <= horizon) {
+          followUps.push({ lead: l, when: fu, isLate: fu < today });
+        }
+      }
+
       const idle = daysSince(l.lastActivity || l.stageChangedAt);
       if (idle >= STALE_THRESHOLD_DAYS) {
         stale.push({ lead: l, idle });
@@ -93,11 +103,12 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
     closing.sort((a, b) => a.close - b.close);
     overdue.sort((a, b) => a.close - b.close);
     stale.sort((a, b) => b.idle - a.idle);
+    followUps.sort((a, b) => a.when - b.when);
 
-    return { closing, stale, overdue };
+    return { closing, stale, overdue, followUps };
   }, [scopedLeads]);
 
-  const totalTasks = tasks.closing.length + tasks.stale.length + tasks.overdue.length;
+  const totalTasks = tasks.closing.length + tasks.stale.length + tasks.overdue.length + tasks.followUps.length;
 
   return (
     <div className="space-y-7">
@@ -191,7 +202,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
             Nada urgente por aqui. Seus negócios estão em dia.
           </div>
         ) : (
-          <div className="grid md:grid-cols-3 gap-3">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
             <TaskBucket
               icon={AlertTriangle}
               tone="#DC2626"
@@ -203,6 +214,21 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
                 primary: lead.company,
                 secondary: `Fechamento ${formatDateBR(close)}`,
                 badge: `${daysSince(close)}d`,
+                onClick: onLeadClick,
+              }))}
+            />
+            <TaskBucket
+              icon={CalendarCheck}
+              tone="#047857"
+              title="Follow-ups agendados"
+              empty="Sem follow-up nos próximos 7 dias"
+              items={tasks.followUps.slice(0, 4).map(({ lead, when, isLate }) => ({
+                key: lead.id,
+                lead,
+                primary: lead.company,
+                secondary: `${stageLabel(lead.stage)} · ${formatDateBR(when)}`,
+                badge: isLate ? `${daysSince(when)}d atraso` : formatDateBR(when),
+                badgeTone: isLate ? "#DC2626" : "#047857",
                 onClick: onLeadClick,
               }))}
             />
@@ -384,7 +410,7 @@ function TaskBucket({ icon: Icon, tone, title, empty, items }) {
               </div>
               <span
                 className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0"
-                style={{ background: tone + "14", color: tone }}
+                style={{ background: (it.badgeTone || tone) + "14", color: it.badgeTone || tone }}
               >
                 {it.badge}
               </span>
