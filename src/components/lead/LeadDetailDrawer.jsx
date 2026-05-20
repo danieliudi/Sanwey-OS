@@ -11,7 +11,6 @@ import { UrgencyTag } from "../ui/UrgencyTag";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
-import { ClassificationBadge, CLASSIFICATION_OPTIONS } from "../ui/ClassificationBadge";
 import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
@@ -22,8 +21,6 @@ const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.
 
 export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isManager, currentUser }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
-  const [classification, setClassification] = useState(lead?.clientClassification ?? "");
-  const [orderCount, setOrderCount] = useState(lead?.orderCount ?? 0);
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -38,12 +35,10 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
   useEffect(() => {
     if (lead) {
       setStage(lead.stage);
-      setClassification(lead.clientClassification ?? "");
-      setOrderCount(lead.orderCount ?? 0);
       setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
       setShowFollowUpInput(false);
     }
-  }, [lead?.id, lead?.stage, lead?.clientClassification, lead?.orderCount]);
+  }, [lead?.id, lead?.stage]);
 
   const overlaps = useMemo(() => {
     if (!isManager || !lead || !lead.company) return [];
@@ -120,18 +115,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
 
   const handleOwnerChange = (e) => {
     onUpdate(lead.id, { owner: e.target.value || null });
-  };
-
-  const handleClassificationChange = (e) => {
-    const newClass = e.target.value || null;
-    setClassification(newClass ?? "");
-    onUpdate(lead.id, { clientClassification: newClass, orderCount: newClass === "A" ? orderCount : 0 });
-  };
-
-  const handleOrderCountChange = (e) => {
-    const count = parseInt(e.target.value, 10) || 0;
-    setOrderCount(count);
-    onUpdate(lead.id, { orderCount: count });
   };
 
   const handleStartOutreach = () => {
@@ -431,43 +414,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
                 options={sellerOptions}
               />
             </div>
-          </div>
-
-          {/* Classificação ABCD */}
-          <div className="grid md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block" style={{ color: NEUTRAL.slate }}>
-                Classificação de cliente
-              </label>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={classification}
-                  onChange={handleClassificationChange}
-                  options={CLASSIFICATION_OPTIONS}
-                  placeholder="Sem classificação"
-                />
-                {classification && (
-                  <ClassificationBadge classification={classification} orderCount={orderCount} size="md" />
-                )}
-              </div>
-            </div>
-            {classification === "A" && (
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block" style={{ color: NEUTRAL.slate }}>
-                  Qtd. pedidos (A-#)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={orderCount}
-                  onChange={handleOrderCountChange}
-                  className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
-                  style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
-                  onFocus={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite + "70"; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
-                />
-              </div>
-            )}
           </div>
 
           {/* Email draft */}
