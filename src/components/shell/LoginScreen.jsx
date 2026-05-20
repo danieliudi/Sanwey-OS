@@ -35,20 +35,19 @@ export function LoginScreen({
 
         <div className="flex-1 flex items-center justify-center p-6 md:p-10 pt-16 md:pt-10">
           <div className="w-full max-w-md">
-            {/* Brand mark */}
+            {/* Brand mark — logo institucional completo já inclui símbolo,
+                wordmark "Sanwey", "desde 1984" e tagline */}
             <div className="flex flex-col items-center text-center mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <img src="/sanwey-logo.png" alt="Sanwey" className="w-11 h-11" style={{ objectFit: "contain" }} />
-                <div className="text-left">
-                  <div className="font-bold leading-tight" style={{ fontSize: 22, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
-                    Grupo Sanwey
-                  </div>
-                  <div className="text-xs font-medium" style={{ color: NEUTRAL.slate, letterSpacing: "0.04em" }}>
-                    Commercial Intelligence
-                  </div>
-                </div>
+              <img
+                src="/sanwey-logo.png"
+                alt="Sanwey — A marca que valoriza o seu produto"
+                style={{ width: 260, height: "auto", objectFit: "contain" }}
+                className="mb-3"
+              />
+              <div className="text-xs font-semibold uppercase mb-3" style={{ color: NEUTRAL.slate, letterSpacing: "0.12em" }}>
+                Commercial Intelligence
               </div>
-              <p className="text-sm max-w-xs leading-relaxed mt-2" style={{ color: NEUTRAL.slate }}>
+              <p className="text-sm max-w-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>
                 Plataforma unificada de inteligência comercial<br />para as empresas do Grupo
               </p>
               <span className="block mt-3" style={{ width: 36, height: 2, background: ACCENT_RED, borderRadius: 1 }} />
@@ -81,9 +80,12 @@ function LeftPanel() {
       className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
       style={{ background: DARK_BG, color: "#FFFFFF" }}
     >
-      {/* Watermark grande do logo no fundo (atrás de tudo, opacidade baixa) */}
+      {/* Watermark grande do símbolo no fundo (atrás de tudo, opacidade baixa).
+          Usamos o símbolo (não o logo completo) porque o texto institucional
+          do logo é preto e ficaria invisível sobre o fundo escuro mesmo
+          com opacidade baixa. */}
       <img
-        src="/sanwey-logo.png"
+        src="/sanwey-simbolo.png"
         alt=""
         aria-hidden
         className="absolute pointer-events-none select-none"
@@ -98,9 +100,10 @@ function LeftPanel() {
         }}
       />
 
-      {/* Top: logo */}
+      {/* Top: símbolo + wordmark (logo completo tem texto preto que sumiria
+          no painel escuro, então recriamos manualmente aqui). */}
       <div className="relative z-10 flex items-center gap-3">
-        <img src="/sanwey-logo.png" alt="Sanwey" className="w-11 h-11" style={{ objectFit: "contain" }} />
+        <img src="/sanwey-simbolo.png" alt="Sanwey" className="w-11 h-11" style={{ objectFit: "contain" }} />
         <span className="text-2xl italic font-light tracking-tight text-white" style={{ fontFamily: "Georgia, serif" }}>
           Sanwey
         </span>
