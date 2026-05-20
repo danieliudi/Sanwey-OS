@@ -382,6 +382,7 @@ export default function App() {
             user={currentUser}
             activeCompany={activeCompany}
             leads={leads}
+            users={users}
             signals={signals}
             onNavigate={setSection}
             onLeadClick={setSelectedLead}
@@ -396,6 +397,7 @@ export default function App() {
             user={currentUser}
             activeCompany={activeCompany}
             leads={leads}
+            users={users}
             onLeadClick={setSelectedLead}
             onStarToggle={toggleStar}
             onLoadDemoLeads={loadDemoLeads}
