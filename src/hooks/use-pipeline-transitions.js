@@ -56,6 +56,22 @@ export function usePipelineTransitions() {
     });
   }, [setRules]);
 
+  /**
+   * Define em bloco quais destinos são permitidos a partir de uma etapa.
+   * Usado pelos bulk actions ("Só avançar", "Bloquear todos", "Permitir
+   * todos"). Aceita lista vazia (bloqueia tudo) sem regredir pro modo
+   * aberto — preserva a intenção explícita do usuário.
+   */
+  const setRowAllowed = useCallback((companyId, stages, fromStageId, allowedIds) => {
+    setRules(prev => {
+      const companyRules = prev[companyId] ?? buildOpenRules(stages);
+      return {
+        ...prev,
+        [companyId]: { ...companyRules, [fromStageId]: [...allowedIds] },
+      };
+    });
+  }, [setRules]);
+
   /** Returns the allowed destinations for a given stage (or all if unconfigured). */
   const getAllowedDestinations = useCallback((companyId, fromStageId, allStageIds) => {
     const companyRules = rules[companyId];
@@ -65,7 +81,7 @@ export function usePipelineTransitions() {
     return allowed;
   }, [rules]);
 
-  return { rules, isTransitionAllowed, toggleTransition, resetCompany, getAllowedDestinations };
+  return { rules, isTransitionAllowed, toggleTransition, resetCompany, setRowAllowed, getAllowedDestinations };
 }
 
 /** Builds a rule object where every stage can go to every other stage. */
