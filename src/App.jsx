@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Presentation, GitBranch, Workflow, Zap,
@@ -7,6 +8,7 @@ import {
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { defaultPipelines } from "./constants/pipelines";
+import { ROUTES, sectionFromPath } from "./constants/routes";
 import { generateMarketSignals } from "./data/generate-signals";
 import { usePersistentState } from "./hooks/use-persistent-state";
 import { useCrossReferrals } from "./hooks/use-cross-referrals";
@@ -89,8 +91,19 @@ export default function App() {
   const { evaluateAutomations } = useAutomations();
 
   const [activeCompany, setActiveCompany] = useState("all");
-  const [section, setSection] = useState("dashboard");
   const [selectedLead, setSelectedLead] = useState(null);
+
+  // ── Roteamento ──────────────────────────────────────────────────────────
+  // section vem direto da URL. Mudar de tela é navigate(ROUTES[id]) — a URL
+  // muda e o useLocation re-renderiza. Mantém todas as condicionais (if
+  // section === "x") funcionando sem refactor maior.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const section = sectionFromPath(location.pathname);
+  const setSection = useCallback((id) => {
+    const path = ROUTES[id];
+    if (path) navigate(path);
+  }, [navigate]);
 
   // Mantém o drawer em sync quando o lead aberto muda via realtime
   // (outra sessão editou) ou via update otimista local.
@@ -377,118 +390,139 @@ export default function App() {
           )}
           key={section}
         >
-        {section === "dashboard" && (
-          <DashboardView
-            user={currentUser}
-            activeCompany={activeCompany}
-            leads={leads}
-            users={users}
-            signals={signals}
-            onNavigate={setSection}
-            onLeadClick={setSelectedLead}
-            visibleWidgets={settings.visibleDashboardWidgets}
-          />
-        )}
-        {section === "signals" && (
-          <SignalsView activeCompany={activeCompany} signals={signals} />
-        )}
-        {section === "explorer" && (
-          <ExplorerView
-            user={currentUser}
-            activeCompany={activeCompany}
-            leads={leads}
-            users={users}
-            onLeadClick={setSelectedLead}
-            onStarToggle={toggleStar}
-            onLoadDemoLeads={loadDemoLeads}
-            onGoToSettings={() => setSection("settings")}
-            onAddLead={handleAddLead}
-            accessibleCompanies={accessibleCompanies}
-          />
-        )}
-        {section === "crm" && (
-          <CRMView
-            user={currentUser}
-            activeCompany={activeCompany}
-            leads={leads}
-            pipelines={pipelines}
-            users={users}
-            onLeadClick={setSelectedLead}
-            onStageChange={handleStageChange}
-            onAddLead={handleAddLead}
-            visibleStages={settings.visibleKanbanStages}
-            pipelineTransitions={pipelineTransitions}
-          />
-        )}
-        {section === "agents" && (
-          <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} />
-        )}
-        {section === "fair-import" && isManager && (
-          <FairImportView
-            addLead={handleAddLead}
-            leads={leads}
-            users={users}
-            currentUser={currentUser}
-            state={fairImportState}
-            setState={setFairImportState}
-          />
-        )}
-        {section === "executive" && isManager && (
-          <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} />
-        )}
-        {section === "funnel-history" && isManager && (
-          <FunnelHistoryView
-            user={currentUser}
-            activeCompany={activeCompany}
-            leads={leads}
-            users={users}
-          />
-        )}
-        {section === "pipeline-builder" && isManager && (
-          <PipelineBuilderView
-            pipelines={pipelines}
-            transitions={pipelineTransitions}
-            accessibleCompanies={accessibleCompanies}
-          />
-        )}
-        {section === "automations" && isManager && (
-          <AutomationsView
-            leads={leads}
-            pipelines={pipelines}
-            activeCompany={activeCompany}
-          />
-        )}
-        {section === "crossref" && isManager && (
-          <CrossReferralsView
-            crossReferrals={crossReferrals}
-            users={users}
-            onApprove={approveCross}
-            onReject={rejectCross}
-          />
-        )}
-        {section === "users" && isManager && (
-          <UserManagementView
-            users={users}
-            onUsersChange={setUsers}
-            onUpdateUser={supabaseEnabled ? updateUser : undefined}
-            onDeleteUser={supabaseEnabled ? deleteUser : undefined}
-            supabaseEnabled={supabaseEnabled}
-            loading={usersLoading}
-            currentUser={currentUser}
-          />
-        )}
-        {section === "settings" && isManager && (
-          <SettingsView
-            settings={settings}
-            onUpdate={updateSettings}
-            onReset={resetSettings}
-            onClearLocalData={clearLocalData}
-            currentUser={currentUser}
-            leadsCount={leads.length}
-            onLoadDemoLeads={loadDemoLeads}
-            onClearAllLeads={clearAllLeads}
-          />
-        )}
+        <Routes>
+          <Route path={ROUTES.dashboard} element={
+            <DashboardView
+              user={currentUser}
+              activeCompany={activeCompany}
+              leads={leads}
+              users={users}
+              signals={signals}
+              onNavigate={setSection}
+              onLeadClick={setSelectedLead}
+              visibleWidgets={settings.visibleDashboardWidgets}
+            />
+          } />
+          <Route path={ROUTES.signals} element={
+            <SignalsView activeCompany={activeCompany} signals={signals} />
+          } />
+          <Route path={ROUTES.explorer} element={
+            <ExplorerView
+              user={currentUser}
+              activeCompany={activeCompany}
+              leads={leads}
+              users={users}
+              onLeadClick={setSelectedLead}
+              onStarToggle={toggleStar}
+              onLoadDemoLeads={loadDemoLeads}
+              onGoToSettings={() => setSection("settings")}
+              onAddLead={handleAddLead}
+              accessibleCompanies={accessibleCompanies}
+            />
+          } />
+          <Route path={ROUTES.crm} element={
+            <CRMView
+              user={currentUser}
+              activeCompany={activeCompany}
+              leads={leads}
+              pipelines={pipelines}
+              users={users}
+              onLeadClick={setSelectedLead}
+              onStageChange={handleStageChange}
+              onAddLead={handleAddLead}
+              visibleStages={settings.visibleKanbanStages}
+              pipelineTransitions={pipelineTransitions}
+            />
+          } />
+          <Route path={ROUTES.agents} element={
+            <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} />
+          } />
+          {/* Rotas gerente-only: vendedor é redirecionado pra Início. */}
+          <Route path={ROUTES["fair-import"]} element={
+            isManager ? (
+              <FairImportView
+                addLead={handleAddLead}
+                leads={leads}
+                users={users}
+                currentUser={currentUser}
+                state={fairImportState}
+                setState={setFairImportState}
+              />
+            ) : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES.executive} element={
+            isManager
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["funnel-history"]} element={
+            isManager ? (
+              <FunnelHistoryView
+                user={currentUser}
+                activeCompany={activeCompany}
+                leads={leads}
+                users={users}
+              />
+            ) : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["pipeline-builder"]} element={
+            isManager ? (
+              <PipelineBuilderView
+                pipelines={pipelines}
+                transitions={pipelineTransitions}
+                accessibleCompanies={accessibleCompanies}
+              />
+            ) : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES.automations} element={
+            isManager ? (
+              <AutomationsView
+                leads={leads}
+                pipelines={pipelines}
+                activeCompany={activeCompany}
+              />
+            ) : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES.crossref} element={
+            isManager ? (
+              <CrossReferralsView
+                crossReferrals={crossReferrals}
+                users={users}
+                onApprove={approveCross}
+                onReject={rejectCross}
+              />
+            ) : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES.users} element={
+            isManager ? (
+              <UserManagementView
+                users={users}
+                onUsersChange={setUsers}
+                onUpdateUser={supabaseEnabled ? updateUser : undefined}
+                onDeleteUser={supabaseEnabled ? deleteUser : undefined}
+                supabaseEnabled={supabaseEnabled}
+                loading={usersLoading}
+                currentUser={currentUser}
+              />
+            ) : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES.settings} element={
+            isManager ? (
+              <SettingsView
+                settings={settings}
+                onUpdate={updateSettings}
+                onReset={resetSettings}
+                onClearLocalData={clearLocalData}
+                currentUser={currentUser}
+                leadsCount={leads.length}
+                onLoadDemoLeads={loadDemoLeads}
+                onClearAllLeads={clearAllLeads}
+              />
+            ) : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          {/* Catch-all: rota desconhecida volta pro Início. */}
+          <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
+        </Routes>
         </ErrorBoundary>
         </div>
 
