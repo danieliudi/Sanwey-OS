@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
+import { AUTOMATION_TEMPLATES } from "../../constants/automation-templates";
 import { useAutomations } from "../../hooks/use-automations";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -60,6 +61,17 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
   const { automations, addAutomation, deleteAutomation, toggleAutomation, stats } = useAutomations();
   const [showBuilder, setShowBuilder] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  // Quando o usuário clica num template, pré-preenche o builder.
+  const [builderInitial, setBuilderInitial] = useState(null);
+
+  const openBuilder = (initial = null) => {
+    setBuilderInitial(initial);
+    setShowBuilder(true);
+  };
+  const closeBuilder = () => {
+    setShowBuilder(false);
+    setBuilderInitial(null);
+  };
 
   const allStages = useMemo(() => {
     const p = pipelines || defaultPipelines();
@@ -88,7 +100,7 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
           </p>
         </div>
         <button
-          onClick={() => setShowBuilder(true)}
+          onClick={() => openBuilder()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
           style={{ background: "#1E4D8C", color: "#FFFFFF" }}
           onMouseEnter={e => { e.currentTarget.style.background = "#163a6b"; }}
@@ -123,23 +135,32 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
       {/* Empty state */}
       {automations.length === 0 && (
         <div
-          className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-16 gap-3"
+          className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-10 gap-3"
           style={{ borderColor: "#E8E8E8" }}
         >
           <Zap size={32} style={{ color: "#D1D5DB" }} />
           <p className="text-sm font-semibold" style={{ color: NEUTRAL.slate }}>Nenhuma automação criada</p>
-          <p className="text-xs" style={{ color: "#9CA3AF" }}>Crie regras para mover cards, alterar campos e alertar a equipe automaticamente.</p>
+          <p className="text-xs text-center max-w-md" style={{ color: "#9CA3AF" }}>
+            Comece com um dos templates abaixo (recomendado) ou crie do zero.
+          </p>
           <button
-            onClick={() => setShowBuilder(true)}
-            className="mt-2 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "#1E4D8C", color: "#FFFFFF" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#163a6b"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#1E4D8C"; }}
+            onClick={() => openBuilder()}
+            className="mt-1 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #D4D4D4" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
           >
             <Plus size={14} />
-            Criar primeira automação
+            Criar do zero
           </button>
         </div>
+      )}
+
+      {/* Galeria de templates — mostra sempre que houver poucos automatismos
+          configurados (≤ 3). Quando o time já tem muitos, escondemos pra
+          não ocupar espaço. */}
+      {automations.length <= 3 && (
+        <TemplateGallery onUseTemplate={(t) => openBuilder(t.rule)} />
       )}
 
       {/* Automation list */}
@@ -168,8 +189,9 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
       {showBuilder && (
         <AutomationBuilder
           allStages={allStages}
-          onSave={(rule) => { addAutomation(rule); setShowBuilder(false); }}
-          onClose={() => setShowBuilder(false)}
+          initialRule={builderInitial}
+          onSave={(rule) => { addAutomation(rule); closeBuilder(); }}
+          onClose={closeBuilder}
         />
       )}
     </div>
@@ -364,9 +386,22 @@ const EMPTY_RULE = {
   action:  { type: "move_stage",   targetStage: "" },
 };
 
-function AutomationBuilder({ allStages, onSave, onClose }) {
-  const [rule, setRule] = useState(EMPTY_RULE);
-  const [step, setStep] = useState(0); // 0=name+company, 1=trigger, 2=action
+function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
+  // initialRule vem dos templates (clique em "Usar template"). Garante
+  // shape válido mesclando com EMPTY_RULE pra evitar quebrar a validação
+  // se algum campo estiver faltando.
+  const [rule, setRule] = useState(() => {
+    if (!initialRule) return EMPTY_RULE;
+    return {
+      ...EMPTY_RULE,
+      ...initialRule,
+      trigger: { ...EMPTY_RULE.trigger, ...(initialRule.trigger || {}) },
+      action:  { ...EMPTY_RULE.action,  ...(initialRule.action  || {}) },
+    };
+  });
+  // Quando o template já tem tudo preenchido, começa direto na etapa de
+  // ação (revisão final). Quando não, segue do zero.
+  const [step, setStep] = useState(initialRule ? 2 : 0);
 
   const canNext = () => {
     if (step === 0) return rule.name.trim().length > 0;
@@ -888,6 +923,62 @@ function validateAction(a) {
   if (a.type === "add_badge")  return Boolean(a.badge);
   if (a.type === "notify")     return Boolean(a.message?.trim());
   return false;
+}
+
+// ── Template gallery ─────────────────────────────────────────────────────────
+
+function TemplateGallery({ onUseTemplate }) {
+  return (
+    <div
+      className="rounded-xl border p-4"
+      style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
+    >
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-1">
+        <div>
+          <div className="flex items-center gap-1.5">
+            <Zap size={14} style={{ color: "#1E4D8C" }} />
+            <h3 className="text-sm font-bold" style={{ color: NEUTRAL.graphite }}>
+              Templates prontos
+            </h3>
+          </div>
+          <p className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+            Use como ponto de partida — depois você pode ajustar antes de salvar.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {AUTOMATION_TEMPLATES.map(t => (
+          <button
+            key={t.id}
+            onClick={() => onUseTemplate(t)}
+            className="text-left rounded-lg border p-3 transition-all cursor-pointer"
+            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = "#1E4D8C";
+              e.currentTarget.style.background = "#EFF6FF";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = "#E5E7EB";
+              e.currentTarget.style.background = "#FAFAFA";
+            }}
+          >
+            <div className="flex items-start gap-2">
+              <span className="text-lg leading-none mt-0.5">{t.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold leading-snug" style={{ color: NEUTRAL.graphite }}>
+                  {t.title}
+                </div>
+                <div className="text-[11px] mt-1 leading-snug" style={{ color: NEUTRAL.slate }}>
+                  {t.summary}
+                </div>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default AutomationsView;
