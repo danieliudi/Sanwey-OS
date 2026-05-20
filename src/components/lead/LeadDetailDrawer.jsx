@@ -33,6 +33,15 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
   useEffect(() => { resetEnrich(); }, [lead?.id, resetEnrich]);
 
   useEffect(() => {
+    if (!lead) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lead, onClose]);
+
+  useEffect(() => {
     if (lead) {
       setStage(lead.stage);
       setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
@@ -158,18 +167,17 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
 
   return (
     <div
-      className="fixed inset-0 z-40 flex"
+      className="fixed inset-0 z-40 flex items-center justify-center p-4 md:p-6"
       style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
-      <div className="flex-1" onClick={onClose} />
       <div
-        className="w-full max-w-xl h-full overflow-y-auto"
+        className="w-full max-w-2xl max-h-full overflow-y-auto rounded-2xl"
         style={{
           background: "#FAFAF8",
-          boxShadow: "-8px 0 32px rgba(0,0,0,0.12)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.24)",
         }}
         onClick={e => e.stopPropagation()}
       >
