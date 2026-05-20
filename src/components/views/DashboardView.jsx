@@ -12,12 +12,15 @@ import { UrgencyTag } from "../ui/UrgencyTag";
 import { LeadCard } from "../lead/LeadCard";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, daysSince } from "../../utils/date";
+import { exportLeadsToCSV } from "../../utils/export-csv";
+import { useUsersById } from "../../hooks/use-users-by-id";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 const STALE_THRESHOLD_DAYS = 14;
 const CLOSING_HORIZON_DAYS = 7;
 
-export function DashboardView({ user, activeCompany, leads, signals, onNavigate, onLeadClick, visibleWidgets }) {
+export function DashboardView({ user, activeCompany, leads, users = [], signals, onNavigate, onLeadClick, visibleWidgets }) {
+  const usersById = useUsersById(users);
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
@@ -112,8 +115,25 @@ export function DashboardView({ user, activeCompany, leads, signals, onNavigate,
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" icon={RefreshCcw} size="sm">Atualizar</Button>
-          {isManager && <Button variant="primary" accent={accent} icon={Download} size="sm">Exportar</Button>}
+          <Button
+            variant="secondary"
+            icon={RefreshCcw}
+            size="sm"
+            onClick={() => window.location.reload()}
+          >
+            Atualizar
+          </Button>
+          {isManager && (
+            <Button
+              variant="primary"
+              accent={accent}
+              icon={Download}
+              size="sm"
+              onClick={() => exportLeadsToCSV(scopedLeads, { usersById })}
+            >
+              Exportar
+            </Button>
+          )}
         </div>
       </div>
 

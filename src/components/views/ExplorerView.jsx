@@ -8,6 +8,8 @@ import { Select } from "../ui/Select";
 import { CnpjLookupCard } from "./CnpjLookupCard";
 import { ProspectSuggestions } from "./ProspectSuggestions";
 import { isSupabaseConfigured } from "../../lib/supabase";
+import { exportLeadsToCSV } from "../../utils/export-csv";
+import { useUsersById } from "../../hooks/use-users-by-id";
 
 const INITIAL_FILTERS = {
   search: "",
@@ -20,9 +22,10 @@ const INITIAL_FILTERS = {
 const SIZE_OPTIONS = ["PME", "Mid-Market", "Enterprise"];
 
 export function ExplorerView({
-  leads, onAddLead, accessibleCompanies, onLoadDemoLeads, onGoToSettings,
+  leads, users = [], onAddLead, accessibleCompanies, onLoadDemoLeads, onGoToSettings,
 }) {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const usersById = useUsersById(users);
 
   const reset = useCallback(() => setFilters(INITIAL_FILTERS), []);
 
@@ -51,7 +54,14 @@ export function ExplorerView({
               Limpar ({activeCount})
             </Button>
           )}
-          <Button variant="primary" size="sm" icon={Download}>Exportar</Button>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Download}
+            onClick={() => exportLeadsToCSV(leads, { usersById, filename: `sanwey-leads-explorer-${new Date().toISOString().slice(0, 10)}.csv` })}
+          >
+            Exportar
+          </Button>
         </div>
       </div>
 

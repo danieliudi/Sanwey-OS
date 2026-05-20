@@ -84,6 +84,23 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
     return `Olá ${firstName},\n\nIdentifiquei que a ${lead.company} teve ${(lead.evidence || "").toLowerCase()}.\n\nSou da ${company.name} e gostaria de entender melhor como podemos apoiar nesse momento.\n\nPodemos agendar 20 minutos esta semana?\n\nAbraço,\n${senderName}${senderEmail}\n${company.name}`;
   }, [lead, company, firstName, currentUser]);
 
+  // IMPORTANT: todos os hooks precisam rodar antes de qualquer return.
+  // researchLinks vinha sendo declarado depois do early-return abaixo, o
+  // que disparava React error #310 ("Rendered more hooks than during the
+  // previous render") ao abrir o drawer pela primeira vez.
+  const researchLinks = useMemo(() => {
+    if (!lead) return [];
+    const name = lead.company;
+    const nameEnc = encodeURIComponent(name);
+    const queryEnc = encodeURIComponent(`${name} ${lead.cnpj || ""}`.trim());
+    return [
+      { id: "google", label: "Google", icon: Search, href: `https://www.google.com/search?q=${queryEnc}` },
+      { id: "linkedin", label: "LinkedIn", icon: Linkedin, href: `https://www.linkedin.com/search/results/people/?keywords=${nameEnc}` },
+      { id: "news", label: "Google News", icon: Newspaper, href: `https://news.google.com/search?q=${nameEnc}&hl=pt-BR` },
+      { id: "reclameaqui", label: "Reclame Aqui", icon: MessageSquareWarning, href: `https://www.reclameaqui.com.br/busca/?q=${nameEnc}` },
+    ];
+  }, [lead]);
+
   if (!lead || !company) return null;
 
   const handleCopyDraft = () => {
@@ -155,19 +172,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
     setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
     setShowFollowUpInput(false);
   };
-
-  const researchLinks = useMemo(() => {
-    if (!lead) return [];
-    const name = lead.company;
-    const nameEnc = encodeURIComponent(name);
-    const queryEnc = encodeURIComponent(`${name} ${lead.cnpj || ""}`.trim());
-    return [
-      { id: "google", label: "Google", icon: Search, href: `https://www.google.com/search?q=${queryEnc}` },
-      { id: "linkedin", label: "LinkedIn", icon: Linkedin, href: `https://www.linkedin.com/search/results/people/?keywords=${nameEnc}` },
-      { id: "news", label: "Google News", icon: Newspaper, href: `https://news.google.com/search?q=${nameEnc}&hl=pt-BR` },
-      { id: "reclameaqui", label: "Reclame Aqui", icon: MessageSquareWarning, href: `https://www.reclameaqui.com.br/busca/?q=${nameEnc}` },
-    ];
-  }, [lead]);
 
   return (
     <div
