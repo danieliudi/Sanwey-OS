@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Presentation, GitBranch, Workflow, Zap,
-  Briefcase, Brain, Sliders,
+  Briefcase, Brain, Sliders, Crown,
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -29,6 +29,7 @@ import { SignalsView } from "./components/views/SignalsView";
 import { ExplorerView } from "./components/views/ExplorerView";
 import { CRMView } from "./components/views/CRMView";
 import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
+import { PresidencyDashboard } from "./components/views/PresidencyDashboard";
 import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { UserManagementView } from "./components/views/UserManagementView";
 import { SettingsView } from "./components/views/SettingsView";
@@ -253,6 +254,7 @@ export default function App() {
     ];
     if (isManager) {
       intelligenceItems.unshift({ id: "executive", label: "Executivo", icon: BarChart3 });
+      intelligenceItems.unshift({ id: "presidency", label: "Presidência", icon: Crown });
       intelligenceItems.push({ id: "funnel-history", label: "Histórico do funil", icon: GitBranch });
     }
     groups.push({ label: "Inteligência", icon: Brain, items: intelligenceItems });
@@ -284,7 +286,7 @@ export default function App() {
 
   // Keep vendedor off restricted sections even if state was stale.
   useEffect(() => {
-    const managerOnly = ["executive", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users", "settings"];
+    const managerOnly = ["executive", "presidency", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users", "settings"];
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -454,6 +456,11 @@ export default function App() {
           <Route path={ROUTES.executive} element={
             isManager
               ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES.presidency} element={
+            isManager
+              ? <PresidencyDashboard leads={leads} pipelines={pipelines} users={users} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["funnel-history"]} element={

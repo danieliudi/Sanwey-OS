@@ -11,3 +11,13 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Print: esconde shell (sidebar, header, footer) e mantém só o conteúdo
+   da rota — usado pelo botão "Exportar PDF" no Painel da Presidência. */
+@media print {
+  aside, header, footer { display: none !important; }
+  main { padding: 0 !important; }
+  .print\:hidden { display: none !important; }
+  body { background: #FFFFFF !important; }
+  @page { size: A4 landscape; margin: 1cm; }
+}
