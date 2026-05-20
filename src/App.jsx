@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Presentation, GitBranch, Workflow, Zap,
-  Briefcase, Brain, Sliders, Crown,
+  Briefcase, Brain, Sliders,
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -29,7 +29,6 @@ import { SignalsView } from "./components/views/SignalsView";
 import { ExplorerView } from "./components/views/ExplorerView";
 import { CRMView } from "./components/views/CRMView";
 import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
-import { PresidencyDashboard } from "./components/views/PresidencyDashboard";
 import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { UserManagementView } from "./components/views/UserManagementView";
 import { SettingsView } from "./components/views/SettingsView";
@@ -256,7 +255,6 @@ export default function App() {
         label: "Inteligência",
         icon: Brain,
         items: [
-          { id: "presidency",     label: "Presidência",        icon: Crown },
           { id: "executive",      label: "Executivo",          icon: BarChart3 },
           { id: "agents",         label: "Agentes",            icon: Bot },
           { id: "funnel-history", label: "Histórico do funil", icon: GitBranch },
@@ -289,7 +287,7 @@ export default function App() {
 
   // Keep vendedor off restricted sections even if state was stale.
   useEffect(() => {
-    const managerOnly = ["executive", "presidency", "agents", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users", "settings"];
+    const managerOnly = ["executive", "agents", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users", "settings"];
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -460,14 +458,12 @@ export default function App() {
           } />
           <Route path={ROUTES.executive} element={
             isManager
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
-          <Route path={ROUTES.presidency} element={
-            isManager
-              ? <PresidencyDashboard leads={leads} pipelines={pipelines} users={users} />
-              : <Navigate to={ROUTES.dashboard} replace />
-          } />
+          {/* Antiga rota /presidencia foi fundida no Executivo. Redireciona
+              quem tem o link salvo. */}
+          <Route path={ROUTES.presidency} element={<Navigate to={ROUTES.executive} replace />} />
           <Route path={ROUTES["funnel-history"]} element={
             isManager ? (
               <FunnelHistoryView
