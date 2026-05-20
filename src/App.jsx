@@ -249,17 +249,20 @@ export default function App() {
       },
     ];
 
-    const intelligenceItems = [
-      { id: "agents", label: "Agentes", icon: Bot },
-    ];
+    // Inteligência e Configuração só pra gerente/admin — vendedor só vê
+    // Início e CRM.
     if (isManager) {
-      intelligenceItems.unshift({ id: "executive", label: "Executivo", icon: BarChart3 });
-      intelligenceItems.unshift({ id: "presidency", label: "Presidência", icon: Crown });
-      intelligenceItems.push({ id: "funnel-history", label: "Histórico do funil", icon: GitBranch });
-    }
-    groups.push({ label: "Inteligência", icon: Brain, items: intelligenceItems });
+      groups.push({
+        label: "Inteligência",
+        icon: Brain,
+        items: [
+          { id: "presidency",     label: "Presidência",        icon: Crown },
+          { id: "executive",      label: "Executivo",          icon: BarChart3 },
+          { id: "agents",         label: "Agentes",            icon: Bot },
+          { id: "funnel-history", label: "Histórico do funil", icon: GitBranch },
+        ],
+      });
 
-    if (isManager) {
       groups.push({
         label: "Configuração",
         icon: Sliders,
@@ -286,7 +289,7 @@ export default function App() {
 
   // Keep vendedor off restricted sections even if state was stale.
   useEffect(() => {
-    const managerOnly = ["executive", "presidency", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users", "settings"];
+    const managerOnly = ["executive", "presidency", "agents", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users", "settings"];
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -438,7 +441,9 @@ export default function App() {
             />
           } />
           <Route path={ROUTES.agents} element={
-            <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} />
+            isManager
+              ? <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} />
+              : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Rotas gerente-only: vendedor é redirecionado pra Início. */}
           <Route path={ROUTES["fair-import"]} element={
