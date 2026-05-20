@@ -42,7 +42,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         style={{ height: 56, borderBottom: `1px solid ${PALETTE.border}` }}
       >
         <img
-          src="/sanwey-logo.png"
+          src="/sanwey-simbolo.png"
           alt="Sanwey"
           style={{
             width: 30,
