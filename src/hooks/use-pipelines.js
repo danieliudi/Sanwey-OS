@@ -39,7 +39,15 @@ export function usePipelines() {
     }));
   }, [setPipelines]);
 
-  return { pipelines, updateStage, reorderStages, resetCompanyPipeline };
+  // Substitui o pipeline inteiro de uma empresa. Usado pelo editor que
+  // trabalha sobre um draft e só persiste no Save — evita N chamadas
+  // separadas (updateStage + reorderStages + add + remove) que poderiam
+  // causar re-renders intermediários e estados inconsistentes.
+  const replacePipeline = useCallback((companyId, stages) => {
+    setPipelines(prev => ({ ...prev, [companyId]: stages.map(s => ({ ...s })) }));
+  }, [setPipelines]);
+
+  return { pipelines, updateStage, reorderStages, resetCompanyPipeline, replacePipeline };
 }
 
 export default usePipelines;

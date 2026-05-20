@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from "react";
 import {
   GitBranch, RotateCcw, CheckCircle2, Lock, ArrowRight, ChevronDown, ChevronUp,
-  Info, Pencil, FastForward, Ban, CheckCheck,
+  Info, Pencil, FastForward, Ban, CheckCheck, Eye,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
 import { StageEditorModal } from "../pipeline/StageEditorModal";
+import { SellerPreviewModal } from "../pipeline/SellerPreviewModal";
 
 /**
  * PipelineBuilderView — visual stage-flow editor.
@@ -22,8 +23,7 @@ export function PipelineBuilderView({
   pipelines,
   transitions,
   accessibleCompanies,
-  onUpdateStage,
-  onReorderStages,
+  onReplacePipeline,
   onResetPipeline,
   leads,
 }) {
@@ -35,6 +35,7 @@ export function PipelineBuilderView({
 
   const [activeCompany, setActiveCompany] = useState(companies[0] || "industria");
   const [editorOpen, setEditorOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const stages = useMemo(() => {
     const p = pipelines || defaultPipelines();
@@ -68,6 +69,16 @@ export function PipelineBuilderView({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setPreviewOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
+            style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+          >
+            <Eye size={11} />
+            Preview vendedor
+          </button>
           <button
             onClick={() => setEditorOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
@@ -247,9 +258,15 @@ export function PipelineBuilderView({
         companyId={activeCompany}
         stages={stages}
         leads={leads}
-        onUpdateStage={onUpdateStage}
-        onReorderStages={onReorderStages}
+        onReplacePipeline={onReplacePipeline}
         onResetPipeline={onResetPipeline}
+      />
+      <SellerPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        companyId={activeCompany}
+        stages={stages}
+        transitions={transitions}
       />
     </div>
   );
