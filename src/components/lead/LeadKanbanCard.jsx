@@ -3,7 +3,6 @@ import { Clock } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { CompanyTag } from "../ui/CompanyTag";
-import { ClassificationBadge } from "../ui/ClassificationBadge";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 
@@ -55,13 +54,6 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
           {lead.company}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {lead.clientClassification && (
-            <ClassificationBadge
-              classification={lead.clientClassification}
-              orderCount={lead.orderCount}
-              size="sm"
-            />
-          )}
           <FitScoreCircle score={lead.fitScore} size={30} />
         </div>
       </div>
