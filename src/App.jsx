@@ -16,6 +16,7 @@ import { useUserSettings } from "./hooks/use-user-settings";
 import { useSupabaseAuth } from "./hooks/use-supabase-auth";
 import { useLeads } from "./hooks/use-leads";
 import { useProfiles } from "./hooks/use-profiles";
+import { useInvitations } from "./hooks/use-invitations";
 import { usePipelineTransitions } from "./hooks/use-pipeline-transitions";
 import { useAutomations } from "./hooks/use-automations";
 import { LoginScreen } from "./components/shell/LoginScreen";
@@ -66,6 +67,12 @@ export default function App() {
     deleteUser,
     setFallbackUsers: setUsers,
   } = useProfiles({ enabled: Boolean(currentUser) && (supabaseEnabled ? isManagerRole : true) });
+  const {
+    invitations,
+    loading: invitationsLoading,
+    createInvitation,
+    revokeInvitation,
+  } = useInvitations({ enabled: Boolean(currentUser) && supabaseEnabled && isManagerRole });
   const { pipelines, updateStage, reorderStages, resetCompanyPipeline, replacePipeline } = usePipelines();
 
   const {
@@ -515,6 +522,10 @@ export default function App() {
                 supabaseEnabled={supabaseEnabled}
                 loading={usersLoading}
                 currentUser={currentUser}
+                invitations={invitations}
+                invitationsLoading={invitationsLoading}
+                onCreateInvitation={createInvitation}
+                onRevokeInvitation={revokeInvitation}
               />
             ) : <Navigate to={ROUTES.dashboard} replace />
           } />
