@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import {
-  UserPlus, User, Mail, Check, Save, Edit3, Trash2, Info, Loader2,
+  UserPlus, User, Mail, Check, Save, Edit3, Trash2, Info, Loader2, Send, X,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { Badge } from "../ui/Badge";
@@ -14,6 +14,8 @@ const EMPTY_FORM = {
   id: null, name: "", email: "", role: "vendedor",
   companies: [], initials: "", avatarBg: "#1E4D8C",
 };
+
+const EMPTY_INVITE = { email: "", role: "vendedor", companies: [] };
 
 const ROLE_OPTIONS_BASE = [
   { value: "vendedor", label: "Vendedor" },
@@ -37,10 +39,16 @@ function roleBadgeVariant(role) {
   return "default";
 }
 
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || "").trim());
+}
+
 export function UserManagementView({
   users, currentUser,
   onUpdateUser, onDeleteUser, onUsersChange,
   supabaseEnabled = false, loading = false,
+  invitations = [], invitationsLoading = false,
+  onCreateInvitation, onRevokeInvitation,
 }) {
   const isAdmin = currentUser?.role === "admin";
   const roleOptions = isAdmin ? ROLE_OPTIONS_ADMIN : ROLE_OPTIONS_BASE;
@@ -63,6 +71,12 @@ export function UserManagementView({
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState(null);
 
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState(EMPTY_INVITE);
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState(null);
+  const [inviteJustSent, setInviteJustSent] = useState(null);
+
   const startNew = useCallback(() => {
     setEditing("new");
     setForm(EMPTY_FORM);
@@ -78,6 +92,18 @@ export function UserManagementView({
   const closeModal = useCallback(() => {
     setEditing(null);
     setModalError(null);
+  }, []);
+
+  const openInvite = useCallback(() => {
+    setInviteOpen(true);
+    setInviteForm(EMPTY_INVITE);
+    setInviteError(null);
+    setInviteJustSent(null);
+  }, []);
+
+  const closeInvite = useCallback(() => {
+    setInviteOpen(false);
+    setInviteError(null);
   }, []);
 
   const save = useCallback(async () => {
@@ -108,7 +134,6 @@ export function UserManagementView({
           onUsersChange(prev => prev.map(u => u.id === form.id ? { ...u, ...form, initials } : u));
         }
       } else {
-        // Local-only create (mock mode). Supabase creation happens via signup flow.
         if (onUsersChange) {
           const newUser = { ...form, id: `u_${Date.now()}`, initials };
           onUsersChange(prev => [...prev, newUser]);
@@ -121,6 +146,42 @@ export function UserManagementView({
       setSaving(false);
     }
   }, [form, onUpdateUser, onUsersChange]);
+
+  const submitInvite = useCallback(async () => {
+    const email = inviteForm.email.trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      setInviteError("Informe um e-mail válido.");
+      return;
+    }
+    if (inviteForm.role === "vendedor" && inviteForm.companies.length === 0) {
+      setInviteError("Selecione ao menos uma empresa para vendedor.");
+      return;
+    }
+    if (users.some(u => (u.email || "").toLowerCase() === email)) {
+      setInviteError("Já existe um usuário cadastrado com este e-mail.");
+      return;
+    }
+    if (invitations.some(i => (i.email || "").toLowerCase() === email)) {
+      setInviteError("Já existe um convite pendente para este e-mail.");
+      return;
+    }
+    setInviting(true);
+    setInviteError(null);
+    try {
+      await onCreateInvitation({
+        email,
+        role: inviteForm.role,
+        companies: inviteForm.companies,
+        invitedBy: currentUser?.id,
+      });
+      setInviteJustSent(email);
+      setInviteForm(EMPTY_INVITE);
+    } catch (e) {
+      setInviteError(e?.message || String(e));
+    } finally {
+      setInviting(false);
+    }
+  }, [inviteForm, onCreateInvitation, currentUser, users, invitations]);
 
   const remove = useCallback(async (id) => {
     const target = users.find(u => u.id === id);
@@ -138,6 +199,16 @@ export function UserManagementView({
     }
   }, [users, onDeleteUser, onUsersChange]);
 
+  const revoke = useCallback(async (inv) => {
+    const ok = window.confirm(`Revogar o convite para ${inv.email}?`);
+    if (!ok) return;
+    try {
+      await onRevokeInvitation(inv.id);
+    } catch (e) {
+      window.alert(`Não foi possível revogar: ${e?.message || e}`);
+    }
+  }, [onRevokeInvitation]);
+
   const toggleCompany = useCallback((id) => {
     setForm(prev => ({
       ...prev,
@@ -147,7 +218,17 @@ export function UserManagementView({
     }));
   }, []);
 
+  const toggleInviteCompany = useCallback((id) => {
+    setInviteForm(prev => ({
+      ...prev,
+      companies: prev.companies.includes(id)
+        ? prev.companies.filter(c => c !== id)
+        : [...prev.companies, id],
+    }));
+  }, []);
+
   const canSave = Boolean(form.name && form.companies.length > 0);
+  const canManageInvites = supabaseEnabled && Boolean(onCreateInvitation);
 
   return (
     <div className="space-y-5">
@@ -160,9 +241,14 @@ export function UserManagementView({
             {users.length} usuários cadastrados · admin &gt; gerente &gt; vendedor
           </p>
         </div>
-        {!supabaseEnabled && (
-          <Button variant="primary" icon={UserPlus} onClick={startNew}>Novo usuário</Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canManageInvites && (
+            <Button variant="primary" icon={UserPlus} onClick={openInvite}>Convidar usuário</Button>
+          )}
+          {!supabaseEnabled && (
+            <Button variant="primary" icon={UserPlus} onClick={startNew}>Novo usuário</Button>
+          )}
+        </div>
       </div>
 
       {supabaseEnabled && (
@@ -172,8 +258,63 @@ export function UserManagementView({
         >
           <Info size={14} className="shrink-0 mt-0.5" />
           <div>
-            <strong>Como adicionar um novo vendedor:</strong> peça para ele se cadastrar na tela de login
-            (botão "Criar conta"). Ele aparecerá aqui como <em>vendedor sem empresas</em>, e você atribui as empresas clicando em Editar.
+            <strong>Como funciona o convite:</strong> ao convidar, você define cargo e empresas. Peça para a pessoa
+            acessar a tela de login e clicar em <em>"Criar conta"</em> com o mesmo e-mail —
+            ela já entrará com as permissões certas, sem precisar editar depois.
+          </div>
+        </div>
+      )}
+
+      {canManageInvites && invitations.length > 0 && (
+        <div>
+          <div className="text-[10px] uppercase font-bold tracking-widest mb-2" style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}>
+            Convites pendentes · {invitations.length}
+          </div>
+          <div className="space-y-2">
+            {invitations.map(inv => (
+              <div
+                key={inv.id}
+                className="p-4 rounded-xl border flex items-center justify-between gap-4 flex-wrap"
+                style={{ background: "#FFFBEB", borderColor: "#FCD34D" }}
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div
+                    className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "#FEF3C7", color: "#92400E" }}
+                  >
+                    <Mail size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>{inv.email}</span>
+                      <Badge variant={roleBadgeVariant(inv.role)} size="sm">
+                        {roleLabel(inv.role)}
+                      </Badge>
+                      <span
+                        className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-xl"
+                        style={{ background: "#FEF3C7", color: "#92400E", letterSpacing: "0.15em" }}
+                      >
+                        Aguardando cadastro
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {inv.companies.length === 0 ? (
+                        <span className="text-[11px] italic" style={{ color: NEUTRAL.slate }}>
+                          Sem empresas atribuídas
+                        </span>
+                      ) : (
+                        inv.companies.map(c => <CompanyTag key={c} companyId={c} size="sm" />)
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" icon={X} onClick={() => revoke(inv)}>
+                    Revogar
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -361,6 +502,114 @@ export function UserManagementView({
           <Button variant="ghost" onClick={closeModal} disabled={saving}>Cancelar</Button>
           <Button variant="primary" icon={saving ? Loader2 : Save} onClick={save} disabled={!canSave || saving}>
             {saving ? "Salvando…" : "Salvar"}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={inviteOpen}
+        onClose={closeInvite}
+        title="Convidar usuário"
+        width={560}
+      >
+        <div className="p-6 space-y-4">
+          <div>
+            <label
+              className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
+              style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+            >
+              E-mail *
+            </label>
+            <Input
+              value={inviteForm.email}
+              onChange={e => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="email@sanwey.com.br"
+              icon={Mail}
+              type="email"
+              autoFocus
+            />
+            <div className="text-[11px] mt-1.5" style={{ color: NEUTRAL.slate }}>
+              A pessoa precisa criar a conta na tela de login com este mesmo e-mail.
+            </div>
+          </div>
+
+          <div>
+            <label
+              className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
+              style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+            >
+              Função
+            </label>
+            <Select
+              value={inviteForm.role}
+              onChange={e => setInviteForm(prev => ({ ...prev, role: e.target.value }))}
+              options={roleOptions}
+            />
+          </div>
+
+          <div>
+            <label
+              className="text-[10px] uppercase font-bold tracking-widest mb-2 block"
+              style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+            >
+              Empresas com acesso {inviteForm.role === "vendedor" && "*"}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {COMPANY_IDS.map(id => {
+                const c = COMPANIES[id];
+                const selected = inviteForm.companies.includes(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => toggleInviteCompany(id)}
+                    className="p-3 rounded-xl border flex items-center gap-2 transition-all"
+                    style={{
+                      background: selected ? c.light : "#FFFFFF",
+                      borderColor: selected ? c.primary : "#EFEFEF",
+                    }}
+                  >
+                    <div className="w-3 h-3 rounded-xl" style={{ background: c.primary }} />
+                    <span
+                      className="font-semibold text-sm flex-1 text-left"
+                      style={{ color: selected ? c.dark : NEUTRAL.graphite }}
+                    >
+                      {c.name}
+                    </span>
+                    {selected && <Check size={14} color={c.primary} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {inviteError && (
+            <div className="p-2 rounded-xl text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+              {inviteError}
+            </div>
+          )}
+
+          {inviteJustSent && (
+            <div className="p-2.5 rounded-xl text-xs flex items-start gap-2" style={{ background: "#ECFDF5", color: "#065F46" }}>
+              <Check size={14} className="shrink-0 mt-0.5" />
+              <div>
+                Convite registrado para <strong>{inviteJustSent}</strong>. Peça para essa pessoa criar a conta na tela de login.
+              </div>
+            </div>
+          )}
+        </div>
+        <div
+          className="px-6 py-4 border-t flex items-center justify-end gap-2"
+          style={{ borderColor: "#EFEFEF", background: NEUTRAL.warmWhite }}
+        >
+          <Button variant="ghost" onClick={closeInvite} disabled={inviting}>Fechar</Button>
+          <Button
+            variant="primary"
+            icon={inviting ? Loader2 : Send}
+            onClick={submitInvite}
+            disabled={inviting || !inviteForm.email.trim()}
+          >
+            {inviting ? "Enviando…" : "Enviar convite"}
           </Button>
         </div>
       </Modal>
