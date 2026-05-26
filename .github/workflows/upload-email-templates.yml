@@ -1,0 +1,26 @@
+name: Upload email templates — Supabase
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "supabase/templates/**"
+      - "supabase/upload-templates.js"
+  workflow_dispatch:
+
+jobs:
+  upload:
+    name: Upload templates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Upload email templates to Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node supabase/upload-templates.js
