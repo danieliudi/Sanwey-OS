@@ -11,6 +11,7 @@ function rowToInvitation(r) {
     createdAt: r.created_at,
     acceptedAt: r.accepted_at,
     acceptedBy: r.accepted_by,
+    lastSentAt: r.last_sent_at ?? null,
   };
 }
 
@@ -106,12 +107,23 @@ export function useInvitations({ enabled = true } = {}) {
     }
   }, [fetchAll]);
 
+  const resendInvitation = useCallback(async (id) => {
+    if (!isSupabaseConfigured) throw new Error("Supabase não configurado.");
+    const { error: err } = await supabase.functions.invoke("resend-invite", {
+      body: { invitation_id: id },
+    });
+    if (err) throw err;
+    const now = new Date().toISOString();
+    setInvitations(prev => prev.map(i => i.id === id ? { ...i, lastSentAt: now } : i));
+  }, []);
+
   return useMemo(() => ({
     invitations,
     loading,
     error,
     createInvitation,
     revokeInvitation,
+    resendInvitation,
     refetch: fetchAll,
-  }), [invitations, loading, error, createInvitation, revokeInvitation, fetchAll]);
+  }), [invitations, loading, error, createInvitation, revokeInvitation, resendInvitation, fetchAll]);
 }

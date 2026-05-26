@@ -48,7 +48,7 @@ export function UserManagementView({
   onUpdateUser, onDeleteUser, onUsersChange,
   supabaseEnabled = false, loading = false,
   invitations = [], invitationsLoading = false,
-  onCreateInvitation, onRevokeInvitation,
+  onCreateInvitation, onRevokeInvitation, onResendInvitation,
 }) {
   const isAdmin = currentUser?.role === "admin";
   const roleOptions = isAdmin ? ROLE_OPTIONS_ADMIN : ROLE_OPTIONS_BASE;
@@ -199,6 +199,8 @@ export function UserManagementView({
     }
   }, [users, onDeleteUser, onUsersChange]);
 
+  const [resendingId, setResendingId] = useState(null);
+
   const revoke = useCallback(async (inv) => {
     const ok = window.confirm(`Revogar o convite para ${inv.email}?`);
     if (!ok) return;
@@ -208,6 +210,18 @@ export function UserManagementView({
       window.alert(`Não foi possível revogar: ${e?.message || e}`);
     }
   }, [onRevokeInvitation]);
+
+  const resend = useCallback(async (inv) => {
+    if (!onResendInvitation) return;
+    setResendingId(inv.id);
+    try {
+      await onResendInvitation(inv.id);
+    } catch (e) {
+      window.alert(`Não foi possível reenviar: ${e?.message || e}`);
+    } finally {
+      setResendingId(null);
+    }
+  }, [onResendInvitation]);
 
   const toggleCompany = useCallback((id) => {
     setForm(prev => ({
@@ -309,6 +323,18 @@ export function UserManagementView({
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  {onResendInvitation && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={resendingId === inv.id ? Loader2 : Send}
+                      disabled={resendingId === inv.id}
+                      onClick={() => resend(inv)}
+                      title={inv.lastSentAt ? `Último envio: ${new Date(inv.lastSentAt).toLocaleString("pt-BR")}` : "Enviar e-mail de convite"}
+                    >
+                      {resendingId === inv.id ? "Enviando…" : inv.lastSentAt ? "Reenviar" : "Enviar"}
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" icon={X} onClick={() => revoke(inv)}>
                     Revogar
                   </Button>
