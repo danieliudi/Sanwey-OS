@@ -72,6 +72,7 @@ export default function App() {
     loading: invitationsLoading,
     createInvitation,
     revokeInvitation,
+    resendInvitation,
   } = useInvitations({ enabled: Boolean(currentUser) && supabaseEnabled && isManagerRole });
   const { pipelines, updateStage, reorderStages, resetCompanyPipeline, replacePipeline } = usePipelines();
 
@@ -526,6 +527,7 @@ export default function App() {
                 invitationsLoading={invitationsLoading}
                 onCreateInvitation={createInvitation}
                 onRevokeInvitation={revokeInvitation}
+                onResendInvitation={supabaseEnabled ? resendInvitation : undefined}
               />
             ) : <Navigate to={ROUTES.dashboard} replace />
           } />

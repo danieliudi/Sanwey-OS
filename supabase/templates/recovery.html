@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Redefinição de senha — CRM Sanwey</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F5F0EA;font-family:Inter,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F0EA;">
+    <tr>
+      <td align="center" style="padding:48px 16px;">
+
+        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom:28px;">
+              <img
+                src="https://sanwey-crm.netlify.app/sanwey-logo.png"
+                width="170"
+                alt="Grupo Sanwey"
+                style="display:block;height:auto;"
+              />
+            </td>
+          </tr>
+
+          <!-- Card principal -->
+          <tr>
+            <td style="background:#FFFFFF;border-radius:16px;border:1px solid #ECE5DE;padding:40px 40px 36px;">
+
+              <!-- Ícone de cadeado (ASCII art em tabela) -->
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background:#FBEAEC;border-radius:50%;width:48px;height:48px;text-align:center;vertical-align:middle;">
+                    <span style="font-size:22px;line-height:48px;">&#128274;</span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Linha de acento vermelha -->
+              <div style="width:36px;height:3px;background:#C8202E;border-radius:2px;margin-bottom:28px;"></div>
+
+              <!-- Título -->
+              <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#2D3436;line-height:1.25;letter-spacing:-0.01em;">
+                Redefinição de senha
+              </h1>
+
+              <!-- Texto -->
+              <p style="margin:0 0 8px;font-size:15px;color:#636E72;line-height:1.6;">
+                Recebemos uma solicitação para redefinir a senha da sua conta no <strong style="color:#2D3436;">CRM Sanwey</strong>.
+              </p>
+              <p style="margin:0 0 28px;font-size:15px;color:#636E72;line-height:1.6;">
+                Clique no botão abaixo para criar uma nova senha. O link é válido por <strong style="color:#2D3436;">1 hora</strong>.
+              </p>
+
+              <!-- Botão CTA -->
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background:#C8202E;border-radius:10px;">
+                    <a
+                      href="{{ .ConfirmationURL }}"
+                      style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;letter-spacing:0.01em;"
+                    >
+                      Redefinir minha senha &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Aviso de segurança -->
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;width:100%;">
+                <tr>
+                  <td style="background:#FFF8F0;border-radius:8px;border-left:3px solid #C8202E;padding:12px 16px;">
+                    <p style="margin:0;font-size:13px;color:#636E72;line-height:1.5;">
+                      <strong style="color:#2D3436;">Não solicitou essa redefinição?</strong><br/>
+                      Ignore este e-mail. Sua senha permanece a mesma e nenhuma alteração foi feita.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Divider -->
+              <div style="height:1px;background:#ECE5DE;margin:28px 0;"></div>
+
+              <!-- Link de fallback -->
+              <p style="margin:0;font-size:12px;color:#636E72;line-height:1.6;">
+                Se o botão não funcionar, copie e cole o endereço abaixo no navegador:<br/>
+                <a href="{{ .ConfirmationURL }}" style="color:#C8202E;word-break:break-all;font-size:12px;">{{ .ConfirmationURL }}</a>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:28px 0 8px;text-align:center;">
+              <p style="margin:0 0 4px;font-size:12px;color:#636E72;line-height:1.6;">
+                &copy; Grupo Sanwey &mdash; Commercial Intelligence Platform
+              </p>
+              <p style="margin:0;font-size:11px;color:#A0A0A0;line-height:1.5;">
+                Você recebeu este e-mail pois foi solicitada uma redefinição de senha para sua conta.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
