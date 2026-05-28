@@ -1,5 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
+
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() => window.innerWidth < 1024);
+  useEffect(() => {
+    const handler = () => setMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return mobile;
+}
 
 const W_COLLAPSED = 52;
 const W_EXPANDED  = 248;
@@ -18,12 +28,29 @@ const P = {
 
 const ROLE_LABEL = { admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor" };
 
-export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout }) {
-  const [expanded, setExpanded] = useState(false);
+export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout, mobileOpen, onMobileClose }) {
+  const [hovered, setHovered] = useState(false);
+  const isMobile = useIsMobile();
 
-  return (
-    <aside
-      style={{
+  const expanded = isMobile ? (mobileOpen ?? false) : hovered;
+
+  const sidebarStyle = isMobile
+    ? {
+        position: "fixed",
+        top: 0,
+        left: 0,
+        height: "100vh",
+        width: W_EXPANDED,
+        background: P.bg,
+        color: P.text,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        zIndex: 50,
+        transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
+        transition: "transform 0.25s cubic-bezier(.4,0,.2,1)",
+      }
+    : {
         position: "fixed",
         top: 0,
         left: 0,
@@ -33,13 +60,34 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         color: P.text,
         display: "flex",
         flexDirection: "column",
-        transition: "width 0.25s cubic-bezier(.4,0,.2,1)",
         overflow: "hidden",
         zIndex: 40,
-      }}
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
-    >
+        transition: "width 0.25s cubic-bezier(.4,0,.2,1)",
+      };
+
+  const handleNavClick = (itemId) => {
+    onSectionChange(itemId);
+    if (isMobile) onMobileClose?.();
+  };
+
+  return (
+    <>
+      {isMobile && mobileOpen && (
+        <div
+          onClick={onMobileClose}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 49,
+          }}
+        />
+      )}
+      <aside
+        style={sidebarStyle}
+        onMouseEnter={!isMobile ? () => setHovered(true) : undefined}
+        onMouseLeave={!isMobile ? () => setHovered(false) : undefined}
+      >
       {/* ── Brand ── */}
       <div
         style={{
@@ -105,7 +153,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                   label={item.label}
                   active={active}
                   expanded={expanded}
-                  onClick={() => onSectionChange(item.id)}
+                  onClick={() => handleNavClick(item.id)}
                 />
               );
             })}
@@ -183,7 +231,8 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
           <LogOut size={14} strokeWidth={2} />
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

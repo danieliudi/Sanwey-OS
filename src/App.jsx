@@ -100,6 +100,12 @@ export default function App() {
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarMobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [sidebarMobileOpen]);
 
   // ── Roteamento ──────────────────────────────────────────────────────────
   // section vem direto da URL. Mudar de tela é navigate(ROUTES[id]) — a URL
@@ -360,17 +366,20 @@ export default function App() {
         onSectionChange={setSection}
         currentUser={currentUser}
         onLogout={handleLogout}
+        mobileOpen={sidebarMobileOpen}
+        onMobileClose={() => setSidebarMobileOpen(false)}
       />
 
-      <div className="flex flex-col min-w-0" style={{ marginLeft: 52, minHeight: "100vh" }}>
+      <div className="flex flex-col min-w-0 lg:ml-[52px]" style={{ minHeight: "100vh" }}>
         <TopBar
           title={sectionTitle}
           activeCompany={activeCompany}
           accessibleCompanies={accessibleCompanies}
           onCompanyChange={setActiveCompany}
+          onMenuToggle={() => setSidebarMobileOpen(v => !v)}
         />
 
-        <div className="px-6 py-6 flex-1 min-w-0">
+        <div className="px-4 py-4 sm:px-6 sm:py-6 flex-1 min-w-0">
         <ErrorBoundary
           fallback={({ error, reset }) => (
             <div className="rounded-xl border p-6 max-w-2xl mx-auto mt-8" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>

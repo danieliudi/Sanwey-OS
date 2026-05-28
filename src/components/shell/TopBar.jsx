@@ -1,5 +1,5 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
 /**
@@ -13,16 +13,33 @@ export function TopBar({
   accessibleCompanies,
   onCompanyChange,
   title,
+  onMenuToggle,
 }) {
   return (
     <div
-      className="flex items-center gap-4 px-6 sticky top-0 z-20 border-b"
+      className="flex items-center gap-3 px-4 lg:px-6 sticky top-0 z-20 border-b"
       style={{
         height: 56,
         background: "#FFFFFF",
         borderColor: "#E5E0DA",
       }}
     >
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onMenuToggle}
+        className="lg:hidden flex items-center justify-center shrink-0 rounded cursor-pointer"
+        style={{
+          width: 36,
+          height: 36,
+          background: "transparent",
+          border: "none",
+          color: NEUTRAL.graphite,
+        }}
+        aria-label="Abrir menu"
+      >
+        <Menu size={20} strokeWidth={2} />
+      </button>
+
       {title && (
         <div
           className="font-bold shrink-0"
@@ -36,8 +53,8 @@ export function TopBar({
         </div>
       )}
 
-      {/* Search */}
-      <div className="flex-1 max-w-2xl relative">
+      {/* Search — hidden on small mobile */}
+      <div className="flex-1 max-w-2xl relative hidden sm:block">
         <Search
           size={14}
           style={{
