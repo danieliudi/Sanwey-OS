@@ -12,9 +12,9 @@ export function Button({
   disabled = false, className = "", accent, type = "button",
 }) {
   const variants = {
-    primary: { bg: accent || NEUTRAL.graphite, color: "#FFFFFF", border: accent || NEUTRAL.graphite },
+    primary: { bg: accent || NEUTRAL.red, color: "#FFFFFF", border: accent || NEUTRAL.red },
     dark: { bg: NEUTRAL.graphite, color: "#FFFFFF", border: NEUTRAL.graphite },
-    secondary: { bg: "#FFFFFF", color: NEUTRAL.graphite, border: "#D4D4D4" },
+    secondary: { bg: "#FFFFFF", color: NEUTRAL.graphite, border: NEUTRAL.sombra },
     ghost: { bg: "transparent", color: NEUTRAL.slate, border: "transparent" },
     danger: { bg: "#FEF2F2", color: "#B91C1C", border: "#FECACA" },
   };

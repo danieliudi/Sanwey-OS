@@ -1,85 +1,95 @@
-import React from "react";
-import { ChevronRight, LogOut } from "lucide-react";
+import React, { useState } from "react";
+import { LogOut } from "lucide-react";
 
-// Paleta vermelho-Sanwey (NEUTRAL.red = #CC2936). Tons mais escuros para o
-// fundo do sidebar e mais claros para acento, mantendo bom contraste do texto
-// branco sobre vermelho.
-const PALETTE = {
-  bg: "#7A1820",        // vermelho escuro profundo (fundo principal)
-  bgHover: "#9B1F2A",   // vermelho médio (hover)
-  bgActive: "#BC2533",  // vermelho saturado (item ativo)
-  border: "rgba(255,255,255,0.08)",
-  textDim: "#F5C7CB",   // rosa claro para items inativos
-  textMuted: "#E0989E", // ainda mais apagado para labels de grupo
-  textBright: "#FFFFFF",
-  accent: "#FFD166",    // amarelo dourado pra strip de "ativo" — contrasta no vermelho
+const W_COLLAPSED = 52;
+const W_EXPANDED  = 248;
+
+const P = {
+  bg:          "#2C2C2B",
+  border:      "rgba(249,245,241,0.08)",
+  text:        "rgba(249,245,241,0.65)",
+  textBright:  "#F9F5F1",
+  textFaint:   "rgba(249,245,241,0.35)",
+  hoverBg:     "rgba(249,245,241,0.06)",
+  activeBg:    "rgba(249,245,241,0.06)",
+  activeStrip: "#C7212B",
+  avatarRing:  "rgba(249,245,241,0.12)",
 };
 
 const ROLE_LABEL = { admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor" };
 
-/**
- * Persistent left navigation. Groups related screens under labelled sections,
- * keeps the active item visually anchored with a thin accent strip, and tucks
- * the user identity + logout into a fixed footer so they're always reachable.
- */
 export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <aside
-      className="flex flex-col shrink-0"
       style={{
-        width: 232,
-        background: PALETTE.bg,
-        color: PALETTE.textDim,
-        minHeight: "100vh",
-        position: "sticky",
+        position: "fixed",
         top: 0,
-        alignSelf: "flex-start",
+        left: 0,
+        height: "100vh",
+        width: expanded ? W_EXPANDED : W_COLLAPSED,
+        background: P.bg,
+        color: P.text,
+        display: "flex",
+        flexDirection: "column",
+        transition: "width 0.25s cubic-bezier(.4,0,.2,1)",
+        overflow: "hidden",
+        zIndex: 40,
       }}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
     >
       {/* ── Brand ── */}
       <div
-        className="flex items-center gap-2.5 px-4 shrink-0"
-        style={{ height: 56, borderBottom: `1px solid ${PALETTE.border}` }}
+        style={{
+          height: 56,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 14px",
+          gap: 10,
+          borderBottom: `1px solid ${P.border}`,
+          flexShrink: 0,
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+        }}
       >
         <img
           src="/sanwey-simbolo.png"
           alt="Sanwey"
-          style={{
-            width: 30,
-            height: 30,
-            objectFit: "contain",
-          }}
+          style={{ width: 24, height: 24, objectFit: "contain", flexShrink: 0 }}
         />
-        <div className="leading-tight min-w-0">
-          <div className="truncate" style={{ color: PALETTE.textBright, fontWeight: 700, fontSize: 13 }}>
-            Grupo Sanwey
-          </div>
-          <div
-            style={{
-              color: PALETTE.textMuted,
-              fontSize: 9,
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-            }}
-          >
+        <div style={{ opacity: expanded ? 1 : 0, transition: "opacity 0.18s ease", lineHeight: 1.25 }}>
+          <div style={{ color: P.textBright, fontWeight: 700, fontSize: 13 }}>Grupo Sanwey</div>
+          <div style={{ color: P.textFaint, fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase" }}>
             Commercial OS
           </div>
         </div>
       </div>
 
-      {/* ── Nav groups ── */}
-      <nav className="flex-1 overflow-y-auto py-3" style={{ scrollbarWidth: "thin" }}>
+      {/* ── Nav ── */}
+      <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "12px 0", scrollbarWidth: "none" }}>
         {navGroups.map((group, gi) => (
-          <div key={gi} className={gi === 0 ? "" : "mt-3"}>
+          <div key={gi} style={{ marginTop: gi === 0 ? 0 : 8 }}>
             {group.label && (
               <div
-                className="flex items-center gap-1.5 px-4 mb-1.5"
                 style={{
-                  color: PALETTE.textMuted,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "0 14px",
+                  color: P.textFaint,
                   fontSize: 10,
                   fontWeight: 700,
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                  pointerEvents: "none",
+                  overflow: "hidden",
+                  maxHeight: expanded ? 28 : 0,
+                  marginBottom: expanded ? 4 : 0,
+                  opacity: expanded ? 1 : 0,
+                  transition: "opacity 0.15s ease, max-height 0.2s ease, margin-bottom 0.2s ease",
                 }}
               >
                 {group.icon && <group.icon size={11} strokeWidth={2.5} />}
@@ -87,50 +97,16 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               </div>
             )}
             {group.items.map((item) => {
-              const Icon = item.icon;
               const active = section === item.id;
               return (
-                <button
+                <NavItem
                   key={item.id}
+                  icon={item.icon}
+                  label={item.label}
+                  active={active}
+                  expanded={expanded}
                   onClick={() => onSectionChange(item.id)}
-                  className="w-full flex items-center gap-2.5 text-left transition-colors duration-150 relative"
-                  style={{
-                    padding: "8px 16px 8px 20px",
-                    fontSize: 13,
-                    color: active ? PALETTE.textBright : PALETTE.textDim,
-                    background: active ? PALETTE.bgActive : "transparent",
-                    fontWeight: active ? 600 : 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.background = PALETTE.bgHover;
-                      e.currentTarget.style.color = PALETTE.textBright;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = PALETTE.textDim;
-                    }
-                  }}
-                >
-                  {active && (
-                    <span
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        top: 6,
-                        bottom: 6,
-                        width: 3,
-                        borderRadius: "0 3px 3px 0",
-                        background: PALETTE.accent,
-                      }}
-                    />
-                  )}
-                  {Icon && <Icon size={15} strokeWidth={active ? 2.4 : 2} />}
-                  <span className="truncate flex-1">{item.label}</span>
-                  {active && <ChevronRight size={12} strokeWidth={2.5} />}
-                </button>
+                />
               );
             })}
           </div>
@@ -139,51 +115,131 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
 
       {/* ── User footer ── */}
       <div
-        className="px-3 py-3 flex items-center gap-2.5 shrink-0"
-        style={{ borderTop: `1px solid ${PALETTE.border}` }}
+        style={{
+          borderTop: `1px solid ${P.border}`,
+          padding: "10px",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexShrink: 0,
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+        }}
       >
         <div
-          className="rounded-full flex items-center justify-center font-bold text-white shrink-0"
           style={{
             width: 32,
             height: 32,
-            background: currentUser?.avatarBg || PALETTE.accent,
+            borderRadius: "50%",
+            background: currentUser?.avatarBg || P.activeStrip,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            color: "#FFFFFF",
             fontSize: 11,
             letterSpacing: "0.02em",
-            boxShadow: "0 0 0 2px rgba(255,255,255,0.08)",
+            flexShrink: 0,
+            boxShadow: `0 0 0 2px ${P.avatarRing}`,
           }}
         >
           {currentUser?.initials || "?"}
         </div>
-        <div className="flex-1 min-w-0">
-          <div
-            className="truncate"
-            style={{ color: PALETTE.textBright, fontSize: 12, fontWeight: 600 }}
-          >
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            opacity: expanded ? 1 : 0,
+            transition: "opacity 0.15s ease",
+          }}
+        >
+          <div style={{ color: P.textBright, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>
             {currentUser?.name || "Convidado"}
           </div>
-          <div className="truncate" style={{ color: PALETTE.textMuted, fontSize: 10 }}>
+          <div style={{ color: P.textFaint, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis" }}>
             {ROLE_LABEL[currentUser?.role] || "—"}
           </div>
         </div>
         <button
           onClick={onLogout}
           title="Sair"
-          className="p-2 rounded-md transition-colors shrink-0"
-          style={{ color: PALETTE.textDim, background: "transparent" }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = PALETTE.bgHover;
-            e.currentTarget.style.color = "#FCA5A5";
+          style={{
+            background: "transparent",
+            border: "none",
+            color: P.text,
+            cursor: "pointer",
+            padding: 6,
+            borderRadius: 3,
+            display: "flex",
+            alignItems: "center",
+            flexShrink: 0,
+            opacity: expanded ? 1 : 0,
+            transition: "opacity 0.15s ease",
+            pointerEvents: expanded ? "auto" : "none",
           }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = PALETTE.textDim;
-          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = P.hoverBg; e.currentTarget.style.color = "#FCA5A5"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = P.text; }}
         >
           <LogOut size={14} strokeWidth={2} />
         </button>
       </div>
     </aside>
+  );
+}
+
+function NavItem({ icon: Icon, label, active, expanded, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "8px 14px",
+        position: "relative",
+        fontSize: 13,
+        fontWeight: active ? 600 : 500,
+        color: active ? P.textBright : P.text,
+        background: active ? P.activeBg : "transparent",
+        border: "none",
+        cursor: "pointer",
+        textAlign: "left",
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+        transition: "background 0.15s, color 0.15s",
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.background = P.hoverBg;
+          e.currentTarget.style.color = P.textBright;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.background = "transparent";
+          e.currentTarget.style.color = P.text;
+        }
+      }}
+    >
+      {active && (
+        <span
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 6,
+            bottom: 6,
+            width: 3,
+            borderRadius: "0 3px 3px 0",
+            background: P.activeStrip,
+          }}
+        />
+      )}
+      {Icon && <Icon size={15} strokeWidth={active ? 2.4 : 2} style={{ flexShrink: 0 }} />}
+      <span style={{ opacity: expanded ? 1 : 0, transition: "opacity 0.15s ease" }}>
+        {label}
+      </span>
+    </button>
   );
 }
 

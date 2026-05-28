@@ -49,14 +49,18 @@ export const COMPANIES = {
 };
 
 export const NEUTRAL = {
-  graphite: "#2D3436",
-  slate: "#636E72",
-  warmWhite: "#FAFAF8",
-  lightGray: "#F5F5F3",
-  gold: "#C49B2A",
-  amber: "#D4730E",
-  red: "#CC2936",
-  success: "#2D9B52",
+  graphite:  "#2C2C2B",  // --carvao
+  slate:     "#8A8680",  // --cinza-medio
+  warmWhite: "#F9F5F1",  // --creme
+  lightGray: "#DEDAD6",  // --body-bg
+  sombra:    "#E5E0DA",  // --sombra
+  red:       "#C7212B",  // --vermelho
+  redDark:   "#8B1419",  // --vermelho-d
+  redTint:   "#FBE9EB",  // --vermelho-t
+  amber:     "#E8920A",  // --amber (App Expression)
+  amberBg:   "#FEF3C7",
+  success:   "#16A34A",
+  gold:      "#C49B2A",
 };
 
 export const COMPANY_IDS = ["industria", "resibag", "montemor"];

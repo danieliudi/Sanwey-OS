@@ -20,7 +20,7 @@ export function TopBar({
       style={{
         height: 56,
         background: "#FFFFFF",
-        borderColor: "#E5E7EB",
+        borderColor: "#E5E0DA",
       }}
     >
       {title && (
@@ -57,18 +57,18 @@ export function TopBar({
           className="w-full text-sm rounded-lg border outline-none transition-colors duration-150 cursor-not-allowed"
           style={{
             padding: "8px 12px 8px 36px",
-            borderColor: "#E5E7EB",
-            background: "#F3F4F6",
+            borderColor: "#E5E0DA",
+            background: "#F9F5F1",
             color: NEUTRAL.slate,
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = "#3B82F6";
+            e.target.style.borderColor = "#C7212B";
             e.target.style.background = "#FFFFFF";
-            e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.12)";
+            e.target.style.boxShadow = "0 0 0 3px rgba(199,33,43,0.10)";
           }}
           onBlur={(e) => {
-            e.target.style.borderColor = "#E5E7EB";
-            e.target.style.background = "#F8FAFB";
+            e.target.style.borderColor = "#E5E0DA";
+            e.target.style.background = "#F9F5F1";
             e.target.style.boxShadow = "none";
           }}
         />
@@ -78,7 +78,7 @@ export function TopBar({
         {accessibleCompanies.length > 1 && (
           <div
             className="flex items-center gap-0.5 rounded-lg p-0.5 border"
-            style={{ background: "#F3F4F6", borderColor: "#E5E7EB" }}
+            style={{ background: "#F9F5F1", borderColor: "#E5E0DA" }}
           >
             {accessibleCompanies.map((id) => {
               const c = COMPANIES[id];

@@ -10,13 +10,13 @@ export function Select({ value, onChange, options, placeholder, className = "" }
         onChange={onChange}
         className="w-full appearance-none py-2 pl-3 pr-9 text-sm rounded-lg border transition-colors duration-150 focus:outline-none focus:ring-2 cursor-pointer"
         style={{
-          borderColor: "#D4D4D4",
+          borderColor: "#E5E0DA",
           background: "#FFFFFF",
           color: value ? NEUTRAL.graphite : NEUTRAL.slate,
-          "--tw-ring-color": NEUTRAL.graphite + "30",
+          "--tw-ring-color": "rgba(199,33,43,.15)",
         }}
-        onFocus={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite + "70"; }}
-        onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
+        onFocus={e => { e.currentTarget.style.borderColor = "#C7212B"; }}
+        onBlur={e => { e.currentTarget.style.borderColor = "#E5E0DA"; }}
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map(opt => (

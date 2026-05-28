@@ -348,12 +348,10 @@ export default function App() {
   return (
     <div
       style={{
-        background: "#F4F6FA",
+        background: "#DEDAD6",
         fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
         color: NEUTRAL.graphite,
         minHeight: "100vh",
-        display: "flex",
-        alignItems: "stretch",
       }}
     >
       <Sidebar
@@ -364,7 +362,7 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex flex-col min-w-0" style={{ marginLeft: 52, minHeight: "100vh" }}>
         <TopBar
           title={sectionTitle}
           activeCompany={activeCompany}
@@ -553,7 +551,7 @@ export default function App() {
 
         <footer
           className="px-6 py-4 border-t text-xs flex items-center justify-between flex-wrap gap-2"
-          style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
+          style={{ background: "#FFFFFF", borderColor: "#E5E0DA", color: NEUTRAL.slate }}
         >
           <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
             Grupo Sanwey · Commercial Intelligence v4.0
