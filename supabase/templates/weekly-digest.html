@@ -1,0 +1,147 @@
+<!--
+  Template: weekly-digest.html
+  Assunto: "Resumo da semana — Pipeline {{COMPANY_LABEL}}"
+  Persona: gerente/admin
+
+  Variáveis:
+    {{RECIPIENT_NAME}}   Nome do destinatário
+    {{COMPANY_LABEL}}    Nome da unidade Sanwey (ex: Sanwey Goiás)
+    {{WEEK_RANGE}}       Intervalo da semana (ex: 26/05 – 01/06/2025)
+    {{LEADS_ACTIVE}}     Número de leads ativos
+    {{LEADS_WON}}        Leads ganhos na semana
+    {{LEADS_LOST}}       Leads perdidos na semana
+    {{PIPELINE_VALUE}}   Valor total do pipeline aberto
+    {{NEW_LEADS}}        Novos leads criados na semana
+    {{STALE_COUNT}}      Leads parados (sem movimentação há 14+ dias)
+    {{APP_URL}}          URL base do app
+-->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resumo semanal — CRM Sanwey</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F9F5F1;font-family:Inter,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F9F5F1;">
+    <tr>
+      <td align="center" style="padding:48px 16px;">
+        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom:28px;">
+              <img src="https://sanwey-crm.netlify.app/sanwey-logo.png" width="170" alt="Grupo Sanwey" style="display:block;height:auto;" />
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background:#FFFFFF;border-radius:16px;border:1px solid #E5E0DA;padding:40px 40px 36px;">
+
+              <!-- Acento vermelho -->
+              <div style="width:36px;height:3px;background:#C7212B;border-radius:2px;margin-bottom:28px;"></div>
+
+              <h1 style="margin:0 0 6px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">
+                Resumo semanal do pipeline
+              </h1>
+              <p style="margin:0 0 28px;font-size:14px;color:#8A8680;line-height:1.5;">
+                {{COMPANY_LABEL}} &middot; {{WEEK_RANGE}}
+              </p>
+
+              <!-- Metrics grid 2x2 -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+                <tr>
+                  <td width="50%" style="padding:0 6px 12px 0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F9F5F1;border:1px solid #E5E0DA;border-radius:10px;">
+                      <tr>
+                        <td style="padding:18px 20px;">
+                          <div style="font-size:28px;font-weight:700;color:#2C2C2B;line-height:1;">{{LEADS_ACTIVE}}</div>
+                          <div style="font-size:12px;color:#8A8680;margin-top:4px;">Leads ativos</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="50%" style="padding:0 0 12px 6px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;">
+                      <tr>
+                        <td style="padding:18px 20px;">
+                          <div style="font-size:28px;font-weight:700;color:#16A34A;line-height:1;">{{LEADS_WON}}</div>
+                          <div style="font-size:12px;color:#8A8680;margin-top:4px;">Ganhos na semana</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" style="padding:0 6px 0 0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFF5F5;border:1px solid #FECACA;border-radius:10px;">
+                      <tr>
+                        <td style="padding:18px 20px;">
+                          <div style="font-size:28px;font-weight:700;color:#C7212B;line-height:1;">{{LEADS_LOST}}</div>
+                          <div style="font-size:12px;color:#8A8680;margin-top:4px;">Perdidos na semana</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="50%" style="padding:0 0 0 6px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F9F5F1;border:1px solid #E5E0DA;border-radius:10px;">
+                      <tr>
+                        <td style="padding:18px 20px;">
+                          <div style="font-size:22px;font-weight:700;color:#2C2C2B;line-height:1;">{{PIPELINE_VALUE}}</div>
+                          <div style="font-size:12px;color:#8A8680;margin-top:4px;">Pipeline total</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Secondary metrics -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F9F5F1;border:1px solid #E5E0DA;border-radius:10px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:14px 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding:3px 0;font-size:13px;color:#8A8680;">Novos leads na semana</td>
+                        <td align="right" style="padding:3px 0;font-size:13px;color:#2C2C2B;font-weight:600;">{{NEW_LEADS}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:3px 0;font-size:13px;color:#8A8680;">Leads parados (14+ dias)</td>
+                        <td align="right" style="padding:3px 0;font-size:13px;color:#E8920A;font-weight:600;">{{STALE_COUNT}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background:#C7212B;border-radius:10px;">
+                    <a href="{{APP_URL}}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;letter-spacing:0.01em;">
+                      Ver pipeline completo &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:28px 0 8px;text-align:center;">
+              <p style="margin:0 0 4px;font-size:12px;color:#8A8680;line-height:1.6;">&copy; Grupo Sanwey &mdash; Commercial Intelligence Platform</p>
+              <p style="margin:0;font-size:11px;color:#A09A94;line-height:1.5;">Resumo semanal automático para gestores do pipeline.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
