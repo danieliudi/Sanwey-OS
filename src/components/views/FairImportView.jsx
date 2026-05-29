@@ -386,7 +386,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
             </label>
             <div
               className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-gray-50"
-              style={{ borderColor: "#DCDCDC", background: "#FAFAF8" }}
+              style={{ borderColor: "#DCDCDC", background: "#FAFAFA" }}
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
@@ -603,7 +603,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
       {/* Expanded detail */}
       {expanded && (
         <div className="px-10 pb-3 pt-1 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs border-t"
-          style={{ borderColor: "#F0F0EE", background: "#FAFAF8" }}>
+          style={{ borderColor: "#EFF2F5", background: "#FAFAFA" }}>
           <DetailField label="CNPJ" value={row.cnpj || "—"} />
           <DetailField label="Email" value={row.contactEmail || "—"} />
           <DetailField label="Telefone" value={row.phone || "—"} />

@@ -248,7 +248,7 @@ function KpiCard({ label, value, sub }) {
       className="rounded-xl border"
       style={{
         background: "#FFFFFF",
-        borderColor: "#E8E8E8",
+        borderColor: "#E5E7EB",
         padding: "12px 16px",
         boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
       }}
@@ -330,7 +330,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
       {open && (
         <div
           className="rounded-2xl border mt-3 p-5"
-          style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}
+          style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
         >
           <div className="text-xs font-semibold mb-4" style={{ color: NEUTRAL.slate }}>
             Distribuição por etapa
@@ -667,7 +667,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                   {bucket.leads.length === 0 ? (
                     <div
                       className="flex items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs"
-                      style={{ borderColor: isOver ? stage.color + "40" : "#E8E8E8", color: NEUTRAL.slate }}
+                      style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}
                     >
                       {isOver ? "Soltar aqui" : "Sem leads"}
                     </div>
@@ -708,9 +708,9 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                   <button
                     onClick={() => setAddingInStage(stage.id)}
                     className="mx-2 mb-2 w-[calc(100%-16px)] flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors duration-150"
-                    style={{ borderColor: "#E8E8E8", color: NEUTRAL.slate, background: "transparent", borderStyle: "dashed" }}
+                    style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "transparent", borderStyle: "dashed" }}
                     onMouseEnter={e => { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.color = "#1E4D8C"; e.currentTarget.style.borderColor = "#C7D2FE"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.borderColor = "#E8E8E8"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.borderColor = "#E5E7EB"; }}
                   >
                     <Plus size={12} />
                     Novo card

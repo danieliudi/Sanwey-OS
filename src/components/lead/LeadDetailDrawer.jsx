@@ -176,7 +176,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
       <div
         className="w-full max-w-2xl max-h-full overflow-y-auto rounded-2xl"
         style={{
-          background: "#FAFAF8",
+          background: "#FFFFFF",
           boxShadow: "0 24px 64px rgba(0,0,0,0.24)",
         }}
         onClick={e => e.stopPropagation()}
@@ -184,7 +184,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
         {/* Drawer header */}
         <div
           className="sticky top-0 z-10 px-5 py-3.5 border-b flex items-center justify-between"
-          style={{ background: "rgba(250,250,248,0.97)", borderColor: "#E8E8E8", backdropFilter: "blur(8px)" }}
+          style={{ background: "rgba(250,250,248,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
         >
           <div className="flex items-center gap-2">
             <CompanyTag companyId={lead.companyId} />
@@ -235,7 +235,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
           {isSupabaseConfigured && (
             <div
               className="p-3.5 rounded-xl border flex items-start justify-between gap-3 flex-wrap"
-              style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}
+              style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
             >
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: NEUTRAL.slate }}>
@@ -339,7 +339,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
 
           {/* Campos customizados da etapa */}
           {customDefs.length > 0 && (
-            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
               <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
                 Detalhes da etapa
               </div>
@@ -366,7 +366,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
 
           {/* Produto — só mostra se tiver SKU */}
           {(lead.skuName || lead.quantity > 0) && (
-            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
               <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
                 <Package size={12} />Produto vinculado
               </div>
@@ -385,7 +385,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
           )}
 
           {/* Decisor */}
-          <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+          <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
             <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
               <Users size={12} />Decisor
             </div>
@@ -450,7 +450,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
           </div>
 
           {/* Follow-up inline */}
-          <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+          <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: NEUTRAL.slate }}>
                 <Calendar size={13} />
@@ -482,7 +482,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
                   value={followUpDate}
                   onChange={e => setFollowUpDate(e.target.value)}
                   className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors cursor-pointer"
-                  style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FAFAF8" }}
+                  style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
                   onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
                   onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
                 />
@@ -517,9 +517,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-150 cursor-pointer"
-                      style={{ borderColor: "#E8E8E8", background: "#FFFFFF", color: NEUTRAL.graphite }}
+                      style={{ borderColor: "#E5E7EB", background: "#FFFFFF", color: NEUTRAL.graphite }}
                       onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"; e.currentTarget.style.borderColor = "#D0D0D0"; }}
-                      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "#E8E8E8"; }}
+                      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "#E5E7EB"; }}
                     >
                       <Icon size={12} strokeWidth={2} />
                       {l.label}
@@ -549,7 +549,7 @@ function PipelineStageBar({ currentStage, companyColor }) {
   return (
     <div
       className="p-4 rounded-xl border"
-      style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}
+      style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
     >
       <div
         className="text-[10px] font-semibold mb-3 tracking-widest uppercase"
@@ -561,7 +561,7 @@ function PipelineStageBar({ currentStage, companyColor }) {
         {nonTerminal.map((s, idx) => {
           const done   = isTerminal || idx < currentIdx;
           const active = !isTerminal && idx === currentIdx;
-          const lineColor = done ? companyColor : "#E8E8E8";
+          const lineColor = done ? companyColor : "#E5E7EB";
 
           return (
             <React.Fragment key={s.id}>
@@ -632,7 +632,7 @@ function PipelineStageBar({ currentStage, companyColor }) {
             flex: 1,
             height: 2,
             marginTop: 9,
-            background: isWon ? "#16A34A" : isLost ? "#B91C1C" : "#E8E8E8",
+            background: isWon ? "#16A34A" : isLost ? "#B91C1C" : "#E5E7EB",
             transition: "background 0.2s",
           }}
         />
@@ -690,7 +690,7 @@ function HeroMetric({ label, value, color }) {
       style={{
         background: color ? color + "0D" : "#FFFFFF",
         borderRadius: 12,
-        border: `1px solid ${color ? color + "22" : "#E8E8E8"}`,
+        border: `1px solid ${color ? color + "22" : "#E5E7EB"}`,
         padding: "10px 14px",
       }}
     >

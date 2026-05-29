@@ -8,7 +8,7 @@ import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
 const ACCENT_RED = "#C7212B";   // --vermelho DS v2.2
 const DARK_BG    = "#1A1414";   // preto quente (painel esquerdo)
-const CREAM      = "#F9F5F1";   // --creme DS v2.2
+const CREAM      = "#F8F9FA";   // fundo neutro claro
 
 // LoginScreen com layout split institucional, espelhando o mockup novo:
 // - Esquerda escura com watermark grande do logo, headline e valores
@@ -174,7 +174,7 @@ function LangSelector() {
     <button
       type="button"
       className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors"
-      style={{ background: "#FFFFFF", borderColor: "#E5E0DA", color: NEUTRAL.graphite }}
+      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
       onMouseEnter={e => { e.currentTarget.style.background = "#F8F4EF"; }}
       onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
       title="Idioma (em breve)"
@@ -223,7 +223,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
       className="rounded-2xl p-7 md:p-8"
       style={{
         background: "#FFFFFF",
-        border: "1px solid #E5E0DA",
+        border: "1px solid #E5E7EB",
         boxShadow: "0 30px 80px -20px rgba(20, 14, 14, 0.10), 0 8px 16px -8px rgba(20, 14, 14, 0.06)",
       }}
     >
@@ -348,7 +348,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
 
 function Field({ label, type, value, onChange, placeholder, autoComplete, required, icon: Icon }) {
   const [focused, setFocused] = useState(false);
-  const borderColor = focused ? ACCENT_RED : "#E5E0DA";
+  const borderColor = focused ? ACCENT_RED : "#E5E7EB";
   return (
     <label className="block">
       <div className="text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>
@@ -382,7 +382,7 @@ function Field({ label, type, value, onChange, placeholder, autoComplete, requir
 
 function PasswordField({ value, onChange, autoComplete, show, onToggleShow }) {
   const [focused, setFocused] = useState(false);
-  const borderColor = focused ? ACCENT_RED : "#E5E0DA";
+  const borderColor = focused ? ACCENT_RED : "#E5E7EB";
   return (
     <label className="block">
       <div className="text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>
@@ -454,7 +454,7 @@ function MockLoginCard({ users, onMockLogin }) {
       className="rounded-2xl p-7"
       style={{
         background: "#FFFFFF",
-        border: "1px solid #E5E0DA",
+        border: "1px solid #E5E7EB",
         boxShadow: "0 30px 80px -20px rgba(20, 14, 14, 0.10)",
       }}
     >
@@ -472,13 +472,13 @@ function MockLoginCard({ users, onMockLogin }) {
               key={u.id}
               onClick={() => onMockLogin(u)}
               className="w-full p-3 rounded-xl border flex items-center gap-3 transition-all duration-150 text-left cursor-pointer"
-              style={{ borderColor: "#E5E0DA", background: "#FFFFFF" }}
+              style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
               onMouseEnter={e => {
                 e.currentTarget.style.borderColor = ACCENT_RED;
                 e.currentTarget.style.background = "#FFF7F8";
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = "#E5E0DA";
+                e.currentTarget.style.borderColor = "#E5E7EB";
                 e.currentTarget.style.background = "#FFFFFF";
               }}
             >
@@ -511,7 +511,7 @@ function ResourceFooter() {
     <div className="px-6 md:px-10 pb-6">
       <div
         className="rounded-2xl border p-4 grid grid-cols-2 md:grid-cols-4 gap-4"
-        style={{ background: "#FFFFFF", borderColor: "#E5E0DA" }}
+        style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
       >
         <ResourceItem
           icon={Megaphone}

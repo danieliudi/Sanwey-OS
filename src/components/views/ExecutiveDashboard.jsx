@@ -216,7 +216,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
     <div className="space-y-5">
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Pipeline por empresa */}
-        <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
           <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
             Pipeline por empresa
           </h3>
@@ -236,7 +236,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
                       {formatK(m.pipeline)}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "#F0F0EE" }}>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "#EFF2F5" }}>
                     <div
                       className="h-full rounded-full transition-all"
                       style={{ width: `${pct}%`, background: m.company.primary }}
@@ -253,7 +253,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
         </div>
 
         {/* Funil de conversão */}
-        <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
           <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
             Funil de conversão (Grupo)
           </h3>
@@ -266,7 +266,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
                   </span>
                   <span className="text-xs" style={{ color: NEUTRAL.slate }}>{count} leads</span>
                 </div>
-                <div className="h-5 rounded-lg overflow-hidden" style={{ background: "#F0F0EE" }}>
+                <div className="h-5 rounded-lg overflow-hidden" style={{ background: "#EFF2F5" }}>
                   <div
                     className="h-full rounded-lg transition-all flex items-center justify-end pr-2"
                     style={{ width: `${Math.max(pct, 5)}%`, background: stage.color }}
@@ -281,7 +281,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
       </div>
 
       {/* Matriz por empresa */}
-      <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
           Desempenho por empresa · matriz
         </h3>

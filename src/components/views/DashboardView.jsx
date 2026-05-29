@@ -199,7 +199,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
         {totalTasks === 0 ? (
           <div
             className="p-5 rounded-xl border text-center text-sm"
-            style={{ background: "#FFFFFF", borderColor: "#E8E8E8", color: NEUTRAL.slate }}
+            style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
           >
             Nada urgente por aqui. Seus negócios estão em dia.
           </div>
@@ -289,7 +289,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
             {hotLeads.length === 0 && (
               <div
                 className="p-6 rounded-xl border text-center text-sm"
-                style={{ background: "#FFFFFF", borderColor: "#E8E8E8", color: NEUTRAL.slate }}
+                style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
               >
                 Nenhum lead quente no momento
               </div>
@@ -324,14 +324,14 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
               <div
                 key={s.id}
                 className="p-3.5 rounded-xl border transition-all duration-150 cursor-pointer"
-                style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
                 onMouseEnter={e => {
                   e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
                   e.currentTarget.style.borderColor = "#D0D0D0";
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
-                  e.currentTarget.style.borderColor = "#E8E8E8";
+                  e.currentTarget.style.borderColor = "#E5E7EB";
                 }}
               >
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
