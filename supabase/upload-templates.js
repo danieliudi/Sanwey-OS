@@ -47,7 +47,31 @@ const payload = {
   mailer_templates_email_change_content: tpl("email-change.html"),
 };
 
-console.log("Enviando templates para o Supabase...");
+// Templates transacionais (serviço externo de e-mail — não são enviados ao Supabase GoTrue,
+// mas ficam listados aqui para referência e validação de existência dos arquivos)
+const TRANSACTIONAL_TEMPLATES = [
+  "new-lead-assigned.html",
+  "stage-change.html",
+  "lead-won.html",
+  "lead-lost.html",
+  "stale-lead.html",
+  "followup-reminder.html",
+  "automation-alert.html",
+  "weekly-digest.html",
+];
+
+// Valida que todos os arquivos transacionais existem
+for (const file of TRANSACTIONAL_TEMPLATES) {
+  try {
+    tpl(file);
+    console.log(`✓ ${file}`);
+  } catch {
+    console.error(`✗ Arquivo não encontrado: ${file}`);
+    process.exit(1);
+  }
+}
+
+console.log("\nEnviando templates Supabase (GoTrue)...");
 
 const res = await fetch(
   `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`,
