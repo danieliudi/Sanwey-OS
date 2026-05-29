@@ -122,49 +122,68 @@ export function PipelineBuilderView({
         className="rounded-xl border p-5"
         style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
       >
-        <div className="flex items-start gap-0 overflow-x-auto pb-1" style={{ scrollbarWidth: "thin" }}>
+        <div className="flex items-center gap-0 overflow-x-auto pb-2" style={{ scrollbarWidth: "thin" }}>
           {stages.map((stage, idx) => (
             <React.Fragment key={stage.id}>
-              <div className="flex flex-col items-center shrink-0" style={{ width: 120 }}>
+              {/* Stage card */}
+              <div
+                className="shrink-0 rounded-xl border flex flex-col"
+                style={{
+                  minWidth: 130,
+                  background: "#FFFFFF",
+                  borderColor: "#E5E7EB",
+                  borderTopWidth: 3,
+                  borderTopColor: stage.color,
+                  overflow: "hidden",
+                }}
+              >
+                {/* Code badge */}
                 <div
-                  className="w-full rounded-xl border-t-2 px-3 py-3 text-center"
-                  style={{
-                    borderTopColor: stage.color,
-                    borderColor: "#E5E7EB",
-                    background: "#FFFFFF",
-                    borderTopWidth: 3,
-                    borderWidth: 1,
-                  }}
+                  className="px-3 pt-3 pb-1 flex items-center gap-2"
                 >
-                  <div className="text-xs font-bold mb-1" style={{ color: stage.color }}>
+                  <span
+                    className="inline-flex items-center justify-center rounded-md text-xs font-bold shrink-0"
+                    style={{
+                      width: 22, height: 22,
+                      background: stage.color + "18",
+                      color: stage.color,
+                    }}
+                  >
                     {stage.code}
-                  </div>
-                  <div className="text-xs font-semibold leading-tight" style={{ color: NEUTRAL.graphite }}>
+                  </span>
+                  {stage.terminal && (
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                      style={{
+                        background: stage.won ? "#E8F2EC" : "#FEF2F2",
+                        color: stage.won ? "#1A6E35" : "#B91C1C",
+                      }}
+                    >
+                      {stage.won ? "Terminal" : "Perdido"}
+                    </span>
+                  )}
+                </div>
+
+                {/* Name + probability */}
+                <div className="px-3 pb-3">
+                  <div
+                    className="font-semibold leading-snug text-xs"
+                    style={{ color: NEUTRAL.graphite }}
+                  >
                     {stage.name}
                   </div>
                   {Number.isFinite(stage.probability) && !stage.terminal && (
-                    <div className="text-[10px] mt-1" style={{ color: NEUTRAL.slate }}>
+                    <div className="text-[10px] mt-0.5 font-medium" style={{ color: NEUTRAL.slate }}>
                       {stage.probability}%
-                    </div>
-                  )}
-                  {stage.terminal && (
-                    <div className="mt-1.5">
-                      <span
-                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{
-                          background: stage.won ? "#E8F2EC" : "#FEF2F2",
-                          color: stage.won ? "#1A6E35" : "#B91C1C",
-                        }}
-                      >
-                        {stage.won ? "Terminal" : "Perdido"}
-                      </span>
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Arrow connector */}
               {idx < stages.length - 1 && (
-                <div className="flex items-center shrink-0 self-center mx-1">
-                  <ArrowRight size={16} style={{ color: "#CBD5E1" }} />
+                <div className="flex items-center shrink-0 px-1.5">
+                  <ArrowRight size={14} style={{ color: "#CBD5E1" }} />
                 </div>
               )}
             </React.Fragment>

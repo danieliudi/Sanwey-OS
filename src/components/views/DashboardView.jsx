@@ -19,7 +19,7 @@ import { isStale, daysIdle } from "../../utils/pipeline-metrics";
 const TERMINAL = new Set(["ganho", "perdido"]);
 const CLOSING_HORIZON_DAYS = 7;
 
-export function DashboardView({ user, activeCompany, leads, users = [], signals, onNavigate, onLeadClick, visibleWidgets, pipelines }) {
+export function DashboardView({ user, activeCompany, leads, users = [], signals, onNavigate, onLeadClick, onSignalClick, visibleWidgets, pipelines }) {
   const usersById = useUsersById(users);
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
   const isGroupView = activeCompany === "all";
@@ -338,6 +338,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
                 key={s.id}
                 className="p-3.5 rounded-xl border transition-all duration-150 cursor-pointer"
                 style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                onClick={() => onSignalClick?.(s)}
                 onMouseEnter={e => {
                   e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
                   e.currentTarget.style.borderColor = "#D0D0D0";

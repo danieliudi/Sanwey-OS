@@ -24,6 +24,7 @@ import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScr
 import { Sidebar } from "./components/shell/Sidebar";
 import { TopBar } from "./components/shell/TopBar";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
+import { SignalDetailDrawer } from "./components/lead/SignalDetailDrawer";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
@@ -101,7 +102,10 @@ export default function App() {
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);
+  const [selectedSignal, setSelectedSignal] = useState(null);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+
+  const closeSignalDrawer = useCallback(() => setSelectedSignal(null), []);
 
   useEffect(() => {
     document.body.style.overflow = sidebarMobileOpen ? "hidden" : "";
@@ -420,11 +424,12 @@ export default function App() {
               pipelines={pipelines}
               onNavigate={setSection}
               onLeadClick={setSelectedLead}
+              onSignalClick={setSelectedSignal}
               visibleWidgets={settings.visibleDashboardWidgets}
             />
           } />
           <Route path={ROUTES.signals} element={
-            <SignalsView activeCompany={activeCompany} signals={signals} />
+            <SignalsView activeCompany={activeCompany} signals={signals} onSignalClick={setSelectedSignal} />
           } />
           <Route path={ROUTES.explorer} element={
             <ExplorerView
@@ -582,6 +587,17 @@ export default function App() {
           users={users}
           isManager={isManager}
           currentUser={currentUser}
+        />
+      </ErrorBoundary>
+
+      <ErrorBoundary>
+        <SignalDetailDrawer
+          signal={selectedSignal}
+          onClose={closeSignalDrawer}
+          onAddLead={handleAddLead}
+          currentUser={currentUser}
+          users={users}
+          pipelines={pipelines}
         />
       </ErrorBoundary>
     </div>
