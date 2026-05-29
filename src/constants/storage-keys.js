@@ -14,4 +14,5 @@ export const STORAGE_KEYS = {
   userSettings: `gs_${V}_user_settings`,
   pipelineTransitions: `gs_${V}_pipeline_transitions`,
   automations: `gs_${V}_automations`,
+  leadFormConfig: `gs_${V}_lead_form_config`,
 };

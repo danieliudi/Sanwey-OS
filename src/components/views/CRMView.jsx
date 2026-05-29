@@ -5,11 +5,13 @@ import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { Select } from "../ui/Select";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
+import { LeadCreateModal } from "../lead/LeadCreateModal";
 import { StageFieldsEditor } from "../lead/StageFieldsEditor";
 import { DynamicField, validateFields } from "../ui/DynamicField";
 import { PipelineCalendarView } from "./PipelineCalendarView";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { useStageFields } from "../../hooks/use-stage-fields";
+import { useLeadFormConfig } from "../../hooks/use-lead-form-config";
 import { formatK } from "../../utils/currency";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
@@ -462,11 +464,12 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
-  const [addingInStage, setAddingInStage] = useState(null);
   const [editingFieldsStage, setEditingFieldsStage] = useState(null);
 
   const usersById = useUsersById(users);
   const stageFields = useStageFields();
+  const { formConfig, updateFormConfig } = useLeadFormConfig();
+  const [createModalStage, setCreateModalStage] = useState(null); // { stageId, stage, companyId }
 
   // user.companies may still contain legacy ids ("comercial") that the DB
   // check constraint rejects — pick the first one that's actually valid.
@@ -731,21 +734,9 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                 </div>
 
                 {/* Column footer */}
-                {addingInStage === stage.id && !stage.terminal ? (
-                  <QuickAddForm
-                    stageId={stage.id}
-                    stage={stage}
-                    companyId={isGroupView ? firstValidCompany : activeCompany}
-                    currentUser={user}
-                    users={users}
-                    usersById={usersById}
-                    onAdd={onAddLead}
-                    onCancel={() => setAddingInStage(null)}
-                    customFieldsDef={stageFields.getFields(isGroupView ? firstValidCompany : activeCompany, stage.id)}
-                  />
-                ) : !stage.terminal && onAddLead && (
+                {!stage.terminal && onAddLead && (
                   <button
-                    onClick={() => setAddingInStage(stage.id)}
+                    onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: colCompanyId })}
                     className="mx-2 mb-2 w-[calc(100%-16px)] flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors duration-150"
                     style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "transparent", borderStyle: "dashed" }}
                     onMouseEnter={e => { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.color = "#1E4D8C"; e.currentTarget.style.borderColor = "#C7D2FE"; }}
@@ -784,6 +775,21 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
         updateField={stageFields.updateField}
         deleteField={stageFields.deleteField}
         reorderFields={stageFields.reorderFields}
+      />
+
+      {/* Lead create modal */}
+      <LeadCreateModal
+        open={Boolean(createModalStage)}
+        onClose={() => setCreateModalStage(null)}
+        stageId={createModalStage?.stageId}
+        stage={createModalStage?.stage}
+        companyId={createModalStage?.companyId}
+        currentUser={user}
+        users={users}
+        onAdd={onAddLead}
+        isManager={isManager}
+        formConfig={formConfig}
+        onUpdateFormConfig={updateFormConfig}
       />
     </div>
   );
