@@ -1,16 +1,14 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { Select } from "../ui/Select";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
-import { StageFieldsEditor } from "../lead/StageFieldsEditor";
 import { DynamicField, validateFields } from "../ui/DynamicField";
 import { PipelineCalendarView } from "./PipelineCalendarView";
 import { useUsersById } from "../../hooks/use-users-by-id";
-import { useStageFields } from "../../hooks/use-stage-fields";
 import { useLeadFormConfig } from "../../hooks/use-lead-form-config";
 import { formatK } from "../../utils/currency";
 
@@ -451,7 +449,6 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions }) {
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
-  const isAdmin = user.role === "admin";
   const isConsultor = user.role === "consultor";
 
   // IDs of consultores supervised by this vendedor
@@ -464,10 +461,8 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
-  const [editingFieldsStage, setEditingFieldsStage] = useState(null);
 
   const usersById = useUsersById(users);
-  const stageFields = useStageFields();
   const { formConfig, updateFormConfig } = useLeadFormConfig();
   const [createModalStage, setCreateModalStage] = useState(null); // { stageId, stage, companyId }
 
@@ -686,19 +681,6 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                       </div>
                     )}
                   </div>
-                  {isAdmin && (
-                    <button
-                      onClick={() => setEditingFieldsStage({ stageId: stage.id, stageName: stage.name, companyId: colCompanyId })}
-                      className="p-1.5 rounded-lg cursor-pointer transition-colors"
-                      style={{ color: NEUTRAL.slate, background: "transparent" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
-                      title="Configurar campos desta etapa"
-                      aria-label="Configurar etapa"
-                    >
-                      <Settings size={13} />
-                    </button>
-                  )}
                 </div>
 
                 {/* Cards */}
@@ -763,19 +745,6 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
           Arraste para mover entre etapas · Clique no card para ver detalhes
         </p>
       )}
-
-      <StageFieldsEditor
-        open={!!editingFieldsStage}
-        onClose={() => setEditingFieldsStage(null)}
-        companyId={editingFieldsStage?.companyId}
-        stageId={editingFieldsStage?.stageId}
-        stageName={editingFieldsStage?.stageName}
-        getFields={stageFields.getFields}
-        addField={stageFields.addField}
-        updateField={stageFields.updateField}
-        deleteField={stageFields.deleteField}
-        reorderFields={stageFields.reorderFields}
-      />
 
       {/* Lead create modal */}
       <LeadCreateModal
