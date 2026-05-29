@@ -1,11 +1,12 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { Select } from "../ui/Select";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
+import { LeadFormBuilder } from "../lead/LeadFormBuilder";
 import { DynamicField, validateFields } from "../ui/DynamicField";
 import { PipelineCalendarView } from "./PipelineCalendarView";
 import { useUsersById } from "../../hooks/use-users-by-id";
@@ -465,6 +466,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
   const usersById = useUsersById(users);
   const { formConfig, updateFormConfig } = useLeadFormConfig();
   const [createModalStage, setCreateModalStage] = useState(null); // { stageId, stage, companyId }
+  const [showFormBuilder, setShowFormBuilder] = useState(false);
 
   // user.companies may still contain legacy ids ("comercial") that the DB
   // check constraint rejects — pick the first one that's actually valid.
@@ -591,7 +593,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
               label="Calendário"
             />
           </div>
-          {isManager && viewMode === "kanban" && (
+          {isManager && (
             <Select
               value={ownerFilter}
               onChange={e => setOwnerFilter(e.target.value)}
@@ -681,6 +683,19 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
                       </div>
                     )}
                   </div>
+                  {isManager && (
+                    <button
+                      onClick={() => setShowFormBuilder(true)}
+                      className="p-1.5 rounded-lg cursor-pointer transition-colors"
+                      style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                      title="Configurar formulário de criação"
+                      aria-label="Configurar formulário"
+                    >
+                      <Settings size={13} />
+                    </button>
+                  )}
                 </div>
 
                 {/* Cards */}
@@ -760,6 +775,15 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
         formConfig={formConfig}
         onUpdateFormConfig={updateFormConfig}
       />
+
+      {/* Form builder — acessível pelo ⚙️ das colunas ou pelo modal de criação */}
+      {showFormBuilder && (
+        <LeadFormBuilder
+          formConfig={formConfig}
+          onSave={updateFormConfig}
+          onClose={() => setShowFormBuilder(false)}
+        />
+      )}
     </div>
   );
 }
