@@ -80,7 +80,7 @@ export function SignalsView({ activeCompany, signals }) {
             className="p-5 rounded-xl border transition-all duration-150 cursor-default"
             style={{
               background: "#FFFFFF",
-              borderColor: "#E8E8E8",
+              borderColor: "#E5E7EB",
               borderLeftWidth: 4,
               borderLeftColor: COMPANIES[s.company]?.primary || NEUTRAL.slate,
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
@@ -91,7 +91,7 @@ export function SignalsView({ activeCompany, signals }) {
             }}
             onMouseLeave={e => {
               e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
-              e.currentTarget.style.borderColor = "#E8E8E8";
+              e.currentTarget.style.borderColor = "#E5E7EB";
             }}
           >
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">

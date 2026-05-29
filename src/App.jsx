@@ -354,7 +354,7 @@ export default function App() {
   return (
     <div
       style={{
-        background: "#DEDAD6",
+        background: "#F7F8FA",
         fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
         color: NEUTRAL.graphite,
         minHeight: "100vh",
@@ -560,7 +560,7 @@ export default function App() {
 
         <footer
           className="px-6 py-4 border-t text-xs flex items-center justify-between flex-wrap gap-2"
-          style={{ background: "#FFFFFF", borderColor: "#E5E0DA", color: NEUTRAL.slate }}
+          style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
         >
           <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
             Grupo Sanwey · Commercial Intelligence v4.0

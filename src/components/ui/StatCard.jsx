@@ -7,7 +7,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
       className="p-5 rounded-xl border transition-all duration-150 hover:shadow-md cursor-default"
       style={{
         background: accent ? accent : "#FFFFFF",
-        borderColor: accent ? "transparent" : "#E5E0DA",
+        borderColor: accent ? "transparent" : "#E5E7EB",
         boxShadow: accent ? "none" : "0 1px 3px rgba(0,0,0,0.04)",
       }}
     >
@@ -16,7 +16,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
           className="rounded-lg flex items-center justify-center"
           style={{
             width: 36, height: 36,
-            background: accent ? "rgba(255,255,255,0.15)" : "#DEDAD6",
+            background: accent ? "rgba(255,255,255,0.15)" : "#F0F2F5",
           }}
         >
           <Icon size={18} color={accent ? "#FFFFFF" : NEUTRAL.graphite} strokeWidth={2} />

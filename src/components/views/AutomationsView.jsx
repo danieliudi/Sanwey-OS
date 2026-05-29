@@ -120,7 +120,7 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
             <div
               key={t.id}
               className="rounded-xl border px-4 py-3 flex items-center gap-3"
-              style={{ borderColor: "#E8E8E8", background: "#FAFAFA" }}
+              style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
             >
               <Icon size={16} style={{ color: NEUTRAL.slate }} />
               <div>
@@ -136,7 +136,7 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
       {automations.length === 0 && (
         <div
           className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-10 gap-3"
-          style={{ borderColor: "#E8E8E8" }}
+          style={{ borderColor: "#E5E7EB" }}
         >
           <Zap size={32} style={{ color: "#D1D5DB" }} />
           <p className="text-sm font-semibold" style={{ color: NEUTRAL.slate }}>Nenhuma automação criada</p>

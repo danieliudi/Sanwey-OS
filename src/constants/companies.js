@@ -50,14 +50,14 @@ export const COMPANIES = {
 
 export const NEUTRAL = {
   graphite:  "#2C2C2B",  // --carvao
-  slate:     "#8A8680",  // --cinza-medio
-  warmWhite: "#F9F5F1",  // --creme
-  lightGray: "#DEDAD6",  // --body-bg
-  sombra:    "#E5E0DA",  // --sombra
+  slate:     "#6B7280",  // cinza neutro-frio (HubSpot/Tailwind gray-500)
+  warmWhite: "#F8F9FA",  // branco neutro (quase branco, sem amarelo)
+  lightGray: "#F7F8FA",  // fundo do app — cinza leve e frio
+  sombra:    "#E5E7EB",  // bordas — Tailwind gray-200 (padrão SaaS)
   red:       "#C7212B",  // --vermelho
   redDark:   "#8B1419",  // --vermelho-d
   redTint:   "#FBE9EB",  // --vermelho-t
-  amber:     "#E8920A",  // --amber (App Expression)
+  amber:     "#E8920A",  // --amber
   amberBg:   "#FEF3C7",
   success:   "#16A34A",
   gold:      "#C49B2A",

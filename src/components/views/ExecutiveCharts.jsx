@@ -246,7 +246,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
 
 function ChartCard({ title, subtitle, children }) {
   return (
-    <div className="rounded-xl border p-4" style={{ borderColor: "#E8E8E8", background: "#FFFFFF" }}>
+    <div className="rounded-xl border p-4" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
       <div className="mb-2">
         <div className="text-sm font-bold" style={{ color: NEUTRAL.graphite }}>{title}</div>
         {subtitle && (

@@ -106,9 +106,9 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
   return (
     <div className="grid lg:grid-cols-[1fr,320px] gap-4">
       {/* Calendário */}
-      <div className="rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
+      <div className="rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
         {/* Cabeçalho */}
-        <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "#E8E8E8" }}>
+        <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "#E5E7EB" }}>
           <div className="flex items-center gap-3">
             <button
               onClick={goPrev}
@@ -146,7 +146,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
         </div>
 
         {/* Cabeçalho dos dias da semana */}
-        <div className="grid grid-cols-7 border-b" style={{ borderColor: "#E8E8E8" }}>
+        <div className="grid grid-cols-7 border-b" style={{ borderColor: "#E5E7EB" }}>
           {WEEKDAYS.map(w => (
             <div
               key={w}
@@ -205,7 +205,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
         </div>
 
         {/* Legenda */}
-        <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap text-[11px] border-t" style={{ borderColor: "#E8E8E8", color: NEUTRAL.slate }}>
+        <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap text-[11px] border-t" style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate }}>
           <LegendDot color="#047857" icon={CalendarCheck} label="Follow-up agendado" />
           <LegendDot color="#1E3A8A" icon={CalendarClock} label="Previsão de fechamento" />
           <LegendDot color="#DC2626" icon={AlertTriangle} label="Fechamento atrasado" />
@@ -213,7 +213,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
       </div>
 
       {/* Sidebar lateral com detalhes do dia selecionado */}
-      <div className="rounded-xl border p-3" style={{ background: "#FFFFFF", borderColor: "#E8E8E8", minHeight: 200 }}>
+      <div className="rounded-xl border p-3" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", minHeight: 200 }}>
         {selectedDay ? (
           <DaySidebar
             day={selectedDay}
@@ -311,9 +311,9 @@ function DaySidebar({ day, events, onLeadClick, onClose }) {
                 key={i}
                 onClick={() => onLeadClick?.(ev.lead)}
                 className="w-full text-left rounded-lg border p-2.5 transition-colors cursor-pointer"
-                style={{ borderColor: "#E8E8E8", background: "#FFFFFF" }}
+                style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.borderColor = "#D1D5DB"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "#E8E8E8"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "#E5E7EB"; }}
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span

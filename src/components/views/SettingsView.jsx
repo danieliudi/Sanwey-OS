@@ -11,7 +11,7 @@ function Section({ title, description, children }) {
   return (
     <div
       className="p-5 rounded-xl border"
-      style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div className="mb-4">
         <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
@@ -144,8 +144,8 @@ export function SettingsView({
                   onClick={() => toggleCompany(id)}
                   className="p-3 rounded-lg border flex items-center gap-2.5 transition-all duration-150 text-left"
                   style={{
-                    background: enabled ? c.light : "#FAFAF8",
-                    borderColor: enabled ? c.primary + "80" : "#E8E8E8",
+                    background: enabled ? c.light : "#FAFAFA",
+                    borderColor: enabled ? c.primary + "80" : "#E5E7EB",
                     boxShadow: enabled ? `0 0 0 1px ${c.primary}40` : "none",
                   }}
                   onMouseEnter={e => {
@@ -156,8 +156,8 @@ export function SettingsView({
                   }}
                   onMouseLeave={e => {
                     if (!enabled) {
-                      e.currentTarget.style.borderColor = "#E8E8E8";
-                      e.currentTarget.style.background = "#FAFAF8";
+                      e.currentTarget.style.borderColor = "#E5E7EB";
+                      e.currentTarget.style.background = "#FAFAFA";
                     }
                   }}
                 >
@@ -243,7 +243,7 @@ export function SettingsView({
                   style={{
                     background: active ? NEUTRAL.graphite : "#FFFFFF",
                     color: active ? "#FFFFFF" : NEUTRAL.slate,
-                    borderColor: active ? NEUTRAL.graphite : "#E8E8E8",
+                    borderColor: active ? NEUTRAL.graphite : "#E5E7EB",
                     boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
                   }}
                   onMouseEnter={e => {
@@ -254,7 +254,7 @@ export function SettingsView({
                   }}
                   onMouseLeave={e => {
                     if (!active) {
-                      e.currentTarget.style.borderColor = "#E8E8E8";
+                      e.currentTarget.style.borderColor = "#E5E7EB";
                       e.currentTarget.style.background = "#FFFFFF";
                     }
                   }}

@@ -6,7 +6,7 @@ import { CompanyTag } from "../ui/CompanyTag";
 import { formatK } from "../../utils/currency";
 
 function LeadRowImpl({ lead, striped, onClick, onStarToggle }) {
-  const base = striped ? "#FAFAF8" : "#FFFFFF";
+  const base = striped ? "#FAFAFA" : "#FFFFFF";
   return (
     <div
       className="grid md:grid-cols-12 gap-4 px-4 py-3 border-b cursor-pointer items-center"

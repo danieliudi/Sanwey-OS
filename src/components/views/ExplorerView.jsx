@@ -73,7 +73,7 @@ export function ExplorerView({
       )}
 
       {/* Filter card */}
-      <div className="p-5 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <div className="p-5 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
         <div className="flex items-center gap-2 mb-4">
           <Filter size={14} color={NEUTRAL.graphite} />
           <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
@@ -140,7 +140,7 @@ export function ExplorerView({
       {leads.length === 0 && onLoadDemoLeads && (
         <div
           className="p-4 rounded-xl border flex items-center justify-between gap-3 flex-wrap"
-          style={{ background: NEUTRAL.warmWhite || "#FAFAF8", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+          style={{ background: NEUTRAL.warmWhite || "#FAFAFA", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
         >
           <div className="text-sm" style={{ color: NEUTRAL.slate }}>
             CRM ainda vazio. Carregue dados de demonstração para ver o pipeline completo.
