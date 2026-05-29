@@ -11,36 +11,41 @@ function useIsMobile() {
   return mobile;
 }
 
-const W_COLLAPSED = 52;
-const W_EXPANDED  = 248;
+const W = 248;
 
 const P = {
-  bg:          "#2C2C2B",
-  border:      "rgba(249,245,241,0.08)",
-  text:        "rgba(249,245,241,0.65)",
-  textBright:  "#F9F5F1",
-  textFaint:   "rgba(249,245,241,0.35)",
-  hoverBg:     "rgba(249,245,241,0.06)",
-  activeBg:    "rgba(249,245,241,0.06)",
-  activeStrip: "#C7212B",
-  avatarRing:  "rgba(249,245,241,0.12)",
+  bg:          "#C7212B",
+  border:      "rgba(255,255,255,0.12)",
+  text:        "rgba(255,255,255,0.72)",
+  textBright:  "#FFFFFF",
+  textFaint:   "rgba(255,255,255,0.40)",
+  hoverBg:     "rgba(0,0,0,0.12)",
+  activeBg:    "rgba(0,0,0,0.18)",
+  activeStrip: "#FFFFFF",
+  avatarRing:  "rgba(255,255,255,0.20)",
 };
 
-const ROLE_LABEL = { admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor" };
+const ROLE_LABEL = {
+  admin:     "Administrador",
+  gerente:   "Gerente",
+  vendedor:  "Vendedor",
+  consultor: "Consultor",
+};
 
 export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout, mobileOpen, onMobileClose }) {
-  const [hovered, setHovered] = useState(false);
   const isMobile = useIsMobile();
 
-  const expanded = isMobile ? (mobileOpen ?? false) : hovered;
+  const handleNavClick = (itemId) => {
+    onSectionChange(itemId);
+    if (isMobile) onMobileClose?.();
+  };
 
   const sidebarStyle = isMobile
     ? {
         position: "fixed",
-        top: 0,
-        left: 0,
+        top: 0, left: 0,
         height: "100vh",
-        width: W_EXPANDED,
+        width: W,
         background: P.bg,
         color: P.text,
         display: "flex",
@@ -52,191 +57,149 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
       }
     : {
         position: "fixed",
-        top: 0,
-        left: 0,
+        top: 0, left: 0,
         height: "100vh",
-        width: expanded ? W_EXPANDED : W_COLLAPSED,
+        width: W,
         background: P.bg,
         color: P.text,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
         zIndex: 40,
-        transition: "width 0.25s cubic-bezier(.4,0,.2,1)",
       };
-
-  const handleNavClick = (itemId) => {
-    onSectionChange(itemId);
-    if (isMobile) onMobileClose?.();
-  };
 
   return (
     <>
       {isMobile && mobileOpen && (
         <div
           onClick={onMobileClose}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 49,
-          }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 49 }}
         />
       )}
-      <aside
-        style={sidebarStyle}
-        onMouseEnter={!isMobile ? () => setHovered(true) : undefined}
-        onMouseLeave={!isMobile ? () => setHovered(false) : undefined}
-      >
-      {/* ── Brand ── */}
-      <div
-        style={{
-          height: 56,
-          display: "flex",
-          alignItems: "center",
-          padding: "0 14px",
-          gap: 10,
-          borderBottom: `1px solid ${P.border}`,
-          flexShrink: 0,
-          overflow: "hidden",
-          whiteSpace: "nowrap",
-        }}
-      >
-        <img
-          src="/sanwey-simbolo.png"
-          alt="Sanwey"
-          style={{ width: 24, height: 24, objectFit: "contain", flexShrink: 0 }}
-        />
-        <div style={{ opacity: expanded ? 1 : 0, transition: "opacity 0.18s ease", lineHeight: 1.25 }}>
-          <div style={{ color: P.textBright, fontWeight: 700, fontSize: 13 }}>Grupo Sanwey</div>
-          <div style={{ color: P.textFaint, fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-            Commercial OS
+      <aside style={sidebarStyle}>
+        {/* ── Brand ── */}
+        <div
+          style={{
+            height: 56,
+            display: "flex",
+            alignItems: "center",
+            padding: "0 16px",
+            gap: 10,
+            borderBottom: `1px solid ${P.border}`,
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src="/sanwey-simbolo.png"
+            alt="Sanwey"
+            style={{ width: 24, height: 24, objectFit: "contain", flexShrink: 0, filter: "brightness(0) invert(1)" }}
+          />
+          <div style={{ lineHeight: 1.25 }}>
+            <div style={{ color: P.textBright, fontWeight: 700, fontSize: 13 }}>Grupo Sanwey</div>
+            <div style={{ color: P.textFaint, fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+              Commercial OS
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Nav ── */}
-      <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "12px 0", scrollbarWidth: "none" }}>
-        {navGroups.map((group, gi) => (
-          <div key={gi} style={{ marginTop: gi === 0 ? 0 : 8 }}>
-            {group.label && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "0 14px",
-                  color: P.textFaint,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  whiteSpace: "nowrap",
-                  pointerEvents: "none",
-                  overflow: "hidden",
-                  maxHeight: expanded ? 28 : 0,
-                  marginBottom: expanded ? 4 : 0,
-                  opacity: expanded ? 1 : 0,
-                  transition: "opacity 0.15s ease, max-height 0.2s ease, margin-bottom 0.2s ease",
-                }}
-              >
-                {group.icon && <group.icon size={11} strokeWidth={2.5} />}
-                <span>{group.label}</span>
-              </div>
-            )}
-            {group.items.map((item) => {
-              const active = section === item.id;
-              return (
+        {/* ── Nav ── */}
+        <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "10px 0", scrollbarWidth: "none" }}>
+          {navGroups.map((group, gi) => (
+            <div key={gi} style={{ marginTop: gi === 0 ? 0 : 6 }}>
+              {group.label && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "6px 16px 3px",
+                    color: P.textFaint,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    pointerEvents: "none",
+                  }}
+                >
+                  {group.icon && <group.icon size={10} strokeWidth={2.5} />}
+                  <span>{group.label}</span>
+                </div>
+              )}
+              {group.items.map((item) => (
                 <NavItem
                   key={item.id}
                   icon={item.icon}
                   label={item.label}
-                  active={active}
-                  expanded={expanded}
+                  active={section === item.id}
                   onClick={() => handleNavClick(item.id)}
                 />
-              );
-            })}
-          </div>
-        ))}
-      </nav>
+              ))}
+            </div>
+          ))}
+        </nav>
 
-      {/* ── User footer ── */}
-      <div
-        style={{
-          borderTop: `1px solid ${P.border}`,
-          padding: "10px",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          flexShrink: 0,
-          overflow: "hidden",
-          whiteSpace: "nowrap",
-        }}
-      >
+        {/* ── User footer ── */}
         <div
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: currentUser?.avatarBg || P.activeStrip,
+            borderTop: `1px solid ${P.border}`,
+            padding: "10px 12px",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 700,
-            color: "#FFFFFF",
-            fontSize: 11,
-            letterSpacing: "0.02em",
+            gap: 8,
             flexShrink: 0,
-            boxShadow: `0 0 0 2px ${P.avatarRing}`,
           }}
         >
-          {currentUser?.initials || "?"}
-        </div>
-        <div
-          style={{
-            flex: 1,
-            minWidth: 0,
-            opacity: expanded ? 1 : 0,
-            transition: "opacity 0.15s ease",
-          }}
-        >
-          <div style={{ color: P.textBright, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>
-            {currentUser?.name || "Convidado"}
+          <div
+            style={{
+              width: 32, height: 32,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,0.20)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+              color: "#FFFFFF",
+              fontSize: 11,
+              flexShrink: 0,
+              boxShadow: `0 0 0 2px ${P.avatarRing}`,
+            }}
+          >
+            {currentUser?.initials || "?"}
           </div>
-          <div style={{ color: P.textFaint, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis" }}>
-            {ROLE_LABEL[currentUser?.role] || "—"}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: P.textBright, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {currentUser?.name || "Convidado"}
+            </div>
+            <div style={{ color: P.textFaint, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {ROLE_LABEL[currentUser?.role] || "—"}
+            </div>
           </div>
+          <button
+            onClick={onLogout}
+            title="Sair"
+            style={{
+              background: "transparent",
+              border: "none",
+              color: P.text,
+              cursor: "pointer",
+              padding: 6,
+              borderRadius: 3,
+              display: "flex",
+              alignItems: "center",
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = P.hoverBg; e.currentTarget.style.color = "#FFB0B0"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = P.text; }}
+          >
+            <LogOut size={14} strokeWidth={2} />
+          </button>
         </div>
-        <button
-          onClick={onLogout}
-          title="Sair"
-          style={{
-            background: "transparent",
-            border: "none",
-            color: P.text,
-            cursor: "pointer",
-            padding: 6,
-            borderRadius: 3,
-            display: "flex",
-            alignItems: "center",
-            flexShrink: 0,
-            opacity: expanded ? 1 : 0,
-            transition: "opacity 0.15s ease",
-            pointerEvents: expanded ? "auto" : "none",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = P.hoverBg; e.currentTarget.style.color = "#FCA5A5"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = P.text; }}
-        >
-          <LogOut size={14} strokeWidth={2} />
-        </button>
-      </div>
       </aside>
     </>
   );
 }
 
-function NavItem({ icon: Icon, label, active, expanded, onClick }) {
+function NavItem({ icon: Icon, label, active, onClick }) {
   return (
     <button
       onClick={onClick}
@@ -245,7 +208,7 @@ function NavItem({ icon: Icon, label, active, expanded, onClick }) {
         display: "flex",
         alignItems: "center",
         gap: 10,
-        padding: "8px 14px",
+        padding: "7px 16px",
         position: "relative",
         fontSize: 13,
         fontWeight: active ? 600 : 500,
@@ -254,30 +217,17 @@ function NavItem({ icon: Icon, label, active, expanded, onClick }) {
         border: "none",
         cursor: "pointer",
         textAlign: "left",
-        overflow: "hidden",
         whiteSpace: "nowrap",
-        transition: "background 0.15s, color 0.15s",
+        transition: "background 0.12s",
       }}
-      onMouseEnter={(e) => {
-        if (!active) {
-          e.currentTarget.style.background = P.hoverBg;
-          e.currentTarget.style.color = P.textBright;
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!active) {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = P.text;
-        }
-      }}
+      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = P.hoverBg; }}
+      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
     >
       {active && (
         <span
           style={{
             position: "absolute",
-            left: 0,
-            top: 6,
-            bottom: 6,
+            left: 0, top: 5, bottom: 5,
             width: 3,
             borderRadius: "0 3px 3px 0",
             background: P.activeStrip,
@@ -285,9 +235,7 @@ function NavItem({ icon: Icon, label, active, expanded, onClick }) {
         />
       )}
       {Icon && <Icon size={15} strokeWidth={active ? 2.4 : 2} style={{ flexShrink: 0 }} />}
-      <span style={{ opacity: expanded ? 1 : 0, transition: "opacity 0.15s ease" }}>
-        {label}
-      </span>
+      <span>{label}</span>
     </button>
   );
 }
