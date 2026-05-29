@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { X, Settings, Star, Loader2, ChevronDown } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
+import { X, Settings, Loader2 } from "lucide-react";
+import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { CANONICAL_STATES } from "../../constants/taxonomy";
 import { FIELD_DEFS } from "../../constants/lead-form-fields";
@@ -289,108 +289,80 @@ export function LeadCreateModal({
     if (e.key === "Escape") onClose();
   }, [onClose]);
 
+  const company = COMPANIES[companyId];
+
   if (!open) return null;
 
   return (
-    <>
-      {/* Backdrop */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6"
+      style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)" }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      onKeyDown={handleKeyDown}
+    >
       <div
-        onClick={onClose}
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 55 }}
-      />
-
-      {/* Modal */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        onKeyDown={handleKeyDown}
+        className="w-full max-w-xl max-h-full overflow-y-auto rounded-2xl flex flex-col"
         style={{
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          zIndex: 56,
-          width: "min(96vw, 520px)",
-          maxHeight: "90vh",
-          display: "flex",
-          flexDirection: "column",
           background: "#FFFFFF",
-          borderRadius: 12,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.1)",
-          overflow: "hidden",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.24)",
         }}
+        onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header — same style as LeadDetailDrawer */}
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "14px 18px",
-            borderBottom: "1px solid #E5E7EB",
-            background: "#F8F9FA",
-            flexShrink: 0,
-          }}
+          className="sticky top-0 z-10 px-5 py-3.5 border-b flex items-center justify-between shrink-0"
+          style={{ background: "rgba(250,250,248,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
         >
-          <div
-            style={{
-              width: 28, height: 28,
-              borderRadius: 7,
-              background: "#FBE9EB",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <Star size={13} style={{ color: "#C7212B" }} fill="#C7212B" />
+          <div className="flex items-center gap-2 min-w-0">
+            {company && (
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold shrink-0"
+                style={{ background: company.primary + "18", color: company.primary, border: `1px solid ${company.primary}30` }}
+              >
+                {company.name}
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="font-bold text-sm leading-tight" style={{ color: NEUTRAL.graphite }}>
+                Novo card
+              </p>
+              {stage?.name && (
+                <p className="text-xs" style={{ color: NEUTRAL.slate }}>{stage.name}</p>
+              )}
+            </div>
           </div>
-          <span
-            style={{ fontWeight: 700, fontSize: 15, color: NEUTRAL.graphite, flex: 1 }}
-          >
-            Novo card
-          </span>
-          {isManager && (
+          <div className="flex items-center gap-1 shrink-0">
+            {isManager && (
+              <button
+                onClick={() => setShowBuilder(true)}
+                className="flex items-center gap-1 p-1.5 rounded-lg transition-colors cursor-pointer"
+                style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                title="Configurar campos do formulário"
+              >
+                <Settings size={15} />
+              </button>
+            )}
             <button
-              onClick={() => setShowBuilder(true)}
-              style={{
-                display: "flex", alignItems: "center", gap: 5,
-                fontSize: 12, fontWeight: 600,
-                padding: "5px 10px",
-                borderRadius: 6,
-                border: "1px solid #E5E7EB",
-                background: "#FFFFFF",
-                color: NEUTRAL.slate,
-                cursor: "pointer",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#C7212B"; e.currentTarget.style.color = "#C7212B"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; }}
-              title="Configurar campos do formulário"
+              onClick={onClose}
+              className="p-1.5 rounded-lg transition-colors cursor-pointer"
+              style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              aria-label="Fechar"
             >
-              <Settings size={13} />
-              Editar
+              <X size={18} />
             </button>
-          )}
-          <button
-            onClick={onClose}
-            style={{
-              width: 28, height: 28,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              borderRadius: 6,
-              border: "none",
-              background: "transparent",
-              color: NEUTRAL.slate,
-              cursor: "pointer",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-          >
-            <X size={15} />
-          </button>
+          </div>
         </div>
 
         {/* Form */}
         <form
           onSubmit={handleSubmit}
-          style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0" }}
+          className="flex-1 overflow-y-auto px-5 pt-5 pb-0"
         >
           {formConfig.map((entry, idx) => {
             const def = FIELD_DEFS[entry.id];
@@ -400,9 +372,11 @@ export function LeadCreateModal({
                 <label
                   style={{
                     display: "block",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: NEUTRAL.graphite,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: NEUTRAL.slate,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.07em",
                     marginBottom: 5,
                   }}
                 >
@@ -428,7 +402,7 @@ export function LeadCreateModal({
             <div
               style={{
                 padding: "8px 12px",
-                borderRadius: 6,
+                borderRadius: 8,
                 background: "#FEF2F2",
                 color: "#B91C1C",
                 fontSize: 12,
@@ -443,35 +417,22 @@ export function LeadCreateModal({
 
         {/* Footer */}
         <div
-          style={{
-            padding: "14px 20px",
-            borderTop: "1px solid #E5E7EB",
-            background: "#F8F9FA",
-            flexShrink: 0,
-          }}
+          className="px-5 py-4 border-t shrink-0"
+          style={{ borderColor: "#E5E7EB", background: "rgba(250,250,248,0.97)" }}
         >
           <button
             type="button"
             onClick={handleSubmit}
             disabled={saving}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-colors"
             style={{
-              width: "100%",
-              padding: "10px",
-              borderRadius: 8,
-              border: "none",
               background: saving ? "#9CA3AF" : "#C7212B",
               color: "#FFFFFF",
-              fontSize: 13,
-              fontWeight: 700,
+              border: "none",
               cursor: saving ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 7,
-              transition: "background 0.15s",
             }}
             onMouseEnter={e => { if (!saving) e.currentTarget.style.background = "#8B1419"; }}
-            onMouseLeave={e => { if (!saving) e.currentTarget.style.background = "#C7212B"; }}
+            onMouseLeave={e => { if (!saving) e.currentTarget.style.background = saving ? "#9CA3AF" : "#C7212B"; }}
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? "Criando…" : "Criar card"}
@@ -487,7 +448,7 @@ export function LeadCreateModal({
           onClose={() => setShowBuilder(false)}
         />
       )}
-    </>
+    </div>
   );
 }
 
