@@ -115,6 +115,8 @@ export function useSupabaseAuth() {
         companies: profile.companies || [],
         initials: profile.initials || (profile.name || session.user.email).slice(0, 2).toUpperCase(),
         avatarBg: profile.avatar_bg || "#1E4D8C",
+        sector: profile.sector || null,
+        supervisorId: profile.supervisor_id || null,
       }
     : null;
 

@@ -13,6 +13,8 @@ function rowToUser(r) {
     companies: Array.isArray(r.companies) ? r.companies : [],
     initials: r.initials || (r.name || r.email || "—").slice(0, 2).toUpperCase(),
     avatarBg: r.avatar_bg || "#1E4D8C",
+    sector: r.sector || null,
+    supervisorId: r.supervisor_id || null,
   };
 }
 
@@ -83,6 +85,8 @@ export function useProfiles({ enabled = true } = {}) {
     if (patch.companies !== undefined) dbPatch.companies = patch.companies;
     if (patch.initials !== undefined) dbPatch.initials = patch.initials;
     if (patch.avatarBg !== undefined) dbPatch.avatar_bg = patch.avatarBg;
+    if (patch.sector !== undefined) dbPatch.sector = patch.sector;
+    if (patch.supervisorId !== undefined) dbPatch.supervisor_id = patch.supervisorId || null;
 
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...patch } : u));
     const { error: err } = await supabase.from("profiles").update(dbPatch).eq("id", id);
