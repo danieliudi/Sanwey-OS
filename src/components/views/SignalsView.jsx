@@ -14,7 +14,7 @@ const URGENCY_FILTERS = [
   { key: "informativo", label: "Info" },
 ];
 
-export function SignalsView({ activeCompany, signals }) {
+export function SignalsView({ activeCompany, signals, onSignalClick }) {
   const isGroupView = activeCompany === "all";
   const [urgencyFilter, setUrgencyFilter] = useState("all");
 
@@ -77,7 +77,7 @@ export function SignalsView({ activeCompany, signals }) {
         {scopedSignals.map(s => (
           <div
             key={s.id}
-            className="p-5 rounded-xl border transition-all duration-150 cursor-default"
+            className="p-5 rounded-xl border transition-all duration-150 cursor-pointer"
             style={{
               background: "#FFFFFF",
               borderColor: "#E5E7EB",
@@ -85,6 +85,7 @@ export function SignalsView({ activeCompany, signals }) {
               borderLeftColor: COMPANIES[s.company]?.primary || NEUTRAL.slate,
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
             }}
+            onClick={() => onSignalClick?.(s)}
             onMouseEnter={e => {
               e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
               e.currentTarget.style.borderColor = "#D0D0D0";
