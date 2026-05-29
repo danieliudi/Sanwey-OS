@@ -1,0 +1,117 @@
+<!--
+  Template: stale-lead.html
+  Assunto: "Lead parado há {{DAYS}} dias: {{COMPANY_NAME}}"
+  Persona: dono do lead (vendedor/consultor) e/ou gerente
+
+  Variáveis:
+    {{RECIPIENT_NAME}}  Nome do destinatário
+    {{COMPANY_NAME}}    Nome do lead/empresa
+    {{DAYS}}            Número de dias sem movimentação
+    {{STAGE_NAME}}      Etapa atual no pipeline
+    {{OWNER_NAME}}      Responsável pelo lead
+    {{LEAD_URL}}        Link direto para o lead
+    {{APP_URL}}         URL base do app
+-->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lead parado — CRM Sanwey</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F9F5F1;font-family:Inter,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F9F5F1;">
+    <tr>
+      <td align="center" style="padding:48px 16px;">
+        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom:28px;">
+              <img src="https://sanwey-crm.netlify.app/sanwey-logo.png" width="170" alt="Grupo Sanwey" style="display:block;height:auto;" />
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background:#FFFFFF;border-radius:16px;border:1px solid #E5E0DA;padding:40px 40px 36px;">
+
+              <!-- Acento âmbar -->
+              <div style="width:36px;height:3px;background:#E8920A;border-radius:2px;margin-bottom:28px;"></div>
+
+              <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">
+                Lead parado há {{DAYS}} dias
+              </h1>
+
+              <p style="margin:0 0 24px;font-size:15px;color:#8A8680;line-height:1.6;">
+                <strong style="color:#2C2C2B;">{{COMPANY_NAME}}</strong> está em <strong style="color:#2C2C2B;">{{STAGE_NAME}}</strong> há <strong style="color:#E8920A;">{{DAYS}} dias</strong> sem movimentação.
+              </p>
+
+              <!-- Info box âmbar -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFFBF0;border:1px solid #FDE68A;border-radius:10px;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="50%" style="padding:4px 0;font-size:13px;color:#8A8680;">Empresa</td>
+                        <td width="50%" style="padding:4px 0;font-size:13px;color:#2C2C2B;font-weight:600;">{{COMPANY_NAME}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:13px;color:#8A8680;">Etapa atual</td>
+                        <td style="padding:4px 0;font-size:13px;color:#2C2C2B;">{{STAGE_NAME}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:13px;color:#8A8680;">Responsável</td>
+                        <td style="padding:4px 0;font-size:13px;color:#2C2C2B;">{{OWNER_NAME}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:13px;color:#8A8680;">Inativo há</td>
+                        <td style="padding:4px 0;font-size:13px;color:#E8920A;font-weight:600;">{{DAYS}} dias</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 24px;font-size:14px;color:#8A8680;line-height:1.6;">
+                Considere fazer contato ou reclassificar este lead.
+              </p>
+
+              <!-- CTA -->
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background:#E8920A;border-radius:10px;">
+                    <a href="{{LEAD_URL}}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;letter-spacing:0.01em;">
+                      Revisar lead &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Divider -->
+              <div style="height:1px;background:#E5E0DA;margin:28px 0;"></div>
+
+              <p style="margin:0;font-size:12px;color:#8A8680;line-height:1.6;">
+                Se o botão não funcionar, copie e cole o endereço abaixo no navegador:<br/>
+                <a href="{{LEAD_URL}}" style="color:#E8920A;word-break:break-all;font-size:12px;">{{LEAD_URL}}</a>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:28px 0 8px;text-align:center;">
+              <p style="margin:0 0 4px;font-size:12px;color:#8A8680;line-height:1.6;">&copy; Grupo Sanwey &mdash; Commercial Intelligence Platform</p>
+              <p style="margin:0;font-size:11px;color:#A09A94;line-height:1.5;">Alerta automático por inatividade no pipeline.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

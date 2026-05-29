@@ -3,7 +3,7 @@ import { RotateCcw, Check, AlertTriangle, Trash2, Database, Sparkles } from "luc
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import {
-  DASHBOARD_WIDGETS, NOTIFICATION_PREFS, DENSITY_OPTIONS,
+  DASHBOARD_WIDGETS, NOTIFICATION_GROUPS, DENSITY_OPTIONS,
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
 
@@ -212,17 +212,36 @@ export function SettingsView({
         {/* Notifications */}
         <Section
           title="Notificações"
-          description="Alertas visuais dentro do app."
+          description="Alertas visuais dentro do app, filtrados pelo seu papel."
         >
-          <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
-            {NOTIFICATION_PREFS.map(n => (
-              <ToggleRow
-                key={n.id}
-                label={n.label}
-                checked={Boolean(settings.notifications[n.id])}
-                onChange={() => toggleNotification(n.id)}
-              />
-            ))}
+          <div className="space-y-4">
+            {NOTIFICATION_GROUPS
+              .filter(group => !currentUser?.role || group.roles.includes(currentUser.role))
+              .map(group => (
+                <div key={group.id}>
+                  <div
+                    className="pb-2 mb-1 border-b"
+                    style={{ borderColor: "#F0F0F0" }}
+                  >
+                    <span
+                      className="font-bold tracking-wide"
+                      style={{ fontSize: 10, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em" }}
+                    >
+                      {group.label}
+                    </span>
+                  </div>
+                  <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                    {group.items.map(n => (
+                      <ToggleRow
+                        key={n.id}
+                        label={n.label}
+                        checked={Boolean(settings.notifications[n.id])}
+                        onChange={() => toggleNotification(n.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
           </div>
         </Section>
 
