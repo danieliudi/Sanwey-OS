@@ -66,7 +66,7 @@ export default function App() {
     updateUser,
     deleteUser,
     setFallbackUsers: setUsers,
-  } = useProfiles({ enabled: Boolean(currentUser) && (supabaseEnabled ? isManagerRole : true) });
+  } = useProfiles({ enabled: Boolean(currentUser) });
   const {
     invitations,
     loading: invitationsLoading,
@@ -163,7 +163,7 @@ export default function App() {
     if (id === lastUserIdRef.current) return;
     lastUserIdRef.current = id;
     if (!currentUser) return;
-    if (currentUser.role === "vendedor") {
+    if (currentUser.role === "vendedor" || currentUser.role === "consultor") {
       if (currentUser.companies.length === 1) {
         setActiveCompany(currentUser.companies[0]);
       } else if (activeCompany !== "all" && !currentUser.companies.includes(activeCompany)) {
@@ -176,7 +176,7 @@ export default function App() {
   const handleMockLogin = useCallback((u) => {
     setMockUser(u);
     if (u.role === "gerente" || u.role === "admin") setActiveCompany("all");
-    else setActiveCompany(u.companies[0] || "all");
+    else setActiveCompany(u.companies?.[0] || "all");
     setSection("dashboard");
   }, [setMockUser]);
 
@@ -339,7 +339,7 @@ export default function App() {
   // path: wait, refresh, or log out.
   if (
     supabaseEnabled &&
-    currentUser.role === "vendedor" &&
+    (currentUser.role === "vendedor" || currentUser.role === "consultor") &&
     (!currentUser.companies || currentUser.companies.length === 0)
   ) {
     return (

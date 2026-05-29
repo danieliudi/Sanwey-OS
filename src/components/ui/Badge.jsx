@@ -8,8 +8,9 @@ const VARIANTS = {
   gold:     { bg: "#FFFBE6",   color: "#9A7A00",        border: "#FFE680" },
   neutral:  { bg: "#E5E7EB20", color: NEUTRAL.slate,    border: "#E5E7EB" },
   success:  { bg: "#EDFAF2",   color: "#16A34A",        border: "#9ADDB8" },
-  dark:     { bg: NEUTRAL.graphite, color: "#FFFFFF",    border: NEUTRAL.graphite },
-  admin:    { bg: "#EDE9FE",   color: "#5B21B6",        border: "#C4B5FD" },
+  dark:      { bg: NEUTRAL.graphite, color: "#FFFFFF",    border: NEUTRAL.graphite },
+  admin:     { bg: "#EDE9FE",   color: "#5B21B6",        border: "#C4B5FD" },
+  secondary: { bg: "#F0FDFA",   color: "#0F766E",        border: "#99F6E4" },
 };
 
 export function Badge({ children, variant = "default", size = "sm", customColor }) {

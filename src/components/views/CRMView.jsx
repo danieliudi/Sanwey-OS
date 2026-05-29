@@ -31,7 +31,10 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
   React.useEffect(() => { inputRef.current?.focus(); }, []);
 
   const ownerOptions = useMemo(() => {
-    const visible = (users || []).filter(u => u.companies?.includes(companyId) || u.role !== "vendedor");
+    const visible = (users || []).filter(u =>
+      u.companies?.includes(companyId) &&
+      (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
+    );
     // Label curto pra caber no select estreito do form (ex.: "Daniel I.").
     // Nome completo continua visível no dropdown aberto via title.
     return visible.map(u => {
@@ -67,13 +70,16 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
     try {
       const now = new Date();
       const closeDate = new Date(now.getTime() + 30 * 86400000);
+      const resolvedOwner = ownerId || currentUser?.id || null;
+      const ownerUser = (users || []).find(u => u.id === resolvedOwner);
       const lead = {
         id: newId(),
         company: company.trim(),
         companyId,
         stage: stageId,
         status: stageId,
-        owner: ownerId || currentUser?.id || null,
+        owner: resolvedOwner,
+        sector: ownerUser?.sector || currentUser?.sector || null,
         value: parseFloat(value) || 0,
         fitScore: 0,
         starred: false,
@@ -84,9 +90,6 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         lastActivity: now.toISOString(),
         stageChangedAt: now.toISOString(),
         closeDate: closeDate.toISOString(),
-        // probabilidade default vem da etapa em que o card está sendo criado
-        // (10% em prospecção, 80% em negociação, etc.) — usado pelo KPI
-        // "Valor ponderado".
         probability: Number.isFinite(stage?.probability) ? stage.probability : 10,
         decisionMaker: { name: "—", role: "—" },
         customFields: customValues,
@@ -428,6 +431,13 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
   const isAdmin = user.role === "admin";
+  const isConsultor = user.role === "consultor";
+
+  // IDs of consultores supervised by this vendedor
+  const subordinateIds = useMemo(() => {
+    if (user.role !== "vendedor") return new Set();
+    return new Set((users || []).filter(u => u.supervisorId === user.id).map(u => u.id));
+  }, [users, user.id, user.role]);
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "calendar"
   const [draggedLead, setDraggedLead] = useState(null);
@@ -456,9 +466,19 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
   const companyScopedLeads = useMemo(() => {
     let s = leads;
     if (!isGroupView) s = s.filter(l => l.companyId === activeCompany);
-    if (!isManager) s = s.filter(l => l.owner === user.id);
+    if (isConsultor) {
+      // Consultor sees only their own leads
+      s = s.filter(l => l.owner === user.id);
+    } else if (!isManager) {
+      // Vendedor sees own leads + subordinates' leads
+      s = s.filter(l => l.owner === user.id || subordinateIds.has(l.owner));
+    }
+    // Sector filter: if user has a sector, only show leads matching that sector (or without sector)
+    if (user.sector && (user.role === "vendedor" || user.role === "consultor")) {
+      s = s.filter(l => !l.sector || l.sector === user.sector);
+    }
     return s;
-  }, [leads, activeCompany, user.id, isGroupView, isManager]);
+  }, [leads, activeCompany, user.id, user.role, user.sector, isGroupView, isManager, isConsultor, subordinateIds]);
 
   const scopedLeads = useMemo(() => {
     if (isManager && ownerFilter !== "all") {

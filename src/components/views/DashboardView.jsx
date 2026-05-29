@@ -24,15 +24,28 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
+  const isConsultor = user.role === "consultor";
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
   const accent = companyData?.primary || NEUTRAL.graphite;
+
+  const subordinateIds = useMemo(() => {
+    if (user.role !== "vendedor") return new Set();
+    return new Set((users || []).filter(u => u.supervisorId === user.id).map(u => u.id));
+  }, [users, user.id, user.role]);
 
   const scopedLeads = useMemo(() => {
     let s = leads;
     if (!isGroupView) s = s.filter(l => l.companyId === activeCompany);
-    if (!isManager) s = s.filter(l => l.owner === user.id);
+    if (isConsultor) {
+      s = s.filter(l => l.owner === user.id);
+    } else if (!isManager) {
+      s = s.filter(l => l.owner === user.id || subordinateIds.has(l.owner));
+    }
+    if (user.sector && (user.role === "vendedor" || user.role === "consultor")) {
+      s = s.filter(l => !l.sector || l.sector === user.sector);
+    }
     return s;
-  }, [leads, activeCompany, user.id, isGroupView, isManager]);
+  }, [leads, activeCompany, user.id, user.role, user.sector, isGroupView, isManager, isConsultor, subordinateIds]);
 
   const scopedSignals = useMemo(
     () => (isGroupView ? signals : signals.filter(s => s.company === activeCompany)),

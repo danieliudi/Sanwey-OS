@@ -1,8 +1,9 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   UserPlus, User, Mail, Check, Save, Edit3, Trash2, Info, Loader2, Send, X,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
@@ -13,11 +14,13 @@ import { CompanyTag } from "../ui/CompanyTag";
 const EMPTY_FORM = {
   id: null, name: "", email: "", role: "vendedor",
   companies: [], initials: "", avatarBg: "#1E4D8C",
+  sector: "", supervisorId: "",
 };
 
-const EMPTY_INVITE = { email: "", role: "vendedor", companies: [] };
+const EMPTY_INVITE = { email: "", role: "vendedor", companies: [], sector: "", supervisorId: "" };
 
 const ROLE_OPTIONS_BASE = [
+  { value: "consultor", label: "Consultor" },
   { value: "vendedor", label: "Vendedor" },
   { value: "gerente", label: "Gerente" },
 ];
@@ -27,15 +30,22 @@ const ROLE_OPTIONS_ADMIN = [
   { value: "admin", label: "Admin" },
 ];
 
+const SECTOR_OPTIONS = [
+  { value: "", label: "Sem setor" },
+  ...CANONICAL_SECTORS.map(s => ({ value: s, label: s })),
+];
+
 function roleLabel(role) {
   if (role === "admin") return "Admin";
   if (role === "gerente") return "Gerente";
+  if (role === "consultor") return "Consultor";
   return "Vendedor";
 }
 
 function roleBadgeVariant(role) {
   if (role === "admin") return "admin";
   if (role === "gerente") return "dark";
+  if (role === "consultor") return "secondary";
   return "default";
 }
 
@@ -85,7 +95,7 @@ export function UserManagementView({
 
   const startEdit = useCallback((u) => {
     setEditing(u.id);
-    setForm({ ...EMPTY_FORM, ...u });
+    setForm({ ...EMPTY_FORM, ...u, sector: u.sector || "", supervisorId: u.supervisorId || "" });
     setModalError(null);
   }, []);
 
@@ -129,6 +139,8 @@ export function UserManagementView({
             companies: form.companies,
             initials,
             avatarBg: form.avatarBg,
+            sector: form.sector || null,
+            supervisorId: form.supervisorId || null,
           });
         } else if (onUsersChange) {
           onUsersChange(prev => prev.map(u => u.id === form.id ? { ...u, ...form, initials } : u));
@@ -153,8 +165,8 @@ export function UserManagementView({
       setInviteError("Informe um e-mail válido.");
       return;
     }
-    if (inviteForm.role === "vendedor" && inviteForm.companies.length === 0) {
-      setInviteError("Selecione ao menos uma empresa para vendedor.");
+    if ((inviteForm.role === "vendedor" || inviteForm.role === "consultor") && inviteForm.companies.length === 0) {
+      setInviteError("Selecione ao menos uma empresa para vendedor/consultor.");
       return;
     }
     if (users.some(u => (u.email || "").toLowerCase() === email)) {
@@ -172,6 +184,8 @@ export function UserManagementView({
         email,
         role: inviteForm.role,
         companies: inviteForm.companies,
+        sector: inviteForm.sector || null,
+        supervisorId: inviteForm.supervisorId || null,
         invitedBy: currentUser?.id,
       });
       setInviteJustSent(email);
@@ -244,6 +258,12 @@ export function UserManagementView({
   const canSave = Boolean(form.name && form.companies.length > 0);
   const canManageInvites = supabaseEnabled && Boolean(onCreateInvitation);
 
+  // Vendedores disponíveis como supervisores (para seleção de consultor)
+  const vendedorOptions = useMemo(() => [
+    { value: "", label: "Sem supervisor" },
+    ...users.filter(u => u.role === "vendedor").map(u => ({ value: u.id, label: u.name })),
+  ], [users]);
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -252,7 +272,7 @@ export function UserManagementView({
             Gestão de Usuários
           </h1>
           <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
-            {users.length} usuários cadastrados · admin &gt; gerente &gt; vendedor
+            {users.length} usuários cadastrados · admin &gt; gerente &gt; vendedor &gt; consultor
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -390,7 +410,17 @@ export function UserManagementView({
                         </span>
                       )}
                     </div>
-                    <div className="text-xs mb-1" style={{ color: NEUTRAL.slate }}>{u.email}</div>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-xs" style={{ color: NEUTRAL.slate }}>{u.email}</span>
+                      {u.sector && (
+                        <span
+                          className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded"
+                          style={{ background: "#EEF2FF", color: "#3730A3", letterSpacing: "0.12em" }}
+                        >
+                          {u.sector}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-1">
                       {!Array.isArray(u.companies) || u.companies.length === 0 ? (
                         <span className="text-[11px] italic" style={{ color: NEUTRAL.slate }}>
@@ -515,6 +545,36 @@ export function UserManagementView({
               })}
             </div>
           </div>
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <label
+                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
+                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+              >
+                Setor
+              </label>
+              <Select
+                value={form.sector || ""}
+                onChange={e => setForm(prev => ({ ...prev, sector: e.target.value }))}
+                options={SECTOR_OPTIONS}
+              />
+            </div>
+            {form.role === "consultor" && (
+              <div>
+                <label
+                  className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
+                  style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+                >
+                  Supervisor (vendedor)
+                </label>
+                <Select
+                  value={form.supervisorId || ""}
+                  onChange={e => setForm(prev => ({ ...prev, supervisorId: e.target.value }))}
+                  options={vendedorOptions}
+                />
+              </div>
+            )}
+          </div>
           {modalError && (
             <div className="p-2 rounded-xl text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
               {modalError}
@@ -578,7 +638,7 @@ export function UserManagementView({
               className="text-[10px] uppercase font-bold tracking-widest mb-2 block"
               style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
             >
-              Empresas com acesso {inviteForm.role === "vendedor" && "*"}
+              Empresas com acesso {(inviteForm.role === "vendedor" || inviteForm.role === "consultor") && "*"}
             </label>
             <div className="grid grid-cols-2 gap-2">
               {COMPANY_IDS.map(id => {
@@ -607,6 +667,37 @@ export function UserManagementView({
                 );
               })}
             </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <label
+                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
+                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+              >
+                Setor
+              </label>
+              <Select
+                value={inviteForm.sector || ""}
+                onChange={e => setInviteForm(prev => ({ ...prev, sector: e.target.value }))}
+                options={SECTOR_OPTIONS}
+              />
+            </div>
+            {inviteForm.role === "consultor" && (
+              <div>
+                <label
+                  className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
+                  style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+                >
+                  Supervisor (vendedor)
+                </label>
+                <Select
+                  value={inviteForm.supervisorId || ""}
+                  onChange={e => setInviteForm(prev => ({ ...prev, supervisorId: e.target.value }))}
+                  options={vendedorOptions}
+                />
+              </div>
+            )}
           </div>
 
           {inviteError && (
