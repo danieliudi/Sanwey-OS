@@ -100,6 +100,12 @@ export default function App() {
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarMobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [sidebarMobileOpen]);
 
   // ── Roteamento ──────────────────────────────────────────────────────────
   // section vem direto da URL. Mudar de tela é navigate(ROUTES[id]) — a URL
@@ -348,12 +354,10 @@ export default function App() {
   return (
     <div
       style={{
-        background: "#F4F6FA",
+        background: "#DEDAD6",
         fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
         color: NEUTRAL.graphite,
         minHeight: "100vh",
-        display: "flex",
-        alignItems: "stretch",
       }}
     >
       <Sidebar
@@ -362,17 +366,20 @@ export default function App() {
         onSectionChange={setSection}
         currentUser={currentUser}
         onLogout={handleLogout}
+        mobileOpen={sidebarMobileOpen}
+        onMobileClose={() => setSidebarMobileOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex flex-col min-w-0 lg:ml-[52px]" style={{ minHeight: "100vh" }}>
         <TopBar
           title={sectionTitle}
           activeCompany={activeCompany}
           accessibleCompanies={accessibleCompanies}
           onCompanyChange={setActiveCompany}
+          onMenuToggle={() => setSidebarMobileOpen(v => !v)}
         />
 
-        <div className="px-6 py-6 flex-1 min-w-0">
+        <div className="px-4 py-4 sm:px-6 sm:py-6 flex-1 min-w-0">
         <ErrorBoundary
           fallback={({ error, reset }) => (
             <div className="rounded-xl border p-6 max-w-2xl mx-auto mt-8" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>
@@ -553,7 +560,7 @@ export default function App() {
 
         <footer
           className="px-6 py-4 border-t text-xs flex items-center justify-between flex-wrap gap-2"
-          style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
+          style={{ background: "#FFFFFF", borderColor: "#E5E0DA", color: NEUTRAL.slate }}
         >
           <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
             Grupo Sanwey · Commercial Intelligence v4.0

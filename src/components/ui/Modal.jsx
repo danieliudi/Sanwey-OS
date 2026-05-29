@@ -24,13 +24,13 @@ export function Modal({ open, onClose, title, children, width = 560 }) {
         style={{ background: "#FFFFFF", maxWidth: width, boxShadow: "0 24px 64px rgba(0,0,0,0.2)" }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "#F0F0F0" }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "#E5E0DA" }}>
           <h3 className="font-semibold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>{title}</h3>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg transition-colors"
             style={{ color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#F1EDE9"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             aria-label="Fechar"
           >

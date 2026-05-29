@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --vermelho:    #C7212B;
+  --vermelho-d:  #8B1419;
+  --vermelho-t:  #FBE9EB;
+  --carvao:      #2C2C2B;
+  --cinza-medio: #8A8680;
+  --sombra:      #E5E0DA;
+  --creme:       #F9F5F1;
+  --body-bg:     #DEDAD6;
+  --amber:       #E8920A;
+  --amber-bg:    #FEF3C7;
+  --r:           3px;
+}
+
 html, body, #root {
   height: 100%;
 }

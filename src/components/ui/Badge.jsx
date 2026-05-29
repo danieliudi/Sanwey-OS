@@ -2,14 +2,14 @@ import React from "react";
 import { NEUTRAL } from "../../constants/companies";
 
 const VARIANTS = {
-  default: { bg: "#F1F3F5", color: NEUTRAL.graphite, border: "#E2E6EA" },
-  urgent: { bg: "#FFF4E6", color: "#C2660A", border: "#FFD4A3" },
-  critical: { bg: "#FFF0F0", color: "#B91C1C", border: "#FFC5C5" },
-  gold: { bg: "#FFFBE6", color: "#9A7A00", border: "#FFE680" },
-  neutral: { bg: "#F1F3F5", color: NEUTRAL.slate, border: "#E2E6EA" },
-  success: { bg: "#EDFAF2", color: "#1A7A3C", border: "#9ADDB8" },
-  dark: { bg: NEUTRAL.graphite, color: "#FFFFFF", border: NEUTRAL.graphite },
-  admin: { bg: "#EDE9FE", color: "#5B21B6", border: "#C4B5FD" },
+  default:  { bg: "#E5E0DA20", color: NEUTRAL.graphite, border: "#E5E0DA" },
+  urgent:   { bg: "#FEF3C7",   color: "#E8920A",        border: "#FDE68A" },
+  critical: { bg: "#FBE9EB",   color: "#C7212B",        border: "#F5C6CB" },
+  gold:     { bg: "#FFFBE6",   color: "#9A7A00",        border: "#FFE680" },
+  neutral:  { bg: "#E5E0DA20", color: NEUTRAL.slate,    border: "#E5E0DA" },
+  success:  { bg: "#EDFAF2",   color: "#16A34A",        border: "#9ADDB8" },
+  dark:     { bg: NEUTRAL.graphite, color: "#F9F5F1",   border: NEUTRAL.graphite },
+  admin:    { bg: "#EDE9FE",   color: "#5B21B6",        border: "#C4B5FD" },
 };
 
 export function Badge({ children, variant = "default", size = "sm", customColor }) {
@@ -21,7 +21,7 @@ export function Badge({ children, variant = "default", size = "sm", customColor 
     : "px-2.5 py-1 text-xs";
   return (
     <span
-      className={`inline-flex items-center gap-1 ${cls} font-semibold rounded-full border whitespace-nowrap`}
+      className={`inline-flex items-center gap-1 ${cls} font-semibold rounded border whitespace-nowrap`}
       style={{ background: v.bg, color: v.color, borderColor: v.border }}
     >
       {children}

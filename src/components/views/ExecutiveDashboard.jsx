@@ -6,6 +6,7 @@ import { StatCard } from "../ui/StatCard";
 import { formatK, formatM } from "../../utils/currency";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
+import { AnalyticsTab } from "./AnalyticsTab";
 
 // Painel Executivo — único ponto de visão consolidada do Grupo. Inclui
 // o que era a tela "Presidência" como uma tab. Filtro de período é
@@ -19,8 +20,9 @@ const PERIODS = [
 ];
 
 const TABS = [
-  { id: "overview", label: "Visão geral" },
-  { id: "charts",   label: "Gráficos" },
+  { id: "overview",   label: "Visão geral" },
+  { id: "charts",     label: "Gráficos" },
+  { id: "analytics",  label: "Análise" },
 ];
 
 function filterByPeriod(leads, period) {
@@ -198,6 +200,10 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users }) 
 
       {tab === "charts" && (
         <ExecutiveCharts leads={filteredLeads} pipelines={pipelines} users={users} />
+      )}
+
+      {tab === "analytics" && (
+        <AnalyticsTab allLeads={leads} period={period} users={users} />
       )}
     </div>
   );

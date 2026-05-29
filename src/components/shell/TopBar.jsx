@@ -1,5 +1,5 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
 /**
@@ -13,16 +13,33 @@ export function TopBar({
   accessibleCompanies,
   onCompanyChange,
   title,
+  onMenuToggle,
 }) {
   return (
     <div
-      className="flex items-center gap-4 px-6 sticky top-0 z-20 border-b"
+      className="flex items-center gap-3 px-4 lg:px-6 sticky top-0 z-20 border-b"
       style={{
         height: 56,
         background: "#FFFFFF",
-        borderColor: "#E5E7EB",
+        borderColor: "#E5E0DA",
       }}
     >
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onMenuToggle}
+        className="lg:hidden flex items-center justify-center shrink-0 rounded cursor-pointer"
+        style={{
+          width: 36,
+          height: 36,
+          background: "transparent",
+          border: "none",
+          color: NEUTRAL.graphite,
+        }}
+        aria-label="Abrir menu"
+      >
+        <Menu size={20} strokeWidth={2} />
+      </button>
+
       {title && (
         <div
           className="font-bold shrink-0"
@@ -36,8 +53,8 @@ export function TopBar({
         </div>
       )}
 
-      {/* Search */}
-      <div className="flex-1 max-w-2xl relative">
+      {/* Search — hidden on small mobile */}
+      <div className="flex-1 max-w-2xl relative hidden sm:block">
         <Search
           size={14}
           style={{
@@ -57,18 +74,18 @@ export function TopBar({
           className="w-full text-sm rounded-lg border outline-none transition-colors duration-150 cursor-not-allowed"
           style={{
             padding: "8px 12px 8px 36px",
-            borderColor: "#E5E7EB",
-            background: "#F3F4F6",
+            borderColor: "#E5E0DA",
+            background: "#F9F5F1",
             color: NEUTRAL.slate,
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = "#3B82F6";
+            e.target.style.borderColor = "#C7212B";
             e.target.style.background = "#FFFFFF";
-            e.target.style.boxShadow = "0 0 0 3px rgba(59,130,246,0.12)";
+            e.target.style.boxShadow = "0 0 0 3px rgba(199,33,43,0.10)";
           }}
           onBlur={(e) => {
-            e.target.style.borderColor = "#E5E7EB";
-            e.target.style.background = "#F8FAFB";
+            e.target.style.borderColor = "#E5E0DA";
+            e.target.style.background = "#F9F5F1";
             e.target.style.boxShadow = "none";
           }}
         />
@@ -78,7 +95,7 @@ export function TopBar({
         {accessibleCompanies.length > 1 && (
           <div
             className="flex items-center gap-0.5 rounded-lg p-0.5 border"
-            style={{ background: "#F3F4F6", borderColor: "#E5E7EB" }}
+            style={{ background: "#F9F5F1", borderColor: "#E5E0DA" }}
           >
             {accessibleCompanies.map((id) => {
               const c = COMPANIES[id];
