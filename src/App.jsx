@@ -80,6 +80,7 @@ export default function App() {
     leads,
     addLead,
     updateLead: updateLeadRemote,
+    deleteLead,
     toggleStar,
     changeStage,
     loadDemoLeads,
@@ -576,6 +577,7 @@ export default function App() {
           lead={selectedLead}
           onClose={closeDrawer}
           onUpdate={updateLead}
+          onDelete={deleteLead}
           allLeads={leads}
           users={users}
           isManager={isManager}

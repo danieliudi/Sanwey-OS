@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   X, MapPin, AlertTriangle, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
-  Building2, RefreshCw, Check,
+  Building2, RefreshCw, Check, Trash2,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -19,11 +19,13 @@ import { isSupabaseConfigured } from "../../lib/supabase";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isManager, currentUser }) {
+export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, users, isManager, currentUser }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const { loading: enriching, error: enrichError, data: enrichData, lookup, reset: resetEnrich } = useCnpjLookup();
   const stageFields = useStageFields();
@@ -46,6 +48,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
       setStage(lead.stage);
       setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
       setShowFollowUpInput(false);
+      setConfirmDelete(false);
     }
   }, [lead?.id, lead?.stage]);
 
@@ -165,6 +168,22 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
     setShowFollowUpInput(false);
   };
 
+  const canDelete = onDelete && (
+    isManager ||
+    (currentUser && (lead.owner === currentUser.id || lead.createdBy === currentUser.id))
+  );
+
+  const handleDeleteConfirmed = async () => {
+    if (!onDelete) return;
+    setDeleting(true);
+    try {
+      await onDelete(lead.id);
+      onClose();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center p-4 md:p-6"
@@ -190,16 +209,54 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, allLeads, users, isM
             <CompanyTag companyId={lead.companyId} />
             <UrgencyTag urgency={lead.urgency} />
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
-            style={{ color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-            aria-label="Fechar"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            {canDelete && !confirmDelete && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
+                style={{ color: NEUTRAL.slate }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                aria-label="Excluir card"
+                title="Excluir card"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+            {canDelete && confirmDelete && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleDeleteConfirmed}
+                  disabled={deleting}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                  style={{ background: "#B91C1C", color: "#FFFFFF", border: "none", opacity: deleting ? 0.6 : 1 }}
+                  onMouseEnter={e => { if (!deleting) e.currentTarget.style.background = "#7F1D1D"; }}
+                  onMouseLeave={e => { if (!deleting) e.currentTarget.style.background = "#B91C1C"; }}
+                >
+                  {deleting ? "Excluindo…" : "Confirmar exclusão"}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="p-1.5 rounded-lg text-xs cursor-pointer transition-colors"
+                  style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
+              style={{ color: NEUTRAL.slate }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              aria-label="Fechar"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="p-5 space-y-4">
