@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
+import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { Select } from "../ui/Select";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { StageFieldsEditor } from "../lead/StageFieldsEditor";
@@ -15,10 +16,24 @@ const TERMINAL = new Set(["ganho", "perdido"]);
 
 // ── Quick-add form ────────────────────────────────────────────────────────────
 
+const SELECT_STYLE = {
+  borderColor: "#D1D5DB",
+  color: NEUTRAL.graphite,
+  background: "#FFFFFF",
+  padding: "6px 22px 6px 8px",
+  appearance: "none",
+  WebkitAppearance: "none",
+  backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23636E72' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "right 6px center",
+  backgroundSize: "12px",
+};
+
 function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById, onAdd, onCancel, customFieldsDef = [] }) {
   const [company, setCompany] = useState("");
   const [value, setValue] = useState("");
   const [ownerId, setOwnerId] = useState(currentUser?.id || "");
+  const [sector, setSector] = useState(currentUser?.sector || "");
   const [customValues, setCustomValues] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -59,6 +74,10 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!company.trim()) return;
+    if (!sector) {
+      setError("Selecione o setor.");
+      return;
+    }
     // Validar obrigatórios dos campos customizados antes do insert.
     const validationErrors = validateFields(customFieldsDef, customValues);
     if (validationErrors.length > 0) {
@@ -71,7 +90,6 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
       const now = new Date();
       const closeDate = new Date(now.getTime() + 30 * 86400000);
       const resolvedOwner = ownerId || currentUser?.id || null;
-      const ownerUser = (users || []).find(u => u.id === resolvedOwner);
       const lead = {
         id: newId(),
         company: company.trim(),
@@ -79,7 +97,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         stage: stageId,
         status: stageId,
         owner: resolvedOwner,
-        sector: ownerUser?.sector || currentUser?.sector || null,
+        sector,
         value: parseFloat(value) || 0,
         fitScore: 0,
         starred: false,
@@ -120,6 +138,22 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
         onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
       />
+      <select
+        value={sector}
+        onChange={e => setSector(e.target.value)}
+        className="w-full text-xs rounded-lg border outline-none"
+        style={{
+          ...SELECT_STYLE,
+          borderColor: !sector ? "#C7212B" : "#D1D5DB",
+          color: sector ? NEUTRAL.graphite : NEUTRAL.slate,
+        }}
+        required
+      >
+        <option value="">Setor *</option>
+        {CANONICAL_SECTORS.map(s => (
+          <option key={s} value={s}>{s}</option>
+        ))}
+      </select>
       <div className="flex gap-1.5">
         <input
           type="number"
@@ -136,23 +170,8 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
             value={ownerId}
             onChange={e => setOwnerId(e.target.value)}
             title={ownerOptions.find(o => o.value === ownerId)?.fullName || "Responsável"}
-            className="flex-1 min-w-0 text-xs rounded-lg border py-1.5 outline-none truncate"
-            style={{
-              borderColor: "#D1D5DB",
-              color: NEUTRAL.graphite,
-              background: "#FFFFFF",
-              padding: "6px 22px 6px 8px",
-              maxWidth: "100%",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              appearance: "none",
-              WebkitAppearance: "none",
-              backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23636E72' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 6px center",
-              backgroundSize: "12px",
-            }}
+            className="flex-1 min-w-0 text-xs rounded-lg border outline-none truncate"
+            style={{ ...SELECT_STYLE, maxWidth: "100%" }}
           >
             <option value="">Responsável</option>
             {ownerOptions.map(o => (
@@ -177,10 +196,10 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
       <div className="flex gap-1.5">
         <button
           type="submit"
-          disabled={saving || !company.trim()}
+          disabled={saving || !company.trim() || !sector}
           className="flex-1 text-xs font-semibold py-1.5 rounded-lg transition-opacity"
-          style={{ background: "#1E4D8C", color: "#FFFFFF", opacity: saving || !company.trim() ? 0.5 : 1 }}
-          onMouseEnter={e => { if (!saving && company.trim()) e.currentTarget.style.background = "#163a6b"; }}
+          style={{ background: "#1E4D8C", color: "#FFFFFF", opacity: saving || !company.trim() || !sector ? 0.5 : 1 }}
+          onMouseEnter={e => { if (!saving && company.trim() && sector) e.currentTarget.style.background = "#163a6b"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "#1E4D8C"; }}
         >
           {saving ? "Salvando…" : "Criar card"}
