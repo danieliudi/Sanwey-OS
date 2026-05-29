@@ -283,12 +283,27 @@ export function useLeads({ userId, role, companies } = {}) {
     setRemoteLeads(prev => prev.filter(l => !l.isDemo));
   }, [setFallbackLeads]);
 
+  const deleteLead = useCallback(async (id) => {
+    if (!isSupabaseConfigured) {
+      setFallbackLeads(prev => prev.filter(l => l.id !== id));
+      return;
+    }
+    setRemoteLeads(prev => prev.filter(l => l.id !== id));
+    const { error: err } = await supabase.from("leads").delete().eq("id", id);
+    if (err) {
+      setError(err);
+      fetchAll();
+      throw err;
+    }
+  }, [setFallbackLeads, fetchAll]);
+
   return useMemo(() => ({
     leads,
     loading,
     error,
     addLead,
     updateLead,
+    deleteLead,
     toggleStar,
     changeStage,
     loadDemoLeads,
@@ -296,5 +311,5 @@ export function useLeads({ userId, role, companies } = {}) {
     clearDemoLeads,
     refetch: fetchAll,
     canQuery,
-  }), [leads, loading, error, addLead, updateLead, toggleStar, changeStage, loadDemoLeads, clearAllLeads, clearDemoLeads, fetchAll, canQuery]);
+  }), [leads, loading, error, addLead, updateLead, deleteLead, toggleStar, changeStage, loadDemoLeads, clearAllLeads, clearDemoLeads, fetchAll, canQuery]);
 }
