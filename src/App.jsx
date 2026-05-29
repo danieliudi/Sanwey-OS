@@ -370,7 +370,7 @@ export default function App() {
         onMobileClose={() => setSidebarMobileOpen(false)}
       />
 
-      <div className="flex flex-col min-w-0 lg:ml-[52px]" style={{ minHeight: "100vh" }}>
+      <div className="flex flex-col min-w-0 lg:ml-[248px]" style={{ minHeight: "100vh" }}>
         <TopBar
           title={sectionTitle}
           activeCompany={activeCompany}
