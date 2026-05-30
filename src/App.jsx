@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Presentation, GitBranch, Workflow, Zap,
-  Briefcase, Brain, Sliders,
+  Briefcase, Brain, Sliders, LifeBuoy,
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -39,6 +39,8 @@ import { FairImportView } from "./components/views/FairImportView";
 import { FunnelHistoryView } from "./components/views/FunnelHistoryView";
 import { PipelineBuilderView } from "./components/views/PipelineBuilderView";
 import { AutomationsView } from "./components/views/AutomationsView";
+import { TutoriaisView } from "./components/views/TutoriaisView";
+import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 
 const INITIAL_SIGNALS = generateMarketSignals();
 
@@ -60,6 +62,12 @@ export default function App() {
 
   const [mockUser, setMockUser] = usePersistentState(STORAGE_KEYS.currentUser, null);
   const currentUser = supabaseEnabled ? supaUser : mockUser;
+
+  const [onboardingDoneMap, setOnboardingDoneMap] = usePersistentState("gs_v4_onboarding", {});
+  const showOnboarding = Boolean(currentUser && !onboardingDoneMap[currentUser.id]);
+  const dismissOnboarding = useCallback(() => {
+    if (currentUser?.id) setOnboardingDoneMap(m => ({ ...m, [currentUser.id]: true }));
+  }, [currentUser?.id, setOnboardingDoneMap]);
 
   const isManagerRole = currentUser?.role === "gerente" || currentUser?.role === "admin";
   const {
@@ -293,6 +301,12 @@ export default function App() {
         ],
       });
     }
+    groups.push({
+      label: null,
+      items: [
+        { id: "tutorials", label: "Ajuda & Tutoriais", icon: LifeBuoy },
+      ],
+    });
     return groups;
   }, [isManager]);
 
@@ -563,6 +577,9 @@ export default function App() {
               />
             ) : <Navigate to={ROUTES.dashboard} replace />
           } />
+          <Route path={ROUTES.tutorials} element={
+            <TutoriaisView currentUser={currentUser} />
+          } />
           {/* Catch-all: rota desconhecida volta pro Início. */}
           <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
         </Routes>
@@ -594,6 +611,10 @@ export default function App() {
           currentUser={currentUser}
         />
       </ErrorBoundary>
+
+      {showOnboarding && (
+        <OnboardingModal currentUser={currentUser} onDone={dismissOnboarding} />
+      )}
 
       <ErrorBoundary>
         <SignalDetailDrawer
