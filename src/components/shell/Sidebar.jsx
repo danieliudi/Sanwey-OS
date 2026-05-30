@@ -153,7 +153,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             style={{
               width: 32, height: 32,
               borderRadius: "50%",
-              background: "rgba(0,0,0,0.20)",
+              background: currentUser?.avatarUrl ? "transparent" : (currentUser?.avatarBg || "rgba(0,0,0,0.20)"),
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -162,9 +162,12 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               fontSize: 11,
               flexShrink: 0,
               boxShadow: `0 0 0 2px ${P.avatarRing}`,
+              overflow: "hidden",
             }}
           >
-            {currentUser?.initials || "?"}
+            {currentUser?.avatarUrl
+              ? <img src={currentUser.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : (currentUser?.initials || "?")}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ color: P.textBright, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

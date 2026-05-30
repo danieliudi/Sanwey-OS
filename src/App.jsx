@@ -53,6 +53,7 @@ export default function App() {
     signIn,
     signUp,
     signOut,
+    updateAuthUser,
     refreshProfile,
     configured: supabaseEnabled,
   } = useSupabaseAuth();
@@ -555,6 +556,10 @@ export default function App() {
                 leadsCount={leads.length}
                 onLoadDemoLeads={loadDemoLeads}
                 onClearAllLeads={clearAllLeads}
+                onUpdateUser={updateUser}
+                onUpdateAuthUser={supabaseEnabled ? updateAuthUser : null}
+                onUpdateMockUser={supabaseEnabled ? null : setMockUser}
+                supabaseEnabled={supabaseEnabled}
               />
             ) : <Navigate to={ROUTES.dashboard} replace />
           } />
