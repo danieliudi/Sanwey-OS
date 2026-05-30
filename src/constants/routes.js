@@ -17,6 +17,7 @@ export const ROUTES = {
   "fair-import":     "/importar-feira",
   users:             "/usuarios",
   settings:          "/configuracoes",
+  tutorials:         "/ajuda",
 };
 
 // Reverso: path → id (não inclui dashboard porque qualquer path desconhecido
