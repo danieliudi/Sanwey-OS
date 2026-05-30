@@ -87,6 +87,7 @@ export function useProfiles({ enabled = true } = {}) {
     if (patch.avatarBg !== undefined) dbPatch.avatar_bg = patch.avatarBg;
     if (patch.sector !== undefined) dbPatch.sector = patch.sector;
     if (patch.supervisorId !== undefined) dbPatch.supervisor_id = patch.supervisorId || null;
+    if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
 
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...patch } : u));
     const { error: err } = await supabase.from("profiles").update(dbPatch).eq("id", id);

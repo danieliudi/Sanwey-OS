@@ -1,5 +1,5 @@
-import React, { useCallback } from "react";
-import { RotateCcw, Check, AlertTriangle, Trash2, Database, Sparkles } from "lucide-react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
+import { RotateCcw, Check, AlertTriangle, Trash2, Database, Sparkles, Camera, Loader2 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import {
@@ -50,10 +50,109 @@ function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
   );
 }
 
+const ROLE_LABEL = { admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor" };
+
 export function SettingsView({
   settings, onUpdate, onReset, onClearLocalData, currentUser,
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
+  onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
 }) {
+  // ── Profile form ────────────────────────────────────────────────────
+  const [profileForm, setProfileForm] = useState({
+    name: currentUser?.name || "",
+    email: currentUser?.email || "",
+    avatarUrl: currentUser?.avatarUrl || null,
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileFeedback, setProfileFeedback] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({ newPassword: "", confirmPassword: "" });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordFeedback, setPasswordFeedback] = useState(null);
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (currentUser) {
+      setProfileForm(f => ({
+        ...f,
+        name: currentUser.name || "",
+        email: currentUser.email || "",
+        avatarUrl: currentUser.avatarUrl || null,
+      }));
+    }
+  }, [currentUser?.id]);
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setProfileFeedback({ type: "error", msg: "Imagem muito grande. Máximo 2 MB." });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => setProfileForm(f => ({ ...f, avatarUrl: ev.target.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleProfileSave = async () => {
+    if (!profileForm.name.trim()) {
+      setProfileFeedback({ type: "error", msg: "Nome não pode ficar em branco." });
+      return;
+    }
+    setProfileSaving(true);
+    setProfileFeedback(null);
+    try {
+      const profilePatch = {
+        name: profileForm.name.trim(),
+        initials: profileForm.name.trim().slice(0, 2).toUpperCase(),
+        avatarUrl: profileForm.avatarUrl || null,
+      };
+      if (onUpdateUser && currentUser?.id) {
+        await onUpdateUser(currentUser.id, profilePatch);
+      } else if (onUpdateMockUser) {
+        onUpdateMockUser(u => ({ ...u, ...profilePatch }));
+      }
+      if (profileForm.email && profileForm.email !== currentUser?.email) {
+        if (onUpdateAuthUser) {
+          await onUpdateAuthUser({ email: profileForm.email });
+        } else if (onUpdateMockUser) {
+          onUpdateMockUser(u => ({ ...u, email: profileForm.email }));
+        }
+      }
+      setProfileFeedback({ type: "success", msg: "Perfil atualizado com sucesso." });
+    } catch (err) {
+      setProfileFeedback({ type: "error", msg: err.message || "Erro ao salvar perfil." });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handlePasswordSave = async () => {
+    setPasswordFeedback(null);
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordFeedback({ type: "error", msg: "A senha deve ter pelo menos 6 caracteres." });
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordFeedback({ type: "error", msg: "As senhas não coincidem." });
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      if (onUpdateAuthUser) {
+        await onUpdateAuthUser({ password: passwordForm.newPassword });
+        setPasswordFeedback({ type: "success", msg: "Senha alterada com sucesso." });
+        setPasswordForm({ newPassword: "", confirmPassword: "" });
+      } else {
+        setPasswordFeedback({ type: "error", msg: "Troca de senha requer Supabase configurado." });
+      }
+    } catch (err) {
+      setPasswordFeedback({ type: "error", msg: err.message || "Erro ao alterar senha." });
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  // ── General settings callbacks ───────────────────────────────────────
   const toggleCompany = useCallback((id) => {
     const has = settings.enabledCompanies.includes(id);
     const next = has
@@ -285,15 +384,164 @@ export function SettingsView({
           </div>
         </Section>
 
-        {/* Conta */}
-        <Section
-          title="Conta"
-          description={currentUser ? `Logado como ${currentUser.name} · ${currentUser.email}` : ""}
-        >
-          <p className="text-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>
-            Login/senha e privacidade de dados estão disponíveis via Supabase (ver README).
-            Ainda não há tela de troca de senha no front — use o painel do Supabase ou recovery por e-mail.
-          </p>
+        {/* Perfil */}
+        <Section title="Meu perfil">
+          {/* Avatar + info */}
+          <div className="flex items-center gap-4 mb-5">
+            <div className="relative shrink-0">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center overflow-hidden font-bold text-white"
+                style={{
+                  fontSize: 22,
+                  background: profileForm.avatarUrl ? "transparent" : (currentUser?.avatarBg || "#1E4D8C"),
+                }}
+              >
+                {profileForm.avatarUrl
+                  ? <img src={profileForm.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                  : (currentUser?.initials || "?")}
+              </div>
+              <button
+                onClick={() => fileRef.current?.click()}
+                title="Alterar foto"
+                className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ background: NEUTRAL.red, color: "#FFF", border: "2px solid #FFF", cursor: "pointer" }}
+              >
+                <Camera size={11} />
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+            </div>
+            <div>
+              <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{currentUser?.name}</div>
+              <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{currentUser?.email}</div>
+              <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{ROLE_LABEL[currentUser?.role] || currentUser?.role}</div>
+            </div>
+          </div>
+
+          {/* Fields */}
+          <div className="space-y-3 mb-4">
+            <div>
+              <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Nome
+              </label>
+              <input
+                type="text"
+                value={profileForm.name}
+                onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, outline: "none", background: "#FAFAF8" }}
+                onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                onBlur={e => { e.target.style.borderColor = "#E5E0DA"; e.target.style.boxShadow = "none"; }}
+              />
+            </div>
+            <div>
+              <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Email
+              </label>
+              <input
+                type="email"
+                value={profileForm.email}
+                onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+                style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, outline: "none", background: "#FAFAF8" }}
+                onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                onBlur={e => { e.target.style.borderColor = "#E5E0DA"; e.target.style.boxShadow = "none"; }}
+              />
+              {!supabaseEnabled && (
+                <p className="text-xs mt-1" style={{ color: NEUTRAL.slate }}>Modo offline — email salvo localmente.</p>
+              )}
+            </div>
+          </div>
+
+          {profileFeedback && (
+            <div
+              className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg mb-3"
+              style={{
+                background: profileFeedback.type === "success" ? "#F0FDF4" : "#FEF2F2",
+                color: profileFeedback.type === "success" ? "#16A34A" : "#B91C1C",
+                border: `1px solid ${profileFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
+              }}
+            >
+              {profileFeedback.type === "success" ? <Check size={13} /> : <AlertTriangle size={13} />}
+              {profileFeedback.msg}
+            </div>
+          )}
+
+          <button
+            onClick={handleProfileSave}
+            disabled={profileSaving}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all"
+            style={{ background: NEUTRAL.red, opacity: profileSaving ? 0.7 : 1, cursor: profileSaving ? "not-allowed" : "pointer" }}
+          >
+            {profileSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            Salvar alterações
+          </button>
+
+          {/* Alterar senha */}
+          <div className="border-t mt-6 pt-5" style={{ borderColor: "#E5E0DA" }}>
+            <div className="font-semibold text-sm mb-3" style={{ color: NEUTRAL.graphite }}>Alterar senha</div>
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Nova senha
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres"
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, outline: "none", background: "#FAFAF8" }}
+                  onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                  onBlur={e => { e.target.style.borderColor = "#E5E0DA"; e.target.style.boxShadow = "none"; }}
+                />
+              </div>
+              <div>
+                <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Confirmar nova senha
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                  placeholder="Repita a nova senha"
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, outline: "none", background: "#FAFAF8" }}
+                  onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                  onBlur={e => { e.target.style.borderColor = "#E5E0DA"; e.target.style.boxShadow = "none"; }}
+                />
+              </div>
+            </div>
+
+            {passwordFeedback && (
+              <div
+                className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg mb-3"
+                style={{
+                  background: passwordFeedback.type === "success" ? "#F0FDF4" : "#FEF2F2",
+                  color: passwordFeedback.type === "success" ? "#16A34A" : "#B91C1C",
+                  border: `1px solid ${passwordFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
+                }}
+              >
+                {passwordFeedback.type === "success" ? <Check size={13} /> : <AlertTriangle size={13} />}
+                {passwordFeedback.msg}
+              </div>
+            )}
+
+            <button
+              onClick={handlePasswordSave}
+              disabled={passwordSaving || !passwordForm.newPassword}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+              style={{
+                background: "#FFF",
+                color: NEUTRAL.graphite,
+                borderColor: "#E5E0DA",
+                opacity: (passwordSaving || !passwordForm.newPassword) ? 0.5 : 1,
+                cursor: (passwordSaving || !passwordForm.newPassword) ? "not-allowed" : "pointer",
+              }}
+            >
+              {passwordSaving ? <Loader2 size={14} className="animate-spin" /> : null}
+              Alterar senha
+            </button>
+          </div>
         </Section>
 
         {/* Dados de demonstração */}

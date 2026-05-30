@@ -104,6 +104,16 @@ export function useSupabaseAuth() {
     await supabase.auth.signOut();
   }, []);
 
+  const updateAuthUser = useCallback(async (patch) => {
+    const authPatch = {};
+    if (patch.email) authPatch.email = patch.email;
+    if (patch.password) authPatch.password = patch.password;
+    if (Object.keys(authPatch).length === 0) return;
+    const { error } = await supabase.auth.updateUser(authPatch);
+    if (error) throw error;
+    if (patch.email) refreshProfile();
+  }, [refreshProfile]);
+
   // Shapes the profile + auth user in the format the rest of the app expects
   // (same keys the mock DEFAULT_USERS had).
   const currentUser = session && profile
@@ -115,6 +125,7 @@ export function useSupabaseAuth() {
         companies: profile.companies || [],
         initials: profile.initials || (profile.name || session.user.email).slice(0, 2).toUpperCase(),
         avatarBg: profile.avatar_bg || "#1E4D8C",
+        avatarUrl: profile.avatar_url || null,
         sector: profile.sector || null,
         supervisorId: profile.supervisor_id || null,
       }
@@ -128,6 +139,7 @@ export function useSupabaseAuth() {
     signIn,
     signUp,
     signOut,
+    updateAuthUser,
     refreshProfile,
     configured: isSupabaseConfigured,
   };
