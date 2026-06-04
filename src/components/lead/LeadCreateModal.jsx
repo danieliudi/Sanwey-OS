@@ -224,6 +224,7 @@ export function LeadCreateModal({
   const [values, setValues] = useState(() => ({
     owner: currentUser?.id || "",
     sector: currentUser?.sector || "",
+    contactEmail: "",
   }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -234,7 +235,7 @@ export function LeadCreateModal({
   // Focus first input when modal opens
   React.useEffect(() => {
     if (open) {
-      setValues({ owner: currentUser?.id || "", sector: currentUser?.sector || "" });
+      setValues({ owner: currentUser?.id || "", sector: currentUser?.sector || "", contactEmail: "" });
       setError(null);
       setSaving(false);
       setDuplicates([]);
