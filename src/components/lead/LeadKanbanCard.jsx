@@ -11,11 +11,11 @@ function daysFromDate(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function daysBadgeColor(days) {
-  if (days >= 21) return "#B91C1C";
-  if (days >= 14) return "#C2410C";
-  if (days >= 7)  return "#B45309";
-  return NEUTRAL.slate;
+function agingStyle(days) {
+  if (days > 21) return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
+  if (days > 7)  return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
+  if (days > 0)  return { bg: "#DCFCE7", text: "#16A34A", border: "#BBF7D0" };
+  return null; // "Hoje" — don't show badge for day 0
 }
 
 function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onClick, onDragStart }) {
@@ -48,12 +48,28 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
-      {/* Company + score */}
+      {/* Company + aging badge + score */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: NEUTRAL.graphite }}>
           {lead.company}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {daysInStage !== null && agingStyle(daysInStage) && (
+            <span
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
+              style={{
+                fontSize: 10,
+                background: agingStyle(daysInStage).bg,
+                color: agingStyle(daysInStage).text,
+                border: `1px solid ${agingStyle(daysInStage).border}`,
+                letterSpacing: "-0.01em",
+              }}
+              title={`${daysInStage} dias nesta etapa`}
+            >
+              <Clock size={8} strokeWidth={2.5} />
+              {daysInStage}d
+            </span>
+          )}
           <FitScoreCircle score={lead.fitScore} size={30} />
         </div>
       </div>
@@ -72,17 +88,6 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
           {probDisplay}% · {formatDateBR(lead.closeDate)}
         </span>
       </div>
-
-      {/* Days-in-stage indicator */}
-      {daysInStage !== null && (
-        <div
-          className="flex items-center gap-1 mt-2 text-[11px] font-medium"
-          style={{ color: daysBadgeColor(daysInStage) }}
-        >
-          <Clock size={10} strokeWidth={2.5} />
-          <span>{daysInStage === 0 ? "Hoje" : `${daysInStage}d nesta etapa`}</span>
-        </div>
-      )}
 
       {/* Owner footer */}
       {showOwnerFooter && lead.owner && (
