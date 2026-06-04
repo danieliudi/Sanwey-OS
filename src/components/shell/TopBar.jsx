@@ -14,6 +14,7 @@ export function TopBar({
   onCompanyChange,
   title,
   onMenuToggle,
+  onSearchOpen,
 }) {
   return (
     <div
@@ -53,42 +54,45 @@ export function TopBar({
         </div>
       )}
 
-      {/* Search — hidden on small mobile */}
-      <div className="flex-1 max-w-2xl relative hidden sm:block">
-        <Search
-          size={14}
+      {/* Search trigger — hidden on mobile, shows Cmd+K hint on desktop */}
+      <div className="flex-1 hidden sm:flex items-center">
+        <button
+          onClick={onSearchOpen}
+          className="flex items-center gap-2 rounded-lg border transition-colors duration-150 cursor-pointer"
           style={{
-            position: "absolute",
-            left: 12,
-            top: "50%",
-            transform: "translateY(-50%)",
-            color: NEUTRAL.slate,
-            pointerEvents: "none",
-          }}
-        />
-        <input
-          type="text"
-          placeholder="Busca global em breve — use os filtros de cada tela"
-          disabled
-          aria-disabled="true"
-          className="w-full text-sm rounded-lg border outline-none transition-colors duration-150 cursor-not-allowed"
-          style={{
-            padding: "8px 12px 8px 36px",
+            padding: "7px 12px",
             borderColor: "#E5E7EB",
             background: "#F8F9FA",
             color: NEUTRAL.slate,
+            fontSize: 13,
           }}
-          onFocus={(e) => {
-            e.target.style.borderColor = "#C7212B";
-            e.target.style.background = "#FFFFFF";
-            e.target.style.boxShadow = "0 0 0 3px rgba(199,33,43,0.10)";
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "#C7212B";
+            e.currentTarget.style.background = "#FFFFFF";
+            e.currentTarget.style.boxShadow = "0 0 0 3px rgba(199,33,43,0.10)";
           }}
-          onBlur={(e) => {
-            e.target.style.borderColor = "#E5E7EB";
-            e.target.style.background = "#F8F9FA";
-            e.target.style.boxShadow = "none";
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "#E5E7EB";
+            e.currentTarget.style.background = "#F8F9FA";
+            e.currentTarget.style.boxShadow = "none";
           }}
-        />
+          aria-label="Abrir busca global"
+        >
+          <Search size={13} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
+          <span style={{ color: NEUTRAL.slate }}>Buscar lead, empresa, setor...</span>
+          <kbd
+            className="ml-2 hidden lg:flex items-center gap-0.5 rounded font-mono font-semibold select-none"
+            style={{
+              fontSize: 11,
+              padding: "1px 5px",
+              background: "#EFEFEF",
+              color: NEUTRAL.slate,
+              border: "1px solid #E5E0DA",
+            }}
+          >
+            ⌘K
+          </kbd>
+        </button>
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0">

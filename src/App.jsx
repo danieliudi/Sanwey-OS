@@ -41,6 +41,7 @@ import { PipelineBuilderView } from "./components/views/PipelineBuilderView";
 import { AutomationsView } from "./components/views/AutomationsView";
 import { TutoriaisView } from "./components/views/TutoriaisView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
+import { CommandPalette } from "./components/ui/CommandPalette";
 
 const INITIAL_SIGNALS = generateMarketSignals();
 
@@ -113,6 +114,7 @@ export default function App() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [selectedSignal, setSelectedSignal] = useState(null);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
 
   const closeSignalDrawer = useCallback(() => setSelectedSignal(null), []);
 
@@ -120,6 +122,18 @@ export default function App() {
     document.body.style.overflow = sidebarMobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [sidebarMobileOpen]);
+
+  // Global Cmd+K / Ctrl+K shortcut to open the command palette
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   // ── Roteamento ──────────────────────────────────────────────────────────
   // section vem direto da URL. Mudar de tela é navigate(ROUTES[id]) — a URL
@@ -397,6 +411,7 @@ export default function App() {
           accessibleCompanies={accessibleCompanies}
           onCompanyChange={setActiveCompany}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}
+          onSearchOpen={() => setCmdOpen(true)}
         />
 
         <div className="px-4 py-4 sm:px-6 sm:py-6 flex-1 min-w-0">
@@ -615,6 +630,15 @@ export default function App() {
       {showOnboarding && (
         <OnboardingModal currentUser={currentUser} onDone={dismissOnboarding} />
       )}
+
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        leads={leads}
+        users={users}
+        pipelines={pipelines}
+        onSelectLead={(lead) => { setSelectedLead(lead); setCmdOpen(false); }}
+      />
 
       <ErrorBoundary>
         <SignalDetailDrawer
