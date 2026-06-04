@@ -1,6 +1,7 @@
 import React from "react";
 import { Menu, Search } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { NotificationCenter } from "./NotificationCenter";
 
 /**
  * Slim top bar above the main content. Holds global search, the company
@@ -15,6 +16,14 @@ export function TopBar({
   title,
   onMenuToggle,
   onSearchOpen,
+  notifications,
+  unreadCount,
+  onMarkAllRead,
+  onMarkRead,
+  onClearAll,
+  desktopPermission,
+  onRequestDesktopPermission,
+  onSelectLead,
 }) {
   return (
     <div
@@ -96,6 +105,17 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0">
+        <NotificationCenter
+          notifications={notifications || []}
+          unreadCount={unreadCount || 0}
+          onMarkAllRead={onMarkAllRead}
+          onMarkRead={onMarkRead}
+          onClearAll={onClearAll}
+          desktopPermission={desktopPermission}
+          onRequestDesktopPermission={onRequestDesktopPermission}
+          onSelectLead={onSelectLead}
+        />
+
         {accessibleCompanies.length > 1 && (
           <div
             className="flex items-center gap-0.5 rounded-lg p-0.5 border"

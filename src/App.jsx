@@ -15,6 +15,7 @@ import { useCrossReferrals } from "./hooks/use-cross-referrals";
 import { useUserSettings } from "./hooks/use-user-settings";
 import { useSupabaseAuth } from "./hooks/use-supabase-auth";
 import { useLeads } from "./hooks/use-leads";
+import { useNotifications } from "./hooks/use-notifications";
 import { useProfiles } from "./hooks/use-profiles";
 import { useInvitations } from "./hooks/use-invitations";
 import { usePipelineTransitions } from "./hooks/use-pipeline-transitions";
@@ -110,6 +111,17 @@ export default function App() {
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
   const pipelineTransitions = usePipelineTransitions();
   const { evaluateAutomations } = useAutomations();
+
+  const {
+    notifications,
+    unreadCount,
+    push: pushNotification,
+    markAllRead: markAllNotificationsRead,
+    markRead: markNotificationRead,
+    clearAll: clearAllNotifications,
+    desktopPermission,
+    requestDesktopPermission,
+  } = useNotifications({ currentUser, leads });
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);
@@ -220,9 +232,22 @@ export default function App() {
   }, [supabaseEnabled, signOut, setMockUser]);
 
   const updateLead = useCallback(async (id, patch) => {
+    // Notify if lead gets assigned to current user
+    if (patch.owner && patch.owner === currentUser?.id) {
+      const lead = leads.find(l => l.id === id);
+      if (lead && lead.owner !== currentUser?.id) {
+        pushNotification({
+          type: 'lead_assigned',
+          title: 'Lead atribuído a você',
+          body: `${lead.company} foi atribuído à sua carteira.`,
+          leadId: id,
+          companyId: lead?.companyId,
+        });
+      }
+    }
     setSelectedLead(prev => (prev && prev.id === id ? { ...prev, ...patch } : prev));
     await updateLeadRemote(id, patch);
-  }, [updateLeadRemote]);
+  }, [updateLeadRemote, currentUser, leads, pushNotification]);
 
   const handleStageChange = useCallback(async (id, stage) => {
     const prev = leads.find(l => l.id === id);
@@ -413,6 +438,17 @@ export default function App() {
           onCompanyChange={setActiveCompany}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}
           onSearchOpen={() => setCmdOpen(true)}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAllRead={markAllNotificationsRead}
+          onMarkRead={markNotificationRead}
+          onClearAll={clearAllNotifications}
+          desktopPermission={desktopPermission}
+          onRequestDesktopPermission={requestDesktopPermission}
+          onSelectLead={(leadId) => {
+            const lead = leads.find(l => l.id === leadId);
+            if (lead) setSelectedLead(lead);
+          }}
         />
 
         <div className="px-4 py-4 sm:px-6 sm:py-6 flex-1 min-w-0">
