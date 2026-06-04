@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   X, MapPin, AlertTriangle, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
   Building2, RefreshCw, Check, Trash2, Mail, ChevronDown, ChevronUp,
+  Clock, MessageSquare, GitBranch, CalendarClock,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -19,7 +20,7 @@ import { isSupabaseConfigured } from "../../lib/supabase";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, users, isManager, currentUser }) {
+export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, isManager, currentUser }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
@@ -29,6 +30,8 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, 
   const [editingContactEmail, setEditingContactEmail] = useState(false);
   const [contactEmailDraft, setContactEmailDraft] = useState("");
   const [emailsOpen, setEmailsOpen] = useState(true);
+  const [noteText, setNoteText] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
 
   const { loading: enriching, error: enrichError, data: enrichData, lookup, reset: resetEnrich } = useCnpjLookup();
   const stageFields = useStageFields();
@@ -54,8 +57,26 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, 
       setConfirmDelete(false);
       setEditingContactEmail(false);
       setContactEmailDraft(lead.contactEmail || "");
+      setNoteText("");
     }
   }, [lead?.id, lead?.stage]);
+
+  const handleAddNote = useCallback(async () => {
+    const text = noteText.trim();
+    if (!text || !onAddActivity) return;
+    setNoteSaving(true);
+    try {
+      await onAddActivity(lead.id, {
+        type: 'note',
+        userId: currentUser?.id || null,
+        userName: currentUser?.name || null,
+        body: text,
+      });
+      setNoteText("");
+    } finally {
+      setNoteSaving(false);
+    }
+  }, [noteText, onAddActivity, lead?.id, currentUser]);
 
   const overlaps = useMemo(() => {
     if (!isManager || !lead || !lead.company) return [];
@@ -165,6 +186,15 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, 
     const d = new Date(followUpDate);
     if (Number.isNaN(d.getTime())) return;
     onUpdate(lead.id, { nextFollowUp: d.toISOString() });
+    if (onAddActivity) {
+      onAddActivity(lead.id, {
+        type: 'follow_up_set',
+        userId: currentUser?.id || null,
+        userName: currentUser?.name || null,
+        body: `Follow-up agendado para ${d.toLocaleDateString('pt-BR')}`,
+        meta: { date: d.toISOString() },
+      });
+    }
     setShowFollowUpInput(false);
   };
 
@@ -626,6 +656,114 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, 
                 )}
               </div>
             )}
+          </div>
+
+          {/* Histórico de atividades */}
+          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E0DA" }}>
+            {/* Header */}
+            <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#F9F5F1", borderBottom: "1px solid #E5E0DA" }}>
+              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+                <Clock size={13} style={{ color: NEUTRAL.slate }} />
+                Histórico de atividades
+                {(lead.activities || []).length > 0 && (
+                  <span
+                    className="inline-flex items-center justify-center rounded-full text-xs font-bold px-1.5 py-0.5 ml-1"
+                    style={{ background: company.primary + "22", color: company.primary, fontSize: 10, minWidth: 18 }}
+                  >
+                    {lead.activities.length}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Add note input */}
+            {onAddActivity && (
+              <div className="px-4 py-3 border-b" style={{ background: "#FFFFFF", borderColor: "#E5E0DA" }}>
+                <div className="flex items-start gap-2">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-0.5"
+                    style={{ background: company.primary, fontSize: 9 }}
+                  >
+                    {(currentUser?.name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <textarea
+                      value={noteText}
+                      onChange={e => setNoteText(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAddNote(); }}
+                      placeholder="Adicionar nota ou anotação..."
+                      rows={noteText ? 3 : 1}
+                      className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors resize-none"
+                      style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, background: "#F9F5F1", fontFamily: "inherit" }}
+                      onFocus={e => { e.currentTarget.style.borderColor = company.primary; e.currentTarget.style.background = "#FFFFFF"; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = "#E5E0DA"; e.currentTarget.style.background = "#F9F5F1"; }}
+                    />
+                    {noteText.trim() && (
+                      <div className="flex justify-end mt-1.5">
+                        <button
+                          onClick={handleAddNote}
+                          disabled={noteSaving}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95"
+                          style={{ background: noteSaving ? "#E5E0DA" : company.primary, color: "#FFFFFF", border: "none", cursor: noteSaving ? "not-allowed" : "pointer" }}
+                        >
+                          <Send size={11} />
+                          {noteSaving ? "Salvando..." : "Salvar nota"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Timeline */}
+            <div style={{ background: "#FFFFFF" }}>
+              {(!lead.activities || lead.activities.length === 0) ? (
+                <div className="px-4 py-5 text-xs text-center" style={{ color: NEUTRAL.slate }}>
+                  Nenhuma atividade registrada ainda.
+                </div>
+              ) : (
+                <div className="divide-y" style={{ borderColor: "#F0EDE8" }}>
+                  {[...(lead.activities)].reverse().map((act) => {
+                    const isNote = act.type === 'note';
+                    const isStage = act.type === 'stage_changed';
+                    const isFollowUp = act.type === 'follow_up_set';
+                    const isEmail = act.type === 'email_received' || act.type === 'email_sent';
+                    const iconColor = isNote ? company.primary
+                      : isStage ? NEUTRAL.slate
+                      : isFollowUp ? NEUTRAL.amber
+                      : isEmail ? "#2563EB"
+                      : NEUTRAL.slate;
+                    const Icon = isNote ? MessageSquare
+                      : isStage ? GitBranch
+                      : isFollowUp ? CalendarClock
+                      : isEmail ? Mail
+                      : Clock;
+                    return (
+                      <div key={act.id} className="px-4 py-3 flex items-start gap-3">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                          style={{ background: iconColor + "18" }}
+                        >
+                          <Icon size={12} style={{ color: iconColor }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs leading-relaxed" style={{ color: NEUTRAL.graphite }}>
+                            {act.body}
+                          </div>
+                          <div className="text-xs mt-1 flex items-center gap-2" style={{ color: NEUTRAL.slate }}>
+                            {act.userName && (
+                              <span className="font-medium">{act.userName}</span>
+                            )}
+                            <span>{act.timestamp ? new Date(act.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Email draft */}

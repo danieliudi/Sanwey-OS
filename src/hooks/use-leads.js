@@ -42,6 +42,7 @@ function rowToLead(r) {
     decisionMaker: r.decision_maker || { name: "—", role: "—" },
     starred: Boolean(r.starred),
     notes: Array.isArray(r.notes) ? r.notes : [],
+    activities: Array.isArray(r.activities) ? r.activities : [],
     clientClassification: r.client_classification ?? null,
     orderCount: r.order_count ?? 0,
     customFields: r.custom_fields && typeof r.custom_fields === "object" ? r.custom_fields : {},
@@ -90,6 +91,7 @@ function leadToRow(l, extras = {}) {
     decision_maker: l.decisionMaker ?? {},
     starred: Boolean(l.starred),
     notes: l.notes ?? [],
+    activities: l.activities ?? [],
     client_classification: l.clientClassification ?? null,
     order_count: l.orderCount ?? 0,
     custom_fields: l.customFields && typeof l.customFields === "object" ? l.customFields : {},
@@ -239,11 +241,32 @@ export function useLeads({ userId, role, companies } = {}) {
     await updateLead(id, { starred: !target.starred });
   }, [leads, updateLead]);
 
+  const addLeadActivity = useCallback(async (leadId, activity) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+    const newActivity = {
+      id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      ...activity,
+    };
+    const activities = [...(lead.activities || []), newActivity];
+    await updateLead(leadId, { activities });
+  }, [leads, updateLead]);
+
   const changeStage = useCallback(async (id, stage) => {
+    const lead = leads.find(l => l.id === id);
+    const oldStage = lead?.stage;
     // status espelha stage no banco (mesmo CHECK, default igual). Sem este
     // patch, status fica defasado e relatórios baseados em status quebram.
     await updateLead(id, { stage, status: stage, stageChangedAt: new Date().toISOString() });
-  }, [updateLead]);
+    if (oldStage && oldStage !== stage) {
+      await addLeadActivity(id, {
+        type: 'stage_changed',
+        body: `Etapa alterada de "${oldStage}" para "${stage}"`,
+        meta: { from: oldStage, to: stage },
+      });
+    }
+  }, [leads, updateLead, addLeadActivity]);
 
   const loadDemoLeads = useCallback(async () => {
     const demo = generateLeadsForAllCompanies();
@@ -306,10 +329,11 @@ export function useLeads({ userId, role, companies } = {}) {
     deleteLead,
     toggleStar,
     changeStage,
+    addLeadActivity,
     loadDemoLeads,
     clearAllLeads,
     clearDemoLeads,
     refetch: fetchAll,
     canQuery,
-  }), [leads, loading, error, addLead, updateLead, deleteLead, toggleStar, changeStage, loadDemoLeads, clearAllLeads, clearDemoLeads, fetchAll, canQuery]);
+  }), [leads, loading, error, addLead, updateLead, deleteLead, toggleStar, changeStage, addLeadActivity, loadDemoLeads, clearAllLeads, clearDemoLeads, fetchAll, canQuery]);
 }

@@ -94,6 +94,7 @@ export default function App() {
     deleteLead,
     toggleStar,
     changeStage,
+    addLeadActivity,
     loadDemoLeads,
     clearAllLeads: clearAllLeadsRemote,
   } = useLeads({
@@ -620,6 +621,7 @@ export default function App() {
           onClose={closeDrawer}
           onUpdate={updateLead}
           onDelete={deleteLead}
+          onAddActivity={addLeadActivity}
           allLeads={leads}
           users={users}
           isManager={isManager}
