@@ -448,7 +448,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions }) {
+export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead }) {
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
   const isConsultor = user.role === "consultor";
@@ -797,6 +797,11 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
         isManager={isManager}
         formConfig={formConfig}
         onUpdateFormConfig={updateFormConfig}
+        existingLeads={leads}
+        onViewExisting={(lead) => {
+          if (onLeadClick) onLeadClick(lead);
+          setCreateModalStage(null);
+        }}
       />
 
       {/* Form builder — acessível pelo ⚙️ das colunas ou pelo modal de criação */}
