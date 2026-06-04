@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download } from "lucide-react";
+import { exportLeadsCSV } from "../../utils/export-leads";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
@@ -574,6 +575,28 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Exportar CSV */}
+          <button
+            onClick={() => exportLeadsCSV(scopedLeads, users, pipelines)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+            style={{
+              background: "#FFFFFF",
+              borderColor: "#D4D4D4",
+              color: NEUTRAL.slate,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = "#F3F4F6";
+              e.currentTarget.style.color = NEUTRAL.graphite;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "#FFFFFF";
+              e.currentTarget.style.color = NEUTRAL.slate;
+            }}
+            title="Exportar leads filtrados como CSV"
+          >
+            <Download size={13} />
+            Exportar CSV
+          </button>
           {/* Toggle Kanban / Calendário */}
           <div
             className="inline-flex rounded-lg border overflow-hidden"
