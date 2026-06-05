@@ -20,6 +20,7 @@ function agingStyle(days) {
 
 function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onClick, onDragStart }) {
   const daysInStage = daysFromDate(lead.stageChangedAt);
+  const ageStyle = daysInStage !== null ? agingStyle(daysInStage) : null;
   // Normalize probability: demo data uses 0–1 scale, manual cards use 0–100
   const probDisplay = lead.probability > 1
     ? Math.round(lead.probability)
@@ -54,14 +55,14 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
           {lead.company}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {daysInStage !== null && agingStyle(daysInStage) && (
+          {ageStyle && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
               style={{
                 fontSize: 10,
-                background: agingStyle(daysInStage).bg,
-                color: agingStyle(daysInStage).text,
-                border: `1px solid ${agingStyle(daysInStage).border}`,
+                background: ageStyle.bg,
+                color: ageStyle.text,
+                border: `1px solid ${ageStyle.border}`,
                 letterSpacing: "-0.01em",
               }}
               title={`${daysInStage} dias nesta etapa`}

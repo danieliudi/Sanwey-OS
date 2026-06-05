@@ -84,7 +84,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
   };
 
   const handleCopy = () => {
-    if (!result) return;
+    if (!result || !navigator.clipboard?.writeText) return;
     navigator.clipboard.writeText(result).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

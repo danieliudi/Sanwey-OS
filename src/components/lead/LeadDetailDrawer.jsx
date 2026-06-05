@@ -93,7 +93,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   const sellerOptions = useMemo(() => {
     if (!lead) return [];
     return (users || [])
-      .filter(u => u.role === "vendedor" && Array.isArray(u.companies) && u.companies.includes(lead.companyId))
+      .filter(u => (u.role === "vendedor" || u.role === "consultor") && Array.isArray(u.companies) && u.companies.includes(lead.companyId))
       .map(u => ({ value: u.id, label: u.name }));
   }, [lead, users]);
 

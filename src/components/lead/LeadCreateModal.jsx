@@ -33,7 +33,7 @@ function findDuplicates(typedName, existingLeads) {
 
 // ── Field renderer ────────────────────────────────────────────────────────────
 
-function FieldInput({ def, configEntry, value, onChange, users, companyId }) {
+function FieldInput({ def, configEntry, value, onChange, users, companyId, inputRef }) {
   const baseStyle = {
     width: "100%",
     fontSize: 13,
@@ -197,6 +197,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId }) {
   // default text
   return (
     <input
+      ref={inputRef}
       type="text"
       value={value || ""}
       onChange={e => onChange(e.target.value)}

@@ -51,6 +51,7 @@ function rowToLead(r) {
     lastActivity: r.last_activity,
     stageChangedAt: r.stage_changed_at,
     isDemo: Boolean(r.is_demo),
+    createdBy: r.created_by || null,
   };
 }
 
@@ -311,14 +312,16 @@ export function useLeads({ userId, role, companies } = {}) {
       setFallbackLeads(prev => prev.filter(l => l.id !== id));
       return;
     }
+    const removed = leads.find(l => l.id === id);
     setRemoteLeads(prev => prev.filter(l => l.id !== id));
     const { error: err } = await supabase.from("leads").delete().eq("id", id);
     if (err) {
       setError(err);
-      fetchAll();
+      if (removed) setRemoteLeads(prev => [removed, ...prev]);
+      fetchAll().catch(() => {});
       throw err;
     }
-  }, [setFallbackLeads, fetchAll]);
+  }, [leads, setFallbackLeads, fetchAll]);
 
   return useMemo(() => ({
     leads,

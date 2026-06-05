@@ -222,7 +222,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    if (!result) return;
+    if (!result || !navigator.clipboard?.writeText) return;
     navigator.clipboard.writeText(result).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

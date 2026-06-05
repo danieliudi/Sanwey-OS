@@ -84,9 +84,13 @@ export function useNotifications({ currentUser, leads = [] } = {}) {
               leadId: lead.id,
               companyId: lead.companyId,
             });
-            sendDesktopNotification(notif.title, notif.body, { leadId: lead.id });
             return [notif, ...prev].slice(0, MAX_NOTIFICATIONS);
           });
+          sendDesktopNotification(
+            'Follow-up para hoje',
+            `${lead.company} — acompanhamento agendado para hoje.`,
+            { leadId: lead.id }
+          );
         }
       }
     }

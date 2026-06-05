@@ -165,7 +165,7 @@ export default function App() {
   useEffect(() => {
     if (!selectedLead) return;
     const fresh = leads.find(l => l.id === selectedLead.id);
-    if (!fresh) return;
+    if (!fresh) { setSelectedLead(null); return; }
     if (fresh === selectedLead) return;
     setSelectedLead(fresh);
   }, [leads, selectedLead]);
@@ -233,20 +233,19 @@ export default function App() {
 
   const updateLead = useCallback(async (id, patch) => {
     // Notify if lead gets assigned to current user
-    if (patch.owner && patch.owner === currentUser?.id) {
-      const lead = leads.find(l => l.id === id);
-      if (lead && lead.owner !== currentUser?.id) {
-        pushNotification({
-          type: 'lead_assigned',
-          title: 'Lead atribuído a você',
-          body: `${lead.company} foi atribuído à sua carteira.`,
-          leadId: id,
-          companyId: lead?.companyId,
-        });
-      }
-    }
+    const lead = leads.find(l => l.id === id);
+    const shouldNotify = patch.owner && patch.owner === currentUser?.id && lead && lead.owner !== currentUser?.id;
     setSelectedLead(prev => (prev && prev.id === id ? { ...prev, ...patch } : prev));
     await updateLeadRemote(id, patch);
+    if (shouldNotify) {
+      pushNotification({
+        type: 'lead_assigned',
+        title: 'Lead atribuído a você',
+        body: `${lead.company} foi atribuído à sua carteira.`,
+        leadId: id,
+        companyId: lead?.companyId,
+      });
+    }
   }, [updateLeadRemote, currentUser, leads, pushNotification]);
 
   const handleStageChange = useCallback(async (id, stage) => {

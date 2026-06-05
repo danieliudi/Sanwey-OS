@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, X, Send, Loader2, AlertCircle } from "lucide-react";
 import { useAI } from "../../hooks/use-ai";
 import { pipelineChatPrompt } from "../../constants/ai-prompts";
@@ -24,6 +24,10 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  const systemPrompt = useMemo(() => {
+    return pipelineChatPrompt("", leads, users)[0];
+  }, [leads, users]);
+
   const handleSend = async () => {
     const question = input.trim();
     if (!question || loading) return;
@@ -34,9 +38,8 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
     setLoading(true);
 
     try {
-      const promptMessages = pipelineChatPrompt(question, leads, users);
       // For multi-turn: inject prior assistant/user messages after the system prompt
-      const systemMsg = promptMessages[0]; // system
+      const systemMsg = systemPrompt;
       const priorTurns = messages.flatMap(m => [{ role: m.role, content: m.content }]);
       const finalMessages = [systemMsg, ...priorTurns, { role: "user", content: question }];
 
