@@ -546,7 +546,7 @@ export default function App() {
           } />
           <Route path={ROUTES.executive} element={
             isManager
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Antiga rota /presidencia foi fundida no Executivo. Redireciona

@@ -17,6 +17,7 @@ import { formatDateBR } from "../../utils/date";
 import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { isSupabaseConfigured } from "../../lib/supabase";
+import { LeadAIPanel } from "../ai/LeadAIPanel";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
@@ -765,6 +766,14 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               )}
             </div>
           </div>
+
+          {/* IA panel */}
+          <LeadAIPanel
+            lead={lead}
+            currentUser={currentUser}
+            activities={lead.activities || []}
+            linkedEmails={lead.linkedEmails || []}
+          />
 
           {/* Email draft */}
           <div className="p-4 rounded-xl" style={{ background: company.dark, color: "#FFFFFF" }}>
