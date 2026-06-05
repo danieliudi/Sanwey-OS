@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState, useEffect } from "react";
-import { RotateCcw, Check, AlertTriangle, Trash2, Database, Sparkles, Camera, Loader2 } from "lucide-react";
+import { RotateCcw, Check, AlertTriangle, Trash2, Database, Sparkles, Camera, Loader2, Bot, Key, Zap, ExternalLink, CheckCircle2 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { AI_PROVIDERS, AI_PROVIDER_MAP } from "../../constants/ai-providers";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import {
   DASHBOARD_WIDGETS, NOTIFICATION_GROUPS, DENSITY_OPTIONS,
@@ -150,6 +151,99 @@ export function SettingsView({
     } finally {
       setPasswordSaving(false);
     }
+  };
+
+  // ── AI integration state ─────────────────────────────────────────────
+  const [aiForm, setAiForm] = useState({
+    provider: currentUser?.aiConfig?.provider || '',
+    model: currentUser?.aiConfig?.model || '',
+    apiKey: currentUser?.aiConfig?.apiKey || '',
+  });
+  const [aiKeyVisible, setAiKeyVisible] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState(null); // null | 'ok' | 'error'
+  const [aiTestMsg, setAiTestMsg] = useState('');
+  const [aiTesting, setAiTesting] = useState(false);
+
+  useEffect(() => {
+    if (currentUser?.aiConfig) {
+      setAiForm({
+        provider: currentUser.aiConfig.provider || '',
+        model: currentUser.aiConfig.model || '',
+        apiKey: currentUser.aiConfig.apiKey || '',
+      });
+    }
+  }, [currentUser?.id]);
+
+  const selectedProvider = AI_PROVIDER_MAP[aiForm.provider];
+
+  const handleAiProviderChange = (providerId) => {
+    const p = AI_PROVIDER_MAP[providerId];
+    setAiForm(f => ({ ...f, provider: providerId, model: p?.models[0]?.id || '' }));
+    setAiTestResult(null);
+  };
+
+  const handleAiSave = async () => {
+    if (!aiForm.provider || !aiForm.model || !aiForm.apiKey.trim()) return;
+    setAiSaving(true);
+    try {
+      const config = { provider: aiForm.provider, model: aiForm.model, apiKey: aiForm.apiKey.trim() };
+      if (onUpdateUser && currentUser?.id) await onUpdateUser(currentUser.id, { aiConfig: config });
+      if (onUpdateMockUser) onUpdateMockUser(u => ({ ...u, aiConfig: config }));
+    } finally {
+      setAiSaving(false);
+    }
+  };
+
+  const handleAiTest = async () => {
+    if (!aiForm.provider || !aiForm.model || !aiForm.apiKey.trim()) return;
+    setAiTesting(true);
+    setAiTestResult(null);
+    try {
+      const config = { provider: aiForm.provider, model: aiForm.model, apiKey: aiForm.apiKey.trim() };
+      const messages = [
+        { role: 'user', content: 'Responda apenas: "Conexão OK"' }
+      ];
+      let text = '';
+      if (config.provider === 'openai') {
+        const r = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: config.model, messages, max_tokens: 20 }),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message || 'Erro');
+        text = d.choices[0]?.message?.content || '';
+      } else if (config.provider === 'gemini') {
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Responda apenas: "Conexão OK"' }] }] }),
+          }
+        );
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message || 'Erro');
+        text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      } else {
+        text = 'Anthropic requer Supabase Edge Function (deploy necessário)';
+      }
+      setAiTestResult('ok');
+      setAiTestMsg(text.trim().slice(0, 80));
+    } catch (e) {
+      setAiTestResult('error');
+      setAiTestMsg(e.message);
+    } finally {
+      setAiTesting(false);
+    }
+  };
+
+  const handleAiDisconnect = async () => {
+    setAiForm({ provider: '', model: '', apiKey: '' });
+    setAiTestResult(null);
+    if (onUpdateUser && currentUser?.id) await onUpdateUser(currentUser.id, { aiConfig: null });
+    if (onUpdateMockUser) onUpdateMockUser(u => ({ ...u, aiConfig: null }));
   };
 
   // ── General settings callbacks ───────────────────────────────────────
