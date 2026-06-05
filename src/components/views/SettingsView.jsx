@@ -675,6 +675,186 @@ export function SettingsView({
             Limpar dados locais
           </Button>
         </Section>
+
+        {/* ─── Integrações de IA ─────────────────────────────────────────────── */}
+        <section className="lg:col-span-2">
+          <div
+            className="p-5 rounded-xl border"
+            style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Bot size={16} style={{ color: NEUTRAL.red }} />
+              <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+                Integrações de IA
+              </h2>
+            </div>
+
+            <div className="space-y-5">
+              {/* Status badge */}
+              {currentUser?.aiConfig?.provider && (
+                <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "#DCFCE7", color: "#16A34A" }}>
+                  <CheckCircle2 size={13} />
+                  <span className="font-semibold">
+                    {AI_PROVIDER_MAP[currentUser.aiConfig.provider]?.name} — {currentUser.aiConfig.model} conectado
+                  </span>
+                  <button
+                    onClick={handleAiDisconnect}
+                    className="ml-auto text-xs underline"
+                    style={{ color: "#16A34A", background: "none", border: "none", cursor: "pointer" }}
+                  >
+                    Desconectar
+                  </button>
+                </div>
+              )}
+
+              {/* Provider picker */}
+              <div>
+                <label className="text-xs font-semibold block mb-2" style={{ color: NEUTRAL.slate }}>
+                  Provedor de IA
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {AI_PROVIDERS.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleAiProviderChange(p.id)}
+                      className="py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all"
+                      style={{
+                        background: aiForm.provider === p.id ? NEUTRAL.red + "0F" : "#FFFFFF",
+                        borderColor: aiForm.provider === p.id ? NEUTRAL.red : "#E5E0DA",
+                        color: aiForm.provider === p.id ? NEUTRAL.red : NEUTRAL.graphite,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Model picker */}
+              {selectedProvider && (
+                <div>
+                  <label className="text-xs font-semibold block mb-2" style={{ color: NEUTRAL.slate }}>
+                    Modelo
+                  </label>
+                  <div className="flex flex-col gap-1.5">
+                    {selectedProvider.models.map(m => (
+                      <label
+                        key={m.id}
+                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
+                        style={{
+                          background: aiForm.model === m.id ? NEUTRAL.red + "0F" : "#FAFAFA",
+                          borderColor: aiForm.model === m.id ? NEUTRAL.red : "#E5E0DA",
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="ai-model"
+                          value={m.id}
+                          checked={aiForm.model === m.id}
+                          onChange={() => setAiForm(f => ({ ...f, model: m.id }))}
+                          style={{ accentColor: NEUTRAL.red }}
+                        />
+                        <span className="text-xs font-medium" style={{ color: NEUTRAL.graphite }}>{m.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* API key */}
+              {selectedProvider && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold" style={{ color: NEUTRAL.slate }}>
+                      <Key size={11} className="inline mr-1" />Chave de API
+                    </label>
+                    <a
+                      href={selectedProvider.keyHint.includes('platform.openai') ? 'https://platform.openai.com/api-keys' :
+                            selectedProvider.keyHint.includes('console.anthropic') ? 'https://console.anthropic.com/settings/keys' :
+                            'https://aistudio.google.com/app/apikey'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs flex items-center gap-1"
+                      style={{ color: NEUTRAL.red }}
+                    >
+                      <ExternalLink size={10} />Obter chave
+                    </a>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={aiKeyVisible ? "text" : "password"}
+                      value={aiForm.apiKey}
+                      onChange={e => { setAiForm(f => ({ ...f, apiKey: e.target.value })); setAiTestResult(null); }}
+                      placeholder={selectedProvider.keyPlaceholder}
+                      className="w-full text-sm rounded-xl border px-3 py-2.5 outline-none pr-16"
+                      style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, background: "#FAFAFA", fontFamily: "monospace" }}
+                      onFocus={e => { e.currentTarget.style.borderColor = NEUTRAL.red; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = "#E5E0DA"; }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setAiKeyVisible(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs"
+                      style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                    >
+                      {aiKeyVisible ? "Ocultar" : "Mostrar"}
+                    </button>
+                  </div>
+                  <p className="text-[11px] mt-1" style={{ color: NEUTRAL.slate }}>
+                    {selectedProvider.keyHint}
+                  </p>
+                </div>
+              )}
+
+              {/* Test result */}
+              {aiTestResult && (
+                <div
+                  className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs"
+                  style={{
+                    background: aiTestResult === 'ok' ? "#DCFCE7" : "#FEE2E2",
+                    color: aiTestResult === 'ok' ? "#16A34A" : "#DC2626",
+                  }}
+                >
+                  {aiTestResult === 'ok' ? <CheckCircle2 size={13} /> : <Zap size={13} />}
+                  <span>{aiTestResult === 'ok' ? `✓ ${aiTestMsg || 'Conexão OK'}` : aiTestMsg}</span>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              {selectedProvider && aiForm.apiKey.trim() && (
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={handleAiTest}
+                    disabled={aiTesting}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-all"
+                    style={{
+                      background: "#FFFFFF",
+                      borderColor: "#E5E0DA",
+                      color: NEUTRAL.graphite,
+                      cursor: aiTesting ? "wait" : "pointer",
+                    }}
+                  >
+                    <Zap size={12} />
+                    {aiTesting ? "Testando..." : "Testar conexão"}
+                  </button>
+                  <button
+                    onClick={handleAiSave}
+                    disabled={aiSaving}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
+                    style={{
+                      background: aiSaving ? "#E5E0DA" : NEUTRAL.red,
+                      border: "none",
+                      cursor: aiSaving ? "wait" : "pointer",
+                    }}
+                  >
+                    {aiSaving ? "Salvando..." : "Salvar configuração"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
