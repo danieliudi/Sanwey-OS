@@ -15,6 +15,7 @@ import { useCrossReferrals } from "./hooks/use-cross-referrals";
 import { useUserSettings } from "./hooks/use-user-settings";
 import { useSupabaseAuth } from "./hooks/use-supabase-auth";
 import { useLeads } from "./hooks/use-leads";
+import { useNotifications } from "./hooks/use-notifications";
 import { useProfiles } from "./hooks/use-profiles";
 import { useInvitations } from "./hooks/use-invitations";
 import { usePipelineTransitions } from "./hooks/use-pipeline-transitions";
@@ -41,6 +42,7 @@ import { PipelineBuilderView } from "./components/views/PipelineBuilderView";
 import { AutomationsView } from "./components/views/AutomationsView";
 import { TutoriaisView } from "./components/views/TutoriaisView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
+import { CommandPalette } from "./components/ui/CommandPalette";
 
 const INITIAL_SIGNALS = generateMarketSignals();
 
@@ -93,6 +95,7 @@ export default function App() {
     deleteLead,
     toggleStar,
     changeStage,
+    addLeadActivity,
     loadDemoLeads,
     clearAllLeads: clearAllLeadsRemote,
   } = useLeads({
@@ -109,10 +112,22 @@ export default function App() {
   const pipelineTransitions = usePipelineTransitions();
   const { evaluateAutomations } = useAutomations();
 
+  const {
+    notifications,
+    unreadCount,
+    push: pushNotification,
+    markAllRead: markAllNotificationsRead,
+    markRead: markNotificationRead,
+    clearAll: clearAllNotifications,
+    desktopPermission,
+    requestDesktopPermission,
+  } = useNotifications({ currentUser, leads });
+
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);
   const [selectedSignal, setSelectedSignal] = useState(null);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
 
   const closeSignalDrawer = useCallback(() => setSelectedSignal(null), []);
 
@@ -120,6 +135,18 @@ export default function App() {
     document.body.style.overflow = sidebarMobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [sidebarMobileOpen]);
+
+  // Global Cmd+K / Ctrl+K shortcut to open the command palette
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   // ── Roteamento ──────────────────────────────────────────────────────────
   // section vem direto da URL. Mudar de tela é navigate(ROUTES[id]) — a URL
@@ -138,7 +165,7 @@ export default function App() {
   useEffect(() => {
     if (!selectedLead) return;
     const fresh = leads.find(l => l.id === selectedLead.id);
-    if (!fresh) return;
+    if (!fresh) { setSelectedLead(null); return; }
     if (fresh === selectedLead) return;
     setSelectedLead(fresh);
   }, [leads, selectedLead]);
@@ -205,9 +232,21 @@ export default function App() {
   }, [supabaseEnabled, signOut, setMockUser]);
 
   const updateLead = useCallback(async (id, patch) => {
+    // Notify if lead gets assigned to current user
+    const lead = leads.find(l => l.id === id);
+    const shouldNotify = patch.owner && patch.owner === currentUser?.id && lead && lead.owner !== currentUser?.id;
     setSelectedLead(prev => (prev && prev.id === id ? { ...prev, ...patch } : prev));
     await updateLeadRemote(id, patch);
-  }, [updateLeadRemote]);
+    if (shouldNotify) {
+      pushNotification({
+        type: 'lead_assigned',
+        title: 'Lead atribuído a você',
+        body: `${lead.company} foi atribuído à sua carteira.`,
+        leadId: id,
+        companyId: lead?.companyId,
+      });
+    }
+  }, [updateLeadRemote, currentUser, leads, pushNotification]);
 
   const handleStageChange = useCallback(async (id, stage) => {
     const prev = leads.find(l => l.id === id);
@@ -397,6 +436,18 @@ export default function App() {
           accessibleCompanies={accessibleCompanies}
           onCompanyChange={setActiveCompany}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}
+          onSearchOpen={() => setCmdOpen(true)}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAllRead={markAllNotificationsRead}
+          onMarkRead={markNotificationRead}
+          onClearAll={clearAllNotifications}
+          desktopPermission={desktopPermission}
+          onRequestDesktopPermission={requestDesktopPermission}
+          onSelectLead={(leadId) => {
+            const lead = leads.find(l => l.id === leadId);
+            if (lead) setSelectedLead(lead);
+          }}
         />
 
         <div className="px-4 py-4 sm:px-6 sm:py-6 flex-1 min-w-0">
@@ -494,7 +545,7 @@ export default function App() {
           } />
           <Route path={ROUTES.executive} element={
             isManager
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Antiga rota /presidencia foi fundida no Executivo. Redireciona
@@ -605,6 +656,7 @@ export default function App() {
           onClose={closeDrawer}
           onUpdate={updateLead}
           onDelete={deleteLead}
+          onAddActivity={addLeadActivity}
           allLeads={leads}
           users={users}
           isManager={isManager}
@@ -615,6 +667,15 @@ export default function App() {
       {showOnboarding && (
         <OnboardingModal currentUser={currentUser} onDone={dismissOnboarding} />
       )}
+
+      <CommandPalette
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        leads={leads}
+        users={users}
+        pipelines={pipelines}
+        onSelectLead={(lead) => { setSelectedLead(lead); setCmdOpen(false); }}
+      />
 
       <ErrorBoundary>
         <SignalDetailDrawer

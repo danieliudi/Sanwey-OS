@@ -1,14 +1,39 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
-import { X, Settings, Loader2 } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { X, Settings, Loader2, AlertTriangle } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { CANONICAL_STATES } from "../../constants/taxonomy";
 import { FIELD_DEFS } from "../../constants/lead-form-fields";
 import { LeadFormBuilder } from "./LeadFormBuilder";
 
+// ── Duplicate detection helpers ───────────────────────────────────────────────
+
+function normalizeName(name) {
+  return (name || "").trim().toLowerCase();
+}
+
+function isSimilar(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  // includes check for longer strings
+  if (a.length > 4 && b.length > 4) {
+    if (a.includes(b) || b.includes(a)) return true;
+  }
+  return false;
+}
+
+function findDuplicates(typedName, existingLeads) {
+  const typed = normalizeName(typedName);
+  if (typed.length < 2) return [];
+  return (existingLeads || []).filter(lead => {
+    const existing = normalizeName(lead.company);
+    return isSimilar(typed, existing);
+  });
+}
+
 // ── Field renderer ────────────────────────────────────────────────────────────
 
-function FieldInput({ def, configEntry, value, onChange, users, companyId }) {
+function FieldInput({ def, configEntry, value, onChange, users, companyId, inputRef }) {
   const baseStyle = {
     width: "100%",
     fontSize: 13,
@@ -172,6 +197,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId }) {
   // default text
   return (
     <input
+      ref={inputRef}
       type="text"
       value={value || ""}
       onChange={e => onChange(e.target.value)}
@@ -193,25 +219,44 @@ export function LeadCreateModal({
   isManager,
   formConfig,
   onUpdateFormConfig,
+  existingLeads,
+  onViewExisting,
 }) {
   const [values, setValues] = useState(() => ({
     owner: currentUser?.id || "",
     sector: currentUser?.sector || "",
+    contactEmail: "",
   }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [duplicates, setDuplicates] = useState([]);
   const firstRef = useRef(null);
 
   // Focus first input when modal opens
   React.useEffect(() => {
     if (open) {
-      setValues({ owner: currentUser?.id || "", sector: currentUser?.sector || "" });
+      setValues({ owner: currentUser?.id || "", sector: currentUser?.sector || "", contactEmail: "" });
       setError(null);
       setSaving(false);
+      setDuplicates([]);
       setTimeout(() => firstRef.current?.focus(), 80);
     }
   }, [open, currentUser]);
+
+  // Debounced duplicate detection on company name change
+  useEffect(() => {
+    const typed = values.company || "";
+    if (!typed.trim() || typed.trim().length < 2) {
+      setDuplicates([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const found = findDuplicates(typed, existingLeads);
+      setDuplicates(found);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [values.company, existingLeads]);
 
   const set = useCallback((fieldId, val) => {
     setValues(prev => ({ ...prev, [fieldId]: val }));
@@ -368,33 +413,102 @@ export function LeadCreateModal({
             const def = FIELD_DEFS[entry.id];
             if (!def) return null;
             return (
-              <div key={entry.id} style={{ marginBottom: 16 }}>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: NEUTRAL.slate,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                    marginBottom: 5,
-                  }}
-                >
-                  {entry.required && (
-                    <span style={{ color: "#C7212B", marginRight: 2 }}>*</span>
-                  )}
-                  {def.label}
-                </label>
-                <FieldInput
-                  def={def}
-                  configEntry={entry}
-                  value={values[entry.id]}
-                  onChange={val => set(entry.id, val)}
-                  users={users}
-                  companyId={companyId}
-                  inputRef={idx === 0 ? firstRef : undefined}
-                />
-              </div>
+              <React.Fragment key={entry.id}>
+                <div style={{ marginBottom: entry.id === "company" && duplicates.length > 0 ? 8 : 16 }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: NEUTRAL.slate,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.07em",
+                      marginBottom: 5,
+                    }}
+                  >
+                    {entry.required && (
+                      <span style={{ color: "#C7212B", marginRight: 2 }}>*</span>
+                    )}
+                    {def.label}
+                  </label>
+                  <FieldInput
+                    def={def}
+                    configEntry={entry}
+                    value={values[entry.id]}
+                    onChange={val => set(entry.id, val)}
+                    users={users}
+                    companyId={companyId}
+                    inputRef={idx === 0 ? firstRef : undefined}
+                  />
+                </div>
+                {entry.id === "company" && duplicates.length > 0 && (
+                  <div
+                    style={{
+                      marginBottom: 16,
+                      padding: "10px 12px",
+                      background: "#FEF3C7",
+                      borderLeft: "3px solid #E8920A",
+                      borderRadius: "0 6px 6px 0",
+                      color: "#92400E",
+                      fontSize: 12,
+                    }}
+                  >
+                    {duplicates.slice(0, 1).map(dup => {
+                      const ownerUser = (users || []).find(u => u.id === dup.owner);
+                      const ownerName = ownerUser?.name || dup.owner || "—";
+                      return (
+                        <div key={dup.id}>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 8 }}>
+                            <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1, color: "#E8920A" }} />
+                            <span>
+                              <strong>Lead similar já existe:</strong> "{dup.company}" — Etapa: {dup.stage} (responsável: {ownerName})
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, marginLeft: 20 }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onViewExisting) onViewExisting(dup);
+                                onClose();
+                              }}
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: "#92400E",
+                                background: "rgba(255,255,255,0.6)",
+                                border: "1px solid #E8920A",
+                                borderRadius: 5,
+                                padding: "3px 10px",
+                                cursor: "pointer",
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.9)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.6)"; }}
+                            >
+                              Ver lead existente
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDuplicates([])}
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: "#78350F",
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: "3px 0",
+                                textDecoration: "underline",
+                              }}
+                            >
+                              Criar mesmo assim
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </React.Fragment>
             );
           })}
 

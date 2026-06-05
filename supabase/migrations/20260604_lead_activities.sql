@@ -1,0 +1,2 @@
+ALTER TABLE leads
+  ADD COLUMN IF NOT EXISTS activities JSONB DEFAULT '[]'::jsonb NOT NULL;

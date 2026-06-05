@@ -1,5 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Bot } from "lucide-react";
+import { PipelineChatPanel } from "../ai/PipelineChatPanel";
+import { exportLeadsCSV } from "../../utils/export-leads";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
@@ -447,7 +449,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions }) {
+export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead }) {
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
   const isConsultor = user.role === "consultor";
@@ -466,6 +468,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
   const usersById = useUsersById(users);
   const { formConfig, updateFormConfig } = useLeadFormConfig();
   const [createModalStage, setCreateModalStage] = useState(null); // { stageId, stage, companyId }
+  const [showAIChat, setShowAIChat] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
 
   // user.companies may still contain legacy ids ("comercial") that the DB
@@ -559,6 +562,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
   const handleDragLeave  = useCallback(() => { setDragOverStage(null); }, []);
 
   return (
+    <>
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -574,6 +578,28 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Exportar CSV */}
+          <button
+            onClick={() => exportLeadsCSV(scopedLeads, users, pipelines)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+            style={{
+              background: "#FFFFFF",
+              borderColor: "#D4D4D4",
+              color: NEUTRAL.slate,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = "#F3F4F6";
+              e.currentTarget.style.color = NEUTRAL.graphite;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "#FFFFFF";
+              e.currentTarget.style.color = NEUTRAL.slate;
+            }}
+            title="Exportar leads filtrados como CSV"
+          >
+            <Download size={13} />
+            Exportar CSV
+          </button>
           {/* Toggle Kanban / Calendário */}
           <div
             className="inline-flex rounded-lg border overflow-hidden"
@@ -774,6 +800,11 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
         isManager={isManager}
         formConfig={formConfig}
         onUpdateFormConfig={updateFormConfig}
+        existingLeads={leads}
+        onViewExisting={(lead) => {
+          if (onLeadClick) onLeadClick(lead);
+          setCreateModalStage(null);
+        }}
       />
 
       {/* Form builder — acessível pelo ⚙️ das colunas ou pelo modal de criação */}
@@ -785,6 +816,27 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
         />
       )}
     </div>
+
+    {/* Floating AI button */}
+    <button
+      onClick={() => setShowAIChat(v => !v)}
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
+      style={{ background: "#C7212B", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(199,33,43,0.3)", border: "none", cursor: "pointer" }}
+      onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
+      onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+    >
+      <Bot size={16} />
+      Perguntar à IA
+    </button>
+
+    <PipelineChatPanel
+      leads={scopedLeads}
+      users={users}
+      currentUser={user}
+      isOpen={showAIChat}
+      onClose={() => setShowAIChat(false)}
+    />
+    </>
   );
 }
 

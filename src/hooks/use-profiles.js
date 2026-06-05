@@ -15,6 +15,7 @@ function rowToUser(r) {
     avatarBg: r.avatar_bg || "#1E4D8C",
     sector: r.sector || null,
     supervisorId: r.supervisor_id || null,
+    aiConfig: r.ai_config || null,
   };
 }
 
@@ -88,6 +89,7 @@ export function useProfiles({ enabled = true } = {}) {
     if (patch.sector !== undefined) dbPatch.sector = patch.sector;
     if (patch.supervisorId !== undefined) dbPatch.supervisor_id = patch.supervisorId || null;
     if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
+    if (patch.aiConfig !== undefined) dbPatch.ai_config = patch.aiConfig;
 
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...patch } : u));
     const { error: err } = await supabase.from("profiles").update(dbPatch).eq("id", id);

@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer } from "lucide-react";
+import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { useAI } from "../../hooks/use-ai";
+import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
 import { formatK, formatM } from "../../utils/currency";
@@ -23,6 +25,7 @@ const TABS = [
   { id: "overview",   label: "Visão geral" },
   { id: "charts",     label: "Gráficos" },
   { id: "analytics",  label: "Análise" },
+  { id: "ia",         label: "IA" },
 ];
 
 function filterByPeriod(leads, period) {
@@ -38,7 +41,7 @@ function filterByPeriod(leads, period) {
   });
 }
 
-export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users }) {
+export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, currentUser }) {
   const [period, setPeriod] = useState("all");
   const [tab, setTab] = useState("overview");
 
@@ -205,6 +208,195 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users }) 
       {tab === "analytics" && (
         <AnalyticsTab allLeads={leads} period={period} users={users} />
       )}
+
+      {tab === "ia" && (
+        <AIExecutivePanel leads={filteredLeads} users={users} currentUser={currentUser} />
+      )}
+    </div>
+  );
+}
+
+// ── AI Executive Panel ───────────────────────────────────────────────────────
+
+function AISection({ icon: Icon, title, description, onGenerate, loading, result, error, iconColor }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (!result || !navigator.clipboard?.writeText) return;
+    navigator.clipboard.writeText(result).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div
+      className="rounded-xl border p-5 space-y-4"
+      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: iconColor + "18" }}
+        >
+          <Icon size={17} style={{ color: iconColor }} />
+        </div>
+        <div>
+          <h3 className="font-semibold" style={{ fontSize: 14, color: NEUTRAL.graphite }}>{title}</h3>
+          <p className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{description}</p>
+        </div>
+      </div>
+
+      <button
+        onClick={onGenerate}
+        disabled={loading}
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150 active:scale-95"
+        style={{
+          background: "#C7212B",
+          color: "#FFFFFF",
+          border: "none",
+          cursor: loading ? "not-allowed" : "pointer",
+          opacity: loading ? 0.8 : 1,
+        }}
+        onMouseEnter={e => { if (!loading) e.currentTarget.style.filter = "brightness(0.9)"; }}
+        onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+      >
+        {loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+        {loading ? "Gerando..." : "Gerar"}
+      </button>
+
+      {error && (
+        <div
+          className="flex items-start gap-2 text-sm px-3 py-2.5 rounded-lg"
+          style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }}
+        >
+          <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {result && (
+        <div className="space-y-2">
+          <div
+            className="text-sm leading-relaxed whitespace-pre-line p-3 rounded-lg border"
+            style={{ background: "#F9F5F1", borderColor: "#E5E0DA", color: NEUTRAL.graphite }}
+          >
+            {result}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onGenerate}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
+              style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: "#E5E0DA", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E0DA"; e.currentTarget.style.color = NEUTRAL.slate; }}
+            >
+              <RotateCcw size={11} />
+              Regenerar
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
+              style={{
+                background: copied ? "#F0FDF4" : "#FFFFFF",
+                color: copied ? "#16A34A" : NEUTRAL.slate,
+                borderColor: copied ? "#BBF7D0" : "#E5E0DA",
+                cursor: "pointer",
+              }}
+              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; } }}
+              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E0DA"; e.currentTarget.style.color = NEUTRAL.slate; } }}
+            >
+              {copied ? "Copiado!" : "Copiar"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AIExecutivePanel({ leads, users, currentUser }) {
+  const { complete, isConfigured } = useAI(currentUser);
+  const [forecastLoading, setForecastLoading] = useState(false);
+  const [forecastResult, setForecastResult] = useState(null);
+  const [forecastError, setForecastError] = useState(null);
+  const [funnelLoading, setFunnelLoading] = useState(false);
+  const [funnelResult, setFunnelResult] = useState(null);
+  const [funnelError, setFunnelError] = useState(null);
+
+  const handleForecast = async () => {
+    if (!isConfigured) return;
+    setForecastLoading(true);
+    setForecastResult(null);
+    setForecastError(null);
+    try {
+      const text = await complete(forecastPrompt(leads));
+      setForecastResult(text);
+    } catch (err) {
+      setForecastError(err.message || "Erro ao gerar forecast.");
+    } finally {
+      setForecastLoading(false);
+    }
+  };
+
+  const handleFunnel = async () => {
+    if (!isConfigured) return;
+    setFunnelLoading(true);
+    setFunnelResult(null);
+    setFunnelError(null);
+    try {
+      const text = await complete(funnelDiagnosisPrompt(leads));
+      setFunnelResult(text);
+    } catch (err) {
+      setFunnelError(err.message || "Erro ao gerar diagnóstico.");
+    } finally {
+      setFunnelLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
+            Inteligência Artificial Executiva
+          </h2>
+          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+            Análises geradas pela IA com base nos dados do pipeline filtrado
+          </p>
+        </div>
+        {!isConfigured && (
+          <span
+            className="text-xs font-medium px-3 py-1.5 rounded-full"
+            style={{ background: "#FEF3C7", color: "#92400E" }}
+          >
+            Configure sua LLM nas Configurações → Integrações de IA
+          </span>
+        )}
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <AISection
+          icon={TrendingUp}
+          iconColor="#1E4D8C"
+          title="Forecast Executivo"
+          description="Previsão de receita realizável e principais riscos do pipeline atual"
+          onGenerate={isConfigured ? handleForecast : undefined}
+          loading={forecastLoading}
+          result={forecastResult}
+          error={forecastError}
+        />
+        <AISection
+          icon={Bot}
+          iconColor="#C7212B"
+          title="Diagnóstico de Funil"
+          description="Identifica gargalos, hipóteses de causa e ações corretivas priorizadas"
+          onGenerate={isConfigured ? handleFunnel : undefined}
+          loading={funnelLoading}
+          result={funnelResult}
+          error={funnelError}
+        />
+      </div>
     </div>
   );
 }

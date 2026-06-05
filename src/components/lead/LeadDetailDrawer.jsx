@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   X, MapPin, AlertTriangle, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
-  Building2, RefreshCw, Check, Trash2,
+  Building2, RefreshCw, Check, Trash2, Mail, ChevronDown, ChevronUp,
+  Clock, MessageSquare, GitBranch, CalendarClock,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -16,16 +17,22 @@ import { formatDateBR } from "../../utils/date";
 import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { isSupabaseConfigured } from "../../lib/supabase";
+import { LeadAIPanel } from "../ai/LeadAIPanel";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, users, isManager, currentUser }) {
+export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, isManager, currentUser }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingContactEmail, setEditingContactEmail] = useState(false);
+  const [contactEmailDraft, setContactEmailDraft] = useState("");
+  const [emailsOpen, setEmailsOpen] = useState(true);
+  const [noteText, setNoteText] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
 
   const { loading: enriching, error: enrichError, data: enrichData, lookup, reset: resetEnrich } = useCnpjLookup();
   const stageFields = useStageFields();
@@ -49,8 +56,28 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, 
       setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
       setShowFollowUpInput(false);
       setConfirmDelete(false);
+      setEditingContactEmail(false);
+      setContactEmailDraft(lead.contactEmail || "");
+      setNoteText("");
     }
   }, [lead?.id, lead?.stage]);
+
+  const handleAddNote = useCallback(async () => {
+    const text = noteText.trim();
+    if (!text || !onAddActivity) return;
+    setNoteSaving(true);
+    try {
+      await onAddActivity(lead.id, {
+        type: 'note',
+        userId: currentUser?.id || null,
+        userName: currentUser?.name || null,
+        body: text,
+      });
+      setNoteText("");
+    } finally {
+      setNoteSaving(false);
+    }
+  }, [noteText, onAddActivity, lead?.id, currentUser]);
 
   const overlaps = useMemo(() => {
     if (!isManager || !lead || !lead.company) return [];
@@ -66,7 +93,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, 
   const sellerOptions = useMemo(() => {
     if (!lead) return [];
     return (users || [])
-      .filter(u => u.role === "vendedor" && Array.isArray(u.companies) && u.companies.includes(lead.companyId))
+      .filter(u => (u.role === "vendedor" || u.role === "consultor") && Array.isArray(u.companies) && u.companies.includes(lead.companyId))
       .map(u => ({ value: u.id, label: u.name }));
   }, [lead, users]);
 
@@ -160,12 +187,36 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, 
     const d = new Date(followUpDate);
     if (Number.isNaN(d.getTime())) return;
     onUpdate(lead.id, { nextFollowUp: d.toISOString() });
+    if (onAddActivity) {
+      onAddActivity(lead.id, {
+        type: 'follow_up_set',
+        userId: currentUser?.id || null,
+        userName: currentUser?.name || null,
+        body: `Follow-up agendado para ${d.toLocaleDateString('pt-BR')}`,
+        meta: { date: d.toISOString() },
+      });
+    }
     setShowFollowUpInput(false);
   };
 
   const handleCancelFollowUp = () => {
     setFollowUpDate(lead.nextFollowUp ? lead.nextFollowUp.slice(0, 10) : "");
     setShowFollowUpInput(false);
+  };
+
+  const handleStartEditContactEmail = () => {
+    setContactEmailDraft(lead.contactEmail || "");
+    setEditingContactEmail(true);
+  };
+
+  const handleSaveContactEmail = () => {
+    onUpdate(lead.id, { contactEmail: contactEmailDraft.trim() || null });
+    setEditingContactEmail(false);
+  };
+
+  const handleCancelContactEmail = () => {
+    setContactEmailDraft(lead.contactEmail || "");
+    setEditingContactEmail(false);
   };
 
   const canDelete = onDelete && (
@@ -480,6 +531,249 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, allLeads, 
               />
             </div>
           </div>
+
+          {/* E-mail do contato */}
+          <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: NEUTRAL.slate }}>
+                <Mail size={13} />
+                E-mail do contato
+              </div>
+              {!editingContactEmail && (
+                <button
+                  onClick={handleStartEditContactEmail}
+                  className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
+                  style={{ color: company.primary, background: company.light }}
+                  onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+                >
+                  {lead.contactEmail ? "Alterar" : "Adicionar"}
+                </button>
+              )}
+            </div>
+
+            {lead.contactEmail && !editingContactEmail && (
+              <div className="text-sm mt-1" style={{ color: NEUTRAL.graphite }}>
+                {lead.contactEmail}
+              </div>
+            )}
+
+            {!lead.contactEmail && !editingContactEmail && (
+              <div className="text-xs mt-1 italic" style={{ color: NEUTRAL.slate }}>
+                Nenhum e-mail cadastrado
+              </div>
+            )}
+
+            {editingContactEmail && (
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="email"
+                  value={contactEmailDraft}
+                  onChange={e => setContactEmailDraft(e.target.value)}
+                  placeholder="contato@empresa.com.br"
+                  className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
+                  style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                  onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
+                  onKeyDown={e => { if (e.key === "Enter") handleSaveContactEmail(); if (e.key === "Escape") handleCancelContactEmail(); }}
+                  autoFocus
+                />
+                <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveContactEmail}>
+                  Salvar
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleCancelContactEmail}>
+                  Cancelar
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* E-mails vinculados */}
+          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E0DA" }}>
+            <button
+              onClick={() => setEmailsOpen(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 transition-colors cursor-pointer"
+              style={{ background: "#F9F5F1", border: "none" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#F1EDE8"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#F9F5F1"; }}
+            >
+              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#2C2C2B" }}>
+                <Mail size={13} style={{ color: "#8A8680" }} />
+                E-mails vinculados
+                {(lead.linkedEmails || []).length > 0 && (
+                  <span
+                    className="inline-flex items-center justify-center rounded-full text-xs font-bold px-1.5 py-0.5 ml-1"
+                    style={{ background: company.primary + "22", color: company.primary, fontSize: 10, minWidth: 18 }}
+                  >
+                    {lead.linkedEmails.length}
+                  </span>
+                )}
+              </div>
+              {emailsOpen ? <ChevronUp size={14} style={{ color: "#8A8680" }} /> : <ChevronDown size={14} style={{ color: "#8A8680" }} />}
+            </button>
+
+            {emailsOpen && (
+              <div style={{ background: "#F9F5F1" }}>
+                {(!lead.linkedEmails || lead.linkedEmails.length === 0) ? (
+                  <div className="px-4 pb-4 pt-1 text-xs" style={{ color: "#8A8680" }}>
+                    Nenhum e-mail vinculado ainda. Quando e-mails do Outlook forem detectados para{" "}
+                    <span style={{ color: "#2C2C2B", fontWeight: 600 }}>
+                      {lead.contactEmail || "o e-mail do contato"}
+                    </span>
+                    , aparecerão aqui.
+                  </div>
+                ) : (
+                  <div className="divide-y" style={{ borderColor: "#E5E0DA" }}>
+                    {lead.linkedEmails.map((email, idx) => (
+                      <div key={email.id || idx} className="px-4 py-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                            <span
+                              className="text-xs font-bold"
+                              style={{ color: email.direction === "sent" ? company.primary : "#2C2C2B" }}
+                              title={email.direction === "sent" ? "Enviado" : "Recebido"}
+                            >
+                              {email.direction === "sent" ? "→" : "←"}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-semibold truncate" style={{ color: "#2C2C2B" }}>
+                              {email.subject || "(sem assunto)"}
+                            </div>
+                            <div className="text-xs mt-0.5 truncate" style={{ color: "#8A8680" }}>
+                              {email.direction === "sent" ? `Para: ${email.to}` : `De: ${email.from}`}
+                            </div>
+                          </div>
+                          <div className="text-xs shrink-0" style={{ color: "#8A8680" }}>
+                            {email.date ? formatDateBR(email.date) : "—"}
+                          </div>
+                        </div>
+                        {idx < lead.linkedEmails.length - 1 && (
+                          <div className="mt-3" style={{ borderTop: "1px solid #E5E0DA" }} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Histórico de atividades */}
+          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E0DA" }}>
+            {/* Header */}
+            <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#F9F5F1", borderBottom: "1px solid #E5E0DA" }}>
+              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+                <Clock size={13} style={{ color: NEUTRAL.slate }} />
+                Histórico de atividades
+                {(lead.activities || []).length > 0 && (
+                  <span
+                    className="inline-flex items-center justify-center rounded-full text-xs font-bold px-1.5 py-0.5 ml-1"
+                    style={{ background: company.primary + "22", color: company.primary, fontSize: 10, minWidth: 18 }}
+                  >
+                    {lead.activities.length}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Add note input */}
+            {onAddActivity && (
+              <div className="px-4 py-3 border-b" style={{ background: "#FFFFFF", borderColor: "#E5E0DA" }}>
+                <div className="flex items-start gap-2">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-0.5"
+                    style={{ background: company.primary, fontSize: 9 }}
+                  >
+                    {(currentUser?.name || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <textarea
+                      value={noteText}
+                      onChange={e => setNoteText(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleAddNote(); }}
+                      placeholder="Adicionar nota ou anotação..."
+                      rows={noteText ? 3 : 1}
+                      className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors resize-none"
+                      style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, background: "#F9F5F1", fontFamily: "inherit" }}
+                      onFocus={e => { e.currentTarget.style.borderColor = company.primary; e.currentTarget.style.background = "#FFFFFF"; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = "#E5E0DA"; e.currentTarget.style.background = "#F9F5F1"; }}
+                    />
+                    {noteText.trim() && (
+                      <div className="flex justify-end mt-1.5">
+                        <button
+                          onClick={handleAddNote}
+                          disabled={noteSaving}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95"
+                          style={{ background: noteSaving ? "#E5E0DA" : company.primary, color: "#FFFFFF", border: "none", cursor: noteSaving ? "not-allowed" : "pointer" }}
+                        >
+                          <Send size={11} />
+                          {noteSaving ? "Salvando..." : "Salvar nota"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Timeline */}
+            <div style={{ background: "#FFFFFF" }}>
+              {(!lead.activities || lead.activities.length === 0) ? (
+                <div className="px-4 py-5 text-xs text-center" style={{ color: NEUTRAL.slate }}>
+                  Nenhuma atividade registrada ainda.
+                </div>
+              ) : (
+                <div className="divide-y" style={{ borderColor: "#F0EDE8" }}>
+                  {[...(lead.activities)].reverse().map((act) => {
+                    const isNote = act.type === 'note';
+                    const isStage = act.type === 'stage_changed';
+                    const isFollowUp = act.type === 'follow_up_set';
+                    const isEmail = act.type === 'email_received' || act.type === 'email_sent';
+                    const iconColor = isNote ? company.primary
+                      : isStage ? NEUTRAL.slate
+                      : isFollowUp ? NEUTRAL.amber
+                      : isEmail ? "#2563EB"
+                      : NEUTRAL.slate;
+                    const Icon = isNote ? MessageSquare
+                      : isStage ? GitBranch
+                      : isFollowUp ? CalendarClock
+                      : isEmail ? Mail
+                      : Clock;
+                    return (
+                      <div key={act.id} className="px-4 py-3 flex items-start gap-3">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                          style={{ background: iconColor + "18" }}
+                        >
+                          <Icon size={12} style={{ color: iconColor }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs leading-relaxed" style={{ color: NEUTRAL.graphite }}>
+                            {act.body}
+                          </div>
+                          <div className="text-xs mt-1 flex items-center gap-2" style={{ color: NEUTRAL.slate }}>
+                            {act.userName && (
+                              <span className="font-medium">{act.userName}</span>
+                            )}
+                            <span>{act.timestamp ? new Date(act.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* IA panel */}
+          <LeadAIPanel
+            lead={lead}
+            currentUser={currentUser}
+            activities={lead.activities || []}
+            linkedEmails={lead.linkedEmails || []}
+          />
 
           {/* Email draft */}
           <div className="p-4 rounded-xl" style={{ background: company.dark, color: "#FFFFFF" }}>
