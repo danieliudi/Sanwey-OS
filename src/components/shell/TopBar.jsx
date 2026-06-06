@@ -106,19 +106,37 @@ export function TopBar({
 
       <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
         {accessibleCompanies.length > 1 && (
-          <div
-            className="flex-shrink min-w-0"
-            style={{
-              maxWidth: 140,
-              overflowX: "auto",
-              scrollbarWidth: "none",
-              WebkitOverflowScrolling: "touch",
-            }}
-          >
-            <div
-              className="flex items-center gap-0.5 rounded-lg p-0.5 border"
-              style={{ background: "#F8F9FA", borderColor: "#E5E7EB", width: "max-content" }}
-            >
+          <>
+            {/* Mobile: compact native selector — avoids all pills overflowing the viewport */}
+            <div className="flex lg:hidden shrink-0">
+              <select
+                value={activeCompany}
+                onChange={(e) => onCompanyChange(e.target.value)}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: NEUTRAL.graphite,
+                  background: "#F8F9FA",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 6,
+                  padding: "4px 24px 4px 8px",
+                  appearance: "none",
+                  WebkitAppearance: "none",
+                  backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8680' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 6px center",
+                  backgroundSize: "11px",
+                  cursor: "pointer",
+                  maxWidth: 110,
+                }}
+              >
+                {accessibleCompanies.map((id) => (
+                  <option key={id} value={id}>{COMPANIES[id]?.short}</option>
+                ))}
+              </select>
+            </div>
+            {/* Desktop: full pill row */}
+            <div className="hidden lg:flex items-center gap-0.5 rounded-lg p-0.5 border" style={{ background: "#F8F9FA", borderColor: "#E5E7EB" }}>
               {accessibleCompanies.map((id) => {
                 const c = COMPANIES[id];
                 const active = activeCompany === id;
@@ -148,7 +166,7 @@ export function TopBar({
                 );
               })}
             </div>
-          </div>
+          </>
         )}
 
         <NotificationCenter
