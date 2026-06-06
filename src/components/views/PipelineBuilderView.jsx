@@ -91,28 +91,30 @@ export function PipelineBuilderView({
           </button>
 
           {/* Company tabs */}
-          <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: "#F5F5F3", borderColor: "#E5E5E5" }}>
-            {companies.map(id => {
-              const c = COMPANIES[id];
-              const active = activeCompany === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => setActiveCompany(id)}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
-                  style={{
-                    background: active ? "#FFFFFF" : "transparent",
-                    color: active ? (c?.primary || NEUTRAL.graphite) : NEUTRAL.slate,
-                    boxShadow: active ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
-                  }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.04)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = active ? "#FFFFFF" : "transparent"; }}
-                >
-                  <span className="w-2 h-2 rounded-full" style={{ background: c?.primary }} />
-                  {c?.short || id}
-                </button>
-              );
-            })}
+          <div className="overflow-x-auto max-w-full" style={{ scrollbarWidth: "none" }}>
+            <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: "#F5F5F3", borderColor: "#E5E5E5", width: "max-content" }}>
+              {companies.map(id => {
+                const c = COMPANIES[id];
+                const active = activeCompany === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setActiveCompany(id)}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                    style={{
+                      background: active ? "#FFFFFF" : "transparent",
+                      color: active ? (c?.primary || NEUTRAL.graphite) : NEUTRAL.slate,
+                      boxShadow: active ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
+                    }}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.04)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = active ? "#FFFFFF" : "transparent"; }}
+                  >
+                    <span className="w-2 h-2 rounded-full" style={{ background: c?.primary }} />
+                    {c?.short || id}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

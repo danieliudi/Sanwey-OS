@@ -577,7 +577,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
             {summary.lost > 0 && ` · ${summary.lost} perdido${summary.lost !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Exportar CSV */}
           <button
             onClick={() => exportLeadsCSV(scopedLeads, users, pipelines)}
@@ -598,7 +598,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
             title="Exportar leads filtrados como CSV"
           >
             <Download size={13} />
-            Exportar CSV
+            <span className="hidden sm:inline">Exportar CSV</span>
           </button>
           {/* Toggle Kanban / Calendário */}
           <div
@@ -624,7 +624,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
               value={ownerFilter}
               onChange={e => setOwnerFilter(e.target.value)}
               options={ownerOptions}
-              className="w-52"
+              className="w-full sm:w-44"
             />
           )}
         </div>
@@ -643,7 +643,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
           onLeadClick={onLeadClick}
         />
       ) : (
-      <div className="overflow-x-auto -mx-4 px-4 md:-mx-6 md:px-6 pb-4" style={{ scrollbarWidth: "thin" }}>
+      <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
         <div
           className="flex gap-3"
           style={{ minWidth: `${stages.length * 284}px` }}
