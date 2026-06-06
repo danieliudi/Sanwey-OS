@@ -13,6 +13,7 @@ function rowToUser(r) {
     companies: Array.isArray(r.companies) ? r.companies : [],
     initials: r.initials || (r.name || r.email || "—").slice(0, 2).toUpperCase(),
     avatarBg: r.avatar_bg || "#1E4D8C",
+    avatarUrl: r.avatar_url || null,
     sector: r.sector || null,
     supervisorId: r.supervisor_id || null,
     aiConfig: r.ai_config || null,
