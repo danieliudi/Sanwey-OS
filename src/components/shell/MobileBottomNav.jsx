@@ -14,7 +14,7 @@ const INACTIVE_COLOR = "#8A8680";
 export function MobileBottomNav({ section, onSectionChange, onMenuOpen }) {
   return (
     <div
-      className="lg:hidden"
+      className="flex flex-row lg:hidden"
       style={{
         position: "fixed",
         bottom: 0,
@@ -24,8 +24,6 @@ export function MobileBottomNav({ section, onSectionChange, onMenuOpen }) {
         zIndex: 30,
         background: "#FFFFFF",
         borderTop: "1px solid #E5E7EB",
-        display: "flex",
-        flexDirection: "row",
       }}
     >
       {TABS.map(({ id, label, Icon }) => {

@@ -97,17 +97,15 @@ export function NotificationCenter({
         )}
       </button>
 
-      {/* Dropdown panel */}
+      {/* Dropdown panel — fixed on mobile (avoids overflow anchoring bug), absolute on desktop */}
       {open && (
         <div
-          className="absolute right-0 mt-2 flex flex-col rounded-2xl border overflow-hidden z-50"
+          className="fixed top-14 left-2 right-2 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[340px] flex flex-col rounded-2xl border overflow-hidden z-50"
           style={{
-            width: 340,
             maxHeight: 480,
             background: "#FFFFFF",
             borderColor: "#E5E0DA",
             boxShadow: "0 8px 32px rgba(44,44,43,0.14)",
-            top: "100%",
           }}
         >
           {/* Header */}
