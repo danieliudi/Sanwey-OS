@@ -27,7 +27,7 @@ export function TopBar({
 }) {
   return (
     <div
-      className="flex items-center gap-3 px-4 lg:px-6 sticky top-0 z-20 border-b overflow-x-hidden"
+      className="flex items-center gap-3 px-4 lg:px-6 sticky top-0 z-20 border-b"
       style={{
         height: 56,
         background: "#FFFFFF",
