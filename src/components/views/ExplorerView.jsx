@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { X, Filter, Search, Download, Sparkles } from "lucide-react";
+import { X, Filter, Search, Download, Sparkles, Upload } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS, CANONICAL_STATES } from "../../constants/taxonomy";
 import { Button } from "../ui/Button";
@@ -10,6 +10,7 @@ import { ProspectSuggestions } from "./ProspectSuggestions";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { exportLeadsToCSV } from "../../utils/export-csv";
 import { useUsersById } from "../../hooks/use-users-by-id";
+import { ImportModal } from "../lead/ImportModal";
 
 const INITIAL_FILTERS = {
   search: "",
@@ -22,9 +23,10 @@ const INITIAL_FILTERS = {
 const SIZE_OPTIONS = ["PME", "Mid-Market", "Enterprise"];
 
 export function ExplorerView({
-  leads, users = [], onAddLead, accessibleCompanies, onLoadDemoLeads, onGoToSettings,
+  leads, users = [], currentUser, onAddLead, accessibleCompanies, onLoadDemoLeads, onGoToSettings,
 }) {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [showImport, setShowImport] = useState(false);
   const usersById = useUsersById(users);
 
   const reset = useCallback(() => setFilters(INITIAL_FILTERS), []);
@@ -54,6 +56,14 @@ export function ExplorerView({
               Limpar ({activeCount})
             </Button>
           )}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Upload}
+            onClick={() => setShowImport(true)}
+          >
+            Importar planilha
+          </Button>
           <Button
             variant="primary"
             size="sm"
@@ -134,6 +144,15 @@ export function ExplorerView({
         leads={leads}
         accessibleCompanies={accessibleCompanies}
         onAddLead={onAddLead}
+      />
+
+      <ImportModal
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+        users={users}
+        currentUser={currentUser}
+        onAddLead={onAddLead}
+        companies={accessibleCompanies || []}
       />
 
       {/* Empty CRM banner */}

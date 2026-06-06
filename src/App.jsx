@@ -43,6 +43,7 @@ import { AutomationsView } from "./components/views/AutomationsView";
 import { TutoriaisView } from "./components/views/TutoriaisView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
+import { MobileBottomNav } from "./components/shell/MobileBottomNav";
 
 const INITIAL_SIGNALS = generateMarketSignals();
 
@@ -450,7 +451,7 @@ export default function App() {
           }}
         />
 
-        <div className="px-4 py-4 sm:px-6 sm:py-6 flex-1 min-w-0">
+        <div className="px-4 py-4 sm:px-6 sm:py-6 lg:py-6 pb-20 lg:pb-0 flex-1 min-w-0">
         <ErrorBoundary
           fallback={({ error, reset }) => (
             <div className="rounded-xl border p-6 max-w-2xl mx-auto mt-8" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>
@@ -648,6 +649,14 @@ export default function App() {
             Maio 2026
           </div>
         </footer>
+
+        <div className="lg:hidden">
+          <MobileBottomNav
+            section={section}
+            onSectionChange={setSection}
+            onMenuOpen={() => setSidebarMobileOpen(true)}
+          />
+        </div>
       </div>
 
       <ErrorBoundary>

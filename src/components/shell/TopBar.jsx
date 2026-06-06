@@ -27,7 +27,7 @@ export function TopBar({
 }) {
   return (
     <div
-      className="flex items-center gap-3 px-4 lg:px-6 sticky top-0 z-20 border-b"
+      className="flex items-center gap-3 px-4 lg:px-6 sticky top-0 z-20 border-b overflow-x-hidden"
       style={{
         height: 56,
         background: "#FFFFFF",
@@ -52,7 +52,7 @@ export function TopBar({
 
       {title && (
         <div
-          className="font-bold shrink-0"
+          className="hidden lg:block font-bold shrink-0"
           style={{
             fontSize: 15,
             color: NEUTRAL.graphite,
@@ -104,7 +104,53 @@ export function TopBar({
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+        {accessibleCompanies.length > 1 && (
+          <div
+            className="flex-shrink min-w-0"
+            style={{
+              maxWidth: 140,
+              overflowX: "auto",
+              scrollbarWidth: "none",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            <div
+              className="flex items-center gap-0.5 rounded-lg p-0.5 border"
+              style={{ background: "#F8F9FA", borderColor: "#E5E7EB", width: "max-content" }}
+            >
+              {accessibleCompanies.map((id) => {
+                const c = COMPANIES[id];
+                const active = activeCompany === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => onCompanyChange(id)}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150 flex items-center gap-1.5 cursor-pointer shrink-0"
+                    style={{
+                      background: active ? "#FFFFFF" : "transparent",
+                      color: active ? NEUTRAL.graphite : NEUTRAL.slate,
+                      boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.04)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = active ? "#FFFFFF" : "transparent";
+                    }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ background: c?.primary }}
+                    />
+                    {c?.short}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <NotificationCenter
           notifications={notifications || []}
           unreadCount={unreadCount || 0}
@@ -115,43 +161,6 @@ export function TopBar({
           onRequestDesktopPermission={onRequestDesktopPermission}
           onSelectLead={onSelectLead}
         />
-
-        {accessibleCompanies.length > 1 && (
-          <div
-            className="flex items-center gap-0.5 rounded-lg p-0.5 border"
-            style={{ background: "#F8F9FA", borderColor: "#E5E7EB" }}
-          >
-            {accessibleCompanies.map((id) => {
-              const c = COMPANIES[id];
-              const active = activeCompany === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => onCompanyChange(id)}
-                  className="px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
-                  style={{
-                    background: active ? "#FFFFFF" : "transparent",
-                    color: active ? NEUTRAL.graphite : NEUTRAL.slate,
-                    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.04)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = active ? "#FFFFFF" : "transparent";
-                  }}
-                >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: c?.primary }}
-                  />
-                  {c?.short}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
       </div>
     </div>
   );
