@@ -820,7 +820,7 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
     {/* Floating AI button */}
     <button
       onClick={() => setShowAIChat(v => !v)}
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
+      className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
       style={{ background: "#C7212B", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(199,33,43,0.3)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
       onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
