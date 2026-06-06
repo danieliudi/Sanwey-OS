@@ -423,7 +423,8 @@ export function AgentActionsView({ currentUser, activeCompany }) {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex items-center gap-1 border-b" style={{ borderColor: "#EFEFEF" }}>
+      <div className="overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+      <div className="flex items-center gap-1 border-b" style={{ borderColor: "#EFEFEF", width: "max-content", minWidth: "100%" }}>
         {[
           { key: "pending",  label: "Pendentes" },
           { key: "approved", label: "Aprovados" },
@@ -447,6 +448,7 @@ export function AgentActionsView({ currentUser, activeCompany }) {
             </button>
           );
         })}
+      </div>
       </div>
 
       {/* Resolve error */}
