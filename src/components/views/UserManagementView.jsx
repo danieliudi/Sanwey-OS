@@ -387,9 +387,9 @@ export function UserManagementView({
                   >
                     {u.initials}
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>{u.name}</span>
+                  <div className="min-w-0 overflow-hidden">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap min-w-0">
+                      <span className="font-semibold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{u.name}</span>
                       <Badge variant={roleBadgeVariant(u.role)} size="sm">
                         {roleLabel(u.role)}
                       </Badge>

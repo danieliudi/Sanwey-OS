@@ -38,7 +38,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard icon={Network} value={overlaps.length} label="Overlaps ativos"
           sublabel="Clientes em múltiplas empresas" compact />
         <StatCard icon={Sparkles} value={suggestions.length} label="Sugestões pendentes"
