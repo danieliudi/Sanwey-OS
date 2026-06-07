@@ -599,6 +599,7 @@ export default function App() {
             isManager ? (
               <UserManagementView
                 users={users}
+                leads={leads}
                 onUsersChange={setUsers}
                 onUpdateUser={supabaseEnabled ? updateUser : undefined}
                 onDeleteUser={supabaseEnabled ? deleteUser : undefined}

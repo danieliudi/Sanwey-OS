@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
   UserPlus, User, Mail, Check, Save, Edit3, Trash2, Info, Loader2, Send, X,
+  Search, Users, Building2, MoreVertical,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
@@ -54,7 +55,8 @@ function isValidEmail(email) {
 }
 
 export function UserManagementView({
-  users, currentUser,
+  users, leads = [],
+  currentUser,
   onUpdateUser, onDeleteUser, onUsersChange,
   supabaseEnabled = false, loading = false,
   invitations = [], invitationsLoading = false,
@@ -87,6 +89,9 @@ export function UserManagementView({
   const [inviteError, setInviteError] = useState(null);
   const [inviteJustSent, setInviteJustSent] = useState(null);
 
+  const [search, setSearch] = useState("");
+  const [menuOpenId, setMenuOpenId] = useState(null);
+
   const startNew = useCallback(() => {
     setEditing("new");
     setForm(EMPTY_FORM);
@@ -117,38 +122,24 @@ export function UserManagementView({
   }, []);
 
   const save = useCallback(async () => {
-    if (!form.name?.trim()) {
-      setModalError("Informe o nome.");
-      return;
-    }
+    if (!form.name?.trim()) { setModalError("Informe o nome."); return; }
     if (!Array.isArray(form.companies) || form.companies.length === 0) {
-      setModalError("Selecione ao menos uma empresa.");
-      return;
+      setModalError("Selecione ao menos uma empresa."); return;
     }
     const initials = form.initials
       || form.name.split(" ").map(n => n[0]).filter(Boolean).join("").slice(0, 2).toUpperCase();
-
     setSaving(true);
     setModalError(null);
     try {
       if (form.id) {
         if (onUpdateUser) {
-          await onUpdateUser(form.id, {
-            name: form.name,
-            role: form.role,
-            companies: form.companies,
-            initials,
-            avatarBg: form.avatarBg,
-            sector: form.sector || null,
-            supervisorId: form.supervisorId || null,
-          });
+          await onUpdateUser(form.id, { name: form.name, role: form.role, companies: form.companies, initials, avatarBg: form.avatarBg, sector: form.sector || null, supervisorId: form.supervisorId || null });
         } else if (onUsersChange) {
           onUsersChange(prev => prev.map(u => u.id === form.id ? { ...u, ...form, initials } : u));
         }
       } else {
         if (onUsersChange) {
-          const newUser = { ...form, id: `u_${Date.now()}`, initials };
-          onUsersChange(prev => [...prev, newUser]);
+          onUsersChange(prev => [...prev, { ...form, id: `u_${Date.now()}`, initials }]);
         }
       }
       setEditing(null);
@@ -161,33 +152,20 @@ export function UserManagementView({
 
   const submitInvite = useCallback(async () => {
     const email = inviteForm.email.trim().toLowerCase();
-    if (!isValidEmail(email)) {
-      setInviteError("Informe um e-mail válido.");
-      return;
-    }
+    if (!isValidEmail(email)) { setInviteError("Informe um e-mail válido."); return; }
     if ((inviteForm.role === "vendedor" || inviteForm.role === "consultor") && inviteForm.companies.length === 0) {
-      setInviteError("Selecione ao menos uma empresa para vendedor/consultor.");
-      return;
+      setInviteError("Selecione ao menos uma empresa para vendedor/consultor."); return;
     }
     if (users.some(u => (u.email || "").toLowerCase() === email)) {
-      setInviteError("Já existe um usuário cadastrado com este e-mail.");
-      return;
+      setInviteError("Já existe um usuário cadastrado com este e-mail."); return;
     }
     if (invitations.some(i => (i.email || "").toLowerCase() === email)) {
-      setInviteError("Já existe um convite pendente para este e-mail.");
-      return;
+      setInviteError("Já existe um convite pendente para este e-mail."); return;
     }
     setInviting(true);
     setInviteError(null);
     try {
-      await onCreateInvitation({
-        email,
-        role: inviteForm.role,
-        companies: inviteForm.companies,
-        sector: inviteForm.sector || null,
-        supervisorId: inviteForm.supervisorId || null,
-        invitedBy: currentUser?.id,
-      });
+      await onCreateInvitation({ email, role: inviteForm.role, companies: inviteForm.companies, sector: inviteForm.sector || null, supervisorId: inviteForm.supervisorId || null, invitedBy: currentUser?.id });
       setInviteJustSent(email);
       setInviteForm(EMPTY_INVITE);
     } catch (e) {
@@ -202,12 +180,10 @@ export function UserManagementView({
     if (!target) return;
     const ok = window.confirm(`Remover ${target.name}? Esta ação não pode ser desfeita.`);
     if (!ok) return;
+    setMenuOpenId(null);
     try {
-      if (onDeleteUser) {
-        await onDeleteUser(id);
-      } else if (onUsersChange) {
-        onUsersChange(prev => prev.filter(u => u.id !== id));
-      }
+      if (onDeleteUser) await onDeleteUser(id);
+      else if (onUsersChange) onUsersChange(prev => prev.filter(u => u.id !== id));
     } catch (e) {
       window.alert(`Não foi possível remover: ${e?.message || e}`);
     }
@@ -218,66 +194,74 @@ export function UserManagementView({
   const revoke = useCallback(async (inv) => {
     const ok = window.confirm(`Revogar o convite para ${inv.email}?`);
     if (!ok) return;
-    try {
-      await onRevokeInvitation(inv.id);
-    } catch (e) {
-      window.alert(`Não foi possível revogar: ${e?.message || e}`);
-    }
+    try { await onRevokeInvitation(inv.id); } catch (e) { window.alert(`Erro: ${e?.message || e}`); }
   }, [onRevokeInvitation]);
 
   const resend = useCallback(async (inv) => {
     if (!onResendInvitation) return;
     setResendingId(inv.id);
-    try {
-      await onResendInvitation(inv.id);
-    } catch (e) {
-      window.alert(`Não foi possível reenviar: ${e?.message || e}`);
-    } finally {
-      setResendingId(null);
-    }
+    try { await onResendInvitation(inv.id); } catch (e) { window.alert(`Erro: ${e?.message || e}`); } finally { setResendingId(null); }
   }, [onResendInvitation]);
 
   const toggleCompany = useCallback((id) => {
-    setForm(prev => ({
-      ...prev,
-      companies: prev.companies.includes(id)
-        ? prev.companies.filter(c => c !== id)
-        : [...prev.companies, id],
-    }));
+    setForm(prev => ({ ...prev, companies: prev.companies.includes(id) ? prev.companies.filter(c => c !== id) : [...prev.companies, id] }));
   }, []);
 
   const toggleInviteCompany = useCallback((id) => {
-    setInviteForm(prev => ({
-      ...prev,
-      companies: prev.companies.includes(id)
-        ? prev.companies.filter(c => c !== id)
-        : [...prev.companies, id],
-    }));
+    setInviteForm(prev => ({ ...prev, companies: prev.companies.includes(id) ? prev.companies.filter(c => c !== id) : [...prev.companies, id] }));
   }, []);
 
   const canSave = Boolean(form.name && form.companies.length > 0);
   const canManageInvites = supabaseEnabled && Boolean(onCreateInvitation);
 
-  // Vendedores disponíveis como supervisores (para seleção de consultor)
   const vendedorOptions = useMemo(() => [
     { value: "", label: "Sem supervisor" },
     ...users.filter(u => u.role === "vendedor").map(u => ({ value: u.id, label: u.name })),
   ], [users]);
 
+  // Per-user lead stats
+  const userStats = useMemo(() => {
+    const map = {};
+    for (const u of users) {
+      const owned = leads.filter(l => l.owner === u.id);
+      const won = owned.filter(l => l.stage === "ganho").length;
+      const open = owned.filter(l => l.stage !== "ganho" && l.stage !== "perdido").length;
+      map[u.id] = { total: owned.length, won, open };
+    }
+    return map;
+  }, [users, leads]);
+
+  // Summary stats
+  const totalUsers = users.length;
+  const managerCount = users.filter(u => u.role === "gerente" || u.role === "admin").length;
+  const sellerCount = users.filter(u => u.role === "vendedor" || u.role === "consultor").length;
+
+  // Filter
+  const q = search.trim().toLowerCase();
+  const filteredUsers = q
+    ? users.filter(u =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        roleLabel(u.role).toLowerCase().includes(q)
+      )
+    : users;
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6" onClick={() => setMenuOpenId(null)}>
+
+      {/* ── Page header ── */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
-            Gestão de Usuários
+          <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: "#201a1a", letterSpacing: "-0.02em" }}>
+            Equipe Comercial
           </h1>
           <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
-            {users.length} usuários cadastrados · admin &gt; gerente &gt; vendedor &gt; consultor
+            Gerencie usuários, cargos e acessos do time
           </p>
         </div>
         <div className="flex items-center gap-2">
           {canManageInvites && (
-            <Button variant="primary" icon={UserPlus} onClick={openInvite}>Convidar usuário</Button>
+            <Button variant="primary" icon={UserPlus} onClick={openInvite}>Convidar</Button>
           )}
           {!supabaseEnabled && (
             <Button variant="primary" icon={UserPlus} onClick={startNew}>Novo usuário</Button>
@@ -285,6 +269,14 @@ export function UserManagementView({
         </div>
       </div>
 
+      {/* ── Summary stat cards ── */}
+      <div className="grid grid-cols-3 gap-3">
+        <StatMini label="Total" value={totalUsers} />
+        <StatMini label="Gerentes" value={managerCount} accent="#b5000b" />
+        <StatMini label="Vendedores" value={sellerCount} />
+      </div>
+
+      {/* ── Supabase info ── */}
       {supabaseEnabled && (
         <div
           className="p-3 rounded-xl border flex items-start gap-2 text-xs"
@@ -293,12 +285,12 @@ export function UserManagementView({
           <Info size={14} className="shrink-0 mt-0.5" />
           <div>
             <strong>Como funciona o convite:</strong> ao convidar, você define cargo e empresas. Peça para a pessoa
-            acessar a tela de login e clicar em <em>"Criar conta"</em> com o mesmo e-mail —
-            ela já entrará com as permissões certas, sem precisar editar depois.
+            acessar a tela de login e clicar em <em>"Criar conta"</em> com o mesmo e-mail.
           </div>
         </div>
       )}
 
+      {/* ── Pending invites ── */}
       {canManageInvites && invitations.length > 0 && (
         <div>
           <div className="text-[10px] uppercase font-bold tracking-widest mb-2" style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}>
@@ -312,52 +304,32 @@ export function UserManagementView({
                 style={{ background: "#FFFBEB", borderColor: "#FCD34D" }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: "#FEF3C7", color: "#92400E" }}
-                  >
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FEF3C7", color: "#92400E" }}>
                     <Mail size={18} />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>{inv.email}</span>
-                      <Badge variant={roleBadgeVariant(inv.role)} size="sm">
-                        {roleLabel(inv.role)}
-                      </Badge>
-                      <span
-                        className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-xl"
-                        style={{ background: "#FEF3C7", color: "#92400E", letterSpacing: "0.15em" }}
-                      >
-                        Aguardando cadastro
+                      <span className="font-semibold text-sm" style={{ color: "#201a1a" }}>{inv.email}</span>
+                      <Badge variant={roleBadgeVariant(inv.role)} size="sm">{roleLabel(inv.role)}</Badge>
+                      <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                        Aguardando
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {inv.companies.length === 0 ? (
-                        <span className="text-[11px] italic" style={{ color: NEUTRAL.slate }}>
-                          Sem empresas atribuídas
-                        </span>
-                      ) : (
-                        inv.companies.map(c => <CompanyTag key={c} companyId={c} size="sm" />)
-                      )}
+                      {inv.companies.length === 0
+                        ? <span className="text-[11px] italic" style={{ color: NEUTRAL.slate }}>Sem empresas</span>
+                        : inv.companies.map(c => <CompanyTag key={c} companyId={c} size="sm" />)
+                      }
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
                   {onResendInvitation && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={resendingId === inv.id ? Loader2 : Send}
-                      disabled={resendingId === inv.id}
-                      onClick={() => resend(inv)}
-                      title={inv.lastSentAt ? `Último envio: ${new Date(inv.lastSentAt).toLocaleString("pt-BR")}` : "Enviar e-mail de convite"}
-                    >
+                    <Button variant="ghost" size="sm" icon={resendingId === inv.id ? Loader2 : Send} disabled={resendingId === inv.id} onClick={() => resend(inv)}>
                       {resendingId === inv.id ? "Enviando…" : inv.lastSentAt ? "Reenviar" : "Enviar"}
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" icon={X} onClick={() => revoke(inv)}>
-                    Revogar
-                  </Button>
+                  <Button variant="ghost" size="sm" icon={X} onClick={() => revoke(inv)}>Revogar</Button>
                 </div>
               </div>
             ))}
@@ -365,92 +337,179 @@ export function UserManagementView({
         </div>
       )}
 
+      {/* ── Search ── */}
+      <div className="relative">
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: NEUTRAL.slate }} />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar por nome, e-mail ou cargo..."
+          className="w-full rounded-xl border text-sm transition-all"
+          style={{
+            paddingLeft: 42, paddingRight: 16, height: 48,
+            borderColor: "#E5E7EB", background: "#FFFFFF", color: "#201a1a", outline: "none",
+          }}
+          onFocus={e => { e.target.style.borderColor = "#b5000b"; e.target.style.boxShadow = "0 0 0 3px rgba(181,0,11,0.08)"; }}
+          onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
+        />
+      </div>
+
+      {/* ── User cards ── */}
       {loading && users.length === 0 ? (
         <div className="p-10 flex items-center justify-center gap-2 text-sm" style={{ color: NEUTRAL.slate }}>
           <Loader2 size={14} className="animate-spin" />
           Carregando usuários…
         </div>
+      ) : filteredUsers.length === 0 ? (
+        <div className="p-8 text-center rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}>
+          Nenhum usuário encontrado.
+        </div>
       ) : (
-        <div className="space-y-2">
-          {users.map(u => {
-            const pending = u.role === "vendedor" && (!u.companies || u.companies.length === 0);
+        <div className="grid gap-4 sm:grid-cols-2">
+          {filteredUsers.map(u => {
+            const stats = userStats[u.id] || { total: 0, won: 0, open: 0 };
+            const pending = (u.role === "vendedor" || u.role === "consultor") && (!u.companies || u.companies.length === 0);
+            const isSelf = u.id === currentUser?.id;
+            const menuOpen = menuOpenId === u.id;
+
             return (
               <div
                 key={u.id}
-                className="p-4 rounded-xl border flex items-center justify-between gap-4 flex-wrap"
-                style={{ background: "#FFFFFF", borderColor: pending ? NEUTRAL.gold : "#EFEFEF" }}
+                className="rounded-xl border flex flex-col"
+                style={{
+                  background: "#FFFFFF",
+                  borderColor: pending ? "#FCD34D" : "#E5E7EB",
+                  boxShadow: "0 1px 4px rgba(32,26,26,0.06)",
+                  overflow: "hidden",
+                }}
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div
-                    className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white shrink-0"
-                    style={{ background: u.avatarBg }}
-                  >
-                    {u.initials}
+                {/* Card top */}
+                <div className="p-5 flex items-start gap-4">
+                  {/* Avatar */}
+                  <div className="relative shrink-0">
+                    <div
+                      className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-white"
+                      style={{ background: u.avatarBg || "#b5000b", fontSize: 20, overflow: "hidden" }}
+                    >
+                      {u.avatarUrl
+                        ? <img src={u.avatarUrl} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : (u.initials || u.name?.slice(0, 2).toUpperCase() || "?")
+                      }
+                    </div>
                   </div>
-                  <div className="min-w-0 overflow-hidden">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap min-w-0">
-                      <span className="font-semibold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{u.name}</span>
-                      <Badge variant={roleBadgeVariant(u.role)} size="sm">
-                        {roleLabel(u.role)}
-                      </Badge>
-                      {u.id === currentUser?.id && (
-                        <span
-                          className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-xl"
-                          style={{ background: NEUTRAL.gold + "20", color: "#8A6A00", letterSpacing: "0.15em" }}
-                        >
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-bold text-[15px] leading-tight truncate" style={{ color: "#201a1a" }}>
+                          {u.name}
+                        </div>
+                        <div className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+                          {u.email || "—"}
+                        </div>
+                      </div>
+
+                      {/* 3-dot menu */}
+                      {(canEdit(u) || canDelete(u)) && (
+                        <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={() => setMenuOpenId(menuOpen ? null : u.id)}
+                            className="rounded-lg flex items-center justify-center transition-colors"
+                            style={{ width: 32, height: 32, background: menuOpen ? "#fef1f0" : "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
+                            onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background = "transparent"; }}
+                          >
+                            <MoreVertical size={15} />
+                          </button>
+                          {menuOpen && (
+                            <div
+                              className="absolute right-0 top-9 rounded-xl border flex flex-col overflow-hidden z-20"
+                              style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 8px 24px rgba(32,26,26,0.12)", minWidth: 160 }}
+                            >
+                              {canEdit(u) && (
+                                <button
+                                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors"
+                                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "#201a1a" }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                                  onClick={() => { setMenuOpenId(null); startEdit(u); }}
+                                >
+                                  <Edit3 size={14} /> Editar perfil
+                                </button>
+                              )}
+                              {canDelete(u) && (
+                                <button
+                                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors"
+                                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "#ba1a1a" }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = "#ffdad6"; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                                  onClick={() => remove(u.id)}
+                                >
+                                  <Trash2 size={14} /> Remover
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Badges row */}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                      <Badge variant={roleBadgeVariant(u.role)} size="sm">{roleLabel(u.role)}</Badge>
+                      {isSelf && (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#fef1f0", color: "#b5000b" }}>
                           Você
                         </span>
                       )}
                       {pending && (
-                        <span
-                          className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-xl"
-                          style={{ background: "#FEF9E7", color: "#8A6A00", letterSpacing: "0.15em" }}
-                        >
-                          Aguardando liberação
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                          Sem empresa
                         </span>
                       )}
-                    </div>
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-xs" style={{ color: NEUTRAL.slate }}>{u.email}</span>
                       {u.sector && (
-                        <span
-                          className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded"
-                          style={{ background: "#EEF2FF", color: "#3730A3", letterSpacing: "0.12em" }}
-                        >
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#EEF2FF", color: "#3730A3" }}>
                           {u.sector}
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      {!Array.isArray(u.companies) || u.companies.length === 0 ? (
-                        <span className="text-[11px] italic" style={{ color: NEUTRAL.slate }}>
-                          Sem empresas atribuídas
-                        </span>
-                      ) : (
-                        u.companies.map(c => <CompanyTag key={c} companyId={c} size="sm" />)
-                      )}
-                    </div>
+
+                    {/* Company tags */}
+                    {Array.isArray(u.companies) && u.companies.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {u.companies.map(c => <CompanyTag key={c} companyId={c} size="sm" />)}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={Edit3}
-                    onClick={() => startEdit(u)}
+
+                {/* Stats strip */}
+                <div className="border-t mx-0 grid grid-cols-3 divide-x" style={{ borderColor: "#E5E7EB" }}>
+                  <StatStrip label="Leads" value={stats.total} />
+                  <StatStrip label="Abertos" value={stats.open} />
+                  <StatStrip label="Ganhos" value={stats.won} accent="#16A34A" />
+                </div>
+
+                {/* Ver Perfil button */}
+                <div className="p-4 pt-3">
+                  <button
+                    onClick={() => canEdit(u) ? startEdit(u) : null}
                     disabled={!canEdit(u)}
+                    className="w-full rounded-xl border font-semibold text-sm flex items-center justify-center gap-2 transition-all"
+                    style={{
+                      height: 44,
+                      borderColor: canEdit(u) ? "#b5000b" : "#E5E7EB",
+                      color: canEdit(u) ? "#b5000b" : NEUTRAL.slate,
+                      background: "transparent",
+                      cursor: canEdit(u) ? "pointer" : "default",
+                    }}
+                    onMouseEnter={e => { if (canEdit(u)) { e.currentTarget.style.background = "#fef1f0"; } }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                   >
-                    Editar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={Trash2}
-                    onClick={() => remove(u.id)}
-                    disabled={!canDelete(u)}
-                  >
-                    Remover
-                  </Button>
+                    <User size={15} />
+                    Ver Perfil
+                  </button>
                 </div>
               </div>
             );
@@ -458,87 +517,36 @@ export function UserManagementView({
         </div>
       )}
 
-      <Modal
-        open={editing !== null}
-        onClose={closeModal}
-        title={editing === "new" ? "Novo usuário" : "Editar usuário"}
-        width={560}
-      >
+      {/* ── Edit / New modal ── */}
+      <Modal open={editing !== null} onClose={closeModal} title={editing === "new" ? "Novo usuário" : "Editar usuário"} width={560}>
         <div className="p-6 space-y-4">
           <div className="grid md:grid-cols-2 gap-3">
             <div>
-              <label
-                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-              >
-                Nome *
-              </label>
-              <Input
-                value={form.name}
-                onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Nome completo"
-                icon={User}
-              />
+              <FieldLabel>Nome *</FieldLabel>
+              <Input value={form.name} onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))} placeholder="Nome completo" icon={User} />
             </div>
             <div>
-              <label
-                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-              >
-                Função
-              </label>
-              <Select
-                value={form.role}
-                onChange={e => setForm(prev => ({ ...prev, role: e.target.value }))}
-                options={roleOptions}
-              />
+              <FieldLabel>Função</FieldLabel>
+              <Select value={form.role} onChange={e => setForm(prev => ({ ...prev, role: e.target.value }))} options={roleOptions} />
             </div>
           </div>
           <div>
-            <label
-              className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-              style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-            >
-              Email {supabaseEnabled && <span style={{ textTransform: "none", fontWeight: 400 }}>(não editável — gerenciado pelo login)</span>}
-            </label>
-            <Input
-              value={form.email}
-              onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-              placeholder="email@sanwey.com.br"
-              icon={Mail}
-              type="email"
-              disabled={supabaseEnabled}
-            />
+            <FieldLabel>Email {supabaseEnabled && <span style={{ textTransform: "none", fontWeight: 400 }}>(gerenciado pelo login)</span>}</FieldLabel>
+            <Input value={form.email} onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))} placeholder="email@sanwey.com.br" icon={Mail} type="email" disabled={supabaseEnabled} />
           </div>
           <div>
-            <label
-              className="text-[10px] uppercase font-bold tracking-widest mb-2 block"
-              style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-            >
-              Empresas com acesso *
-            </label>
+            <FieldLabel>Empresas com acesso *</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
               {COMPANY_IDS.map(id => {
                 const c = COMPANIES[id];
                 const selected = form.companies.includes(id);
                 return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => toggleCompany(id)}
+                  <button key={id} type="button" onClick={() => toggleCompany(id)}
                     className="p-3 rounded-xl border flex items-center gap-2 transition-all"
-                    style={{
-                      background: selected ? c.light : "#FFFFFF",
-                      borderColor: selected ? c.primary : "#EFEFEF",
-                    }}
+                    style={{ background: selected ? c.light : "#FFFFFF", borderColor: selected ? c.primary : "#E5E7EB" }}
                   >
-                    <div className="w-3 h-3 rounded-xl" style={{ background: c.primary }} />
-                    <span
-                      className="font-semibold text-sm flex-1 text-left"
-                      style={{ color: selected ? c.dark : NEUTRAL.graphite }}
-                    >
-                      {c.name}
-                    </span>
+                    <div className="w-3 h-3 rounded-full" style={{ background: c.primary }} />
+                    <span className="font-semibold text-sm flex-1 text-left" style={{ color: selected ? c.dark : "#201a1a" }}>{c.name}</span>
                     {selected && <Check size={14} color={c.primary} />}
                   </button>
                 );
@@ -547,44 +555,21 @@ export function UserManagementView({
           </div>
           <div className="grid md:grid-cols-2 gap-3">
             <div>
-              <label
-                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-              >
-                Setor
-              </label>
-              <Select
-                value={form.sector || ""}
-                onChange={e => setForm(prev => ({ ...prev, sector: e.target.value }))}
-                options={SECTOR_OPTIONS}
-              />
+              <FieldLabel>Setor</FieldLabel>
+              <Select value={form.sector || ""} onChange={e => setForm(prev => ({ ...prev, sector: e.target.value }))} options={SECTOR_OPTIONS} />
             </div>
             {form.role === "consultor" && (
               <div>
-                <label
-                  className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-                >
-                  Supervisor (vendedor)
-                </label>
-                <Select
-                  value={form.supervisorId || ""}
-                  onChange={e => setForm(prev => ({ ...prev, supervisorId: e.target.value }))}
-                  options={vendedorOptions}
-                />
+                <FieldLabel>Supervisor (vendedor)</FieldLabel>
+                <Select value={form.supervisorId || ""} onChange={e => setForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
               </div>
             )}
           </div>
           {modalError && (
-            <div className="p-2 rounded-xl text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
-              {modalError}
-            </div>
+            <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "#ba1a1a" }}>{modalError}</div>
           )}
         </div>
-        <div
-          className="px-6 py-4 border-t flex items-center justify-end gap-2"
-          style={{ borderColor: "#EFEFEF", background: NEUTRAL.warmWhite }}
-        >
+        <div className="px-6 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "#E5E7EB", background: "#fef1f0" }}>
           <Button variant="ghost" onClick={closeModal} disabled={saving}>Cancelar</Button>
           <Button variant="primary" icon={saving ? Loader2 : Save} onClick={save} disabled={!canSave || saving}>
             {saving ? "Salvando…" : "Salvar"}
@@ -592,145 +577,103 @@ export function UserManagementView({
         </div>
       </Modal>
 
-      <Modal
-        open={inviteOpen}
-        onClose={closeInvite}
-        title="Convidar usuário"
-        width={560}
-      >
+      {/* ── Invite modal ── */}
+      <Modal open={inviteOpen} onClose={closeInvite} title="Convidar usuário" width={560}>
         <div className="p-6 space-y-4">
           <div>
-            <label
-              className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-              style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-            >
-              E-mail *
-            </label>
-            <Input
-              value={inviteForm.email}
-              onChange={e => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
-              placeholder="email@sanwey.com.br"
-              icon={Mail}
-              type="email"
-              autoFocus
-            />
+            <FieldLabel>E-mail *</FieldLabel>
+            <Input value={inviteForm.email} onChange={e => setInviteForm(prev => ({ ...prev, email: e.target.value }))} placeholder="email@sanwey.com.br" icon={Mail} type="email" />
             <div className="text-[11px] mt-1.5" style={{ color: NEUTRAL.slate }}>
               A pessoa precisa criar a conta na tela de login com este mesmo e-mail.
             </div>
           </div>
-
           <div>
-            <label
-              className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-              style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-            >
-              Função
-            </label>
-            <Select
-              value={inviteForm.role}
-              onChange={e => setInviteForm(prev => ({ ...prev, role: e.target.value }))}
-              options={roleOptions}
-            />
+            <FieldLabel>Função</FieldLabel>
+            <Select value={inviteForm.role} onChange={e => setInviteForm(prev => ({ ...prev, role: e.target.value }))} options={roleOptions} />
           </div>
-
           <div>
-            <label
-              className="text-[10px] uppercase font-bold tracking-widest mb-2 block"
-              style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-            >
-              Empresas com acesso {(inviteForm.role === "vendedor" || inviteForm.role === "consultor") && "*"}
-            </label>
+            <FieldLabel>Empresas com acesso {(inviteForm.role === "vendedor" || inviteForm.role === "consultor") && "*"}</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
               {COMPANY_IDS.map(id => {
                 const c = COMPANIES[id];
                 const selected = inviteForm.companies.includes(id);
                 return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => toggleInviteCompany(id)}
+                  <button key={id} type="button" onClick={() => toggleInviteCompany(id)}
                     className="p-3 rounded-xl border flex items-center gap-2 transition-all"
-                    style={{
-                      background: selected ? c.light : "#FFFFFF",
-                      borderColor: selected ? c.primary : "#EFEFEF",
-                    }}
+                    style={{ background: selected ? c.light : "#FFFFFF", borderColor: selected ? c.primary : "#E5E7EB" }}
                   >
-                    <div className="w-3 h-3 rounded-xl" style={{ background: c.primary }} />
-                    <span
-                      className="font-semibold text-sm flex-1 text-left"
-                      style={{ color: selected ? c.dark : NEUTRAL.graphite }}
-                    >
-                      {c.name}
-                    </span>
+                    <div className="w-3 h-3 rounded-full" style={{ background: c.primary }} />
+                    <span className="font-semibold text-sm flex-1 text-left" style={{ color: selected ? c.dark : "#201a1a" }}>{c.name}</span>
                     {selected && <Check size={14} color={c.primary} />}
                   </button>
                 );
               })}
             </div>
           </div>
-
           <div className="grid md:grid-cols-2 gap-3">
             <div>
-              <label
-                className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-              >
-                Setor
-              </label>
-              <Select
-                value={inviteForm.sector || ""}
-                onChange={e => setInviteForm(prev => ({ ...prev, sector: e.target.value }))}
-                options={SECTOR_OPTIONS}
-              />
+              <FieldLabel>Setor</FieldLabel>
+              <Select value={inviteForm.sector || ""} onChange={e => setInviteForm(prev => ({ ...prev, sector: e.target.value }))} options={SECTOR_OPTIONS} />
             </div>
             {inviteForm.role === "consultor" && (
               <div>
-                <label
-                  className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-                  style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
-                >
-                  Supervisor (vendedor)
-                </label>
-                <Select
-                  value={inviteForm.supervisorId || ""}
-                  onChange={e => setInviteForm(prev => ({ ...prev, supervisorId: e.target.value }))}
-                  options={vendedorOptions}
-                />
+                <FieldLabel>Supervisor (vendedor)</FieldLabel>
+                <Select value={inviteForm.supervisorId || ""} onChange={e => setInviteForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
               </div>
             )}
           </div>
-
           {inviteError && (
-            <div className="p-2 rounded-xl text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
-              {inviteError}
-            </div>
+            <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "#ba1a1a" }}>{inviteError}</div>
           )}
-
           {inviteJustSent && (
             <div className="p-2.5 rounded-xl text-xs flex items-start gap-2" style={{ background: "#ECFDF5", color: "#065F46" }}>
               <Check size={14} className="shrink-0 mt-0.5" />
-              <div>
-                Convite registrado para <strong>{inviteJustSent}</strong>. Peça para essa pessoa criar a conta na tela de login.
-              </div>
+              <div>Convite registrado para <strong>{inviteJustSent}</strong>. Peça para criar a conta na tela de login.</div>
             </div>
           )}
         </div>
-        <div
-          className="px-6 py-4 border-t flex items-center justify-end gap-2"
-          style={{ borderColor: "#EFEFEF", background: NEUTRAL.warmWhite }}
-        >
+        <div className="px-6 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "#E5E7EB", background: "#fef1f0" }}>
           <Button variant="ghost" onClick={closeInvite} disabled={inviting}>Fechar</Button>
-          <Button
-            variant="primary"
-            icon={inviting ? Loader2 : Send}
-            onClick={submitInvite}
-            disabled={inviting || !inviteForm.email.trim()}
-          >
+          <Button variant="primary" icon={inviting ? Loader2 : Send} onClick={submitInvite} disabled={inviting || !inviteForm.email.trim()}>
             {inviting ? "Enviando…" : "Enviar convite"}
           </Button>
         </div>
       </Modal>
     </div>
+  );
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function StatMini({ label, value, accent }) {
+  return (
+    <div className="rounded-xl border p-4" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+      <div className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>{label}</div>
+      <div className="font-bold" style={{ fontSize: 28, color: accent || "#201a1a", lineHeight: 1, letterSpacing: "-0.02em" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function StatStrip({ label, value, accent }) {
+  return (
+    <div className="py-3 px-4 text-center">
+      <div className="text-[10px] uppercase font-bold tracking-wider mb-0.5" style={{ color: "#6B7280", letterSpacing: "0.08em" }}>
+        {label}
+      </div>
+      <div className="font-bold text-lg" style={{ color: accent || "#201a1a", letterSpacing: "-0.01em" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function FieldLabel({ children }) {
+  return (
+    <label className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block" style={{ color: "#6B7280", letterSpacing: "0.15em" }}>
+      {children}
+    </label>
   );
 }
 
