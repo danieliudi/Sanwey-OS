@@ -144,13 +144,13 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
             {seed.public_signals.map((sig, idx) => (
               <span
                 key={idx}
-                className="px-2 py-0.5 rounded-lg border text-[10px] flex items-center gap-1"
+                className="px-2 py-0.5 rounded-lg border text-[10px] flex items-center gap-1 max-w-full overflow-hidden"
                 style={{ borderColor: "#E5E7EB", background: "#FAFAFA", color: NEUTRAL.graphite }}
-                title={sig.detail || ""}
+                title={`${sig.source} · ${sig.label}${sig.detail ? ` · ${sig.detail}` : ""}`}
               >
-                <strong style={{ color: NEUTRAL.graphite }}>{sig.source}</strong>
-                <span style={{ color: NEUTRAL.slate }}>·</span>
-                <span style={{ color: NEUTRAL.slate }}>{sig.label}</span>
+                <strong className="shrink-0" style={{ color: NEUTRAL.graphite }}>{sig.source}</strong>
+                <span className="shrink-0" style={{ color: NEUTRAL.slate }}>·</span>
+                <span className="truncate" style={{ color: NEUTRAL.slate }}>{sig.label}</span>
                 {sig.year && <span style={{ color: NEUTRAL.slate }}>· {sig.year}</span>}
               </span>
             ))}

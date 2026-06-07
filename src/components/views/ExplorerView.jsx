@@ -50,7 +50,7 @@ export function ExplorerView({
             Descubra novos prospects · cruze sinais públicos · adicione ao CRM com um clique
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {activeCount > 0 && (
             <Button variant="ghost" size="sm" icon={X} onClick={reset}>
               Limpar ({activeCount})
@@ -118,7 +118,7 @@ export function ExplorerView({
           />
         </div>
         <div className="flex items-center gap-4 flex-wrap pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-medium" style={{ color: NEUTRAL.slate }}>
                 Fit mínimo
