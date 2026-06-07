@@ -3,24 +3,12 @@
 // when the leads array is empty (fresh install, after clear, etc.).
 
 export const CANONICAL_SECTORS = [
-  "Agroquímica",
   "Alimentício",
-  "Construção Civil",
-  "Construção Industrial",
-  "Distribuição Química",
-  "Fabricante Concorrente",
-  "Gases Industriais",
-  "Interno Grupo",
-  "Metalurgia",
-  "Mineração",
-  "Off-shore",
-  "Papel e Celulose",
-  "Petroquímica",
-  "Química Fina",
-  "Químico/Industrial",
-  "Químico/Petroquímico",
-  "Siderurgia",
-  "Tintas e Vernizes",
+  "Minério",
+  "Químico / Petroquímico",
+  "Armazenagem",
+  "Agrobusiness",
+  "Resíduos",
 ];
 
 export const CANONICAL_STATES = [
