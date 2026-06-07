@@ -222,7 +222,7 @@ export function CommandPalette({ open, onClose, leads, users, pipelines, onSelec
           maxWidth: 560,
           borderRadius: 16,
           background: "#FFFFFF",
-          border: "1px solid #E5E0DA",
+          border: "1px solid #E5E7EB",
           boxShadow: "0 24px 64px rgba(44,44,43,0.20)",
           overflow: "hidden",
           maxHeight: "calc(100vh - 120px)",
@@ -234,7 +234,7 @@ export function CommandPalette({ open, onClose, leads, users, pipelines, onSelec
           className="flex items-center gap-3 px-4"
           style={{
             height: 56,
-            borderBottom: "1px solid #E5E0DA",
+            borderBottom: "1px solid #E5E7EB",
           }}
         >
           <Search size={18} style={{ color: "#8A8680", shrink: 0, flexShrink: 0 }} />

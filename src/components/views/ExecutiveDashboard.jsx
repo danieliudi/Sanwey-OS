@@ -279,7 +279,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
         <div className="space-y-2">
           <div
             className="text-sm leading-relaxed whitespace-pre-line p-3 rounded-lg border"
-            style={{ background: "#F9F5F1", borderColor: "#E5E0DA", color: NEUTRAL.graphite }}
+            style={{ background: "#fef1f0", borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
           >
             {result}
           </div>
@@ -287,9 +287,9 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
             <button
               onClick={onGenerate}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
-              style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: "#E5E0DA", cursor: "pointer" }}
+              style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: "#E5E7EB", cursor: "pointer" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E0DA"; e.currentTarget.style.color = NEUTRAL.slate; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; }}
             >
               <RotateCcw size={11} />
               Regenerar
@@ -300,11 +300,11 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
               style={{
                 background: copied ? "#F0FDF4" : "#FFFFFF",
                 color: copied ? "#16A34A" : NEUTRAL.slate,
-                borderColor: copied ? "#BBF7D0" : "#E5E0DA",
+                borderColor: copied ? "#BBF7D0" : "#E5E7EB",
                 cursor: "pointer",
               }}
               onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E0DA"; e.currentTarget.style.color = NEUTRAL.slate; } }}
+              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; } }}
             >
               {copied ? "Copiado!" : "Copiar"}
             </button>

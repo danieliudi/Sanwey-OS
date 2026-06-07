@@ -112,7 +112,7 @@ const CLASS_COLORS = {
   "Classe C": "#EAB308",
   "Classe D": "#9CA3AF",
   "Classe X": "#B91C1C",
-  "Classe —": "#E5E0DA",
+  "Classe —": "#E5E7EB",
 };
 
 function winRateColor(rate) {

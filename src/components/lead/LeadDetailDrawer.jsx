@@ -589,13 +589,13 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           </div>
 
           {/* E-mails vinculados */}
-          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E0DA" }}>
+          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
             <button
               onClick={() => setEmailsOpen(v => !v)}
               className="w-full flex items-center justify-between px-4 py-3 transition-colors cursor-pointer"
-              style={{ background: "#F9F5F1", border: "none" }}
+              style={{ background: "#fef1f0", border: "none" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#F1EDE8"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#F9F5F1"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#fef1f0"; }}
             >
               <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#201a1a" }}>
                 <Mail size={13} style={{ color: "#8A8680" }} />
@@ -613,7 +613,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             </button>
 
             {emailsOpen && (
-              <div style={{ background: "#F9F5F1" }}>
+              <div style={{ background: "#fef1f0" }}>
                 {(!lead.linkedEmails || lead.linkedEmails.length === 0) ? (
                   <div className="px-4 pb-4 pt-1 text-xs" style={{ color: "#8A8680" }}>
                     Nenhum e-mail vinculado ainda. Quando e-mails do Outlook forem detectados para{" "}
@@ -623,7 +623,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                     , aparecerão aqui.
                   </div>
                 ) : (
-                  <div className="divide-y" style={{ borderColor: "#E5E0DA" }}>
+                  <div className="divide-y" style={{ borderColor: "#E5E7EB" }}>
                     {lead.linkedEmails.map((email, idx) => (
                       <div key={email.id || idx} className="px-4 py-3">
                         <div className="flex items-start justify-between gap-2">
@@ -649,7 +649,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                           </div>
                         </div>
                         {idx < lead.linkedEmails.length - 1 && (
-                          <div className="mt-3" style={{ borderTop: "1px solid #E5E0DA" }} />
+                          <div className="mt-3" style={{ borderTop: "1px solid #E5E7EB" }} />
                         )}
                       </div>
                     ))}
@@ -660,9 +660,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           </div>
 
           {/* Histórico de atividades */}
-          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E0DA" }}>
+          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
             {/* Header */}
-            <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#F9F5F1", borderBottom: "1px solid #E5E0DA" }}>
+            <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#fef1f0", borderBottom: "1px solid #E5E7EB" }}>
               <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
                 <Clock size={13} style={{ color: NEUTRAL.slate }} />
                 Histórico de atividades
@@ -679,7 +679,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
             {/* Add note input */}
             {onAddActivity && (
-              <div className="px-4 py-3 border-b" style={{ background: "#FFFFFF", borderColor: "#E5E0DA" }}>
+              <div className="px-4 py-3 border-b" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
                 <div className="flex items-start gap-2">
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-0.5"
@@ -695,9 +695,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                       placeholder="Adicionar nota ou anotação..."
                       rows={noteText ? 3 : 1}
                       className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors resize-none"
-                      style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, background: "#F9F5F1", fontFamily: "inherit" }}
+                      style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#fef1f0", fontFamily: "inherit" }}
                       onFocus={e => { e.currentTarget.style.borderColor = company.primary; e.currentTarget.style.background = "#FFFFFF"; }}
-                      onBlur={e => { e.currentTarget.style.borderColor = "#E5E0DA"; e.currentTarget.style.background = "#F9F5F1"; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.background = "#fef1f0"; }}
                     />
                     {noteText.trim() && (
                       <div className="flex justify-end mt-1.5">
@@ -705,7 +705,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                           onClick={handleAddNote}
                           disabled={noteSaving}
                           className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95"
-                          style={{ background: noteSaving ? "#E5E0DA" : company.primary, color: "#FFFFFF", border: "none", cursor: noteSaving ? "not-allowed" : "pointer" }}
+                          style={{ background: noteSaving ? "#E5E7EB" : company.primary, color: "#FFFFFF", border: "none", cursor: noteSaving ? "not-allowed" : "pointer" }}
                         >
                           <Send size={11} />
                           {noteSaving ? "Salvando..." : "Salvar nota"}

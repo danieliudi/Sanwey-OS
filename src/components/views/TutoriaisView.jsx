@@ -38,7 +38,7 @@ function VideoCard({ video }) {
           <>
             <div
               className="flex items-center justify-center rounded-full"
-              style={{ width: 48, height: 48, background: "#E5E0DA" }}
+              style={{ width: 48, height: 48, background: "#E5E7EB" }}
             >
               <Play size={20} style={{ color: NEUTRAL.slate, marginLeft: 2 }} />
             </div>
@@ -375,7 +375,7 @@ export function TutoriaisView({ currentUser }) {
           {/* CTA */}
           <div
             className="rounded-xl border p-5 flex items-center justify-between gap-4"
-            style={{ background: "#F9F5F1", borderColor: "#E5E0DA" }}
+            style={{ background: "#fef1f0", borderColor: "#E5E7EB" }}
           >
             <div>
               <p className="font-semibold text-sm mb-0.5" style={{ color: NEUTRAL.graphite }}>
@@ -395,7 +395,7 @@ export function TutoriaisView({ currentUser }) {
         <div className="space-y-5">
           <div
             className="rounded-xl border p-5"
-            style={{ background: "#F9F5F1", borderColor: "#E5E0DA" }}
+            style={{ background: "#fef1f0", borderColor: "#E5E7EB" }}
           >
             <div className="flex items-start gap-3">
               <Bot size={18} style={{ color: NEUTRAL.red, flexShrink: 0, marginTop: 2 }} />

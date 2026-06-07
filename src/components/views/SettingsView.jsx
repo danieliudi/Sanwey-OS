@@ -449,9 +449,9 @@ export function SettingsView({
                         value={profileForm.name}
                         onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))}
                         className="w-full rounded-lg border px-3 py-2 text-sm"
-                        style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, outline: "none", background: "#FAFAF8" }}
+                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "#fff8f7" }}
                         onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
-                        onBlur={e => { e.target.style.borderColor = "#E5E0DA"; e.target.style.boxShadow = "none"; }}
+                        onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
                       />
                     </div>
                     <div>
@@ -463,9 +463,9 @@ export function SettingsView({
                         value={profileForm.email}
                         onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))}
                         className="w-full rounded-lg border px-3 py-2 text-sm"
-                        style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, outline: "none", background: "#FAFAF8" }}
+                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "#fff8f7" }}
                         onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
-                        onBlur={e => { e.target.style.borderColor = "#E5E0DA"; e.target.style.boxShadow = "none"; }}
+                        onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
                       />
                       {!supabaseEnabled && (
                         <p className="text-xs mt-1" style={{ color: NEUTRAL.slate }}>Modo offline — email salvo localmente.</p>
@@ -510,9 +510,9 @@ export function SettingsView({
                         onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
                         placeholder="Mínimo 6 caracteres"
                         className="w-full rounded-lg border px-3 py-2 text-sm"
-                        style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, outline: "none", background: "#FAFAF8" }}
+                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "#fff8f7" }}
                         onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
-                        onBlur={e => { e.target.style.borderColor = "#E5E0DA"; e.target.style.boxShadow = "none"; }}
+                        onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
                       />
                     </div>
                     <div>
@@ -525,9 +525,9 @@ export function SettingsView({
                         onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
                         placeholder="Repita a nova senha"
                         className="w-full rounded-lg border px-3 py-2 text-sm"
-                        style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, outline: "none", background: "#FAFAF8" }}
+                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "#fff8f7" }}
                         onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
-                        onBlur={e => { e.target.style.borderColor = "#E5E0DA"; e.target.style.boxShadow = "none"; }}
+                        onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
                       />
                     </div>
                   </div>
@@ -553,7 +553,7 @@ export function SettingsView({
                     style={{
                       background: "#FFF",
                       color: NEUTRAL.graphite,
-                      borderColor: "#E5E0DA",
+                      borderColor: "#E5E7EB",
                       opacity: (passwordSaving || !passwordForm.newPassword) ? 0.5 : 1,
                       cursor: (passwordSaving || !passwordForm.newPassword) ? "not-allowed" : "pointer",
                     }}
@@ -759,7 +759,7 @@ export function SettingsView({
                           className="py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all"
                           style={{
                             background: aiForm.provider === p.id ? NEUTRAL.red + "0F" : "#FFFFFF",
-                            borderColor: aiForm.provider === p.id ? NEUTRAL.red : "#E5E0DA",
+                            borderColor: aiForm.provider === p.id ? NEUTRAL.red : "#E5E7EB",
                             color: aiForm.provider === p.id ? NEUTRAL.red : NEUTRAL.graphite,
                             cursor: "pointer",
                           }}
@@ -783,7 +783,7 @@ export function SettingsView({
                             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
                             style={{
                               background: aiForm.model === m.id ? NEUTRAL.red + "0F" : "#FAFAFA",
-                              borderColor: aiForm.model === m.id ? NEUTRAL.red : "#E5E0DA",
+                              borderColor: aiForm.model === m.id ? NEUTRAL.red : "#E5E7EB",
                             }}
                           >
                             <input
@@ -827,9 +827,9 @@ export function SettingsView({
                           onChange={e => { setAiForm(f => ({ ...f, apiKey: e.target.value })); setAiTestResult(null); }}
                           placeholder={selectedProvider.keyPlaceholder}
                           className="w-full text-sm rounded-xl border px-3 py-2.5 outline-none pr-16"
-                          style={{ borderColor: "#E5E0DA", color: NEUTRAL.graphite, background: "#FAFAFA", fontFamily: "monospace" }}
+                          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FAFAFA", fontFamily: "monospace" }}
                           onFocus={e => { e.currentTarget.style.borderColor = NEUTRAL.red; }}
-                          onBlur={e => { e.currentTarget.style.borderColor = "#E5E0DA"; }}
+                          onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
                         />
                         <button
                           type="button"
@@ -869,7 +869,7 @@ export function SettingsView({
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-all"
                         style={{
                           background: "#FFFFFF",
-                          borderColor: "#E5E0DA",
+                          borderColor: "#E5E7EB",
                           color: NEUTRAL.graphite,
                           cursor: aiTesting ? "wait" : "pointer",
                         }}
@@ -882,7 +882,7 @@ export function SettingsView({
                         disabled={aiSaving}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
                         style={{
-                          background: aiSaving ? "#E5E0DA" : NEUTRAL.red,
+                          background: aiSaving ? "#E5E7EB" : NEUTRAL.red,
                           border: "none",
                           cursor: aiSaving ? "wait" : "pointer",
                         }}

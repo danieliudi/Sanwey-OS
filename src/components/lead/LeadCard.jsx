@@ -11,15 +11,15 @@ function LeadCardImpl({ lead, isGroupView, onClick }) {
     <div
       onClick={() => onClick?.(lead)}
       className="px-4 py-3.5 rounded-xl border transition-all duration-150 cursor-pointer group"
-      style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 4px rgba(32,26,26,0.06)" }}
       onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-        e.currentTarget.style.borderColor = "#D0D0D0";
+        e.currentTarget.style.boxShadow = "0 4px 16px rgba(32,26,26,0.10)";
+        e.currentTarget.style.borderColor = "#e9bcb6";
         e.currentTarget.style.transform = "translateY(-1px)";
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
-        e.currentTarget.style.borderColor = "#E8E8E8";
+        e.currentTarget.style.boxShadow = "0 1px 4px rgba(32,26,26,0.06)";
+        e.currentTarget.style.borderColor = "#E5E7EB";
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
