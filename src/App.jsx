@@ -418,6 +418,9 @@ export default function App() {
         fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
         color: NEUTRAL.graphite,
         minHeight: "100vh",
+        width: "100%",
+        maxWidth: "100vw",
+        overflowX: "clip",
       }}
     >
       <Sidebar
@@ -430,12 +433,9 @@ export default function App() {
         onMobileClose={() => setSidebarMobileOpen(false)}
       />
 
-      <div className="flex flex-col min-w-0 lg:ml-[248px]" style={{ minHeight: "100vh" }}>
+      <div className="flex flex-col min-w-0 lg:ml-[248px]" style={{ minHeight: "100vh", overflowX: "clip" }}>
         <TopBar
           title={sectionTitle}
-          activeCompany={activeCompany}
-          accessibleCompanies={accessibleCompanies}
-          onCompanyChange={setActiveCompany}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}
           onSearchOpen={() => setCmdOpen(true)}
           notifications={notifications}
@@ -516,6 +516,8 @@ export default function App() {
             <CRMView
               user={currentUser}
               activeCompany={activeCompany}
+              accessibleCompanies={accessibleCompanies}
+              onCompanyChange={setActiveCompany}
               leads={leads}
               pipelines={pipelines}
               users={users}

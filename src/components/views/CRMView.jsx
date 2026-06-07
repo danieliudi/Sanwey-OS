@@ -449,7 +449,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead }) {
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
   const isConsultor = user.role === "consultor";
@@ -624,6 +624,20 @@ export function CRMView({ user, activeCompany, leads, pipelines, users, onLeadCl
               value={ownerFilter}
               onChange={e => setOwnerFilter(e.target.value)}
               options={ownerOptions}
+              className="w-full sm:w-44"
+            />
+          )}
+          {isManager && accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
+            <Select
+              value={activeCompany}
+              onChange={e => onCompanyChange(e.target.value)}
+              options={[
+                { value: "all", label: "Todas as empresas" },
+                ...accessibleCompanies.filter(id => id !== "all").map(id => ({
+                  value: id,
+                  label: COMPANIES[id]?.short || id,
+                })),
+              ]}
               className="w-full sm:w-44"
             />
           )}
