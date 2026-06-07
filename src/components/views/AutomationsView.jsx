@@ -146,7 +146,7 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
           <button
             onClick={() => openBuilder()}
             className="mt-1 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #D4D4D4" }}
+            style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
           >

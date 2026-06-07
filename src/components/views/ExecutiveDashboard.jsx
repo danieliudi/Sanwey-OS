@@ -133,7 +133,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "#D4D4D4", background: "#FFFFFF" }}>
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
             {PERIODS.map(p => (
               <button
                 key={p.id}
@@ -151,7 +151,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
           <button
             onClick={() => window.print()}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-            style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
             title="Imprimir / salvar como PDF"

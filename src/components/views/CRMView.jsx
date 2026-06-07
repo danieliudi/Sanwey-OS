@@ -26,7 +26,7 @@ const SELECT_STYLE = {
   padding: "6px 22px 6px 8px",
   appearance: "none",
   WebkitAppearance: "none",
-  backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23636E72' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+  backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
   backgroundRepeat: "no-repeat",
   backgroundPosition: "right 6px center",
   backgroundSize: "12px",
@@ -584,7 +584,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
             style={{
               background: "#FFFFFF",
-              borderColor: "#D4D4D4",
+              borderColor: "#E5E7EB",
               color: NEUTRAL.slate,
             }}
             onMouseEnter={e => {
@@ -603,7 +603,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           {/* Toggle Kanban / Calendário */}
           <div
             className="inline-flex rounded-lg border overflow-hidden"
-            style={{ borderColor: "#D4D4D4", background: "#FFFFFF" }}
+            style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
             role="tablist"
           >
             <ViewToggleButton

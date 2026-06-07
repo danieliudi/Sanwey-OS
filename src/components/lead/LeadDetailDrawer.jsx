@@ -572,9 +572,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                   onChange={e => setContactEmailDraft(e.target.value)}
                   placeholder="contato@empresa.com.br"
                   className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
-                  style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                  style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
                   onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
                   onKeyDown={e => { if (e.key === "Enter") handleSaveContactEmail(); if (e.key === "Escape") handleCancelContactEmail(); }}
                   autoFocus
                 />
@@ -598,7 +598,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               onMouseLeave={e => { e.currentTarget.style.background = "#fef1f0"; }}
             >
               <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#201a1a" }}>
-                <Mail size={13} style={{ color: "#8A8680" }} />
+                <Mail size={13} style={{ color: "#6B7280" }} />
                 E-mails vinculados
                 {(lead.linkedEmails || []).length > 0 && (
                   <span
@@ -609,13 +609,13 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                   </span>
                 )}
               </div>
-              {emailsOpen ? <ChevronUp size={14} style={{ color: "#8A8680" }} /> : <ChevronDown size={14} style={{ color: "#8A8680" }} />}
+              {emailsOpen ? <ChevronUp size={14} style={{ color: "#6B7280" }} /> : <ChevronDown size={14} style={{ color: "#6B7280" }} />}
             </button>
 
             {emailsOpen && (
               <div style={{ background: "#fef1f0" }}>
                 {(!lead.linkedEmails || lead.linkedEmails.length === 0) ? (
-                  <div className="px-4 pb-4 pt-1 text-xs" style={{ color: "#8A8680" }}>
+                  <div className="px-4 pb-4 pt-1 text-xs" style={{ color: "#6B7280" }}>
                     Nenhum e-mail vinculado ainda. Quando e-mails do Outlook forem detectados para{" "}
                     <span style={{ color: "#201a1a", fontWeight: 600 }}>
                       {lead.contactEmail || "o e-mail do contato"}
@@ -640,11 +640,11 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                             <div className="text-xs font-semibold truncate" style={{ color: "#201a1a" }}>
                               {email.subject || "(sem assunto)"}
                             </div>
-                            <div className="text-xs mt-0.5 truncate" style={{ color: "#8A8680" }}>
+                            <div className="text-xs mt-0.5 truncate" style={{ color: "#6B7280" }}>
                               {email.direction === "sent" ? `Para: ${email.to}` : `De: ${email.from}`}
                             </div>
                           </div>
-                          <div className="text-xs shrink-0" style={{ color: "#8A8680" }}>
+                          <div className="text-xs shrink-0" style={{ color: "#6B7280" }}>
                             {email.date ? formatDateBR(email.date) : "—"}
                           </div>
                         </div>
@@ -833,9 +833,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                   value={followUpDate}
                   onChange={e => setFollowUpDate(e.target.value)}
                   className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors cursor-pointer"
-                  style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                  style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
                   onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "#D4D4D4"; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
                 />
                 <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveFollowUp}>
                   Salvar

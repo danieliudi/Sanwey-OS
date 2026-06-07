@@ -434,7 +434,7 @@ function CheckBox({ checked, onChange }) {
       className="w-4 h-4 rounded flex items-center justify-center transition-colors cursor-pointer shrink-0"
       style={{
         background: checked ? ACCENT_RED : "#FFFFFF",
-        border: `1.5px solid ${checked ? ACCENT_RED : "#D4D4D4"}`,
+        border: `1.5px solid ${checked ? ACCENT_RED : "#E5E7EB"}`,
       }}
     >
       {checked && (

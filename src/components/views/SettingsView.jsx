@@ -348,7 +348,7 @@ export function SettingsView({
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left w-full"
                 style={{
                   background: active ? "#FBE9EB" : "transparent",
-                  color: active ? "#b5000b" : "#8A8680",
+                  color: active ? "#b5000b" : "#6B7280",
                   boxShadow: active ? "inset 3px 0 0 #b5000b" : "inset 3px 0 0 transparent",
                   border: "none",
                   cursor: "pointer",
@@ -362,7 +362,7 @@ export function SettingsView({
                 onMouseLeave={e => {
                   if (!active) {
                     e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#8A8680";
+                    e.currentTarget.style.color = "#6B7280";
                   }
                 }}
               >
@@ -388,7 +388,7 @@ export function SettingsView({
                   className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold shrink-0 transition-all"
                   style={{
                     background: active ? "#b5000b" : "#F1EDE8",
-                    color: active ? "#FFFFFF" : "#8A8680",
+                    color: active ? "#FFFFFF" : "#6B7280",
                     border: "none",
                     cursor: "pointer",
                   }}

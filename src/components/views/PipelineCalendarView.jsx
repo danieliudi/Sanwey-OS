@@ -137,7 +137,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
           <button
             onClick={goToday}
             className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
-            style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
           >
