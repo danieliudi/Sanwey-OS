@@ -36,7 +36,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
   const [company, setCompany] = useState("");
   const [value, setValue] = useState("");
   const [ownerId, setOwnerId] = useState(currentUser?.id || "");
-  const [sector, setSector] = useState(currentUser?.sector || "");
+  const [sector, setSector] = useState(currentUser?.sectors?.[0] || "");
   const [customValues, setCustomValues] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -495,12 +495,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       // Vendedor sees own leads + subordinates' leads
       s = s.filter(l => l.owner === user.id || subordinateIds.has(l.owner));
     }
-    // Sector filter: if user has a sector, only show leads matching that sector (or without sector)
-    if (user.sector && (user.role === "vendedor" || user.role === "consultor")) {
-      s = s.filter(l => !l.sector || l.sector === user.sector);
+    // Sector filter: if user has sectors, only show leads in those sectors (or without sector)
+    if (user.sectors?.length && (user.role === "vendedor" || user.role === "consultor")) {
+      s = s.filter(l => !l.sector || user.sectors.includes(l.sector));
     }
     return s;
-  }, [leads, activeCompany, user.id, user.role, user.sector, isGroupView, isManager, isConsultor, subordinateIds]);
+  }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, isConsultor, subordinateIds]);
 
   const scopedLeads = useMemo(() => {
     if (isManager && ownerFilter !== "all") {

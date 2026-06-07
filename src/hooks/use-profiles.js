@@ -14,7 +14,7 @@ function rowToUser(r) {
     initials: r.initials || (r.name || r.email || "—").slice(0, 2).toUpperCase(),
     avatarBg: r.avatar_bg || "#1E4D8C",
     avatarUrl: r.avatar_url || null,
-    sector: r.sector || null,
+    sectors: Array.isArray(r.sectors) ? r.sectors : [],
     supervisorId: r.supervisor_id || null,
     aiConfig: r.ai_config || null,
   };
@@ -87,7 +87,7 @@ export function useProfiles({ enabled = true } = {}) {
     if (patch.companies !== undefined) dbPatch.companies = patch.companies;
     if (patch.initials !== undefined) dbPatch.initials = patch.initials;
     if (patch.avatarBg !== undefined) dbPatch.avatar_bg = patch.avatarBg;
-    if (patch.sector !== undefined) dbPatch.sector = patch.sector;
+    if (patch.sectors !== undefined) dbPatch.sectors = patch.sectors;
     if (patch.supervisorId !== undefined) dbPatch.supervisor_id = patch.supervisorId || null;
     if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
     if (patch.aiConfig !== undefined) dbPatch.ai_config = patch.aiConfig;
