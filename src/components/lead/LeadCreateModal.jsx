@@ -224,7 +224,7 @@ export function LeadCreateModal({
 }) {
   const [values, setValues] = useState(() => ({
     owner: currentUser?.id || "",
-    sector: currentUser?.sector || "",
+    sector: currentUser?.sectors?.[0] || "",
     contactEmail: "",
   }));
   const [saving, setSaving] = useState(false);
@@ -236,7 +236,7 @@ export function LeadCreateModal({
   // Focus first input when modal opens
   React.useEffect(() => {
     if (open) {
-      setValues({ owner: currentUser?.id || "", sector: currentUser?.sector || "", contactEmail: "" });
+      setValues({ owner: currentUser?.id || "", sector: currentUser?.sectors?.[0] || "", contactEmail: "" });
       setError(null);
       setSaving(false);
       setDuplicates([]);
@@ -302,7 +302,7 @@ export function LeadCreateModal({
         stage: stageId,
         status: stageId,
         owner: resolvedOwner,
-        sector: values.sector || ownerUser?.sector || currentUser?.sector || null,
+        sector: values.sector || ownerUser?.sectors?.[0] || currentUser?.sectors?.[0] || null,
         value: parseFloat(values.value) || 0,
         probability: Number.isFinite(stage?.probability) ? stage.probability : 10,
         contactEmail: values.contactEmail || null,

@@ -15,10 +15,10 @@ import { CompanyTag } from "../ui/CompanyTag";
 const EMPTY_FORM = {
   id: null, name: "", email: "", role: "vendedor",
   companies: [], initials: "", avatarBg: "#1E4D8C",
-  sector: "", supervisorId: "",
+  sectors: [], supervisorId: "",
 };
 
-const EMPTY_INVITE = { email: "", role: "vendedor", companies: [], sector: "", supervisorId: "" };
+const EMPTY_INVITE = { email: "", role: "vendedor", companies: [], sectors: [], supervisorId: "" };
 
 const ROLE_OPTIONS_BASE = [
   { value: "consultor", label: "Consultor" },
@@ -29,11 +29,6 @@ const ROLE_OPTIONS_BASE = [
 const ROLE_OPTIONS_ADMIN = [
   ...ROLE_OPTIONS_BASE,
   { value: "admin", label: "Admin" },
-];
-
-const SECTOR_OPTIONS = [
-  { value: "", label: "Sem setor" },
-  ...CANONICAL_SECTORS.map(s => ({ value: s, label: s })),
 ];
 
 function roleLabel(role) {
@@ -100,7 +95,7 @@ export function UserManagementView({
 
   const startEdit = useCallback((u) => {
     setEditing(u.id);
-    setForm({ ...EMPTY_FORM, ...u, sector: u.sector || "", supervisorId: u.supervisorId || "" });
+    setForm({ ...EMPTY_FORM, ...u, sectors: Array.isArray(u.sectors) ? u.sectors : [], supervisorId: u.supervisorId || "" });
     setModalError(null);
   }, []);
 
@@ -133,7 +128,7 @@ export function UserManagementView({
     try {
       if (form.id) {
         if (onUpdateUser) {
-          await onUpdateUser(form.id, { name: form.name, role: form.role, companies: form.companies, initials, avatarBg: form.avatarBg, sector: form.sector || null, supervisorId: form.supervisorId || null });
+          await onUpdateUser(form.id, { name: form.name, role: form.role, companies: form.companies, initials, avatarBg: form.avatarBg, sectors: form.sectors || [], supervisorId: form.supervisorId || null });
         } else if (onUsersChange) {
           onUsersChange(prev => prev.map(u => u.id === form.id ? { ...u, ...form, initials } : u));
         }
@@ -165,7 +160,7 @@ export function UserManagementView({
     setInviting(true);
     setInviteError(null);
     try {
-      await onCreateInvitation({ email, role: inviteForm.role, companies: inviteForm.companies, sector: inviteForm.sector || null, supervisorId: inviteForm.supervisorId || null, invitedBy: currentUser?.id });
+      await onCreateInvitation({ email, role: inviteForm.role, companies: inviteForm.companies, sectors: inviteForm.sectors || [], supervisorId: inviteForm.supervisorId || null, invitedBy: currentUser?.id });
       setInviteJustSent(email);
       setInviteForm(EMPTY_INVITE);
     } catch (e) {
@@ -209,6 +204,14 @@ export function UserManagementView({
 
   const toggleInviteCompany = useCallback((id) => {
     setInviteForm(prev => ({ ...prev, companies: prev.companies.includes(id) ? prev.companies.filter(c => c !== id) : [...prev.companies, id] }));
+  }, []);
+
+  const toggleSector = useCallback((s) => {
+    setForm(prev => ({ ...prev, sectors: prev.sectors.includes(s) ? prev.sectors.filter(x => x !== s) : [...prev.sectors, s] }));
+  }, []);
+
+  const toggleInviteSector = useCallback((s) => {
+    setInviteForm(prev => ({ ...prev, sectors: prev.sectors.includes(s) ? prev.sectors.filter(x => x !== s) : [...prev.sectors, s] }));
   }, []);
 
   const canSave = Boolean(form.name && form.companies.length > 0);
@@ -468,11 +471,11 @@ export function UserManagementView({
                           Sem empresa
                         </span>
                       )}
-                      {u.sector && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#EEF2FF", color: "#3730A3" }}>
-                          {u.sector}
+                      {Array.isArray(u.sectors) && u.sectors.map(s => (
+                        <span key={s} className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#EEF2FF", color: "#3730A3" }}>
+                          {s}
                         </span>
-                      )}
+                      ))}
                     </div>
 
                     {/* Company tags */}
@@ -553,18 +556,33 @@ export function UserManagementView({
               })}
             </div>
           </div>
-          <div className="grid md:grid-cols-2 gap-3">
-            <div>
-              <FieldLabel>Setor</FieldLabel>
-              <Select value={form.sector || ""} onChange={e => setForm(prev => ({ ...prev, sector: e.target.value }))} options={SECTOR_OPTIONS} />
+          <div>
+            <FieldLabel>Setores</FieldLabel>
+            <div className="grid grid-cols-2 gap-2">
+              {CANONICAL_SECTORS.map(s => {
+                const selected = form.sectors.includes(s);
+                return (
+                  <button key={s} type="button" onClick={() => toggleSector(s)}
+                    className="p-2.5 rounded-xl border flex items-center gap-2 transition-all text-left"
+                    style={{ background: selected ? "#EEF2FF" : "#FFFFFF", borderColor: selected ? "#6366F1" : "#E5E7EB" }}
+                  >
+                    <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all"
+                      style={{ background: selected ? "#6366F1" : "transparent", borderColor: selected ? "#6366F1" : "#D1D5DB" }}
+                    >
+                      {selected && <Check size={11} color="#FFFFFF" />}
+                    </div>
+                    <span className="text-xs font-semibold leading-tight" style={{ color: selected ? "#3730A3" : "#201a1a" }}>{s}</span>
+                  </button>
+                );
+              })}
             </div>
-            {form.role === "consultor" && (
-              <div>
-                <FieldLabel>Supervisor (vendedor)</FieldLabel>
-                <Select value={form.supervisorId || ""} onChange={e => setForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
-              </div>
-            )}
           </div>
+          {form.role === "consultor" && (
+            <div>
+              <FieldLabel>Supervisor (vendedor)</FieldLabel>
+              <Select value={form.supervisorId || ""} onChange={e => setForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
+            </div>
+          )}
           {modalError && (
             <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "#ba1a1a" }}>{modalError}</div>
           )}
@@ -610,18 +628,33 @@ export function UserManagementView({
               })}
             </div>
           </div>
-          <div className="grid md:grid-cols-2 gap-3">
-            <div>
-              <FieldLabel>Setor</FieldLabel>
-              <Select value={inviteForm.sector || ""} onChange={e => setInviteForm(prev => ({ ...prev, sector: e.target.value }))} options={SECTOR_OPTIONS} />
+          <div>
+            <FieldLabel>Setores</FieldLabel>
+            <div className="grid grid-cols-2 gap-2">
+              {CANONICAL_SECTORS.map(s => {
+                const selected = inviteForm.sectors.includes(s);
+                return (
+                  <button key={s} type="button" onClick={() => toggleInviteSector(s)}
+                    className="p-2.5 rounded-xl border flex items-center gap-2 transition-all text-left"
+                    style={{ background: selected ? "#EEF2FF" : "#FFFFFF", borderColor: selected ? "#6366F1" : "#E5E7EB" }}
+                  >
+                    <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all"
+                      style={{ background: selected ? "#6366F1" : "transparent", borderColor: selected ? "#6366F1" : "#D1D5DB" }}
+                    >
+                      {selected && <Check size={11} color="#FFFFFF" />}
+                    </div>
+                    <span className="text-xs font-semibold leading-tight" style={{ color: selected ? "#3730A3" : "#201a1a" }}>{s}</span>
+                  </button>
+                );
+              })}
             </div>
-            {inviteForm.role === "consultor" && (
-              <div>
-                <FieldLabel>Supervisor (vendedor)</FieldLabel>
-                <Select value={inviteForm.supervisorId || ""} onChange={e => setInviteForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
-              </div>
-            )}
           </div>
+          {inviteForm.role === "consultor" && (
+            <div>
+              <FieldLabel>Supervisor (vendedor)</FieldLabel>
+              <Select value={inviteForm.supervisorId || ""} onChange={e => setInviteForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
+            </div>
+          )}
           {inviteError && (
             <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "#ba1a1a" }}>{inviteError}</div>
           )}

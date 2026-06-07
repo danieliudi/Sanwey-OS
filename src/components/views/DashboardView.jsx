@@ -41,11 +41,11 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
     } else if (!isManager) {
       s = s.filter(l => l.owner === user.id || subordinateIds.has(l.owner));
     }
-    if (user.sector && (user.role === "vendedor" || user.role === "consultor")) {
-      s = s.filter(l => !l.sector || l.sector === user.sector);
+    if (user.sectors?.length && (user.role === "vendedor" || user.role === "consultor")) {
+      s = s.filter(l => !l.sector || user.sectors.includes(l.sector));
     }
     return s;
-  }, [leads, activeCompany, user.id, user.role, user.sector, isGroupView, isManager, isConsultor, subordinateIds]);
+  }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, isConsultor, subordinateIds]);
 
   const scopedSignals = useMemo(
     () => (isGroupView ? signals : signals.filter(s => s.company === activeCompany)),

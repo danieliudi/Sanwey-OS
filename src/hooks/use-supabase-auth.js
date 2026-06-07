@@ -126,7 +126,7 @@ export function useSupabaseAuth() {
         initials: profile.initials || (profile.name || session.user.email).slice(0, 2).toUpperCase(),
         avatarBg: profile.avatar_bg || "#1E4D8C",
         avatarUrl: profile.avatar_url || null,
-        sector: profile.sector || null,
+        sectors: Array.isArray(profile.sectors) ? profile.sectors : [],
         supervisorId: profile.supervisor_id || null,
       }
     : null;
