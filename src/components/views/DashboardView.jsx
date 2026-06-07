@@ -332,7 +332,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
               Ver todos <ArrowRight size={12} />
             </button>
           </div>
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-1">
             {scopedSignals.slice(0, 5).map(s => (
               <div
                 key={s.id}
