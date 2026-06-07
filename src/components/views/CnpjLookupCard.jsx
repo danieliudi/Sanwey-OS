@@ -116,7 +116,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
       </div>
 
       <div className="flex gap-2 mb-3 flex-wrap">
-        <div className="flex-1 min-w-[220px]">
+        <div className="flex-1 min-w-0">
           <Input
             value={cnpj}
             onChange={e => setCnpj(e.target.value)}
