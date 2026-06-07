@@ -1,89 +1,69 @@
 import React from "react";
-import { Home, LayoutKanban, Compass, Activity, Grid3x3 } from "lucide-react";
 
 const TABS = [
-  { id: "dashboard", label: "Início",     Icon: Home },
-  { id: "crm",       label: "Negócios",   Icon: LayoutKanban },
-  { id: "explorer",  label: "Explorador", Icon: Compass },
-  { id: "signals",   label: "Sinais",     Icon: Activity },
+  { id: "dashboard", label: "Início",     icon: "home" },
+  { id: "crm",       label: "Negócios",   icon: "handshake" },
+  { id: "explorer",  label: "Explorador", icon: "explore" },
+  { id: "signals",   label: "Sinais",     icon: "monitoring" },
 ];
-
-const ACTIVE_COLOR   = "#C7212B";
-const INACTIVE_COLOR = "#8A8680";
 
 export function MobileBottomNav({ section, onSectionChange, onMenuOpen }) {
   return (
-    <div
-      className="flex flex-row lg:hidden"
-      style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 56,
-        zIndex: 30,
-        background: "#FFFFFF",
-        borderTop: "1px solid #E5E7EB",
-      }}
+    <nav
+      className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-white border-t border-border-subtle z-30 flex justify-around items-stretch"
+      style={{ height: 64 }}
     >
-      {TABS.map(({ id, label, Icon }) => {
+      {TABS.map(({ id, label, icon }) => {
         const active = section === id;
-        const color = active ? ACTIVE_COLOR : INACTIVE_COLOR;
         return (
           <button
             key={id}
             onClick={() => onSectionChange(id)}
-            className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full cursor-pointer"
+            className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors duration-200"
             style={{
-              background: "transparent",
+              background: active ? "#fef1f0" : "transparent",
               border: "none",
-              padding: 0,
-              color,
+              color: active ? "#b5000b" : "#5c5f60",
+              cursor: "pointer",
+              padding: "4px 0",
+              fontFamily: "inherit",
             }}
             aria-label={label}
           >
-            <Icon size={20} strokeWidth={2} color={color} />
             <span
+              className="material-symbols-outlined"
               style={{
-                fontSize: 10,
-                fontWeight: 600,
-                marginTop: 2,
-                color,
-                lineHeight: 1,
+                fontSize: 24,
+                fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
               }}
             >
+              {icon}
+            </span>
+            <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, lineHeight: 1 }}>
               {label}
             </span>
           </button>
         );
       })}
 
-      {/* Menu tab — always calls onMenuOpen, never active */}
+      {/* More / Menu */}
       <button
         onClick={onMenuOpen}
-        className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full cursor-pointer"
+        className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors duration-200"
         style={{
           background: "transparent",
           border: "none",
-          padding: 0,
-          color: INACTIVE_COLOR,
+          color: "#5c5f60",
+          cursor: "pointer",
+          padding: "4px 0",
+          fontFamily: "inherit",
         }}
         aria-label="Menu"
       >
-        <Grid3x3 size={20} strokeWidth={2} color={INACTIVE_COLOR} />
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            marginTop: 2,
-            color: INACTIVE_COLOR,
-            lineHeight: 1,
-          }}
-        >
-          Menu
-        </span>
+        <span className="material-symbols-outlined" style={{ fontSize: 24 }}>grid_view</span>
+        <span style={{ fontSize: 11, fontWeight: 500, lineHeight: 1 }}>Mais</span>
       </button>
-    </div>
+    </nav>
   );
 }
 

@@ -147,7 +147,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         className="w-full text-xs rounded-lg border outline-none"
         style={{
           ...SELECT_STYLE,
-          borderColor: !sector ? "#C7212B" : "#D1D5DB",
+          borderColor: !sector ? "#b5000b" : "#D1D5DB",
           color: sector ? NEUTRAL.graphite : NEUTRAL.slate,
         }}
         required
@@ -681,7 +681,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 style={{
                   width: 272,
                   minWidth: 272,
-                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "#F0F7FF" : "#F4F6FA",
+                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "#F0F7FF" : "#fef1f0",
                   borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "70" : isOver && !canAccept ? "#FECACA" : "#E5E7EB",
                   boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
                 }}
@@ -835,7 +835,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     <button
       onClick={() => setShowAIChat(v => !v)}
       className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
-      style={{ background: "#C7212B", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(199,33,43,0.3)", border: "none", cursor: "pointer" }}
+      style={{ background: "#b5000b", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
       onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
     >

@@ -414,9 +414,9 @@ export default function App() {
   return (
     <div
       style={{
-        background: "#F7F8FA",
-        fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif",
-        color: NEUTRAL.graphite,
+        background: "#fff8f7",
+        fontFamily: "'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        color: "#201a1a",
         minHeight: "100vh",
         width: "100%",
         maxWidth: "100vw",
@@ -433,7 +433,7 @@ export default function App() {
         onMobileClose={() => setSidebarMobileOpen(false)}
       />
 
-      <div className="flex flex-col min-w-0 lg:ml-[248px]" style={{ minHeight: "100vh", overflowX: "clip" }}>
+      <div className="flex flex-col min-w-0 lg:ml-[288px]" style={{ minHeight: "100vh", overflowX: "clip" }}>
         <TopBar
           title={sectionTitle}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}

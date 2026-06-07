@@ -6,9 +6,9 @@ import {
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
-const ACCENT_RED = "#C7212B";   // --vermelho DS v2.2
-const DARK_BG    = "#1A1414";   // preto quente (painel esquerdo)
-const CREAM      = "#F8F9FA";   // fundo neutro claro
+const ACCENT_RED = "#b5000b";   // primary DS
+const DARK_BG    = "#1A1414";   // painel esquerdo
+const CREAM      = "#fff8f7";   // surface
 
 // LoginScreen com layout split institucional, espelhando o mockup novo:
 // - Esquerda escura com watermark grande do logo, headline e valores

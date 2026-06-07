@@ -597,7 +597,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               onMouseEnter={e => { e.currentTarget.style.background = "#F1EDE8"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "#F9F5F1"; }}
             >
-              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#2C2C2B" }}>
+              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#201a1a" }}>
                 <Mail size={13} style={{ color: "#8A8680" }} />
                 E-mails vinculados
                 {(lead.linkedEmails || []).length > 0 && (
@@ -617,7 +617,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                 {(!lead.linkedEmails || lead.linkedEmails.length === 0) ? (
                   <div className="px-4 pb-4 pt-1 text-xs" style={{ color: "#8A8680" }}>
                     Nenhum e-mail vinculado ainda. Quando e-mails do Outlook forem detectados para{" "}
-                    <span style={{ color: "#2C2C2B", fontWeight: 600 }}>
+                    <span style={{ color: "#201a1a", fontWeight: 600 }}>
                       {lead.contactEmail || "o e-mail do contato"}
                     </span>
                     , aparecerão aqui.
@@ -630,14 +630,14 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                           <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
                             <span
                               className="text-xs font-bold"
-                              style={{ color: email.direction === "sent" ? company.primary : "#2C2C2B" }}
+                              style={{ color: email.direction === "sent" ? company.primary : "#201a1a" }}
                               title={email.direction === "sent" ? "Enviado" : "Recebido"}
                             >
                               {email.direction === "sent" ? "→" : "←"}
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs font-semibold truncate" style={{ color: "#2C2C2B" }}>
+                            <div className="text-xs font-semibold truncate" style={{ color: "#201a1a" }}>
                               {email.subject || "(sem assunto)"}
                             </div>
                             <div className="text-xs mt-0.5 truncate" style={{ color: "#8A8680" }}>

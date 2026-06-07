@@ -13,7 +13,7 @@ const TYPE_ICON = {
 const TYPE_COLOR = {
   followup: "#F59E0B",
   stage_changed: NEUTRAL.slate,
-  lead_assigned: "#C7212B",
+  lead_assigned: "#b5000b",
   default: NEUTRAL.slate,
 };
 
@@ -88,7 +88,7 @@ export function NotificationCenter({
               width: unreadCount > 9 ? 16 : 14,
               height: 14,
               fontSize: 9,
-              background: "#C7212B",
+              background: "#b5000b",
               lineHeight: 1,
             }}
           >
@@ -114,7 +114,7 @@ export function NotificationCenter({
             style={{ borderColor: "#E5E0DA", background: "#F9F5F1" }}
           >
             <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
-              Notificações {unreadCount > 0 && <span style={{ color: "#C7212B" }}>({unreadCount})</span>}
+              Notificações {unreadCount > 0 && <span style={{ color: "#b5000b" }}>({unreadCount})</span>}
             </span>
             <div className="flex items-center gap-1">
               {unreadCount > 0 && (
@@ -211,7 +211,7 @@ export function NotificationCenter({
                       {!notif.read && (
                         <div
                           className="w-2 h-2 rounded-full shrink-0 mt-1.5"
-                          style={{ background: "#C7212B" }}
+                          style={{ background: "#b5000b" }}
                         />
                       )}
                     </div>

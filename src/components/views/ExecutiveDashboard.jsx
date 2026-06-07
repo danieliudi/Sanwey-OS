@@ -252,7 +252,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
         disabled={loading}
         className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150 active:scale-95"
         style={{
-          background: "#C7212B",
+          background: "#b5000b",
           color: "#FFFFFF",
           border: "none",
           cursor: loading ? "not-allowed" : "pointer",
@@ -388,7 +388,7 @@ function AIExecutivePanel({ leads, users, currentUser }) {
         />
         <AISection
           icon={Bot}
-          iconColor="#C7212B"
+          iconColor="#b5000b"
           title="Diagnóstico de Funil"
           description="Identifica gargalos, hipóteses de causa e ações corretivas priorizadas"
           onGenerate={isConfigured ? handleFunnel : undefined}

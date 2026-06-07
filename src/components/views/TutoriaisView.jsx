@@ -336,7 +336,7 @@ export function TutoriaisView({ currentUser }) {
                   <div className="flex flex-col items-center">
                     <div
                       className="flex items-center justify-center rounded-full font-bold text-sm shrink-0"
-                      style={{ width: 32, height: 32, background: "#C7212B", color: "#FFFFFF", fontSize: 13 }}
+                      style={{ width: 32, height: 32, background: "#b5000b", color: "#FFFFFF", fontSize: 13 }}
                     >
                       {step.number}
                     </div>

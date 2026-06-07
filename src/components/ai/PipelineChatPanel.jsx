@@ -4,7 +4,7 @@ import { useAI } from "../../hooks/use-ai";
 import { pipelineChatPrompt } from "../../constants/ai-prompts";
 import { NEUTRAL } from "../../constants/companies";
 
-const RED = "#C7212B";
+const RED = "#b5000b";
 
 export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }) {
   const { complete, isConfigured } = useAI(currentUser);
@@ -162,7 +162,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                   style={
                     isError
                       ? { background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }
-                      : { background: "#F4F6FA", color: NEUTRAL.graphite }
+                      : { background: "#fef1f0", color: NEUTRAL.graphite }
                   }
                 >
                   {isError && <AlertCircle size={12} style={{ display: "inline", marginRight: 4 }} />}
@@ -176,7 +176,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
             <div className="flex justify-start">
               <div
                 className="flex items-center gap-2 text-sm px-3 py-2 rounded-2xl rounded-tl-sm"
-                style={{ background: "#F4F6FA", color: NEUTRAL.slate }}
+                style={{ background: "#fef1f0", color: NEUTRAL.slate }}
               >
                 <Loader2 size={13} className="animate-spin" />
                 Analisando pipeline...

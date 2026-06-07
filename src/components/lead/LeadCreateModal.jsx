@@ -46,7 +46,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
     boxSizing: "border-box",
   };
 
-  const handleFocus = e => { e.target.style.borderColor = "#C7212B"; e.target.style.boxShadow = "0 0 0 2px rgba(199,33,43,.1)"; };
+  const handleFocus = e => { e.target.style.borderColor = "#b5000b"; e.target.style.boxShadow = "0 0 0 2px rgba(199,33,43,.1)"; };
   const handleBlur  = e => { e.target.style.borderColor = "#D1D5DB"; e.target.style.boxShadow = "none"; };
 
   if (def.type === "sector") {
@@ -57,7 +57,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
         style={{ ...baseStyle, appearance: "none", paddingRight: 32,
           backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
           backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", backgroundSize: "14px",
-          borderColor: configEntry.required && !value ? "#C7212B" : "#D1D5DB",
+          borderColor: configEntry.required && !value ? "#b5000b" : "#D1D5DB",
         }}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -427,7 +427,7 @@ export function LeadCreateModal({
                     }}
                   >
                     {entry.required && (
-                      <span style={{ color: "#C7212B", marginRight: 2 }}>*</span>
+                      <span style={{ color: "#b5000b", marginRight: 2 }}>*</span>
                     )}
                     {def.label}
                   </label>
@@ -540,13 +540,13 @@ export function LeadCreateModal({
             disabled={saving}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-colors"
             style={{
-              background: saving ? "#9CA3AF" : "#C7212B",
+              background: saving ? "#9CA3AF" : "#b5000b",
               color: "#FFFFFF",
               border: "none",
               cursor: saving ? "not-allowed" : "pointer",
             }}
             onMouseEnter={e => { if (!saving) e.currentTarget.style.background = "#8B1419"; }}
-            onMouseLeave={e => { if (!saving) e.currentTarget.style.background = saving ? "#9CA3AF" : "#C7212B"; }}
+            onMouseLeave={e => { if (!saving) e.currentTarget.style.background = saving ? "#9CA3AF" : "#b5000b"; }}
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? "Criando…" : "Criar card"}

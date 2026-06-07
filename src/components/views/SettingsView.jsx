@@ -348,15 +348,15 @@ export function SettingsView({
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left w-full"
                 style={{
                   background: active ? "#FBE9EB" : "transparent",
-                  color: active ? "#C7212B" : "#8A8680",
-                  boxShadow: active ? "inset 3px 0 0 #C7212B" : "inset 3px 0 0 transparent",
+                  color: active ? "#b5000b" : "#8A8680",
+                  boxShadow: active ? "inset 3px 0 0 #b5000b" : "inset 3px 0 0 transparent",
                   border: "none",
                   cursor: "pointer",
                 }}
                 onMouseEnter={e => {
                   if (!active) {
                     e.currentTarget.style.background = "#F1EDE8";
-                    e.currentTarget.style.color = "#2C2C2B";
+                    e.currentTarget.style.color = "#201a1a";
                   }
                 }}
                 onMouseLeave={e => {
@@ -387,7 +387,7 @@ export function SettingsView({
                   onClick={() => setActiveTab(tab.id)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold shrink-0 transition-all"
                   style={{
-                    background: active ? "#C7212B" : "#F1EDE8",
+                    background: active ? "#b5000b" : "#F1EDE8",
                     color: active ? "#FFFFFF" : "#8A8680",
                     border: "none",
                     cursor: "pointer",
