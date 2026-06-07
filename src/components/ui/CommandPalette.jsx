@@ -47,14 +47,14 @@ function LeadResultRow({ lead, users, pipelines, highlighted, onSelect }) {
       onClick={onSelect}
       className="flex items-center gap-3 px-4 py-3 cursor-pointer"
       style={{
-        background: highlighted ? "#F5F4F2" : "transparent",
+        background: highlighted ? "#fef1f0" : "transparent",
         transition: "background 100ms",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = "#F5F4F2";
+        e.currentTarget.style.background = "#fef1f0";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = highlighted ? "#F5F4F2" : "transparent";
+        e.currentTarget.style.background = highlighted ? "#fef1f0" : "transparent";
       }}
     >
       {/* Company initial badge */}
@@ -80,7 +80,7 @@ function LeadResultRow({ lead, users, pipelines, highlighted, onSelect }) {
         </div>
         <div
           className="text-xs truncate mt-0.5"
-          style={{ color: "#8A8680" }}
+          style={{ color: "#6B7280" }}
         >
           {stageName}
           {lead.sector ? ` · ${lead.sector}` : ""}
@@ -222,7 +222,7 @@ export function CommandPalette({ open, onClose, leads, users, pipelines, onSelec
           maxWidth: 560,
           borderRadius: 16,
           background: "#FFFFFF",
-          border: "1px solid #E5E0DA",
+          border: "1px solid #E5E7EB",
           boxShadow: "0 24px 64px rgba(44,44,43,0.20)",
           overflow: "hidden",
           maxHeight: "calc(100vh - 120px)",
@@ -234,10 +234,10 @@ export function CommandPalette({ open, onClose, leads, users, pipelines, onSelec
           className="flex items-center gap-3 px-4"
           style={{
             height: 56,
-            borderBottom: "1px solid #E5E0DA",
+            borderBottom: "1px solid #E5E7EB",
           }}
         >
-          <Search size={18} style={{ color: "#8A8680", shrink: 0, flexShrink: 0 }} />
+          <Search size={18} style={{ color: "#6B7280", shrink: 0, flexShrink: 0 }} />
           <input
             ref={inputRef}
             type="text"
@@ -270,7 +270,7 @@ export function CommandPalette({ open, onClose, leads, users, pipelines, onSelec
           {trimmedQuery === "" && (
             <div
               className="flex items-center justify-center py-10"
-              style={{ color: "#8A8680", fontSize: 14 }}
+              style={{ color: "#6B7280", fontSize: 14 }}
             >
               Digite para buscar...
             </div>
@@ -279,7 +279,7 @@ export function CommandPalette({ open, onClose, leads, users, pipelines, onSelec
           {trimmedQuery !== "" && results.length === 0 && (
             <div
               className="flex items-center justify-center py-10"
-              style={{ color: "#8A8680", fontSize: 14 }}
+              style={{ color: "#6B7280", fontSize: 14 }}
             >
               Nenhum resultado
             </div>

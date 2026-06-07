@@ -13,7 +13,7 @@ const TYPE_ICON = {
 const TYPE_COLOR = {
   followup: "#F59E0B",
   stage_changed: NEUTRAL.slate,
-  lead_assigned: "#C7212B",
+  lead_assigned: "#b5000b",
   default: NEUTRAL.slate,
 };
 
@@ -88,7 +88,7 @@ export function NotificationCenter({
               width: unreadCount > 9 ? 16 : 14,
               height: 14,
               fontSize: 9,
-              background: "#C7212B",
+              background: "#b5000b",
               lineHeight: 1,
             }}
           >
@@ -104,17 +104,17 @@ export function NotificationCenter({
           style={{
             maxHeight: 480,
             background: "#FFFFFF",
-            borderColor: "#E5E0DA",
-            boxShadow: "0 8px 32px rgba(44,44,43,0.14)",
+            borderColor: "#E5E7EB",
+            boxShadow: "0 8px 32px rgba(32,26,26,0.14)",
           }}
         >
           {/* Header */}
           <div
             className="flex items-center justify-between px-4 py-3 border-b"
-            style={{ borderColor: "#E5E0DA", background: "#F9F5F1" }}
+            style={{ borderColor: "#E5E7EB", background: "#fef1f0" }}
           >
             <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
-              Notificações {unreadCount > 0 && <span style={{ color: "#C7212B" }}>({unreadCount})</span>}
+              Notificações {unreadCount > 0 && <span style={{ color: "#b5000b" }}>({unreadCount})</span>}
             </span>
             <div className="flex items-center gap-1">
               {unreadCount > 0 && (
@@ -122,7 +122,7 @@ export function NotificationCenter({
                   onClick={onMarkAllRead}
                   className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg transition-colors"
                   style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#E5E0DA"; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#E5E7EB"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
                   title="Marcar todas como lidas"
                 >
@@ -134,7 +134,7 @@ export function NotificationCenter({
                   onClick={onClearAll}
                   className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg transition-colors"
                   style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#E5E0DA"; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#E5E7EB"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
                   title="Limpar tudo"
                 >
@@ -145,7 +145,7 @@ export function NotificationCenter({
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-center rounded-lg transition-colors"
                 style={{ width: 24, height: 24, color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#E5E0DA"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#E5E7EB"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
               >
                 <X size={13} />
@@ -157,7 +157,7 @@ export function NotificationCenter({
           {desktopPermission === "default" && (
             <div
               className="flex items-center justify-between px-4 py-2.5 border-b text-xs"
-              style={{ borderColor: "#E5E0DA", background: "#FEF3C7" }}
+              style={{ borderColor: "#E5E7EB", background: "#FEF3C7" }}
             >
               <span style={{ color: "#92400E" }}>Ativar notificações do navegador?</span>
               <button
@@ -188,7 +188,7 @@ export function NotificationCenter({
                       onClick={() => handleNotifClick(notif)}
                       className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors"
                       style={{ background: notif.read ? "#FFFFFF" : "#FBF9F7" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#F9F5F1"; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = notif.read ? "#FFFFFF" : "#FBF9F7"; }}
                     >
                       <div
@@ -211,7 +211,7 @@ export function NotificationCenter({
                       {!notif.read && (
                         <div
                           className="w-2 h-2 rounded-full shrink-0 mt-1.5"
-                          style={{ background: "#C7212B" }}
+                          style={{ background: "#b5000b" }}
                         />
                       )}
                     </div>

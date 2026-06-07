@@ -8,9 +8,9 @@ import {
 } from "../../constants/ai-prompts";
 import { NEUTRAL } from "../../constants/companies";
 
-const RED = "#C7212B";
-const CREAM = "#F9F5F1";
-const BORDER = "#E5E0DA";
+const RED = "#b5000b";
+const CREAM = "#fef1f0";
+const BORDER = "#E5E7EB";
 const BG = "#F1EDE8";
 
 const FEATURES = [

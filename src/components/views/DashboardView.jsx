@@ -337,14 +337,14 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
               <div
                 key={s.id}
                 className="p-3.5 rounded-xl border transition-all duration-150 cursor-pointer"
-                style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 4px rgba(32,26,26,0.06)" }}
                 onClick={() => onSignalClick?.(s)}
                 onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-                  e.currentTarget.style.borderColor = "#D0D0D0";
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(32,26,26,0.10)";
+                  e.currentTarget.style.borderColor = "#e9bcb6";
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
+                  e.currentTarget.style.boxShadow = "0 1px 4px rgba(32,26,26,0.06)";
                   e.currentTarget.style.borderColor = "#E5E7EB";
                 }}
               >

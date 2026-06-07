@@ -49,15 +49,15 @@ export const COMPANIES = {
 };
 
 export const NEUTRAL = {
-  graphite:  "#2C2C2B",  // --carvao
-  slate:     "#6B7280",  // cinza neutro-frio (HubSpot/Tailwind gray-500)
-  warmWhite: "#F8F9FA",  // branco neutro (quase branco, sem amarelo)
-  lightGray: "#F7F8FA",  // fundo do app — cinza leve e frio
-  sombra:    "#E5E7EB",  // bordas — Tailwind gray-200 (padrão SaaS)
-  red:       "#C7212B",  // --vermelho
-  redDark:   "#8B1419",  // --vermelho-d
-  redTint:   "#FBE9EB",  // --vermelho-t
-  amber:     "#E8920A",  // --amber
+  graphite:  "#201a1a",  // on-surface (dark text)
+  slate:     "#6B7280",  // gray-text
+  warmWhite: "#fff8f7",  // surface (body bg)
+  lightGray: "#fef1f0",  // surface-container-low
+  sombra:    "#E5E7EB",  // border-subtle
+  red:       "#b5000b",  // primary
+  redDark:   "#930007",  // on-primary-fixed-variant
+  redTint:   "#fef1f0",  // surface-container-low
+  amber:     "#E8920A",
   amberBg:   "#FEF3C7",
   success:   "#16A34A",
   gold:      "#C49B2A",

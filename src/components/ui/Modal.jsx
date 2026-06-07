@@ -21,7 +21,7 @@ export function Modal({ open, onClose, title, children, width = 560 }) {
     >
       <div
         className="rounded-2xl shadow-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-        style={{ background: "#FFFFFF", maxWidth: width, boxShadow: "0 24px 64px rgba(0,0,0,0.2)" }}
+        style={{ background: "#FFFFFF", maxWidth: width, boxShadow: "0 24px 64px rgba(32,26,26,0.16)" }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "#E5E7EB" }}>
@@ -30,7 +30,7 @@ export function Modal({ open, onClose, title, children, width = 560 }) {
             onClick={onClose}
             className="p-1.5 rounded-lg transition-colors"
             style={{ color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             aria-label="Fechar"
           >

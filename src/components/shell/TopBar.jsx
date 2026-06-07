@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Menu, Search } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
+import { Search } from "lucide-react";
 import { NotificationCenter } from "./NotificationCenter";
 
-/**
- * Slim top bar above the main content. Holds global search and quick-access
- * action icons. The page title is rendered inside each view, not here.
- */
 export function TopBar({
   title,
   onMenuToggle,
@@ -28,92 +23,81 @@ export function TopBar({
   }, []);
 
   return (
-    <div
-      className="flex items-center gap-3 px-4 sticky top-0 z-20 border-b"
+    <header
+      className="sticky top-0 z-30 flex items-center justify-between border-b border-border-subtle bg-surface-white"
       style={{
-        height: 56,
+        height: 64,
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
-        background: "#FFFFFF",
-        borderColor: "#E5E7EB",
+        paddingLeft: isDesktop ? 32 : 16,
+        paddingRight: isDesktop ? 32 : 16,
       }}
     >
-      {/* Hamburger — mobile only */}
+      {/* Mobile: hamburger + brand name */}
       {!isDesktop && (
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onMenuToggle}
+            className="flex items-center justify-center"
+            style={{ width: 40, height: 40, background: "transparent", border: "none", color: "#201a1a", cursor: "pointer", borderRadius: 8 }}
+            aria-label="Abrir menu"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 24 }}>menu</span>
+          </button>
+          <span style={{ fontWeight: 800, fontSize: 18, color: "#b5000b", letterSpacing: "-0.02em" }}>
+            Sanwey
+          </span>
+        </div>
+      )}
+
+      {/* Desktop: search bar */}
+      {isDesktop && (
         <button
-          onClick={onMenuToggle}
-          className="flex items-center justify-center shrink-0 rounded cursor-pointer"
+          onClick={onSearchOpen}
+          className="flex items-center gap-2 border border-border-subtle rounded-lg transition-all duration-150"
           style={{
-            width: 36,
-            height: 36,
-            background: "transparent",
-            border: "none",
-            color: NEUTRAL.graphite,
+            padding: "8px 14px",
+            background: "#fef1f0",
+            color: "#6B7280",
+            fontSize: 14,
+            width: 360,
+            cursor: "pointer",
           }}
-          aria-label="Abrir menu"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "#b5000b";
+            e.currentTarget.style.background = "#FFFFFF";
+            e.currentTarget.style.boxShadow = "0 0 0 3px rgba(181,0,11,0.08)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "#E5E7EB";
+            e.currentTarget.style.background = "#fef1f0";
+            e.currentTarget.style.boxShadow = "none";
+          }}
+          aria-label="Abrir busca global"
         >
-          <Menu size={20} strokeWidth={2} />
+          <Search size={15} style={{ color: "#6B7280", flexShrink: 0 }} />
+          <span style={{ color: "#6B7280", flex: 1, textAlign: "left" }}>Buscar lead, empresa, setor...</span>
+          <kbd
+            className="font-mono font-semibold select-none rounded"
+            style={{ fontSize: 11, padding: "1px 6px", background: "#E5E7EB", color: "#6B7280", border: "1px solid #e9bcb6" }}
+          >
+            ⌘K
+          </kbd>
         </button>
       )}
 
-      {title && isDesktop && (
-        <div
-          className="font-bold shrink-0"
-          style={{
-            fontSize: 15,
-            color: NEUTRAL.graphite,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          {title}
-        </div>
-      )}
-
-      {/* Search trigger — desktop only */}
-      {isDesktop && (
-        <div className="flex-1 flex items-center">
+      {/* Right: notifications (+ profile avatar on mobile) */}
+      <div className="flex items-center gap-2">
+        {!isDesktop && (
           <button
             onClick={onSearchOpen}
-            className="flex items-center gap-2 rounded-lg border transition-colors duration-150 cursor-pointer"
-            style={{
-              padding: "7px 12px",
-              borderColor: "#E5E7EB",
-              background: "#F8F9FA",
-              color: NEUTRAL.slate,
-              fontSize: 13,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#C7212B";
-              e.currentTarget.style.background = "#FFFFFF";
-              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(199,33,43,0.10)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#E5E7EB";
-              e.currentTarget.style.background = "#F8F9FA";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-            aria-label="Abrir busca global"
+            style={{ width: 40, height: 40, background: "transparent", border: "none", color: "#5c5f60", cursor: "pointer", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}
+            aria-label="Buscar"
           >
-            <Search size={13} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
-            <span style={{ color: NEUTRAL.slate }}>Buscar lead, empresa, setor...</span>
-            <kbd
-              className="ml-2 flex items-center gap-0.5 rounded font-mono font-semibold select-none"
-              style={{
-                fontSize: 11,
-                padding: "1px 5px",
-                background: "#EFEFEF",
-                color: NEUTRAL.slate,
-                border: "1px solid #E5E0DA",
-              }}
-            >
-              ⌘K
-            </kbd>
+            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>search</span>
           </button>
-        </div>
-      )}
-
-      <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+        )}
         <NotificationCenter
           notifications={notifications || []}
           unreadCount={unreadCount || 0}
@@ -125,7 +109,7 @@ export function TopBar({
           onSelectLead={onSelectLead}
         />
       </div>
-    </div>
+    </header>
   );
 }
 

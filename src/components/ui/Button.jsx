@@ -12,11 +12,11 @@ export function Button({
   disabled = false, className = "", accent, type = "button",
 }) {
   const variants = {
-    primary: { bg: accent || NEUTRAL.red, color: "#FFFFFF", border: accent || NEUTRAL.red },
-    dark: { bg: NEUTRAL.graphite, color: "#FFFFFF", border: NEUTRAL.graphite },
-    secondary: { bg: "#FFFFFF", color: NEUTRAL.graphite, border: NEUTRAL.sombra },
-    ghost: { bg: "transparent", color: NEUTRAL.slate, border: "transparent" },
-    danger: { bg: "#FEF2F2", color: "#B91C1C", border: "#FECACA" },
+    primary: { bg: accent || "#e30613", color: "#FFFFFF", border: accent || "#e30613" },
+    dark: { bg: "#201a1a", color: "#FFFFFF", border: "#201a1a" },
+    secondary: { bg: "#FFFFFF", color: "#201a1a", border: "#E5E7EB" },
+    ghost: { bg: "transparent", color: "#5c5f60", border: "transparent" },
+    danger: { bg: "#ffdad6", color: "#ba1a1a", border: "#ffdad6" },
   };
   const v = variants[variant] || variants.primary;
   const s = SIZES[size];

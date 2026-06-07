@@ -11,18 +11,18 @@ function useIsMobile() {
   return mobile;
 }
 
-const W = 248;
+const SIDEBAR_W = 288;
 
-const P = {
-  bg:          "#C7212B",
-  border:      "rgba(255,255,255,0.12)",
-  text:        "rgba(255,255,255,0.72)",
-  textBright:  "#FFFFFF",
-  textFaint:   "rgba(255,255,255,0.40)",
-  hoverBg:     "rgba(0,0,0,0.12)",
-  activeBg:    "rgba(0,0,0,0.18)",
-  activeStrip: "#FFFFFF",
-  avatarRing:  "rgba(255,255,255,0.20)",
+const T = {
+  bg:          "#FFFFFF",
+  border:      "#E5E7EB",
+  text:        "#5c5f60",
+  textActive:  "#b5000b",
+  textOnSurface: "#201a1a",
+  activeBg:    "#fef1f0",
+  hoverBg:     "#f2e5e5",
+  activeStrip: "#b5000b",
+  groupLabel:  "#936e69",
 };
 
 const ROLE_LABEL = {
@@ -40,89 +40,114 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
     if (isMobile) onMobileClose?.();
   };
 
-  const sidebarStyle = isMobile
-    ? {
-        position: "fixed",
-        top: 0, left: 0,
-        height: "100vh",
-        width: W,
-        background: P.bg,
-        color: P.text,
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        zIndex: 50,
-        transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
-        transition: "transform 0.25s cubic-bezier(.4,0,.2,1)",
-      }
-    : {
-        position: "fixed",
-        top: 0, left: 0,
-        height: "100vh",
-        width: W,
-        background: P.bg,
-        color: P.text,
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        zIndex: 40,
-      };
+  const sidebarStyle = {
+    position: "fixed",
+    top: 0, left: 0,
+    height: "100vh",
+    width: SIDEBAR_W,
+    background: T.bg,
+    borderRight: `1px solid ${T.border}`,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    zIndex: isMobile ? 50 : 40,
+    ...(isMobile && {
+      transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
+      transition: "transform 0.25s cubic-bezier(.4,0,.2,1)",
+    }),
+  };
 
   return (
     <>
       {isMobile && mobileOpen && (
         <div
           onClick={onMobileClose}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 49 }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 49 }}
         />
       )}
       <aside style={sidebarStyle}>
         {/* ── Brand ── */}
         <div
           style={{
-            height: 56,
+            height: 64,
             display: "flex",
             alignItems: "center",
-            padding: "0 16px",
-            gap: 10,
-            borderBottom: `1px solid ${P.border}`,
+            padding: "0 20px",
+            gap: 12,
+            borderBottom: `1px solid ${T.border}`,
             flexShrink: 0,
           }}
         >
-          <img
-            src="/sanwey-simbolo.png"
-            alt="Sanwey"
-            style={{ width: 24, height: 24, objectFit: "contain", flexShrink: 0, filter: "brightness(0) invert(1)" }}
-          />
-          <div style={{ lineHeight: 1.25 }}>
-            <div style={{ color: P.textBright, fontWeight: 700, fontSize: 13 }}>Grupo Sanwey</div>
-            <div style={{ color: P.textFaint, fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-              Commercial OS
-            </div>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: "#b5000b",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <img
+              src="/sanwey-simbolo.png"
+              alt="Sanwey"
+              style={{ width: 20, height: 20, objectFit: "contain", filter: "brightness(0) invert(1)" }}
+            />
+          </div>
+          <div style={{ lineHeight: 1.3 }}>
+            <div style={{ color: "#201a1a", fontWeight: 700, fontSize: 14 }}>Grupo Sanwey</div>
+            <div style={{ color: T.text, fontSize: 11 }}>Commercial Intelligence</div>
           </div>
         </div>
 
+        {/* ── CTA ── */}
+        <div style={{ padding: "16px 16px 8px" }}>
+          <button
+            onClick={() => handleNavClick("crm")}
+            style={{
+              width: "100%",
+              height: 44,
+              background: "#e30613",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontFamily: "inherit",
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: "pointer",
+              transition: "filter 0.15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.92)"; }}
+            onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
+            Novo Negócio
+          </button>
+        </div>
+
         {/* ── Nav ── */}
-        <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "10px 0", scrollbarWidth: "none" }}>
+        <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "4px 0 8px", scrollbarWidth: "none" }}>
           {navGroups.map((group, gi) => (
-            <div key={gi} style={{ marginTop: gi === 0 ? 0 : 6 }}>
+            <div key={gi} style={{ marginTop: gi === 0 ? 0 : 4 }}>
               {group.label && (
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "6px 16px 3px",
-                    color: P.textFaint,
-                    fontSize: 10,
+                    padding: "8px 20px 4px",
+                    color: T.groupLabel,
+                    fontSize: 11,
                     fontWeight: 700,
-                    letterSpacing: "0.12em",
+                    letterSpacing: "0.08em",
                     textTransform: "uppercase",
                     pointerEvents: "none",
                   }}
                 >
-                  {group.icon && <group.icon size={10} strokeWidth={2.5} />}
-                  <span>{group.label}</span>
+                  {group.label}
                 </div>
               )}
               {group.items.map((item) => (
@@ -141,28 +166,28 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         {/* ── User footer ── */}
         <div
           style={{
-            borderTop: `1px solid ${P.border}`,
-            padding: "10px 12px",
+            borderTop: `1px solid ${T.border}`,
+            padding: "12px 16px",
             display: "flex",
             alignItems: "center",
-            gap: 8,
+            gap: 10,
             flexShrink: 0,
           }}
         >
           <div
             style={{
-              width: 32, height: 32,
+              width: 36, height: 36,
               borderRadius: "50%",
-              background: currentUser?.avatarUrl ? "transparent" : (currentUser?.avatarBg || "rgba(0,0,0,0.20)"),
+              background: currentUser?.avatarUrl ? "transparent" : (currentUser?.avatarBg || "#b5000b"),
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontWeight: 700,
               color: "#FFFFFF",
-              fontSize: 11,
+              fontSize: 12,
               flexShrink: 0,
-              boxShadow: `0 0 0 2px ${P.avatarRing}`,
               overflow: "hidden",
+              border: "2px solid #E5E7EB",
             }}
           >
             {currentUser?.avatarUrl
@@ -170,10 +195,10 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               : (currentUser?.initials || "?")}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: P.textBright, fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ color: "#201a1a", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {currentUser?.name || "Convidado"}
             </div>
-            <div style={{ color: P.textFaint, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ color: T.text, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {ROLE_LABEL[currentUser?.role] || "—"}
             </div>
           </div>
@@ -183,18 +208,19 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             style={{
               background: "transparent",
               border: "none",
-              color: P.text,
+              color: T.text,
               cursor: "pointer",
-              padding: 6,
-              borderRadius: 3,
+              padding: 8,
+              borderRadius: 8,
               display: "flex",
               alignItems: "center",
               flexShrink: 0,
+              transition: "background 0.12s, color 0.12s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = P.hoverBg; e.currentTarget.style.color = "#FFB0B0"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = P.text; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.text; }}
           >
-            <LogOut size={14} strokeWidth={2} />
+            <LogOut size={15} strokeWidth={2} />
           </button>
         </div>
       </aside>
@@ -203,42 +229,37 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
 }
 
 function NavItem({ icon: Icon, label, active, onClick }) {
+  const [hovered, setHovered] = useState(false);
   return (
     <button
       onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         width: "100%",
         display: "flex",
         alignItems: "center",
         gap: 10,
-        padding: "7px 16px",
+        padding: "0 12px",
+        height: 44,
         position: "relative",
-        fontSize: 13,
-        fontWeight: active ? 600 : 500,
-        color: active ? P.textBright : P.text,
-        background: active ? P.activeBg : "transparent",
+        fontSize: 14,
+        fontFamily: "inherit",
+        fontWeight: active ? 700 : 500,
+        color: active ? T.textActive : hovered ? T.textOnSurface : T.text,
+        background: active ? T.activeBg : hovered ? "#f2e5e5" : "transparent",
         border: "none",
+        borderRight: active ? "4px solid #b5000b" : "4px solid transparent",
         cursor: "pointer",
         textAlign: "left",
         whiteSpace: "nowrap",
-        transition: "background 0.12s",
+        transition: "background 0.12s, color 0.12s, border-color 0.12s",
+        borderRadius: "0 8px 8px 0",
+        marginRight: 4,
       }}
-      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = P.hoverBg; }}
-      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
     >
-      {active && (
-        <span
-          style={{
-            position: "absolute",
-            left: 0, top: 5, bottom: 5,
-            width: 3,
-            borderRadius: "0 3px 3px 0",
-            background: P.activeStrip,
-          }}
-        />
-      )}
-      {Icon && <Icon size={15} strokeWidth={active ? 2.4 : 2} style={{ flexShrink: 0 }} />}
-      <span>{label}</span>
+      {Icon && <Icon size={16} strokeWidth={active ? 2.5 : 2} style={{ flexShrink: 0 }} />}
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
     </button>
   );
 }

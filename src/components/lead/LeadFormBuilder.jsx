@@ -141,9 +141,9 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
             <button
               onClick={handleSave}
               className="px-4 py-1.5 text-xs font-semibold rounded-lg text-white transition-colors"
-              style={{ background: "#C7212B" }}
+              style={{ background: "#b5000b" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#8B1419"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#C7212B"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#b5000b"; }}
             >
               Salvar
             </button>
@@ -202,7 +202,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                         color: NEUTRAL.graphite,
                         boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#C7212B"; e.currentTarget.style.background = "#FBE9EB"; }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#b5000b"; e.currentTarget.style.background = "#FBE9EB"; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.background = "#FFFFFF"; }}
                     >
                       <FieldTypeIcon type={f.type} size={12} />
@@ -232,7 +232,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
               >
                 <div
                   className="w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                  style={{ background: "#C7212B" }}
+                  style={{ background: "#b5000b" }}
                 >
                   <Star size={12} fill="white" />
                 </div>
@@ -296,13 +296,13 @@ function DropZone({ idx, active, onDragOver, onDragLeave, onDrop }) {
         height: active ? 32 : 6,
         borderRadius: 6,
         background: active ? "#FBE9EB" : "transparent",
-        border: active ? "2px dashed #C7212B" : "2px solid transparent",
+        border: active ? "2px dashed #b5000b" : "2px solid transparent",
         transition: "all 0.12s",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontSize: 10,
-        color: "#C7212B",
+        color: "#b5000b",
         fontWeight: 600,
         letterSpacing: "0.06em",
       }}
@@ -334,7 +334,7 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
       <span className="flex-1 text-sm font-medium" style={{ color: NEUTRAL.graphite }}>
         {field.label}
         {field.required && (
-          <span className="ml-1 text-xs font-bold" style={{ color: "#C7212B" }}>*</span>
+          <span className="ml-1 text-xs font-bold" style={{ color: "#b5000b" }}>*</span>
         )}
       </span>
       {field.locked ? (
@@ -353,7 +353,7 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
             className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold transition-colors"
             style={{
               background: field.required ? "#FBE9EB" : "#F3F4F6",
-              color: field.required ? "#C7212B" : NEUTRAL.slate,
+              color: field.required ? "#b5000b" : NEUTRAL.slate,
               border: "none",
               cursor: "pointer",
             }}

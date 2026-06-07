@@ -167,7 +167,7 @@ export function StageFieldsEditor({
           {/* Form de novo/editar */}
           {draft && (
             <div className="rounded-lg border p-4 space-y-3"
-                 style={{ borderColor: "#D4D4D4", background: "#FFFFFF" }}>
+                 style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
               <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
                 {draft._new ? "Novo campo" : "Editar campo"}
               </div>
@@ -176,13 +176,13 @@ export function StageFieldsEditor({
                   <input type="text" value={draft.label}
                          onChange={e => setDraft({ ...draft, label: e.target.value })}
                          className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
-                         style={{ borderColor: "#D4D4D4" }} />
+                         style={{ borderColor: "#E5E7EB" }} />
                 </FieldInput>
                 <FieldInput label="Tipo">
                   <select value={draft.fieldType}
                           onChange={e => setDraft({ ...draft, fieldType: e.target.value })}
                           className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
-                          style={{ borderColor: "#D4D4D4", background: "#FFFFFF" }}>
+                          style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
                     {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </FieldInput>
@@ -192,13 +192,13 @@ export function StageFieldsEditor({
                   <input type="text" value={draft.placeholder || ""}
                          onChange={e => setDraft({ ...draft, placeholder: e.target.value })}
                          className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
-                         style={{ borderColor: "#D4D4D4" }} />
+                         style={{ borderColor: "#E5E7EB" }} />
                 </FieldInput>
                 <FieldInput label="Texto de ajuda (opcional)">
                   <input type="text" value={draft.helpText || ""}
                          onChange={e => setDraft({ ...draft, helpText: e.target.value })}
                          className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
-                         style={{ borderColor: "#D4D4D4" }} />
+                         style={{ borderColor: "#E5E7EB" }} />
                 </FieldInput>
               </div>
               {draft.fieldType === "select" && (
@@ -214,7 +214,7 @@ export function StageFieldsEditor({
                               setDraft({ ...draft, options: opts });
                             }}
                             className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
-                            style={{ borderColor: "#D4D4D4", fontFamily: "monospace" }} />
+                            style={{ borderColor: "#E5E7EB", fontFamily: "monospace" }} />
                 </FieldInput>
               )}
               <label className="inline-flex items-center gap-2 text-sm cursor-pointer"
@@ -237,7 +237,7 @@ export function StageFieldsEditor({
           {!draft && (
             <button onClick={startNewField}
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-semibold cursor-pointer"
-                    style={{ borderColor: "#D4D4D4", borderStyle: "dashed", color: "#1E4D8C", background: "#FFFFFF" }}>
+                    style={{ borderColor: "#E5E7EB", borderStyle: "dashed", color: "#1E4D8C", background: "#FFFFFF" }}>
               <Plus size={14} />
               Adicionar campo
             </button>

@@ -133,7 +133,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "#D4D4D4", background: "#FFFFFF" }}>
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
             {PERIODS.map(p => (
               <button
                 key={p.id}
@@ -151,7 +151,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
           <button
             onClick={() => window.print()}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-            style={{ borderColor: "#D4D4D4", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
             title="Imprimir / salvar como PDF"
@@ -252,7 +252,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
         disabled={loading}
         className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150 active:scale-95"
         style={{
-          background: "#C7212B",
+          background: "#b5000b",
           color: "#FFFFFF",
           border: "none",
           cursor: loading ? "not-allowed" : "pointer",
@@ -279,7 +279,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
         <div className="space-y-2">
           <div
             className="text-sm leading-relaxed whitespace-pre-line p-3 rounded-lg border"
-            style={{ background: "#F9F5F1", borderColor: "#E5E0DA", color: NEUTRAL.graphite }}
+            style={{ background: "#fef1f0", borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
           >
             {result}
           </div>
@@ -287,9 +287,9 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
             <button
               onClick={onGenerate}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
-              style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: "#E5E0DA", cursor: "pointer" }}
+              style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: "#E5E7EB", cursor: "pointer" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E0DA"; e.currentTarget.style.color = NEUTRAL.slate; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; }}
             >
               <RotateCcw size={11} />
               Regenerar
@@ -300,11 +300,11 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
               style={{
                 background: copied ? "#F0FDF4" : "#FFFFFF",
                 color: copied ? "#16A34A" : NEUTRAL.slate,
-                borderColor: copied ? "#BBF7D0" : "#E5E0DA",
+                borderColor: copied ? "#BBF7D0" : "#E5E7EB",
                 cursor: "pointer",
               }}
               onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E0DA"; e.currentTarget.style.color = NEUTRAL.slate; } }}
+              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; } }}
             >
               {copied ? "Copiado!" : "Copiar"}
             </button>
@@ -388,7 +388,7 @@ function AIExecutivePanel({ leads, users, currentUser }) {
         />
         <AISection
           icon={Bot}
-          iconColor="#C7212B"
+          iconColor="#b5000b"
           title="Diagnóstico de Funil"
           description="Identifica gargalos, hipóteses de causa e ações corretivas priorizadas"
           onGenerate={isConfigured ? handleFunnel : undefined}

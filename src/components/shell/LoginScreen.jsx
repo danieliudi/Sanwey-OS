@@ -6,9 +6,9 @@ import {
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
-const ACCENT_RED = "#C7212B";   // --vermelho DS v2.2
-const DARK_BG    = "#1A1414";   // preto quente (painel esquerdo)
-const CREAM      = "#F8F9FA";   // fundo neutro claro
+const ACCENT_RED = "#b5000b";   // primary DS
+const DARK_BG    = "#1A1414";   // painel esquerdo
+const CREAM      = "#fff8f7";   // surface
 
 // LoginScreen com layout split institucional, espelhando o mockup novo:
 // - Esquerda escura com watermark grande do logo, headline e valores
@@ -434,7 +434,7 @@ function CheckBox({ checked, onChange }) {
       className="w-4 h-4 rounded flex items-center justify-center transition-colors cursor-pointer shrink-0"
       style={{
         background: checked ? ACCENT_RED : "#FFFFFF",
-        border: `1.5px solid ${checked ? ACCENT_RED : "#D4D4D4"}`,
+        border: `1.5px solid ${checked ? ACCENT_RED : "#E5E7EB"}`,
       }}
     >
       {checked && (

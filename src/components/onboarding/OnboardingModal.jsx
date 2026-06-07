@@ -69,7 +69,7 @@ export function OnboardingModal({ currentUser, onDone }) {
               style={{
                 width: i === step ? 20 : 7,
                 height: 7,
-                background: i === step ? NEUTRAL.red : "#E5E0DA",
+                background: i === step ? NEUTRAL.red : "#E5E7EB",
                 border: "none",
                 cursor: "pointer",
                 padding: 0,

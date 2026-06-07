@@ -110,7 +110,7 @@ const BTN_PRIMARY = {
 const BTN_SECONDARY = {
   background: "#FFFFFF",
   color: NEUTRAL.graphite,
-  border: `1px solid #E5E0DA`,
+  border: `1px solid #E5E7EB`,
   borderRadius: 8,
   padding: "10px 20px",
   fontWeight: 600,
@@ -148,7 +148,7 @@ const LABEL_STYLE = {
 const SELECT_STYLE = {
   width: "100%",
   padding: "8px 12px",
-  border: `1px solid #E5E0DA`,
+  border: `1px solid #E5E7EB`,
   borderRadius: 8,
   fontSize: 13,
   color: NEUTRAL.graphite,
@@ -372,7 +372,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
         <div
           style={{
             padding: "20px 24px",
-            borderBottom: `1px solid #E5E0DA`,
+            borderBottom: `1px solid #E5E7EB`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -405,7 +405,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                 height: 4,
                 flex: 1,
                 borderRadius: 2,
-                background: s <= step ? NEUTRAL.red : "#E5E0DA",
+                background: s <= step ? NEUTRAL.red : "#E5E7EB",
                 transition: "background 0.2s",
               }}
             />
@@ -429,12 +429,12 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 style={{
-                  border: `2px dashed ${isDragging ? NEUTRAL.red : "#E5E0DA"}`,
+                  border: `2px dashed ${isDragging ? NEUTRAL.red : "#E5E7EB"}`,
                   borderRadius: 10,
                   padding: "40px 24px",
                   textAlign: "center",
                   cursor: "pointer",
-                  background: isDragging ? "#FBE9EB" : "#FAFAF8",
+                  background: isDragging ? "#FBE9EB" : "#fff8f7",
                   transition: "all 0.15s",
                 }}
               >
@@ -522,7 +522,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
               {/* Column mapping table */}
               <div>
                 <label style={LABEL_STYLE}>Mapear colunas</label>
-                <div style={{ border: `1px solid #E5E0DA`, borderRadius: 8, overflow: "hidden" }}>
+                <div style={{ border: `1px solid #E5E7EB`, borderRadius: 8, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: "#F5F5F3" }}>
@@ -594,7 +594,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   <div style={{ fontSize: 15, fontWeight: 600, color: NEUTRAL.graphite, marginBottom: 16 }}>
                     Importando {importProgress}/{importTotal}…
                   </div>
-                  <div style={{ background: "#E5E0DA", borderRadius: 4, height: 8, overflow: "hidden", maxWidth: 400, margin: "0 auto" }}>
+                  <div style={{ background: "#E5E7EB", borderRadius: 4, height: 8, overflow: "hidden", maxWidth: 400, margin: "0 auto" }}>
                     <div
                       style={{
                         height: "100%",
@@ -630,7 +630,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                     <div style={{ ...LABEL_STYLE, marginBottom: 8 }}>
                       Prévia (primeiras {Math.min(5, rows.length)} linhas)
                     </div>
-                    <div style={{ overflowX: "auto", border: `1px solid #E5E0DA`, borderRadius: 8 }}>
+                    <div style={{ overflowX: "auto", border: `1px solid #E5E7EB`, borderRadius: 8 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 480 }}>
                         <thead>
                           <tr style={{ background: "#F5F5F3" }}>
@@ -678,7 +678,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
         <div
           style={{
             padding: "16px 24px",
-            borderTop: `1px solid #E5E0DA`,
+            borderTop: `1px solid #E5E7EB`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",

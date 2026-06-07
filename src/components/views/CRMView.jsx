@@ -26,7 +26,7 @@ const SELECT_STYLE = {
   padding: "6px 22px 6px 8px",
   appearance: "none",
   WebkitAppearance: "none",
-  backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23636E72' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+  backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
   backgroundRepeat: "no-repeat",
   backgroundPosition: "right 6px center",
   backgroundSize: "12px",
@@ -147,7 +147,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         className="w-full text-xs rounded-lg border outline-none"
         style={{
           ...SELECT_STYLE,
-          borderColor: !sector ? "#C7212B" : "#D1D5DB",
+          borderColor: !sector ? "#b5000b" : "#D1D5DB",
           color: sector ? NEUTRAL.graphite : NEUTRAL.slate,
         }}
         required
@@ -584,7 +584,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
             style={{
               background: "#FFFFFF",
-              borderColor: "#D4D4D4",
+              borderColor: "#E5E7EB",
               color: NEUTRAL.slate,
             }}
             onMouseEnter={e => {
@@ -603,7 +603,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           {/* Toggle Kanban / Calendário */}
           <div
             className="inline-flex rounded-lg border overflow-hidden"
-            style={{ borderColor: "#D4D4D4", background: "#FFFFFF" }}
+            style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
             role="tablist"
           >
             <ViewToggleButton
@@ -681,7 +681,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 style={{
                   width: 272,
                   minWidth: 272,
-                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "#F0F7FF" : "#F4F6FA",
+                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "#F0F7FF" : "#fef1f0",
                   borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "70" : isOver && !canAccept ? "#FECACA" : "#E5E7EB",
                   boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
                 }}
@@ -835,7 +835,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     <button
       onClick={() => setShowAIChat(v => !v)}
       className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
-      style={{ background: "#C7212B", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(199,33,43,0.3)", border: "none", cursor: "pointer" }}
+      style={{ background: "#b5000b", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
       onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
     >

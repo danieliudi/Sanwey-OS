@@ -8,7 +8,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
       style={{
         background: accent ? accent : "#FFFFFF",
         borderColor: accent ? "transparent" : "#E5E7EB",
-        boxShadow: accent ? "none" : "0 1px 3px rgba(0,0,0,0.04)",
+        boxShadow: accent ? "none" : "0 1px 4px rgba(32,26,26,0.06)",
       }}
     >
       <div className="flex items-center justify-between mb-4">
@@ -40,11 +40,11 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
       <div
         className="leading-none mb-1.5"
         style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontWeight: 900,
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          fontWeight: 800,
           fontSize: compact ? 26 : 32,
-          color: accent ? "#FFFFFF" : NEUTRAL.graphite,
-          letterSpacing: "-0.01em",
+          color: accent ? "#FFFFFF" : "#201a1a",
+          letterSpacing: "-0.02em",
         }}
       >
         {value}
