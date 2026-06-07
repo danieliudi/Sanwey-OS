@@ -247,14 +247,14 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
         className="w-full max-w-2xl max-h-full overflow-y-auto rounded-2xl"
         style={{
           background: "#FFFFFF",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.24)",
+          boxShadow: "0 24px 64px rgba(32,26,26,0.18)",
         }}
         onClick={e => e.stopPropagation()}
       >
         {/* Drawer header */}
         <div
           className="sticky top-0 z-10 px-5 py-3.5 border-b flex items-center justify-between"
-          style={{ background: "rgba(250,250,248,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
+          style={{ background: "rgba(255,248,247,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
         >
           <div className="flex items-center gap-2">
             <CompanyTag companyId={lead.companyId} />

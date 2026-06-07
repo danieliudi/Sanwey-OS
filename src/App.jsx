@@ -451,7 +451,7 @@ export default function App() {
           }}
         />
 
-        <div className="px-4 py-4 sm:px-6 sm:py-6 lg:py-6 pb-20 lg:pb-0 flex-1 min-w-0">
+        <div className="px-4 py-4 sm:px-6 sm:py-6 lg:py-6 pb-24 lg:pb-6 flex-1 min-w-0">
         <ErrorBoundary
           fallback={({ error, reset }) => (
             <div className="rounded-xl border p-6 max-w-2xl mx-auto mt-8" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>
