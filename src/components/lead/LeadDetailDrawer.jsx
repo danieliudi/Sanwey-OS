@@ -4,7 +4,8 @@ import {
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
   Building2, RefreshCw, Check, Trash2, Mail, ChevronDown, ChevronUp,
   Clock, MessageSquare, GitBranch, CalendarClock, ArrowLeft, ArrowRight, History,
-  FileText, Activity, Paperclip, ListChecks, FileDown, Plus,
+  FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
+  File, FileImage, FileSpreadsheet, AlertCircle,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -18,6 +19,7 @@ import { formatDateBR } from "../../utils/date";
 import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
+import { useLeadAttachments } from "../../hooks/use-lead-attachments";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { StageFieldInput } from "./StageFieldInput";
@@ -488,10 +490,11 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
             {/* ── Tab: Anexos ── */}
             {sideTab === "anexos" && (
-              <PlaceholderPanel
-                icon={Paperclip}
-                title="Anexos"
-                hint="Em breve — anexe documentos, contratos e amostras diretamente no card."
+              <AttachmentsPanel
+                leadId={lead.id}
+                companyId={lead.companyId}
+                currentUser={currentUser}
+                companyColor={company.primary}
               />
             )}
 
@@ -1547,6 +1550,188 @@ function CommentsPanel({ lead, currentUser, users, onAddActivity }) {
               {saving ? "Adicionando..." : "Comentar"}
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Attachments panel ─────────────────────────────────────────────────────────
+
+const FILE_ICON_MAP = {
+  "application/pdf": FileText,
+  "image/jpeg": FileImage,
+  "image/png": FileImage,
+  "image/gif": FileImage,
+  "image/webp": FileImage,
+  "application/vnd.ms-excel": FileSpreadsheet,
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": FileSpreadsheet,
+};
+
+function FileIcon({ mimeType }) {
+  const Icon = FILE_ICON_MAP[mimeType] || File;
+  return <Icon size={16} />;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
+  const { attachments, loading, uploading, error, upload, remove, getSignedUrl } = useLeadAttachments(leadId);
+  const [dragOver, setDragOver] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const inputRef = useRef(null);
+
+  const doUpload = useCallback(async (file) => {
+    await upload(file, { leadId, companyId, uploadedBy: currentUser?.id || null });
+  }, [upload, leadId, companyId, currentUser]);
+
+  const handleFiles = useCallback((files) => {
+    Array.from(files).forEach(doUpload);
+  }, [doUpload]);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  }, [handleFiles]);
+
+  const handleDownload = useCallback(async (att) => {
+    setDownloadingId(att.id);
+    try {
+      const url = await getSignedUrl(att.file_path);
+      if (!url) return;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = att.file_name;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      setDownloadingId(null);
+    }
+  }, [getSignedUrl]);
+
+  return (
+    <div className="space-y-3">
+      {/* Drop zone */}
+      <div
+        className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 p-5 cursor-pointer transition-colors"
+        style={{
+          borderColor: dragOver ? companyColor : "#D1D5DB",
+          background: dragOver ? (companyColor + "08") : "#FAFAFA",
+        }}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+        aria-label="Clique ou arraste arquivos para anexar"
+      >
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center"
+          style={{ background: dragOver ? (companyColor + "18") : "#F3F4F6" }}
+        >
+          <Upload size={16} style={{ color: dragOver ? companyColor : NEUTRAL.slate }} />
+        </div>
+        <div className="text-xs text-center" style={{ color: NEUTRAL.slate }}>
+          {uploading ? (
+            <span style={{ color: companyColor }}>Enviando…</span>
+          ) : (
+            <>
+              <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>
+                Clique ou arraste
+              </span>
+              {" "}para anexar
+              <div className="mt-0.5">PDF, Word, Excel, imagens · máx 50 MB</div>
+            </>
+          )}
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.gif,.webp"
+          onChange={e => { if (e.target.files?.length) { handleFiles(e.target.files); e.target.value = ""; } }}
+        />
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>Carregando…</div>
+      )}
+
+      {!loading && attachments.length === 0 && (
+        <div className="text-xs text-center py-2 italic" style={{ color: NEUTRAL.slate }}>
+          Nenhum arquivo anexado ainda.
+        </div>
+      )}
+
+      {attachments.length > 0 && (
+        <div className="space-y-1.5">
+          {attachments.map(att => (
+            <div
+              key={att.id}
+              className="flex items-center gap-2.5 p-2.5 rounded-lg border"
+              style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: "#F3F4F6", color: NEUTRAL.slate }}
+              >
+                <FileIcon mimeType={att.mime_type} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold truncate" style={{ color: NEUTRAL.graphite }}>
+                  {att.file_name}
+                </div>
+                <div className="text-[10px] mt-0.5" style={{ color: NEUTRAL.slate }}>
+                  {formatBytes(att.file_size)}
+                  {att.created_at && (
+                    <> · {new Date(att.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => handleDownload(att)}
+                disabled={downloadingId === att.id}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: NEUTRAL.slate, background: "transparent", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                title="Baixar arquivo"
+                aria-label="Baixar arquivo"
+              >
+                <Download size={13} />
+              </button>
+              <button
+                onClick={() => remove(att)}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: NEUTRAL.slate, background: "transparent", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                title="Remover arquivo"
+                aria-label="Remover arquivo"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>
