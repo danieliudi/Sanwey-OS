@@ -167,41 +167,62 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         <div
           style={{
             borderTop: `1px solid ${T.border}`,
-            padding: "12px 16px",
+            padding: "8px 8px",
             display: "flex",
             alignItems: "center",
-            gap: 10,
+            gap: 4,
             flexShrink: 0,
           }}
         >
-          <div
+          <button
+            onClick={() => handleNavClick("settings")}
+            title="Configurações do perfil"
             style={{
-              width: 36, height: 36,
-              borderRadius: "50%",
-              background: currentUser?.avatarUrl ? "transparent" : (currentUser?.avatarBg || "#b5000b"),
+              flex: 1,
+              minWidth: 0,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 700,
-              color: "#FFFFFF",
-              fontSize: 12,
-              flexShrink: 0,
-              overflow: "hidden",
-              border: "2px solid #E5E7EB",
+              gap: 10,
+              padding: "8px 8px",
+              background: section === "settings" ? T.activeBg : "transparent",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              transition: "background 0.12s",
+              textAlign: "left",
             }}
+            onMouseEnter={e => { if (section !== "settings") e.currentTarget.style.background = T.hoverBg; }}
+            onMouseLeave={e => { if (section !== "settings") e.currentTarget.style.background = "transparent"; }}
           >
-            {currentUser?.avatarUrl
-              ? <img src={currentUser.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : (currentUser?.initials || "?")}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: "#201a1a", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {currentUser?.name || "Convidado"}
+            <div
+              style={{
+                width: 36, height: 36,
+                borderRadius: "50%",
+                background: currentUser?.avatarUrl ? "transparent" : (currentUser?.avatarBg || "#b5000b"),
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 700,
+                color: "#FFFFFF",
+                fontSize: 12,
+                flexShrink: 0,
+                overflow: "hidden",
+                border: `2px solid ${section === "settings" ? "#b5000b" : "#E5E7EB"}`,
+              }}
+            >
+              {currentUser?.avatarUrl
+                ? <img src={currentUser.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : (currentUser?.initials || "?")}
             </div>
-            <div style={{ color: T.text, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {ROLE_LABEL[currentUser?.role] || "—"}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ color: section === "settings" ? "#b5000b" : "#201a1a", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {currentUser?.name || "Convidado"}
+              </div>
+              <div style={{ color: T.text, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {ROLE_LABEL[currentUser?.role] || "—"}
+              </div>
             </div>
-          </div>
+          </button>
           <button
             onClick={onLogout}
             title="Sair"
