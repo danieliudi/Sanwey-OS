@@ -59,7 +59,7 @@ export function ExplorerView({
           <Button
             variant="secondary"
             size="sm"
-            icon={Upload}
+            icon={Download}
             onClick={() => setShowImport(true)}
           >
             Importar planilha
@@ -67,7 +67,7 @@ export function ExplorerView({
           <Button
             variant="primary"
             size="sm"
-            icon={Download}
+            icon={Upload}
             onClick={() => exportLeadsToCSV(leads, { usersById, filename: `sanwey-leads-explorer-${new Date().toISOString().slice(0, 10)}.csv` })}
           >
             Exportar
@@ -75,50 +75,52 @@ export function ExplorerView({
         </div>
       </div>
 
-      {isSupabaseConfigured && (
-        <CnpjLookupCard
-          onAddLead={onAddLead}
-          accessibleCompanies={accessibleCompanies}
-        />
-      )}
+      {/* CNPJ lookup + Filters side by side */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.6fr]">
+        {isSupabaseConfigured && (
+          <CnpjLookupCard
+            onAddLead={onAddLead}
+            accessibleCompanies={accessibleCompanies}
+          />
+        )}
 
-      {/* Filter card */}
-      <div className="p-5 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-        <div className="flex items-center gap-2 mb-4">
-          <Filter size={14} color={NEUTRAL.graphite} />
-          <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
-            Filtros da curadoria
-          </span>
-        </div>
-        <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
-          <Input
-            value={filters.search}
-            onChange={e => setFilters(prev => ({ ...prev, search: e.target.value }))}
-            placeholder="Empresa ou CNPJ..."
-            icon={Search}
-            className="md:col-span-2"
-          />
-          <Select
-            value={filters.sector}
-            onChange={e => setFilters(prev => ({ ...prev, sector: e.target.value }))}
-            placeholder="Todos setores"
-            options={CANONICAL_SECTORS}
-          />
-          <Select
-            value={filters.state}
-            onChange={e => setFilters(prev => ({ ...prev, state: e.target.value }))}
-            placeholder="Todos estados"
-            options={CANONICAL_STATES}
-          />
-          <Select
-            value={filters.size}
-            onChange={e => setFilters(prev => ({ ...prev, size: e.target.value }))}
-            placeholder="Qualquer porte"
-            options={SIZE_OPTIONS}
-          />
-        </div>
-        <div className="flex items-center gap-4 flex-wrap pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
-          <div className="flex-1 min-w-0">
+        {/* Filter card */}
+        <div className={`p-4 rounded-xl border${!isSupabaseConfigured ? " lg:col-span-2" : ""}`} style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Filter size={13} color={NEUTRAL.graphite} />
+            <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
+              Filtros da curadoria
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <Input
+              value={filters.search}
+              onChange={e => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              placeholder="Empresa ou CNPJ..."
+              icon={Search}
+              className="col-span-2"
+            />
+            <Select
+              value={filters.sector}
+              onChange={e => setFilters(prev => ({ ...prev, sector: e.target.value }))}
+              placeholder="Todos setores"
+              options={CANONICAL_SECTORS}
+            />
+            <Select
+              value={filters.state}
+              onChange={e => setFilters(prev => ({ ...prev, state: e.target.value }))}
+              placeholder="Todos estados"
+              options={CANONICAL_STATES}
+            />
+            <Select
+              value={filters.size}
+              onChange={e => setFilters(prev => ({ ...prev, size: e.target.value }))}
+              placeholder="Qualquer porte"
+              options={SIZE_OPTIONS}
+              className="col-span-2"
+            />
+          </div>
+          <div className="pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-medium" style={{ color: NEUTRAL.slate }}>
                 Fit mínimo

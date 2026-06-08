@@ -89,31 +89,31 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
               {seed.sector}
             </span>
           </div>
-          <div className="font-bold text-base leading-tight truncate" style={{ color: NEUTRAL.graphite }}>
+          <div className="font-bold leading-tight truncate" style={{ color: NEUTRAL.graphite, fontSize: 17 }}>
             {seed.company}
           </div>
           {seed.razao_social && seed.razao_social !== seed.company && (
-            <div className="text-xs truncate" style={{ color: NEUTRAL.slate }}>{seed.razao_social}</div>
+            <div className="text-sm truncate" style={{ color: NEUTRAL.slate }}>{seed.razao_social}</div>
           )}
-          <div className="text-[11px] font-mono mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs font-mono mt-0.5" style={{ color: NEUTRAL.slate }}>
             {formatCnpj(seed.cnpj)}
           </div>
         </div>
         <FitScoreCircle score={seed.fit_score || 65} size={44} />
       </div>
 
-      <div className="flex items-center gap-3 text-xs flex-wrap" style={{ color: NEUTRAL.slate }}>
+      <div className="flex items-center gap-3 text-sm flex-wrap" style={{ color: NEUTRAL.slate }}>
         <div className="flex items-center gap-1">
-          <MapPin size={11} />
+          <MapPin size={12} />
           <span>{seed.city || seed.state}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Building2 size={11} />
+          <Building2 size={12} />
           <span>{seed.size}</span>
         </div>
         {seed.relevant_for?.length > 0 && (
           <div className="flex items-center gap-1">
-            <Target size={11} />
+            <Target size={12} />
             <span>
               {seed.relevant_for.map(id => COMPANIES[id]?.short || id).join(" · ")}
             </span>
@@ -123,10 +123,10 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
 
       {seed.evidence && (
         <div
-          className="text-xs p-2.5 rounded-lg flex gap-2"
-          style={{ background: NEUTRAL.warmWhite, color: NEUTRAL.graphite }}
+          className="text-sm p-2.5 rounded-lg flex gap-2"
+          style={{ background: NEUTRAL.warmWhite, color: NEUTRAL.graphite, lineHeight: 1.5 }}
         >
-          <Flame size={12} className="shrink-0 mt-0.5" color={NEUTRAL.amber} />
+          <Flame size={13} className="shrink-0 mt-0.5" color={NEUTRAL.amber} />
           <span>{seed.evidence}</span>
         </div>
       )}
@@ -134,17 +134,17 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
       {Array.isArray(seed.public_signals) && seed.public_signals.length > 0 && (
         <div className="space-y-1">
           <div
-            className="text-[10px] font-semibold flex items-center gap-1"
+            className="text-xs font-semibold flex items-center gap-1"
             style={{ color: NEUTRAL.slate }}
           >
-            <Database size={10} />
+            <Database size={11} />
             Sinais de bases públicas
           </div>
           <div className="flex flex-wrap gap-1">
             {seed.public_signals.map((sig, idx) => (
               <span
                 key={idx}
-                className="px-2 py-0.5 rounded-lg border text-[10px] flex items-center gap-1 max-w-full overflow-hidden"
+                className="px-2 py-0.5 rounded-lg border text-xs flex items-center gap-1 max-w-full overflow-hidden"
                 style={{ borderColor: "#E5E7EB", background: "#FAFAFA", color: NEUTRAL.graphite }}
                 title={`${sig.source} · ${sig.label}${sig.detail ? ` · ${sig.detail}` : ""}`}
               >
