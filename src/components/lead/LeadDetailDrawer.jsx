@@ -394,6 +394,37 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             <HeroMetric label="FECHAMENTO" value={formatDateBR(lead.closeDate) || "—"} />
           </div>
 
+          {/* ── Formulário Inicial (vindo de captura pública) ───────────────── */}
+          {customValues.capture_customer_name && (
+            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
+                  Formulário Inicial
+                </div>
+                {customValues.capture_source && (
+                  <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+                    style={{ background: NEUTRAL.warmWhite || "#FAFAFA", color: NEUTRAL.slate, letterSpacing: "0.08em" }}>
+                    via {customValues.capture_source}
+                  </span>
+                )}
+              </div>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+                <CaptureRow label="Nome do Cliente" value={customValues.capture_customer_name} />
+                <CaptureRow label="Contato" value={customValues.capture_contact_phone} mono />
+                <CaptureRow label="E-mail" value={customValues.capture_contact_email} link={customValues.capture_contact_email ? `mailto:${customValues.capture_contact_email}` : null} />
+                <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
+                <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
+                <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
+              </dl>
+              {customValues.capture_notes && (
+                <div className="mt-3 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+                  <div className="text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.slate }}>Mensagem</div>
+                  <div className="text-sm whitespace-pre-line" style={{ color: NEUTRAL.graphite }}>{customValues.capture_notes}</div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Enriquecimento RF */}
           {isSupabaseConfigured && (
             <div
@@ -1180,6 +1211,30 @@ function InfoTile({ label, value }) {
         {label}
       </div>
       <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{value}</div>
+    </div>
+  );
+}
+
+function CaptureRow({ label, value, mono, link, badge }) {
+  const dim = value === null || value === undefined || value === "";
+  const priorityColor = badge && value === "Alta" ? "#DC2626"
+    : badge && value === "Média" ? "#E8920A"
+    : badge && value === "Baixa" ? "#16A34A"
+    : null;
+  return (
+    <div>
+      <dt className="text-[11px] font-semibold" style={{ color: NEUTRAL.slate }}>{label}</dt>
+      <dd className={`text-sm ${mono ? "font-mono" : ""}`} style={{ color: dim ? NEUTRAL.slate : NEUTRAL.graphite, fontStyle: dim ? "italic" : "normal", marginTop: 2 }}>
+        {dim ? "—" : link ? (
+          <a href={link} style={{ color: "#1E4D8C", textDecoration: "none" }}>{value}</a>
+        ) : badge ? (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
+            style={{ background: (priorityColor || NEUTRAL.slate) + "14", color: priorityColor || NEUTRAL.slate }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: priorityColor || NEUTRAL.slate }} />
+            {value}
+          </span>
+        ) : value}
+      </dd>
     </div>
   );
 }
