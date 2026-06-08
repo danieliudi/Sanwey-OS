@@ -681,6 +681,23 @@ export function UserManagementView({
           </Button>
         </div>
       </Modal>
+
+      {/* ── Confirm dialog ── */}
+      <Modal open={!!confirmDialog} onClose={() => setConfirmDialog(null)} title="Confirmar ação" width={400}>
+        <div className="p-6">
+          <p className="text-sm mb-6" style={{ color: "#201a1a", lineHeight: 1.6 }}>{confirmDialog?.message}</p>
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="ghost" onClick={() => setConfirmDialog(null)}>Cancelar</Button>
+            <Button
+              variant="primary"
+              onClick={confirmDialog?.onConfirm}
+              style={{ background: "#ba1a1a" }}
+            >
+              Confirmar
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
