@@ -1,7 +1,7 @@
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import {
   RotateCcw, Check, AlertTriangle, Trash2, Database, Sparkles, Camera, Loader2,
-  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X,
+  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -57,7 +57,7 @@ function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
 
 const ROLE_LABEL = { admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor" };
 
-const TABS = [
+const BASE_TABS = [
   { id: "perfil",        label: "Perfil",           icon: User     },
   { id: "preferencias", label: "Preferências",      icon: Sliders  },
   { id: "notificacoes", label: "Notificações",      icon: Bell     },
@@ -69,8 +69,13 @@ export function SettingsView({
   settings, onUpdate, onReset, onClearLocalData, currentUser,
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
+  usersPanel,
 }) {
   const [activeTab, setActiveTab] = useState("perfil");
+  const tabs = useMemo(
+    () => usersPanel ? [...BASE_TABS, { id: "usuarios", label: "Usuários", icon: UserCog }] : BASE_TABS,
+    [usersPanel],
+  );
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [clearTyped, setClearTyped] = useState("");
 
@@ -346,7 +351,7 @@ export function SettingsView({
 
         {/* Sidebar nav — lg only */}
         <nav className="hidden lg:flex flex-col gap-0.5 shrink-0" style={{ width: 200 }}>
-          {TABS.map(tab => {
+          {tabs.map(tab => {
             const active = activeTab === tab.id;
             const Icon = tab.icon;
             return (
@@ -386,7 +391,7 @@ export function SettingsView({
 
           {/* Mobile horizontal tabs — lg:hidden */}
           <div className="lg:hidden flex gap-1.5 overflow-x-auto mb-4" style={{ scrollbarWidth: "none" }}>
-            {TABS.map(tab => {
+            {tabs.map(tab => {
               const active = activeTab === tab.id;
               const Icon = tab.icon;
               return (
@@ -979,6 +984,9 @@ export function SettingsView({
                 </Section>
               </div>
             )}
+
+            {/* ── USUÁRIOS ── */}
+            {activeTab === "usuarios" && usersPanel}
 
           </div>
         </div>

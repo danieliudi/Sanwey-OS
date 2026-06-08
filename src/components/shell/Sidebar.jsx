@@ -134,15 +134,18 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         {/* ── Nav ── */}
         <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "4px 0 8px", scrollbarWidth: "none" }}>
           {navGroups.map((group, gi) => (
-            <div key={gi} style={{ marginTop: gi === 0 ? 0 : 4 }}>
+            <div key={gi} style={{ marginTop: gi === 0 ? 0 : 8 }}>
+              {gi > 0 && group.label && (
+                <div style={{ height: 1, background: T.border, margin: "0 16px 8px" }} />
+              )}
               {group.label && (
                 <div
                   style={{
-                    padding: "8px 20px 4px",
+                    padding: "2px 20px 4px",
                     color: T.groupLabel,
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: 700,
-                    letterSpacing: "0.08em",
+                    letterSpacing: "0.1em",
                     textTransform: "uppercase",
                     pointerEvents: "none",
                   }}
