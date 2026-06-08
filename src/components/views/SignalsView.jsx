@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Bell } from "lucide-react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { Bell, Plus, CheckCircle2 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { Badge } from "../ui/Badge";
 import { CompanyTag } from "../ui/CompanyTag";
@@ -14,9 +14,69 @@ const URGENCY_FILTERS = [
   { key: "informativo", label: "Info" },
 ];
 
-export function SignalsView({ activeCompany, signals, onSignalClick }) {
+export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, accessibleCompanies }) {
   const isGroupView = activeCompany === "all";
   const [urgencyFilter, setUrgencyFilter] = useState("all");
+  const [expandedCreate, setExpandedCreate] = useState(null);
+  const [createCompany, setCreateCompany] = useState("");
+  const [justAdded, setJustAdded] = useState(new Set());
+  const createInputRef = useRef(null);
+
+  const handleOpenCreate = useCallback((signalId, e) => {
+    e.stopPropagation();
+    setCreateCompany("");
+    setExpandedCreate(signalId);
+    setTimeout(() => createInputRef.current?.focus(), 50);
+  }, []);
+
+  const handleCreateLead = useCallback((signal) => {
+    if (!createCompany.trim() || !onAddLead) return;
+    const validCompanies = (accessibleCompanies || []).filter(id => id !== "all");
+    const targetCompany = validCompanies.find(id => id === signal.company)
+      || validCompanies[0]
+      || signal.company
+      || "industria";
+    const now = new Date().toISOString();
+    onAddLead({
+      id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      companyId: targetCompany,
+      company: createCompany.trim(),
+      razaoSocial: createCompany.trim(),
+      sector: "",
+      cnpj: "",
+      size: "Mid-Market",
+      city: "—",
+      state: "—",
+      address: "",
+      capitalSocial: 0,
+      contactEmail: "",
+      phone: "",
+      situacao: "ATIVA",
+      trigger: "Sinal regulatório",
+      triggerLabel: signal.source,
+      evidence: `${signal.title} — ${signal.excerpt}`,
+      fitScore: 60,
+      quantity: 0,
+      value: 0,
+      probability: 0.1,
+      closeDate: new Date(Date.now() + 60 * 86400000).toISOString(),
+      dateDetected: now,
+      daysAgo: 0,
+      stage: "prospeccao",
+      status: "prospeccao",
+      owner: null,
+      urgency: signal.urgency === "critico" ? "urgente" : "medio",
+      decisionMaker: { name: "—", role: "—" },
+      starred: false,
+      notes: [],
+      createdAt: now,
+      lastActivity: now,
+      stageChangedAt: now,
+    });
+    setJustAdded(prev => new Set([...prev, signal.id]));
+    setExpandedCreate(null);
+    setCreateCompany("");
+  }, [createCompany, onAddLead, accessibleCompanies]);
 
   const scopedSignals = useMemo(() => {
     let s = isGroupView ? signals : signals.filter(x => x.company === activeCompany);
@@ -115,6 +175,61 @@ export function SignalsView({ activeCompany, signals, onSignalClick }) {
               <span>{s.affectedCount} afetad{s.affectedCount === 1 ? "a" : "as"}</span>
               <span>{s.date}</span>
             </div>
+
+            {/* Create lead CTA */}
+            {onAddLead && (
+              <div className="pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+                {justAdded.has(s.id) ? (
+                  <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "#16A34A" }}>
+                    <CheckCircle2 size={12} />
+                    Lead adicionado ao pipeline
+                  </div>
+                ) : expandedCreate === s.id ? (
+                  <div className="flex gap-2 items-center" onClick={e => e.stopPropagation()}>
+                    <input
+                      ref={createInputRef}
+                      placeholder="Nome da empresa..."
+                      value={createCompany}
+                      onChange={e => setCreateCompany(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") handleCreateLead(s);
+                        if (e.key === "Escape") setExpandedCreate(null);
+                      }}
+                      className="flex-1 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
+                      style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+                      onFocus={e => { e.currentTarget.style.borderColor = "#b5000b"; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
+                    />
+                    <button
+                      onClick={() => handleCreateLead(s)}
+                      disabled={!createCompany.trim()}
+                      className="text-xs px-2.5 py-1.5 rounded-lg font-semibold text-white"
+                      style={{ background: "#b5000b", border: "none", cursor: createCompany.trim() ? "pointer" : "not-allowed", opacity: createCompany.trim() ? 1 : 0.5 }}
+                    >
+                      Criar
+                    </button>
+                    <button
+                      onClick={() => setExpandedCreate(null)}
+                      className="text-xs"
+                      style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={e => handleOpenCreate(s.id, e)}
+                    className="text-xs font-semibold flex items-center gap-1 transition-colors"
+                    style={{ color: "#b5000b", background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.opacity = "0.75"; }}
+                    onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+                  >
+                    <Plus size={12} />
+                    Criar lead a partir deste sinal
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

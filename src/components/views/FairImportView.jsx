@@ -352,13 +352,45 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
   return (
     <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: NEUTRAL.graphite }}>
-          Importar Leads de Feira
-        </h1>
-        <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
-          Sobe a planilha exportada do app da feira (Swapcard, RD Station Events, etc.) para distribuição de leads.
-        </p>
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: NEUTRAL.graphite }}>
+            Importar Leads de Feira
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+            Sobe a planilha exportada do app da feira (Swapcard, RD Station Events, etc.) para distribuição de leads.
+          </p>
+        </div>
+        <a
+          href="/template-leads-feira.csv"
+          download="template-leads-feira.csv"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all"
+          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF", textDecoration: "none" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "#F5F5F3"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+        >
+          <Upload size={13} style={{ transform: "rotate(180deg)" }} />
+          Baixar modelo .csv
+        </a>
+      </div>
+
+      {/* Format instructions */}
+      <div
+        className="p-4 rounded-xl border text-xs leading-relaxed"
+        style={{ background: "#FFFBF0", borderColor: "#FDE68A", color: "#78350F" }}
+      >
+        <div className="font-semibold mb-1.5">Colunas esperadas (Swapcard / RD Station Events)</div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1" style={{ color: "#92400E" }}>
+          <span>✓ First Name / Last Name</span>
+          <span>✓ Company / Email</span>
+          <span>✓ Job Title / Mobile Phone</span>
+          <span>✓ City / State / CNPJ</span>
+          <span>✓ Porte da empresa / Área de atuação</span>
+          <span>✓ Exhibitor Member (para atribuição ao vendedor)</span>
+        </div>
+        <div className="mt-1.5" style={{ color: "#B45309" }}>
+          Formatos aceitos: <strong>.xlsx</strong> e <strong>.csv</strong> · Máx. 5 MB · Use o modelo acima como referência.
+        </div>
       </div>
 
       {/* Fair name + file upload — always visible */}

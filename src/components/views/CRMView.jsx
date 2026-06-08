@@ -657,6 +657,14 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           onLeadClick={onLeadClick}
         />
       ) : (
+      <div className="relative">
+        {/* Fade gradient indicating more stages exist to the right */}
+        <div
+          className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
+          style={{
+            background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)",
+          }}
+        />
       <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
         <div
           className="flex gap-3"
@@ -799,6 +807,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             );
           })}
         </div>
+      </div>
       </div>
       )}
 
