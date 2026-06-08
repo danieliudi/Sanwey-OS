@@ -449,6 +449,7 @@ export default function App() {
             const lead = leads.find(l => l.id === leadId);
             if (lead) setSelectedLead(lead);
           }}
+          onHelpClick={() => setSection("tutorials")}
         />
 
         <div className="px-4 py-4 sm:px-6 sm:py-6 lg:py-6 pb-24 lg:pb-6 flex-1 min-w-0">

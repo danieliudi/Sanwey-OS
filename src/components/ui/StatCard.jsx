@@ -1,7 +1,7 @@
 import React from "react";
 import { NEUTRAL } from "../../constants/companies";
 
-export function StatCard({ icon: Icon, value, label, sublabel, accent, compact = false, trend }) {
+export function StatCard({ icon: Icon, value, label, sublabel, accent, compact = false, trend, tooltip }) {
   return (
     <div
       className="p-5 rounded-xl border transition-all duration-150 hover:shadow-md cursor-default"
@@ -50,10 +50,17 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
         {value}
       </div>
       <div
-        className="font-medium text-sm"
+        className="font-medium text-sm flex items-center gap-1"
         style={{ color: accent ? "rgba(255,255,255,0.9)" : NEUTRAL.graphite }}
       >
         {label}
+        {tooltip && (
+          <span title={tooltip} style={{ cursor: "help", opacity: 0.5, display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+            </svg>
+          </span>
+        )}
       </div>
       {sublabel && (
         <div
