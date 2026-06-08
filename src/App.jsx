@@ -2,8 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
-  Settings as SettingsIcon, Bot, Presentation, GitBranch, Workflow, Zap,
-  Briefcase, Brain, Sliders, LifeBuoy,
+  Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy,
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -37,7 +36,6 @@ import { UserManagementView } from "./components/views/UserManagementView";
 import { SettingsView } from "./components/views/SettingsView";
 import { AgentActionsView } from "./components/views/AgentActionsView";
 import { FairImportView } from "./components/views/FairImportView";
-import { FunnelHistoryView } from "./components/views/FunnelHistoryView";
 import { PipelineBuilderView } from "./components/views/PipelineBuilderView";
 import { AutomationsView } from "./components/views/AutomationsView";
 import { TutoriaisView } from "./components/views/TutoriaisView";
@@ -305,42 +303,40 @@ export default function App() {
         ],
       },
       {
-        label: "CRM",
-        icon: Briefcase,
+        label: "Negócios",
         items: [
-          { id: "crm",       label: "Negócios",      icon: Layers },
-          { id: "signals",   label: "Sinais",        icon: Bell },
-          { id: "explorer",  label: "Explorador",    icon: Globe2 },
-          ...(isManager ? [{ id: "fair-import", label: "Importar feira", icon: Presentation }] : []),
+          { id: "crm", label: "Pipeline", icon: Layers },
+        ],
+      },
+      {
+        label: "Prospecção",
+        items: [
+          { id: "signals",  label: "Sinais",     icon: Bell },
+          { id: "explorer", label: "Explorador", icon: Globe2 },
         ],
       },
     ];
 
-    // Inteligência e Configuração só pra gerente/admin — vendedor só vê
-    // Início e CRM.
     if (isManager) {
       groups.push({
         label: "Inteligência",
-        icon: Brain,
         items: [
-          { id: "executive",      label: "Executivo",          icon: BarChart3 },
-          { id: "crossref",       label: "Cross-sell",         icon: Shuffle },
-          { id: "agents",         label: "Agentes",            icon: Bot },
-          { id: "funnel-history", label: "Histórico do funil", icon: GitBranch },
+          { id: "executive", label: "Executivo",  icon: BarChart3 },
+          { id: "crossref",  label: "Cross-sell", icon: Shuffle },
+          { id: "agents",    label: "Agentes",    icon: Bot },
         ],
       });
 
       groups.push({
         label: "Configuração",
-        icon: Sliders,
         items: [
           { id: "pipeline-builder", label: "Construtor de pipeline", icon: Workflow },
-          { id: "automations",      label: "Automações",              icon: Zap },
-          { id: "users",            label: "Usuários",                icon: UserCog },
-          { id: "settings",         label: "Configurações",           icon: SettingsIcon },
+          { id: "automations",      label: "Automações",             icon: Zap },
+          { id: "settings",         label: "Configurações",          icon: SettingsIcon },
         ],
       });
     }
+
     groups.push({
       label: null,
       items: [
@@ -517,6 +513,16 @@ export default function App() {
               onGoToSettings={() => setSection("settings")}
               onAddLead={handleAddLead}
               accessibleCompanies={accessibleCompanies}
+              fairImportPanel={isManager ? (
+                <FairImportView
+                  addLead={handleAddLead}
+                  leads={leads}
+                  users={users}
+                  currentUser={currentUser}
+                  state={fairImportState}
+                  setState={setFairImportState}
+                />
+              ) : undefined}
             />
           } />
           <Route path={ROUTES.crm} element={
@@ -540,36 +546,21 @@ export default function App() {
               ? <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
-          {/* Rotas gerente-only: vendedor é redirecionado pra Início. */}
+          {/* fair-import is now a tab inside ExplorerView */}
           <Route path={ROUTES["fair-import"]} element={
-            isManager ? (
-              <FairImportView
-                addLead={handleAddLead}
-                leads={leads}
-                users={users}
-                currentUser={currentUser}
-                state={fairImportState}
-                setState={setFairImportState}
-              />
-            ) : <Navigate to={ROUTES.dashboard} replace />
+            <Navigate to={ROUTES.explorer} replace />
           } />
           <Route path={ROUTES.executive} element={
             isManager
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Antiga rota /presidencia foi fundida no Executivo. Redireciona
               quem tem o link salvo. */}
           <Route path={ROUTES.presidency} element={<Navigate to={ROUTES.executive} replace />} />
+          {/* funnel-history is now a tab inside ExecutiveDashboard */}
           <Route path={ROUTES["funnel-history"]} element={
-            isManager ? (
-              <FunnelHistoryView
-                user={currentUser}
-                activeCompany={activeCompany}
-                leads={leads}
-                users={users}
-              />
-            ) : <Navigate to={ROUTES.dashboard} replace />
+            <Navigate to={ROUTES.executive} replace />
           } />
           <Route path={ROUTES["pipeline-builder"]} element={
             isManager ? (
@@ -603,23 +594,7 @@ export default function App() {
             ) : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.users} element={
-            isManager ? (
-              <UserManagementView
-                users={users}
-                leads={leads}
-                onUsersChange={setUsers}
-                onUpdateUser={supabaseEnabled ? updateUser : undefined}
-                onDeleteUser={supabaseEnabled ? deleteUser : undefined}
-                supabaseEnabled={supabaseEnabled}
-                loading={usersLoading}
-                currentUser={currentUser}
-                invitations={invitations}
-                invitationsLoading={invitationsLoading}
-                onCreateInvitation={createInvitation}
-                onRevokeInvitation={revokeInvitation}
-                onResendInvitation={supabaseEnabled ? resendInvitation : undefined}
-              />
-            ) : <Navigate to={ROUTES.dashboard} replace />
+            isManager ? <Navigate to={ROUTES.settings} replace /> : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.settings} element={
             isManager ? (
@@ -636,6 +611,23 @@ export default function App() {
                 onUpdateAuthUser={supabaseEnabled ? updateAuthUser : null}
                 onUpdateMockUser={supabaseEnabled ? null : setMockUser}
                 supabaseEnabled={supabaseEnabled}
+                usersPanel={
+                  <UserManagementView
+                    users={users}
+                    leads={leads}
+                    onUsersChange={setUsers}
+                    onUpdateUser={supabaseEnabled ? updateUser : undefined}
+                    onDeleteUser={supabaseEnabled ? deleteUser : undefined}
+                    supabaseEnabled={supabaseEnabled}
+                    loading={usersLoading}
+                    currentUser={currentUser}
+                    invitations={invitations}
+                    invitationsLoading={invitationsLoading}
+                    onCreateInvitation={createInvitation}
+                    onRevokeInvitation={revokeInvitation}
+                    onResendInvitation={supabaseEnabled ? resendInvitation : undefined}
+                  />
+                }
               />
             ) : <Navigate to={ROUTES.dashboard} replace />
           } />

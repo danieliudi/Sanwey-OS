@@ -9,6 +9,7 @@ import { formatK, formatM } from "../../utils/currency";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
 import { AnalyticsTab } from "./AnalyticsTab";
+import { FunnelHistoryView } from "./FunnelHistoryView";
 
 // Painel Executivo — único ponto de visão consolidada do Grupo. Inclui
 // o que era a tela "Presidência" como uma tab. Filtro de período é
@@ -27,6 +28,7 @@ const TABS = [
   { id: "charts",     label: "Gráficos",     hint: "Evolução e distribuição visual" },
   { id: "analytics",  label: "Análise",      hint: "Diagnóstico detalhado por etapa" },
   { id: "ia",         label: "IA",           hint: "Análise e forecast com inteligência artificial" },
+  { id: "historico",  label: "Histórico",    hint: "Evolução do funil ao longo do tempo" },
 ];
 
 function filterByPeriod(leads, period) {
@@ -43,7 +45,7 @@ function filterByPeriod(leads, period) {
   });
 }
 
-export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, currentUser }) {
+export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, currentUser, activeCompany }) {
   const [period, setPeriod] = useState("all");
   const [tab, setTab] = useState("overview");
 
@@ -214,6 +216,10 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
 
       {tab === "ia" && (
         <AIExecutivePanel leads={filteredLeads} users={users} currentUser={currentUser} />
+      )}
+
+      {tab === "historico" && (
+        <FunnelHistoryView user={currentUser} activeCompany={activeCompany} leads={leads} users={users} />
       )}
     </div>
   );

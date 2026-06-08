@@ -24,9 +24,11 @@ const SIZE_OPTIONS = ["PME", "Mid-Market", "Enterprise"];
 
 export function ExplorerView({
   leads, users = [], currentUser, onAddLead, accessibleCompanies, onLoadDemoLeads, onGoToSettings,
+  fairImportPanel,
 }) {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [showImport, setShowImport] = useState(false);
+  const [activeTab, setActiveTab] = useState("explorador");
   const usersById = useUsersById(users);
 
   const reset = useCallback(() => setFilters(INITIAL_FILTERS), []);
@@ -50,31 +52,65 @@ export function ExplorerView({
             Descubra novos prospects · cruze sinais públicos · adicione ao CRM com um clique
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {activeCount > 0 && (
-            <Button variant="ghost" size="sm" icon={X} onClick={reset}>
-              Limpar ({activeCount})
+        {(!fairImportPanel || activeTab === "explorador") && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {activeCount > 0 && (
+              <Button variant="ghost" size="sm" icon={X} onClick={reset}>
+                Limpar ({activeCount})
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Download}
+              onClick={() => setShowImport(true)}
+            >
+              Importar planilha
             </Button>
-          )}
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Download}
-            onClick={() => setShowImport(true)}
-          >
-            Importar planilha
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={Upload}
-            onClick={() => exportLeadsToCSV(leads, { usersById, filename: `sanwey-leads-explorer-${new Date().toISOString().slice(0, 10)}.csv` })}
-          >
-            Exportar
-          </Button>
-        </div>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={Upload}
+              onClick={() => exportLeadsToCSV(leads, { usersById, filename: `sanwey-leads-explorer-${new Date().toISOString().slice(0, 10)}.csv` })}
+            >
+              Exportar
+            </Button>
+          </div>
+        )}
       </div>
 
+      {/* Tab bar — only when fair import panel is available */}
+      {fairImportPanel && (
+        <div className="flex items-center gap-1 border-b" style={{ borderColor: "#E5E7EB" }}>
+          {[
+            { id: "explorador", label: "Explorador" },
+            { id: "feira",      label: "Importar feira" },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
+              style={{
+                color: activeTab === t.id ? NEUTRAL.graphite : NEUTRAL.slate,
+                borderBottomColor: activeTab === t.id ? "#1E4D8C" : "transparent",
+                background: "none",
+                border: "none",
+                borderBottom: `2px solid ${activeTab === t.id ? "#1E4D8C" : "transparent"}`,
+                letterSpacing: "0.08em",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Fair import tab content */}
+      {fairImportPanel && activeTab === "feira" && fairImportPanel}
+
+      {/* Explorador content */}
+      {(!fairImportPanel || activeTab === "explorador") && (
+      <>
       {/* CNPJ lookup + Filters side by side */}
       <div className="grid gap-4 lg:grid-cols-[1fr_1.6fr]">
         {isSupabaseConfigured && (
@@ -177,6 +213,8 @@ export function ExplorerView({
             )}
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );
