@@ -1,8 +1,9 @@
 import React, { useCallback, useRef, useState, useEffect } from "react";
 import {
   RotateCcw, Check, AlertTriangle, Trash2, Database, Sparkles, Camera, Loader2,
-  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe,
+  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X,
 } from "lucide-react";
+import { Modal } from "../ui/Modal";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { AI_PROVIDERS, AI_PROVIDER_MAP } from "../../constants/ai-providers";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -70,6 +71,8 @@ export function SettingsView({
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
 }) {
   const [activeTab, setActiveTab] = useState("perfil");
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [clearTyped, setClearTyped] = useState("");
 
   // ── Profile form ────────────────────────────────────────────────────
   const [profileForm, setProfileForm] = useState({
@@ -311,10 +314,15 @@ export function SettingsView({
 
   const handleClearLeads = useCallback(() => {
     if (leadsCount === 0) return;
-    if (window.confirm(`Remover todos os ${leadsCount} leads? Esta ação não pode ser desfeita.`)) {
-      onClearAllLeads?.();
-    }
-  }, [leadsCount, onClearAllLeads]);
+    setClearTyped("");
+    setClearConfirmOpen(true);
+  }, [leadsCount]);
+
+  const handleClearConfirm = useCallback(() => {
+    onClearAllLeads?.();
+    setClearConfirmOpen(false);
+    setClearTyped("");
+  }, [onClearAllLeads]);
 
   return (
     <div className="space-y-5">
@@ -699,7 +707,7 @@ export function SettingsView({
                     .map(group => (
                       <div key={group.id}>
                         <div
-                          className="pb-2 mb-1 border-b"
+                          className="pb-2 mb-1 border-b flex items-center justify-between"
                           style={{ borderColor: "#F0F0F0" }}
                         >
                           <span
@@ -708,6 +716,22 @@ export function SettingsView({
                           >
                             {group.label}
                           </span>
+                          {(() => {
+                            const allOn = group.items.every(n => Boolean(settings.notifications[n.id]));
+                            return (
+                              <button
+                                onClick={() => {
+                                  const update = {};
+                                  group.items.forEach(n => { update[n.id] = !allOn; });
+                                  onUpdate({ notifications: { ...settings.notifications, ...update } });
+                                }}
+                                className="text-[10px] font-semibold"
+                                style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                              >
+                                {allOn ? "Desativar todos" : "Ativar todos"}
+                              </button>
+                            );
+                          })()}
                         </div>
                         <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
                           {group.items.map(n => (
@@ -912,9 +936,23 @@ export function SettingsView({
                     <Button variant="secondary" icon={Sparkles} onClick={handleLoadDemo}>
                       Carregar dados de demonstração
                     </Button>
-                    <Button variant="ghost" icon={Database} onClick={handleClearLeads} disabled={leadsCount === 0}>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+                    <Button
+                      variant="ghost"
+                      icon={Trash2}
+                      onClick={handleClearLeads}
+                      disabled={leadsCount === 0}
+                      style={{ color: "#DC2626", borderColor: "#FECACA" }}
+                    >
                       Limpar todos os leads
                     </Button>
+                    {leadsCount > 0 && (
+                      <span className="self-center text-xs flex items-center gap-1" style={{ color: "#DC2626" }}>
+                        <AlertTriangle size={11} />
+                        Ação irreversível
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>
                     Gera ~68 empresas fictícias distribuídas nas 4 unidades, com setor, estado, porte e
@@ -945,6 +983,66 @@ export function SettingsView({
           </div>
         </div>
       </div>
+
+      {/* Confirm clear leads modal */}
+      <Modal
+        open={clearConfirmOpen}
+        onClose={() => setClearConfirmOpen(false)}
+        title="⚠️ Confirmar exclusão de leads"
+        width={440}
+      >
+        <div className="px-6 py-5 space-y-4">
+          <p className="text-sm leading-relaxed" style={{ color: NEUTRAL.graphite }}>
+            Esta ação removerá <strong>todos os {leadsCount} leads</strong> do CRM.
+            Ela é <strong>irreversível</strong> e não pode ser desfeita.
+          </p>
+          <div
+            className="p-3 rounded-lg text-xs flex items-start gap-2"
+            style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+          >
+            <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+            <span>Dados sincronizados com o Supabase serão excluídos do banco de dados permanentemente.</span>
+          </div>
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: NEUTRAL.slate }}>
+              Digite <strong style={{ color: NEUTRAL.graphite }}>LIMPAR</strong> para confirmar
+            </label>
+            <input
+              type="text"
+              value={clearTyped}
+              onChange={e => setClearTyped(e.target.value)}
+              placeholder="LIMPAR"
+              autoFocus
+              className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
+              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+              onFocus={e => { e.currentTarget.style.borderColor = "#DC2626"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={() => setClearConfirmOpen(false)}
+              className="px-4 py-2 text-sm rounded-lg border"
+              style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFFFFF" }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleClearConfirm}
+              disabled={clearTyped !== "LIMPAR"}
+              className="px-4 py-2 text-sm rounded-lg font-semibold text-white transition-opacity"
+              style={{
+                background: "#DC2626",
+                opacity: clearTyped === "LIMPAR" ? 1 : 0.4,
+                cursor: clearTyped === "LIMPAR" ? "pointer" : "not-allowed",
+                border: "none",
+              }}
+            >
+              Excluir todos os leads
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

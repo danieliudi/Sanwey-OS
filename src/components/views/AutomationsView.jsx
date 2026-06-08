@@ -141,17 +141,14 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
           <Zap size={32} style={{ color: "#D1D5DB" }} />
           <p className="text-sm font-semibold" style={{ color: NEUTRAL.slate }}>Nenhuma automação criada</p>
           <p className="text-xs text-center max-w-md" style={{ color: "#9CA3AF" }}>
-            Comece com um dos templates abaixo (recomendado) ou crie do zero.
+            Escolha um template abaixo para começar — ou crie do zero se preferir.
           </p>
           <button
             onClick={() => openBuilder()}
-            className="mt-1 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            className="mt-1 text-xs"
+            style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
           >
-            <Plus size={14} />
-            Criar do zero
+            Criar automação personalizada
           </button>
         </div>
       )}
@@ -973,6 +970,10 @@ function TemplateGallery({ onUseTemplate }) {
                   {t.summary}
                 </div>
               </div>
+            </div>
+            <div className="mt-2 text-[11px] font-semibold flex items-center gap-1" style={{ color: "#1E4D8C" }}>
+              <Plus size={10} />
+              Usar este template
             </div>
           </button>
         ))}

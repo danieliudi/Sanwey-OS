@@ -308,10 +308,10 @@ export default function App() {
         label: "CRM",
         icon: Briefcase,
         items: [
-          { id: "crm",       label: "Negócios",   icon: Layers },
-          { id: "signals",   label: "Sinais",     icon: Bell },
-          { id: "explorer",  label: "Explorador", icon: Globe2 },
-          ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
+          { id: "crm",       label: "Negócios",      icon: Layers },
+          { id: "signals",   label: "Sinais",        icon: Bell },
+          { id: "explorer",  label: "Explorador",    icon: Globe2 },
+          ...(isManager ? [{ id: "fair-import", label: "Importar feira", icon: Presentation }] : []),
         ],
       },
     ];
@@ -324,6 +324,7 @@ export default function App() {
         icon: Brain,
         items: [
           { id: "executive",      label: "Executivo",          icon: BarChart3 },
+          { id: "crossref",       label: "Cross-sell",         icon: Shuffle },
           { id: "agents",         label: "Agentes",            icon: Bot },
           { id: "funnel-history", label: "Histórico do funil", icon: GitBranch },
         ],
@@ -335,7 +336,6 @@ export default function App() {
         items: [
           { id: "pipeline-builder", label: "Construtor de pipeline", icon: Workflow },
           { id: "automations",      label: "Automações",              icon: Zap },
-          { id: "fair-import",      label: "Importar feira",          icon: Presentation },
           { id: "users",            label: "Usuários",                icon: UserCog },
           { id: "settings",         label: "Configurações",           icon: SettingsIcon },
         ],
@@ -497,7 +497,13 @@ export default function App() {
             />
           } />
           <Route path={ROUTES.signals} element={
-            <SignalsView activeCompany={activeCompany} signals={signals} onSignalClick={setSelectedSignal} />
+            <SignalsView
+              activeCompany={activeCompany}
+              signals={signals}
+              onSignalClick={setSelectedSignal}
+              onAddLead={handleAddLead}
+              accessibleCompanies={accessibleCompanies}
+            />
           } />
           <Route path={ROUTES.explorer} element={
             <ExplorerView
@@ -634,7 +640,7 @@ export default function App() {
             ) : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.tutorials} element={
-            <TutoriaisView currentUser={currentUser} />
+            <TutoriaisView currentUser={currentUser} onNavigate={setSection} />
           } />
           {/* Catch-all: rota desconhecida volta pro Início. */}
           <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />

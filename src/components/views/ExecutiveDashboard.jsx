@@ -17,15 +17,16 @@ import { AnalyticsTab } from "./AnalyticsTab";
 const PERIODS = [
   { id: "all", label: "Todo período" },
   { id: "30d", label: "30 dias" },
+  { id: "60d", label: "60 dias" },
   { id: "90d", label: "90 dias" },
-  { id: "ytd", label: "YTD" },
+  { id: "ytd", label: "Este ano" },
 ];
 
 const TABS = [
-  { id: "overview",   label: "Visão geral" },
-  { id: "charts",     label: "Gráficos" },
-  { id: "analytics",  label: "Análise" },
-  { id: "ia",         label: "IA" },
+  { id: "overview",   label: "Visão geral",  hint: "KPIs e pipeline por empresa" },
+  { id: "charts",     label: "Gráficos",     hint: "Evolução e distribuição visual" },
+  { id: "analytics",  label: "Análise",      hint: "Diagnóstico detalhado por etapa" },
+  { id: "ia",         label: "IA",           hint: "Análise e forecast com inteligência artificial" },
 ];
 
 function filterByPeriod(leads, period) {
@@ -33,6 +34,7 @@ function filterByPeriod(leads, period) {
   const now = Date.now();
   let cutoff;
   if (period === "30d") cutoff = now - 30 * 86400000;
+  else if (period === "60d") cutoff = now - 60 * 86400000;
   else if (period === "90d") cutoff = now - 90 * 86400000;
   else if (period === "ytd") cutoff = new Date(new Date().getFullYear(), 0, 1).getTime();
   return leads.filter(l => {
@@ -180,6 +182,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
+              title={t.hint}
               className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
               style={{
                 color: active ? NEUTRAL.graphite : NEUTRAL.slate,

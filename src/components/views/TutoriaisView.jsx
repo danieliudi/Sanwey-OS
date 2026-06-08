@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Play, ChevronDown, ChevronUp, BookOpen, LifeBuoy, Zap, Bot, Copy, Check, ChevronRight } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Play, ChevronDown, ChevronUp, BookOpen, LifeBuoy, Zap, Bot, Copy, Check, ChevronRight, ArrowRight, Search } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import { VIDEO_TUTORIALS, FAQ_ITEMS, AUTOMATION_GUIDE, AI_PROMPTS } from "../../data/tutorials";
 
@@ -14,8 +14,52 @@ const TABS = [
 
 // ── Video card ────────────────────────────────────────────────────────────────
 
-function VideoCard({ video }) {
+function VideoCard({ video, onNavigate }) {
   const hasUrl = Boolean(video.url);
+
+  if (!hasUrl && video.quickStart) {
+    return (
+      <div
+        className="flex flex-col rounded-xl border overflow-hidden"
+        style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      >
+        <div
+          className="px-4 py-3 flex items-center gap-2 border-b"
+          style={{ background: "#F7F7F5", borderColor: "#F0F0F0" }}
+        >
+          <span style={{ fontSize: 18 }}>{video.quickStart.icon}</span>
+          <span className="font-bold text-sm leading-snug" style={{ color: NEUTRAL.graphite }}>
+            {video.title}
+          </span>
+        </div>
+        <div className="p-4 flex-1 flex flex-col gap-2">
+          <div className="space-y-1.5">
+            {video.quickStart.steps.map((step, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs" style={{ color: NEUTRAL.graphite }}>
+                <span
+                  className="shrink-0 flex items-center justify-center rounded-full font-bold"
+                  style={{ width: 18, height: 18, minWidth: 18, background: "#b5000b12", color: "#b5000b", fontSize: 10 }}
+                >
+                  {i + 1}
+                </span>
+                <span className="leading-relaxed">{step}</span>
+              </div>
+            ))}
+          </div>
+          {video.description && onNavigate && (
+            <button
+              onClick={() => onNavigate(video.description.toLowerCase().replace(/\s+/g, "-"))}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold"
+              style={{ color: "#b5000b", background: "none", border: "none", cursor: "pointer" }}
+            >
+              Ir para {video.description} <ArrowRight size={11} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex flex-col rounded-xl border overflow-hidden"
@@ -242,10 +286,19 @@ function PromptCategorySection({ category }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function TutoriaisView({ currentUser }) {
+export function TutoriaisView({ currentUser, onNavigate }) {
   const role = currentUser?.role || "vendedor";
   const videos = VIDEO_TUTORIALS[role] || VIDEO_TUTORIALS.vendedor;
   const [activeTab, setActiveTab] = useState("tutoriais");
+  const [faqSearch, setFaqSearch] = useState("");
+
+  const filteredFaq = useMemo(() => {
+    if (!faqSearch.trim()) return FAQ_ITEMS;
+    const q = faqSearch.toLowerCase();
+    return FAQ_ITEMS.filter(f =>
+      f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q)
+    );
+  }, [faqSearch]);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -294,7 +347,7 @@ export function TutoriaisView({ currentUser }) {
               Vídeos tutoriais
             </h2>
             <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
-              {videos.map(v => <VideoCard key={v.id} video={v} />)}
+              {videos.map(v => <VideoCard key={v.id} video={v} onNavigate={onNavigate} />)}
             </div>
             <p className="text-xs mt-3" style={{ color: NEUTRAL.slate }}>
               Os vídeos serão publicados em breve. Quando disponíveis, aparecerão automaticamente nesta tela.
@@ -433,12 +486,28 @@ export function TutoriaisView({ currentUser }) {
                 Perguntas frequentes
               </h2>
             </div>
-            <p className="text-xs" style={{ color: NEUTRAL.slate }}>
+            <p className="text-xs mb-3" style={{ color: NEUTRAL.slate }}>
               Dúvidas comuns sobre uso da plataforma.
             </p>
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: NEUTRAL.slate }} />
+              <input
+                type="text"
+                value={faqSearch}
+                onChange={e => setFaqSearch(e.target.value)}
+                placeholder="Buscar pergunta..."
+                className="w-full text-xs rounded-lg border pl-8 pr-3 py-2 outline-none"
+                style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FAFAFA" }}
+                onFocus={e => { e.currentTarget.style.borderColor = "#b5000b"; }}
+                onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
+              />
+            </div>
           </div>
           <div className="px-5">
-            {FAQ_ITEMS.map((item, i) => <FAQItem key={i} item={item} />)}
+            {filteredFaq.length > 0
+              ? filteredFaq.map((item, i) => <FAQItem key={i} item={item} />)
+              : <p className="py-6 text-xs text-center" style={{ color: NEUTRAL.slate }}>Nenhuma pergunta encontrada para "{faqSearch}".</p>
+            }
           </div>
         </div>
       )}

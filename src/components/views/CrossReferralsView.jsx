@@ -165,7 +165,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                 <div className="text-sm mb-4" style={{ color: NEUTRAL.graphite }}>
                   <strong>Racional:</strong> {s.reason}
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-3 flex-wrap">
                   <Button
                     variant="primary"
                     icon={CheckCircle2}
@@ -174,9 +174,16 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                   >
                     Aprovar indicação
                   </Button>
-                  <Button variant="ghost" icon={X} onClick={() => onReject(s.id)}>
+                  <button
+                    onClick={() => onReject(s.id)}
+                    className="text-xs flex items-center gap-1"
+                    style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                  >
+                    <X size={12} />
                     Rejeitar
-                  </Button>
+                  </button>
                 </div>
               </div>
             ))}
