@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   X, MapPin, AlertTriangle, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
@@ -19,6 +19,7 @@ import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
+import { StageFieldInput } from "./StageFieldInput";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
@@ -40,6 +41,31 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
   const customValues = lead?.customFields || {};
   const { entries: stageHistory } = useSingleLeadHistory(lead?.id);
+
+  // Edição inline dos campos customizados da etapa.
+  // Mantém o digitado localmente e salva com debounce (600ms) para não bater
+  // no Supabase a cada tecla.
+  const [customDraft, setCustomDraft] = useState({});
+  const customDebounceRef = useRef(null);
+
+  useEffect(() => {
+    setCustomDraft({});
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+  }, [lead?.id]);
+
+  const handleCustomChange = useCallback((fieldKey, value) => {
+    setCustomDraft(prev => ({ ...prev, [fieldKey]: value }));
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    customDebounceRef.current = setTimeout(() => {
+      if (!lead) return;
+      const merged = { ...(lead.customFields || {}), [fieldKey]: value };
+      onUpdate(lead.id, { customFields: merged });
+    }, 600);
+  }, [lead, onUpdate]);
+
+  const getCustomValue = useCallback((fieldKey) => {
+    return fieldKey in customDraft ? customDraft[fieldKey] : (customValues[fieldKey] ?? "");
+  }, [customDraft, customValues]);
 
   // Resolve prev/next non-terminal stages based on the default pipeline order.
   const stageNav = useMemo(() => {
@@ -265,10 +291,11 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
       aria-modal="true"
     >
       <div
-        className="w-full max-w-2xl max-h-full overflow-y-auto rounded-2xl"
+        className="w-full max-w-6xl rounded-2xl flex flex-col"
         style={{
           background: "#FFFFFF",
           boxShadow: "0 24px 64px rgba(32,26,26,0.18)",
+          maxHeight: "92vh",
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -331,61 +358,111 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           </div>
         </div>
 
-        <div className="p-5 space-y-4">
-          {/* Lead title */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h2 className="font-bold mb-1" style={{ fontSize: 20, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
-                {lead.company}
-              </h2>
-              <div className="flex items-center gap-2 text-sm flex-wrap" style={{ color: NEUTRAL.slate }}>
-                {lead.cnpj && <span className="font-mono text-xs">{lead.cnpj}</span>}
-                {lead.cnpj && (lead.sector || lead.city) && <span>·</span>}
-                {lead.sector && <span>{lead.sector}</span>}
-                {lead.sector && lead.city && <span>·</span>}
-                {lead.city && <span className="flex items-center gap-1"><MapPin size={12} />{lead.city}</span>}
-                {!lead.cnpj && !lead.sector && !lead.city && <span className="text-xs italic">Sem dados de cadastro</span>}
+        {/* ── BODY: 3 colunas (esquerda info / centro form da etapa / direita movimentação) ── */}
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+
+          {/* ───── LEFT SIDEBAR ───────────────────────────────────────── */}
+          <aside
+            className="w-full lg:w-[320px] shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4"
+            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+          >
+            {/* Título do lead */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold mb-1" style={{ fontSize: 18, color: NEUTRAL.graphite, letterSpacing: "-0.02em", wordBreak: "break-word" }}>
+                  {lead.company}
+                </h2>
+                <div className="flex items-center gap-1.5 text-xs flex-wrap" style={{ color: NEUTRAL.slate }}>
+                  {lead.cnpj && <span className="font-mono">{lead.cnpj}</span>}
+                  {lead.cnpj && (lead.sector || lead.city) && <span>·</span>}
+                  {lead.sector && <span>{lead.sector}</span>}
+                  {lead.sector && lead.city && <span>·</span>}
+                  {lead.city && <span className="flex items-center gap-1"><MapPin size={11} />{lead.city}</span>}
+                  {!lead.cnpj && !lead.sector && !lead.city && <span className="italic">Sem dados</span>}
+                </div>
               </div>
+              <FitScoreCircle score={lead.fitScore} size={48} />
             </div>
-            <FitScoreCircle score={lead.fitScore} size={60} />
-          </div>
+
+            {/* Formulário Inicial (vindo de captura pública) */}
+            {customValues.capture_customer_name && (
+              <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
+                    Formulário Inicial
+                  </div>
+                  {customValues.capture_source && (
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+                      style={{ background: "#FAFAFA", color: NEUTRAL.slate, letterSpacing: "0.08em" }}>
+                      via {customValues.capture_source}
+                    </span>
+                  )}
+                </div>
+                <dl className="space-y-2.5 text-sm">
+                  <CaptureRow label="Nome do Cliente" value={customValues.capture_customer_name} />
+                  <CaptureRow label="Contato" value={customValues.capture_contact_phone} mono />
+                  <CaptureRow label="E-mail" value={customValues.capture_contact_email} link={customValues.capture_contact_email ? `mailto:${customValues.capture_contact_email}` : null} />
+                  <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
+                  <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
+                  <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
+                </dl>
+                {customValues.capture_notes && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.slate }}>Mensagem</div>
+                    <div className="text-sm whitespace-pre-line" style={{ color: NEUTRAL.graphite }}>{customValues.capture_notes}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Histórico de etapas */}
+            {stageHistory.length > 0 && (
+              <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+                <div className="flex items-center gap-1.5 mb-3" style={{ color: NEUTRAL.slate }}>
+                  <History size={13} />
+                  <span className="text-xs font-semibold">Histórico</span>
+                </div>
+                <ol className="space-y-2.5 relative" style={{ paddingLeft: 18 }}>
+                  <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 1, background: "#E5E7EB" }} />
+                  {stageHistory.slice(0, 8).map((h, i) => {
+                    const toStage = DEFAULT_PIPELINE_STAGES.find(s => s.id === h.toStage);
+                    const fromStage = h.fromStage ? DEFAULT_PIPELINE_STAGES.find(s => s.id === h.fromStage) : null;
+                    return (
+                      <li key={i} className="relative">
+                        <div style={{
+                          position: "absolute", left: -16, top: 3,
+                          width: 9, height: 9, borderRadius: "50%",
+                          background: toStage?.color || NEUTRAL.slate,
+                          border: "2px solid #FFFFFF", boxShadow: "0 0 0 1px #E5E7EB",
+                        }} />
+                        <div className="text-xs" style={{ color: NEUTRAL.graphite }}>
+                          {fromStage ? (
+                            <>{fromStage.name} <span style={{ color: NEUTRAL.slate }}>→</span> <strong>{toStage?.name || h.toStage}</strong></>
+                          ) : (
+                            <strong>{toStage?.name || h.toStage}</strong>
+                          )}
+                        </div>
+                        <div className="text-[11px] mt-0.5" style={{ color: NEUTRAL.slate }}>
+                          {new Date(h.changedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                        </div>
+                      </li>
+                    );
+                  })}
+                  {stageHistory.length > 8 && (
+                    <li className="text-[11px]" style={{ color: NEUTRAL.slate }}>
+                      +{stageHistory.length - 8} eventos anteriores
+                    </li>
+                  )}
+                </ol>
+              </div>
+            )}
+          </aside>
+
+          {/* ───── CENTER ─────────────────────────────────────────────── */}
+          <main className="flex-1 min-w-0 overflow-y-auto p-5 space-y-4">
 
           {/* ── Pipeline stage progress bar ───────────────────────────────── */}
           <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
-
-          {/* ── Stage navigation: ← anterior · próxima → ──────────────────── */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <button
-              onClick={() => moveToStage(stageNav.prev?.id)}
-              disabled={!stageNav.prev}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-              style={{
-                background: stageNav.prev ? "#FFFFFF" : "#F3F4F6",
-                color: stageNav.prev ? NEUTRAL.graphite : NEUTRAL.slate,
-                border: `1px solid ${stageNav.prev ? "#E5E7EB" : "#F3F4F6"}`,
-                cursor: stageNav.prev ? "pointer" : "not-allowed",
-              }}
-              title={stageNav.prev ? `Voltar para ${stageNav.prev.name}` : "Sem etapa anterior"}
-            >
-              <ArrowLeft size={13} />
-              {stageNav.prev?.name || "—"}
-            </button>
-            <button
-              onClick={() => moveToStage(stageNav.next?.id)}
-              disabled={!stageNav.next}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-              style={{
-                background: stageNav.next ? company.primary : "#F3F4F6",
-                color: stageNav.next ? "#FFFFFF" : NEUTRAL.slate,
-                border: "none",
-                cursor: stageNav.next ? "pointer" : "not-allowed",
-              }}
-              title={stageNav.next ? `Avançar para ${stageNav.next.name}` : "Etapa final"}
-            >
-              {stageNav.next?.name || "Final"}
-              <ArrowRight size={13} />
-            </button>
-          </div>
 
           {/* ── Hero metrics ─────────────────────────────────────────────── */}
           <div className="grid grid-cols-3 gap-2">
@@ -393,37 +470,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             <HeroMetric label="PROB." value={`${probDisplay}%`} color={company.primary} />
             <HeroMetric label="FECHAMENTO" value={formatDateBR(lead.closeDate) || "—"} />
           </div>
-
-          {/* ── Formulário Inicial (vindo de captura pública) ───────────────── */}
-          {customValues.capture_customer_name && (
-            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
-                  Formulário Inicial
-                </div>
-                {customValues.capture_source && (
-                  <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
-                    style={{ background: NEUTRAL.warmWhite || "#FAFAFA", color: NEUTRAL.slate, letterSpacing: "0.08em" }}>
-                    via {customValues.capture_source}
-                  </span>
-                )}
-              </div>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
-                <CaptureRow label="Nome do Cliente" value={customValues.capture_customer_name} />
-                <CaptureRow label="Contato" value={customValues.capture_contact_phone} mono />
-                <CaptureRow label="E-mail" value={customValues.capture_contact_email} link={customValues.capture_contact_email ? `mailto:${customValues.capture_contact_email}` : null} />
-                <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
-                <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
-                <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
-              </dl>
-              {customValues.capture_notes && (
-                <div className="mt-3 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
-                  <div className="text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.slate }}>Mensagem</div>
-                  <div className="text-sm whitespace-pre-line" style={{ color: NEUTRAL.graphite }}>{customValues.capture_notes}</div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Enriquecimento RF */}
           {isSupabaseConfigured && (
@@ -531,29 +577,33 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             <InfoTile label="Fechamento" value={formatDateBR(lead.closeDate)} />
           </div>
 
-          {/* Campos customizados da etapa */}
+          {/* Campos customizados da etapa — editáveis inline (save debounced) */}
           {customDefs.length > 0 && (
             <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-              <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
-                Detalhes da etapa
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
+                  Fase atual · {DEFAULT_PIPELINE_STAGES.find(s => s.id === lead.stage)?.name || lead.stage}
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {customDefs.map(f => {
-                  const v = customValues[f.fieldKey];
-                  const display = v === undefined || v === null || v === ""
-                    ? "—"
-                    : f.fieldType === "checkbox" ? (v ? "Sim" : "Não")
-                    : f.fieldType === "currency" && Number.isFinite(Number(v)) ? formatBRL(Number(v))
-                    : f.fieldType === "date" ? formatDateBR(v)
-                    : f.fieldType === "user" ? (users.find(u => u.id === v)?.name || v)
-                    : String(v);
-                  return (
-                    <div key={f.id}>
-                      <div className="text-[11px] font-semibold mb-0.5" style={{ color: NEUTRAL.slate }}>{f.label}</div>
-                      <div className="text-sm" style={{ color: NEUTRAL.graphite, wordBreak: "break-word" }}>{display}</div>
-                    </div>
-                  );
-                })}
+              <div className="space-y-4">
+                {customDefs.map(f => (
+                  <div key={f.id}>
+                    <label className="block" style={{ fontSize: 13, fontWeight: 700, color: NEUTRAL.graphite, marginBottom: 2 }}>
+                      {f.required && <span style={{ color: "#b5000b", marginRight: 4 }}>*</span>}
+                      {f.label}
+                    </label>
+                    {f.helpText && (
+                      <div style={{ fontSize: 11, color: NEUTRAL.slate, marginBottom: 6 }}>{f.helpText}</div>
+                    )}
+                    <StageFieldInput
+                      field={f}
+                      value={getCustomValue(f.fieldKey)}
+                      onChange={(val) => handleCustomChange(f.fieldKey, val)}
+                      users={users}
+                      companyId={lead.companyId}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -853,50 +903,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             </div>
           </div>
 
-          {/* ── Histórico de etapas ────────────────────────────────────── */}
-          {stageHistory.length > 0 && (
-            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-              <div className="flex items-center gap-1.5 mb-3" style={{ color: NEUTRAL.slate }}>
-                <History size={13} />
-                <span className="text-xs font-semibold">Histórico de etapas</span>
-              </div>
-              <ol className="space-y-2.5 relative" style={{ paddingLeft: 18 }}>
-                <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 1, background: "#E5E7EB" }} />
-                {stageHistory.slice(0, 8).map((h, i) => {
-                  const toStage = DEFAULT_PIPELINE_STAGES.find(s => s.id === h.toStage);
-                  const fromStage = h.fromStage ? DEFAULT_PIPELINE_STAGES.find(s => s.id === h.fromStage) : null;
-                  return (
-                    <li key={i} className="relative">
-                      <div
-                        style={{
-                          position: "absolute", left: -16, top: 3,
-                          width: 9, height: 9, borderRadius: "50%",
-                          background: toStage?.color || NEUTRAL.slate,
-                          border: "2px solid #FFFFFF", boxShadow: "0 0 0 1px #E5E7EB",
-                        }}
-                      />
-                      <div className="text-xs" style={{ color: NEUTRAL.graphite }}>
-                        {fromStage ? (
-                          <>{fromStage.name} <span style={{ color: NEUTRAL.slate }}>→</span> <strong>{toStage?.name || h.toStage}</strong></>
-                        ) : (
-                          <strong>{toStage?.name || h.toStage}</strong>
-                        )}
-                      </div>
-                      <div className="text-[11px] mt-0.5" style={{ color: NEUTRAL.slate }}>
-                        {new Date(h.changedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                      </div>
-                    </li>
-                  );
-                })}
-                {stageHistory.length > 8 && (
-                  <li className="text-[11px]" style={{ color: NEUTRAL.slate }}>
-                    +{stageHistory.length - 8} eventos anteriores
-                  </li>
-                )}
-              </ol>
-            </div>
-          )}
-
           {/* IA panel */}
           <LeadAIPanel
             lead={lead}
@@ -1011,6 +1017,68 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               </div>
             </div>
           </div>
+          </main>
+
+          {/* ───── RIGHT SIDEBAR ─────────────────────────────────────── */}
+          <aside
+            className="w-full lg:w-[240px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5"
+            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+          >
+            <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>
+              Mover card para fase
+            </div>
+            <div className="space-y-2">
+              {stageNav.next && (
+                <button
+                  onClick={() => moveToStage(stageNav.next.id)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                  style={{ background: company.primary + "14", color: company.primary, border: `1px solid ${company.primary}30` }}
+                  onMouseEnter={e => { e.currentTarget.style.background = company.primary + "22"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = company.primary + "14"; }}
+                >
+                  <span>{stageNav.next.name}</span>
+                  <ArrowRight size={14} />
+                </button>
+              )}
+              {stageNav.prev && (
+                <button
+                  onClick={() => moveToStage(stageNav.prev.id)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+                >
+                  <ArrowLeft size={13} />
+                  <span>{stageNav.prev.name}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="mt-5 pt-4 border-t space-y-2" style={{ borderColor: "#E5E7EB" }}>
+              <a
+                href="#"
+                onClick={e => { e.preventDefault(); /* future: open pipeline builder for this stage */ }}
+                className="flex items-center gap-2 text-xs"
+                style={{ color: NEUTRAL.slate, textDecoration: "none" }}
+                onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
+                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+              >
+                <GitBranch size={12} />
+                Configurar mover cards
+              </a>
+              <a
+                href="#"
+                onClick={e => { e.preventDefault(); /* future: AI-assisted move */ }}
+                className="flex items-center gap-2 text-xs"
+                style={{ color: NEUTRAL.slate, textDecoration: "none" }}
+                onMouseEnter={e => { e.currentTarget.style.color = "#7C3AED"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+              >
+                <Sparkles size={12} />
+                Mover cards com IA
+              </a>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
