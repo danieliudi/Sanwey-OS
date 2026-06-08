@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import {
-  RotateCcw, Check, AlertTriangle, Trash2, Database, Sparkles, Camera, Loader2,
+  RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
@@ -204,13 +204,19 @@ export function SettingsView({
     setAiTestResult(null);
   };
 
+  const [aiSaveFeedback, setAiSaveFeedback] = useState(null);
+
   const handleAiSave = async () => {
     if (!aiForm.provider || !aiForm.model || !aiForm.apiKey.trim()) return;
     setAiSaving(true);
+    setAiSaveFeedback(null);
     try {
       const config = { provider: aiForm.provider, model: aiForm.model, apiKey: aiForm.apiKey.trim() };
       if (onUpdateUser && currentUser?.id) await onUpdateUser(currentUser.id, { aiConfig: config });
       if (onUpdateMockUser) onUpdateMockUser(u => ({ ...u, aiConfig: config }));
+      setAiSaveFeedback({ type: "success", msg: "Configuração salva com sucesso." });
+    } catch (err) {
+      setAiSaveFeedback({ type: "error", msg: err.message || "Erro ao salvar configuração." });
     } finally {
       setAiSaving(false);
     }
@@ -918,6 +924,18 @@ export function SettingsView({
                       >
                         {aiSaving ? "Salvando..." : "Salvar configuração"}
                       </button>
+                    </div>
+                  )}
+                  {aiSaveFeedback && (
+                    <div
+                      className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+                      style={{
+                        background: aiSaveFeedback.type === "success" ? "#DCFCE7" : "#FEF2F2",
+                        color: aiSaveFeedback.type === "success" ? "#16A34A" : "#B91C1C",
+                      }}
+                    >
+                      {aiSaveFeedback.type === "success" ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                      {aiSaveFeedback.msg}
                     </div>
                   )}
                 </div>
