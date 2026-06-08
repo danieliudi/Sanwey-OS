@@ -3,7 +3,7 @@ import {
   X, MapPin, AlertTriangle, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
   Building2, RefreshCw, Check, Trash2, Mail, ChevronDown, ChevronUp,
-  Clock, MessageSquare, GitBranch, CalendarClock,
+  Clock, MessageSquare, GitBranch, CalendarClock, ArrowLeft, ArrowRight, History,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -16,6 +16,7 @@ import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
 import { useStageFields } from "../../hooks/use-stage-fields";
+import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 
@@ -38,6 +39,26 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
   const customValues = lead?.customFields || {};
+  const { entries: stageHistory } = useSingleLeadHistory(lead?.id);
+
+  // Resolve prev/next non-terminal stages based on the default pipeline order.
+  const stageNav = useMemo(() => {
+    if (!lead?.stage) return { prev: null, next: null };
+    const idx = DEFAULT_PIPELINE_STAGES.findIndex(s => s.id === lead.stage);
+    if (idx < 0) return { prev: null, next: null };
+    const prev = idx > 0 ? DEFAULT_PIPELINE_STAGES[idx - 1] : null;
+    // Next: skip terminal stages
+    const next = idx < DEFAULT_PIPELINE_STAGES.length - 1
+      ? DEFAULT_PIPELINE_STAGES[idx + 1]
+      : null;
+    return { prev, next };
+  }, [lead?.stage]);
+
+  const moveToStage = useCallback((toStage) => {
+    if (!lead || !toStage) return;
+    setStage(toStage);
+    onUpdate(lead.id, { stage: toStage, status: toStage, stageChangedAt: new Date().toISOString() });
+  }, [lead, onUpdate]);
 
   useEffect(() => { resetEnrich(); }, [lead?.id, resetEnrich]);
 
@@ -331,6 +352,40 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
           {/* ── Pipeline stage progress bar ───────────────────────────────── */}
           <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
+
+          {/* ── Stage navigation: ← anterior · próxima → ──────────────────── */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <button
+              onClick={() => moveToStage(stageNav.prev?.id)}
+              disabled={!stageNav.prev}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+              style={{
+                background: stageNav.prev ? "#FFFFFF" : "#F3F4F6",
+                color: stageNav.prev ? NEUTRAL.graphite : NEUTRAL.slate,
+                border: `1px solid ${stageNav.prev ? "#E5E7EB" : "#F3F4F6"}`,
+                cursor: stageNav.prev ? "pointer" : "not-allowed",
+              }}
+              title={stageNav.prev ? `Voltar para ${stageNav.prev.name}` : "Sem etapa anterior"}
+            >
+              <ArrowLeft size={13} />
+              {stageNav.prev?.name || "—"}
+            </button>
+            <button
+              onClick={() => moveToStage(stageNav.next?.id)}
+              disabled={!stageNav.next}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+              style={{
+                background: stageNav.next ? company.primary : "#F3F4F6",
+                color: stageNav.next ? "#FFFFFF" : NEUTRAL.slate,
+                border: "none",
+                cursor: stageNav.next ? "pointer" : "not-allowed",
+              }}
+              title={stageNav.next ? `Avançar para ${stageNav.next.name}` : "Etapa final"}
+            >
+              {stageNav.next?.name || "Final"}
+              <ArrowRight size={13} />
+            </button>
+          </div>
 
           {/* ── Hero metrics ─────────────────────────────────────────────── */}
           <div className="grid grid-cols-3 gap-2">
@@ -766,6 +821,50 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               )}
             </div>
           </div>
+
+          {/* ── Histórico de etapas ────────────────────────────────────── */}
+          {stageHistory.length > 0 && (
+            <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+              <div className="flex items-center gap-1.5 mb-3" style={{ color: NEUTRAL.slate }}>
+                <History size={13} />
+                <span className="text-xs font-semibold">Histórico de etapas</span>
+              </div>
+              <ol className="space-y-2.5 relative" style={{ paddingLeft: 18 }}>
+                <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 1, background: "#E5E7EB" }} />
+                {stageHistory.slice(0, 8).map((h, i) => {
+                  const toStage = DEFAULT_PIPELINE_STAGES.find(s => s.id === h.toStage);
+                  const fromStage = h.fromStage ? DEFAULT_PIPELINE_STAGES.find(s => s.id === h.fromStage) : null;
+                  return (
+                    <li key={i} className="relative">
+                      <div
+                        style={{
+                          position: "absolute", left: -16, top: 3,
+                          width: 9, height: 9, borderRadius: "50%",
+                          background: toStage?.color || NEUTRAL.slate,
+                          border: "2px solid #FFFFFF", boxShadow: "0 0 0 1px #E5E7EB",
+                        }}
+                      />
+                      <div className="text-xs" style={{ color: NEUTRAL.graphite }}>
+                        {fromStage ? (
+                          <>{fromStage.name} <span style={{ color: NEUTRAL.slate }}>→</span> <strong>{toStage?.name || h.toStage}</strong></>
+                        ) : (
+                          <strong>{toStage?.name || h.toStage}</strong>
+                        )}
+                      </div>
+                      <div className="text-[11px] mt-0.5" style={{ color: NEUTRAL.slate }}>
+                        {new Date(h.changedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                      </div>
+                    </li>
+                  );
+                })}
+                {stageHistory.length > 8 && (
+                  <li className="text-[11px]" style={{ color: NEUTRAL.slate }}>
+                    +{stageHistory.length - 8} eventos anteriores
+                  </li>
+                )}
+              </ol>
+            </div>
+          )}
 
           {/* IA panel */}
           <LeadAIPanel
