@@ -14,6 +14,7 @@ export function TopBar({
   desktopPermission,
   onRequestDesktopPermission,
   onSelectLead,
+  onHelpClick,
 }) {
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
   useEffect(() => {
@@ -98,16 +99,28 @@ export function TopBar({
             <span className="material-symbols-outlined" style={{ fontSize: 22 }}>search</span>
           </button>
         )}
-        <NotificationCenter
-          notifications={notifications || []}
-          unreadCount={unreadCount || 0}
-          onMarkAllRead={onMarkAllRead}
-          onMarkRead={onMarkRead}
-          onClearAll={onClearAll}
-          desktopPermission={desktopPermission}
-          onRequestDesktopPermission={onRequestDesktopPermission}
-          onSelectLead={onSelectLead}
-        />
+        <div className="flex items-center gap-1">
+          {!isDesktop && onHelpClick && (
+            <button
+              onClick={onHelpClick}
+              title="Ajuda e tutoriais"
+              style={{ width: 40, height: 40, background: "transparent", border: "none", color: "#5c5f60", cursor: "pointer", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}
+              aria-label="Ajuda"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 22 }}>help</span>
+            </button>
+          )}
+          <NotificationCenter
+            notifications={notifications || []}
+            unreadCount={unreadCount || 0}
+            onMarkAllRead={onMarkAllRead}
+            onMarkRead={onMarkRead}
+            onClearAll={onClearAll}
+            desktopPermission={desktopPermission}
+            onRequestDesktopPermission={onRequestDesktopPermission}
+            onSelectLead={onSelectLead}
+          />
+        </div>
       </div>
     </header>
   );

@@ -60,8 +60,8 @@ export function MobileBottomNav({ section, onSectionChange, onMenuOpen }) {
         }}
         aria-label="Menu"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: 24 }}>grid_view</span>
-        <span style={{ fontSize: 11, fontWeight: 500, lineHeight: 1 }}>Mais</span>
+        <span className="material-symbols-outlined" style={{ fontSize: 24 }}>menu</span>
+        <span style={{ fontSize: 11, fontWeight: 500, lineHeight: 1 }}>Menu</span>
       </button>
     </nav>
   );
