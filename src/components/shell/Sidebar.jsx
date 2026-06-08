@@ -218,7 +218,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               <div style={{ color: section === "settings" ? "#b5000b" : "#201a1a", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {currentUser?.name || "Convidado"}
               </div>
-              <div style={{ color: T.text, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ color: T.text, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {ROLE_LABEL[currentUser?.role] || "—"}
               </div>
             </div>
