@@ -4,6 +4,7 @@ import {
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
   Building2, RefreshCw, Check, Trash2, Mail, ChevronDown, ChevronUp,
   Clock, MessageSquare, GitBranch, CalendarClock, ArrowLeft, ArrowRight, History,
+  FileText, Activity, Paperclip, ListChecks, FileDown, Plus,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -25,6 +26,7 @@ const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.
 
 export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, isManager, currentUser }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
+  const [sideTab, setSideTab] = useState("form");
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -384,6 +386,12 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               <FitScoreCircle score={lead.fitScore} size={48} />
             </div>
 
+            {/* Tabs */}
+            <SideTabs activeTab={sideTab} onChange={setSideTab} />
+
+            {/* ── Tab: Form ── */}
+            {sideTab === "form" && (
+            <>
             {/* Formulário Inicial (vindo de captura pública) */}
             {customValues.capture_customer_name && (
               <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
@@ -455,6 +463,63 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                   )}
                 </ol>
               </div>
+            )}
+            </>
+            )}
+
+            {/* ── Tab: Atividades ── */}
+            {sideTab === "atividades" && (
+              <ActivitiesPanel
+                stageHistory={stageHistory}
+                activities={lead.activities || []}
+                users={users}
+              />
+            )}
+
+            {/* ── Tab: Comentários ── */}
+            {sideTab === "comentarios" && (
+              <CommentsPanel
+                lead={lead}
+                currentUser={currentUser}
+                users={users}
+                onAddActivity={onAddActivity}
+              />
+            )}
+
+            {/* ── Tab: Anexos ── */}
+            {sideTab === "anexos" && (
+              <PlaceholderPanel
+                icon={Paperclip}
+                title="Anexos"
+                hint="Em breve — anexe documentos, contratos e amostras diretamente no card."
+              />
+            )}
+
+            {/* ── Tab: Checklists ── */}
+            {sideTab === "checklists" && (
+              <PlaceholderPanel
+                icon={ListChecks}
+                title="Checklists"
+                hint="Em breve — crie listas de subtarefas para acompanhar atividades do card."
+              />
+            )}
+
+            {/* ── Tab: Email ── */}
+            {sideTab === "email" && (
+              <PlaceholderPanel
+                icon={Mail}
+                title="Email"
+                hint="Em breve — emails vinculados e rascunhos centralizados aqui."
+              />
+            )}
+
+            {/* ── Tab: PDF ── */}
+            {sideTab === "pdf" && (
+              <PlaceholderPanel
+                icon={FileDown}
+                title="Exportar PDF"
+                hint="Em breve — gere um PDF deste card para compartilhar fora da plataforma."
+              />
             )}
           </aside>
 
@@ -1279,6 +1344,226 @@ function InfoTile({ label, value }) {
         {label}
       </div>
       <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{value}</div>
+    </div>
+  );
+}
+
+// ── Side-tab system ─────────────────────────────────────────────────────────
+
+const SIDE_TABS = [
+  { id: "form",         label: "Form",        icon: FileText },
+  { id: "atividades",   label: "Atividades",  icon: Activity },
+  { id: "anexos",       label: "Anexos",      icon: Paperclip },
+  { id: "checklists",   label: "Checklists",  icon: ListChecks },
+  { id: "comentarios",  label: "Comentários", icon: MessageSquare },
+  { id: "email",        label: "Email",       icon: Mail },
+  { id: "pdf",          label: "PDF",         icon: FileDown },
+];
+
+function SideTabs({ activeTab, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {SIDE_TABS.map(t => {
+        const active = activeTab === t.id;
+        const Icon = t.icon;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
+            style={{
+              background: active ? "#FFFFFF" : "transparent",
+              color: active ? "#b5000b" : NEUTRAL.slate,
+              border: `1px solid ${active ? "#b5000b" : "#E5E7EB"}`,
+              cursor: "pointer",
+            }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#FFFFFF"; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+          >
+            <Icon size={11} />
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ActivitiesPanel({ stageHistory, activities, users }) {
+  // Combina movimentações de etapa + atividades genéricas em uma única timeline.
+  const combined = useMemo(() => {
+    const items = [];
+    for (const h of stageHistory || []) {
+      items.push({
+        type: "stage",
+        timestamp: h.changedAt,
+        from: h.fromStage,
+        to: h.toStage,
+        userId: h.changedBy,
+      });
+    }
+    for (const a of activities || []) {
+      items.push({
+        type: a.type || "note",
+        timestamp: a.timestamp || a.createdAt,
+        body: a.body,
+        userId: a.userId,
+        userName: a.userName,
+        meta: a.meta,
+      });
+    }
+    return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [stageHistory, activities]);
+
+  if (combined.length === 0) {
+    return (
+      <PlaceholderPanel
+        icon={Activity}
+        title="Atividades"
+        hint="Movimentações entre etapas e edições aparecem aqui."
+      />
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+      <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite }}>
+        Atividades
+      </div>
+      <ol className="space-y-3">
+        {combined.slice(0, 20).map((a, i) => {
+          const fromStage = a.from ? DEFAULT_PIPELINE_STAGES.find(s => s.id === a.from) : null;
+          const toStage = a.to ? DEFAULT_PIPELINE_STAGES.find(s => s.id === a.to) : null;
+          const user = a.userId ? (users || []).find(u => u.id === a.userId) : null;
+          const userName = user?.name || a.userName || "Sistema";
+          return (
+            <li key={i} className="text-xs" style={{ color: NEUTRAL.graphite }}>
+              {a.type === "stage" ? (
+                <div>
+                  <span style={{ color: NEUTRAL.slate }}>{userName} </span>
+                  moveu para <strong>{toStage?.name || a.to}</strong>
+                  {fromStage && <span style={{ color: NEUTRAL.slate }}> (de {fromStage.name})</span>}
+                </div>
+              ) : (
+                <div>
+                  <span style={{ color: NEUTRAL.slate }}>{userName} </span>
+                  {a.body}
+                </div>
+              )}
+              <div className="text-[10px] mt-0.5" style={{ color: NEUTRAL.slate }}>
+                {new Date(a.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+              </div>
+            </li>
+          );
+        })}
+        {combined.length > 20 && (
+          <li className="text-[10px]" style={{ color: NEUTRAL.slate }}>
+            +{combined.length - 20} eventos anteriores
+          </li>
+        )}
+      </ol>
+    </div>
+  );
+}
+
+function CommentsPanel({ lead, currentUser, users, onAddActivity }) {
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const notes = Array.isArray(lead?.notes) ? lead.notes : [];
+  const comments = (lead?.activities || []).filter(a => a.type === "note" || a.type === "comment");
+  const all = useMemo(() => {
+    const merged = [
+      ...notes.map(n => ({ body: n.text || n.body, timestamp: n.createdAt, userName: n.userName })),
+      ...comments.map(c => ({ body: c.body, timestamp: c.timestamp, userId: c.userId, userName: c.userName })),
+    ];
+    return merged.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [notes, comments]);
+
+  const handleAdd = async () => {
+    const t = text.trim();
+    if (!t || !onAddActivity) return;
+    setSaving(true);
+    try {
+      await onAddActivity(lead.id, {
+        type: "comment",
+        userId: currentUser?.id || null,
+        userName: currentUser?.name || null,
+        body: t,
+      });
+      setText("");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="p-4 rounded-xl border space-y-3" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+      <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+        Comentários
+      </div>
+      {all.length === 0 && (
+        <div className="text-xs italic" style={{ color: NEUTRAL.slate }}>
+          Nenhum comentário ainda.
+        </div>
+      )}
+      {all.length > 0 && (
+        <ol className="space-y-2.5">
+          {all.slice(0, 20).map((c, i) => (
+            <li key={i} className="text-xs" style={{ color: NEUTRAL.graphite }}>
+              <div className="font-semibold mb-0.5" style={{ color: NEUTRAL.graphite, fontSize: 11 }}>
+                {c.userName || (users || []).find(u => u.id === c.userId)?.name || "—"}
+                <span className="ml-1.5 font-normal" style={{ color: NEUTRAL.slate, fontSize: 10 }}>
+                  {c.timestamp ? new Date(c.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : ""}
+                </span>
+              </div>
+              <div className="whitespace-pre-line">{c.body}</div>
+            </li>
+          ))}
+        </ol>
+      )}
+      {onAddActivity && (
+        <div className="pt-2 border-t" style={{ borderColor: "#F0F0F0" }}>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Escreva um comentário..."
+            rows={2}
+            className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
+            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, resize: "vertical", fontFamily: "inherit" }}
+          />
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={handleAdd}
+              disabled={!text.trim() || saving}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+              style={{
+                background: text.trim() && !saving ? "#b5000b" : "#E5E7EB",
+                color: text.trim() && !saving ? "#FFFFFF" : NEUTRAL.slate,
+                border: "none",
+                cursor: text.trim() && !saving ? "pointer" : "not-allowed",
+              }}
+            >
+              <Plus size={12} />
+              {saving ? "Adicionando..." : "Comentar"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlaceholderPanel({ icon: Icon, title, hint }) {
+  return (
+    <div className="p-6 rounded-xl border text-center" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+      <div className="inline-flex items-center justify-center mb-3" style={{
+        width: 40, height: 40, borderRadius: "50%",
+        background: "#F3F4F6",
+      }}>
+        <Icon size={18} color={NEUTRAL.slate} />
+      </div>
+      <div className="text-sm font-semibold mb-1" style={{ color: NEUTRAL.graphite }}>{title}</div>
+      <div className="text-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>{hint}</div>
     </div>
   );
 }
