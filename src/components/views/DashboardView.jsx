@@ -181,7 +181,8 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
         )}
         {widgetVisible("avg_fit") && (
           <StatCard icon={Gauge} value={stats.avgFit} label="Fit score médio"
-            sublabel={`${stats.newCount} novos em 48h`} compact />
+            sublabel={`${stats.newCount} novos em 48h`} compact
+            tooltip="Pontuação de 0 a 100 que indica o potencial do lead. Acima de 70 é considerado quente." />
         )}
       </div>
 
@@ -317,9 +318,11 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
         <div>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>Sinais de mercado</h2>
+              <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+                Sinais de mercado
+              </h2>
               <p className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
-                {isGroupView ? "Todas as empresas" : companyData?.short} · 14 dias
+                Alertas automáticos sobre empresas do seu pipeline · clique para ver detalhes
               </p>
             </div>
             <button

@@ -170,26 +170,35 @@ export function UserManagementView({
     }
   }, [inviteForm, onCreateInvitation, currentUser, users, invitations]);
 
-  const remove = useCallback(async (id) => {
+  const remove = useCallback((id) => {
     const target = users.find(u => u.id === id);
     if (!target) return;
-    const ok = window.confirm(`Remover ${target.name}? Esta ação não pode ser desfeita.`);
-    if (!ok) return;
     setMenuOpenId(null);
-    try {
-      if (onDeleteUser) await onDeleteUser(id);
-      else if (onUsersChange) onUsersChange(prev => prev.filter(u => u.id !== id));
-    } catch (e) {
-      window.alert(`Não foi possível remover: ${e?.message || e}`);
-    }
+    setConfirmDialog({
+      message: `Remover ${target.name}? Esta ação não pode ser desfeita.`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          if (onDeleteUser) await onDeleteUser(id);
+          else if (onUsersChange) onUsersChange(prev => prev.filter(u => u.id !== id));
+        } catch (e) {
+          window.alert(`Não foi possível remover: ${e?.message || e}`);
+        }
+      },
+    });
   }, [users, onDeleteUser, onUsersChange]);
 
   const [resendingId, setResendingId] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null); // { message, onConfirm }
 
-  const revoke = useCallback(async (inv) => {
-    const ok = window.confirm(`Revogar o convite para ${inv.email}?`);
-    if (!ok) return;
-    try { await onRevokeInvitation(inv.id); } catch (e) { window.alert(`Erro: ${e?.message || e}`); }
+  const revoke = useCallback((inv) => {
+    setConfirmDialog({
+      message: `Revogar o convite para ${inv.email}?`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try { await onRevokeInvitation(inv.id); } catch (e) { window.alert(`Erro: ${e?.message || e}`); }
+      },
+    });
   }, [onRevokeInvitation]);
 
   const resend = useCallback(async (inv) => {

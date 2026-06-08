@@ -745,10 +745,20 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 >
                   {bucket.leads.length === 0 ? (
                     <div
-                      className="flex items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs"
+                      className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
                       style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}
                     >
-                      {isOver ? "Soltar aqui" : "Sem leads"}
+                      {isOver ? (
+                        <>
+                          <Plus size={16} style={{ opacity: 0.5 }} />
+                          <span>Soltar aqui</span>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ opacity: 0.5 }}>Nenhum negócio nesta etapa</span>
+                          {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card ou clique em "+ Novo card"</span>}
+                        </>
+                      )}
                     </div>
                   ) : (
                     bucket.leads.map(lead => {
@@ -764,6 +774,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                           isGroupView={isGroupView}
                           onClick={onLeadClick}
                           onDragStart={handleDragStart}
+                          stages={stages}
+                          onMoveToStage={onStageChange}
                         />
                       );
                     })
@@ -850,6 +862,36 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       isOpen={showAIChat}
       onClose={() => setShowAIChat(false)}
     />
+
+      {/* FAB mobile — botão flutuante para criar negócio */}
+      {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
+        <button
+          className="lg:hidden fixed z-20 flex items-center gap-2 font-semibold shadow-lg"
+          style={{
+            bottom: 80,
+            right: 16,
+            height: 52,
+            padding: "0 20px",
+            background: "#b5000b",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: 26,
+            fontSize: 14,
+            cursor: "pointer",
+            boxShadow: "0 4px 16px rgba(181,0,11,0.35)",
+          }}
+          onClick={() => {
+            const firstStage = stages.find(s => !s.terminal);
+            if (firstStage) setCreateModalStage({ stageId: firstStage.id, stage: firstStage, companyId: isGroupView ? firstValidCompany : activeCompany });
+          }}
+          onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
+          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+          aria-label="Novo negócio"
+        >
+          <Plus size={20} />
+          Novo negócio
+        </button>
+      )}
     </>
   );
 }
