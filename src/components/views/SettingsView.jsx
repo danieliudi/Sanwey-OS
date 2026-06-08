@@ -70,7 +70,7 @@ export function SettingsView({
   settings, onUpdate, onReset, onClearLocalData, currentUser,
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
-  usersPanel,
+  usersPanel, onOpenClientImport,
 }) {
   const [activeTab, setActiveTab] = useState("perfil");
   const tabs = useMemo(
@@ -1060,6 +1060,26 @@ export function SettingsView({
                     <strong>Dica:</strong> adicione <code>?src=instagram</code>, <code>?src=whatsapp</code> ou outro identificador ao final da URL para rastrear a origem da captura no card do lead.
                   </div>
                 </div>
+
+                {/* Importar planilha de clientes */}
+                {onOpenClientImport && (
+                  <div className="mt-6 pt-5 border-t" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+                      <div>
+                        <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite, marginBottom: 2 }}>
+                          Importar planilha de clientes
+                        </div>
+                        <p className="text-xs" style={{ color: NEUTRAL.slate, marginBottom: 0, maxWidth: 480 }}>
+                          Envie um arquivo .xlsx ou .csv com clientes ativos e inativos. A plataforma deduplica
+                          automaticamente por CNPJ — registros já cadastrados são ignorados.
+                        </p>
+                      </div>
+                      <Button variant="primary" icon={Database} onClick={onOpenClientImport}>
+                        Importar planilha
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </Section>
             )}
 

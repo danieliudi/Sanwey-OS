@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { X, Settings, Loader2, AlertTriangle } from "lucide-react";
+import { X, Settings, Loader2 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { CANONICAL_STATES } from "../../constants/taxonomy";
@@ -8,29 +8,43 @@ import { LeadFormBuilder } from "./LeadFormBuilder";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { StageFieldInput } from "./StageFieldInput";
 
-// ── Duplicate detection helpers ───────────────────────────────────────────────
+// ── Customer search helpers ───────────────────────────────────────────────────
 
 function normalizeName(name) {
   return (name || "").trim().toLowerCase();
 }
 
-function isSimilar(a, b) {
-  if (!a || !b) return false;
-  if (a === b) return true;
-  // includes check for longer strings
-  if (a.length > 4 && b.length > 4) {
-    if (a.includes(b) || b.includes(a)) return true;
-  }
-  return false;
+function cnpjDigits(s) {
+  return (s || "").replace(/\D/g, "");
 }
 
-function findDuplicates(typedName, existingLeads) {
-  const typed = normalizeName(typedName);
-  if (typed.length < 2) return [];
-  return (existingLeads || []).filter(lead => {
-    const existing = normalizeName(lead.company);
-    return isSimilar(typed, existing);
-  });
+// Procura matches existentes por nome (substring case-insensitive) ou CNPJ.
+// Retorna até `limit` candidatos ordenados por relevância (exact > prefix > inclusion).
+function findMatches({ name, cnpj }, existingLeads, limit = 5) {
+  const typedName = normalizeName(name);
+  const typedCnpj = cnpjDigits(cnpj);
+  if (typedName.length < 2 && typedCnpj.length < 4) return [];
+
+  const scored = [];
+  for (const l of (existingLeads || [])) {
+    const ln = normalizeName(l.company);
+    const lc = cnpjDigits(l.cnpj);
+    let score = 0;
+    // CNPJ tem prioridade — match exato pesa muito
+    if (typedCnpj && lc) {
+      if (lc === typedCnpj) score += 100;
+      else if (lc.startsWith(typedCnpj)) score += 60;
+      else if (lc.includes(typedCnpj)) score += 30;
+    }
+    if (typedName && ln) {
+      if (ln === typedName) score += 50;
+      else if (ln.startsWith(typedName)) score += 25;
+      else if (ln.includes(typedName)) score += 10;
+    }
+    if (score > 0) scored.push({ lead: l, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit).map(s => s.lead);
 }
 
 // ── Field renderer ────────────────────────────────────────────────────────────
@@ -254,19 +268,20 @@ export function LeadCreateModal({
     }
   }, [open, currentUser]);
 
-  // Debounced duplicate detection on company name change
+  // Debounced match lookup on company name OR CNPJ change.
+  // Procura clientes já cadastrados em qualquer empresa acessível.
   useEffect(() => {
-    const typed = values.company || "";
-    if (!typed.trim() || typed.trim().length < 2) {
+    const name = values.company || "";
+    const cnpj = values.cnpj || "";
+    if (name.trim().length < 2 && cnpjDigits(cnpj).length < 4) {
       setDuplicates([]);
       return;
     }
     const timer = setTimeout(() => {
-      const found = findDuplicates(typed, existingLeads);
-      setDuplicates(found);
-    }, 300);
+      setDuplicates(findMatches({ name, cnpj }, existingLeads));
+    }, 250);
     return () => clearTimeout(timer);
-  }, [values.company, existingLeads]);
+  }, [values.company, values.cnpj, existingLeads]);
 
   const set = useCallback((fieldId, val) => {
     setValues(prev => ({ ...prev, [fieldId]: val }));
@@ -463,71 +478,72 @@ export function LeadCreateModal({
                     inputRef={idx === 0 ? firstRef : undefined}
                   />
                 </div>
-                {entry.id === "company" && duplicates.length > 0 && (
+                {(entry.id === "company" || entry.id === "cnpj") && duplicates.length > 0 && (
                   <div
                     style={{
                       marginBottom: 16,
                       padding: "10px 12px",
-                      background: "#FEF3C7",
-                      borderLeft: "3px solid #E8920A",
-                      borderRadius: "0 6px 6px 0",
-                      color: "#92400E",
+                      background: "#EFF6FF",
+                      border: "1px solid #BFDBFE",
+                      borderRadius: 8,
                       fontSize: 12,
                     }}
                   >
-                    {duplicates.slice(0, 1).map(dup => {
-                      const ownerUser = (users || []).find(u => u.id === dup.owner);
-                      const ownerName = ownerUser?.name || dup.owner || "—";
-                      return (
-                        <div key={dup.id}>
-                          <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 8 }}>
-                            <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1, color: "#E8920A" }} />
-                            <span>
-                              <strong>Lead similar já existe:</strong> "{dup.company}" — Etapa: {dup.stage} (responsável: {ownerName})
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ color: "#1E40AF", fontWeight: 600 }}>
+                        {duplicates.length} cliente{duplicates.length !== 1 ? "s" : ""} já cadastrado{duplicates.length !== 1 ? "s" : ""}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDuplicates([])}
+                        style={{
+                          fontSize: 11, color: "#1E40AF",
+                          background: "transparent", border: "none",
+                          cursor: "pointer", textDecoration: "underline",
+                        }}
+                      >
+                        Ignorar e criar novo
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {duplicates.map(dup => {
+                        const ownerUser = (users || []).find(u => u.id === dup.owner);
+                        const ownerName = ownerUser?.name || "—";
+                        const dupCompany = COMPANIES[dup.companyId];
+                        return (
+                          <button
+                            key={dup.id}
+                            type="button"
+                            onClick={() => {
+                              if (onViewExisting) onViewExisting(dup);
+                              onClose();
+                            }}
+                            style={{
+                              display: "flex", alignItems: "center", justifyContent: "space-between",
+                              gap: 10, width: "100%", textAlign: "left",
+                              padding: "8px 10px", borderRadius: 6,
+                              background: "#FFFFFF", border: "1px solid #DBEAFE",
+                              cursor: "pointer", color: NEUTRAL.graphite,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#F0F7FF"; e.currentTarget.style.borderColor = "#93C5FD"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "#DBEAFE"; }}
+                          >
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: 600, fontSize: 12, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {dup.company}
+                              </div>
+                              <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 1 }}>
+                                {dup.cnpj && <span style={{ fontFamily: "monospace" }}>{dup.cnpj} · </span>}
+                                {dupCompany?.short || dup.companyId} · {dup.stage} · {ownerName}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "#1E40AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                              Abrir →
                             </span>
-                          </div>
-                          <div style={{ display: "flex", gap: 8, marginLeft: 20 }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (onViewExisting) onViewExisting(dup);
-                                onClose();
-                              }}
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                color: "#92400E",
-                                background: "rgba(255,255,255,0.6)",
-                                border: "1px solid #E8920A",
-                                borderRadius: 5,
-                                padding: "3px 10px",
-                                cursor: "pointer",
-                              }}
-                              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.9)"; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.6)"; }}
-                            >
-                              Ver lead existente
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setDuplicates([])}
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                color: "#78350F",
-                                background: "transparent",
-                                border: "none",
-                                cursor: "pointer",
-                                padding: "3px 0",
-                                textDecoration: "underline",
-                              }}
-                            >
-                              Criar mesmo assim
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </React.Fragment>

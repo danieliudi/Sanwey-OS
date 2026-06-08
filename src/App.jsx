@@ -25,6 +25,7 @@ import { Sidebar } from "./components/shell/Sidebar";
 import { TopBar } from "./components/shell/TopBar";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
 import { SignalDetailDrawer } from "./components/lead/SignalDetailDrawer";
+import { ImportModal } from "./components/lead/ImportModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
@@ -127,6 +128,7 @@ export default function App() {
   const [selectedSignal, setSelectedSignal] = useState(null);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [clientImportOpen, setClientImportOpen] = useState(false);
 
   const closeSignalDrawer = useCallback(() => setSelectedSignal(null), []);
 
@@ -611,6 +613,7 @@ export default function App() {
                 onUpdateAuthUser={supabaseEnabled ? updateAuthUser : null}
                 onUpdateMockUser={supabaseEnabled ? null : setMockUser}
                 supabaseEnabled={supabaseEnabled}
+                onOpenClientImport={() => setClientImportOpen(true)}
                 usersPanel={
                   <UserManagementView
                     users={users}
@@ -686,6 +689,15 @@ export default function App() {
         users={users}
         pipelines={pipelines}
         onSelectLead={(lead) => { setSelectedLead(lead); setCmdOpen(false); }}
+      />
+
+      <ImportModal
+        isOpen={clientImportOpen}
+        onClose={() => setClientImportOpen(false)}
+        users={users}
+        currentUser={currentUser}
+        onAddLead={handleAddLead}
+        companies={accessibleCompanies || []}
       />
 
       <ErrorBoundary>
