@@ -11,10 +11,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { invitation_id } = await req.json();
-    if (!invitation_id) {
-      return new Response(JSON.stringify({ error: "invitation_id obrigatório" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Authentication: only admin/gerente users may resend invites
+    const authHeader = req.headers.get("Authorization") || "";
+    const jwt = authHeader.replace(/^Bearer\s+/i, "");
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: "Autenticação necessária" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -22,6 +24,32 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    const { data: userData, error: userErr } = await supabase.auth.getUser(jwt);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Sessão inválida" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userData.user.id)
+      .single();
+
+    if (!profile || !["admin", "gerente", "gerente_marketing"].includes(profile.role)) {
+      return new Response(JSON.stringify({ error: "Sem permissão" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { invitation_id } = await req.json();
+    if (!invitation_id) {
+      return new Response(JSON.stringify({ error: "invitation_id obrigatório" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Busca o convite
     const { data: inv, error: invErr } = await supabase

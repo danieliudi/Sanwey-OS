@@ -149,20 +149,23 @@ export function useMarketingCampaigns({ userId, role } = {}) {
   }, [canWrite]);
 
   const toggleStar = useCallback(async (id) => {
+    if (!canWrite) return;
     const campaign = campaigns.find(c => c.id === id);
     if (!campaign || !isSupabaseConfigured) return;
     const starred = !campaign.starred;
-    await supabase.from(TABLE).update({ starred }).eq("id", id);
+    const { error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id);
+    if (err) throw err;
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, starred } : c));
-  }, [campaigns]);
+  }, [campaigns, canWrite]);
 
-  // Agency-safe checklist tick (no canWrite guard — agency can tick)
+  // Agency-safe checklist tick — uses SECURITY DEFINER RPC so agencia (whose
+  // RLS blocks direct UPDATE on marketing_campaigns) can still mark items.
   const updateChecklist = useCallback(async (id, checklist) => {
     if (!isSupabaseConfigured) return;
-    const { error: err } = await supabase
-      .from(TABLE)
-      .update({ approval_checklist: checklist })
-      .eq("id", id);
+    const { error: err } = await supabase.rpc("mc_set_checklist", {
+      p_campaign_id: id,
+      p_checklist: checklist,
+    });
     if (err) throw err;
     setCampaigns(prev =>
       prev.map(c => c.id === id ? { ...c, approvalChecklist: checklist } : c)

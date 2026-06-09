@@ -127,7 +127,8 @@ export function UserManagementView({
 
   const save = useCallback(async () => {
     if (!form.name?.trim()) { setModalError("Informe o nome."); return; }
-    if (!Array.isArray(form.companies) || form.companies.length === 0) {
+    const companyRequired = form.role === "vendedor" || form.role === "consultor" || form.role === "gerente";
+    if (companyRequired && (!Array.isArray(form.companies) || form.companies.length === 0)) {
       setModalError("Selecione ao menos uma empresa."); return;
     }
     const initials = form.initials
@@ -232,7 +233,8 @@ export function UserManagementView({
     setInviteForm(prev => ({ ...prev, sectors: prev.sectors.includes(s) ? prev.sectors.filter(x => x !== s) : [...prev.sectors, s] }));
   }, []);
 
-  const canSave = Boolean(form.name && form.companies.length > 0);
+  const formCompanyRequired = form.role === "vendedor" || form.role === "consultor" || form.role === "gerente";
+  const canSave = Boolean(form.name && (!formCompanyRequired || form.companies.length > 0));
   const canManageInvites = supabaseEnabled && Boolean(onCreateInvitation);
 
   const vendedorOptions = useMemo(() => [

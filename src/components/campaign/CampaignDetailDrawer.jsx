@@ -380,11 +380,30 @@ export function CampaignDetailDrawer({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const saveTimeout = useRef(null);
+  const pendingPatch = useRef({});
 
   const isAgencia = currentUser?.role === "agencia";
 
+  const flushPending = useCallback(() => {
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current);
+      saveTimeout.current = null;
+    }
+    const patch = pendingPatch.current;
+    pendingPatch.current = {};
+    if (campaign?.id && Object.keys(patch).length > 0) {
+      onUpdate?.(campaign.id, patch);
+    }
+  }, [campaign?.id, onUpdate]);
+
+  // Flush when switching campaigns or unmounting (close)
+  useEffect(() => {
+    return () => { flushPending(); };
+  }, [campaign?.id, flushPending]);
+
   useEffect(() => {
     setDraft({});
+    pendingPatch.current = {};
   }, [campaign?.id]);
 
   const get = (field) =>
@@ -393,9 +412,15 @@ export function CampaignDetailDrawer({
   const set = useCallback((field, value) => {
     if (isAgencia) return;
     setDraft(prev => ({ ...prev, [field]: value }));
+    pendingPatch.current = { ...pendingPatch.current, [field]: value };
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(() => {
-      onUpdate?.(campaign.id, { [field]: value });
+      const patch = pendingPatch.current;
+      pendingPatch.current = {};
+      saveTimeout.current = null;
+      if (Object.keys(patch).length > 0) {
+        onUpdate?.(campaign.id, patch);
+      }
     }, 600);
   }, [campaign?.id, onUpdate, isAgencia]);
 
