@@ -389,6 +389,28 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               <FitScoreCircle score={lead.fitScore} size={48} />
             </div>
 
+            {/* Métricas compactas — Unidades / Prob. / Fechamento */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Unidades</div>
+                <div className="text-sm font-bold mt-0.5" style={{ color: NEUTRAL.graphite }}>
+                  {lead.quantity ? `${lead.quantity} un` : "—"}
+                </div>
+              </div>
+              <div className="rounded-lg p-2" style={{ background: company.primary + "0D", border: `1px solid ${company.primary}22` }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Prob.</div>
+                <div className="text-sm font-bold mt-0.5" style={{ color: company.primary }}>
+                  {probDisplay}%
+                </div>
+              </div>
+              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Fechamento</div>
+                <div className="text-sm font-bold mt-0.5" style={{ color: NEUTRAL.graphite }}>
+                  {formatDateBR(lead.closeDate) || "—"}
+                </div>
+              </div>
+            </div>
+
             {/* Decisor + infos do cliente */}
             <div className="flex items-center gap-3">
               <div
@@ -615,13 +637,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           {/* ── Pipeline stage progress bar ───────────────────────────────── */}
           <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
 
-          {/* ── Hero metrics ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-3 gap-2">
-            <HeroMetric label="UNIDADES" value={lead.quantity ? `${lead.quantity} un` : "—"} />
-            <HeroMetric label="PROB." value={`${probDisplay}%`} color={company.primary} />
-            <HeroMetric label="FECHAMENTO" value={formatDateBR(lead.closeDate) || "—"} />
-          </div>
-
           {/* Enriquecimento RF */}
           {isSupabaseConfigured && (
             <div
@@ -719,14 +734,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               )}
             </div>
           )}
-
-          {/* Info tiles */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <InfoTile label="Porte" value={lead.size || "—"} />
-            <InfoTile label="Quantidade" value={lead.quantity ? `${lead.quantity} un` : "—"} />
-            <InfoTile label="Probabilidade" value={`${probDisplay}%`} />
-            <InfoTile label="Fechamento" value={formatDateBR(lead.closeDate)} />
-          </div>
 
           {/* Campos customizados da etapa — editáveis inline (save debounced) */}
           {customDefs.length > 0 && (
