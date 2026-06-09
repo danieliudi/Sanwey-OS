@@ -27,7 +27,7 @@ import { StageFieldInput } from "./StageFieldInput";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, isManager, currentUser }) {
+export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, isManager, currentUser, onNavigateToPipelineBuilder }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
   const [followUpDate, setFollowUpDate] = useState("");
@@ -405,8 +405,8 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               </div>
               <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
                 <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Fechamento</div>
-                <div className="text-sm font-bold mt-0.5" style={{ color: NEUTRAL.graphite }}>
-                  {formatDateBR(lead.closeDate) || "—"}
+                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: NEUTRAL.graphite }}>
+                  {lead.closeDate ? formatDateBR(lead.closeDate).replace(/(\d{2}\/\d{2}\/)\d{2}(\d{2})$/, "$1$2") : "—"}
                 </div>
               </div>
             </div>
@@ -1104,20 +1104,22 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             </div>
 
             <div className="mt-5 pt-4 border-t space-y-2" style={{ borderColor: "#E5E7EB" }}>
+              {isManager && onNavigateToPipelineBuilder && (
+                <a
+                  href="#"
+                  onClick={e => { e.preventDefault(); onNavigateToPipelineBuilder(); }}
+                  className="flex items-center gap-2 text-xs"
+                  style={{ color: NEUTRAL.slate, textDecoration: "none" }}
+                  onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                >
+                  <GitBranch size={12} />
+                  Configurar mover cards
+                </a>
+              )}
               <a
                 href="#"
-                onClick={e => { e.preventDefault(); /* future: open pipeline builder for this stage */ }}
-                className="flex items-center gap-2 text-xs"
-                style={{ color: NEUTRAL.slate, textDecoration: "none" }}
-                onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
-                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
-              >
-                <GitBranch size={12} />
-                Configurar mover cards
-              </a>
-              <a
-                href="#"
-                onClick={e => { e.preventDefault(); /* future: AI-assisted move */ }}
+                onClick={e => { e.preventDefault(); setSideTab("ia"); }}
                 className="flex items-center gap-2 text-xs"
                 style={{ color: NEUTRAL.slate, textDecoration: "none" }}
                 onMouseEnter={e => { e.currentTarget.style.color = "#7C3AED"; }}
