@@ -96,6 +96,8 @@ export function useInvitations({ enabled = true } = {}) {
       .single();
     if (err) throw err;
     setInvitations(prev => prev.some(i => i.id === data.id) ? prev : [rowToInvitation(data), ...prev]);
+    // Envia e-mail de convite via Edge Function
+    await supabase.functions.invoke("resend-invite", { body: { invitation_id: data.id } });
     return rowToInvitation(data);
   }, []);
 
