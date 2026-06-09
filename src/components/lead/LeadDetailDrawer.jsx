@@ -405,8 +405,8 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               </div>
               <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
                 <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Fechamento</div>
-                <div className="text-sm font-bold mt-0.5" style={{ color: NEUTRAL.graphite }}>
-                  {formatDateBR(lead.closeDate) || "—"}
+                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: NEUTRAL.graphite }}>
+                  {lead.closeDate ? formatDateBR(lead.closeDate).replace(/(\d{2}\/\d{2}\/)\d{2}(\d{2})$/, "$1$2") : "—"}
                 </div>
               </div>
             </div>
