@@ -621,12 +621,39 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
             {/* ── Tab: IA ── */}
             {sideTab === "ia" && (
-              <LeadAIPanel
-                lead={lead}
-                currentUser={currentUser}
-                activities={lead.activities || []}
-                linkedEmails={lead.linkedEmails || []}
-              />
+              <div className="space-y-4">
+                <LeadAIPanel
+                  lead={lead}
+                  currentUser={currentUser}
+                  activities={lead.activities || []}
+                  linkedEmails={lead.linkedEmails || []}
+                />
+
+                {/* Rascunho de abordagem */}
+                <div className="p-4 rounded-xl" style={{ background: company.dark, color: "#FFFFFF" }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "#FFE9A8" }}>
+                      <Sparkles size={12} />Rascunho de abordagem
+                    </div>
+                    <button
+                      onClick={handleCopyDraft}
+                      className="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all duration-150"
+                      style={{ background: "rgba(255,255,255,0.12)", color: copied ? "#A3E6B4" : "rgba(255,255,255,0.8)", border: "none", cursor: "pointer" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
+                    >
+                      {copied ? <Check size={11} /> : <Copy size={11} />}
+                      {copied ? "Copiado!" : "Copiar"}
+                    </button>
+                  </div>
+                  <div
+                    className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-lg"
+                    style={{ background: "rgba(0,0,0,0.18)", color: "rgba(255,255,255,0.92)" }}
+                  >
+                    {emailDraft}
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* ── Tab: Anexos ── */}
@@ -958,30 +985,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             )}
           </div>
 
-          {/* Email draft */}
-          <div className="p-4 rounded-xl" style={{ background: company.dark, color: "#FFFFFF" }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "#FFE9A8" }}>
-                <Sparkles size={12} />Rascunho de abordagem
-              </div>
-              <button
-                onClick={handleCopyDraft}
-                className="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all duration-150"
-                style={{ background: "rgba(255,255,255,0.12)", color: copied ? "#A3E6B4" : "rgba(255,255,255,0.8)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
-              >
-                {copied ? <Check size={11} /> : <Copy size={11} />}
-                {copied ? "Copiado!" : "Copiar"}
-              </button>
-            </div>
-            <div
-              className="text-sm leading-relaxed whitespace-pre-line p-3 rounded-lg"
-              style={{ background: "rgba(0,0,0,0.18)", color: "rgba(255,255,255,0.92)" }}
-            >
-              {emailDraft}
-            </div>
-          </div>
 
           {/* Follow-up inline */}
           <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
