@@ -571,7 +571,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               />
             )}
 
-
             {/* ── Tab: Anexos ── */}
             {sideTab === "anexos" && (
               <AttachmentsPanel
