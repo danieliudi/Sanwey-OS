@@ -20,6 +20,7 @@ import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
+import { useLeadChecklists } from "../../hooks/use-lead-checklists";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { StageFieldInput } from "./StageFieldInput";
@@ -500,10 +501,11 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
             {/* ── Tab: Checklists ── */}
             {sideTab === "checklists" && (
-              <PlaceholderPanel
-                icon={ListChecks}
-                title="Checklists"
-                hint="Em breve — crie listas de subtarefas para acompanhar atividades do card."
+              <ChecklistsPanel
+                leadId={lead.id}
+                companyId={lead.companyId}
+                currentUser={currentUser}
+                companyColor={company.primary}
               />
             )}
 
@@ -1733,6 +1735,215 @@ function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Checklists panel ──────────────────────────────────────────────────────────
+
+function ChecklistsPanel({ leadId, companyId, currentUser, companyColor }) {
+  const { checklists, loading, error, createChecklist, deleteChecklist, addItem, toggleItem, removeItem, renameChecklist } = useLeadChecklists(leadId);
+  const [newTitle, setNewTitle] = useState("");
+  const [creatingTitle, setCreatingTitle] = useState(false);
+  const [addingTo, setAddingTo] = useState(null);
+  const [addingText, setAddingText] = useState("");
+  const [editingTitleId, setEditingTitleId] = useState(null);
+  const [editingTitleText, setEditingTitleText] = useState("");
+
+  const handleCreate = async () => {
+    const t = newTitle.trim() || "Checklist";
+    setCreatingTitle(false);
+    setNewTitle("");
+    await createChecklist({ title: t, companyId, createdBy: currentUser?.id });
+  };
+
+  const handleAddItem = async (checklistId) => {
+    const t = addingText.trim();
+    if (!t) { setAddingTo(null); return; }
+    setAddingText("");
+    setAddingTo(null);
+    await addItem(checklistId, t);
+  };
+
+  const handleRename = async (id) => {
+    const t = editingTitleText.trim();
+    setEditingTitleId(null);
+    setEditingTitleText("");
+    if (t) await renameChecklist(id, t);
+  };
+
+  if (loading) return <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>Carregando…</div>;
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          {error}
+        </div>
+      )}
+
+      {checklists.length === 0 && !creatingTitle && (
+        <div className="text-xs text-center py-2 italic" style={{ color: NEUTRAL.slate }}>
+          Nenhum checklist criado ainda.
+        </div>
+      )}
+
+      {checklists.map(cl => {
+        const items = Array.isArray(cl.items) ? cl.items : [];
+        const doneCount = items.filter(it => it.done).length;
+        const progress = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
+
+        return (
+          <div key={cl.id} className="rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+            {/* Header */}
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b" style={{ borderColor: "#F0F0F0" }}>
+              <ListChecks size={13} style={{ color: companyColor, flexShrink: 0 }} />
+              {editingTitleId === cl.id ? (
+                <input
+                  autoFocus
+                  value={editingTitleText}
+                  onChange={e => setEditingTitleText(e.target.value)}
+                  onBlur={() => handleRename(cl.id)}
+                  onKeyDown={e => { if (e.key === "Enter") handleRename(cl.id); if (e.key === "Escape") { setEditingTitleId(null); } }}
+                  className="flex-1 text-xs font-semibold outline-none bg-transparent border-b"
+                  style={{ color: NEUTRAL.graphite, borderColor: companyColor }}
+                />
+              ) : (
+                <button
+                  className="flex-1 text-left text-xs font-semibold"
+                  style={{ color: NEUTRAL.graphite, background: "none", border: "none", cursor: "text" }}
+                  onDoubleClick={() => { setEditingTitleId(cl.id); setEditingTitleText(cl.title); }}
+                  title="Clique duplo para renomear"
+                >
+                  {cl.title}
+                </button>
+              )}
+              {items.length > 0 && (
+                <span className="text-[10px] font-semibold shrink-0" style={{ color: NEUTRAL.slate }}>
+                  {doneCount}/{items.length}
+                </span>
+              )}
+              <button
+                onClick={() => deleteChecklist(cl.id)}
+                className="p-1 rounded transition-colors shrink-0"
+                style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                title="Remover checklist"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+
+            {/* Progress bar */}
+            {items.length > 0 && (
+              <div className="px-3 pt-2" style={{ paddingBottom: 0 }}>
+                <div className="h-1 rounded-full overflow-hidden" style={{ background: "#F3F4F6" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%`, background: progress === 100 ? "#16A34A" : companyColor }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Items */}
+            <div className="p-3 space-y-1.5">
+              {items.map(it => (
+                <div key={it.id} className="flex items-start gap-2 group">
+                  <button
+                    onClick={() => toggleItem(cl.id, it.id)}
+                    className="mt-0.5 shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-all"
+                    style={{
+                      background: it.done ? companyColor : "#FFFFFF",
+                      borderColor: it.done ? companyColor : "#D1D5DB",
+                      cursor: "pointer",
+                    }}
+                    aria-label={it.done ? "Desmarcar" : "Marcar como feito"}
+                  >
+                    {it.done && <Check size={10} style={{ color: "#FFFFFF" }} />}
+                  </button>
+                  <span
+                    className="flex-1 text-xs leading-5"
+                    style={{
+                      color: it.done ? NEUTRAL.slate : NEUTRAL.graphite,
+                      textDecoration: it.done ? "line-through" : "none",
+                    }}
+                  >
+                    {it.text}
+                  </span>
+                  <button
+                    onClick={() => removeItem(cl.id, it.id)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all"
+                    style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                    title="Remover item"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add item inline */}
+              {addingTo === cl.id ? (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-4 h-4 rounded border shrink-0" style={{ borderColor: "#D1D5DB" }} />
+                  <input
+                    autoFocus
+                    value={addingText}
+                    onChange={e => setAddingText(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") handleAddItem(cl.id); if (e.key === "Escape") { setAddingTo(null); setAddingText(""); } }}
+                    onBlur={() => handleAddItem(cl.id)}
+                    placeholder="Nova tarefa..."
+                    className="flex-1 text-xs outline-none border-b pb-0.5"
+                    style={{ color: NEUTRAL.graphite, borderColor: companyColor, background: "transparent" }}
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setAddingTo(cl.id); setAddingText(""); }}
+                  className="flex items-center gap-1.5 text-xs mt-1 transition-colors"
+                  style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.color = companyColor; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                >
+                  <Plus size={11} />
+                  Adicionar item
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* New checklist */}
+      {creatingTitle ? (
+        <div className="flex items-center gap-2">
+          <input
+            autoFocus
+            value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") { setCreatingTitle(false); setNewTitle(""); } }}
+            onBlur={handleCreate}
+            placeholder="Nome do checklist..."
+            className="flex-1 text-xs rounded-lg border px-3 py-2 outline-none"
+            style={{ borderColor: companyColor, color: NEUTRAL.graphite }}
+          />
+        </div>
+      ) : (
+        <button
+          onClick={() => setCreatingTitle(true)}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed text-xs font-semibold transition-colors"
+          style={{ borderColor: "#D1D5DB", color: NEUTRAL.slate, background: "transparent" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = companyColor; e.currentTarget.style.color = companyColor; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = NEUTRAL.slate; }}
+        >
+          <Plus size={12} />
+          Novo checklist
+        </button>
       )}
     </div>
   );
