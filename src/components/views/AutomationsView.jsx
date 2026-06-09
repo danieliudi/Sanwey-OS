@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from "react";
 import {
   Zap, Plus, Trash2, ToggleLeft, ToggleRight, ArrowRight,
-  AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X,
+  AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X, Info,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
 import { AUTOMATION_TEMPLATES } from "../../constants/automation-templates";
+import { MARKETING_AUTOMATION_TEMPLATES } from "../../constants/marketing-pipelines";
 import { useAutomations } from "../../hooks/use-automations";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -61,6 +62,7 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
   const { automations, addAutomation, deleteAutomation, toggleAutomation, stats } = useAutomations();
   const [showBuilder, setShowBuilder] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [moduleTab, setModuleTab] = useState("all");
   // Quando o usuário clica num template, pré-preenche o builder.
   const [builderInitial, setBuilderInitial] = useState(null);
 
@@ -94,6 +96,22 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
             <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
               Automações
             </h1>
+            <span
+              className="inline-flex items-center justify-center rounded-full cursor-help"
+              style={{ width: 18, height: 18, background: "#F3F4F6", color: NEUTRAL.slate }}
+              title={
+                "Regras automáticas que executam sozinhas — sem IA, sem aprovação.\n\n" +
+                "Use para ações mecânicas e previsíveis:\n" +
+                "• Mover card após X dias parado\n" +
+                "• Aplicar badge ao criar lead\n" +
+                "• Notificar mudança de etapa\n\n" +
+                "Diferenças:\n" +
+                "• Time de Agentes → sugere ações via IA, você decide se aprova\n" +
+                "• Aba IA do card → assistente sob demanda para um lead específico"
+              }
+            >
+              <Info size={11} />
+            </span>
           </div>
           <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
             Regras automáticas sem IA — {stats.enabled} ativa{stats.enabled !== 1 ? "s" : ""} de {stats.total}
@@ -160,11 +178,39 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
         <TemplateGallery onUseTemplate={(t) => openBuilder(t.rule)} />
       )}
 
+      {/* Module filter tabs */}
+      {automations.length > 0 && (
+        <div className="flex gap-1 border-b" style={{ borderColor: "#E5E7EB" }}>
+          {[
+            { id: "all",       label: `Todas (${automations.length})` },
+            { id: "crm",       label: `CRM (${stats.byModule?.crm || 0})` },
+            { id: "marketing", label: `Marketing (${stats.byModule?.marketing || 0})` },
+            { id: "universal", label: `Universal (${stats.byModule?.universal || 0})` },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setModuleTab(t.id)}
+              className="px-3 py-2 text-xs font-medium border-b-2 transition-colors"
+              style={{
+                borderBottomColor: moduleTab === t.id ? "#1E4D8C" : "transparent",
+                color:             moduleTab === t.id ? "#1E4D8C" : NEUTRAL.slate,
+                background:        "none",
+                border:            "none",
+                borderBottom:      `2px solid ${moduleTab === t.id ? "#1E4D8C" : "transparent"}`,
+                cursor:            "pointer",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Automation list */}
       {automations.length > 0 && (
         <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
           <div className="divide-y" style={{ borderColor: "#F3F4F6" }}>
-            {automations.map(rule => (
+            {automations.filter(rule => moduleTab === "all" || (rule.module ?? "crm") === moduleTab).map(rule => (
               <AutomationRow
                 key={rule.id}
                 rule={rule}
@@ -264,6 +310,18 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
                   style={{ background: COMPANIES[rule.companyId]?.primary + "18" || "#F3F4F6", color: COMPANIES[rule.companyId]?.primary || NEUTRAL.slate }}
                 >
                   {company.label}
+                </span>
+              )}
+              {rule.module && rule.module !== "crm" && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                  style={{
+                    background: rule.module === "marketing" ? "#FDF4FF" : "#F0FDF4",
+                    color:      rule.module === "marketing" ? "#7C3AED" : "#15803D",
+                    border:     `1px solid ${rule.module === "marketing" ? "#E9D5FF" : "#BBF7D0"}`,
+                  }}
+                >
+                  {rule.module === "marketing" ? "Marketing" : "Universal"}
                 </span>
               )}
             </div>
@@ -376,9 +434,16 @@ function AutomationDetail({ rule, allStages }) {
 
 // ── Builder modal ─────────────────────────────────────────────────────────────
 
+const MODULE_OPTIONS = [
+  { id: "crm",       label: "CRM" },
+  { id: "marketing", label: "Marketing" },
+  { id: "universal", label: "Universal" },
+];
+
 const EMPTY_RULE = {
   name: "",
   companyId: "all",
+  module: "crm",
   trigger: { type: "stage_change", fromStage: "", toStage: "" },
   action:  { type: "move_stage",   targetStage: "" },
 };
@@ -553,6 +618,32 @@ function StepIdentification({ rule, setRule }) {
           onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
           onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
         />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Módulo</label>
+        <div className="flex gap-2">
+          {MODULE_OPTIONS.map(m => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setRule(r => ({ ...r, module: m.id }))}
+              className="flex-1 py-2 text-xs font-semibold rounded-xl border transition-colors"
+              style={{
+                borderColor: (rule.module ?? "crm") === m.id ? "#1E4D8C" : "#E5E7EB",
+                background:  (rule.module ?? "crm") === m.id ? "#EFF6FF" : "#FAFAFA",
+                color:       (rule.module ?? "crm") === m.id ? "#1E4D8C" : NEUTRAL.slate,
+                cursor:      "pointer",
+              }}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] mt-1.5" style={{ color: NEUTRAL.slate }}>
+          {(rule.module ?? "crm") === "crm" ? "Avalia leads no pipeline de CRM." :
+           (rule.module ?? "crm") === "marketing" ? "Avalia campanhas no Kanban de Marketing." :
+           "Avalia em todos os módulos."}
+        </p>
       </div>
       <div>
         <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Empresa</label>
@@ -945,7 +1036,7 @@ function TemplateGallery({ onUseTemplate }) {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {AUTOMATION_TEMPLATES.map(t => (
+        {[...AUTOMATION_TEMPLATES, ...MARKETING_AUTOMATION_TEMPLATES].map(t => (
           <button
             key={t.id}
             onClick={() => onUseTemplate(t)}
@@ -971,9 +1062,22 @@ function TemplateGallery({ onUseTemplate }) {
                 </div>
               </div>
             </div>
-            <div className="mt-2 text-[11px] font-semibold flex items-center gap-1" style={{ color: "#1E4D8C" }}>
-              <Plus size={10} />
-              Usar este template
+            <div className="mt-2 flex items-center justify-between">
+              <div className="text-[11px] font-semibold flex items-center gap-1" style={{ color: "#1E4D8C" }}>
+                <Plus size={10} />
+                Usar este template
+              </div>
+              {t.rule?.module && t.rule.module !== "crm" && (
+                <span
+                  className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                  style={{
+                    background: t.rule.module === "marketing" ? "#FDF4FF" : "#F0FDF4",
+                    color:      t.rule.module === "marketing" ? "#7C3AED" : "#15803D",
+                  }}
+                >
+                  {t.rule.module === "marketing" ? "Marketing" : "Universal"}
+                </span>
+              )}
             </div>
           </button>
         ))}

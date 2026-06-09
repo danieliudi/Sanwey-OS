@@ -42,6 +42,7 @@ export function useAutomations() {
       ...prev,
       {
         ...rule,
+        module: rule.module ?? "crm",
         id: crypto.randomUUID(),
         enabled: true,
         createdAt: new Date().toISOString(),
@@ -62,19 +63,23 @@ export function useAutomations() {
   }, [setAutomations]);
 
   /**
-   * Evaluate all enabled automations against a lead change.
-   * Returns an array of patches to apply: [{ leadId, patch }]
+   * Evaluate all enabled automations against an entity change.
    *
-   * @param {object} lead        - current lead state (after the triggering event)
-   * @param {object|null} prev   - previous lead state (null = newly created)
-   * @param {string} eventType   - "stage_change" | "field_value" | "lead_created"
+   * @param {object} lead        - current entity state (after the triggering event)
+   * @param {object|null} prev   - previous entity state (null = newly created)
+   * @param {string} eventType   - "stage_change" | "field_value" | "lead_created" | etc.
+   * @param {"crm"|"marketing"|"universal"} [module="crm"] - scope filter
    */
-  const evaluateAutomations = useCallback((lead, prev, eventType) => {
+  const evaluateAutomations = useCallback((lead, prev, eventType, module = "crm") => {
     const patches = [];
     const notifications = [];
 
     for (const rule of automations) {
       if (!rule.enabled) continue;
+      // Module filter: rule must match requested module or be universal.
+      // Rules without a module field are treated as "crm" (backwards compat).
+      const ruleModule = rule.module ?? "crm";
+      if (ruleModule !== "universal" && ruleModule !== module) continue;
       if (rule.companyId !== "all" && rule.companyId !== lead.companyId) continue;
 
       const { trigger, action } = rule;
@@ -164,6 +169,11 @@ export function useAutomations() {
     enabled: automations.filter(a => a.enabled).length,
     byType: automations.reduce((acc, a) => {
       acc[a.trigger.type] = (acc[a.trigger.type] || 0) + 1;
+      return acc;
+    }, {}),
+    byModule: automations.reduce((acc, a) => {
+      const m = a.module ?? "crm";
+      acc[m] = (acc[m] || 0) + 1;
       return acc;
     }, {}),
   }), [automations]);

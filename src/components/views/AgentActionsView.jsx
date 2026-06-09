@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Bot, RefreshCw, CheckCircle2, XCircle, EyeOff, ChevronDown, ChevronUp,
   Clock, AlertTriangle, TrendingUp, Mail, Zap, Target, Telescope, Repeat2,
-  Shield, GitMerge, Settings,
+  Shield, GitMerge, Settings, Info,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
@@ -383,6 +383,23 @@ export function AgentActionsView({ currentUser, activeCompany }) {
             >
               Time de Agentes
             </h1>
+            <span
+              className="inline-flex items-center justify-center rounded-full cursor-help"
+              style={{ width: 18, height: 18, background: "#F3F4F6", color: NEUTRAL.slate }}
+              title={
+                "Agentes de IA que monitoram a carteira e sugerem ações — você aprova, rejeita ou ignora.\n\n" +
+                "Use para receber recomendações proativas:\n" +
+                "• Leads frios precisando de cadência\n" +
+                "• Oportunidades de cross-sell entre empresas\n" +
+                "• Alertas de saúde do funil\n" +
+                "• Qualificação de leads novos\n\n" +
+                "Diferenças:\n" +
+                "• Automações → executam sozinhas, sem IA, sem aprovação\n" +
+                "• Aba IA do card → assistente sob demanda para um lead específico"
+              }
+            >
+              <Info size={11} />
+            </span>
           </div>
           <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
             {loading
