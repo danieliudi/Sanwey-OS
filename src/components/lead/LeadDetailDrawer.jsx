@@ -488,6 +488,42 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             {/* ── Tab: Form ── */}
             {sideTab === "form" && (
             <>
+            {/* Formulário Inicial — dados preenchidos na criação do card */}
+            {!customValues.capture_customer_name && (
+              <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+                <div className="text-xs font-semibold mb-3" style={{ color: company.primary }}>
+                  Formulário Inicial
+                </div>
+                <dl className="space-y-2.5 text-sm">
+                  <CaptureRow label="Empresa" value={lead.company} />
+                  {lead.cnpj && <CaptureRow label="CNPJ" value={lead.cnpj} mono />}
+                  {lead.razaoSocial && <CaptureRow label="Razão Social" value={lead.razaoSocial} />}
+                  {lead.contactEmail && (
+                    <CaptureRow label="E-mail do Contato" value={lead.contactEmail}
+                      link={`mailto:${lead.contactEmail}`} />
+                  )}
+                  {lead.phone && <CaptureRow label="Telefone" value={lead.phone} mono />}
+                  {lead.state && <CaptureRow label="Estado (UF)" value={lead.state} />}
+                  {lead.city && <CaptureRow label="Cidade" value={lead.city} />}
+                  {lead.sector && <CaptureRow label="Setor" value={lead.sector} />}
+                  {lead.size && <CaptureRow label="Porte" value={lead.size} />}
+                  {lead.value > 0 && <CaptureRow label="Valor (R$)" value={formatBRL(lead.value)} />}
+                  {lead.owner && (
+                    <CaptureRow
+                      label="Responsável"
+                      value={(users || []).find(u => u.id === lead.owner)?.name || "—"}
+                    />
+                  )}
+                </dl>
+                {lead.notes && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.slate }}>Observações</div>
+                    <div className="text-sm whitespace-pre-line" style={{ color: NEUTRAL.graphite }}>{lead.notes}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Formulário Inicial (vindo de captura pública) */}
             {customValues.capture_customer_name && (
               <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
