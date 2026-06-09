@@ -764,7 +764,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                       ) : (
                         <>
                           <span style={{ opacity: 0.5 }}>Nenhum negócio nesta etapa</span>
-                          {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card ou clique em "+ Novo card"</span>}
+                          {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>}
                         </>
                       )}
                     </div>
@@ -789,20 +789,6 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                     })
                   )}
                 </div>
-
-                {/* Column footer */}
-                {!stage.terminal && onAddLead && (
-                  <button
-                    onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: colCompanyId })}
-                    className="mx-2 mb-2 w-[calc(100%-16px)] flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors duration-150"
-                    style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "transparent", borderStyle: "dashed" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.color = "#1E4D8C"; e.currentTarget.style.borderColor = "#C7D2FE"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.borderColor = "#E5E7EB"; }}
-                  >
-                    <Plus size={12} />
-                    Novo card
-                  </button>
-                )}
               </div>
             );
           })}
@@ -872,13 +858,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       onClose={() => setShowAIChat(false)}
     />
 
-      {/* FAB mobile — botão flutuante para criar negócio */}
+      {/* FAB — botão flutuante único para criar novo card */}
       {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
         <button
-          className="lg:hidden fixed z-20 flex items-center gap-2 font-semibold shadow-lg"
+          className="fixed z-20 flex items-center gap-2 font-semibold shadow-lg"
           style={{
-            bottom: 80,
-            right: 16,
+            bottom: 24,
+            left: 24,
             height: 52,
             padding: "0 20px",
             background: "#b5000b",
@@ -895,10 +881,10 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           }}
           onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
           onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-          aria-label="Novo negócio"
+          aria-label="Criar novo card"
         >
           <Plus size={20} />
-          Novo negócio
+          Novo card
         </button>
       )}
     </>
