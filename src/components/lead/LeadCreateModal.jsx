@@ -1,12 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { X, Settings, Loader2 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { CANONICAL_STATES } from "../../constants/taxonomy";
 import { FIELD_DEFS } from "../../constants/lead-form-fields";
 import { LeadFormBuilder } from "./LeadFormBuilder";
-import { useStageFields } from "../../hooks/use-stage-fields";
-import { StageFieldInput } from "./StageFieldInput";
 
 // ── Customer search helpers ───────────────────────────────────────────────────
 
@@ -243,24 +241,16 @@ export function LeadCreateModal({
     sector: currentUser?.sectors?.[0] || "",
     contactEmail: "",
   }));
-  const [customValues, setCustomValues] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [duplicates, setDuplicates] = useState([]);
   const firstRef = useRef(null);
 
-  const stageFields = useStageFields();
-  const customDefs = useMemo(
-    () => (stageId && companyId) ? stageFields.getFields(companyId, stageId) : [],
-    [stageFields, companyId, stageId]
-  );
-
   // Focus first input when modal opens
   React.useEffect(() => {
     if (open) {
       setValues({ owner: currentUser?.id || "", sector: currentUser?.sectors?.[0] || "", contactEmail: "" });
-      setCustomValues({});
       setError(null);
       setSaving(false);
       setDuplicates([]);
@@ -306,19 +296,6 @@ export function LeadCreateModal({
         return;
       }
     }
-    // Validate required stage-specific custom fields
-    for (const f of customDefs) {
-      if (!f.required) continue;
-      const v = customValues[f.fieldKey];
-      const empty = v === undefined || v === null || v === ""
-        || (Array.isArray(v) && v.length === 0)
-        || (typeof v === "string" && !v.trim());
-      if (empty) {
-        setError(`O campo "${f.label}" é obrigatório.`);
-        return;
-      }
-    }
-
     setSaving(true);
     setError(null);
     try {
@@ -356,7 +333,7 @@ export function LeadCreateModal({
         lastActivity: now.toISOString(),
         stageChangedAt: now.toISOString(),
         decisionMaker: { name: "—", role: "—" },
-        customFields: { ...customValues },
+        customFields: {},
       };
       await onAdd(lead);
       onClose();
@@ -365,7 +342,7 @@ export function LeadCreateModal({
     } finally {
       setSaving(false);
     }
-  }, [values, customValues, customDefs, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose]);
+  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === "Escape") onClose();
@@ -549,44 +526,6 @@ export function LeadCreateModal({
               </React.Fragment>
             );
           })}
-
-          {customDefs.length > 0 && (
-            <div style={{ marginTop: 8, paddingTop: 16, borderTop: "1px dashed #E5E7EB" }}>
-              <div
-                style={{
-                  fontSize: 11, fontWeight: 700, color: NEUTRAL.slate,
-                  textTransform: "uppercase", letterSpacing: "0.07em",
-                  marginBottom: 12,
-                }}
-              >
-                Detalhes da etapa · {stage?.name}
-              </div>
-              {customDefs.map(f => (
-                <div key={f.id} style={{ marginBottom: 16 }}>
-                  <label
-                    style={{
-                      display: "block", fontSize: 11, fontWeight: 700,
-                      color: NEUTRAL.slate, textTransform: "uppercase",
-                      letterSpacing: "0.07em", marginBottom: 5,
-                    }}
-                  >
-                    {f.required && <span style={{ color: "#b5000b", marginRight: 2 }}>*</span>}
-                    {f.label}
-                  </label>
-                  {f.helpText && (
-                    <div style={{ fontSize: 11, color: NEUTRAL.slate, marginBottom: 6 }}>{f.helpText}</div>
-                  )}
-                  <StageFieldInput
-                    field={f}
-                    value={customValues[f.fieldKey]}
-                    onChange={val => setCustomValues(prev => ({ ...prev, [f.fieldKey]: val }))}
-                    users={users}
-                    companyId={companyId}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
 
           {error && (
             <div
