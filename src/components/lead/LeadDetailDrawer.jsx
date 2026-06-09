@@ -436,6 +436,29 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                           {enrichData.email && <>✉ {enrichData.email}</>}
                         </div>
                       )}
+                      {enrichData.cnd && (
+                        <div className="mt-1.5">
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                            style={{
+                              background:
+                                enrichData.cnd.status === "negativa" ? "#DCFCE7"
+                                : enrichData.cnd.status === "positiva_efeito_negativo" ? "#FEF3C7"
+                                : enrichData.cnd.status === "positiva" ? "#FEE2E2"
+                                : "#F3F4F6",
+                              color:
+                                enrichData.cnd.status === "negativa" ? "#16A34A"
+                                : enrichData.cnd.status === "positiva_efeito_negativo" ? "#D97706"
+                                : enrichData.cnd.status === "positiva" ? "#DC2626"
+                                : NEUTRAL.slate,
+                            }}
+                            title={enrichData.cnd.message || enrichData.cnd.label}
+                          >
+                            {enrichData.cnd.status === "negativa" ? "✓" : enrichData.cnd.status === "nao_verificado" ? "—" : "⚠"}{" "}
+                            {enrichData.cnd.label}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ) : enrichError ? (
                     <div className="text-xs" style={{ color: "#B91C1C" }}>{enrichError.message || String(enrichError)}</div>
