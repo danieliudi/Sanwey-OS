@@ -1758,12 +1758,19 @@ function ChecklistsPanel({ leadId, companyId, currentUser, companyColor }) {
     await createChecklist({ title: t, companyId, createdBy: currentUser?.id });
   };
 
-  const handleAddItem = async (checklistId) => {
+  const handleAddItemEnter = async (checklistId) => {
     const t = addingText.trim();
-    if (!t) { setAddingTo(null); return; }
+    if (!t) return;
+    setAddingText("");
+    await addItem(checklistId, t);
+    // keep input open for next item
+  };
+
+  const handleAddItemBlur = async (checklistId) => {
+    const t = addingText.trim();
     setAddingText("");
     setAddingTo(null);
-    await addItem(checklistId, t);
+    if (t) await addItem(checklistId, t);
   };
 
   const handleRename = async (id) => {
@@ -1895,8 +1902,8 @@ function ChecklistsPanel({ leadId, companyId, currentUser, companyColor }) {
                     autoFocus
                     value={addingText}
                     onChange={e => setAddingText(e.target.value)}
-                    onKeyDown={e => { if (e.key === "Enter") handleAddItem(cl.id); if (e.key === "Escape") { setAddingTo(null); setAddingText(""); } }}
-                    onBlur={() => handleAddItem(cl.id)}
+                    onKeyDown={e => { if (e.key === "Enter") handleAddItemEnter(cl.id); if (e.key === "Escape") { setAddingTo(null); setAddingText(""); } }}
+                    onBlur={() => handleAddItemBlur(cl.id)}
                     placeholder="Nova tarefa..."
                     className="flex-1 text-xs outline-none border-b pb-0.5"
                     style={{ color: NEUTRAL.graphite, borderColor: companyColor, background: "transparent" }}
