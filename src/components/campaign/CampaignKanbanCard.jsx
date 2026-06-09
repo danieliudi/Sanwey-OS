@@ -1,5 +1,5 @@
-import React, { memo } from "react";
-import { Clock, Star, AlertTriangle, TrendingUp } from "lucide-react";
+import React, { memo, useRef, useState, useEffect } from "react";
+import { Clock, Star, AlertTriangle, TrendingUp, MoreVertical, ArrowRight } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { CHANNEL_COLORS, MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { formatK } from "../../utils/currency";
@@ -22,7 +22,10 @@ function slaStyle(daysInStage, sla) {
   return null;
 }
 
-function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, stages }) {
+function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, stages, onMoveToStage }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
   const stage = MARKETING_STAGES.find(s => s.id === campaign.stage);
   const daysInStage = daysFromDate(campaign.stageChangedAt);
   const daysToLaunch = daysUntilDate(campaign.launchDate);
@@ -43,11 +46,22 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, sta
     .map(id => COMPANIES[id]?.short || id)
     .join(", ");
 
+  const moveTargets = (stages || MARKETING_STAGES).filter(s => s.id !== campaign.stage && !s.terminal);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
   return (
     <div
       draggable
       onDragStart={() => onDragStart?.(campaign)}
-      onClick={() => onClick?.(campaign)}
+      onClick={() => { if (!menuOpen) onClick?.(campaign); }}
       className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
       style={{
         background: "#FFFFFF",
@@ -66,7 +80,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, sta
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
-      {/* Header: name + badges */}
+      {/* Header: name + badges + menu */}
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: NEUTRAL.graphite }}>
           {campaign.name}
@@ -94,6 +108,97 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, sta
           )}
           {campaign.starred && (
             <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} />
+          )}
+          {moveTargets.length > 0 && onMoveToStage && (
+            <div ref={menuRef} style={{ position: "relative" }}>
+              <button
+                title="Mover para outra etapa"
+                onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: NEUTRAL.slate,
+                  cursor: "pointer",
+                  padding: 2,
+                  borderRadius: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  lineHeight: 1,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+              >
+                <MoreVertical size={14} />
+              </button>
+              {menuOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 4px)",
+                    right: 0,
+                    background: "#FFFFFF",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: 8,
+                    boxShadow: "0 8px 24px rgba(32,26,26,0.12)",
+                    zIndex: 50,
+                    minWidth: 180,
+                    overflow: "hidden",
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div
+                    style={{
+                      padding: "6px 12px 4px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: NEUTRAL.slate,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    Mover para
+                  </div>
+                  {moveTargets.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={e => {
+                        e.stopPropagation();
+                        onMoveToStage(campaign.id, s.id);
+                        setMenuOpen(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 12px",
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        color: NEUTRAL.graphite,
+                        textAlign: "left",
+                        transition: "background 0.1s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                    >
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: s.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      {s.name}
+                      <ArrowRight size={11} style={{ marginLeft: "auto", opacity: 0.4 }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

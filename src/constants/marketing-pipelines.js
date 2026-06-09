@@ -9,6 +9,17 @@ export const MARKETING_STAGES = [
   { id: "encerrado", name: "Encerrado",  color: "#9CA3AF", sla: null, terminal: true },
 ];
 
+export const DELIVERABLE_STAGES = [
+  { id: "pendente",   name: "Pendente",   color: "#9CA3AF", sla: null },
+  { id: "produzindo", name: "Produzindo", color: "#D97706", sla: 7 },
+  { id: "revisao",    name: "Revisão",    color: "#7C3AED", sla: 3 },
+  { id: "entregue",   name: "Entregue",   color: "#16A34A", sla: null, terminal: true },
+];
+
+export const EXPENSE_CATEGORIES = [
+  "Mídia Paga", "Produção", "Agência", "Ferramentas", "Eventos", "Outros",
+];
+
 export const MARKETING_CHANNELS = [
   "Email", "Social", "Conteúdo", "Digital", "Outdoor", "Evento",
 ];
