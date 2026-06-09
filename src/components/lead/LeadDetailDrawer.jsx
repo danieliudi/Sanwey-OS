@@ -409,6 +409,57 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               </div>
             )}
 
+            {/* Resumo compacto dos dados do formulário inicial */}
+            {(customValues.capture_customer_name || customValues.capture_product_interest || customValues.capture_contact_phone) && (
+              <div className="rounded-xl border p-3 space-y-1.5" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+                <div className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: company.primary }}>
+                  Prospecção
+                  {customValues.capture_source && (
+                    <span className="ml-1.5 normal-case tracking-normal font-normal" style={{ color: NEUTRAL.slate }}>
+                      via {customValues.capture_source}
+                    </span>
+                  )}
+                </div>
+                {customValues.capture_customer_name && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span style={{ color: NEUTRAL.slate, minWidth: 16 }}>A</span>
+                    <span style={{ color: NEUTRAL.graphite, fontWeight: 600 }}>{customValues.capture_customer_name}</span>
+                  </div>
+                )}
+                {customValues.capture_product_interest && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <Package size={12} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
+                    <span style={{ color: NEUTRAL.graphite }}>{customValues.capture_product_interest}</span>
+                  </div>
+                )}
+                {customValues.capture_contact_phone && (
+                  <div className="flex items-center gap-2 text-xs font-mono">
+                    <span style={{ color: NEUTRAL.slate, minWidth: 12, fontSize: 10 }}>☎</span>
+                    <span style={{ color: NEUTRAL.graphite }}>{customValues.capture_contact_phone}</span>
+                  </div>
+                )}
+                {customValues.capture_priority && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span style={{ color: NEUTRAL.slate, minWidth: 12 }}>!</span>
+                    <span style={{
+                      fontWeight: 600,
+                      color: customValues.capture_priority === "Alta" ? "#DC2626"
+                        : customValues.capture_priority === "Média" ? "#E8920A"
+                        : "#16A34A"
+                    }}>
+                      {customValues.capture_priority}
+                    </span>
+                  </div>
+                )}
+                {customValues.capture_prospect_date && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <Calendar size={12} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
+                    <span style={{ color: NEUTRAL.graphite }}>{formatDateBR(customValues.capture_prospect_date)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Tabs */}
             <SideTabs activeTab={sideTab} onChange={setSideTab} />
 
@@ -566,7 +617,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
           {/* ── Hero metrics ─────────────────────────────────────────────── */}
           <div className="grid grid-cols-3 gap-2">
-            <HeroMetric label="VALOR" value={formatK(lead.value, 1)} />
+            <HeroMetric label="UNIDADES" value={lead.quantity ? `${lead.quantity} un` : "—"} />
             <HeroMetric label="PROB." value={`${probDisplay}%`} color={company.primary} />
             <HeroMetric label="FECHAMENTO" value={formatDateBR(lead.closeDate) || "—"} />
           </div>
