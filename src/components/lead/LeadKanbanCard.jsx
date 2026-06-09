@@ -32,6 +32,10 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
     ? stages.filter(s => s.id !== lead.stage && !s.terminal)
     : [];
 
+  const accentColor = COMPANIES[lead.companyId]?.primary || NEUTRAL.slate;
+  const shadowBase  = `inset 3px 0 0 ${accentColor}, 0 1px 4px rgba(32,26,26,0.06)`;
+  const shadowHover = `inset 3px 0 0 ${accentColor}, 0 4px 16px rgba(32,26,26,0.10)`;
+
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e) => {
@@ -46,21 +50,20 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
       draggable
       onDragStart={() => onDragStart?.(lead)}
       onClick={() => { if (!menuOpen) onClick?.(lead); }}
-      className="p-3.5 rounded-xl border cursor-pointer transition-all duration-150"
+      className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
       style={{
         background: "#FFFFFF",
-        borderColor: "#E5E7EB",
-        boxShadow: "0 1px 4px rgba(32,26,26,0.06)",
-        borderLeft: `3px solid ${COMPANIES[lead.companyId]?.primary || NEUTRAL.slate}`,
+        border: "1px solid #E5E7EB",
+        boxShadow: shadowBase,
         position: "relative",
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = "0 4px 16px rgba(32,26,26,0.10)";
+        e.currentTarget.style.boxShadow = shadowHover;
         e.currentTarget.style.borderColor = "#e9bcb6";
         e.currentTarget.style.transform = "translateY(-1px)";
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = "0 1px 4px rgba(32,26,26,0.06)";
+        e.currentTarget.style.boxShadow = shadowBase;
         e.currentTarget.style.borderColor = "#E5E7EB";
         e.currentTarget.style.transform = "translateY(0)";
       }}
