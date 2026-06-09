@@ -21,9 +21,12 @@ const EMPTY_FORM = {
 const EMPTY_INVITE = { email: "", role: "vendedor", companies: [], sectors: [], supervisorId: "" };
 
 const ROLE_OPTIONS_BASE = [
-  { value: "consultor", label: "Consultor" },
-  { value: "vendedor", label: "Vendedor" },
-  { value: "gerente", label: "Gerente" },
+  { value: "consultor",         label: "Consultor" },
+  { value: "vendedor",          label: "Vendedor" },
+  { value: "gerente",           label: "Gerente (CRM)" },
+  { value: "marketing",         label: "Marketing" },
+  { value: "gerente_marketing", label: "Gerente de Marketing" },
+  { value: "agencia",           label: "Agência (Visitante)" },
 ];
 
 const ROLE_OPTIONS_ADMIN = [
@@ -32,16 +35,22 @@ const ROLE_OPTIONS_ADMIN = [
 ];
 
 function roleLabel(role) {
-  if (role === "admin") return "Admin";
-  if (role === "gerente") return "Gerente";
-  if (role === "consultor") return "Consultor";
+  if (role === "admin")             return "Admin";
+  if (role === "gerente")           return "Gerente";
+  if (role === "consultor")         return "Consultor";
+  if (role === "marketing")         return "Marketing";
+  if (role === "gerente_marketing") return "G. Marketing";
+  if (role === "agencia")           return "Agência";
   return "Vendedor";
 }
 
 function roleBadgeVariant(role) {
-  if (role === "admin") return "admin";
-  if (role === "gerente") return "dark";
-  if (role === "consultor") return "secondary";
+  if (role === "admin")             return "admin";
+  if (role === "gerente")           return "dark";
+  if (role === "consultor")         return "secondary";
+  if (role === "marketing")         return "primary";
+  if (role === "gerente_marketing") return "primary";
+  if (role === "agencia")           return "secondary";
   return "default";
 }
 

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
-  Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy,
+  Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -40,6 +40,7 @@ import { FairImportView } from "./components/views/FairImportView";
 import { PipelineBuilderView } from "./components/views/PipelineBuilderView";
 import { AutomationsView } from "./components/views/AutomationsView";
 import { TutoriaisView } from "./components/views/TutoriaisView";
+import { MarketingView } from "./components/views/MarketingView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -71,7 +72,9 @@ export default function App() {
     if (currentUser?.id) setOnboardingDoneMap(m => ({ ...m, [currentUser.id]: true }));
   }, [currentUser?.id, setOnboardingDoneMap]);
 
-  const isManagerRole = currentUser?.role === "gerente" || currentUser?.role === "admin";
+  const isManagerRole   = currentUser?.role === "gerente" || currentUser?.role === "admin";
+  const isMarketingUser = ["marketing", "gerente_marketing", "admin"].includes(currentUser?.role);
+  const isAgencia       = currentUser?.role === "agencia";
   const {
     users,
     loading: usersLoading,
@@ -273,7 +276,7 @@ export default function App() {
 
   const closeDrawer = useCallback(() => setSelectedLead(null), []);
 
-  const isManager = isManagerRole;
+  const isManager      = isManagerRole;
 
   // Respects settings.enabledCompanies — the user can toggle a company off from
   // the Settings view without deleting data or editing code.
@@ -319,6 +322,15 @@ export default function App() {
       },
     ];
 
+    if (isMarketingUser || isAgencia) {
+      groups.push({
+        label: "Marketing",
+        items: [
+          { id: "marketing", label: "Campanhas", icon: Megaphone },
+        ],
+      });
+    }
+
     if (isManager) {
       groups.push({
         label: "Inteligência",
@@ -363,7 +375,12 @@ export default function App() {
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
-  }, [isManager, section]);
+    const marketingOnly = ["marketing"];
+    if (!isMarketingUser && !isAgencia && marketingOnly.includes(section)) {
+      setSection("dashboard");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isManager, isMarketingUser, isAgencia, section]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
@@ -636,6 +653,11 @@ export default function App() {
           } />
           <Route path={ROUTES.tutorials} element={
             <TutoriaisView currentUser={currentUser} onNavigate={setSection} />
+          } />
+          <Route path={ROUTES.marketing} element={
+            (isMarketingUser || isAgencia)
+              ? <MarketingView user={currentUser} />
+              : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Catch-all: rota desconhecida volta pro Início. */}
           <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
