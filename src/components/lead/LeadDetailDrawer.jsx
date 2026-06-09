@@ -1355,6 +1355,10 @@ function InfoTile({ label, value }) {
 
 // ── Side-tab system ─────────────────────────────────────────────────────────
 
+const SIDE_TAB_HINTS = {
+  ia: "Assistente de IA sob demanda para este lead — briefing, rascunho de e-mail, próximo passo, análise de objeção. Use quando precisa de apoio antes de uma ação específica. Para sugestões automáticas em toda a carteira, veja Time de Agentes.",
+};
+
 const SIDE_TABS = [
   { id: "form",         label: "Form",        icon: FileText },
   { id: "atividades",   label: "Atividades",  icon: Activity },
@@ -1376,6 +1380,7 @@ function SideTabs({ activeTab, onChange }) {
           <button
             key={t.id}
             onClick={() => onChange(t.id)}
+            title={SIDE_TAB_HINTS[t.id] || undefined}
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
             style={{
               background: active ? "#FFFFFF" : "transparent",
