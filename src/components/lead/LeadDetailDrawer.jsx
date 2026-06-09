@@ -401,6 +401,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                 <div className="font-semibold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{decisionMakerName}</div>
                 <div className="text-xs truncate" style={{ color: NEUTRAL.slate }}>{decisionMakerRole}</div>
               </div>
+              <FitScoreCircle score={lead.fitScore} size={48} />
             </div>
             {(lead.size || lead.phone) && (
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: NEUTRAL.slate }}>
@@ -569,6 +570,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                 linkedEmails={lead.linkedEmails || []}
               />
             )}
+
 
             {/* ── Tab: Anexos ── */}
             {sideTab === "anexos" && (
