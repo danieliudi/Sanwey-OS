@@ -44,32 +44,23 @@ function blurStyle(e)  { e.target.style.borderColor = "#D1D5DB"; e.target.style.
 
 // ── AddFieldForm ──────────────────────────────────────────────────────────────
 
-function AddFieldForm({ onAdd, onCancel, accent }) {
+function AddFieldForm({ onAdd, onCancel, accent, busy }) {
   const [fieldType, setFieldType] = useState("text");
   const [label, setLabel]         = useState("");
   const [required, setRequired]   = useState(false);
   const [options, setOptions]      = useState("");
-  const [saving, setSaving]        = useState(false);
   const [error, setError]          = useState(null);
 
   const hasOptions = ["select", "radio", "multicheck"].includes(fieldType);
 
-  const handleAdd = async () => {
+  const handleAdd = () => {
     if (!label.trim()) { setError("Informe um nome para o campo."); return; }
     if (hasOptions && !options.trim()) { setError("Informe pelo menos uma opção."); return; }
-    setSaving(true);
     setError(null);
-    try {
-      const parsed = hasOptions
-        ? options.split("\n").map(s => s.trim()).filter(Boolean)
-        : [];
-      await onAdd({ fieldType, label: label.trim(), required, options: parsed });
-      onCancel();
-    } catch (e) {
-      setError(e.message || "Erro ao salvar.");
-    } finally {
-      setSaving(false);
-    }
+    const parsed = hasOptions
+      ? options.split("\n").map(s => s.trim()).filter(Boolean)
+      : [];
+    onAdd({ fieldType, label: label.trim(), required, options: parsed });
   };
 
   return (
@@ -140,14 +131,15 @@ function AddFieldForm({ onAdd, onCancel, accent }) {
       <div style={{ display: "flex", gap: 6 }}>
         <button
           onClick={handleAdd}
-          disabled={saving}
-          style={{ flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 12px", borderRadius: 6, border: "none", background: saving ? "#9CA3AF" : accent, color: "#FFF", cursor: saving ? "not-allowed" : "pointer" }}
+          disabled={busy}
+          style={{ flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 12px", borderRadius: 6, border: "none", background: busy ? "#9CA3AF" : accent, color: "#FFF", cursor: busy ? "not-allowed" : "pointer" }}
         >
-          {saving ? "Adicionando…" : "Adicionar"}
+          {busy ? "Adicionando…" : "Adicionar"}
         </button>
         <button
           onClick={onCancel}
-          style={{ fontSize: 12, fontWeight: 600, padding: "7px 12px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+          disabled={busy}
+          style={{ fontSize: 12, fontWeight: 600, padding: "7px 12px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: busy ? "not-allowed" : "pointer" }}
         >
           Cancelar
         </button>
@@ -158,7 +150,7 @@ function AddFieldForm({ onAdd, onCancel, accent }) {
 
 // ── FieldRow ──────────────────────────────────────────────────────────────────
 
-function FieldRow({ field, accent, onDelete, onMoveUp, onMoveDown, onToggleRequired, isFirst, isLast }) {
+function FieldRow({ field, accent, onDelete, onMoveUp, onMoveDown, onToggleRequired, isFirst, isLast, busy }) {
   const [confirmDel, setConfirmDel] = useState(false);
   const Icon = TYPE_ICON[field.fieldType] || Settings2;
   const typeMeta = FIELD_TYPES.find(t => t.value === field.fieldType);
@@ -189,13 +181,14 @@ function FieldRow({ field, accent, onDelete, onMoveUp, onMoveDown, onToggleRequi
 
       {/* Required toggle */}
       <button
-        onClick={() => onToggleRequired(field.id, !field.required)}
+        onClick={() => !busy && onToggleRequired(field.id, !field.required)}
         title={field.required ? "Remover obrigatoriedade" : "Tornar obrigatório"}
         style={{
-          fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, cursor: "pointer", flexShrink: 0,
+          fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, cursor: busy ? "wait" : "pointer", flexShrink: 0,
           border: `1px solid ${field.required ? accent + "60" : "#E5E7EB"}`,
           background: field.required ? accent + "12" : "transparent",
           color: field.required ? accent : NEUTRAL.slate,
+          opacity: busy ? 0.6 : 1,
         }}
       >
         {field.required ? "Obrig." : "Opcional"}
@@ -255,6 +248,7 @@ function FieldRow({ field, accent, onDelete, onMoveUp, onMoveDown, onToggleRequi
 export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFields }) {
   const [showAdd, setShowAdd] = useState(false);
   const [opError, setOpError] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open) { setShowAdd(false); setOpError(null); }
@@ -266,52 +260,58 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
   const accent  = company?.primary || NEUTRAL.graphite;
   const fields  = stageFields.getFields(companyId, stage.id);
 
-  const handleAdd = async ({ fieldType, label, required, options }) => {
-    const orderIdx = fields.length;
-    await stageFields.addField({
-      companyId,
-      stageId: stage.id,
-      fieldKey: slugifyKey(label),
-      fieldType,
-      label,
-      required,
-      options,
-      orderIdx,
-      placeholder: "",
-      helpText: "",
+  const run = async (fn) => {
+    setBusy(true);
+    setOpError(null);
+    try {
+      await fn();
+      await stageFields.refetch();
+    } catch (e) {
+      setOpError(e.message || "Erro ao salvar. Verifique a conexão.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAdd = ({ fieldType, label, required, options }) =>
+    run(async () => {
+      await stageFields.addField({
+        companyId,
+        stageId: stage.id,
+        fieldKey: slugifyKey(label),
+        fieldType,
+        label,
+        required,
+        options,
+        orderIdx: fields.length,
+        placeholder: "",
+        helpText: "",
+      });
+      setShowAdd(false);
     });
-  };
 
-  const handleDelete = async (id) => {
-    try {
-      setOpError(null);
-      await stageFields.deleteField(id);
-    } catch (e) {
-      setOpError(e.message || "Erro ao remover campo.");
-    }
-  };
+  const handleDelete = (id) =>
+    run(() => stageFields.deleteField(id));
 
-  const handleToggleRequired = async (id, required) => {
-    try {
-      setOpError(null);
-      await stageFields.updateField(id, { required });
-    } catch (e) {
-      setOpError(e.message || "Erro ao atualizar campo.");
-    }
-  };
+  const handleToggleRequired = (id, newRequired) =>
+    run(() => {
+      const f = fields.find(f => f.id === id);
+      if (!f) return Promise.resolve();
+      return stageFields.updateField(id, { ...f, required: newRequired });
+    });
 
-  const handleMoveUp = async (idx) => {
+  const handleMoveUp = (idx) => {
     if (idx === 0) return;
-    const newOrder = [...fields];
-    [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
-    await stageFields.reorderFields(companyId, stage.id, newOrder.map(f => f.id));
+    const ordered = [...fields];
+    [ordered[idx - 1], ordered[idx]] = [ordered[idx], ordered[idx - 1]];
+    run(() => stageFields.reorderFields(companyId, stage.id, ordered.map(f => f.id)));
   };
 
-  const handleMoveDown = async (idx) => {
+  const handleMoveDown = (idx) => {
     if (idx === fields.length - 1) return;
-    const newOrder = [...fields];
-    [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
-    await stageFields.reorderFields(companyId, stage.id, newOrder.map(f => f.id));
+    const ordered = [...fields];
+    [ordered[idx], ordered[idx + 1]] = [ordered[idx + 1], ordered[idx]];
+    run(() => stageFields.reorderFields(companyId, stage.id, ordered.map(f => f.id)));
   };
 
   return (
@@ -386,6 +386,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
               accent={accent}
               isFirst={idx === 0}
               isLast={idx === fields.length - 1}
+              busy={busy}
               onDelete={handleDelete}
               onToggleRequired={handleToggleRequired}
               onMoveUp={() => handleMoveUp(idx)}
@@ -395,7 +396,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
 
           {/* Add form or button */}
           {showAdd ? (
-            <AddFieldForm accent={accent} onAdd={handleAdd} onCancel={() => setShowAdd(false)} />
+            <AddFieldForm accent={accent} onAdd={handleAdd} onCancel={() => setShowAdd(false)} busy={busy} />
           ) : (
             <button
               onClick={() => setShowAdd(true)}
