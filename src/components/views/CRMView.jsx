@@ -858,13 +858,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       onClose={() => setShowAIChat(false)}
     />
 
-      {/* FAB — botão flutuante único para criar novo card */}
+      {/* FAB — botão flutuante único para criar novo card (só no Kanban) */}
       {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
         <button
-          className="fixed z-20 flex items-center gap-2 font-semibold shadow-lg"
+          className="fixed z-30 flex items-center gap-2 font-semibold shadow-lg left-6 lg:left-[312px] bottom-20 lg:bottom-6"
           style={{
-            bottom: 24,
-            left: 24,
             height: 52,
             padding: "0 20px",
             background: "#b5000b",
