@@ -411,6 +411,65 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               </div>
             </div>
 
+            {/* Receita Federal — compacto */}
+            {isSupabaseConfigured && (
+              <div
+                className="p-2.5 rounded-lg border flex items-start justify-between gap-2"
+                style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-semibold mb-0.5 flex items-center gap-1" style={{ color: NEUTRAL.slate }}>
+                    <Building2 size={11} />
+                    Receita Federal
+                  </div>
+                  {enrichData ? (
+                    <div className="text-xs" style={{ color: NEUTRAL.graphite }}>
+                      <div className="font-semibold truncate">{enrichData.razaoSocial || enrichData.company}</div>
+                      <div className="truncate text-[11px]" style={{ color: NEUTRAL.slate }}>
+                        {enrichData.cnae} · {enrichData.porte || "—"} · {enrichData.situacao || "—"}
+                        {enrichData.capitalSocial > 0 && ` · ${formatBRL(enrichData.capitalSocial)}`}
+                      </div>
+                      {(enrichData.telefone || enrichData.email) && (
+                        <div className="mt-0.5 text-[11px] truncate" style={{ color: NEUTRAL.slate }}>
+                          {enrichData.telefone && <>📞 {enrichData.telefone}</>}
+                          {enrichData.telefone && enrichData.email && " · "}
+                          {enrichData.email && <>✉ {enrichData.email}</>}
+                        </div>
+                      )}
+                    </div>
+                  ) : enrichError ? (
+                    <div className="text-xs" style={{ color: "#B91C1C" }}>{enrichError.message || String(enrichError)}</div>
+                  ) : (
+                    <div className="text-[11px]" style={{ color: NEUTRAL.slate }}>Busca CNAE, porte, capital social e contatos.</div>
+                  )}
+                </div>
+                <Button variant="ghost" size="sm" icon={enriching ? RefreshCw : Building2}
+                  onClick={handleEnrich} disabled={enriching || !lead.cnpj}>
+                  {enriching ? "Buscando…" : enrichData ? "Re-buscar" : "Enriquecer"}
+                </Button>
+              </div>
+            )}
+
+            {/* Sinal de mercado — compacto */}
+            {(lead.triggerLabel || lead.evidence) && (
+              <div
+                className="p-2.5 rounded-lg"
+                style={{
+                  background: company.light,
+                  border: `1px solid ${company.primary}20`,
+                  borderLeft: `3px solid ${company.primary}`,
+                }}
+              >
+                <div className="text-[10px] font-semibold mb-0.5 flex items-center gap-1" style={{ color: company.dark }}>
+                  <AlertTriangle size={11} />
+                  {lead.triggerLabel ? `Gatilho · ${lead.triggerLabel}` : "Gatilho"}
+                </div>
+                {lead.evidence && (
+                  <div className="text-xs line-clamp-3" style={{ color: NEUTRAL.graphite }}>{lead.evidence}</div>
+                )}
+              </div>
+            )}
+
             {/* Decisor + infos do cliente */}
             <div className="flex items-center gap-3">
               <div
@@ -700,49 +759,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           {/* ── Pipeline stage progress bar ───────────────────────────────── */}
           <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
 
-          {/* Enriquecimento RF */}
-          {isSupabaseConfigured && (
-            <div
-              className="p-3.5 rounded-xl border flex items-start justify-between gap-3 flex-wrap"
-              style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: NEUTRAL.slate }}>
-                  <Building2 size={12} />
-                  Receita Federal
-                </div>
-                {enrichData ? (
-                  <div className="text-xs" style={{ color: NEUTRAL.graphite }}>
-                    <div className="font-semibold">{enrichData.razaoSocial || enrichData.company}</div>
-                    <div style={{ color: NEUTRAL.slate }}>
-                      CNAE {enrichData.cnae} · {enrichData.porte || "—"} · {enrichData.situacao || "—"}
-                      {enrichData.capitalSocial > 0 && ` · Capital ${formatBRL(enrichData.capitalSocial)}`}
-                    </div>
-                    {(enrichData.telefone || enrichData.email) && (
-                      <div className="mt-0.5" style={{ color: NEUTRAL.slate }}>
-                        {enrichData.telefone && <>📞 {enrichData.telefone}</>}
-                        {enrichData.telefone && enrichData.email && " · "}
-                        {enrichData.email && <>✉ {enrichData.email}</>}
-                      </div>
-                    )}
-                  </div>
-                ) : enrichError ? (
-                  <div className="text-xs" style={{ color: "#B91C1C" }}>
-                    {enrichError.message || String(enrichError)}
-                  </div>
-                ) : (
-                  <div className="text-xs" style={{ color: NEUTRAL.slate }}>
-                    Busca CNAE, porte, capital social e contatos.
-                  </div>
-                )}
-              </div>
-              <Button variant="ghost" size="sm" icon={enriching ? RefreshCw : Building2}
-                onClick={handleEnrich} disabled={enriching || !lead.cnpj}>
-                {enriching ? "Buscando…" : enrichData ? "Re-buscar" : "Enriquecer"}
-              </Button>
-            </div>
-          )}
-
           {/* Overlap (gerente) */}
           {isManager && overlaps.length > 0 && (
             <div
@@ -774,27 +790,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                   </div>
                 );
               })}
-            </div>
-          )}
-
-          {/* Trigger — only render if there's an actual trigger */}
-          {(lead.triggerLabel || lead.evidence) && (
-            <div
-              className="p-3.5 rounded-xl border-l-4"
-              style={{
-                background: company.light,
-                borderLeftColor: company.primary,
-                border: `1px solid ${company.primary}20`,
-                borderLeft: `4px solid ${company.primary}`,
-              }}
-            >
-              <div className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: company.dark }}>
-                <AlertTriangle size={12} />
-                Gatilho{lead.triggerLabel ? ` · ${lead.triggerLabel}` : ""}
-              </div>
-              {lead.evidence && (
-                <div className="text-sm" style={{ color: NEUTRAL.graphite }}>{lead.evidence}</div>
-              )}
             </div>
           )}
 
