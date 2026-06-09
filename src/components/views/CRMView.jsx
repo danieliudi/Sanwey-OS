@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Bot } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Bot, Pencil } from "lucide-react";
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
 import { exportLeadsCSV } from "../../utils/export-leads";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -9,10 +9,12 @@ import { Select } from "../ui/Select";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
 import { LeadFormBuilder } from "../lead/LeadFormBuilder";
+import { StageFieldEditorModal } from "../pipeline/StageFieldEditorModal";
 import { DynamicField, validateFields } from "../ui/DynamicField";
 import { PipelineCalendarView } from "./PipelineCalendarView";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { useLeadFormConfig } from "../../hooks/use-lead-form-config";
+import { useStageFields } from "../../hooks/use-stage-fields";
 import { formatK } from "../../utils/currency";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
@@ -467,9 +469,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
 
   const usersById = useUsersById(users);
   const { formConfig, updateFormConfig } = useLeadFormConfig();
+  const stageFields = useStageFields();
   const [createModalStage, setCreateModalStage] = useState(null); // { stageId, stage, companyId }
   const [showAIChat, setShowAIChat] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
+  const [editingStage, setEditingStage] = useState(null); // { stage, companyId }
 
   // user.companies may still contain legacy ids ("comercial") that the DB
   // check constraint rejects — pick the first one that's actually valid.
@@ -731,17 +735,17 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                       </div>
                     )}
                   </div>
-                  {isManager && (
+                  {isManager && !stage.terminal && (
                     <button
-                      onClick={() => setShowFormBuilder(true)}
-                      className="p-1.5 rounded-lg cursor-pointer transition-colors"
-                      style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
-                      title="Configurar formulário de criação"
-                      aria-label="Configurar formulário"
+                      onClick={() => setEditingStage({ stage, companyId: colCompanyId })}
+                      className="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer transition-colors text-xs font-semibold"
+                      style={{ color: NEUTRAL.slate, background: "transparent", border: "1px solid transparent" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                      title="Editar campos desta etapa"
                     >
-                      <Settings size={13} />
+                      <Settings size={11} />
+                      Editar fase
                     </button>
                   )}
                 </div>
@@ -828,7 +832,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         }}
       />
 
-      {/* Form builder — acessível pelo ⚙️ das colunas ou pelo modal de criação */}
+      {/* Form builder — acessível pelo modal de criação */}
       {showFormBuilder && (
         <LeadFormBuilder
           formConfig={formConfig}
@@ -836,6 +840,15 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           onClose={() => setShowFormBuilder(false)}
         />
       )}
+
+      {/* Stage field editor */}
+      <StageFieldEditorModal
+        open={Boolean(editingStage)}
+        onClose={() => setEditingStage(null)}
+        stage={editingStage?.stage}
+        companyId={editingStage?.companyId}
+        stageFields={stageFields}
+      />
     </div>
 
     {/* Floating AI button */}

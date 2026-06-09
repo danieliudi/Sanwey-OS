@@ -675,6 +675,7 @@ export default function App() {
           users={users}
           isManager={isManager}
           currentUser={currentUser}
+          onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("pipeline-builder"); }}
         />
       </ErrorBoundary>
 
