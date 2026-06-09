@@ -3,18 +3,21 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 // Tipos de campo suportados na v1.
 export const FIELD_TYPES = [
-  { value: "text",     label: "Texto curto" },
-  { value: "textarea", label: "Texto longo" },
-  { value: "number",   label: "Número" },
-  { value: "currency", label: "Moeda (R$)" },
-  { value: "date",     label: "Data" },
-  { value: "datetime", label: "Data e hora" },
-  { value: "email",    label: "E-mail" },
-  { value: "phone",    label: "Telefone" },
-  { value: "url",      label: "URL" },
-  { value: "checkbox", label: "Caixa de seleção" },
-  { value: "select",   label: "Lista suspensa" },
-  { value: "user",     label: "Usuário do sistema" },
+  { value: "text",       label: "Texto curto" },
+  { value: "textarea",   label: "Texto longo" },
+  { value: "number",     label: "Número" },
+  { value: "currency",   label: "Moeda (R$)" },
+  { value: "date",       label: "Data" },
+  { value: "datetime",   label: "Data e hora" },
+  { value: "time",       label: "Hora (HH:MM)" },
+  { value: "email",      label: "E-mail" },
+  { value: "phone",      label: "Telefone" },
+  { value: "url",        label: "URL" },
+  { value: "checkbox",   label: "Caixa de seleção" },
+  { value: "select",     label: "Lista suspensa" },
+  { value: "radio",      label: "Escolha única (radio)" },
+  { value: "multicheck", label: "Múltiplas escolhas" },
+  { value: "user",       label: "Usuário do sistema" },
 ];
 
 function rowToField(r) {

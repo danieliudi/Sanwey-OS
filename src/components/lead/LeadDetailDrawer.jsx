@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   X, MapPin, AlertTriangle, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
   Building2, RefreshCw, Check, Trash2, Mail, ChevronDown, ChevronUp,
-  Clock, MessageSquare, GitBranch, CalendarClock,
+  Clock, MessageSquare, GitBranch, CalendarClock, ArrowLeft, ArrowRight, History,
+  FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
+  File, FileImage, FileSpreadsheet, AlertCircle,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -16,13 +18,18 @@ import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
 import { useStageFields } from "../../hooks/use-stage-fields";
+import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
+import { useLeadAttachments } from "../../hooks/use-lead-attachments";
+import { useLeadChecklists } from "../../hooks/use-lead-checklists";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
+import { StageFieldInput } from "./StageFieldInput";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
 export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, isManager, currentUser }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
+  const [sideTab, setSideTab] = useState("form");
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -38,6 +45,51 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
   const customValues = lead?.customFields || {};
+  const { entries: stageHistory } = useSingleLeadHistory(lead?.id);
+
+  // Edição inline dos campos customizados da etapa.
+  // Mantém o digitado localmente e salva com debounce (600ms) para não bater
+  // no Supabase a cada tecla.
+  const [customDraft, setCustomDraft] = useState({});
+  const customDebounceRef = useRef(null);
+
+  useEffect(() => {
+    setCustomDraft({});
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+  }, [lead?.id]);
+
+  const handleCustomChange = useCallback((fieldKey, value) => {
+    setCustomDraft(prev => ({ ...prev, [fieldKey]: value }));
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    customDebounceRef.current = setTimeout(() => {
+      if (!lead) return;
+      const merged = { ...(lead.customFields || {}), [fieldKey]: value };
+      onUpdate(lead.id, { customFields: merged });
+    }, 600);
+  }, [lead, onUpdate]);
+
+  const getCustomValue = useCallback((fieldKey) => {
+    return fieldKey in customDraft ? customDraft[fieldKey] : (customValues[fieldKey] ?? "");
+  }, [customDraft, customValues]);
+
+  // Resolve prev/next non-terminal stages based on the default pipeline order.
+  const stageNav = useMemo(() => {
+    if (!lead?.stage) return { prev: null, next: null };
+    const idx = DEFAULT_PIPELINE_STAGES.findIndex(s => s.id === lead.stage);
+    if (idx < 0) return { prev: null, next: null };
+    const prev = idx > 0 ? DEFAULT_PIPELINE_STAGES[idx - 1] : null;
+    // Next: skip terminal stages
+    const next = idx < DEFAULT_PIPELINE_STAGES.length - 1
+      ? DEFAULT_PIPELINE_STAGES[idx + 1]
+      : null;
+    return { prev, next };
+  }, [lead?.stage]);
+
+  const moveToStage = useCallback((toStage) => {
+    if (!lead || !toStage) return;
+    setStage(toStage);
+    onUpdate(lead.id, { stage: toStage, status: toStage, stageChangedAt: new Date().toISOString() });
+  }, [lead, onUpdate]);
 
   useEffect(() => { resetEnrich(); }, [lead?.id, resetEnrich]);
 
@@ -244,10 +296,11 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
       aria-modal="true"
     >
       <div
-        className="w-full max-w-2xl max-h-full overflow-y-auto rounded-2xl"
+        className="w-full max-w-6xl rounded-2xl flex flex-col"
         style={{
           background: "#FFFFFF",
           boxShadow: "0 24px 64px rgba(32,26,26,0.18)",
+          maxHeight: "92vh",
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -310,24 +363,173 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           </div>
         </div>
 
-        <div className="p-5 space-y-4">
-          {/* Lead title */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h2 className="font-bold mb-1" style={{ fontSize: 20, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
-                {lead.company}
-              </h2>
-              <div className="flex items-center gap-2 text-sm flex-wrap" style={{ color: NEUTRAL.slate }}>
-                {lead.cnpj && <span className="font-mono text-xs">{lead.cnpj}</span>}
-                {lead.cnpj && (lead.sector || lead.city) && <span>·</span>}
-                {lead.sector && <span>{lead.sector}</span>}
-                {lead.sector && lead.city && <span>·</span>}
-                {lead.city && <span className="flex items-center gap-1"><MapPin size={12} />{lead.city}</span>}
-                {!lead.cnpj && !lead.sector && !lead.city && <span className="text-xs italic">Sem dados de cadastro</span>}
+        {/* ── BODY: 3 colunas (esquerda info / centro form da etapa / direita movimentação) ── */}
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+
+          {/* ───── LEFT SIDEBAR ───────────────────────────────────────── */}
+          <aside
+            className="w-full lg:w-[320px] shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4"
+            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+          >
+            {/* Título do lead */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold mb-1" style={{ fontSize: 18, color: NEUTRAL.graphite, letterSpacing: "-0.02em", wordBreak: "break-word" }}>
+                  {lead.company}
+                </h2>
+                <div className="flex items-center gap-1.5 text-xs flex-wrap" style={{ color: NEUTRAL.slate }}>
+                  {lead.cnpj && <span className="font-mono">{lead.cnpj}</span>}
+                  {lead.cnpj && (lead.sector || lead.city) && <span>·</span>}
+                  {lead.sector && <span>{lead.sector}</span>}
+                  {lead.sector && lead.city && <span>·</span>}
+                  {lead.city && <span className="flex items-center gap-1"><MapPin size={11} />{lead.city}</span>}
+                  {!lead.cnpj && !lead.sector && !lead.city && <span className="italic">Sem dados</span>}
+                </div>
               </div>
+              <FitScoreCircle score={lead.fitScore} size={48} />
             </div>
-            <FitScoreCircle score={lead.fitScore} size={60} />
-          </div>
+
+            {/* Tabs */}
+            <SideTabs activeTab={sideTab} onChange={setSideTab} />
+
+            {/* ── Tab: Form ── */}
+            {sideTab === "form" && (
+            <>
+            {/* Formulário Inicial (vindo de captura pública) */}
+            {customValues.capture_customer_name && (
+              <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
+                    Formulário Inicial
+                  </div>
+                  {customValues.capture_source && (
+                    <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+                      style={{ background: "#FAFAFA", color: NEUTRAL.slate, letterSpacing: "0.08em" }}>
+                      via {customValues.capture_source}
+                    </span>
+                  )}
+                </div>
+                <dl className="space-y-2.5 text-sm">
+                  <CaptureRow label="Nome do Cliente" value={customValues.capture_customer_name} />
+                  <CaptureRow label="Contato" value={customValues.capture_contact_phone} mono />
+                  <CaptureRow label="E-mail" value={customValues.capture_contact_email} link={customValues.capture_contact_email ? `mailto:${customValues.capture_contact_email}` : null} />
+                  <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
+                  <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
+                  <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
+                </dl>
+                {customValues.capture_notes && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.slate }}>Mensagem</div>
+                    <div className="text-sm whitespace-pre-line" style={{ color: NEUTRAL.graphite }}>{customValues.capture_notes}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Histórico de etapas */}
+            {stageHistory.length > 0 && (
+              <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+                <div className="flex items-center gap-1.5 mb-3" style={{ color: NEUTRAL.slate }}>
+                  <History size={13} />
+                  <span className="text-xs font-semibold">Histórico</span>
+                </div>
+                <ol className="space-y-2.5 relative" style={{ paddingLeft: 18 }}>
+                  <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 1, background: "#E5E7EB" }} />
+                  {stageHistory.slice(0, 8).map((h, i) => {
+                    const toStage = DEFAULT_PIPELINE_STAGES.find(s => s.id === h.toStage);
+                    const fromStage = h.fromStage ? DEFAULT_PIPELINE_STAGES.find(s => s.id === h.fromStage) : null;
+                    return (
+                      <li key={i} className="relative">
+                        <div style={{
+                          position: "absolute", left: -16, top: 3,
+                          width: 9, height: 9, borderRadius: "50%",
+                          background: toStage?.color || NEUTRAL.slate,
+                          border: "2px solid #FFFFFF", boxShadow: "0 0 0 1px #E5E7EB",
+                        }} />
+                        <div className="text-xs" style={{ color: NEUTRAL.graphite }}>
+                          {fromStage ? (
+                            <>{fromStage.name} <span style={{ color: NEUTRAL.slate }}>→</span> <strong>{toStage?.name || h.toStage}</strong></>
+                          ) : (
+                            <strong>{toStage?.name || h.toStage}</strong>
+                          )}
+                        </div>
+                        <div className="text-[11px] mt-0.5" style={{ color: NEUTRAL.slate }}>
+                          {new Date(h.changedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                        </div>
+                      </li>
+                    );
+                  })}
+                  {stageHistory.length > 8 && (
+                    <li className="text-[11px]" style={{ color: NEUTRAL.slate }}>
+                      +{stageHistory.length - 8} eventos anteriores
+                    </li>
+                  )}
+                </ol>
+              </div>
+            )}
+            </>
+            )}
+
+            {/* ── Tab: Atividades ── */}
+            {sideTab === "atividades" && (
+              <ActivitiesPanel
+                stageHistory={stageHistory}
+                activities={lead.activities || []}
+                users={users}
+              />
+            )}
+
+            {/* ── Tab: Comentários ── */}
+            {sideTab === "comentarios" && (
+              <CommentsPanel
+                lead={lead}
+                currentUser={currentUser}
+                users={users}
+                onAddActivity={onAddActivity}
+              />
+            )}
+
+            {/* ── Tab: Anexos ── */}
+            {sideTab === "anexos" && (
+              <AttachmentsPanel
+                leadId={lead.id}
+                companyId={lead.companyId}
+                currentUser={currentUser}
+                companyColor={company.primary}
+              />
+            )}
+
+            {/* ── Tab: Checklists ── */}
+            {sideTab === "checklists" && (
+              <ChecklistsPanel
+                leadId={lead.id}
+                companyId={lead.companyId}
+                currentUser={currentUser}
+                companyColor={company.primary}
+              />
+            )}
+
+            {/* ── Tab: Email ── */}
+            {sideTab === "email" && (
+              <PlaceholderPanel
+                icon={Mail}
+                title="Email"
+                hint="Em breve — emails vinculados e rascunhos centralizados aqui."
+              />
+            )}
+
+            {/* ── Tab: PDF ── */}
+            {sideTab === "pdf" && (
+              <PlaceholderPanel
+                icon={FileDown}
+                title="Exportar PDF"
+                hint="Em breve — gere um PDF deste card para compartilhar fora da plataforma."
+              />
+            )}
+          </aside>
+
+          {/* ───── CENTER ─────────────────────────────────────────────── */}
+          <main className="flex-1 min-w-0 overflow-y-auto p-5 space-y-4">
 
           {/* ── Pipeline stage progress bar ───────────────────────────────── */}
           <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
@@ -445,29 +647,33 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             <InfoTile label="Fechamento" value={formatDateBR(lead.closeDate)} />
           </div>
 
-          {/* Campos customizados da etapa */}
+          {/* Campos customizados da etapa — editáveis inline (save debounced) */}
           {customDefs.length > 0 && (
             <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-              <div className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: company.primary }}>
-                Detalhes da etapa
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
+                  Fase atual · {DEFAULT_PIPELINE_STAGES.find(s => s.id === lead.stage)?.name || lead.stage}
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {customDefs.map(f => {
-                  const v = customValues[f.fieldKey];
-                  const display = v === undefined || v === null || v === ""
-                    ? "—"
-                    : f.fieldType === "checkbox" ? (v ? "Sim" : "Não")
-                    : f.fieldType === "currency" && Number.isFinite(Number(v)) ? formatBRL(Number(v))
-                    : f.fieldType === "date" ? formatDateBR(v)
-                    : f.fieldType === "user" ? (users.find(u => u.id === v)?.name || v)
-                    : String(v);
-                  return (
-                    <div key={f.id}>
-                      <div className="text-[11px] font-semibold mb-0.5" style={{ color: NEUTRAL.slate }}>{f.label}</div>
-                      <div className="text-sm" style={{ color: NEUTRAL.graphite, wordBreak: "break-word" }}>{display}</div>
-                    </div>
-                  );
-                })}
+              <div className="space-y-4">
+                {customDefs.map(f => (
+                  <div key={f.id}>
+                    <label className="block" style={{ fontSize: 13, fontWeight: 700, color: NEUTRAL.graphite, marginBottom: 2 }}>
+                      {f.required && <span style={{ color: "#b5000b", marginRight: 4 }}>*</span>}
+                      {f.label}
+                    </label>
+                    {f.helpText && (
+                      <div style={{ fontSize: 11, color: NEUTRAL.slate, marginBottom: 6 }}>{f.helpText}</div>
+                    )}
+                    <StageFieldInput
+                      field={f}
+                      value={getCustomValue(f.fieldKey)}
+                      onChange={(val) => handleCustomChange(f.fieldKey, val)}
+                      users={users}
+                      companyId={lead.companyId}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -881,6 +1087,68 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               </div>
             </div>
           </div>
+          </main>
+
+          {/* ───── RIGHT SIDEBAR ─────────────────────────────────────── */}
+          <aside
+            className="w-full lg:w-[240px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5"
+            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+          >
+            <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>
+              Mover card para fase
+            </div>
+            <div className="space-y-2">
+              {stageNav.next && (
+                <button
+                  onClick={() => moveToStage(stageNav.next.id)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                  style={{ background: company.primary + "14", color: company.primary, border: `1px solid ${company.primary}30` }}
+                  onMouseEnter={e => { e.currentTarget.style.background = company.primary + "22"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = company.primary + "14"; }}
+                >
+                  <span>{stageNav.next.name}</span>
+                  <ArrowRight size={14} />
+                </button>
+              )}
+              {stageNav.prev && (
+                <button
+                  onClick={() => moveToStage(stageNav.prev.id)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+                >
+                  <ArrowLeft size={13} />
+                  <span>{stageNav.prev.name}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="mt-5 pt-4 border-t space-y-2" style={{ borderColor: "#E5E7EB" }}>
+              <a
+                href="#"
+                onClick={e => { e.preventDefault(); /* future: open pipeline builder for this stage */ }}
+                className="flex items-center gap-2 text-xs"
+                style={{ color: NEUTRAL.slate, textDecoration: "none" }}
+                onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
+                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+              >
+                <GitBranch size={12} />
+                Configurar mover cards
+              </a>
+              <a
+                href="#"
+                onClick={e => { e.preventDefault(); /* future: AI-assisted move */ }}
+                className="flex items-center gap-2 text-xs"
+                style={{ color: NEUTRAL.slate, textDecoration: "none" }}
+                onMouseEnter={e => { e.currentTarget.style.color = "#7C3AED"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+              >
+                <Sparkles size={12} />
+                Mover cards com IA
+              </a>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -1081,6 +1349,641 @@ function InfoTile({ label, value }) {
         {label}
       </div>
       <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{value}</div>
+    </div>
+  );
+}
+
+// ── Side-tab system ─────────────────────────────────────────────────────────
+
+const SIDE_TABS = [
+  { id: "form",         label: "Form",        icon: FileText },
+  { id: "atividades",   label: "Atividades",  icon: Activity },
+  { id: "anexos",       label: "Anexos",      icon: Paperclip },
+  { id: "checklists",   label: "Checklists",  icon: ListChecks },
+  { id: "comentarios",  label: "Comentários", icon: MessageSquare },
+  { id: "email",        label: "Email",       icon: Mail },
+  { id: "pdf",          label: "PDF",         icon: FileDown },
+];
+
+function SideTabs({ activeTab, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {SIDE_TABS.map(t => {
+        const active = activeTab === t.id;
+        const Icon = t.icon;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
+            style={{
+              background: active ? "#FFFFFF" : "transparent",
+              color: active ? "#b5000b" : NEUTRAL.slate,
+              border: `1px solid ${active ? "#b5000b" : "#E5E7EB"}`,
+              cursor: "pointer",
+            }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#FFFFFF"; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+          >
+            <Icon size={11} />
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ActivitiesPanel({ stageHistory, activities, users }) {
+  // Combina movimentações de etapa + atividades genéricas em uma única timeline.
+  const combined = useMemo(() => {
+    const items = [];
+    for (const h of stageHistory || []) {
+      items.push({
+        type: "stage",
+        timestamp: h.changedAt,
+        from: h.fromStage,
+        to: h.toStage,
+        userId: h.changedBy,
+      });
+    }
+    for (const a of activities || []) {
+      items.push({
+        type: a.type || "note",
+        timestamp: a.timestamp || a.createdAt,
+        body: a.body,
+        userId: a.userId,
+        userName: a.userName,
+        meta: a.meta,
+      });
+    }
+    return items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [stageHistory, activities]);
+
+  if (combined.length === 0) {
+    return (
+      <PlaceholderPanel
+        icon={Activity}
+        title="Atividades"
+        hint="Movimentações entre etapas e edições aparecem aqui."
+      />
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+      <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite }}>
+        Atividades
+      </div>
+      <ol className="space-y-3">
+        {combined.slice(0, 20).map((a, i) => {
+          const fromStage = a.from ? DEFAULT_PIPELINE_STAGES.find(s => s.id === a.from) : null;
+          const toStage = a.to ? DEFAULT_PIPELINE_STAGES.find(s => s.id === a.to) : null;
+          const user = a.userId ? (users || []).find(u => u.id === a.userId) : null;
+          const userName = user?.name || a.userName || "Sistema";
+          return (
+            <li key={i} className="text-xs" style={{ color: NEUTRAL.graphite }}>
+              {a.type === "stage" ? (
+                <div>
+                  <span style={{ color: NEUTRAL.slate }}>{userName} </span>
+                  moveu para <strong>{toStage?.name || a.to}</strong>
+                  {fromStage && <span style={{ color: NEUTRAL.slate }}> (de {fromStage.name})</span>}
+                </div>
+              ) : (
+                <div>
+                  <span style={{ color: NEUTRAL.slate }}>{userName} </span>
+                  {a.body}
+                </div>
+              )}
+              <div className="text-[10px] mt-0.5" style={{ color: NEUTRAL.slate }}>
+                {new Date(a.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+              </div>
+            </li>
+          );
+        })}
+        {combined.length > 20 && (
+          <li className="text-[10px]" style={{ color: NEUTRAL.slate }}>
+            +{combined.length - 20} eventos anteriores
+          </li>
+        )}
+      </ol>
+    </div>
+  );
+}
+
+function CommentsPanel({ lead, currentUser, users, onAddActivity }) {
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const notes = Array.isArray(lead?.notes) ? lead.notes : [];
+  const comments = (lead?.activities || []).filter(a => a.type === "note" || a.type === "comment");
+  const all = useMemo(() => {
+    const merged = [
+      ...notes.map(n => ({ body: n.text || n.body, timestamp: n.createdAt, userName: n.userName })),
+      ...comments.map(c => ({ body: c.body, timestamp: c.timestamp, userId: c.userId, userName: c.userName })),
+    ];
+    return merged.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }, [notes, comments]);
+
+  const handleAdd = async () => {
+    const t = text.trim();
+    if (!t || !onAddActivity) return;
+    setSaving(true);
+    try {
+      await onAddActivity(lead.id, {
+        type: "comment",
+        userId: currentUser?.id || null,
+        userName: currentUser?.name || null,
+        body: t,
+      });
+      setText("");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="p-4 rounded-xl border space-y-3" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+      <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+        Comentários
+      </div>
+      {all.length === 0 && (
+        <div className="text-xs italic" style={{ color: NEUTRAL.slate }}>
+          Nenhum comentário ainda.
+        </div>
+      )}
+      {all.length > 0 && (
+        <ol className="space-y-2.5">
+          {all.slice(0, 20).map((c, i) => (
+            <li key={i} className="text-xs" style={{ color: NEUTRAL.graphite }}>
+              <div className="font-semibold mb-0.5" style={{ color: NEUTRAL.graphite, fontSize: 11 }}>
+                {c.userName || (users || []).find(u => u.id === c.userId)?.name || "—"}
+                <span className="ml-1.5 font-normal" style={{ color: NEUTRAL.slate, fontSize: 10 }}>
+                  {c.timestamp ? new Date(c.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : ""}
+                </span>
+              </div>
+              <div className="whitespace-pre-line">{c.body}</div>
+            </li>
+          ))}
+        </ol>
+      )}
+      {onAddActivity && (
+        <div className="pt-2 border-t" style={{ borderColor: "#F0F0F0" }}>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Escreva um comentário..."
+            rows={2}
+            className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
+            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, resize: "vertical", fontFamily: "inherit" }}
+          />
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={handleAdd}
+              disabled={!text.trim() || saving}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+              style={{
+                background: text.trim() && !saving ? "#b5000b" : "#E5E7EB",
+                color: text.trim() && !saving ? "#FFFFFF" : NEUTRAL.slate,
+                border: "none",
+                cursor: text.trim() && !saving ? "pointer" : "not-allowed",
+              }}
+            >
+              <Plus size={12} />
+              {saving ? "Adicionando..." : "Comentar"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Attachments panel ─────────────────────────────────────────────────────────
+
+const FILE_ICON_MAP = {
+  "application/pdf": FileText,
+  "image/jpeg": FileImage,
+  "image/png": FileImage,
+  "image/gif": FileImage,
+  "image/webp": FileImage,
+  "application/vnd.ms-excel": FileSpreadsheet,
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": FileSpreadsheet,
+};
+
+function FileIcon({ mimeType }) {
+  const Icon = FILE_ICON_MAP[mimeType] || File;
+  return <Icon size={16} />;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
+  const { attachments, loading, uploading, error, upload, remove, getSignedUrl } = useLeadAttachments(leadId);
+  const [dragOver, setDragOver] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const inputRef = useRef(null);
+
+  const doUpload = useCallback(async (file) => {
+    await upload(file, { leadId, companyId, uploadedBy: currentUser?.id || null });
+  }, [upload, leadId, companyId, currentUser]);
+
+  const handleFiles = useCallback((files) => {
+    Array.from(files).forEach(doUpload);
+  }, [doUpload]);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  }, [handleFiles]);
+
+  const handleDownload = useCallback(async (att) => {
+    setDownloadingId(att.id);
+    try {
+      const url = await getSignedUrl(att.file_path);
+      if (!url) return;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = att.file_name;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      setDownloadingId(null);
+    }
+  }, [getSignedUrl]);
+
+  return (
+    <div className="space-y-3">
+      {/* Drop zone */}
+      <div
+        className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 p-5 cursor-pointer transition-colors"
+        style={{
+          borderColor: dragOver ? companyColor : "#D1D5DB",
+          background: dragOver ? (companyColor + "08") : "#FAFAFA",
+        }}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+        aria-label="Clique ou arraste arquivos para anexar"
+      >
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center"
+          style={{ background: dragOver ? (companyColor + "18") : "#F3F4F6" }}
+        >
+          <Upload size={16} style={{ color: dragOver ? companyColor : NEUTRAL.slate }} />
+        </div>
+        <div className="text-xs text-center" style={{ color: NEUTRAL.slate }}>
+          {uploading ? (
+            <span style={{ color: companyColor }}>Enviando…</span>
+          ) : (
+            <>
+              <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>
+                Clique ou arraste
+              </span>
+              {" "}para anexar
+              <div className="mt-0.5">PDF, Word, Excel, imagens · máx 50 MB</div>
+            </>
+          )}
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.gif,.webp"
+          onChange={e => { if (e.target.files?.length) { handleFiles(e.target.files); e.target.value = ""; } }}
+        />
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>Carregando…</div>
+      )}
+
+      {!loading && attachments.length === 0 && (
+        <div className="text-xs text-center py-2 italic" style={{ color: NEUTRAL.slate }}>
+          Nenhum arquivo anexado ainda.
+        </div>
+      )}
+
+      {attachments.length > 0 && (
+        <div className="space-y-1.5">
+          {attachments.map(att => (
+            <div
+              key={att.id}
+              className="flex items-center gap-2.5 p-2.5 rounded-lg border"
+              style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: "#F3F4F6", color: NEUTRAL.slate }}
+              >
+                <FileIcon mimeType={att.mime_type} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold truncate" style={{ color: NEUTRAL.graphite }}>
+                  {att.file_name}
+                </div>
+                <div className="text-[10px] mt-0.5" style={{ color: NEUTRAL.slate }}>
+                  {formatBytes(att.file_size)}
+                  {att.created_at && (
+                    <> · {new Date(att.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => handleDownload(att)}
+                disabled={downloadingId === att.id}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: NEUTRAL.slate, background: "transparent", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                title="Baixar arquivo"
+                aria-label="Baixar arquivo"
+              >
+                <Download size={13} />
+              </button>
+              <button
+                onClick={() => remove(att)}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: NEUTRAL.slate, background: "transparent", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                title="Remover arquivo"
+                aria-label="Remover arquivo"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Checklists panel ──────────────────────────────────────────────────────────
+
+function ChecklistsPanel({ leadId, companyId, currentUser, companyColor }) {
+  const { checklists, loading, error, createChecklist, deleteChecklist, addItem, toggleItem, removeItem, renameChecklist } = useLeadChecklists(leadId);
+  const [newTitle, setNewTitle] = useState("");
+  const [creatingTitle, setCreatingTitle] = useState(false);
+  const [addingTo, setAddingTo] = useState(null);
+  const [addingText, setAddingText] = useState("");
+  const [editingTitleId, setEditingTitleId] = useState(null);
+  const [editingTitleText, setEditingTitleText] = useState("");
+
+  const handleCreate = async () => {
+    const t = newTitle.trim() || "Checklist";
+    setCreatingTitle(false);
+    setNewTitle("");
+    await createChecklist({ title: t, companyId, createdBy: currentUser?.id });
+  };
+
+  const handleAddItem = async (checklistId) => {
+    const t = addingText.trim();
+    if (!t) { setAddingTo(null); return; }
+    setAddingText("");
+    setAddingTo(null);
+    await addItem(checklistId, t);
+  };
+
+  const handleRename = async (id) => {
+    const t = editingTitleText.trim();
+    setEditingTitleId(null);
+    setEditingTitleText("");
+    if (t) await renameChecklist(id, t);
+  };
+
+  if (loading) return <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>Carregando…</div>;
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          {error}
+        </div>
+      )}
+
+      {checklists.length === 0 && !creatingTitle && (
+        <div className="text-xs text-center py-2 italic" style={{ color: NEUTRAL.slate }}>
+          Nenhum checklist criado ainda.
+        </div>
+      )}
+
+      {checklists.map(cl => {
+        const items = Array.isArray(cl.items) ? cl.items : [];
+        const doneCount = items.filter(it => it.done).length;
+        const progress = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
+
+        return (
+          <div key={cl.id} className="rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+            {/* Header */}
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b" style={{ borderColor: "#F0F0F0" }}>
+              <ListChecks size={13} style={{ color: companyColor, flexShrink: 0 }} />
+              {editingTitleId === cl.id ? (
+                <input
+                  autoFocus
+                  value={editingTitleText}
+                  onChange={e => setEditingTitleText(e.target.value)}
+                  onBlur={() => handleRename(cl.id)}
+                  onKeyDown={e => { if (e.key === "Enter") handleRename(cl.id); if (e.key === "Escape") { setEditingTitleId(null); } }}
+                  className="flex-1 text-xs font-semibold outline-none bg-transparent border-b"
+                  style={{ color: NEUTRAL.graphite, borderColor: companyColor }}
+                />
+              ) : (
+                <button
+                  className="flex-1 text-left text-xs font-semibold"
+                  style={{ color: NEUTRAL.graphite, background: "none", border: "none", cursor: "text" }}
+                  onDoubleClick={() => { setEditingTitleId(cl.id); setEditingTitleText(cl.title); }}
+                  title="Clique duplo para renomear"
+                >
+                  {cl.title}
+                </button>
+              )}
+              {items.length > 0 && (
+                <span className="text-[10px] font-semibold shrink-0" style={{ color: NEUTRAL.slate }}>
+                  {doneCount}/{items.length}
+                </span>
+              )}
+              <button
+                onClick={() => deleteChecklist(cl.id)}
+                className="p-1 rounded transition-colors shrink-0"
+                style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                title="Remover checklist"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+
+            {/* Progress bar */}
+            {items.length > 0 && (
+              <div className="px-3 pt-2" style={{ paddingBottom: 0 }}>
+                <div className="h-1 rounded-full overflow-hidden" style={{ background: "#F3F4F6" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%`, background: progress === 100 ? "#16A34A" : companyColor }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Items */}
+            <div className="p-3 space-y-1.5">
+              {items.map(it => (
+                <div key={it.id} className="flex items-start gap-2 group">
+                  <button
+                    onClick={() => toggleItem(cl.id, it.id)}
+                    className="mt-0.5 shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-all"
+                    style={{
+                      background: it.done ? companyColor : "#FFFFFF",
+                      borderColor: it.done ? companyColor : "#D1D5DB",
+                      cursor: "pointer",
+                    }}
+                    aria-label={it.done ? "Desmarcar" : "Marcar como feito"}
+                  >
+                    {it.done && <Check size={10} style={{ color: "#FFFFFF" }} />}
+                  </button>
+                  <span
+                    className="flex-1 text-xs leading-5"
+                    style={{
+                      color: it.done ? NEUTRAL.slate : NEUTRAL.graphite,
+                      textDecoration: it.done ? "line-through" : "none",
+                    }}
+                  >
+                    {it.text}
+                  </span>
+                  <button
+                    onClick={() => removeItem(cl.id, it.id)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all"
+                    style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                    title="Remover item"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add item inline */}
+              {addingTo === cl.id ? (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-4 h-4 rounded border shrink-0" style={{ borderColor: "#D1D5DB" }} />
+                  <input
+                    autoFocus
+                    value={addingText}
+                    onChange={e => setAddingText(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") handleAddItem(cl.id); if (e.key === "Escape") { setAddingTo(null); setAddingText(""); } }}
+                    onBlur={() => handleAddItem(cl.id)}
+                    placeholder="Nova tarefa..."
+                    className="flex-1 text-xs outline-none border-b pb-0.5"
+                    style={{ color: NEUTRAL.graphite, borderColor: companyColor, background: "transparent" }}
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setAddingTo(cl.id); setAddingText(""); }}
+                  className="flex items-center gap-1.5 text-xs mt-1 transition-colors"
+                  style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.color = companyColor; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                >
+                  <Plus size={11} />
+                  Adicionar item
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* New checklist */}
+      {creatingTitle ? (
+        <div className="flex items-center gap-2">
+          <input
+            autoFocus
+            value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") { setCreatingTitle(false); setNewTitle(""); } }}
+            onBlur={handleCreate}
+            placeholder="Nome do checklist..."
+            className="flex-1 text-xs rounded-lg border px-3 py-2 outline-none"
+            style={{ borderColor: companyColor, color: NEUTRAL.graphite }}
+          />
+        </div>
+      ) : (
+        <button
+          onClick={() => setCreatingTitle(true)}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed text-xs font-semibold transition-colors"
+          style={{ borderColor: "#D1D5DB", color: NEUTRAL.slate, background: "transparent" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = companyColor; e.currentTarget.style.color = companyColor; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = NEUTRAL.slate; }}
+        >
+          <Plus size={12} />
+          Novo checklist
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PlaceholderPanel({ icon: Icon, title, hint }) {
+  return (
+    <div className="p-6 rounded-xl border text-center" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+      <div className="inline-flex items-center justify-center mb-3" style={{
+        width: 40, height: 40, borderRadius: "50%",
+        background: "#F3F4F6",
+      }}>
+        <Icon size={18} color={NEUTRAL.slate} />
+      </div>
+      <div className="text-sm font-semibold mb-1" style={{ color: NEUTRAL.graphite }}>{title}</div>
+      <div className="text-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>{hint}</div>
+    </div>
+  );
+}
+
+function CaptureRow({ label, value, mono, link, badge }) {
+  const dim = value === null || value === undefined || value === "";
+  const priorityColor = badge && value === "Alta" ? "#DC2626"
+    : badge && value === "Média" ? "#E8920A"
+    : badge && value === "Baixa" ? "#16A34A"
+    : null;
+  return (
+    <div>
+      <dt className="text-[11px] font-semibold" style={{ color: NEUTRAL.slate }}>{label}</dt>
+      <dd className={`text-sm ${mono ? "font-mono" : ""}`} style={{ color: dim ? NEUTRAL.slate : NEUTRAL.graphite, fontStyle: dim ? "italic" : "normal", marginTop: 2 }}>
+        {dim ? "—" : link ? (
+          <a href={link} style={{ color: "#1E4D8C", textDecoration: "none" }}>{value}</a>
+        ) : badge ? (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
+            style={{ background: (priorityColor || NEUTRAL.slate) + "14", color: priorityColor || NEUTRAL.slate }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: priorityColor || NEUTRAL.slate }} />
+            {value}
+          </span>
+        ) : value}
+      </dd>
     </div>
   );
 }

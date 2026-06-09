@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import {
-  RotateCcw, Check, AlertTriangle, Trash2, Database, Sparkles, Camera, Loader2,
-  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog,
+  RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
+  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -62,6 +62,7 @@ const BASE_TABS = [
   { id: "preferencias", label: "Preferências",      icon: Sliders  },
   { id: "notificacoes", label: "Notificações",      icon: Bell     },
   { id: "ia",           label: "Integrações IA",    icon: Bot      },
+  { id: "captura",      label: "Captura pública",   icon: Link2    },
   { id: "dados",        label: "Dados",             icon: Database },
 ];
 
@@ -69,7 +70,7 @@ export function SettingsView({
   settings, onUpdate, onReset, onClearLocalData, currentUser,
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
-  usersPanel,
+  usersPanel, onOpenClientImport,
 }) {
   const [activeTab, setActiveTab] = useState("perfil");
   const tabs = useMemo(
@@ -204,13 +205,19 @@ export function SettingsView({
     setAiTestResult(null);
   };
 
+  const [aiSaveFeedback, setAiSaveFeedback] = useState(null);
+
   const handleAiSave = async () => {
     if (!aiForm.provider || !aiForm.model || !aiForm.apiKey.trim()) return;
     setAiSaving(true);
+    setAiSaveFeedback(null);
     try {
       const config = { provider: aiForm.provider, model: aiForm.model, apiKey: aiForm.apiKey.trim() };
       if (onUpdateUser && currentUser?.id) await onUpdateUser(currentUser.id, { aiConfig: config });
       if (onUpdateMockUser) onUpdateMockUser(u => ({ ...u, aiConfig: config }));
+      setAiSaveFeedback({ type: "success", msg: "Configuração salva com sucesso." });
+    } catch (err) {
+      setAiSaveFeedback({ type: "error", msg: err.message || "Erro ao salvar configuração." });
     } finally {
       setAiSaving(false);
     }
@@ -920,6 +927,18 @@ export function SettingsView({
                       </button>
                     </div>
                   )}
+                  {aiSaveFeedback && (
+                    <div
+                      className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+                      style={{
+                        background: aiSaveFeedback.type === "success" ? "#DCFCE7" : "#FEF2F2",
+                        color: aiSaveFeedback.type === "success" ? "#16A34A" : "#B91C1C",
+                      }}
+                    >
+                      {aiSaveFeedback.type === "success" ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                      {aiSaveFeedback.msg}
+                    </div>
+                  )}
                 </div>
               </Section>
             )}
@@ -983,6 +1002,85 @@ export function SettingsView({
                   </Button>
                 </Section>
               </div>
+            )}
+
+            {/* ── CAPTURA PÚBLICA ── */}
+            {activeTab === "captura" && (
+              <Section
+                title="Links de captura pública"
+                description="Compartilhe estes links no site, redes sociais ou anúncios. Quando um cliente preenche, o lead entra direto na etapa Prospecção da empresa correspondente."
+              >
+                <div className="space-y-3">
+                  {COMPANY_IDS.map(id => {
+                    const c = COMPANIES[id];
+                    const url = `${window.location.origin}/captura/${id}`;
+                    return (
+                      <div key={id} className="p-3.5 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+                        <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
+                              style={{ background: c.primary + "18", color: c.primary, border: `1px solid ${c.primary}30` }}
+                            >
+                              {c.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => navigator.clipboard?.writeText(url)}
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
+                              style={{ background: "#FFFFFF", color: NEUTRAL.graphite, borderColor: "#E5E7EB" }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+                              title="Copiar link"
+                            >
+                              <Copy size={12} />
+                              Copiar
+                            </button>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
+                              style={{ background: c.primary, color: "#FFFFFF", textDecoration: "none" }}
+                            >
+                              <ExternalLink size={12} />
+                              Abrir
+                            </a>
+                          </div>
+                        </div>
+                        <code style={{ fontSize: 12, color: NEUTRAL.slate, wordBreak: "break-all" }}>{url}</code>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style={{ background: "#EFF6FF", color: "#1E40AF", border: "1px solid #BFDBFE" }}>
+                  <Link2 size={13} className="shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Dica:</strong> adicione <code>?src=instagram</code>, <code>?src=whatsapp</code> ou outro identificador ao final da URL para rastrear a origem da captura no card do lead.
+                  </div>
+                </div>
+
+                {/* Importar planilha de clientes */}
+                {onOpenClientImport && (
+                  <div className="mt-6 pt-5 border-t" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+                      <div>
+                        <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite, marginBottom: 2 }}>
+                          Importar planilha de clientes
+                        </div>
+                        <p className="text-xs" style={{ color: NEUTRAL.slate, marginBottom: 0, maxWidth: 480 }}>
+                          Envie um arquivo .xlsx ou .csv com clientes ativos e inativos. A plataforma deduplica
+                          automaticamente por CNPJ — registros já cadastrados são ignorados.
+                        </p>
+                      </div>
+                      <Button variant="primary" icon={Database} onClick={onOpenClientImport}>
+                        Importar planilha
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Section>
             )}
 
             {/* ── USUÁRIOS ── */}
