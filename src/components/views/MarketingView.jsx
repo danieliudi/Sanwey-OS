@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Plus, X, Megaphone, Star } from "lucide-react";
+import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, Calendar as CalendarIcon, Settings } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
@@ -9,6 +9,7 @@ import { CampaignKanbanCard } from "../campaign/CampaignKanbanCard";
 import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
+import { Select } from "../ui/Select";
 
 // ── Quick-create form ────────────────────────────────────────────────────────
 
@@ -75,7 +76,6 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
         onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
       />
 
-      {/* Company multi-select */}
       <div className="flex flex-wrap gap-1.5">
         {COMPANY_IDS.map(id => {
           const co = COMPANIES[id];
@@ -149,118 +149,226 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
   );
 }
 
-// ── KPI summary bar ───────────────────────────────────────────────────────────
+// ── KPI cards ─────────────────────────────────────────────────────────────────
 
-function KpiBar({ campaigns }) {
-  const active    = campaigns.filter(c => !["encerrado"].includes(c.stage)).length;
-  const totalBudget = campaigns.reduce((s, c) => s + (c.budget || 0), 0);
-  const live      = campaigns.filter(c => c.stage === "ao_vivo").length;
-  const urgent    = campaigns.filter(c => {
-    if (!c.launchDate) return false;
-    const d = Math.floor((new Date(c.launchDate).getTime() - Date.now()) / 86400000);
-    return d <= 7 && d >= 0 && !["ao_vivo","encerrado","analise"].includes(c.stage);
-  }).length;
-
+function KpiCard({ label, value, sub, red }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-      {[
-        { label: "Campanhas ativas", value: String(active) },
-        { label: "Budget total",     value: formatK(totalBudget) },
-        { label: "Ao Vivo",          value: String(live) },
-        { label: "URGENTE",          value: String(urgent), red: urgent > 0 },
-      ].map(k => (
-        <div
-          key={k.label}
-          className="rounded-xl border px-4 py-3"
-          style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
-        >
-          <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: NEUTRAL.slate }}>
-            {k.label}
-          </div>
-          <div className="text-xl font-bold" style={{ color: k.red ? "#DC2626" : NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
-            {k.value}
-          </div>
-        </div>
-      ))}
+    <div
+      className="rounded-xl border"
+      style={{
+        background: "#FFFFFF",
+        borderColor: "#E5E7EB",
+        padding: "12px 16px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 600,
+          color: NEUTRAL.slate,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: red ? "#DC2626" : NEUTRAL.graphite,
+          letterSpacing: "-0.02em",
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div style={{ fontSize: 10, color: NEUTRAL.slate, marginTop: 3 }}>{sub}</div>
+      )}
     </div>
   );
 }
 
-// ── Kanban column ─────────────────────────────────────────────────────────────
-
-function KanbanColumn({ stage, campaigns, canWrite, usersById, onCardClick, onDragStart, onDragOver, onDrop, dragOver, quickAddStage, onQuickAdd, onCancelQuickAdd, currentUser, users }) {
-  const count = campaigns.length;
+function KpiBar({ campaigns }) {
+  const active      = campaigns.filter(c => !["encerrado"].includes(c.stage)).length;
   const totalBudget = campaigns.reduce((s, c) => s + (c.budget || 0), 0);
+  const live        = campaigns.filter(c => c.stage === "ao_vivo").length;
+  const urgent      = campaigns.filter(c => {
+    if (!c.launchDate) return false;
+    const d = Math.floor((new Date(c.launchDate).getTime() - Date.now()) / 86400000);
+    return d <= 7 && d >= 0 && !["ao_vivo", "encerrado", "analise"].includes(c.stage);
+  }).length;
 
   return (
     <div
-      className="flex flex-col rounded-2xl min-w-[240px]"
-      style={{
-        background:  "#F8F9FA",
-        border:      "1px solid #E5E7EB",
-        minHeight:   480,
-        flexShrink:  0,
-        transition:  "background 0.15s",
-        ...(dragOver ? { background: "#EFF6FF", borderColor: "#1E4D8C" } : {}),
-      }}
-      onDragOver={e => { e.preventDefault(); onDragOver(stage.id); }}
-      onDrop={e => { e.preventDefault(); onDrop(stage.id); }}
+      className="grid gap-3"
+      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", marginBottom: 4 }}
     >
-      {/* Column header */}
-      <div className="px-3 py-2.5 flex items-center justify-between border-b" style={{ borderColor: "#E5E7EB" }}>
-        <div className="flex items-center gap-2">
-          <span
-            style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, display: "inline-block", flexShrink: 0 }}
-          />
-          <span className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>{stage.name}</span>
-          <span
-            className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
-            style={{ background: stage.color + "22", color: stage.color }}
-          >
-            {count}
-          </span>
-        </div>
-        {totalBudget > 0 && (
-          <span className="text-[10px]" style={{ color: NEUTRAL.slate }}>{formatK(totalBudget)}</span>
-        )}
-      </div>
-
-      {/* Cards */}
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto">
-        {campaigns.map(c => (
-          <CampaignKanbanCard
-            key={c.id}
-            campaign={c}
-            ownerName={usersById.get(c.owner)?.name || null}
-            onClick={onCardClick}
-            onDragStart={onDragStart}
-            stages={MARKETING_STAGES}
-          />
-        ))}
-
-        {quickAddStage === stage.id ? (
-          <CampaignCreateForm
-            stageId={stage.id}
-            currentUser={currentUser}
-            users={users}
-            onAdd={onQuickAdd}
-            onCancel={onCancelQuickAdd}
-          />
-        ) : (
-          canWrite && (
-            <button
-              onClick={() => onQuickAdd(stage.id, "open")}
-              className="w-full flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs opacity-0 hover:opacity-100 transition-opacity"
-              style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.background = "#F3F4F6"; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.background = "none"; }}
-            >
-              <Plus size={13} /> Nova campanha
-            </button>
-          )
-        )}
-      </div>
+      <KpiCard label="Campanhas ativas" value={String(active)} />
+      <KpiCard label="Budget total"     value={formatK(totalBudget)} />
+      <KpiCard label="Ao Vivo"          value={String(live)} />
+      <KpiCard label="URGENTE"          value={String(urgent)} red={urgent > 0} />
     </div>
+  );
+}
+
+// ── Analytics panel (collapsible) ────────────────────────────────────────────
+
+function AnalyticsPanel({ campaigns }) {
+  const [open, setOpen] = useState(false);
+
+  const stageStats = useMemo(() => {
+    const nonTerminal = MARKETING_STAGES.filter(s => !s.terminal);
+    return nonTerminal.map(stage => {
+      const stageCampaigns = campaigns.filter(c => c.stage === stage.id);
+      const count       = stageCampaigns.length;
+      const totalBudget = stageCampaigns.reduce((sum, c) => sum + (c.budget || 0), 0);
+      const daysArr = stageCampaigns
+        .filter(c => c.stageChangedAt)
+        .map(c => Math.floor((Date.now() - new Date(c.stageChangedAt).getTime()) / (1000 * 60 * 60 * 24)));
+      const avgDays = daysArr.length > 0
+        ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length)
+        : null;
+      return { stage, count, totalBudget, avgDays };
+    });
+  }, [campaigns]);
+
+  const maxCount  = Math.max(...stageStats.map(s => s.count), 1);
+  const maxBudget = Math.max(...stageStats.map(s => s.totalBudget), 1);
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 text-xs font-medium transition-colors duration-150"
+        style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+        onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
+        onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+      >
+        <TrendingUp size={13} strokeWidth={2} />
+        <span>Análise das campanhas</span>
+        <ChevronDown
+          size={13}
+          style={{
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.2s",
+          }}
+        />
+      </button>
+
+      {open && (
+        <div
+          className="rounded-2xl border mt-3 p-5"
+          style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+        >
+          <div className="text-xs font-semibold mb-4" style={{ color: NEUTRAL.slate }}>
+            Distribuição por etapa
+          </div>
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
+          >
+            {stageStats.map(({ stage, count, totalBudget, avgDays }) => (
+              <div key={stage.id}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div
+                    className="text-xs font-semibold flex items-center gap-1.5"
+                    style={{ color: NEUTRAL.graphite }}
+                  >
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: stage.color,
+                        display: "inline-block",
+                        flexShrink: 0,
+                      }}
+                    />
+                    {stage.name}
+                  </div>
+                  <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+                    {count} · {formatK(totalBudget)}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    height: 6,
+                    background: "#F1F3F5",
+                    borderRadius: 3,
+                    overflow: "hidden",
+                    marginBottom: 6,
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${(count / maxCount) * 100}%`,
+                      background: stage.color,
+                      borderRadius: 3,
+                      transition: "width 0.4s ease",
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    height: 3,
+                    background: "#F1F3F5",
+                    borderRadius: 3,
+                    overflow: "hidden",
+                    marginBottom: 5,
+                    opacity: 0.7,
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${(totalBudget / maxBudget) * 100}%`,
+                      background: stage.color,
+                      borderRadius: 3,
+                      transition: "width 0.4s ease",
+                    }}
+                  />
+                </div>
+
+                <div style={{ fontSize: 10, color: NEUTRAL.slate }}>
+                  {avgDays !== null
+                    ? `Média ${avgDays}d nesta etapa`
+                    : count > 0 ? "Sem tempo registrado" : "—"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── View toggle button ────────────────────────────────────────────────────────
+
+function ViewToggleButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+      style={{
+        background: active ? "#1E4D8C" : "#FFFFFF",
+        color: active ? "#FFFFFF" : NEUTRAL.slate,
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#F3F4F6"; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "#FFFFFF"; }}
+    >
+      <Icon size={13} />
+      {label}
+    </button>
   );
 }
 
@@ -281,24 +389,51 @@ export function MarketingView({ user, users = [] }) {
 
   const usersById = useUsersById(users);
 
-  const [selected, setSelected]           = useState(null);
-  const [draggedCampaign, setDraggedCampaign] = useState(null);
-  const [dragOverStage, setDragOverStage] = useState(null);
-  const [quickAddStage, setQuickAddStage] = useState(null);
-  const [filterCompany, setFilterCompany] = useState("all");
-  const [filterChannel, setFilterChannel] = useState("all");
-  const [filterStarred, setFilterStarred] = useState(false);
+  const isManager  = user?.role === "gerente_marketing" || user?.role === "admin";
+  const isAgencia  = user?.role === "agencia";
 
-  const isAgencia = user?.role === "agencia";
+  const [selected, setSelected]               = useState(null);
+  const [draggedCampaign, setDraggedCampaign] = useState(null);
+  const [dragOverStage, setDragOverStage]     = useState(null);
+  const [quickAddStage, setQuickAddStage]     = useState(null);
+  const [filterCompany, setFilterCompany]     = useState("all");
+  const [filterChannel, setFilterChannel]     = useState("all");
+  const [filterStarred, setFilterStarred]     = useState(false);
+  const [ownerFilter, setOwnerFilter]         = useState("all");
+  const [viewMode, setViewMode]               = useState("kanban");
 
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter(c => {
       if (filterCompany !== "all" && !(c.companyIds || []).includes(filterCompany)) return false;
       if (filterChannel !== "all" && c.channel !== filterChannel) return false;
       if (filterStarred && !c.starred) return false;
+      if (isManager && ownerFilter !== "all" && c.owner !== ownerFilter) return false;
       return true;
     });
-  }, [campaigns, filterCompany, filterChannel, filterStarred]);
+  }, [campaigns, filterCompany, filterChannel, filterStarred, ownerFilter, isManager]);
+
+  const ownerOptions = useMemo(() => {
+    const ids = Array.from(new Set(filteredCampaigns.map(c => c.owner).filter(Boolean)));
+    return [
+      { value: "all", label: "Todos os responsáveis" },
+      ...ids.map(id => ({ value: id, label: usersById.get(id)?.name || id })),
+    ];
+  }, [filteredCampaigns, usersById]);
+
+  const exportCampaignsCSV = useCallback(() => {
+    const rows = [
+      ["Nome", "Canal", "Budget", "KPI", "Etapa", "Empresas", "Lançamento"].join(","),
+      ...filteredCampaigns.map(c => [
+        `"${c.name}"`, c.channel || "", c.budget, c.kpi || "",
+        c.stage, (c.companyIds || []).join(";"),
+        c.launchDate ? c.launchDate.slice(0, 10) : "",
+      ].join(","))
+    ].join("\n");
+    const blob = new Blob([rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "campanhas.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredCampaigns]);
 
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedCampaign || !canWrite) return;
@@ -310,7 +445,6 @@ export function MarketingView({ user, users = [] }) {
   }, [draggedCampaign, canWrite, changeStage]);
 
   const handleUpdate = useCallback(async (id, patch) => {
-    // Allow checklist updates for agencia
     if (isAgencia && Object.keys(patch).length === 1 && "approvalChecklist" in patch) {
       await updateChecklist(id, patch.approvalChecklist);
       if (selected?.id === id) setSelected(prev => ({ ...prev, ...patch }));
@@ -331,18 +465,17 @@ export function MarketingView({ user, users = [] }) {
       setQuickAddStage(stageIdOrCampaign);
       return;
     }
-    // stageIdOrCampaign is a campaign object
     await createCampaign(stageIdOrCampaign);
     setQuickAddStage(null);
   }, [createCampaign]);
 
-  // Keep selected campaign in sync
   const syncSelected = useMemo(() => {
     if (!selected) return null;
     return campaigns.find(c => c.id === selected.id) || selected;
   }, [campaigns, selected]);
 
   return (
+    <>
     <div>
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
@@ -357,22 +490,49 @@ export function MarketingView({ user, users = [] }) {
             Kanban de campanhas {isAgencia ? "· acesso de visitante" : ""}
           </p>
         </div>
-        {canWrite && (
+        <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setQuickAddStage("briefing")}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "#1E4D8C", color: "#FFF", border: "none", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#163a6b"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#1E4D8C"; }}
+            onClick={exportCampaignsCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+            style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.color = NEUTRAL.slate; }}
+            title="Exportar campanhas como CSV"
           >
-            <Plus size={15} />
-            Nova campanha
+            <Download size={13} />
+            <span className="hidden sm:inline">Exportar CSV</span>
           </button>
-        )}
+          <div
+            className="inline-flex rounded-lg border overflow-hidden"
+            style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
+            role="tablist"
+          >
+            <ViewToggleButton
+              active={viewMode === "kanban"}
+              onClick={() => setViewMode("kanban")}
+              icon={LayoutGrid}
+              label="Kanban"
+            />
+            <ViewToggleButton
+              active={viewMode === "calendar"}
+              onClick={() => setViewMode("calendar")}
+              icon={CalendarIcon}
+              label="Calendário"
+            />
+          </div>
+          {isManager && (
+            <Select
+              value={ownerFilter}
+              onChange={e => setOwnerFilter(e.target.value)}
+              options={ownerOptions}
+              className="w-full sm:w-48"
+            />
+          )}
+        </div>
       </div>
 
       {/* KPI bar */}
-      <KpiBar campaigns={filteredCampaigns} />
+      {viewMode === "kanban" && <KpiBar campaigns={filteredCampaigns} />}
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap mb-4">
@@ -418,29 +578,159 @@ export function MarketingView({ user, users = [] }) {
         </div>
       )}
 
-      {/* Kanban board */}
-      {!loading && (
-        <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: 520 }}>
-          {MARKETING_STAGES.map(stage => (
-            <KanbanColumn
-              key={stage.id}
-              stage={stage}
-              campaigns={filteredCampaigns.filter(c => c.stage === stage.id)}
-              canWrite={canWrite}
-              usersById={usersById}
-              onCardClick={setSelected}
-              onDragStart={c => setDraggedCampaign(c)}
-              onDragOver={setDragOverStage}
-              onDrop={handleDrop}
-              dragOver={dragOverStage === stage.id}
-              quickAddStage={quickAddStage}
-              onQuickAdd={handleQuickAdd}
-              onCancelQuickAdd={() => setQuickAddStage(null)}
-              currentUser={user}
-              users={[]}
-            />
-          ))}
+      {/* Calendar placeholder */}
+      {!loading && viewMode === "calendar" && (
+        <div className="text-center py-16" style={{ color: NEUTRAL.slate }}>
+          <CalendarIcon size={40} style={{ opacity: 0.3, margin: "0 auto 12px" }} />
+          <div className="font-semibold">Vista de calendário em breve</div>
         </div>
+      )}
+
+      {/* Kanban board */}
+      {!loading && viewMode === "kanban" && (
+        <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
+          <div
+            className="flex gap-3"
+            style={{ minWidth: `${MARKETING_STAGES.length * 260}px` }}
+          >
+            {MARKETING_STAGES.map(stage => {
+              const stageCampaigns = filteredCampaigns.filter(c => c.stage === stage.id);
+              const count       = stageCampaigns.length;
+              const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
+              const isOver      = dragOverStage === stage.id;
+
+              return (
+                <div
+                  key={stage.id}
+                  onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id); }}
+                  onDrop={e => { e.preventDefault(); handleDrop(stage.id); }}
+                  className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+                  style={{
+                    width: 248,
+                    minWidth: 248,
+                    background: isOver ? "#F0F7FF" : "#fef1f0",
+                    borderColor: isOver ? stage.color + "70" : "#E5E7EB",
+                    boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
+                    minHeight: 480,
+                    flexShrink: 0,
+                  }}
+                >
+                  {/* 4px top color band */}
+                  <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
+
+                  {/* Column header */}
+                  <div
+                    className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
+                    style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className="font-semibold flex items-center gap-1.5"
+                        style={{
+                          color: NEUTRAL.graphite,
+                          fontSize: 11,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        <span>{stage.name}</span>
+                        <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>({count})</span>
+                      </div>
+                      <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate, fontWeight: 600 }}>
+                        {totalBudget > 0 ? formatK(totalBudget) : "R$ 0"}
+                      </div>
+                    </div>
+                    {isManager && !stage.terminal && (
+                      <button
+                        onClick={() => {}}
+                        className="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer transition-colors text-xs font-semibold"
+                        style={{ color: NEUTRAL.slate, background: "transparent", border: "1px solid transparent" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                        title="Editar campos desta etapa"
+                      >
+                        <Settings size={11} />
+                        Editar fase
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Cards */}
+                  <div
+                    className="px-2 pt-0.5 pb-1 space-y-2 flex-1 overflow-y-auto"
+                    style={{ maxHeight: "62vh", minHeight: 80 }}
+                  >
+                    {stageCampaigns.length === 0 ? (
+                      <div
+                        className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
+                        style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}
+                      >
+                        {isOver ? (
+                          <>
+                            <Plus size={16} style={{ opacity: 0.5 }} />
+                            <span>Soltar aqui</span>
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ opacity: 0.5 }}>Nenhum negócio nesta etapa</span>
+                            {!stage.terminal && (
+                              <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      stageCampaigns.map(c => (
+                        <CampaignKanbanCard
+                          key={c.id}
+                          campaign={c}
+                          ownerName={usersById.get(c.owner)?.name || null}
+                          onClick={setSelected}
+                          onDragStart={c => setDraggedCampaign(c)}
+                          stages={MARKETING_STAGES}
+                          onMoveToStage={changeStage}
+                        />
+                      ))
+                    )}
+
+                    {quickAddStage === stage.id ? (
+                      <CampaignCreateForm
+                        stageId={stage.id}
+                        currentUser={user}
+                        users={users}
+                        onAdd={handleQuickAdd}
+                        onCancel={() => setQuickAddStage(null)}
+                      />
+                    ) : (
+                      canWrite && stageCampaigns.length > 0 && (
+                        <button
+                          onClick={() => setQuickAddStage(stage.id)}
+                          className="w-full flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs transition-opacity"
+                          style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", opacity: 0 }}
+                          onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.background = "#F3F4F6"; }}
+                          onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.background = "none"; }}
+                        >
+                          <Plus size={13} /> Nova campanha
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Analytics panel */}
+      {!loading && viewMode === "kanban" && filteredCampaigns.length > 0 && (
+        <AnalyticsPanel campaigns={filteredCampaigns} />
+      )}
+
+      {!loading && viewMode === "kanban" && (
+        <p className="text-xs text-center mt-3" style={{ color: NEUTRAL.slate }}>
+          Arraste para mover entre etapas · Clique no card para ver detalhes
+        </p>
       )}
 
       {/* Detail drawer */}
@@ -456,5 +746,31 @@ export function MarketingView({ user, users = [] }) {
         />
       )}
     </div>
+
+    {/* FAB — create new campaign (kanban mode only) */}
+    {viewMode === "kanban" && canWrite && (
+      <button
+        className="fixed z-30 flex items-center gap-2 font-semibold shadow-lg left-6 lg:left-[312px] bottom-20 lg:bottom-6"
+        style={{
+          height: 52,
+          padding: "0 20px",
+          background: "#1E4D8C",
+          color: "#FFFFFF",
+          border: "none",
+          borderRadius: 26,
+          fontSize: 14,
+          cursor: "pointer",
+          boxShadow: "0 4px 16px rgba(30,77,140,0.35)",
+        }}
+        onClick={() => setQuickAddStage("briefing")}
+        onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
+        onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+        aria-label="Criar nova campanha"
+      >
+        <Plus size={20} />
+        Nova campanha
+      </button>
+    )}
+    </>
   );
 }

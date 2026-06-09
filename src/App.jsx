@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
+  Package, DollarSign,
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -41,6 +42,8 @@ import { PipelineBuilderView } from "./components/views/PipelineBuilderView";
 import { AutomationsView } from "./components/views/AutomationsView";
 import { TutoriaisView } from "./components/views/TutoriaisView";
 import { MarketingView } from "./components/views/MarketingView";
+import { EntregasView } from "./components/views/EntregasView";
+import { DespesasView } from "./components/views/DespesasView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -326,7 +329,9 @@ export default function App() {
       groups.push({
         label: "Marketing",
         items: [
-          { id: "marketing", label: "Campanhas", icon: Megaphone },
+          { id: "marketing",           label: "Campanhas", icon: Megaphone },
+          { id: "marketing-entregas",  label: "Entregas",  icon: Package },
+          { id: "marketing-despesas",  label: "Despesas",  icon: DollarSign },
         ],
       });
     }
@@ -375,7 +380,7 @@ export default function App() {
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
-    const marketingOnly = ["marketing"];
+    const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas"];
     if (!isMarketingUser && !isAgencia && marketingOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -657,6 +662,16 @@ export default function App() {
           <Route path={ROUTES.marketing} element={
             (isMarketingUser || isAgencia)
               ? <MarketingView user={currentUser} users={users} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["marketing-entregas"]} element={
+            (isMarketingUser || isAgencia)
+              ? <EntregasView user={currentUser} users={users} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["marketing-despesas"]} element={
+            (isMarketingUser || isAgencia)
+              ? <DespesasView user={currentUser} users={users} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Catch-all: rota desconhecida volta pro Início. */}
