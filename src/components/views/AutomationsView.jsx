@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   Zap, Plus, Trash2, ToggleLeft, ToggleRight, ArrowRight,
-  AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X,
+  AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X, Info,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
@@ -94,6 +94,22 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
             <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
               Automações
             </h1>
+            <span
+              className="inline-flex items-center justify-center rounded-full cursor-help"
+              style={{ width: 18, height: 18, background: "#F3F4F6", color: NEUTRAL.slate }}
+              title={
+                "Regras automáticas que executam sozinhas — sem IA, sem aprovação.\n\n" +
+                "Use para ações mecânicas e previsíveis:\n" +
+                "• Mover card após X dias parado\n" +
+                "• Aplicar badge ao criar lead\n" +
+                "• Notificar mudança de etapa\n\n" +
+                "Diferenças:\n" +
+                "• Time de Agentes → sugere ações via IA, você decide se aprova\n" +
+                "• Aba IA do card → assistente sob demanda para um lead específico"
+              }
+            >
+              <Info size={11} />
+            </span>
           </div>
           <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
             Regras automáticas sem IA — {stats.enabled} ativa{stats.enabled !== 1 ? "s" : ""} de {stats.total}
