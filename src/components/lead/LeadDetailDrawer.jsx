@@ -389,6 +389,28 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               <FitScoreCircle score={lead.fitScore} size={48} />
             </div>
 
+            {/* Métricas compactas — Unidades / Prob. / Fechamento */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Unidades</div>
+                <div className="text-sm font-bold mt-0.5" style={{ color: NEUTRAL.graphite }}>
+                  {lead.quantity ? `${lead.quantity} un` : "—"}
+                </div>
+              </div>
+              <div className="rounded-lg p-2" style={{ background: company.primary + "0D", border: `1px solid ${company.primary}22` }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Prob.</div>
+                <div className="text-sm font-bold mt-0.5" style={{ color: company.primary }}>
+                  {probDisplay}%
+                </div>
+              </div>
+              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Fechamento</div>
+                <div className="text-sm font-bold mt-0.5" style={{ color: NEUTRAL.graphite }}>
+                  {formatDateBR(lead.closeDate) || "—"}
+                </div>
+              </div>
+            </div>
+
             {/* Decisor + infos do cliente */}
             <div className="flex items-center gap-3">
               <div
@@ -467,6 +489,42 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             {/* ── Tab: Form ── */}
             {sideTab === "form" && (
             <>
+            {/* Formulário Inicial — dados preenchidos na criação do card */}
+            {!customValues.capture_customer_name && (
+              <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+                <div className="text-xs font-semibold mb-3" style={{ color: company.primary }}>
+                  Formulário Inicial
+                </div>
+                <dl className="space-y-2.5 text-sm">
+                  <CaptureRow label="Empresa" value={lead.company} />
+                  {lead.cnpj && <CaptureRow label="CNPJ" value={lead.cnpj} mono />}
+                  {lead.razaoSocial && <CaptureRow label="Razão Social" value={lead.razaoSocial} />}
+                  {lead.contactEmail && (
+                    <CaptureRow label="E-mail do Contato" value={lead.contactEmail}
+                      link={`mailto:${lead.contactEmail}`} />
+                  )}
+                  {lead.phone && <CaptureRow label="Telefone" value={lead.phone} mono />}
+                  {lead.state && <CaptureRow label="Estado (UF)" value={lead.state} />}
+                  {lead.city && <CaptureRow label="Cidade" value={lead.city} />}
+                  {lead.sector && <CaptureRow label="Setor" value={lead.sector} />}
+                  {lead.size && <CaptureRow label="Porte" value={lead.size} />}
+                  {lead.value > 0 && <CaptureRow label="Valor (R$)" value={formatBRL(lead.value)} />}
+                  {lead.owner && (
+                    <CaptureRow
+                      label="Responsável"
+                      value={(users || []).find(u => u.id === lead.owner)?.name || "—"}
+                    />
+                  )}
+                </dl>
+                {lead.notes && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.slate }}>Observações</div>
+                    <div className="text-sm whitespace-pre-line" style={{ color: NEUTRAL.graphite }}>{lead.notes}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Formulário Inicial (vindo de captura pública) */}
             {customValues.capture_customer_name && (
               <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
@@ -616,13 +674,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           {/* ── Pipeline stage progress bar ───────────────────────────────── */}
           <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
 
-          {/* ── Hero metrics ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-3 gap-2">
-            <HeroMetric label="UNIDADES" value={lead.quantity ? `${lead.quantity} un` : "—"} />
-            <HeroMetric label="PROB." value={`${probDisplay}%`} color={company.primary} />
-            <HeroMetric label="FECHAMENTO" value={formatDateBR(lead.closeDate) || "—"} />
-          </div>
-
           {/* Enriquecimento RF */}
           {isSupabaseConfigured && (
             <div
@@ -720,14 +771,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               )}
             </div>
           )}
-
-          {/* Info tiles */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <InfoTile label="Porte" value={lead.size || "—"} />
-            <InfoTile label="Quantidade" value={lead.quantity ? `${lead.quantity} un` : "—"} />
-            <InfoTile label="Probabilidade" value={`${probDisplay}%`} />
-            <InfoTile label="Fechamento" value={formatDateBR(lead.closeDate)} />
-          </div>
 
           {/* Campos customizados da etapa — editáveis inline (save debounced) */}
           {customDefs.length > 0 && (
