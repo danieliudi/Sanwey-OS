@@ -656,7 +656,7 @@ export default function App() {
           } />
           <Route path={ROUTES.marketing} element={
             (isMarketingUser || isAgencia)
-              ? <MarketingView user={currentUser} />
+              ? <MarketingView user={currentUser} users={users} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Catch-all: rota desconhecida volta pro Início. */}

@@ -231,7 +231,7 @@ function KanbanColumn({ stage, campaigns, canWrite, usersById, onCardClick, onDr
           <CampaignKanbanCard
             key={c.id}
             campaign={c}
-            ownerName={usersById[c.owner]?.name || null}
+            ownerName={usersById.get(c.owner)?.name || null}
             onClick={onCardClick}
             onDragStart={onDragStart}
             stages={MARKETING_STAGES}
@@ -266,7 +266,7 @@ function KanbanColumn({ stage, campaigns, canWrite, usersById, onCardClick, onDr
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function MarketingView({ user }) {
+export function MarketingView({ user, users = [] }) {
   const {
     campaigns,
     loading,
@@ -279,7 +279,7 @@ export function MarketingView({ user }) {
     updateChecklist,
   } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
 
-  const { usersById } = useUsersById();
+  const usersById = useUsersById(users);
 
   const [selected, setSelected]           = useState(null);
   const [draggedCampaign, setDraggedCampaign] = useState(null);
@@ -450,7 +450,7 @@ export function MarketingView({ user }) {
           onClose={() => setSelected(null)}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
-          users={Object.values(usersById)}
+          users={Array.from(usersById.values())}
           canWrite={canWrite}
           currentUser={user}
         />
