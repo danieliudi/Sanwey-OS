@@ -55,28 +55,50 @@ function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
   );
 }
 
-const ROLE_LABEL = { admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor" };
+const ROLE_LABEL = {
+  admin:             "Administrador",
+  gerente:           "Gerente Comercial",
+  vendedor:          "Vendedor",
+  consultor:         "Consultor",
+  marketing:         "Marketing",
+  gerente_marketing: "Gerente de Marketing",
+  agencia:           "Agência",
+};
 
-const BASE_TABS = [
-  { id: "perfil",        label: "Perfil",           icon: User     },
-  { id: "preferencias", label: "Preferências",      icon: Sliders  },
-  { id: "notificacoes", label: "Notificações",      icon: Bell     },
-  { id: "ia",           label: "Integrações IA",    icon: Bot      },
-  { id: "captura",      label: "Captura pública",   icon: Link2    },
-  { id: "dados",        label: "Dados",             icon: Database },
+// Personal tabs available to every authenticated user.
+const PERSONAL_TABS = [
+  { id: "perfil",        label: "Perfil",          icon: User    },
+  { id: "notificacoes", label: "Notificações",     icon: Bell    },
+  { id: "ia",            label: "Integrações IA",  icon: Bot     },
+];
+
+// Manager-only tabs added on top of the personal ones.
+const MANAGER_TABS = [
+  { id: "preferencias", label: "Preferências",     icon: Sliders  },
+  { id: "captura",       label: "Captura pública", icon: Link2    },
+  { id: "dados",         label: "Dados",           icon: Database },
 ];
 
 export function SettingsView({
   settings, onUpdate, onReset, onClearLocalData, currentUser,
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
-  usersPanel, onOpenClientImport,
+  usersPanel, onOpenClientImport, isManager = false,
 }) {
   const [activeTab, setActiveTab] = useState("perfil");
-  const tabs = useMemo(
-    () => usersPanel ? [...BASE_TABS, { id: "usuarios", label: "Usuários", icon: UserCog }] : BASE_TABS,
-    [usersPanel],
-  );
+  const tabs = useMemo(() => {
+    if (!isManager) return PERSONAL_TABS;
+    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Usuários
+    const list = [
+      PERSONAL_TABS[0],
+      MANAGER_TABS[0],
+      PERSONAL_TABS[1],
+      PERSONAL_TABS[2],
+      MANAGER_TABS[1],
+      MANAGER_TABS[2],
+    ];
+    return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
+  }, [isManager, usersPanel]);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [clearTyped, setClearTyped] = useState("");
 
@@ -342,15 +364,19 @@ export function SettingsView({
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
-            Configurações
+            {isManager ? "Configurações" : "Meu perfil"}
           </h1>
           <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
-            Gerencie seu perfil, preferências e integrações
+            {isManager
+              ? "Gerencie seu perfil, preferências e integrações"
+              : "Atualize seus dados, notificações e integrações pessoais"}
           </p>
         </div>
-        <Button variant="ghost" icon={RotateCcw} onClick={onReset}>
-          Restaurar padrão
-        </Button>
+        {isManager && (
+          <Button variant="ghost" icon={RotateCcw} onClick={onReset}>
+            Restaurar padrão
+          </Button>
+        )}
       </div>
 
       {/* Tab layout */}

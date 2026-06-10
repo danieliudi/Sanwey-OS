@@ -183,7 +183,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
           }}
         >
           <button
-            onClick={() => handleNavClick("profile")}
+            onClick={() => handleNavClick("settings")}
             title="Meu perfil"
             style={{
               flex: 1,
@@ -192,7 +192,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               alignItems: "center",
               gap: 10,
               padding: "8px 8px",
-              background: section === "profile" ? T.activeBg : "transparent",
+              background: section === "settings" ? T.activeBg : "transparent",
               border: "none",
               borderRadius: 8,
               cursor: "pointer",
@@ -215,7 +215,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                 fontSize: 12,
                 flexShrink: 0,
                 overflow: "hidden",
-                border: `2px solid ${section === "profile" ? "#b5000b" : "#E5E7EB"}`,
+                border: `2px solid ${section === "settings" ? "#b5000b" : "#E5E7EB"}`,
               }}
             >
               {currentUser?.avatarUrl
@@ -223,7 +223,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                 : (currentUser?.initials || "?")}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: section === "profile" ? "#b5000b" : "#201a1a", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ color: section === "settings" ? "#b5000b" : "#201a1a", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {currentUser?.name || "Convidado"}
               </div>
               <div style={{ color: T.text, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

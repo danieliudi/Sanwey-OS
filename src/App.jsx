@@ -45,7 +45,6 @@ import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
 import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
-import { UserProfileView } from "./components/views/UserProfileView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -394,18 +393,18 @@ export default function App() {
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
-    if (section === "profile")       return "Meu Perfil";
-    if (section === "marketing-home") return "Visão Geral · Marketing";
+    if (section === "settings" && !isManager) return "Meu perfil";
+    if (section === "marketing-home")         return "Visão Geral · Marketing";
     for (const g of navGroups) {
       const hit = g.items.find(i => i.id === section);
       if (hit) return hit.label;
     }
     return "";
-  }, [navGroups, section]);
+  }, [navGroups, section, isManager]);
 
   // Keep vendedor off restricted sections even if state was stale.
   useEffect(() => {
-    const managerOnly = ["executive", "agents", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users", "settings"];
+    const managerOnly = ["executive", "agents", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users"];
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -418,6 +417,7 @@ export default function App() {
     if (isPureMarketing && crmSections.includes(section)) {
       setSection("dashboard");
     }
+    // Agência can access marketing routes + their own profile (settings).
     const agenciaBlocked = ["crm", "signals", "explorer", "marketing-despesas", "dashboard", "tutorials"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
@@ -673,40 +673,39 @@ export default function App() {
             isManager ? <Navigate to={ROUTES.settings} replace /> : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.settings} element={
-            isManager ? (
-              <SettingsView
-                settings={settings}
-                onUpdate={updateSettings}
-                onReset={resetSettings}
-                onClearLocalData={clearLocalData}
-                currentUser={currentUser}
-                leadsCount={leads.length}
-                onLoadDemoLeads={loadDemoLeads}
-                onClearAllLeads={clearAllLeads}
-                onUpdateUser={updateUser}
-                onUpdateAuthUser={supabaseEnabled ? updateAuthUser : null}
-                onUpdateMockUser={supabaseEnabled ? null : setMockUser}
-                supabaseEnabled={supabaseEnabled}
-                onOpenClientImport={() => setClientImportOpen(true)}
-                usersPanel={
-                  <UserManagementView
-                    users={users}
-                    leads={leads}
-                    onUsersChange={setUsers}
-                    onUpdateUser={supabaseEnabled ? updateUser : undefined}
-                    onDeleteUser={supabaseEnabled ? deleteUser : undefined}
-                    supabaseEnabled={supabaseEnabled}
-                    loading={usersLoading}
-                    currentUser={currentUser}
-                    invitations={invitations}
-                    invitationsLoading={invitationsLoading}
-                    onCreateInvitation={createInvitation}
-                    onRevokeInvitation={revokeInvitation}
-                    onResendInvitation={supabaseEnabled ? resendInvitation : undefined}
-                  />
-                }
-              />
-            ) : <Navigate to={ROUTES.dashboard} replace />
+            <SettingsView
+              settings={settings}
+              onUpdate={updateSettings}
+              onReset={resetSettings}
+              onClearLocalData={clearLocalData}
+              currentUser={currentUser}
+              leadsCount={leads.length}
+              onLoadDemoLeads={loadDemoLeads}
+              onClearAllLeads={clearAllLeads}
+              onUpdateUser={updateUser}
+              onUpdateAuthUser={supabaseEnabled ? updateAuthUser : null}
+              onUpdateMockUser={supabaseEnabled ? null : setMockUser}
+              supabaseEnabled={supabaseEnabled}
+              isManager={isManager}
+              onOpenClientImport={isManager ? () => setClientImportOpen(true) : null}
+              usersPanel={isManager ? (
+                <UserManagementView
+                  users={users}
+                  leads={leads}
+                  onUsersChange={setUsers}
+                  onUpdateUser={supabaseEnabled ? updateUser : undefined}
+                  onDeleteUser={supabaseEnabled ? deleteUser : undefined}
+                  supabaseEnabled={supabaseEnabled}
+                  loading={usersLoading}
+                  currentUser={currentUser}
+                  invitations={invitations}
+                  invitationsLoading={invitationsLoading}
+                  onCreateInvitation={createInvitation}
+                  onRevokeInvitation={revokeInvitation}
+                  onResendInvitation={supabaseEnabled ? resendInvitation : undefined}
+                />
+              ) : null}
+            />
           } />
           <Route path={ROUTES.tutorials} element={
             <TutoriaisView currentUser={currentUser} onNavigate={setSection} />
@@ -731,15 +730,7 @@ export default function App() {
               ? <DespesasView user={currentUser} users={users} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
-          <Route path={ROUTES.profile} element={
-            <UserProfileView
-              currentUser={currentUser}
-              onUpdateUser={updateUser}
-              onUpdateAuthUser={supabaseEnabled ? updateAuthUser : null}
-              onUpdateMockUser={supabaseEnabled ? null : setMockUser}
-              supabaseEnabled={supabaseEnabled}
-            />
-          } />
+          <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
           {/* Catch-all: rota desconhecida volta pro Início. */}
           <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
         </Routes>
