@@ -70,7 +70,11 @@ export function useMarketingDeliverables({ userId, role } = {}) {
       .channel("marketing_deliverables_rt")
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
         if (payload.eventType === "INSERT") {
-          setDeliverables(prev => [rowToDeliverable(payload.new), ...prev]);
+          setDeliverables(prev =>
+            prev.some(d => d.id === payload.new.id)
+              ? prev.map(d => d.id === payload.new.id ? rowToDeliverable(payload.new) : d)
+              : [rowToDeliverable(payload.new), ...prev]
+          );
         } else if (payload.eventType === "UPDATE") {
           setDeliverables(prev => prev.map(d => d.id === payload.new.id ? rowToDeliverable(payload.new) : d));
         } else if (payload.eventType === "DELETE") {
@@ -90,7 +94,10 @@ export function useMarketingDeliverables({ userId, role } = {}) {
       .select()
       .single();
     if (err) throw err;
-    return rowToDeliverable(data);
+    const created = rowToDeliverable(data);
+    // Optimistic: add immediately without waiting for real-time
+    setDeliverables(prev => prev.some(d => d.id === created.id) ? prev : [created, ...prev]);
+    return created;
   }, [canWrite, userId]);
 
   const updateDeliverable = useCallback(async (id, patch) => {

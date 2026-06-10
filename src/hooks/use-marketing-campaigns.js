@@ -93,7 +93,12 @@ export function useMarketingCampaigns({ userId, role } = {}) {
       .channel("marketing_campaigns_rt")
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
         if (payload.eventType === "INSERT") {
-          setCampaigns(prev => [rowToCampaign(payload.new), ...prev]);
+          // Dedup: optimistic insert may have already added this id
+          setCampaigns(prev =>
+            prev.some(c => c.id === payload.new.id)
+              ? prev.map(c => c.id === payload.new.id ? rowToCampaign(payload.new) : c)
+              : [rowToCampaign(payload.new), ...prev]
+          );
         } else if (payload.eventType === "UPDATE") {
           setCampaigns(prev => prev.map(c => c.id === payload.new.id ? rowToCampaign(payload.new) : c));
         } else if (payload.eventType === "DELETE") {
@@ -113,7 +118,10 @@ export function useMarketingCampaigns({ userId, role } = {}) {
       .select()
       .single();
     if (err) throw err;
-    return rowToCampaign(data);
+    const created = rowToCampaign(data);
+    // Optimistic: add immediately without waiting for real-time
+    setCampaigns(prev => prev.some(c => c.id === created.id) ? prev : [created, ...prev]);
+    return created;
   }, [canWrite, userId]);
 
   const updateCampaign = useCallback(async (id, patch) => {
