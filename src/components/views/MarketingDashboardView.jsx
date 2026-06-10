@@ -1,20 +1,19 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  Megaphone, Package, DollarSign, TrendingUp, Clock, Zap,
-  Award, CalendarClock, Activity, PieChart as PieIcon, Timer, ArrowUp, ArrowDown,
+  Megaphone, Package, DollarSign, Zap, Award, ArrowUp, ArrowDown,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  PieChart, Pie,
+  PieChart, Pie, AreaChart, Area,
 } from "recharts";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
 import { MARKETING_STAGES, EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
-import { formatK, formatBRL } from "../../utils/currency";
+import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { formatBRL, formatK } from "../../utils/currency";
 
-// ── Date helpers ──────────────────────────────────────────────────────────────
+// ── Date helpers ────────────────────────────────────────────────────────────────
 
 function monthBounds(date) {
   const d = new Date(date);
@@ -23,118 +22,157 @@ function monthBounds(date) {
     new Date(d.getFullYear(), d.getMonth() + 1, 1),
   ];
 }
-
 function within(date, start, end) {
   if (!date) return false;
   const d = new Date(date);
   return d >= start && d < end;
 }
-
 function pctChange(curr, prev) {
   if (prev === 0) return curr > 0 ? 100 : 0;
   return Math.round(((curr - prev) / prev) * 100);
 }
+function shortMonth(date) {
+  return new Date(date).toLocaleString("pt-BR", { month: "short" });
+}
 
-// ── Primitives ────────────────────────────────────────────────────────────────
+// ── Sparkline SVG ───────────────────────────────────────────────────────────────
+
+function Sparkline({ values = [], color = "#b5000b", w = 70, h = 32 }) {
+  if (values.length < 2) return <div style={{ width: w, height: h }} />;
+  const max = Math.max(...values) || 1;
+  const min = Math.min(...values);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = ((i / (values.length - 1)) * (w - 4) + 2).toFixed(1);
+    const y = (h - 4 - ((v - min) / range) * (h - 8) + 2).toFixed(1);
+    return `${x},${y}`;
+  });
+  const lineStr = pts.join(" ");
+  const fillStr = `2,${h - 2} ${lineStr} ${w - 2},${h - 2}`;
+  const gId = `sg${color.replace(/[^a-z0-9]/gi, "")}`;
+  return (
+    <svg width={w} height={h} style={{ display: "block", flexShrink: 0 }}>
+      <defs>
+        <linearGradient id={gId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+      <polygon points={fillStr} fill={`url(#${gId})`} />
+      <polyline points={lineStr} fill="none" stroke={color} strokeWidth={1.8}
+                strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ── MoM badge ───────────────────────────────────────────────────────────────────
 
 function MoMBadge({ delta, invert }) {
   if (delta === null || delta === undefined || !Number.isFinite(delta)) return null;
-  const positive = invert ? delta < 0 : delta > 0;
-  const negative = invert ? delta > 0 : delta < 0;
-  const color = delta === 0 ? NEUTRAL.slate : positive ? "#16A34A" : negative ? "#DC2626" : NEUTRAL.slate;
-  const bg    = delta === 0 ? "#F3F4F6" : positive ? "#DCFCE7" : negative ? "#FEE2E2" : "#F3F4F6";
+  const up  = invert ? delta < 0 : delta > 0;
+  const dn  = invert ? delta > 0 : delta < 0;
+  const color = delta === 0 ? NEUTRAL.slate : up ? "#16A34A" : "#DC2626";
+  const bg    = delta === 0 ? "#F3F4F6" : up ? "#DCFCE7" : "#FEE2E2";
   const Icon  = delta > 0 ? ArrowUp : delta < 0 ? ArrowDown : null;
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 2,
-        padding: "1px 6px",
-        borderRadius: 99,
-        fontSize: 10,
-        fontWeight: 700,
-        background: bg,
-        color,
-        marginTop: 4,
-      }}
-    >
-      {Icon && <Icon size={9} strokeWidth={3} />}
-      {Math.abs(delta)}% MoM
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 2,
+                   padding: "2px 6px", borderRadius: 99, fontSize: 10, fontWeight: 700,
+                   background: bg, color, whiteSpace: "nowrap" }}>
+      {Icon && <Icon size={9} />}{Math.abs(delta)}%
     </span>
   );
 }
 
-function KpiCard({ icon: Icon, label, value, sub, color, iconBg, delta, invertDelta }) {
+// ── Company tabs ────────────────────────────────────────────────────────────────
+
+function CompanyTabs({ selected, onChange, companyIds }) {
+  const tabs = [
+    { id: "all", short: "Todas", primary: NEUTRAL.graphite },
+    ...companyIds.map(id => COMPANIES[id]).filter(Boolean),
+  ];
   return (
-    <div
-      style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
-        borderRadius: 14,
-        padding: "16px 20px",
-        display: "flex",
-        alignItems: "center",
-        gap: 14,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-      }}
-    >
-      <div
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 10,
-          background: iconBg || "#F3F4F6",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={18} style={{ color: color || NEUTRAL.slate }} strokeWidth={2} />
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {tabs.map(co => {
+        const active = selected === co.id;
+        return (
+          <button key={co.id} onClick={() => onChange(co.id)} style={{
+            padding: "5px 14px", borderRadius: 20,
+            border: `1.5px solid ${active ? co.primary : "#E5E7EB"}`,
+            background: active ? co.primary : "#FFFFFF",
+            color: active ? "#FFFFFF" : NEUTRAL.slate,
+            fontWeight: active ? 700 : 500, fontSize: 12,
+            cursor: "pointer", transition: "all 0.15s",
+            letterSpacing: "0.01em", fontFamily: "inherit",
+            boxShadow: active ? `0 2px 8px ${co.primary}45` : "none",
+          }}>
+            {co.short || co.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── KPI card ────────────────────────────────────────────────────────────────────
+
+function KpiCard({ icon: Icon, label, value, sub, delta, invertDelta, color, sparkline }) {
+  return (
+    <div style={{
+      background: "#FFFFFF",
+      border: "1px solid #E5E7EB",
+      borderRadius: 12,
+      padding: "16px 18px",
+      display: "flex", flexDirection: "column", gap: 2,
+      position: "relative", overflow: "hidden",
+    }}>
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: 3,
+        background: color, borderRadius: "12px 12px 0 0",
+      }} />
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div style={{
+          width: 34, height: 34, borderRadius: 9,
+          background: color + "18",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {Icon && <Icon size={15} style={{ color }} strokeWidth={2.5} />}
+        </div>
+        {sparkline && <Sparkline values={sparkline} color={color} />}
       </div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>
-          {label}
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: color || NEUTRAL.graphite, letterSpacing: "-0.02em", lineHeight: 1 }}>
-          {value}
-        </div>
-        {sub && <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 3 }}>{sub}</div>}
+      <div style={{ fontSize: 30, fontWeight: 800, color: NEUTRAL.graphite, lineHeight: 1,
+                    marginTop: 8, letterSpacing: "-0.03em" }}>
+        {value}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 12, color: NEUTRAL.slate, fontWeight: 500 }}>{label}</span>
         <MoMBadge delta={delta} invert={invertDelta} />
       </div>
+      {sub && <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 1 }}>{sub}</div>}
     </div>
   );
 }
 
-function SectionTitle({ icon: Icon, title, color }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, marginTop: 28 }}>
-      <Icon size={15} style={{ color: color || NEUTRAL.slate }} />
-      <span style={{ fontSize: 12, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-        {title}
-      </span>
-    </div>
-  );
-}
+// ── Panel ────────────────────────────────────────────────────────────────────────
 
-function Panel({ title, children, action }) {
+function Panel({ title, subtitle, children }) {
   return (
-    <div
-      style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
-        borderRadius: 14,
-        padding: "16px 20px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-          {title}
+    <div style={{
+      background: "#FFFFFF", border: "1px solid #E5E7EB",
+      borderRadius: 12, padding: "18px 20px",
+    }}>
+      {(title || subtitle) && (
+        <div style={{ marginBottom: 14 }}>
+          {title && (
+            <div style={{ fontSize: 12, fontWeight: 700, color: NEUTRAL.graphite,
+                          letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              {title}
+            </div>
+          )}
+          {subtitle && (
+            <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 3 }}>{subtitle}</div>
+          )}
         </div>
-        {action}
-      </div>
+      )}
       {children}
     </div>
   );
@@ -142,91 +180,169 @@ function Panel({ title, children, action }) {
 
 function EmptyState({ children }) {
   return (
-    <div style={{ fontSize: 13, color: NEUTRAL.slate, textAlign: "center", padding: "24px 0", opacity: 0.6 }}>
+    <div style={{ padding: "24px 0", textAlign: "center", color: NEUTRAL.slate, fontSize: 12 }}>
       {children}
     </div>
   );
 }
 
-function StageBar({ stages, items }) {
-  const total = items.length || 1;
+// ── Stage pipeline bar ──────────────────────────────────────────────────────────
+
+function StagePipelineBar({ campaigns }) {
+  const total = campaigns.length;
+  const stages = useMemo(() =>
+    MARKETING_STAGES
+      .map(s => ({ ...s, count: campaigns.filter(c => c.stage === s.id).length }))
+      .filter(s => s.count > 0),
+    [campaigns],
+  );
+  if (total === 0) return <EmptyState>Sem campanhas</EmptyState>;
   return (
-    <Panel title="Distribuição por etapa">
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {stages.map(stage => {
-          const count = items.filter(i => i.stage === stage.id).length;
-          const pct   = Math.round((count / total) * 100);
-          return (
-            <div key={stage.id}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, display: "inline-block" }} />
-                  <span style={{ fontSize: 12, color: NEUTRAL.graphite, fontWeight: 500 }}>{stage.name}</span>
-                </div>
-                <span style={{ fontSize: 12, color: NEUTRAL.slate, fontWeight: 600 }}>{count}</span>
-              </div>
-              <div style={{ height: 5, background: "#F1F3F5", borderRadius: 3, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${pct}%`, background: stage.color, borderRadius: 3, transition: "width 0.4s ease" }} />
-              </div>
-            </div>
-          );
-        })}
+    <div>
+      <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden",
+                    marginBottom: 14, gap: 1.5 }}>
+        {stages.map(s => (
+          <div key={s.id} style={{
+            width: `${(s.count / total) * 100}%`,
+            background: s.color, minWidth: s.count > 0 ? 4 : 0,
+            transition: "width 0.4s ease",
+          }} />
+        ))}
       </div>
-    </Panel>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px" }}>
+        {stages.map(s => (
+          <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
+            <span style={{ color: NEUTRAL.slate }}>{s.name}</span>
+            <span style={{ fontWeight: 700, color: NEUTRAL.graphite, fontVariantNumeric: "tabular-nums" }}>
+              {s.count}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
-// ── Phase 1 — new widgets ─────────────────────────────────────────────────────
+// ── Channel chart ───────────────────────────────────────────────────────────────
 
-function BurnRateChart({ expenses }) {
+const CH_COLORS = ["#7C3AED", "#1E4D8C", "#D97706", "#16A34A", "#DC2626", "#9CA3AF"];
+
+function ChannelChart({ campaigns, primaryColor }) {
   const data = useMemo(() => {
-    const months = [];
+    const map = {};
+    campaigns.forEach(c => {
+      const k = c.channel || "Sem canal";
+      map[k] = (map[k] || 0) + 1;
+    });
+    return Object.entries(map)
+      .map(([name, count], i) => ({ name, count, color: CH_COLORS[i % CH_COLORS.length] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [campaigns]);
+
+  const max = Math.max(...data.map(d => d.count), 1);
+  if (data.length === 0) return <EmptyState>Sem campanhas com canal definido</EmptyState>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {data.map((d, i) => (
+        <div key={d.name}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: primaryColor || d.color, flexShrink: 0 }} />
+              <span style={{ color: NEUTRAL.graphite, fontWeight: 500 }}>{d.name}</span>
+            </div>
+            <span style={{ color: NEUTRAL.slate, fontVariantNumeric: "tabular-nums" }}>{d.count}</span>
+          </div>
+          <div style={{ height: 7, background: "#F3F4F6", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{
+              height: "100%", width: `${(d.count / max) * 100}%`,
+              background: `linear-gradient(90deg, ${primaryColor || d.color}, ${(primaryColor || d.color)}bb)`,
+              borderRadius: 4, transition: "width 0.5s ease",
+            }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Monthly trend chart ─────────────────────────────────────────────────────────
+
+function MonthlyTrendChart({ data, primaryColor }) {
+  const hasData = data.some(m => m.campanhas > 0 || m.entregas > 0);
+  if (!hasData) return <EmptyState>Sem dados de atividade ainda</EmptyState>;
+  const sec = primaryColor + "88";
+  return (
+    <ResponsiveContainer width="100%" height={190}>
+      <AreaChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: -20 }}>
+        <defs>
+          <linearGradient id="gc" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor={primaryColor} stopOpacity={0.3} />
+            <stop offset="95%" stopColor={primaryColor} stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor={sec} stopOpacity={0.25} />
+            <stop offset="95%" stopColor={sec} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <XAxis dataKey="month" stroke={NEUTRAL.slate} fontSize={11} tickLine={false} axisLine={false} />
+        <YAxis allowDecimals={false} stroke={NEUTRAL.slate} fontSize={10} tickLine={false} axisLine={false} />
+        <Tooltip
+          contentStyle={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
+          labelStyle={{ color: NEUTRAL.graphite, fontWeight: 600 }}
+        />
+        <Area type="monotone" dataKey="campanhas" name="Campanhas" stroke={primaryColor} strokeWidth={2}
+              fill="url(#gc)" dot={{ r: 3, fill: primaryColor }} activeDot={{ r: 5 }} />
+        <Area type="monotone" dataKey="entregas" name="Entregas" stroke={sec} strokeWidth={2}
+              fill="url(#ge)" dot={false} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── Burn rate ───────────────────────────────────────────────────────────────────
+
+function BurnRateChart({ expenses, primaryColor }) {
+  const data = useMemo(() => {
     const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const [s, e] = monthBounds(d);
-      const total = expenses
-        .filter(x => within(x.createdAt, s, e))
-        .reduce((sum, x) => sum + (x.amount || 0), 0);
-      months.push({
-        month: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
-        total,
-        isCurrent: i === 0,
-      });
-    }
-    return months;
+    return Array.from({ length: 6 }, (_, i) => {
+      const ref = new Date(now); ref.setMonth(ref.getMonth() - (5 - i));
+      const [start, end] = monthBounds(ref);
+      return {
+        month: shortMonth(ref),
+        total: expenses.filter(e => within(e.createdAt, start, end)).reduce((s, e) => s + (e.amount || 0), 0),
+        isCurrent: i === 5,
+      };
+    });
   }, [expenses]);
 
-  const hasData = data.some(m => m.total > 0);
+  if (!data.some(m => m.total > 0)) return <EmptyState>Sem despesas registradas</EmptyState>;
 
   return (
-    <Panel title="Burn rate · últimos 6 meses">
-      {!hasData ? (
-        <EmptyState>Sem despesas registradas</EmptyState>
-      ) : (
-        <ResponsiveContainer width="100%" height={170}>
-          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
-            <XAxis dataKey="month" stroke={NEUTRAL.slate} fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis stroke={NEUTRAL.slate} fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => formatK(v)} />
-            <Tooltip
-              cursor={{ fill: "#F9FAFB" }}
-              contentStyle={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
-              formatter={(v) => [formatBRL(v), "Gasto"]}
-              labelStyle={{ color: NEUTRAL.graphite, fontWeight: 600 }}
-            />
-            <Bar dataKey="total" radius={[6, 6, 0, 0]}>
-              {data.map((entry, i) => (
-                <Cell key={i} fill={entry.isCurrent ? "#7C3AED" : "#E9D5FF"} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      )}
-    </Panel>
+    <ResponsiveContainer width="100%" height={160}>
+      <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
+        <XAxis dataKey="month" stroke={NEUTRAL.slate} fontSize={11} tickLine={false} axisLine={false} />
+        <YAxis stroke={NEUTRAL.slate} fontSize={10} tickLine={false} axisLine={false}
+               tickFormatter={v => formatK(v)} />
+        <Tooltip
+          cursor={{ fill: "#F9FAFB" }}
+          contentStyle={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
+          formatter={v => [formatBRL(v), "Gasto"]}
+          labelStyle={{ color: NEUTRAL.graphite, fontWeight: 600 }}
+        />
+        <Bar dataKey="total" radius={[5, 5, 0, 0]}>
+          {data.map((d, i) => <Cell key={i} fill={d.isCurrent ? primaryColor : primaryColor + "40"} />)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 
-const CATEGORY_COLORS = {
+// ── Category donut ───────────────────────────────────────────────────────────────
+
+const CAT_COLORS = {
   "Mídia Paga":  "#7C3AED",
   "Produção":    "#1E4D8C",
   "Agência":     "#D97706",
@@ -238,173 +354,94 @@ const CATEGORY_COLORS = {
 function CategoryDonut({ expenses }) {
   const data = useMemo(() => {
     const sums = {};
-    expenses.forEach(e => {
-      sums[e.category] = (sums[e.category] || 0) + (e.amount || 0);
-    });
-    return EXPENSE_CATEGORIES
-      .map(c => ({ name: c, value: sums[c] || 0 }))
-      .filter(d => d.value > 0);
+    expenses.forEach(e => { sums[e.category] = (sums[e.category] || 0) + (e.amount || 0); });
+    return EXPENSE_CATEGORIES.map(c => ({ name: c, value: sums[c] || 0 })).filter(d => d.value > 0);
   }, [expenses]);
 
   const total = data.reduce((s, d) => s + d.value, 0);
+  if (data.length === 0) return <EmptyState>Sem despesas registradas</EmptyState>;
 
   return (
-    <Panel title="Despesas por categoria">
-      {data.length === 0 ? (
-        <EmptyState>Sem despesas registradas</EmptyState>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 130, height: 130, flexShrink: 0 }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={data}
-                  dataKey="value"
-                  innerRadius={38}
-                  outerRadius={62}
-                  paddingAngle={2}
-                  stroke="#FFFFFF"
-                  strokeWidth={2}
-                >
-                  {data.map((entry, i) => (
-                    <Cell key={i} fill={CATEGORY_COLORS[entry.name] || "#9CA3AF"} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
-                  formatter={(v) => formatBRL(v)}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{ width: 120, height: 120, flexShrink: 0 }}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie data={data} dataKey="value" innerRadius={36} outerRadius={57}
+                 paddingAngle={2} stroke="#FFFFFF" strokeWidth={2}>
+              {data.map((d, i) => <Cell key={i} fill={CAT_COLORS[d.name] || "#9CA3AF"} />)}
+            </Pie>
+            <Tooltip
+              contentStyle={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
+              formatter={v => [formatBRL(v)]}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 7 }}>
+        {data.map(d => (
+          <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: CAT_COLORS[d.name] || "#9CA3AF", flexShrink: 0 }} />
+            <span style={{ color: NEUTRAL.graphite, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {d.name}
+            </span>
+            <span style={{ color: NEUTRAL.slate, fontVariantNumeric: "tabular-nums" }}>
+              {Math.round((d.value / total) * 100)}%
+            </span>
           </div>
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-            {data.map(d => {
-              const pct = Math.round((d.value / total) * 100);
-              return (
-                <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, background: CATEGORY_COLORS[d.name] || "#9CA3AF", flexShrink: 0 }} />
-                  <span style={{ color: NEUTRAL.graphite, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</span>
-                  <span style={{ color: NEUTRAL.slate, fontVariantNumeric: "tabular-nums" }}>{pct}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </Panel>
+        ))}
+      </div>
+    </div>
   );
 }
 
-function GanttTimeline({ campaigns }) {
-  const data = useMemo(() => {
-    const active = campaigns
-      .filter(c => c.launchDate && c.endDate && c.stage !== "encerrado")
-      .map(c => ({
-        ...c,
-        start: new Date(c.launchDate).getTime(),
-        end:   new Date(c.endDate).getTime(),
-      }))
-      .filter(c => c.end > c.start)
-      .sort((a, b) => a.start - b.start);
+// ── Agency metrics ───────────────────────────────────────────────────────────────
 
-    if (active.length === 0) return null;
+function AgencyMetrics({ deliverables, primaryColor }) {
+  const m = useMemo(() => {
+    const done = deliverables.filter(d => d.stage === "entregue");
+    const onTime = done.filter(d => d.deadline && d.stageChangedAt &&
+      new Date(d.stageChangedAt) <= new Date(d.deadline));
+    const sla = done.length > 0 ? Math.round((onTime.length / done.length) * 100) : null;
+    const times = done.map(d => d.createdAt && d.stageChangedAt
+      ? (new Date(d.stageChangedAt) - new Date(d.createdAt)) / 86400000 : null)
+      .filter(x => x != null && x >= 0);
+    const avgLead = times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null;
+    const stuck = deliverables.filter(d => d.stage === "revisao" && d.stageChangedAt &&
+      (Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000 > 3).length;
+    return { sla, avgLead, stuck, total: done.length };
+  }, [deliverables]);
 
-    const now = Date.now();
-    const minStart = Math.min(...active.map(c => c.start), now - 14 * 86400000);
-    const maxEnd   = Math.max(...active.map(c => c.end),   now + 14 * 86400000);
-    const span     = maxEnd - minStart;
+  const slaColor = m.sla == null ? NEUTRAL.slate : m.sla >= 80 ? "#16A34A" : m.sla >= 60 ? "#D97706" : "#DC2626";
 
-    return active.map(c => ({
-      ...c,
-      leftPct:  ((c.start - minStart) / span) * 100,
-      widthPct: ((c.end - c.start) / span) * 100,
-      nowPct:   ((now - minStart) / span) * 100,
-      _min: minStart, _max: maxEnd, _span: span,
-    }));
-  }, [campaigns]);
+  const card = (value, label, sub, color, warn) => (
+    <div style={{
+      background: warn ? "#FFF7ED" : "#FFFFFF",
+      border: `1px solid ${warn ? "#FED7AA" : "#E5E7EB"}`,
+      borderRadius: 12, padding: "16px 18px", textAlign: "center", flex: 1,
+    }}>
+      <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: "-0.02em", lineHeight: 1 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 5, fontWeight: 600 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
 
   return (
-    <Panel title="Timeline de campanhas ativas">
-      {!data || data.length === 0 ? (
-        <EmptyState>Nenhuma campanha com lançamento agendado</EmptyState>
-      ) : (
-        <div>
-          {/* Date scale (3 markers) */}
-          {(() => {
-            const ref = data[0];
-            const span = ref._span;
-            const mks = [0, 0.5, 1].map(p => {
-              const t = ref._min + span * p;
-              return new Date(t).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-            });
-            return (
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: NEUTRAL.slate, marginBottom: 6, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                {mks.map((m, i) => <span key={i}>{m}</span>)}
-              </div>
-            );
-          })()}
-          <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 8 }}>
-            {data.map(c => {
-              const stage = MARKETING_STAGES.find(s => s.id === c.stage);
-              const color = stage?.color || "#9CA3AF";
-              return (
-                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 140, flexShrink: 0, fontSize: 12, color: NEUTRAL.graphite, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {c.name}
-                  </div>
-                  <div style={{ position: "relative", flex: 1, height: 18, background: "#F8F9FA", borderRadius: 4 }}>
-                    {/* "today" line */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: -2,
-                        bottom: -2,
-                        left: `${c.nowPct}%`,
-                        width: 1.5,
-                        background: "#DC2626",
-                        zIndex: 2,
-                      }}
-                    />
-                    {/* bar */}
-                    <div
-                      title={`${stage?.name} · ${new Date(c.launchDate).toLocaleDateString("pt-BR")} → ${new Date(c.endDate).toLocaleDateString("pt-BR")}`}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        bottom: 0,
-                        left: `${c.leftPct}%`,
-                        width: `${c.widthPct}%`,
-                        minWidth: 4,
-                        background: color,
-                        borderRadius: 3,
-                        opacity: 0.85,
-                        display: "flex",
-                        alignItems: "center",
-                        paddingLeft: 6,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "#FFFFFF",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {c.widthPct > 8 && (stage?.name || "")}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: NEUTRAL.slate, marginTop: 10 }}>
-            <span style={{ width: 8, height: 1.5, background: "#DC2626", display: "inline-block" }} />
-            <span>Hoje</span>
-          </div>
-        </div>
-      )}
-    </Panel>
+    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+      {card(m.sla != null ? `${m.sla}%` : "—", "SLA cumprido",
+            m.total > 0 ? `${m.total} entregas` : "sem entregas", slaColor, false)}
+      {card(m.avgLead != null ? `${m.avgLead}d` : "—", "Lead time médio",
+            "Pendente → Entregue", primaryColor || NEUTRAL.graphite, false)}
+      {card(m.stuck, "Presas em revisão",
+            "Mais de 3 dias", m.stuck > 0 ? "#D97706" : "#16A34A", m.stuck > 0)}
+    </div>
   );
 }
 
-function TopPerformanceList({ campaigns }) {
+// ── Top 5 performance ────────────────────────────────────────────────────────────
+
+function TopPerformanceList({ campaigns, primaryColor }) {
   const top = useMemo(() =>
     [...campaigns]
       .filter(c => (c.performanceScore || 0) > 0)
@@ -413,273 +450,281 @@ function TopPerformanceList({ campaigns }) {
     [campaigns],
   );
 
+  if (top.length === 0) return <EmptyState>Sem campanhas pontuadas ainda</EmptyState>;
+
   return (
-    <Panel title="Top 5 · performance score">
-      {top.length === 0 ? (
-        <EmptyState>Sem campanhas pontuadas ainda</EmptyState>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {top.map((c, i) => {
-            const score = Math.min(100, Math.max(0, c.performanceScore || 0));
-            const color = score >= 80 ? "#16A34A" : score >= 60 ? "#D97706" : "#DC2626";
-            return (
-              <div key={c.id}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, width: 16, fontVariantNumeric: "tabular-nums" }}>
-                      {i + 1}
-                    </span>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {c.name}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
-                    {score}
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {top.map((c, i) => {
+        const score = Math.min(100, Math.max(0, c.performanceScore || 0));
+        const col = score >= 80 ? "#16A34A" : score >= 60 ? "#D97706" : "#DC2626";
+        const stage = MARKETING_STAGES.find(s => s.id === c.stage);
+        return (
+          <div key={c.id}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, width: 16,
+                               fontVariantNumeric: "tabular-nums" }}>{i + 1}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite,
+                               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {c.name}
+                </span>
+                {stage && (
+                  <span style={{ padding: "1px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600,
+                                 background: stage.color + "22", color: stage.color, flexShrink: 0 }}>
+                    {stage.name}
                   </span>
-                </div>
-                <div style={{ height: 4, background: "#F1F3F5", borderRadius: 2, overflow: "hidden", marginLeft: 24 }}>
-                  <div style={{ height: "100%", width: `${score}%`, background: color, borderRadius: 2 }} />
-                </div>
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
-    </Panel>
-  );
-}
-
-// ── Main view ─────────────────────────────────────────────────────────────────
-
-export function MarketingDashboardView({ user }) {
-  const { campaigns,    loading: loadingC } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
-  const { deliverables, loading: loadingD } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
-  const { expenses,     loading: loadingE } = useMarketingExpenses({ userId: user?.id, role: user?.role });
-
-  const isAgencia = user?.role === "agencia";
-
-  // ── Snapshot KPIs ──
-  const campaignKpis = useMemo(() => {
-    const active = campaigns.filter(c => c.stage !== "encerrado").length;
-    const budget = campaigns.reduce((s, c) => s + (c.budget || 0), 0);
-    const live   = campaigns.filter(c => c.stage === "ao_vivo").length;
-    const urgent = campaigns.filter(c => {
-      if (!c.launchDate) return false;
-      const d = Math.floor((new Date(c.launchDate).getTime() - Date.now()) / 86400000);
-      return d <= 7 && d >= 0 && !["ao_vivo", "encerrado", "analise"].includes(c.stage);
-    }).length;
-    return { active, budget, live, urgent };
-  }, [campaigns]);
-
-  const deliverableKpis = useMemo(() => ({
-    total:      deliverables.length,
-    pendente:   deliverables.filter(d => d.stage === "pendente").length,
-    produzindo: deliverables.filter(d => d.stage === "produzindo").length,
-    entregue:   deliverables.filter(d => d.stage === "entregue").length,
-  }), [deliverables]);
-
-  const expenseKpis = useMemo(() => ({
-    total:    expenses.reduce((s, e) => s + (e.amount || 0), 0),
-    pendente: expenses.filter(e => e.status === "pendente").reduce((s, e) => s + (e.amount || 0), 0),
-    pago:     expenses.filter(e => e.status === "pago").reduce((s, e) => s + (e.amount || 0), 0),
-  }), [expenses]);
-
-  // ── Agency effectiveness ──
-  const agencyKpis = useMemo(() => {
-    const entregues = deliverables.filter(d => d.stage === "entregue");
-
-    const onTime = entregues.filter(d => {
-      if (!d.deadline || !d.stageChangedAt) return false;
-      return new Date(d.stageChangedAt) <= new Date(d.deadline);
-    });
-
-    const sla = entregues.length > 0 ? Math.round((onTime.length / entregues.length) * 100) : null;
-
-    const leadTimes = entregues
-      .map(d => {
-        if (!d.createdAt || !d.stageChangedAt) return null;
-        return (new Date(d.stageChangedAt) - new Date(d.createdAt)) / 86400000;
-      })
-      .filter(x => x != null && x >= 0);
-    const avgLeadTime = leadTimes.length > 0
-      ? Math.round(leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length)
-      : null;
-
-    const stuckInReview = deliverables.filter(d => {
-      if (d.stage !== "revisao" || !d.stageChangedAt) return false;
-      const days = (Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000;
-      return days > 3;
-    }).length;
-
-    return { sla, avgLeadTime, stuckInReview, sampleSize: entregues.length };
-  }, [deliverables]);
-
-  // ── Month-over-month activity ──
-  const momKpis = useMemo(() => {
-    const now = new Date();
-    const [curStart, curEnd]   = monthBounds(now);
-    const prev = new Date(now); prev.setMonth(prev.getMonth() - 1);
-    const [prevStart, prevEnd] = monthBounds(prev);
-
-    const campsCur  = campaigns.filter(c => within(c.createdAt, curStart, curEnd)).length;
-    const campsPrev = campaigns.filter(c => within(c.createdAt, prevStart, prevEnd)).length;
-
-    const delivCur  = deliverables.filter(d => d.stage === "entregue" && within(d.stageChangedAt, curStart, curEnd)).length;
-    const delivPrev = deliverables.filter(d => d.stage === "entregue" && within(d.stageChangedAt, prevStart, prevEnd)).length;
-
-    const expCur  = expenses.filter(e => within(e.createdAt, curStart, curEnd)).reduce((s, e) => s + (e.amount || 0), 0);
-    const expPrev = expenses.filter(e => within(e.createdAt, prevStart, prevEnd)).reduce((s, e) => s + (e.amount || 0), 0);
-
-    return {
-      campaigns:    { value: campsCur, delta: pctChange(campsCur, campsPrev) },
-      deliverables: { value: delivCur, delta: pctChange(delivCur, delivPrev) },
-      expenses:     { value: expCur,   delta: pctChange(expCur, expPrev) },
-    };
-  }, [campaigns, deliverables, expenses]);
-
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-  const loading = loadingC || loadingD || loadingE;
-
-  return (
-    <div style={{ maxWidth: 1080, margin: "0 auto" }}>
-      {/* Greeting */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
-          {greeting}, {user?.name?.split(" ")[0] || "—"}
-        </h1>
-        <p style={{ fontSize: 14, color: NEUTRAL.slate, marginTop: 2 }}>
-          Visão geral do Marketing · {campaigns.length} campanha{campaigns.length !== 1 ? "s" : ""} no total
-        </p>
-      </div>
-
-      {loading && (
-        <div className="text-sm text-center py-12" style={{ color: NEUTRAL.slate }}>Carregando…</div>
-      )}
-
-      {!loading && (
-        <>
-          {/* Atividade do mês */}
-          <SectionTitle icon={CalendarClock} title="Atividade do mês" color="#1E4D8C" />
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-            <KpiCard
-              icon={Megaphone}
-              label="Campanhas criadas"
-              value={String(momKpis.campaigns.value)}
-              sub="este mês"
-              color="#1E4D8C"
-              iconBg="#EFF6FF"
-              delta={momKpis.campaigns.delta}
-            />
-            <KpiCard
-              icon={Package}
-              label="Entregas concluídas"
-              value={String(momKpis.deliverables.value)}
-              sub="este mês"
-              color="#16A34A"
-              iconBg="#DCFCE7"
-              delta={momKpis.deliverables.delta}
-            />
-            {!isAgencia && (
-              <KpiCard
-                icon={DollarSign}
-                label="Gasto"
-                value={formatK(momKpis.expenses.value)}
-                sub="este mês"
-                color="#7C3AED"
-                iconBg="#F5F3FF"
-                delta={momKpis.expenses.delta}
-                invertDelta
-              />
-            )}
+              <span style={{ fontSize: 14, fontWeight: 800, color: col,
+                             fontVariantNumeric: "tabular-nums", flexShrink: 0, marginLeft: 8 }}>
+                {score}
+              </span>
+            </div>
+            <div style={{ height: 6, background: "#F1F5F9", borderRadius: 3, overflow: "hidden", marginLeft: 24 }}>
+              <div style={{
+                height: "100%", width: `${score}%`,
+                background: `linear-gradient(90deg, ${col}, ${col}cc)`,
+                borderRadius: 3, transition: "width 0.5s ease",
+              }} />
+            </div>
           </div>
-
-          {/* Campanhas */}
-          <SectionTitle icon={Megaphone} title="Campanhas" color="#b5000b" />
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-            <KpiCard icon={Megaphone}   label="Campanhas ativas" value={String(campaignKpis.active)}  color="#1E4D8C" iconBg="#EFF6FF" />
-            <KpiCard icon={TrendingUp}  label="Budget total"     value={formatK(campaignKpis.budget)} color={NEUTRAL.graphite} iconBg="#F3F4F6" />
-            <KpiCard icon={Zap}         label="Ao Vivo"          value={String(campaignKpis.live)}    color="#16A34A" iconBg="#DCFCE7" />
-            <KpiCard
-              icon={Clock}
-              label="Urgente (< 7d)"
-              value={String(campaignKpis.urgent)}
-              color={campaignKpis.urgent > 0 ? "#DC2626" : NEUTRAL.graphite}
-              iconBg={campaignKpis.urgent > 0 ? "#FEE2E2" : "#F3F4F6"}
-            />
-          </div>
-
-          {/* Entregas */}
-          <SectionTitle icon={Package} title="Entregas" color="#1E4D8C" />
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-            <KpiCard icon={Package} label="Total"      value={String(deliverableKpis.total)}      color={NEUTRAL.graphite} iconBg="#F3F4F6" />
-            <KpiCard icon={Package} label="Pendente"   value={String(deliverableKpis.pendente)}   color={NEUTRAL.slate}    iconBg="#F3F4F6" />
-            <KpiCard icon={Package} label="Produzindo" value={String(deliverableKpis.produzindo)} color="#D97706" iconBg="#FEF3C7" />
-            <KpiCard icon={Package} label="Entregue"   value={String(deliverableKpis.entregue)}   color="#16A34A" iconBg="#DCFCE7" />
-          </div>
-
-          {/* Efetividade da agência */}
-          <SectionTitle icon={Activity} title="Efetividade da agência" color="#D97706" />
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-            <KpiCard
-              icon={Award}
-              label="SLA cumprido"
-              value={agencyKpis.sla === null ? "—" : `${agencyKpis.sla}%`}
-              sub={agencyKpis.sampleSize > 0 ? `${agencyKpis.sampleSize} entrega${agencyKpis.sampleSize !== 1 ? "s" : ""}` : "Sem entregas concluídas"}
-              color={agencyKpis.sla === null ? NEUTRAL.slate : agencyKpis.sla >= 80 ? "#16A34A" : agencyKpis.sla >= 60 ? "#D97706" : "#DC2626"}
-              iconBg={agencyKpis.sla === null ? "#F3F4F6" : agencyKpis.sla >= 80 ? "#DCFCE7" : agencyKpis.sla >= 60 ? "#FEF3C7" : "#FEE2E2"}
-            />
-            <KpiCard
-              icon={Timer}
-              label="Lead time médio"
-              value={agencyKpis.avgLeadTime === null ? "—" : `${agencyKpis.avgLeadTime} d`}
-              sub="Pendente → Entregue"
-              color={NEUTRAL.graphite}
-              iconBg="#F3F4F6"
-            />
-            <KpiCard
-              icon={Clock}
-              label="Em revisão > 3d"
-              value={String(agencyKpis.stuckInReview)}
-              sub="possível retrabalho"
-              color={agencyKpis.stuckInReview > 0 ? "#DC2626" : NEUTRAL.graphite}
-              iconBg={agencyKpis.stuckInReview > 0 ? "#FEE2E2" : "#F3F4F6"}
-            />
-          </div>
-
-          {/* Despesas — hidden for agência */}
-          {!isAgencia && (
-            <>
-              <SectionTitle icon={DollarSign} title="Despesas" color="#7C3AED" />
-              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-                <KpiCard icon={DollarSign} label="Total comprometido" value={formatK(expenseKpis.total)}    color={NEUTRAL.graphite} iconBg="#F3F4F6" />
-                <KpiCard icon={DollarSign} label="A pagar"            value={formatK(expenseKpis.pendente)} color="#D97706" iconBg="#FEF3C7" />
-                <KpiCard icon={DollarSign} label="Pago"               value={formatK(expenseKpis.pago)}     color="#16A34A" iconBg="#DCFCE7" />
-              </div>
-
-              {/* Análise financeira: burn rate + categoria */}
-              <SectionTitle icon={PieIcon} title="Análise financeira" color="#7C3AED" />
-              <div className="grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))" }}>
-                <BurnRateChart expenses={expenses} />
-                <CategoryDonut expenses={expenses} />
-              </div>
-            </>
-          )}
-
-          {/* Timeline de campanhas */}
-          <SectionTitle icon={CalendarClock} title="Timeline de campanhas" color="#1E4D8C" />
-          <GanttTimeline campaigns={campaigns} />
-
-          {/* Distribuição + Top 5 */}
-          <SectionTitle icon={Award} title="Visão das campanhas" color="#16A34A" />
-          <div className="grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
-            <StageBar stages={MARKETING_STAGES.filter(s => !s.terminal)} items={campaigns} />
-            <TopPerformanceList campaigns={campaigns} />
-          </div>
-        </>
-      )}
+        );
+      })}
     </div>
   );
 }
 
-export default MarketingDashboardView;
+// ── Section label ────────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }) {
+  return (
+    <div style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, letterSpacing: "0.1em",
+                  textTransform: "uppercase", marginBottom: 10, marginTop: 20 }}>
+      {children}
+    </div>
+  );
+}
+
+// ── Main view ──────────────────────────────────────────────────────────────────────
+
+export function MarketingDashboardView({ user }) {
+  const { campaigns,    loading: lC } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
+  const { deliverables, loading: lD } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
+  const { expenses,     loading: lE } = useMarketingExpenses({ userId: user?.id, role: user?.role });
+
+  const isAgencia = user?.role === "agencia";
+  const loading   = lC || lD || lE;
+
+  // ── Company filter ──
+  const accessibleCompanies = useMemo(() => {
+    if (["admin", "gerente", "marketing", "gerente_marketing"].includes(user?.role)) return COMPANY_IDS;
+    return user?.companies?.filter(id => COMPANY_IDS.includes(id)) || COMPANY_IDS;
+  }, [user]);
+
+  const [selectedCompany, setSelectedCompany] = useState("all");
+  const co           = selectedCompany !== "all" ? (COMPANIES[selectedCompany] || null) : null;
+  const primaryColor = co?.primary || "#b5000b";
+  const accentColor  = co?.active  || "#b5000b";
+
+  // ── Filtered slices ──
+  const fCampaigns = useMemo(() =>
+    selectedCompany === "all" ? campaigns
+      : campaigns.filter(c => Array.isArray(c.companyIds) && c.companyIds.includes(selectedCompany)),
+    [campaigns, selectedCompany],
+  );
+  const fDeliverables = useMemo(() =>
+    selectedCompany === "all" ? deliverables
+      : deliverables.filter(d => Array.isArray(d.companyIds) && d.companyIds.includes(selectedCompany)),
+    [deliverables, selectedCompany],
+  );
+  const fExpenses = useMemo(() =>
+    selectedCompany === "all" ? expenses
+      : expenses.filter(e => Array.isArray(e.companyIds) && e.companyIds.includes(selectedCompany)),
+    [expenses, selectedCompany],
+  );
+
+  // ── KPIs ──
+  const kpi = useMemo(() => {
+    const active = fCampaigns.filter(c => c.stage !== "encerrado").length;
+    const live   = fCampaigns.filter(c => c.stage === "ao_vivo").length;
+    const budget = fCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
+    const scored = fCampaigns.filter(c => c.performanceScore > 0);
+    const avgScore = scored.length > 0
+      ? Math.round(scored.reduce((s, c) => s + (c.performanceScore || 0), 0) / scored.length)
+      : null;
+    const entregue = fDeliverables.filter(d => d.stage === "entregue").length;
+    return { active, live, budget, avgScore, entregue };
+  }, [fCampaigns, fDeliverables]);
+
+  // ── MoM ──
+  const mom = useMemo(() => {
+    const now = new Date();
+    const [cs, ce] = monthBounds(now);
+    const prev = new Date(now); prev.setMonth(prev.getMonth() - 1);
+    const [ps, pe] = monthBounds(prev);
+    const cc = fCampaigns.filter(c => within(c.createdAt, cs, ce)).length;
+    const cp = fCampaigns.filter(c => within(c.createdAt, ps, pe)).length;
+    const dc = fDeliverables.filter(d => d.stage === "entregue" && within(d.stageChangedAt, cs, ce)).length;
+    const dp = fDeliverables.filter(d => d.stage === "entregue" && within(d.stageChangedAt, ps, pe)).length;
+    const ec = fExpenses.filter(e => within(e.createdAt, cs, ce)).reduce((s, e) => s + (e.amount || 0), 0);
+    const ep = fExpenses.filter(e => within(e.createdAt, ps, pe)).reduce((s, e) => s + (e.amount || 0), 0);
+    return {
+      campaigns:    { v: cc, d: pctChange(cc, cp) },
+      deliverables: { v: dc, d: pctChange(dc, dp) },
+      expenses:     { v: ec, d: pctChange(ec, ep) },
+    };
+  }, [fCampaigns, fDeliverables, fExpenses]);
+
+  // ── Monthly trend (6 months) ──
+  const trendData = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, i) => {
+      const ref = new Date(now); ref.setMonth(ref.getMonth() - (5 - i));
+      const [s, e] = monthBounds(ref);
+      return {
+        month:     shortMonth(ref),
+        campanhas: fCampaigns.filter(c => within(c.createdAt, s, e)).length,
+        entregas:  fDeliverables.filter(d => d.stage === "entregue" && within(d.stageChangedAt, s, e)).length,
+      };
+    });
+  }, [fCampaigns, fDeliverables]);
+
+  const sparkCampaigns = trendData.map(m => m.campanhas);
+  const sparkDelivs    = trendData.map(m => m.entregas);
+
+  const hour     = new Date().getHours();
+  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+
+  // ── Hero strip accent ──
+  // When a company is selected, the top of the page gets a subtle tinted background.
+  const heroBg = co
+    ? `linear-gradient(135deg, ${co.light} 0%, #FFFFFF 70%)`
+    : "transparent";
+
+  return (
+    <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <div style={{
+        borderRadius: 14, padding: "20px 24px", marginBottom: 20,
+        background: heroBg,
+        border: co ? `1px solid ${co.primary}22` : "none",
+        transition: "background 0.4s ease, border-color 0.4s ease",
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+                      flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+          <div>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: co ? co.primary : NEUTRAL.graphite,
+                         letterSpacing: "-0.02em", lineHeight: 1, margin: 0,
+                         transition: "color 0.3s ease" }}>
+              {greeting}, {user?.name?.split(" ")[0] || "—"}
+            </h1>
+            <p style={{ fontSize: 13, color: NEUTRAL.slate, margin: "5px 0 0" }}>
+              Dashboard de Marketing
+              {co && <> · <strong style={{ color: co.primary }}>{co.name}</strong></>}
+              {" "}· {fCampaigns.length} campanha{fCampaigns.length !== 1 ? "s" : ""}
+              {loading && " · carregando…"}
+            </p>
+          </div>
+          {/* Live badge */}
+          {kpi.live > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
+                          borderRadius: 20, background: "#DCFCE7", border: "1px solid #86EFAC" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16A34A",
+                             boxShadow: "0 0 0 3px #16A34A33" }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#15803D" }}>
+                {kpi.live} ao vivo
+              </span>
+            </div>
+          )}
+        </div>
+        <CompanyTabs
+          selected={selectedCompany}
+          onChange={setSelectedCompany}
+          companyIds={accessibleCompanies}
+        />
+      </div>
+
+      {/* ── KPI Strip ──────────────────────────────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+                    gap: 10, marginBottom: 14 }}>
+        <KpiCard
+          icon={Megaphone} label="Campanhas ativas" value={kpi.active}
+          delta={mom.campaigns.d} color={primaryColor} sparkline={sparkCampaigns}
+        />
+        <KpiCard
+          icon={Zap} label="Ao vivo agora" value={kpi.live}
+          color={kpi.live > 0 ? "#16A34A" : NEUTRAL.slate}
+          sub={kpi.live > 0 ? "em exibição" : "nenhuma ao vivo"}
+        />
+        <KpiCard
+          icon={DollarSign} label="Budget comprometido"
+          value={kpi.budget > 0 ? formatBRL(kpi.budget) : "R$ 0"}
+          delta={mom.expenses.d} invertDelta color={accentColor}
+        />
+        <KpiCard
+          icon={Package} label="Entregas concluídas" value={kpi.entregue}
+          delta={mom.deliverables.d} color={accentColor} sparkline={sparkDelivs}
+        />
+        <KpiCard
+          icon={Award} label="Performance médio"
+          value={kpi.avgScore != null ? kpi.avgScore : "—"}
+          sub={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "ótimo" : kpi.avgScore >= 60 ? "bom" : "atenção") : "sem dados"}
+          color={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "#16A34A" : kpi.avgScore >= 60 ? "#D97706" : "#DC2626") : NEUTRAL.slate}
+        />
+      </div>
+
+      {/* ── Activity + Channel ─────────────────────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,3fr) minmax(0,2fr)",
+                    gap: 10, marginBottom: 10 }}>
+        <Panel title="Atividade mensal" subtitle="Campanhas criadas vs. entregas concluídas (últimos 6 meses)">
+          <MonthlyTrendChart data={trendData} primaryColor={primaryColor} />
+        </Panel>
+        <Panel title="Campanhas por canal">
+          <ChannelChart campaigns={fCampaigns} primaryColor={primaryColor} />
+        </Panel>
+      </div>
+
+      {/* ── Stage pipeline ─────────────────────────────────────────── */}
+      <div style={{ marginBottom: 10 }}>
+        <Panel
+          title="Pipeline · distribuição por etapa"
+          subtitle={`${fCampaigns.length} campanha${fCampaigns.length !== 1 ? "s" : ""} no total`}
+        >
+          <StagePipelineBar campaigns={fCampaigns} />
+        </Panel>
+      </div>
+
+      {/* ── Agency effectiveness ───────────────────────────────────── */}
+      {!isAgencia && (
+        <>
+          <SectionLabel>Efetividade da agência</SectionLabel>
+          <AgencyMetrics deliverables={fDeliverables} primaryColor={primaryColor} />
+        </>
+      )}
+
+      {/* ── Financial ──────────────────────────────────────────────── */}
+      {!isAgencia && (
+        <>
+          <SectionLabel>Análise financeira</SectionLabel>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,3fr) minmax(0,2fr)",
+                        gap: 10, marginBottom: 10 }}>
+            <Panel title="Burn rate" subtitle="Gasto mensal · últimos 6 meses">
+              <BurnRateChart expenses={fExpenses} primaryColor={primaryColor} />
+            </Panel>
+            <Panel title="Por categoria">
+              <CategoryDonut expenses={fExpenses} />
+            </Panel>
+          </div>
+        </>
+      )}
+
+      {/* ── Top 5 ──────────────────────────────────────────────────── */}
+      <SectionLabel>Top 5 · performance</SectionLabel>
+      <Panel>
+        <TopPerformanceList campaigns={fCampaigns} primaryColor={primaryColor} />
+      </Panel>
+
+    </div>
+  );
+}

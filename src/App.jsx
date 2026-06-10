@@ -328,7 +328,7 @@ export default function App() {
       groups.push({
         label: "Comercial",
         items: [
-          { id: "dashboard", label: "Início",     icon: LayoutDashboard },
+          { id: "dashboard", label: "Visão Geral", icon: LayoutDashboard },
           { id: "crm",       label: "Pipeline",   icon: Layers },
           { id: "signals",   label: "Sinais",     icon: Bell },
           { id: "explorer",  label: "Explorador", icon: Globe2 },
