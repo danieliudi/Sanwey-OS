@@ -18,6 +18,7 @@ export function useSupabaseAuth() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState(null);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -35,6 +36,7 @@ export function useSupabaseAuth() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!active) return;
       listenerHasFired = true;
+      if (_event === "PASSWORD_RECOVERY") setIsPasswordRecovery(true);
       setSession(newSession);
     });
 
@@ -114,6 +116,12 @@ export function useSupabaseAuth() {
     if (patch.email) refreshProfile();
   }, [refreshProfile]);
 
+  const resetPasswordWithToken = useCallback(async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    setIsPasswordRecovery(false);
+  }, []);
+
   // Shapes the profile + auth user in the format the rest of the app expects
   // (same keys the mock DEFAULT_USERS had).
   const currentUser = session && profile
@@ -140,7 +148,9 @@ export function useSupabaseAuth() {
     signUp,
     signOut,
     updateAuthUser,
+    resetPasswordWithToken,
     refreshProfile,
+    isPasswordRecovery,
     configured: isSupabaseConfigured,
   };
 }

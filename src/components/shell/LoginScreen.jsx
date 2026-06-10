@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import {
   ArrowRight, ChevronRight, Loader2, Mail, Lock, Eye, EyeOff,
   Heart, ShieldCheck, BarChart3, Globe, ChevronDown,
-  Megaphone, Calendar, BookOpen, Headphones,
+  Megaphone, Calendar, BookOpen, Headphones, CheckCircle2, KeyRound,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 
 const ACCENT_RED = "#b5000b";   // primary DS
 const DARK_BG    = "#1A1414";   // painel esquerdo
@@ -189,17 +190,35 @@ function LangSelector() {
 // ── Right: Supabase auth ───────────────────────────────────────────────────
 
 function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
-  const [mode, setMode] = useState("signin");
+  const [mode, setMode] = useState("signin"); // "signin" | "signup" | "recovery"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [remember, setRemember] = useState(true);
   const [localError, setLocalError] = useState(null);
+  const [recoverySent, setRecoverySent] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setLocalError(null);
+    if (mode === "recovery") {
+      if (!email.trim()) return;
+      setRecoveryLoading(true);
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+        setRecoverySent(true);
+      } catch (err) {
+        setLocalError({ message: err?.message || "Não foi possível enviar o e-mail." });
+      } finally {
+        setRecoveryLoading(false);
+      }
+      return;
+    }
     try {
       if (mode === "signin") {
         await onSignIn(email, password);
@@ -215,7 +234,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
     }
   };
 
-  const err = localError || authError;
+  const err = localError || (mode !== "recovery" ? authError : null);
   const isSignin = mode === "signin";
 
   return (
@@ -238,42 +257,84 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
       </div>
 
       <h2 className="text-center font-bold mb-1" style={{ fontSize: 22, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
-        {isSignin ? "Acessar sua conta" : "Criar conta"}
+        {mode === "recovery" ? "Recuperar senha" : isSignin ? "Acessar sua conta" : "Criar conta"}
       </h2>
       <p className="text-center text-sm mb-5" style={{ color: NEUTRAL.slate }}>
-        {isSignin ? "Entre com seu e-mail e senha para continuar." : "Preencha os dados para criar um acesso."}
+        {mode === "recovery"
+          ? "Informe seu e-mail e enviaremos um link para redefinir a senha."
+          : isSignin
+            ? "Entre com seu e-mail e senha para continuar."
+            : "Preencha os dados para criar um acesso."}
       </p>
 
+      {/* Recovery: success state */}
+      {mode === "recovery" && recoverySent && (
+        <div
+          className="rounded-xl p-4 flex flex-col items-center gap-2 text-center mb-4"
+          style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}
+        >
+          <CheckCircle2 size={28} style={{ color: "#16A34A" }} />
+          <div className="font-semibold text-sm" style={{ color: "#15803D" }}>E-mail enviado!</div>
+          <div className="text-xs" style={{ color: "#166534" }}>
+            Verifique sua caixa de entrada em <strong>{email}</strong> e clique no link para redefinir a senha.
+          </div>
+          <button
+            type="button"
+            onClick={() => { setMode("signin"); setRecoverySent(false); setLocalError(null); }}
+            className="mt-1 text-xs font-semibold underline"
+            style={{ color: ACCENT_RED }}
+          >
+            Voltar ao login
+          </button>
+        </div>
+      )}
+
       <form onSubmit={submit} className="space-y-3.5">
-        {!isSignin && (
+        {mode === "recovery" && !recoverySent && (
           <Field
-            label="Nome"
-            type="text"
-            value={name}
-            onChange={setName}
-            placeholder="Seu nome"
+            label="E-mail"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            placeholder="voce@empresa.com"
+            autoComplete="email"
             required
+            icon={Mail}
           />
         )}
-        <Field
-          label="E-mail"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="voce@empresa.com"
-          autoComplete="email"
-          required
-          icon={Mail}
-        />
-        <PasswordField
-          value={password}
-          onChange={setPassword}
-          autoComplete={isSignin ? "current-password" : "new-password"}
-          show={showPwd}
-          onToggleShow={() => setShowPwd(v => !v)}
-        />
+        {mode !== "recovery" && (
+          <>
+            {!isSignin && (
+              <Field
+                label="Nome"
+                type="text"
+                value={name}
+                onChange={setName}
+                placeholder="Seu nome"
+                required
+              />
+            )}
+            <Field
+              label="E-mail"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              placeholder="voce@empresa.com"
+              autoComplete="email"
+              required
+              icon={Mail}
+            />
+            <PasswordField
+              value={password}
+              onChange={setPassword}
+              autoComplete={isSignin ? "current-password" : "new-password"}
+              show={showPwd}
+              onToggleShow={() => setShowPwd(v => !v)}
+            />
+          </>
+        )}
 
-        {isSignin && (
+        {isSignin && mode !== "recovery" && (
           <div className="flex items-center justify-between text-xs pt-1">
             <label className="flex items-center gap-1.5 cursor-pointer select-none">
               <CheckBox checked={remember} onChange={setRemember} />
@@ -283,7 +344,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
               type="button"
               className="font-semibold hover:underline"
               style={{ color: ACCENT_RED }}
-              onClick={() => alert("Recurso de recuperação ainda não habilitado. Procure o administrador.")}
+              onClick={() => { setMode("recovery"); setLocalError(null); setRecoverySent(false); }}
             >
               Esqueci minha senha
             </button>
@@ -299,22 +360,33 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={authLoading}
-          className="w-full p-3.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60 mt-2"
-          style={{ background: ACCENT_RED, fontSize: 15, boxShadow: "0 6px 16px -4px rgba(200, 32, 46, 0.4)" }}
-          onMouseEnter={e => { if (!authLoading) e.currentTarget.style.filter = "brightness(0.92)"; }}
-          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-        >
-          {authLoading ? <Loader2 size={16} className="animate-spin" /> : null}
-          {isSignin ? "Entrar" : "Criar conta"}
-          {!authLoading && <ArrowRight size={16} />}
-        </button>
+        {!recoverySent && (
+          <button
+            type="submit"
+            disabled={authLoading || recoveryLoading}
+            className="w-full p-3.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60 mt-2"
+            style={{ background: ACCENT_RED, fontSize: 15, boxShadow: "0 6px 16px -4px rgba(200, 32, 46, 0.4)" }}
+            onMouseEnter={e => { if (!authLoading && !recoveryLoading) e.currentTarget.style.filter = "brightness(0.92)"; }}
+            onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+          >
+            {(authLoading || recoveryLoading) ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+            {mode === "recovery" ? "Enviar link de recuperação" : isSignin ? "Entrar" : "Criar conta"}
+            {!authLoading && !recoveryLoading && mode !== "recovery" && <ArrowRight size={16} />}
+          </button>
+        )}
       </form>
 
       <div className="mt-5 text-xs text-center" style={{ color: NEUTRAL.slate }}>
-        {isSignin ? (
+        {mode === "recovery" ? (
+          <button
+            type="button"
+            onClick={() => { setMode("signin"); setLocalError(null); setRecoverySent(false); }}
+            className="font-bold underline underline-offset-2 transition-opacity hover:opacity-70"
+            style={{ color: ACCENT_RED }}
+          >
+            ← Voltar ao login
+          </button>
+        ) : isSignin ? (
           <>
             Não tem conta?{" "}
             <button
@@ -338,6 +410,95 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
               Entrar
             </button>
           </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Password reset screen (shown after clicking recovery email link) ─────────
+
+export function PasswordResetScreen({ onReset }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (password.length < 6) { setError("Senha deve ter ao menos 6 caracteres."); return; }
+    if (password !== confirm) { setError("As senhas não coincidem."); return; }
+    setLoading(true);
+    try {
+      await onReset(password);
+      setDone(true);
+    } catch (err) {
+      setError(err?.message || "Não foi possível redefinir a senha.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: CREAM }}>
+      <div
+        className="w-full max-w-md rounded-2xl p-8"
+        style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 20px 60px -20px rgba(20,14,14,0.12)" }}
+      >
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ background: "#FBEAEC" }}>
+            <KeyRound size={22} style={{ color: ACCENT_RED }} />
+          </div>
+          <h2 className="font-bold text-center" style={{ fontSize: 22, color: NEUTRAL.graphite }}>
+            Redefinir senha
+          </h2>
+          <p className="text-sm text-center mt-1" style={{ color: NEUTRAL.slate }}>
+            Escolha uma nova senha para sua conta.
+          </p>
+        </div>
+
+        {done ? (
+          <div className="rounded-xl p-5 flex flex-col items-center gap-3 text-center" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
+            <CheckCircle2 size={32} style={{ color: "#16A34A" }} />
+            <div className="font-semibold" style={{ color: "#15803D" }}>Senha redefinida com sucesso!</div>
+            <div className="text-xs" style={{ color: "#166534" }}>Você será redirecionado automaticamente.</div>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-4">
+            <PasswordField
+              label="Nova senha"
+              value={password}
+              onChange={setPassword}
+              autoComplete="new-password"
+              show={showPwd}
+              onToggleShow={() => setShowPwd(v => !v)}
+            />
+            <PasswordField
+              label="Confirmar senha"
+              value={confirm}
+              onChange={setConfirm}
+              autoComplete="new-password"
+              show={showPwd}
+              onToggleShow={() => setShowPwd(v => !v)}
+            />
+            {error && (
+              <div className="text-xs px-3.5 py-2.5 rounded-lg" style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FCA5A5" }}>
+                {error}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full p-3.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+              style={{ background: ACCENT_RED, fontSize: 15 }}
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+              Salvar nova senha
+            </button>
+          </form>
         )}
       </div>
     </div>
@@ -380,13 +541,13 @@ function Field({ label, type, value, onChange, placeholder, autoComplete, requir
   );
 }
 
-function PasswordField({ value, onChange, autoComplete, show, onToggleShow }) {
+function PasswordField({ value, onChange, autoComplete, show, onToggleShow, label = "Senha" }) {
   const [focused, setFocused] = useState(false);
   const borderColor = focused ? ACCENT_RED : "#E5E7EB";
   return (
     <label className="block">
       <div className="text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>
-        Senha
+        {label}
       </div>
       <div
         className="flex items-center gap-2 rounded-xl border px-3.5 py-2.5 transition-all"

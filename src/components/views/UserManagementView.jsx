@@ -23,7 +23,7 @@ const EMPTY_INVITE = { email: "", role: "vendedor", companies: [], sectors: [], 
 const ROLE_OPTIONS_BASE = [
   { value: "consultor",         label: "Consultor" },
   { value: "vendedor",          label: "Vendedor" },
-  { value: "gerente",           label: "Gerente (CRM)" },
+  { value: "gerente",           label: "Gerente Comercial" },
   { value: "marketing",         label: "Marketing" },
   { value: "gerente_marketing", label: "Gerente de Marketing" },
   { value: "agencia",           label: "Agência (Visitante)" },

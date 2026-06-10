@@ -20,7 +20,7 @@ import { useProfiles } from "./hooks/use-profiles";
 import { useInvitations } from "./hooks/use-invitations";
 import { usePipelineTransitions } from "./hooks/use-pipeline-transitions";
 import { useAutomations } from "./hooks/use-automations";
-import { LoginScreen } from "./components/shell/LoginScreen";
+import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
 import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScreen";
 import { Sidebar } from "./components/shell/Sidebar";
 import { TopBar } from "./components/shell/TopBar";
@@ -62,7 +62,9 @@ export default function App() {
     signUp,
     signOut,
     updateAuthUser,
+    resetPasswordWithToken,
     refreshProfile,
+    isPasswordRecovery,
     configured: supabaseEnabled,
   } = useSupabaseAuth();
 
@@ -398,6 +400,10 @@ export default function App() {
         </div>
       </div>
     );
+  }
+
+  if (supabaseEnabled && isPasswordRecovery) {
+    return <PasswordResetScreen onReset={resetPasswordWithToken} />;
   }
 
   if (!currentUser) {
