@@ -322,27 +322,23 @@ export default function App() {
       ];
     }
 
-    const groups = [
-      {
-        label: null,
-        items: [
-          { id: "dashboard", label: "Início", icon: LayoutDashboard },
-        ],
-      },
-    ];
+    const groups = [];
 
     if (!isPureMarketing) {
       groups.push({
-        label: "Negócios",
+        label: "Comercial",
         items: [
-          { id: "crm", label: "Pipeline", icon: Layers },
+          { id: "dashboard", label: "Início",     icon: LayoutDashboard },
+          { id: "crm",       label: "Pipeline",   icon: Layers },
+          { id: "signals",   label: "Sinais",     icon: Bell },
+          { id: "explorer",  label: "Explorador", icon: Globe2 },
         ],
       });
+    } else {
       groups.push({
-        label: "Prospecção",
+        label: null,
         items: [
-          { id: "signals",  label: "Sinais",     icon: Bell },
-          { id: "explorer", label: "Explorador", icon: Globe2 },
+          { id: "dashboard", label: "Início", icon: LayoutDashboard },
         ],
       });
     }
@@ -742,7 +738,7 @@ export default function App() {
           style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
         >
           <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
-            Grupo Sanwey · Commercial Intelligence v4.0
+            sanweyERP
           </div>
           <div style={{ color: NEUTRAL.slate }}>
             Maio 2026

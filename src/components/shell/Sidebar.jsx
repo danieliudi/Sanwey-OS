@@ -100,8 +100,8 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             />
           </div>
           <div style={{ lineHeight: 1.3 }}>
-            <div style={{ color: "#201a1a", fontWeight: 700, fontSize: 14 }}>Grupo Sanwey</div>
-            <div style={{ color: T.text, fontSize: 11 }}>Commercial Intelligence</div>
+            <div style={{ color: "#201a1a", fontWeight: 700, fontSize: 14 }}>sanweyERP</div>
+            <div style={{ color: T.text, fontSize: 11 }}>Plataforma integrada</div>
           </div>
         </div>
 

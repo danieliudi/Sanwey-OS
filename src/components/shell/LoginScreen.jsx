@@ -46,7 +46,7 @@ export function LoginScreen({
                 className="mb-3"
               />
               <div className="text-xs font-semibold uppercase mb-3" style={{ color: NEUTRAL.slate, letterSpacing: "0.12em" }}>
-                Commercial Intelligence
+                sanweyERP
               </div>
               <p className="text-sm max-w-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>
                 Plataforma unificada de inteligência comercial<br />para as empresas do Grupo
