@@ -44,6 +44,7 @@ import { TutoriaisView } from "./components/views/TutoriaisView";
 import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
 import { DespesasView } from "./components/views/DespesasView";
+import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
 import { UserProfileView } from "./components/views/UserProfileView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
@@ -78,9 +79,12 @@ export default function App() {
     if (currentUser?.id) setOnboardingDoneMap(m => ({ ...m, [currentUser.id]: true }));
   }, [currentUser?.id, setOnboardingDoneMap]);
 
-  const isManagerRole   = currentUser?.role === "gerente" || currentUser?.role === "admin";
-  const isMarketingUser = ["marketing", "gerente_marketing", "admin"].includes(currentUser?.role);
-  const isAgencia       = currentUser?.role === "agencia";
+  const isManagerRole      = currentUser?.role === "gerente" || currentUser?.role === "admin";
+  // isMarketingUser: can access marketing routes (includes admin for RLS/access)
+  const isMarketingUser    = ["marketing", "gerente_marketing", "admin"].includes(currentUser?.role);
+  // isPureMarketing: only the marketing dept roles — drives sidebar and dashboard rendering
+  const isPureMarketing    = ["marketing", "gerente_marketing"].includes(currentUser?.role);
+  const isAgencia          = currentUser?.role === "agencia";
   const {
     users,
     loading: usersLoading,
@@ -306,6 +310,19 @@ export default function App() {
   }, [accessibleCompanies, activeCompany]);
 
   const navGroups = useMemo(() => {
+    // Agência: only Campanhas + Entregas, nothing else.
+    if (isAgencia) {
+      return [
+        {
+          label: "Marketing",
+          items: [
+            { id: "marketing",          label: "Campanhas", icon: Megaphone },
+            { id: "marketing-entregas", label: "Entregas",  icon: Package },
+          ],
+        },
+      ];
+    }
+
     const groups = [
       {
         label: null,
@@ -315,7 +332,7 @@ export default function App() {
       },
     ];
 
-    if (!isAgencia) {
+    if (!isPureMarketing) {
       groups.push({
         label: "Negócios",
         items: [
@@ -331,15 +348,15 @@ export default function App() {
       });
     }
 
-    if (isMarketingUser || isAgencia) {
-      const mktItems = [
-        { id: "marketing",          label: "Campanhas", icon: Megaphone },
-        { id: "marketing-entregas", label: "Entregas",  icon: Package },
-      ];
-      if (!isAgencia) {
-        mktItems.push({ id: "marketing-despesas", label: "Despesas", icon: DollarSign });
-      }
-      groups.push({ label: "Marketing", items: mktItems });
+    if (isPureMarketing) {
+      groups.push({
+        label: "Marketing",
+        items: [
+          { id: "marketing",          label: "Campanhas",  icon: Megaphone },
+          { id: "marketing-entregas", label: "Entregas",   icon: Package },
+          { id: "marketing-despesas", label: "Despesas",   icon: DollarSign },
+        ],
+      });
     }
 
     if (isManager) {
@@ -369,7 +386,7 @@ export default function App() {
       ],
     });
     return groups;
-  }, [isManager, isMarketingUser, isAgencia]);
+  }, [isManager, isPureMarketing, isAgencia]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -391,12 +408,17 @@ export default function App() {
     if (!isMarketingUser && !isAgencia && marketingOnly.includes(section)) {
       setSection("dashboard");
     }
-    const agenciaBlocked = ["crm", "signals", "explorer", "marketing-despesas"];
+    // Pure marketing users shouldn't access CRM sections
+    const crmSections = ["crm", "signals", "explorer"];
+    if (isPureMarketing && crmSections.includes(section)) {
+      setSection("dashboard");
+    }
+    const agenciaBlocked = ["crm", "signals", "explorer", "marketing-despesas", "dashboard", "tutorials"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isManager, isMarketingUser, isAgencia, section]);
+  }, [isManager, isMarketingUser, isPureMarketing, isAgencia, section]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
@@ -518,18 +540,24 @@ export default function App() {
         >
         <Routes>
           <Route path={ROUTES.dashboard} element={
-            <DashboardView
-              user={currentUser}
-              activeCompany={activeCompany}
-              leads={leads}
-              users={users}
-              signals={signals}
-              pipelines={pipelines}
-              onNavigate={setSection}
-              onLeadClick={setSelectedLead}
-              onSignalClick={setSelectedSignal}
-              visibleWidgets={settings.visibleDashboardWidgets}
-            />
+            isAgencia ? (
+              <Navigate to={ROUTES.marketing} replace />
+            ) : isPureMarketing ? (
+              <MarketingDashboardView user={currentUser} />
+            ) : (
+              <DashboardView
+                user={currentUser}
+                activeCompany={activeCompany}
+                leads={leads}
+                users={users}
+                signals={signals}
+                pipelines={pipelines}
+                onNavigate={setSection}
+                onLeadClick={setSelectedLead}
+                onSignalClick={setSelectedSignal}
+                visibleWidgets={settings.visibleDashboardWidgets}
+              />
+            )
           } />
           <Route path={ROUTES.signals} element={
             isAgencia ? <Navigate to={ROUTES.marketing} replace /> : (
