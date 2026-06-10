@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Plus, X, Package, Clock, MoreVertical, ArrowRight } from "lucide-react";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
+import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatDateBR } from "../../utils/date";
@@ -177,10 +178,11 @@ function DeliverableCard({ item, ownerName, onDragStart, stages, onMoveToStage, 
 
 // ── Quick-create form ─────────────────────────────────────────────────────────
 
-function DeliverableCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
+function DeliverableCreateForm({ stageId, currentUser, users, campaigns, onAdd, onCancel }) {
   const [title, setTitle]           = useState("");
   const [assignee, setAssignee]     = useState(currentUser?.id || "");
   const [deadline, setDeadline]     = useState("");
+  const [campaignId, setCampaignId] = useState("");
   const [companyIds, setCompanyIds] = useState(
     currentUser?.companies?.length > 0 ? [currentUser.companies[0]] : []
   );
@@ -198,15 +200,15 @@ function DeliverableCreateForm({ stageId, currentUser, users, onAdd, onCancel })
     setError(null);
     try {
       await onAdd({
-        title:     title.trim(),
-        stage:     stageId,
+        title:          title.trim(),
+        stage:          stageId,
         stageChangedAt: new Date().toISOString(),
-        assignee:  assignee || null,
-        deadline:  deadline ? new Date(deadline).toISOString() : null,
+        assignee:       assignee || null,
+        deadline:       deadline ? new Date(deadline).toISOString() : null,
         companyIds,
-        notes:     [],
-        campaignId: null,
-        createdBy: currentUser?.id || null,
+        notes:          [],
+        campaignId:     campaignId || null,
+        createdBy:      currentUser?.id || null,
       });
       onCancel();
     } catch (err) {
@@ -215,6 +217,9 @@ function DeliverableCreateForm({ stageId, currentUser, users, onAdd, onCancel })
       setSaving(false);
     }
   };
+
+  const focusBlue = e => { e.target.style.borderColor = "#1E4D8C"; };
+  const blurGray  = e => { e.target.style.borderColor = "#D1D5DB"; };
 
   return (
     <form
@@ -230,8 +235,8 @@ function DeliverableCreateForm({ stageId, currentUser, users, onAdd, onCancel })
         onChange={e => setTitle(e.target.value)}
         className="w-full text-xs rounded-xl border px-2.5 py-1.5 outline-none"
         style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-        onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-        onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+        onFocus={focusBlue}
+        onBlur={blurGray}
       />
       <div className="flex flex-wrap gap-1.5">
         {COMPANY_IDS.map(id => {
@@ -258,6 +263,17 @@ function DeliverableCreateForm({ stageId, currentUser, users, onAdd, onCancel })
           );
         })}
       </div>
+      {campaigns.length > 0 && (
+        <select
+          value={campaignId}
+          onChange={e => setCampaignId(e.target.value)}
+          className="w-full text-xs rounded-xl border outline-none px-2 py-1.5"
+          style={{ borderColor: "#D1D5DB", color: campaignId ? NEUTRAL.graphite : NEUTRAL.slate }}
+        >
+          <option value="">Campanha relacionada (opcional)</option>
+          {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      )}
       <div className="flex gap-1.5">
         <select
           value={assignee}
@@ -274,8 +290,8 @@ function DeliverableCreateForm({ stageId, currentUser, users, onAdd, onCancel })
           onChange={e => setDeadline(e.target.value)}
           className="flex-1 text-xs rounded-xl border px-2.5 py-1.5 outline-none"
           style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-          onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-          onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+          onFocus={focusBlue}
+          onBlur={blurGray}
         />
       </div>
       {error && (
@@ -336,6 +352,8 @@ export function EntregasView({ user, users = [] }) {
     createDeliverable,
     changeStage,
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
+
+  const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
 
   const usersById = useUsersById(users);
 
@@ -494,6 +512,7 @@ export function EntregasView({ user, users = [] }) {
                         stageId={stage.id}
                         currentUser={user}
                         users={users}
+                        campaigns={campaigns}
                         onAdd={handleQuickAdd}
                         onCancel={() => setQuickAddStage(null)}
                       />

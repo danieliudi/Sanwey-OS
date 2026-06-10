@@ -14,14 +14,19 @@ import { Select } from "../ui/Select";
 // ── Quick-create form ────────────────────────────────────────────────────────
 
 function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
-  const [name, setName]         = useState("");
-  const [channel, setChannel]   = useState("");
+  const [name, setName]             = useState("");
+  const [channel, setChannel]       = useState("");
+  const [kpi, setKpi]               = useState("");
   const [companyIds, setCompanyIds] = useState(
     currentUser?.companies?.length > 0 ? [currentUser.companies[0]] : []
   );
-  const [budget, setBudget]     = useState("");
-  const [saving, setSaving]     = useState(false);
-  const [error, setError]       = useState(null);
+  const [budget, setBudget]         = useState("");
+  const [owner, setOwner]           = useState(currentUser?.id || "");
+  const [launchDate, setLaunchDate] = useState("");
+  const [endDate, setEndDate]       = useState("");
+  const [agencyName, setAgencyName] = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState(null);
 
   const toggleCompany = (id) => {
     setCompanyIds(prev =>
@@ -37,17 +42,22 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
     setError(null);
     try {
       await onAdd({
-        id:          crypto.randomUUID?.() || `mkt_${Date.now()}`,
-        name:        name.trim(),
-        channel:     channel || null,
-        budget:      parseFloat(budget) || 0,
+        id:             crypto.randomUUID?.() || `mkt_${Date.now()}`,
+        name:           name.trim(),
+        channel:        channel || null,
+        kpi:            kpi || null,
+        budget:         parseFloat(budget) || 0,
         companyIds,
-        stage:       stageId,
+        stage:          stageId,
         stageChangedAt: new Date().toISOString(),
-        createdBy:   currentUser?.id || null,
-        notes:       [],
-        activities:  [],
-        starred:     false,
+        owner:          owner || null,
+        launchDate:     launchDate ? new Date(launchDate).toISOString() : null,
+        endDate:        endDate ? new Date(endDate).toISOString() : null,
+        agencyName:     agencyName.trim() || null,
+        createdBy:      currentUser?.id || null,
+        notes:          [],
+        activities:     [],
+        starred:        false,
         approvalChecklist: [],
       });
       onCancel();
@@ -57,6 +67,9 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
       setSaving(false);
     }
   };
+
+  const focusBlue  = e => { e.target.style.borderColor = "#1E4D8C"; };
+  const blurGray   = e => { e.target.style.borderColor = "#D1D5DB"; };
 
   return (
     <form
@@ -72,8 +85,8 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
         onChange={e => setName(e.target.value)}
         className="w-full text-xs rounded-xl border px-2.5 py-1.5 outline-none"
         style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-        onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-        onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+        onFocus={focusBlue}
+        onBlur={blurGray}
       />
 
       <div className="flex flex-wrap gap-1.5">
@@ -109,6 +122,18 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
           <option value="">Canal</option>
           {MARKETING_CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
+        <select
+          value={kpi}
+          onChange={e => setKpi(e.target.value)}
+          className="flex-1 text-xs rounded-xl border outline-none px-2 py-1.5"
+          style={{ borderColor: "#D1D5DB", color: kpi ? NEUTRAL.graphite : NEUTRAL.slate }}
+        >
+          <option value="">KPI principal</option>
+          {MARKETING_KPIS.map(k => <option key={k} value={k}>{k}</option>)}
+        </select>
+      </div>
+
+      <div className="flex gap-1.5">
         <input
           type="number"
           placeholder="Budget R$"
@@ -116,10 +141,57 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
           onChange={e => setBudget(e.target.value)}
           className="flex-1 text-xs rounded-xl border px-2.5 py-1.5 outline-none"
           style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-          onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-          onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+          onFocus={focusBlue}
+          onBlur={blurGray}
         />
+        <select
+          value={owner}
+          onChange={e => setOwner(e.target.value)}
+          className="flex-1 text-xs rounded-xl border outline-none px-2 py-1.5"
+          style={{ borderColor: "#D1D5DB", color: owner ? NEUTRAL.graphite : NEUTRAL.slate }}
+        >
+          <option value="">Responsável</option>
+          {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
       </div>
+
+      <div className="flex gap-1.5">
+        <div className="flex-1 flex flex-col gap-0.5">
+          <label className="text-[10px] font-semibold pl-0.5" style={{ color: NEUTRAL.slate }}>Lançamento</label>
+          <input
+            type="date"
+            value={launchDate}
+            onChange={e => setLaunchDate(e.target.value)}
+            className="w-full text-xs rounded-xl border px-2.5 py-1.5 outline-none"
+            style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
+            onFocus={focusBlue}
+            onBlur={blurGray}
+          />
+        </div>
+        <div className="flex-1 flex flex-col gap-0.5">
+          <label className="text-[10px] font-semibold pl-0.5" style={{ color: NEUTRAL.slate }}>Encerramento</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+            className="w-full text-xs rounded-xl border px-2.5 py-1.5 outline-none"
+            style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
+            onFocus={focusBlue}
+            onBlur={blurGray}
+          />
+        </div>
+      </div>
+
+      <input
+        type="text"
+        placeholder="Nome da agência (opcional)"
+        value={agencyName}
+        onChange={e => setAgencyName(e.target.value)}
+        className="w-full text-xs rounded-xl border px-2.5 py-1.5 outline-none"
+        style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
+        onFocus={focusBlue}
+        onBlur={blurGray}
+      />
 
       {error && (
         <div className="text-[11px] rounded-lg px-2 py-1.5" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
