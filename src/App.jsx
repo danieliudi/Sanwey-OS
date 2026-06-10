@@ -749,7 +749,10 @@ export default function App() {
           <MobileBottomNav
             section={section}
             onSectionChange={setSection}
-            onMenuOpen={() => setSidebarMobileOpen(true)}
+            role={currentUser?.role}
+            navGroups={navGroups}
+            currentUser={currentUser}
+            onLogout={handleLogout}
           />
         </div>
       </div>
