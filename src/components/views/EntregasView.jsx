@@ -1,54 +1,37 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, X, Package, Clock, MoreVertical, ArrowRight, TrendingUp, ChevronDown } from "lucide-react";
+import { Plus, X, Package, TrendingUp, ChevronDown } from "lucide-react";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
-import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
+import {
+  DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
+} from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatDateBR } from "../../utils/date";
 import { useUsersById } from "../../hooks/use-users-by-id";
+import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
 
-// ── SLA badge ────────────────────────────────────────────────────────────────
+const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
+const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 
-function slaBadge(stageChangedAt, sla) {
-  if (!sla || !stageChangedAt) return null;
-  const days = Math.floor((Date.now() - new Date(stageChangedAt).getTime()) / 86400000);
-  if (days > sla)          return { label: `${days}d`, bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
-  if (days > sla * 0.7)   return { label: `${days}d`, bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  return                          { label: `${days}d`, bg: "#DCFCE7", text: "#16A34A", border: "#BBF7D0" };
-}
+// ── Deliverable card ──────────────────────────────────────────────────────────
 
-// ── Deliverable card ─────────────────────────────────────────────────────────
-
-function DeliverableCard({ item, ownerName, onDragStart, stages, onMoveToStage, canWrite }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = React.useRef(null);
-
-  const stageObj   = stages.find(s => s.id === item.stage);
-  const badge      = slaBadge(item.stageChangedAt, stageObj?.sla);
-  const moveTargets = stages.filter(s => s.id !== item.stage);
+function DeliverableCard({ item, ownerName, onDragStart, onMoveToStage, canWrite, onClick }) {
+  const stage      = DELIVERABLE_STAGES.find(s => s.id === item.stage);
   const isOverdue  = item.deadline && new Date(item.deadline) < new Date();
-
-  React.useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
+  const priColor   = PRIORITY_COLORS[item.priority];
 
   return (
     <div
       draggable={canWrite}
       onDragStart={() => canWrite && onDragStart?.(item)}
+      onClick={() => onClick?.(item)}
       style={{
         background: "#FFFFFF",
         border: "1px solid #E5E7EB",
         borderRadius: 10,
         padding: "10px 12px",
         boxShadow: "0 1px 4px rgba(32,26,26,0.06)",
-        position: "relative",
-        cursor: canWrite ? "grab" : "default",
+        cursor: "pointer",
         transition: "box-shadow 0.12s, border-color 0.12s, transform 0.12s",
       }}
       onMouseEnter={e => {
@@ -66,101 +49,20 @@ function DeliverableCard({ item, ownerName, onDragStart, stages, onMoveToStage, 
         <div style={{ fontWeight: 600, fontSize: 13, lineHeight: 1.35, flex: 1, color: NEUTRAL.graphite }}>
           {item.title}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-          {badge && (
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 2,
-                padding: "2px 6px",
-                borderRadius: 5,
-                fontSize: 10,
-                fontWeight: 700,
-                background: badge.bg,
-                color: badge.text,
-                border: `1px solid ${badge.border}`,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              <Clock size={8} strokeWidth={2.5} />
-              {badge.label}
-            </span>
-          )}
-          {canWrite && moveTargets.length > 0 && onMoveToStage && (
-            <div ref={menuRef} style={{ position: "relative" }}>
-              <button
-                title="Mover para outra etapa"
-                onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: NEUTRAL.slate,
-                  cursor: "pointer",
-                  padding: 2,
-                  borderRadius: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  lineHeight: 1,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
-              >
-                <MoreVertical size={14} />
-              </button>
-              {menuOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 4px)",
-                    right: 0,
-                    background: "#FFFFFF",
-                    border: "1px solid #E5E7EB",
-                    borderRadius: 8,
-                    boxShadow: "0 8px 24px rgba(32,26,26,0.12)",
-                    zIndex: 50,
-                    minWidth: 180,
-                    overflow: "hidden",
-                  }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div style={{ padding: "6px 12px 4px", fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    Mover para
-                  </div>
-                  {moveTargets.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={e => { e.stopPropagation(); onMoveToStage(item.id, s.id); setMenuOpen(false); }}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 12px",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: 13,
-                        color: NEUTRAL.graphite,
-                        textAlign: "left",
-                        transition: "background 0.1s",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
-                      {s.name}
-                      <ArrowRight size={11} style={{ marginLeft: "auto", opacity: 0.4 }} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {priColor && (
+          <span style={{ fontSize: 9, fontWeight: 700, color: priColor, background: priColor + "18", border: `1px solid ${priColor}40`, borderRadius: 4, padding: "2px 5px", flexShrink: 0 }}>
+            {PRIORITY_LABELS[item.priority]}
+          </span>
+        )}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: NEUTRAL.slate }}>
+      {item.requesterName && (
+        <div style={{ fontSize: 11, color: NEUTRAL.slate, marginBottom: 4 }}>
+          {item.requesterName}{item.department ? ` · ${item.department}` : ""}
+        </div>
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: NEUTRAL.slate, marginTop: 4 }}>
         {ownerName ? (
           <span style={{ padding: "2px 7px", borderRadius: 99, background: "#F3F4F6", color: NEUTRAL.slate, fontWeight: 500 }}>
             {ownerName}
@@ -181,15 +83,18 @@ function DeliverableCard({ item, ownerName, onDragStart, stages, onMoveToStage, 
 function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd, onClose }) {
   const stage = DELIVERABLE_STAGES.find(s => s.id === stageId);
 
-  const [title, setTitle]           = useState("");
-  const [assignee, setAssignee]     = useState(currentUser?.id || "");
-  const [deadline, setDeadline]     = useState("");
-  const [campaignId, setCampaignId] = useState("");
-  const [companyIds, setCompanyIds] = useState(
+  const [title, setTitle]             = useState("");
+  const [requesterName, setRequester] = useState("");
+  const [department, setDepartment]   = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority]       = useState("media");
+  const [deadline, setDeadline]       = useState("");
+  const [companyIds, setCompanyIds]   = useState(
     currentUser?.companies?.length > 0 ? [currentUser.companies[0]] : []
   );
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState(null);
+  const [campaignId, setCampaignId]   = useState("");
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState(null);
 
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
@@ -208,15 +113,18 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
     setError(null);
     try {
       await onAdd({
-        title:          title.trim(),
-        stage:          stageId,
+        title:         title.trim(),
+        requesterName: requesterName.trim() || null,
+        department:    department || null,
+        description:   description.trim() || null,
+        priority,
+        deadline:      deadline ? new Date(deadline).toISOString() : null,
+        stage:         stageId,
         stageChangedAt: new Date().toISOString(),
-        assignee:       assignee || null,
-        deadline:       deadline ? new Date(deadline).toISOString() : null,
         companyIds,
-        notes:          [],
-        campaignId:     campaignId || null,
-        createdBy:      currentUser?.id || null,
+        campaignId:    campaignId || null,
+        notes:         [],
+        createdBy:     currentUser?.id || null,
       });
       onClose();
     } catch (err) {
@@ -237,14 +145,14 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 440, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
-              Nova entrega
+              Entregáveis da Agência de Marketing
             </div>
             {stage && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
@@ -266,11 +174,55 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
 
         {/* Body */}
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
-          {/* Título */}
+          {/* Nome do Solicitante */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelSt}>Título da entrega <span style={{ color: "#DC2626" }}>*</span></label>
+            <label style={labelSt}>* Nome do Solicitante</label>
             <input
               autoFocus
+              type="text"
+              placeholder="Nome de quem está solicitando"
+              value={requesterName}
+              onChange={e => setRequester(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={inputSt}
+              onFocus={focusBlue}
+              onBlur={blurGray}
+            />
+          </div>
+
+          {/* Departamento */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelSt}>* Departamento</label>
+            <select
+              value={department}
+              onChange={e => setDepartment(e.target.value)}
+              className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+              style={{ ...inputSt, color: department ? NEUTRAL.graphite : NEUTRAL.slate }}
+            >
+              <option value="">Escolha uma opção</option>
+              {DELIVERABLE_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+
+          {/* Descrição */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelSt}>* Descrição do Entregável</label>
+            <textarea
+              placeholder="Detalhes do entregável solicitado"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={3}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ ...inputSt, resize: "vertical" }}
+              onFocus={focusBlue}
+              onBlur={blurGray}
+            />
+          </div>
+
+          {/* Título */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelSt}>* Título resumido <span style={{ color: "#DC2626" }}>*</span></label>
+            <input
               type="text"
               placeholder="Ex: Banner para Instagram"
               value={title}
@@ -282,9 +234,51 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
             />
           </div>
 
+          {/* Prazo + Prioridade */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={labelSt}>* Prazo</label>
+              <input
+                type="date"
+                value={deadline}
+                onChange={e => setDeadline(e.target.value)}
+                className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                style={inputSt}
+                onFocus={focusBlue}
+                onBlur={blurGray}
+              />
+            </div>
+            <div>
+              <label style={labelSt}>* Prioridade</label>
+              <div style={{ display: "flex", gap: 6, paddingTop: 2 }}>
+                {DELIVERABLE_PRIORITIES.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPriority(p.id)}
+                    style={{
+                      flex: 1,
+                      padding: "5px 0",
+                      borderRadius: 8,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      border: `1px solid ${priority === p.id ? p.color : "#E5E7EB"}`,
+                      background: priority === p.id ? p.color + "18" : "#FFF",
+                      color: priority === p.id ? p.color : NEUTRAL.slate,
+                      cursor: "pointer",
+                      transition: "all 0.1s",
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Empresa */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelSt}>Empresa <span style={{ color: "#DC2626" }}>*</span></label>
+            <label style={labelSt}>Empresa</label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {COMPANY_IDS.map(id => {
                 const co = COMPANIES[id];
@@ -303,7 +297,6 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
                       background: sel ? co.primary + "22" : "#FFF",
                       color: sel ? co.primary : NEUTRAL.slate,
                       cursor: "pointer",
-                      transition: "all 0.1s",
                     }}
                   >
                     {co.short}
@@ -313,9 +306,9 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
             </div>
           </div>
 
-          {/* Campanha relacionada */}
+          {/* Campanha */}
           {campaigns.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 20 }}>
               <label style={labelSt}>Campanha relacionada</label>
               <select
                 value={campaignId}
@@ -329,34 +322,6 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
             </div>
           )}
 
-          {/* Responsável + Prazo */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-            <div>
-              <label style={labelSt}>Responsável</label>
-              <select
-                value={assignee}
-                onChange={e => setAssignee(e.target.value)}
-                className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-                style={{ ...inputSt, color: assignee ? NEUTRAL.graphite : NEUTRAL.slate }}
-              >
-                <option value="">Selecionar</option>
-                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelSt}>Prazo</label>
-              <input
-                type="date"
-                value={deadline}
-                onChange={e => setDeadline(e.target.value)}
-                className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-                style={inputSt}
-                onFocus={focusBlue}
-                onBlur={blurGray}
-              />
-            </div>
-          </div>
-
           {error && (
             <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
               {error}
@@ -369,7 +334,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
             style={{ background: "#1E4D8C", color: "#FFF", opacity: saving || !title.trim() ? 0.5 : 1, border: "none", cursor: saving || !title.trim() ? "default" : "pointer" }}
           >
-            {saving ? "Criando…" : "Criar entrega"}
+            {saving ? "Criando…" : "Criar novo card"}
           </button>
         </form>
       </div>
@@ -410,20 +375,12 @@ function AnalyticsPanel({ deliverables }) {
       >
         <TrendingUp size={13} strokeWidth={2} />
         <span>Análise das entregas</span>
-        <ChevronDown
-          size={13}
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-        />
+        <ChevronDown size={13} style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
       </button>
 
       {open && (
-        <div
-          className="rounded-2xl border mt-3 p-5"
-          style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
-        >
-          <div className="text-xs font-semibold mb-4" style={{ color: NEUTRAL.slate }}>
-            Distribuição por etapa
-          </div>
+        <div className="rounded-2xl border mt-3 p-5" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+          <div className="text-xs font-semibold mb-4" style={{ color: NEUTRAL.slate }}>Distribuição por etapa</div>
           <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
             {stageStats.map(({ stage, count, overdue, avgDays }) => (
               <div key={stage.id}>
@@ -457,21 +414,9 @@ function AnalyticsPanel({ deliverables }) {
 
 function KpiCard({ label, value, color }) {
   return (
-    <div
-      className="rounded-xl border"
-      style={{
-        background: "#FFFFFF",
-        borderColor: "#E5E7EB",
-        padding: "12px 16px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-      }}
-    >
-      <div style={{ fontSize: 10, fontWeight: 600, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: color || NEUTRAL.graphite, letterSpacing: "-0.02em", lineHeight: 1.1 }}>
-        {value}
-      </div>
+    <div className="rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", padding: "12px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: color || NEUTRAL.graphite, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{value}</div>
     </div>
   );
 }
@@ -484,6 +429,8 @@ export function EntregasView({ user, users = [] }) {
     loading,
     canWrite,
     createDeliverable,
+    updateDeliverable,
+    deleteDeliverable,
     changeStage,
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
 
@@ -494,6 +441,7 @@ export function EntregasView({ user, users = [] }) {
   const [draggedItem, setDraggedItem]     = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [quickAddStage, setQuickAddStage] = useState(null);
+  const [selected, setSelected]           = useState(null);
 
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedItem || !canWrite) return;
@@ -506,11 +454,25 @@ export function EntregasView({ user, users = [] }) {
     await createDeliverable(item);
   }, [createDeliverable]);
 
+  const handleUpdate = useCallback(async (id, patch) => {
+    await updateDeliverable(id, patch);
+    setSelected(prev => prev?.id === id ? { ...prev, ...patch } : prev);
+  }, [updateDeliverable]);
+
+  const handleDelete = useCallback(async (id) => {
+    await deleteDeliverable(id);
+  }, [deleteDeliverable]);
+
+  const syncSelected = useMemo(() => {
+    if (!selected) return null;
+    return deliverables.find(d => d.id === selected.id) || selected;
+  }, [deliverables, selected]);
+
   const kpis = useMemo(() => ({
-    total:      deliverables.length,
-    pendente:   deliverables.filter(d => d.stage === "pendente").length,
-    produzindo: deliverables.filter(d => d.stage === "produzindo").length,
-    entregue:   deliverables.filter(d => d.stage === "entregue").length,
+    total:       deliverables.length,
+    solicitacao: deliverables.filter(d => d.stage === "solicitacao").length,
+    em_producao: deliverables.filter(d => d.stage === "em_producao").length,
+    entregue:    deliverables.filter(d => d.stage === "entregue").length,
   }), [deliverables]);
 
   return (
@@ -534,9 +496,9 @@ export function EntregasView({ user, users = [] }) {
       {/* KPI bar */}
       <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
         <KpiCard label="Total"       value={String(kpis.total)} />
-        <KpiCard label="Pendente"    value={String(kpis.pendente)} />
-        <KpiCard label="Produzindo"  value={String(kpis.produzindo)} color="#D97706" />
-        <KpiCard label="Entregue"    value={String(kpis.entregue)}   color="#16A34A" />
+        <KpiCard label="Solicitação" value={String(kpis.solicitacao)} />
+        <KpiCard label="Em Produção" value={String(kpis.em_producao)} color="#D97706" />
+        <KpiCard label="Entregue"    value={String(kpis.entregue)} color="#16A34A" />
       </div>
 
       {/* Loading */}
@@ -578,7 +540,7 @@ export function EntregasView({ user, users = [] }) {
                       flexShrink: 0,
                     }}
                   >
-                    {/* 4px top color band */}
+                    {/* Color band */}
                     <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
 
                     {/* Column header */}
@@ -589,25 +551,18 @@ export function EntregasView({ user, users = [] }) {
                       <div className="min-w-0 flex-1">
                         <div
                           className="font-semibold flex items-center gap-1.5"
-                          style={{
-                            color: NEUTRAL.graphite,
-                            fontSize: 11,
-                            letterSpacing: "0.08em",
-                            textTransform: "uppercase",
-                          }}
+                          style={{ color: NEUTRAL.graphite, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}
                         >
                           <span>{stage.name}</span>
                           <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>({count})</span>
                         </div>
                         {stage.sla && (
-                          <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
-                            SLA {stage.sla}d
-                          </div>
+                          <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>SLA {stage.sla}d</div>
                         )}
                       </div>
                       {canWrite && !stage.terminal && (
                         <button
-                          onClick={() => setQuickAddStage(quickAddStage === stage.id ? null : stage.id)}
+                          onClick={() => setQuickAddStage(stage.id)}
                           className="flex items-center justify-center rounded-md transition-colors"
                           style={{ width: 28, height: 28, color: NEUTRAL.slate, background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
                           onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
@@ -650,9 +605,9 @@ export function EntregasView({ user, users = [] }) {
                             item={item}
                             ownerName={usersById.get(item.assignee)?.name || null}
                             onDragStart={setDraggedItem}
-                            stages={DELIVERABLE_STAGES}
                             onMoveToStage={canWrite ? changeStage : null}
                             canWrite={canWrite}
+                            onClick={setSelected}
                           />
                         ))
                       )}
@@ -669,7 +624,7 @@ export function EntregasView({ user, users = [] }) {
 
       {!loading && (
         <p className="text-xs text-center mt-3" style={{ color: NEUTRAL.slate }}>
-          Arraste para mover · Use "+" no cabeçalho ou o botão flutuante para criar
+          Arraste para mover · Use "+" no cabeçalho ou o botão flutuante para criar · Clique no card para ver detalhes
         </p>
       )}
     </div>
@@ -683,6 +638,18 @@ export function EntregasView({ user, users = [] }) {
         campaigns={campaigns}
         onAdd={handleQuickAdd}
         onClose={() => setQuickAddStage(null)}
+      />
+    )}
+
+    {/* Detail drawer */}
+    {syncSelected && (
+      <DeliverableDetailDrawer
+        item={syncSelected}
+        onClose={() => setSelected(null)}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+        users={Array.from(usersById.values())}
+        canWrite={canWrite}
       />
     )}
 
@@ -701,7 +668,7 @@ export function EntregasView({ user, users = [] }) {
           cursor: "pointer",
           boxShadow: "0 4px 16px rgba(30,77,140,0.35)",
         }}
-        onClick={() => setQuickAddStage("pendente")}
+        onClick={() => setQuickAddStage("solicitacao")}
         onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
         onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
         aria-label="Criar nova entrega"

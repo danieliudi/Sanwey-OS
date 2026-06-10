@@ -10,10 +10,25 @@ export const MARKETING_STAGES = [
 ];
 
 export const DELIVERABLE_STAGES = [
-  { id: "pendente",   name: "Pendente",   color: "#9CA3AF", sla: null },
-  { id: "produzindo", name: "Produzindo", color: "#D97706", sla: 7 },
-  { id: "revisao",    name: "Revisão",    color: "#7C3AED", sla: 3 },
-  { id: "entregue",   name: "Entregue",   color: "#16A34A", sla: null, terminal: true },
+  { id: "solicitacao", name: "Solicitação",  color: "#6366F1", sla: null },
+  { id: "em_producao", name: "Em Produção",  color: "#D97706", sla: 7 },
+  { id: "revisao",     name: "Revisão",      color: "#7C3AED", sla: 3 },
+  { id: "entregue",    name: "Entregue",     color: "#16A34A", sla: null, terminal: true },
+];
+
+export const DELIVERABLE_DEPARTMENTS = [
+  "Vendas", "Marketing", "Operações", "Financeiro", "RH", "TI", "Diretoria", "Outro",
+];
+
+export const DELIVERABLE_PRIORITIES = [
+  { id: "baixa", label: "Baixa", color: "#16A34A" },
+  { id: "media", label: "Média", color: "#D97706" },
+  { id: "alta",  label: "Alta",  color: "#DC2626" },
+];
+
+export const DELIVERABLE_REQUEST_TYPES = [
+  "Design", "Vídeo", "Copywriting", "Social Media", "Email Marketing",
+  "Apresentação", "Landing Page", "Outro",
 ];
 
 export const EXPENSE_CATEGORIES = [

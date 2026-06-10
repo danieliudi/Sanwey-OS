@@ -8,11 +8,27 @@ function rowToDeliverable(r) {
     id:             r.id,
     companyIds:     Array.isArray(r.company_ids) ? r.company_ids : [],
     campaignId:     r.campaign_id ?? null,
+
+    // Formulário Inicial
     title:          r.title,
+    requesterName:  r.requester_name ?? null,
+    department:     r.department ?? null,
+    description:    r.description ?? null,
+    priority:       r.priority ?? "media",
+    deadline:       r.deadline ?? null,
+
+    // Etapa
     stage:          r.stage,
     stageChangedAt: r.stage_changed_at ?? null,
+
+    // Campos da fase atual
+    requestType:    r.request_type ?? null,
+    requestDate:    r.request_date ?? null,
     assignee:       r.assignee ?? null,
-    deadline:       r.deadline ?? null,
+    requestStatus:  r.request_status ?? "pendente",
+    observations:   r.observations ?? null,
+
+    // Padrão
     notes:          Array.isArray(r.notes) ? r.notes : [],
     createdBy:      r.created_by ?? null,
     createdAt:      r.created_at ?? null,
@@ -24,11 +40,23 @@ function deliverableToRow(d, extras = {}) {
   return {
     company_ids:      d.companyIds ?? [],
     campaign_id:      d.campaignId ?? null,
+
     title:            d.title,
-    stage:            d.stage ?? "pendente",
-    stage_changed_at: d.stageChangedAt ?? new Date().toISOString(),
-    assignee:         d.assignee ?? null,
+    requester_name:   d.requesterName ?? null,
+    department:       d.department ?? null,
+    description:      d.description ?? null,
+    priority:         d.priority ?? "media",
     deadline:         d.deadline ?? null,
+
+    stage:            d.stage ?? "solicitacao",
+    stage_changed_at: d.stageChangedAt ?? new Date().toISOString(),
+
+    request_type:     d.requestType ?? null,
+    request_date:     d.requestDate ?? null,
+    assignee:         d.assignee ?? null,
+    request_status:   d.requestStatus ?? "pendente",
+    observations:     d.observations ?? null,
+
     notes:            d.notes ?? [],
     ...extras,
   };
@@ -95,7 +123,6 @@ export function useMarketingDeliverables({ userId, role } = {}) {
       .single();
     if (err) throw err;
     const created = rowToDeliverable(data);
-    // Optimistic: add immediately without waiting for real-time
     setDeliverables(prev => prev.some(d => d.id === created.id) ? prev : [created, ...prev]);
     return created;
   }, [canWrite, userId]);
