@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import {
@@ -11,9 +11,11 @@ import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
 import { Select } from "../ui/Select";
 
-// ── Quick-create form ────────────────────────────────────────────────────────
+// ── Create modal ─────────────────────────────────────────────────────────────
 
-function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
+function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
+  const stage = MARKETING_STAGES.find(s => s.id === stageId);
+
   const [name, setName]             = useState("");
   const [channel, setChannel]       = useState("");
   const [kpi, setKpi]               = useState("");
@@ -28,11 +30,14 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState(null);
 
-  const toggleCompany = (id) => {
-    setCompanyIds(prev =>
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
-    );
-  };
+  useEffect(() => {
+    const h = e => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const toggleCompany = (id) =>
+    setCompanyIds(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,7 +47,6 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
     setError(null);
     try {
       await onAdd({
-        id:             crypto.randomUUID?.() || `mkt_${Date.now()}`,
         name:           name.trim(),
         channel:        channel || null,
         kpi:            kpi || null,
@@ -60,7 +64,7 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
         starred:        false,
         approvalChecklist: [],
       });
-      onCancel();
+      onClose();
     } catch (err) {
       setError(err?.message || "Erro ao criar campanha.");
     } finally {
@@ -68,156 +72,210 @@ function CampaignCreateForm({ stageId, currentUser, users, onAdd, onCancel }) {
     }
   };
 
-  const focusBlue  = e => { e.target.style.borderColor = "#1E4D8C"; };
-  const blurGray   = e => { e.target.style.borderColor = "#D1D5DB"; };
+  const focusBlue = e => { e.target.style.borderColor = "#1E4D8C"; };
+  const blurGray  = e => { e.target.style.borderColor = "#D1D5DB"; };
+  const labelSt   = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
+  const inputSt   = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA" };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mx-2 mb-2 rounded-xl border p-2.5 space-y-2"
-      style={{ background: "#FFFFFF", borderColor: "#E0E7FF" }}
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
     >
-      <input
-        autoFocus
-        type="text"
-        placeholder="Nome da campanha *"
-        value={name}
-        onChange={e => setName(e.target.value)}
-        className="w-full text-xs rounded-xl border px-2.5 py-1.5 outline-none"
-        style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-        onFocus={focusBlue}
-        onBlur={blurGray}
-      />
-
-      <div className="flex flex-wrap gap-1.5">
-        {COMPANY_IDS.map(id => {
-          const co = COMPANIES[id];
-          const sel = companyIds.includes(id);
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => toggleCompany(id)}
-              className="px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-colors"
-              style={{
-                borderColor: sel ? co.primary : "#E5E7EB",
-                background:  sel ? co.primary + "22" : "#FFF",
-                color:       sel ? co.primary : NEUTRAL.slate,
-                cursor:      "pointer",
-              }}
-            >
-              {co.short}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex gap-1.5">
-        <select
-          value={channel}
-          onChange={e => setChannel(e.target.value)}
-          className="flex-1 text-xs rounded-xl border outline-none px-2 py-1.5"
-          style={{ borderColor: "#D1D5DB", color: channel ? NEUTRAL.graphite : NEUTRAL.slate }}
-        >
-          <option value="">Canal</option>
-          {MARKETING_CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select
-          value={kpi}
-          onChange={e => setKpi(e.target.value)}
-          className="flex-1 text-xs rounded-xl border outline-none px-2 py-1.5"
-          style={{ borderColor: "#D1D5DB", color: kpi ? NEUTRAL.graphite : NEUTRAL.slate }}
-        >
-          <option value="">KPI principal</option>
-          {MARKETING_KPIS.map(k => <option key={k} value={k}>{k}</option>)}
-        </select>
-      </div>
-
-      <div className="flex gap-1.5">
-        <input
-          type="number"
-          placeholder="Budget R$"
-          value={budget}
-          onChange={e => setBudget(e.target.value)}
-          className="flex-1 text-xs rounded-xl border px-2.5 py-1.5 outline-none"
-          style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-          onFocus={focusBlue}
-          onBlur={blurGray}
-        />
-        <select
-          value={owner}
-          onChange={e => setOwner(e.target.value)}
-          className="flex-1 text-xs rounded-xl border outline-none px-2 py-1.5"
-          style={{ borderColor: "#D1D5DB", color: owner ? NEUTRAL.graphite : NEUTRAL.slate }}
-        >
-          <option value="">Responsável</option>
-          {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
-      </div>
-
-      <div className="flex gap-1.5">
-        <div className="flex-1 flex flex-col gap-0.5">
-          <label className="text-[10px] font-semibold pl-0.5" style={{ color: NEUTRAL.slate }}>Lançamento</label>
-          <input
-            type="date"
-            value={launchDate}
-            onChange={e => setLaunchDate(e.target.value)}
-            className="w-full text-xs rounded-xl border px-2.5 py-1.5 outline-none"
-            style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-            onFocus={focusBlue}
-            onBlur={blurGray}
-          />
+      <div
+        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+              Nova campanha
+            </div>
+            {stage && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
+                <span style={{ fontSize: 11, color: NEUTRAL.slate, fontWeight: 500 }}>{stage.name}</span>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 6, borderRadius: 8, display: "flex", alignItems: "center" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+          >
+            <X size={18} />
+          </button>
         </div>
-        <div className="flex-1 flex flex-col gap-0.5">
-          <label className="text-[10px] font-semibold pl-0.5" style={{ color: NEUTRAL.slate }}>Encerramento</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={e => setEndDate(e.target.value)}
-            className="w-full text-xs rounded-xl border px-2.5 py-1.5 outline-none"
-            style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-            onFocus={focusBlue}
-            onBlur={blurGray}
-          />
-        </div>
+
+        {/* Body */}
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          {/* Nome */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelSt}>Nome da campanha <span style={{ color: "#DC2626" }}>*</span></label>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Ex: Campanha de Verão 2026"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={inputSt}
+              onFocus={focusBlue}
+              onBlur={blurGray}
+            />
+          </div>
+
+          {/* Empresa */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelSt}>Empresa <span style={{ color: "#DC2626" }}>*</span></label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {COMPANY_IDS.map(id => {
+                const co = COMPANIES[id];
+                const sel = companyIds.includes(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => toggleCompany(id)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 99,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      border: `1px solid ${sel ? co.primary : "#E5E7EB"}`,
+                      background: sel ? co.primary + "22" : "#FFF",
+                      color: sel ? co.primary : NEUTRAL.slate,
+                      cursor: "pointer",
+                      transition: "all 0.1s",
+                    }}
+                  >
+                    {co.short}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Canal + KPI */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={labelSt}>Canal</label>
+              <select
+                value={channel}
+                onChange={e => setChannel(e.target.value)}
+                className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+                style={{ ...inputSt, color: channel ? NEUTRAL.graphite : NEUTRAL.slate }}
+              >
+                <option value="">Selecionar</option>
+                {MARKETING_CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelSt}>KPI principal</label>
+              <select
+                value={kpi}
+                onChange={e => setKpi(e.target.value)}
+                className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+                style={{ ...inputSt, color: kpi ? NEUTRAL.graphite : NEUTRAL.slate }}
+              >
+                <option value="">Selecionar</option>
+                {MARKETING_KPIS.map(k => <option key={k} value={k}>{k}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Budget + Responsável */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={labelSt}>Budget (R$)</label>
+              <input
+                type="number"
+                placeholder="0"
+                value={budget}
+                onChange={e => setBudget(e.target.value)}
+                className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                style={inputSt}
+                onFocus={focusBlue}
+                onBlur={blurGray}
+              />
+            </div>
+            <div>
+              <label style={labelSt}>Responsável</label>
+              <select
+                value={owner}
+                onChange={e => setOwner(e.target.value)}
+                className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+                style={{ ...inputSt, color: owner ? NEUTRAL.graphite : NEUTRAL.slate }}
+              >
+                <option value="">Selecionar</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Lançamento + Encerramento */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div>
+              <label style={labelSt}>Data de lançamento</label>
+              <input
+                type="date"
+                value={launchDate}
+                onChange={e => setLaunchDate(e.target.value)}
+                className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                style={inputSt}
+                onFocus={focusBlue}
+                onBlur={blurGray}
+              />
+            </div>
+            <div>
+              <label style={labelSt}>Encerramento</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                style={inputSt}
+                onFocus={focusBlue}
+                onBlur={blurGray}
+              />
+            </div>
+          </div>
+
+          {/* Agência */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={labelSt}>Agência (opcional)</label>
+            <input
+              type="text"
+              placeholder="Nome da agência"
+              value={agencyName}
+              onChange={e => setAgencyName(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={inputSt}
+              onFocus={focusBlue}
+              onBlur={blurGray}
+            />
+          </div>
+
+          {error && (
+            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={saving || !name.trim()}
+            className="w-full font-semibold py-2.5 rounded-xl text-sm"
+            style={{ background: "#1E4D8C", color: "#FFF", opacity: saving || !name.trim() ? 0.5 : 1, border: "none", cursor: saving || !name.trim() ? "default" : "pointer" }}
+          >
+            {saving ? "Criando…" : "Criar campanha"}
+          </button>
+        </form>
       </div>
-
-      <input
-        type="text"
-        placeholder="Nome da agência (opcional)"
-        value={agencyName}
-        onChange={e => setAgencyName(e.target.value)}
-        className="w-full text-xs rounded-xl border px-2.5 py-1.5 outline-none"
-        style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-        onFocus={focusBlue}
-        onBlur={blurGray}
-      />
-
-      {error && (
-        <div className="text-[11px] rounded-lg px-2 py-1.5" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
-          {error}
-        </div>
-      )}
-
-      <div className="flex gap-1.5">
-        <button
-          type="submit"
-          disabled={saving || !name.trim()}
-          className="flex-1 text-xs font-semibold py-1.5 rounded-xl"
-          style={{ background: "#1E4D8C", color: "#FFF", opacity: saving || !name.trim() ? 0.5 : 1, border: "none", cursor: saving || !name.trim() ? "default" : "pointer" }}
-        >
-          {saving ? "Salvando…" : "Criar campanha"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-2.5 text-xs rounded-xl border"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFF", cursor: "pointer" }}
-        >
-          <X size={12} />
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
 
@@ -532,13 +590,8 @@ export function MarketingView({ user, users = [] }) {
     await deleteCampaign(id);
   }, [canWrite, deleteCampaign]);
 
-  const handleQuickAdd = useCallback(async (stageIdOrCampaign, action) => {
-    if (action === "open") {
-      setQuickAddStage(stageIdOrCampaign);
-      return;
-    }
-    await createCampaign(stageIdOrCampaign);
-    setQuickAddStage(null);
+  const handleQuickAdd = useCallback(async (campaign) => {
+    await createCampaign(campaign);
   }, [createCampaign]);
 
   const syncSelected = useMemo(() => {
@@ -738,17 +791,7 @@ export function MarketingView({ user, users = [] }) {
                       className="px-2 pt-1.5 pb-2 space-y-2 flex-1 overflow-y-auto"
                       style={{ maxHeight: "62vh", minHeight: 80 }}
                     >
-                      {quickAddStage === stage.id && (
-                        <CampaignCreateForm
-                          stageId={stage.id}
-                          currentUser={user}
-                          users={users}
-                          onAdd={handleQuickAdd}
-                          onCancel={() => setQuickAddStage(null)}
-                        />
-                      )}
-
-                      {stageCampaigns.length === 0 && quickAddStage !== stage.id ? (
+                      {stageCampaigns.length === 0 ? (
                         <div
                           className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
                           style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}
@@ -813,6 +856,17 @@ export function MarketingView({ user, users = [] }) {
         />
       )}
     </div>
+
+    {/* Create modal */}
+    {quickAddStage && (
+      <CampaignCreateModal
+        stageId={quickAddStage}
+        currentUser={user}
+        users={users}
+        onAdd={handleQuickAdd}
+        onClose={() => setQuickAddStage(null)}
+      />
+    )}
 
     {/* FAB — create new campaign (kanban mode only) */}
     {viewMode === "kanban" && canWrite && (
