@@ -21,12 +21,11 @@ function rowToDeliverable(r) {
     stage:          r.stage,
     stageChangedAt: r.stage_changed_at ?? null,
 
-    // Campos da fase atual
-    requestType:    r.request_type ?? null,
-    requestDate:    r.request_date ?? null,
+    // Top-level assignee (responsible — shown on card)
     assignee:       r.assignee ?? null,
-    requestStatus:  r.request_status ?? "pendente",
-    observations:   r.observations ?? null,
+
+    // Stage-specific data (all stages keyed by stage id)
+    stageData:      r.stage_data ?? {},
 
     // Padrão
     notes:          Array.isArray(r.notes) ? r.notes : [],
@@ -51,11 +50,8 @@ function deliverableToRow(d, extras = {}) {
     stage:            d.stage ?? "solicitacao",
     stage_changed_at: d.stageChangedAt ?? new Date().toISOString(),
 
-    request_type:     d.requestType ?? null,
-    request_date:     d.requestDate ?? null,
     assignee:         d.assignee ?? null,
-    request_status:   d.requestStatus ?? "pendente",
-    observations:     d.observations ?? null,
+    stage_data:       d.stageData ?? {},
 
     notes:            d.notes ?? [],
     ...extras,
