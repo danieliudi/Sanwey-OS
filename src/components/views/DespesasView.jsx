@@ -313,7 +313,7 @@ export function DespesasView({ user, users = [] }) {
             onMouseLeave={e => { e.currentTarget.style.background = "#1E4D8C"; }}
           >
             <Plus size={15} />
-            Nova despesa
+            Nova Despesa
           </button>
         )}
       </div>

@@ -332,14 +332,14 @@ export default function App() {
     }
 
     if (isMarketingUser || isAgencia) {
-      groups.push({
-        label: "Marketing",
-        items: [
-          { id: "marketing",           label: "Campanhas", icon: Megaphone },
-          { id: "marketing-entregas",  label: "Entregas",  icon: Package },
-          { id: "marketing-despesas",  label: "Despesas",  icon: DollarSign },
-        ],
-      });
+      const mktItems = [
+        { id: "marketing",          label: "Campanhas", icon: Megaphone },
+        { id: "marketing-entregas", label: "Entregas",  icon: Package },
+      ];
+      if (!isAgencia) {
+        mktItems.push({ id: "marketing-despesas", label: "Despesas", icon: DollarSign });
+      }
+      groups.push({ label: "Marketing", items: mktItems });
     }
 
     if (isManager) {
@@ -391,8 +391,8 @@ export default function App() {
     if (!isMarketingUser && !isAgencia && marketingOnly.includes(section)) {
       setSection("dashboard");
     }
-    const crmOnly = ["crm", "signals", "explorer"];
-    if (isAgencia && crmOnly.includes(section)) {
+    const agenciaBlocked = ["crm", "signals", "explorer", "marketing-despesas"];
+    if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -689,9 +689,9 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["marketing-despesas"]} element={
-            (isMarketingUser || isAgencia)
+            (isMarketingUser && !isAgencia)
               ? <DespesasView user={currentUser} users={users} />
-              : <Navigate to={ROUTES.dashboard} replace />
+              : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES.profile} element={
             <UserProfileView

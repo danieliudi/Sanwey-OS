@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, Calendar as CalendarIcon, Settings } from "lucide-react";
+import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
@@ -640,19 +640,40 @@ export function MarketingView({ user, users = [] }) {
                         {totalBudget > 0 ? formatK(totalBudget) : "R$ 0"}
                       </div>
                     </div>
-                    {isManager && !stage.terminal && (
-                      <button
-                        onClick={() => {}}
-                        className="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer transition-colors text-xs font-semibold"
-                        style={{ color: NEUTRAL.slate, background: "transparent", border: "1px solid transparent" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
-                        title="Editar campos desta etapa"
-                      >
-                        <Settings size={11} />
-                        Editar fase
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {canWrite && !stage.terminal && (
+                        <button
+                          onClick={() => setQuickAddStage(stage.id)}
+                          title="Nova campanha"
+                          style={{
+                            width: 24,
+                            height: 24,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "transparent",
+                            border: "1px solid #E5E7EB",
+                            borderRadius: 6,
+                            color: NEUTRAL.slate,
+                            cursor: "pointer",
+                            flexShrink: 0,
+                            transition: "background 0.12s, border-color 0.12s, color 0.12s",
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = "#1E4D8C";
+                            e.currentTarget.style.borderColor = "#1E4D8C";
+                            e.currentTarget.style.color = "#FFF";
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.borderColor = "#E5E7EB";
+                            e.currentTarget.style.color = NEUTRAL.slate;
+                          }}
+                        >
+                          <Plus size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Cards */}
@@ -672,9 +693,9 @@ export function MarketingView({ user, users = [] }) {
                           </>
                         ) : (
                           <>
-                            <span style={{ opacity: 0.5 }}>Nenhum negócio nesta etapa</span>
-                            {!stage.terminal && (
-                              <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>
+                            <span style={{ opacity: 0.5 }}>Nenhuma campanha</span>
+                            {!stage.terminal && canWrite && (
+                              <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card ou use o + acima</span>
                             )}
                           </>
                         )}
