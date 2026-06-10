@@ -28,6 +28,8 @@ function rowToDeliverable(r) {
     stageData:      r.stage_data ?? {},
 
     // Padrão
+    starred:        r.starred ?? false,
+    activities:     Array.isArray(r.activities) ? r.activities : [],
     notes:          Array.isArray(r.notes) ? r.notes : [],
     createdBy:      r.created_by ?? null,
     createdAt:      r.created_at ?? null,
@@ -53,6 +55,8 @@ function deliverableToRow(d, extras = {}) {
     assignee:         d.assignee ?? null,
     stage_data:       d.stageData ?? {},
 
+    starred:          d.starred ?? false,
+    activities:       d.activities ?? [],
     notes:            d.notes ?? [],
     ...extras,
   };
@@ -143,16 +147,34 @@ export function useMarketingDeliverables({ userId, role } = {}) {
 
   const changeStage = useCallback(async (id, stage) => {
     if (!isSupabaseConfigured || !canWrite) return;
-    const now = new Date().toISOString();
+    const now      = new Date().toISOString();
+    const current  = deliverables.find(d => d.id === id);
+    const stageName = stage; // caller can pass a display name if needed
+    const activity  = {
+      type:        "stage_change",
+      description: `Movido para ${stageName}`,
+      at:          now,
+    };
+    const activities = [...(current?.activities || []), activity];
     const { error: err } = await supabase
       .from(TABLE)
-      .update({ stage, stage_changed_at: now })
+      .update({ stage, stage_changed_at: now, activities })
       .eq("id", id);
     if (err) throw err;
     setDeliverables(prev =>
-      prev.map(d => d.id === id ? { ...d, stage, stageChangedAt: now } : d)
+      prev.map(d => d.id === id ? { ...d, stage, stageChangedAt: now, activities } : d)
     );
-  }, [canWrite]);
+  }, [canWrite, deliverables]);
+
+  const toggleStar = useCallback(async (id) => {
+    if (!isSupabaseConfigured || !canWrite) return;
+    const current = deliverables.find(d => d.id === id);
+    if (!current) return;
+    const starred = !current.starred;
+    const { error: err } = await supabase.from(TABLE).update({ starred }).eq("id", id);
+    if (err) throw err;
+    setDeliverables(prev => prev.map(d => d.id === id ? { ...d, starred } : d));
+  }, [canWrite, deliverables]);
 
   return {
     deliverables,
@@ -163,6 +185,7 @@ export function useMarketingDeliverables({ userId, role } = {}) {
     updateDeliverable,
     deleteDeliverable,
     changeStage,
+    toggleStar,
     refetch: fetchAll,
   };
 }
