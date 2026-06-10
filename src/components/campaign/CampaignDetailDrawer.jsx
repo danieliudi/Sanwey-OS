@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
-  Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
+  Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks, MessageSquare,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS } from "../../constants/marketing-pipelines";
@@ -357,13 +357,91 @@ function EditSelect({ value, onChange, options, placeholder = "Selecionar…" })
   );
 }
 
+// ── Comments tab ──────────────────────────────────────────────────────────────
+
+function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
+  const [notes, setNotes] = useState(campaign.notes || []);
+  const [newNote, setNewNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setNotes(campaign.notes || []); }, [campaign.id, campaign.notes]);
+
+  const handleAdd = async () => {
+    const text = newNote.trim();
+    if (!text || !canWrite || isAgencia) return;
+    setSaving(true);
+    const now = new Date().toISOString();
+    const updatedNotes = [...notes, { text, createdAt: now }];
+    const updatedActivities = [...(campaign.activities || []), { text: "Comentário adicionado", at: now }];
+    try {
+      await onUpdate?.(campaign.id, { notes: updatedNotes, activities: updatedActivities });
+      setNotes(updatedNotes);
+      setNewNote("");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {canWrite && !isAgencia && (
+        <div className="space-y-2">
+          <textarea
+            value={newNote}
+            onChange={e => setNewNote(e.target.value)}
+            placeholder="Escreva um comentário…"
+            rows={3}
+            className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
+            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+            onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+            onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAdd(); } }}
+          />
+          <div className="flex justify-end">
+            <button
+              onClick={handleAdd}
+              disabled={!newNote.trim() || saving}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl"
+              style={{
+                background: newNote.trim() ? "#1E4D8C" : "#F3F4F6",
+                color: newNote.trim() ? "#FFF" : NEUTRAL.slate,
+                border: "none",
+                cursor: newNote.trim() ? "pointer" : "default",
+              }}
+            >
+              {saving ? "Salvando…" : "Comentar"}
+            </button>
+          </div>
+        </div>
+      )}
+      {notes.length === 0 ? (
+        <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>
+          Nenhum comentário ainda.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {[...notes].reverse().map((note, i) => (
+            <div key={i} className="p-3 rounded-xl border" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
+              <div className="text-xs whitespace-pre-wrap" style={{ color: NEUTRAL.graphite }}>{note.text}</div>
+              {note.createdAt && (
+                <div className="text-[10px] mt-1" style={{ color: NEUTRAL.slate }}>{formatDateBR(note.createdAt)}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main drawer ───────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "details",   label: "Detalhes",  icon: FileText },
-  { id: "creative",  label: "Criativo",  icon: ListChecks },
-  { id: "files",     label: "Arquivos",  icon: Paperclip },
-  { id: "activity",  label: "Atividade", icon: Activity },
+  { id: "details",   label: "Detalhes",    icon: FileText },
+  { id: "creative",  label: "Criativo",    icon: ListChecks },
+  { id: "files",     label: "Arquivos",    icon: Paperclip },
+  { id: "comments",  label: "Comentários", icon: MessageSquare },
+  { id: "activity",  label: "Atividade",   icon: Activity },
 ];
 
 export function CampaignDetailDrawer({
@@ -783,6 +861,15 @@ export function CampaignDetailDrawer({
               campaign={campaign}
               canDelete={canWrite && !isAgencia}
               currentUserId={currentUser?.id}
+            />
+          )}
+
+          {tab === "comments" && (
+            <ComentariosTab
+              campaign={campaign}
+              canWrite={canWrite}
+              isAgencia={isAgencia}
+              onUpdate={onUpdate}
             />
           )}
 
