@@ -349,14 +349,18 @@ export default function App() {
     }
 
     if (isMarketingUser) {
-      groups.push({
-        label: "Marketing",
-        items: [
-          { id: "marketing",          label: "Campanhas",  icon: Megaphone },
-          { id: "marketing-entregas", label: "Entregas",   icon: Package },
-          { id: "marketing-despesas", label: "Despesas",   icon: DollarSign },
-        ],
-      });
+      const mktItems = [];
+      // Admin and gerente see "Visão Geral" (Marketing Dashboard) since their
+      // "Início" points to the CRM dashboard, not the Marketing one.
+      if (isManager) {
+        mktItems.push({ id: "marketing-home", label: "Visão Geral", icon: LayoutDashboard });
+      }
+      mktItems.push(
+        { id: "marketing",          label: "Campanhas", icon: Megaphone },
+        { id: "marketing-entregas", label: "Entregas",  icon: Package },
+        { id: "marketing-despesas", label: "Despesas",  icon: DollarSign }
+      );
+      groups.push({ label: "Marketing", items: mktItems });
     }
 
     if (isManager) {
@@ -390,7 +394,8 @@ export default function App() {
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
-    if (section === "profile") return "Meu Perfil";
+    if (section === "profile")       return "Meu Perfil";
+    if (section === "marketing-home") return "Visão Geral · Marketing";
     for (const g of navGroups) {
       const hit = g.items.find(i => i.id === section);
       if (hit) return hit.label;
@@ -705,6 +710,11 @@ export default function App() {
           } />
           <Route path={ROUTES.tutorials} element={
             <TutoriaisView currentUser={currentUser} onNavigate={setSection} />
+          } />
+          <Route path={ROUTES["marketing-home"]} element={
+            isMarketingUser
+              ? <MarketingDashboardView user={currentUser} />
+              : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.marketing} element={
             (isMarketingUser || isAgencia)

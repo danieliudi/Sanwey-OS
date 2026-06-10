@@ -491,18 +491,6 @@ export function MarketingView({ user, users = [] }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {canWrite && (
-            <button
-              onClick={() => setQuickAddStage("briefing")}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "#1E4D8C", color: "#FFF", border: "none", cursor: "pointer" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#163a6b"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#1E4D8C"; }}
-            >
-              <Plus size={15} />
-              Nova Campanha
-            </button>
-          )}
           <button
             onClick={exportCampaignsCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
@@ -652,40 +640,6 @@ export function MarketingView({ user, users = [] }) {
                         {totalBudget > 0 ? formatK(totalBudget) : "R$ 0"}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {canWrite && !stage.terminal && (
-                        <button
-                          onClick={() => setQuickAddStage(stage.id)}
-                          title="Nova campanha"
-                          style={{
-                            width: 24,
-                            height: 24,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "transparent",
-                            border: "1px solid #E5E7EB",
-                            borderRadius: 6,
-                            color: NEUTRAL.slate,
-                            cursor: "pointer",
-                            flexShrink: 0,
-                            transition: "background 0.12s, border-color 0.12s, color 0.12s",
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = "#1E4D8C";
-                            e.currentTarget.style.borderColor = "#1E4D8C";
-                            e.currentTarget.style.color = "#FFF";
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = "transparent";
-                            e.currentTarget.style.borderColor = "#E5E7EB";
-                            e.currentTarget.style.color = NEUTRAL.slate;
-                          }}
-                        >
-                          <Plus size={13} />
-                        </button>
-                      )}
-                    </div>
                   </div>
 
                   {/* Cards */}
@@ -707,7 +661,7 @@ export function MarketingView({ user, users = [] }) {
                           <>
                             <span style={{ opacity: 0.5 }}>Nenhuma campanha</span>
                             {!stage.terminal && canWrite && (
-                              <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card ou use o + acima</span>
+                              <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card ou use o botão flutuante</span>
                             )}
                           </>
                         )}

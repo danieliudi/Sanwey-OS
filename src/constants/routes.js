@@ -19,6 +19,7 @@ export const ROUTES = {
   settings:          "/configuracoes",
   tutorials:         "/ajuda",
   marketing:              "/marketing",
+  "marketing-home":       "/marketing/inicio",
   "marketing-entregas":   "/marketing/entregas",
   "marketing-despesas":   "/marketing/despesas",
   profile:                "/perfil",

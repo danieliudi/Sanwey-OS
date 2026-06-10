@@ -444,38 +444,6 @@ export function EntregasView({ user, users = [] }) {
                         <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>({count})</span>
                       </div>
                     </div>
-                    {canWrite && !stage.terminal && (
-                      <button
-                        onClick={() => setQuickAddStage(stage.id)}
-                        title="Nova entrega"
-                        style={{
-                          width: 24,
-                          height: 24,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          background: "transparent",
-                          border: "1px solid #E5E7EB",
-                          borderRadius: 6,
-                          color: NEUTRAL.slate,
-                          cursor: "pointer",
-                          flexShrink: 0,
-                          transition: "background 0.12s, border-color 0.12s, color 0.12s",
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = "#1E4D8C";
-                          e.currentTarget.style.borderColor = "#1E4D8C";
-                          e.currentTarget.style.color = "#FFF";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = "transparent";
-                          e.currentTarget.style.borderColor = "#E5E7EB";
-                          e.currentTarget.style.color = NEUTRAL.slate;
-                        }}
-                      >
-                        <Plus size={13} />
-                      </button>
-                    )}
                   </div>
 
                   {/* Cards area */}
@@ -501,7 +469,7 @@ export function EntregasView({ user, users = [] }) {
                             <span style={{ opacity: 0.5 }}>Sem entregas</span>
                             {!stage.terminal && canWrite && (
                               <span style={{ opacity: 0.4, fontSize: 10 }}>
-                                Arraste um card ou use o + acima
+                                Arraste um card ou use o botão abaixo
                               </span>
                             )}
                           </>
@@ -552,7 +520,7 @@ export function EntregasView({ user, users = [] }) {
 
       {!loading && (
         <p className="text-xs text-center mt-3" style={{ color: NEUTRAL.slate }}>
-          Arraste para mover entre etapas · Use o + em cada coluna para criar nova entrega
+          Arraste para mover entre etapas · Use o botão flutuante para criar nova entrega
         </p>
       )}
     </div>
