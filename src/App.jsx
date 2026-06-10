@@ -348,7 +348,7 @@ export default function App() {
       });
     }
 
-    if (isPureMarketing) {
+    if (isMarketingUser) {
       groups.push({
         label: "Marketing",
         items: [
@@ -386,7 +386,7 @@ export default function App() {
       ],
     });
     return groups;
-  }, [isManager, isPureMarketing, isAgencia]);
+  }, [isManager, isMarketingUser, isPureMarketing, isAgencia]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
