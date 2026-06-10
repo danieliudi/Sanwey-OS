@@ -660,123 +660,131 @@ export function MarketingView({ user, users = [] }) {
 
       {/* Kanban board */}
       {!loading && viewMode === "kanban" && (
-        <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
+        <div className="relative">
           <div
-            className="flex gap-3"
-            style={{ minWidth: `${MARKETING_STAGES.length * 260}px` }}
-          >
-            {MARKETING_STAGES.map(stage => {
-              const stageCampaigns = filteredCampaigns.filter(c => c.stage === stage.id);
-              const count       = stageCampaigns.length;
-              const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
-              const isOver      = dragOverStage === stage.id;
+            className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
+            style={{ background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)" }}
+          />
+          <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
+            <div
+              className="flex gap-3"
+              style={{ minWidth: `${MARKETING_STAGES.length * 264}px` }}
+            >
+              {MARKETING_STAGES.map(stage => {
+                const stageCampaigns = filteredCampaigns.filter(c => c.stage === stage.id);
+                const count       = stageCampaigns.length;
+                const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
+                const isOver      = dragOverStage === stage.id;
 
-              return (
-                <div
-                  key={stage.id}
-                  onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id); }}
-                  onDrop={e => { e.preventDefault(); handleDrop(stage.id); }}
-                  className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                  style={{
-                    width: 248,
-                    minWidth: 248,
-                    background: isOver ? "#F0F7FF" : "#fef1f0",
-                    borderColor: isOver ? stage.color + "70" : "#E5E7EB",
-                    boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
-                    minHeight: 480,
-                    flexShrink: 0,
-                  }}
-                >
-                  {/* 4px top color band */}
-                  <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
-
-                  {/* Column header */}
+                return (
                   <div
-                    className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                    style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}
+                    key={stage.id}
+                    onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id); }}
+                    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }}
+                    onDrop={e => { e.preventDefault(); handleDrop(stage.id); }}
+                    className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+                    style={{
+                      width: 264,
+                      minWidth: 264,
+                      background: isOver ? "#F0F7FF" : "#fef1f0",
+                      borderColor: isOver ? stage.color + "70" : "#E5E7EB",
+                      boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
+                      minHeight: 480,
+                      flexShrink: 0,
+                    }}
                   >
-                    <div className="min-w-0 flex-1">
-                      <div
-                        className="font-semibold flex items-center gap-1.5"
-                        style={{
-                          color: NEUTRAL.graphite,
-                          fontSize: 11,
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        <span>{stage.name}</span>
-                        <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>({count})</span>
+                    {/* 4px top color band */}
+                    <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
+
+                    {/* Column header */}
+                    <div
+                      className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
+                      style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className="font-semibold flex items-center gap-1.5"
+                          style={{
+                            color: NEUTRAL.graphite,
+                            fontSize: 11,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          <span>{stage.name}</span>
+                          <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>({count})</span>
+                        </div>
+                        <div className="text-xs mt-0.5 font-semibold" style={{ color: NEUTRAL.slate }}>
+                          {totalBudget > 0 ? formatK(totalBudget) : "R$ 0"}
+                          {stage.sla && <span style={{ fontWeight: 400, marginLeft: 6 }}>· SLA {stage.sla}d</span>}
+                        </div>
                       </div>
-                      <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate, fontWeight: 600 }}>
-                        {totalBudget > 0 ? formatK(totalBudget) : "R$ 0"}
-                      </div>
+                      {canWrite && !stage.terminal && (
+                        <button
+                          onClick={() => setQuickAddStage(quickAddStage === stage.id ? null : stage.id)}
+                          className="flex items-center justify-center rounded-md transition-colors"
+                          style={{ width: 28, height: 28, color: NEUTRAL.slate, background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                          title="Adicionar campanha nesta etapa"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Cards */}
+                    <div
+                      className="px-2 pt-1.5 pb-2 space-y-2 flex-1 overflow-y-auto"
+                      style={{ maxHeight: "62vh", minHeight: 80 }}
+                    >
+                      {quickAddStage === stage.id && (
+                        <CampaignCreateForm
+                          stageId={stage.id}
+                          currentUser={user}
+                          users={users}
+                          onAdd={handleQuickAdd}
+                          onCancel={() => setQuickAddStage(null)}
+                        />
+                      )}
+
+                      {stageCampaigns.length === 0 && quickAddStage !== stage.id ? (
+                        <div
+                          className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
+                          style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}
+                        >
+                          {isOver ? (
+                            <>
+                              <Plus size={16} style={{ opacity: 0.5 }} />
+                              <span>Soltar aqui</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ opacity: 0.5 }}>Nenhuma campanha</span>
+                              {!stage.terminal && canWrite && (
+                                <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste ou clique no "+" acima</span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        stageCampaigns.map(c => (
+                          <CampaignKanbanCard
+                            key={c.id}
+                            campaign={c}
+                            ownerName={usersById.get(c.owner)?.name || null}
+                            onClick={setSelected}
+                            onDragStart={c => setDraggedCampaign(c)}
+                            stages={MARKETING_STAGES}
+                            onMoveToStage={changeStage}
+                          />
+                        ))
+                      )}
                     </div>
                   </div>
-
-                  {/* Cards */}
-                  <div
-                    className="px-2 pt-0.5 pb-1 space-y-2 flex-1 overflow-y-auto"
-                    style={{ maxHeight: "62vh", minHeight: 80 }}
-                  >
-                    {stageCampaigns.length === 0 ? (
-                      <div
-                        className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
-                        style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}
-                      >
-                        {isOver ? (
-                          <>
-                            <Plus size={16} style={{ opacity: 0.5 }} />
-                            <span>Soltar aqui</span>
-                          </>
-                        ) : (
-                          <>
-                            <span style={{ opacity: 0.5 }}>Nenhuma campanha</span>
-                            {!stage.terminal && canWrite && (
-                              <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card ou use o botão flutuante</span>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      stageCampaigns.map(c => (
-                        <CampaignKanbanCard
-                          key={c.id}
-                          campaign={c}
-                          ownerName={usersById.get(c.owner)?.name || null}
-                          onClick={setSelected}
-                          onDragStart={c => setDraggedCampaign(c)}
-                          stages={MARKETING_STAGES}
-                          onMoveToStage={changeStage}
-                        />
-                      ))
-                    )}
-
-                    {quickAddStage === stage.id ? (
-                      <CampaignCreateForm
-                        stageId={stage.id}
-                        currentUser={user}
-                        users={users}
-                        onAdd={handleQuickAdd}
-                        onCancel={() => setQuickAddStage(null)}
-                      />
-                    ) : (
-                      canWrite && stageCampaigns.length > 0 && (
-                        <button
-                          onClick={() => setQuickAddStage(stage.id)}
-                          className="w-full flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs transition-opacity"
-                          style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", opacity: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.background = "#F3F4F6"; }}
-                          onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.background = "none"; }}
-                        >
-                          <Plus size={13} /> Nova campanha
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -788,7 +796,7 @@ export function MarketingView({ user, users = [] }) {
 
       {!loading && viewMode === "kanban" && (
         <p className="text-xs text-center mt-3" style={{ color: NEUTRAL.slate }}>
-          Arraste para mover entre etapas · Clique no card para ver detalhes
+          Arraste para mover · Use "+" no cabeçalho ou o botão flutuante para criar · Clique no card para ver detalhes
         </p>
       )}
 

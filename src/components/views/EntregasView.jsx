@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Plus, X, Package, Clock, MoreVertical, ArrowRight } from "lucide-react";
+import { Plus, X, Package, Clock, MoreVertical, ArrowRight, TrendingUp, ChevronDown } from "lucide-react";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
@@ -319,6 +319,82 @@ function DeliverableCreateForm({ stageId, currentUser, users, campaigns, onAdd, 
   );
 }
 
+// ── Analytics panel (collapsible) ─────────────────────────────────────────────
+
+function AnalyticsPanel({ deliverables }) {
+  const [open, setOpen] = useState(false);
+
+  const stageStats = useMemo(() => {
+    return DELIVERABLE_STAGES.map(stage => {
+      const items   = deliverables.filter(d => d.stage === stage.id);
+      const count   = items.length;
+      const overdue = items.filter(d => d.deadline && new Date(d.deadline) < new Date()).length;
+      const daysArr = items
+        .filter(d => d.stageChangedAt)
+        .map(d => Math.floor((Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000));
+      const avgDays = daysArr.length > 0
+        ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length)
+        : null;
+      return { stage, count, overdue, avgDays };
+    });
+  }, [deliverables]);
+
+  const maxCount = Math.max(...stageStats.map(s => s.count), 1);
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 text-xs font-medium transition-colors duration-150"
+        style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+        onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
+        onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+      >
+        <TrendingUp size={13} strokeWidth={2} />
+        <span>Análise das entregas</span>
+        <ChevronDown
+          size={13}
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+        />
+      </button>
+
+      {open && (
+        <div
+          className="rounded-2xl border mt-3 p-5"
+          style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+        >
+          <div className="text-xs font-semibold mb-4" style={{ color: NEUTRAL.slate }}>
+            Distribuição por etapa
+          </div>
+          <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+            {stageStats.map(({ stage, count, overdue, avgDays }) => (
+              <div key={stage.id}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: NEUTRAL.graphite }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, display: "inline-block", flexShrink: 0 }} />
+                    {stage.name}
+                  </div>
+                  <div className="text-xs" style={{ color: overdue > 0 ? "#DC2626" : NEUTRAL.slate }}>
+                    {count}{overdue > 0 ? ` · ${overdue} atrasada${overdue !== 1 ? "s" : ""}` : ""}
+                  </div>
+                </div>
+                <div style={{ height: 6, background: "#F1F3F5", borderRadius: 3, overflow: "hidden", marginBottom: 6 }}>
+                  <div style={{ height: "100%", width: `${(count / maxCount) * 100}%`, background: stage.color, borderRadius: 3, transition: "width 0.4s ease" }} />
+                </div>
+                <div style={{ fontSize: 10, color: NEUTRAL.slate }}>
+                  {avgDays !== null
+                    ? `Média ${avgDays}d nesta etapa${stage.sla ? ` · SLA: ${stage.sla}d` : ""}`
+                    : count > 0 ? "Sem tempo registrado" : "—"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── KPI card ──────────────────────────────────────────────────────────────────
 
 function KpiCard({ label, value, color }) {
@@ -414,132 +490,141 @@ export function EntregasView({ user, users = [] }) {
 
       {/* Kanban board */}
       {!loading && (
-        <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
+        <div className="relative">
           <div
-            className="flex gap-3"
-            style={{ minWidth: `${DELIVERABLE_STAGES.length * 260}px` }}
-          >
-            {DELIVERABLE_STAGES.map(stage => {
-              const stageItems = deliverables.filter(d => d.stage === stage.id);
-              const count  = stageItems.length;
-              const isOver = dragOverStage === stage.id;
+            className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
+            style={{ background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)" }}
+          />
+          <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
+            <div
+              className="flex gap-3"
+              style={{ minWidth: `${DELIVERABLE_STAGES.length * 272}px` }}
+            >
+              {DELIVERABLE_STAGES.map(stage => {
+                const stageItems = deliverables.filter(d => d.stage === stage.id);
+                const count  = stageItems.length;
+                const isOver = dragOverStage === stage.id;
 
-              return (
-                <div
-                  key={stage.id}
-                  onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id); }}
-                  onDrop={e => { e.preventDefault(); handleDrop(stage.id); }}
-                  className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                  style={{
-                    width: 248,
-                    minWidth: 248,
-                    background: isOver ? "#F0F7FF" : "#fef1f0",
-                    borderColor: isOver ? stage.color + "70" : "#E5E7EB",
-                    boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
-                    minHeight: 480,
-                    flexShrink: 0,
-                  }}
-                >
-                  {/* 4px top color band */}
-                  <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
-
-                  {/* Column header */}
+                return (
                   <div
-                    className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                    style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}
+                    key={stage.id}
+                    onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id); }}
+                    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }}
+                    onDrop={e => { e.preventDefault(); handleDrop(stage.id); }}
+                    className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+                    style={{
+                      width: 272,
+                      minWidth: 272,
+                      background: isOver ? "#F0F7FF" : "#fef1f0",
+                      borderColor: isOver ? stage.color + "70" : "#E5E7EB",
+                      boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
+                      minHeight: 480,
+                      flexShrink: 0,
+                    }}
                   >
-                    <div className="min-w-0 flex-1">
-                      <div
-                        className="font-semibold flex items-center gap-1.5"
-                        style={{
-                          color: NEUTRAL.graphite,
-                          fontSize: 11,
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        <span>{stage.name}</span>
-                        <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>({count})</span>
-                      </div>
-                    </div>
-                  </div>
+                    {/* 4px top color band */}
+                    <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
 
-                  {/* Cards area */}
-                  <div
-                    className="px-2 pt-0.5 pb-1 space-y-2 flex-1 overflow-y-auto"
-                    style={{ maxHeight: "62vh", minHeight: 80 }}
-                  >
-                    {stageItems.length === 0 && quickAddStage !== stage.id ? (
-                      <div
-                        className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
-                        style={{
-                          borderColor: isOver ? stage.color + "40" : "#E5E7EB",
-                          color: NEUTRAL.slate,
-                        }}
-                      >
-                        {isOver ? (
-                          <>
-                            <Plus size={16} style={{ opacity: 0.5 }} />
-                            <span>Soltar aqui</span>
-                          </>
-                        ) : (
-                          <>
-                            <span style={{ opacity: 0.5 }}>Sem entregas</span>
-                            {!stage.terminal && canWrite && (
-                              <span style={{ opacity: 0.4, fontSize: 10 }}>
-                                Arraste um card ou use o botão abaixo
-                              </span>
-                            )}
-                          </>
+                    {/* Column header */}
+                    <div
+                      className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
+                      style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className="font-semibold flex items-center gap-1.5"
+                          style={{
+                            color: NEUTRAL.graphite,
+                            fontSize: 11,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          <span>{stage.name}</span>
+                          <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>({count})</span>
+                        </div>
+                        {stage.sla && (
+                          <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+                            SLA {stage.sla}d
+                          </div>
                         )}
                       </div>
-                    ) : (
-                      stageItems.map(item => (
-                        <DeliverableCard
-                          key={item.id}
-                          item={item}
-                          ownerName={usersById.get(item.assignee)?.name || null}
-                          onDragStart={setDraggedItem}
-                          stages={DELIVERABLE_STAGES}
-                          onMoveToStage={canWrite ? changeStage : null}
-                          canWrite={canWrite}
-                        />
-                      ))
-                    )}
-
-                    {quickAddStage === stage.id ? (
-                      <DeliverableCreateForm
-                        stageId={stage.id}
-                        currentUser={user}
-                        users={users}
-                        campaigns={campaigns}
-                        onAdd={handleQuickAdd}
-                        onCancel={() => setQuickAddStage(null)}
-                      />
-                    ) : (
-                      canWrite && stageItems.length > 0 && (
+                      {canWrite && !stage.terminal && (
                         <button
-                          onClick={() => setQuickAddStage(stage.id)}
-                          className="w-full flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs transition-opacity"
-                          style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", opacity: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.background = "#F3F4F6"; }}
-                          onMouseLeave={e => { e.currentTarget.style.opacity = "0"; e.currentTarget.style.background = "none"; }}
+                          onClick={() => setQuickAddStage(quickAddStage === stage.id ? null : stage.id)}
+                          className="flex items-center justify-center rounded-md transition-colors"
+                          style={{ width: 28, height: 28, color: NEUTRAL.slate, background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                          title="Adicionar entrega nesta etapa"
                         >
-                          <Plus size={13} /> Nova entrega
+                          <Plus size={14} />
                         </button>
-                      )
-                    )}
+                      )}
+                    </div>
+
+                    {/* Cards area */}
+                    <div
+                      className="px-2 pt-1.5 pb-2 space-y-2 flex-1 overflow-y-auto"
+                      style={{ maxHeight: "62vh", minHeight: 80 }}
+                    >
+                      {quickAddStage === stage.id && (
+                        <DeliverableCreateForm
+                          stageId={stage.id}
+                          currentUser={user}
+                          users={users}
+                          campaigns={campaigns}
+                          onAdd={handleQuickAdd}
+                          onCancel={() => setQuickAddStage(null)}
+                        />
+                      )}
+
+                      {stageItems.length === 0 && quickAddStage !== stage.id ? (
+                        <div
+                          className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
+                          style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}
+                        >
+                          {isOver ? (
+                            <>
+                              <Plus size={16} style={{ opacity: 0.5 }} />
+                              <span>Soltar aqui</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ opacity: 0.5 }}>Sem entregas</span>
+                              {!stage.terminal && canWrite && (
+                                <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste ou clique no "+" acima</span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        stageItems.map(item => (
+                          <DeliverableCard
+                            key={item.id}
+                            item={item}
+                            ownerName={usersById.get(item.assignee)?.name || null}
+                            onDragStart={setDraggedItem}
+                            stages={DELIVERABLE_STAGES}
+                            onMoveToStage={canWrite ? changeStage : null}
+                            canWrite={canWrite}
+                          />
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
+      {!loading && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} />}
+
       {!loading && (
         <p className="text-xs text-center mt-3" style={{ color: NEUTRAL.slate }}>
-          Arraste para mover entre etapas · Use o botão flutuante para criar nova entrega
+          Arraste para mover · Use "+" no cabeçalho ou o botão flutuante para criar
         </p>
       )}
     </div>
