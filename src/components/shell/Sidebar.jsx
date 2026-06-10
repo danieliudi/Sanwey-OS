@@ -26,10 +26,13 @@ const T = {
 };
 
 const ROLE_LABEL = {
-  admin:     "Administrador",
-  gerente:   "Gerente",
-  vendedor:  "Vendedor",
-  consultor: "Consultor",
+  admin:             "Administrador",
+  gerente:           "Gerente Comercial",
+  vendedor:          "Vendedor",
+  consultor:         "Consultor",
+  marketing:         "Marketing",
+  gerente_marketing: "Gerente de Marketing",
+  agencia:           "Agência",
 };
 
 export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout, mobileOpen, onMobileClose }) {
@@ -103,33 +106,35 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         </div>
 
         {/* ── CTA ── */}
-        <div style={{ padding: "16px 16px 8px" }}>
-          <button
-            onClick={() => handleNavClick("crm")}
-            style={{
-              width: "100%",
-              height: 44,
-              background: "#e30613",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: 8,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontFamily: "inherit",
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: "pointer",
-              transition: "filter 0.15s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.92)"; }}
-            onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
-            Novo Negócio
-          </button>
-        </div>
+        {currentUser?.role !== "agencia" && (
+          <div style={{ padding: "16px 16px 8px" }}>
+            <button
+              onClick={() => handleNavClick("crm")}
+              style={{
+                width: "100%",
+                height: 44,
+                background: "#e30613",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: 8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                fontFamily: "inherit",
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+                transition: "filter 0.15s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.92)"; }}
+              onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
+              Novo Negócio
+            </button>
+          </div>
+        )}
 
         {/* ── Nav ── */}
         <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "4px 0 8px", scrollbarWidth: "none" }}>
@@ -178,8 +183,8 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
           }}
         >
           <button
-            onClick={() => handleNavClick("settings")}
-            title="Configurações do perfil"
+            onClick={() => handleNavClick("profile")}
+            title="Meu perfil"
             style={{
               flex: 1,
               minWidth: 0,
@@ -187,7 +192,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               alignItems: "center",
               gap: 10,
               padding: "8px 8px",
-              background: section === "settings" ? T.activeBg : "transparent",
+              background: section === "profile" ? T.activeBg : "transparent",
               border: "none",
               borderRadius: 8,
               cursor: "pointer",
@@ -210,7 +215,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                 fontSize: 12,
                 flexShrink: 0,
                 overflow: "hidden",
-                border: `2px solid ${section === "settings" ? "#b5000b" : "#E5E7EB"}`,
+                border: `2px solid ${section === "profile" ? "#b5000b" : "#E5E7EB"}`,
               }}
             >
               {currentUser?.avatarUrl
@@ -218,7 +223,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                 : (currentUser?.initials || "?")}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: section === "settings" ? "#b5000b" : "#201a1a", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ color: section === "profile" ? "#b5000b" : "#201a1a", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {currentUser?.name || "Convidado"}
               </div>
               <div style={{ color: T.text, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

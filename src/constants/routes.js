@@ -21,6 +21,7 @@ export const ROUTES = {
   marketing:              "/marketing",
   "marketing-entregas":   "/marketing/entregas",
   "marketing-despesas":   "/marketing/despesas",
+  profile:                "/perfil",
 };
 
 // Reverso: path → id (não inclui dashboard porque qualquer path desconhecido

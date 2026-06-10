@@ -44,6 +44,7 @@ import { TutoriaisView } from "./components/views/TutoriaisView";
 import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
 import { DespesasView } from "./components/views/DespesasView";
+import { UserProfileView } from "./components/views/UserProfileView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -312,20 +313,23 @@ export default function App() {
           { id: "dashboard", label: "Início", icon: LayoutDashboard },
         ],
       },
-      {
+    ];
+
+    if (!isAgencia) {
+      groups.push({
         label: "Negócios",
         items: [
           { id: "crm", label: "Pipeline", icon: Layers },
         ],
-      },
-      {
+      });
+      groups.push({
         label: "Prospecção",
         items: [
           { id: "signals",  label: "Sinais",     icon: Bell },
           { id: "explorer", label: "Explorador", icon: Globe2 },
         ],
-      },
-    ];
+      });
+    }
 
     if (isMarketingUser || isAgencia) {
       groups.push({
@@ -365,10 +369,11 @@ export default function App() {
       ],
     });
     return groups;
-  }, [isManager]);
+  }, [isManager, isMarketingUser, isAgencia]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
+    if (section === "profile") return "Meu Perfil";
     for (const g of navGroups) {
       const hit = g.items.find(i => i.id === section);
       if (hit) return hit.label;
@@ -385,6 +390,10 @@ export default function App() {
     const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas"];
     if (!isMarketingUser && !isAgencia && marketingOnly.includes(section)) {
       setSection("dashboard");
+    }
+    const crmOnly = ["crm", "signals", "explorer"];
+    if (isAgencia && crmOnly.includes(section)) {
+      setSection("marketing");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isManager, isMarketingUser, isAgencia, section]);
@@ -523,40 +532,44 @@ export default function App() {
             />
           } />
           <Route path={ROUTES.signals} element={
-            <SignalsView
-              activeCompany={activeCompany}
-              signals={signals}
-              onSignalClick={setSelectedSignal}
-              onAddLead={handleAddLead}
-              accessibleCompanies={accessibleCompanies}
-            />
+            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : (
+              <SignalsView
+                activeCompany={activeCompany}
+                signals={signals}
+                onSignalClick={setSelectedSignal}
+                onAddLead={handleAddLead}
+                accessibleCompanies={accessibleCompanies}
+              />
+            )
           } />
           <Route path={ROUTES.explorer} element={
-            <ExplorerView
-              user={currentUser}
-              activeCompany={activeCompany}
-              leads={leads}
-              users={users}
-              onLeadClick={setSelectedLead}
-              onStarToggle={toggleStar}
-              onLoadDemoLeads={loadDemoLeads}
-              onGoToSettings={() => setSection("settings")}
-              onAddLead={handleAddLead}
-              accessibleCompanies={accessibleCompanies}
-              fairImportPanel={isManager ? (
-                <FairImportView
-                  addLead={handleAddLead}
-                  leads={leads}
-                  users={users}
-                  currentUser={currentUser}
-                  state={fairImportState}
-                  setState={setFairImportState}
-                />
-              ) : undefined}
-            />
+            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : (
+              <ExplorerView
+                user={currentUser}
+                activeCompany={activeCompany}
+                leads={leads}
+                users={users}
+                onLeadClick={setSelectedLead}
+                onStarToggle={toggleStar}
+                onLoadDemoLeads={loadDemoLeads}
+                onGoToSettings={() => setSection("settings")}
+                onAddLead={handleAddLead}
+                accessibleCompanies={accessibleCompanies}
+                fairImportPanel={isManager ? (
+                  <FairImportView
+                    addLead={handleAddLead}
+                    leads={leads}
+                    users={users}
+                    currentUser={currentUser}
+                    state={fairImportState}
+                    setState={setFairImportState}
+                  />
+                ) : undefined}
+              />
+            )
           } />
           <Route path={ROUTES.crm} element={
-            <CRMView
+            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : <CRMView
               user={currentUser}
               activeCompany={activeCompany}
               accessibleCompanies={accessibleCompanies}
@@ -679,6 +692,15 @@ export default function App() {
             (isMarketingUser || isAgencia)
               ? <DespesasView user={currentUser} users={users} />
               : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES.profile} element={
+            <UserProfileView
+              currentUser={currentUser}
+              onUpdateUser={updateUser}
+              onUpdateAuthUser={supabaseEnabled ? updateAuthUser : null}
+              onUpdateMockUser={supabaseEnabled ? null : setMockUser}
+              supabaseEnabled={supabaseEnabled}
+            />
           } />
           {/* Catch-all: rota desconhecida volta pro Início. */}
           <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
