@@ -752,6 +752,7 @@ export function MarketingView({ user, users = [] }) {
                           ownerName={usersById.get(c.owner)?.name || null}
                           onClick={setSelected}
                           onDragStart={c => setDraggedCampaign(c)}
+                          onDragEnd={() => setDraggedCampaign(null)}
                           stages={MARKETING_STAGES}
                           onMoveToStage={changeStage}
                         />
@@ -880,6 +881,7 @@ export function MarketingView({ user, users = [] }) {
                             ownerName={usersById.get(c.owner)?.name || null}
                             onClick={setSelected}
                             onDragStart={c => setDraggedCampaign(c)}
+                            onDragEnd={() => setDraggedCampaign(null)}
                             stages={MARKETING_STAGES}
                             onMoveToStage={changeStage}
                           />

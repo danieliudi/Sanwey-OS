@@ -565,7 +565,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
 
   const handleDragStart  = useCallback((lead) => setDraggedLead(lead), []);
   const handleDragOver   = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
-  const handleDragLeave  = useCallback(() => { setDragOverStage(null); }, []);
+  const handleDragLeave  = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }, []);
+  const handleDragEnd    = useCallback(() => { setDraggedLead(null); setDragOverStage(null); }, []);
 
   return (
     <>
@@ -703,6 +704,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                           isGroupView={isGroupView}
                           onClick={onLeadClick}
                           onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
                           stages={stages}
                           onMoveToStage={onStageChange}
                         />
@@ -852,6 +854,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                           isGroupView={isGroupView}
                           onClick={onLeadClick}
                           onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
                           stages={stages}
                           onMoveToStage={onStageChange}
                         />

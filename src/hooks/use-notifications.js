@@ -65,9 +65,9 @@ export function useNotifications({ currentUser, leads = [] } = {}) {
   // Check for follow-ups due today for this user
   useEffect(() => {
     if (!currentUser || !leads.length) return;
-    const today = new Date().toDateString();
     const myLeads = leads.filter(l => l.owner === currentUser.id && l.nextFollowUp);
     for (const lead of myLeads) {
+      const today = new Date().toDateString();
       const followUpDate = new Date(lead.nextFollowUp).toDateString();
       if (followUpDate === today) {
         const key = `followup-${lead.id}-${today}`;

@@ -22,7 +22,7 @@ function slaStyle(daysInStage, sla) {
   return null;
 }
 
-function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, stages, onMoveToStage }) {
+function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onDragEnd, stages, onMoveToStage }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -61,6 +61,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, sta
     <div
       draggable
       onDragStart={() => onDragStart?.(campaign)}
+      onDragEnd={() => onDragEnd?.()}
       onClick={() => { if (!menuOpen) onClick?.(campaign); }}
       className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
       style={{

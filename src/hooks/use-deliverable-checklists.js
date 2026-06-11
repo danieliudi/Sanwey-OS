@@ -34,6 +34,7 @@ export function useDeliverableChecklists(deliverableId) {
   useEffect(() => { fetch(); }, [fetch]);
 
   const patch = useCallback(async (id, updates) => {
+    if (!isSupabaseConfigured) return;
     const { data, error: err } = await supabase
       .from(TABLE)
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -45,6 +46,7 @@ export function useDeliverableChecklists(deliverableId) {
   }, []);
 
   const createChecklist = useCallback(async ({ title = "Checklist", createdBy } = {}) => {
+    if (!isSupabaseConfigured) return null;
     const { data, error: err } = await supabase
       .from(TABLE)
       .insert({ deliverable_id: deliverableId, title, items: [], created_by: createdBy || null })
@@ -56,7 +58,9 @@ export function useDeliverableChecklists(deliverableId) {
   }, [deliverableId]);
 
   const deleteChecklist = useCallback(async (id) => {
-    await supabase.from(TABLE).delete().eq("id", id);
+    if (!isSupabaseConfigured) return;
+    const { error: err } = await supabase.from(TABLE).delete().eq("id", id);
+    if (err) { setError(err.message); return; }
     setChecklists(prev => prev.filter(c => c.id !== id));
   }, []);
 

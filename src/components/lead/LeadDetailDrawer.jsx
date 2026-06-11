@@ -58,6 +58,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
     setCustomDraft({});
     setMobileTab("info");
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    return () => { if (customDebounceRef.current) clearTimeout(customDebounceRef.current); };
   }, [lead?.id]);
 
   const handleCustomChange = useCallback((fieldKey, value) => {
@@ -238,7 +239,8 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
   const handleSaveFollowUp = () => {
     if (!followUpDate) return;
-    const d = new Date(followUpDate);
+    const [yyyy, mm, dd] = followUpDate.split("-");
+    const d = new Date(+yyyy, +mm - 1, +dd);
     if (Number.isNaN(d.getTime())) return;
     onUpdate(lead.id, { nextFollowUp: d.toISOString() });
     if (onAddActivity) {
@@ -651,7 +653,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                     />
                   )}
                 </dl>
-                {lead.notes && (
+                {lead.notes && !Array.isArray(lead.notes) && (
                   <div className="mt-3 pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
                     <div className="text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.slate }}>Observações</div>
                     <div className="text-sm whitespace-pre-line" style={{ color: NEUTRAL.graphite }}>{lead.notes}</div>
@@ -1707,7 +1709,7 @@ function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
           background: dragOver ? (companyColor + "08") : "#FAFAFA",
         }}
         onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
+        onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
         role="button"

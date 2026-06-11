@@ -18,7 +18,7 @@ function agingStyle(days) {
   return null;
 }
 
-function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onClick, onDragStart, stages, onMoveToStage }) {
+function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -49,6 +49,7 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
     <div
       draggable
       onDragStart={() => onDragStart?.(lead)}
+      onDragEnd={() => onDragEnd?.()}
       onClick={() => { if (!menuOpen) onClick?.(lead); }}
       className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
       style={{

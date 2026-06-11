@@ -349,6 +349,10 @@ export function LeadCreateModal({
   }, [onClose]);
 
   const company = COMPANIES[companyId];
+  const requiredMissing = (formConfig || []).some(e =>
+    e.required && (!values[e.id] || (typeof values[e.id] === "string" && !values[e.id].trim()))
+  );
+  const isSubmitDisabled = saving || requiredMissing;
 
   if (!open) return null;
 
@@ -552,16 +556,16 @@ export function LeadCreateModal({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={saving}
+            disabled={isSubmitDisabled}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-colors"
             style={{
-              background: saving ? "#9CA3AF" : "#b5000b",
+              background: isSubmitDisabled ? "#9CA3AF" : "#b5000b",
               color: "#FFFFFF",
               border: "none",
-              cursor: saving ? "not-allowed" : "pointer",
+              cursor: isSubmitDisabled ? "not-allowed" : "pointer",
             }}
-            onMouseEnter={e => { if (!saving) e.currentTarget.style.background = "#8B1419"; }}
-            onMouseLeave={e => { if (!saving) e.currentTarget.style.background = saving ? "#9CA3AF" : "#b5000b"; }}
+            onMouseEnter={e => { if (!isSubmitDisabled) e.currentTarget.style.background = "#8B1419"; }}
+            onMouseLeave={e => { if (!isSubmitDisabled) e.currentTarget.style.background = isSubmitDisabled ? "#9CA3AF" : "#b5000b"; }}
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? "Criando…" : "Criar card"}

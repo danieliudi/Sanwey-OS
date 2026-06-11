@@ -72,7 +72,7 @@ export function useMarketingExpenses({ userId, role } = {}) {
       .channel("marketing_expenses_rt")
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
         if (payload.eventType === "INSERT") {
-          setExpenses(prev => [rowToExpense(payload.new), ...prev]);
+          setExpenses(prev => prev.some(e => e.id === payload.new.id) ? prev : [rowToExpense(payload.new), ...prev]);
         } else if (payload.eventType === "UPDATE") {
           setExpenses(prev => prev.map(e => e.id === payload.new.id ? rowToExpense(payload.new) : e));
         } else if (payload.eventType === "DELETE") {
