@@ -195,6 +195,86 @@ Forneça:
   ];
 }
 
+export function campaignStageSuggestionPrompt(campaign) {
+  const daysInStage = campaign.stageChangedAt
+    ? Math.floor((Date.now() - new Date(campaign.stageChangedAt)) / 86400000)
+    : 0;
+
+  const launchDays = campaign.launchDate
+    ? Math.floor((new Date(campaign.launchDate) - Date.now()) / 86400000)
+    : null;
+
+  const checklistDone  = (campaign.approvalChecklist || []).filter(i => i.done).length;
+  const checklistTotal = (campaign.approvalChecklist || []).length;
+
+  return [
+    {
+      role: 'system',
+      content: `Você é um especialista em marketing e gestão de campanhas.
+Responda sempre em português brasileiro. Seja conciso e prático.
+Analise os dados da campanha e recomende se é hora de avançar de etapa.`,
+    },
+    {
+      role: 'user',
+      content: `Analise esta campanha e recomende a próxima ação:
+
+**Nome:** ${campaign.name || '—'}
+**Etapa atual:** ${campaign.stage || '—'}
+**Dias nesta etapa:** ${daysInStage}d
+**Canal:** ${campaign.channel || '—'}
+**KPI principal:** ${campaign.kpi || '—'}
+**Budget:** R$ ${campaign.budget?.toLocaleString('pt-BR') || '—'}
+**Lançamento:** ${launchDays !== null ? (launchDays > 0 ? `em ${launchDays} dias` : `${Math.abs(launchDays)} dias atrás`) : '—'}
+**Checklist de aprovação:** ${checklistTotal > 0 ? `${checklistDone}/${checklistTotal} itens concluídos` : 'Não configurado'}
+**Agência:** ${campaign.agencyName || '—'}
+**Score de performance:** ${campaign.performanceScore > 0 ? `${campaign.performanceScore}/100` : '—'}
+
+Responda com:
+1. **Diagnóstico** (1-2 frases sobre o estado atual)
+2. **Recomendação** (avançar / manter / retroceder — justificativa em 1-2 frases)
+3. **Próximo passo** (ação concreta antes de mover — 1 frase)`,
+    },
+  ];
+}
+
+export function deliverableStageSuggestionPrompt(item) {
+  const daysInStage = item.stageChangedAt
+    ? Math.floor((Date.now() - new Date(item.stageChangedAt)) / 86400000)
+    : 0;
+
+  const deadlineDays = item.deadline
+    ? Math.floor((new Date(item.deadline) - Date.now()) / 86400000)
+    : null;
+
+  const stageData = item.stageData?.[item.stage] || {};
+
+  return [
+    {
+      role: 'system',
+      content: `Você é um especialista em gestão de entregas e produção criativa.
+Responda sempre em português brasileiro. Seja conciso e prático.`,
+    },
+    {
+      role: 'user',
+      content: `Analise esta entrega e recomende a próxima ação:
+
+**Título:** ${item.title || '—'}
+**Etapa atual:** ${item.stage || '—'}
+**Dias nesta etapa:** ${daysInStage}d
+**Prioridade:** ${item.priority || '—'}
+**Prazo:** ${deadlineDays !== null ? (deadlineDays > 0 ? `${deadlineDays} dias restantes` : `atrasado ${Math.abs(deadlineDays)} dias`) : '—'}
+**Tipo de solicitação:** ${stageData.request_type || item.requestType || '—'}
+**Progresso de produção:** ${stageData.production_progress !== undefined ? `${stageData.production_progress}%` : '—'}
+**Status revisão:** ${stageData.revision_status || '—'}
+
+Responda com:
+1. **Diagnóstico** (1-2 frases sobre o estado atual)
+2. **Recomendação** (avançar / manter / retroceder — justificativa em 1-2 frases)
+3. **Próximo passo** (ação concreta antes de mover — 1 frase)`,
+    },
+  ];
+}
+
 function summarizeLeads(leads, users) {
   const lines = leads.slice(0, 50).map(l => {
     const owner = users?.find(u => u.id === l.owner);
