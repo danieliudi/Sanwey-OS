@@ -6,13 +6,28 @@ import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 
 const PRIORITIES = ["Alta", "Média", "Baixa"];
 
-// Pequena lista padrão. Em uma evolução, pode vir de uma tabela por empresa.
-const DEFAULT_PRODUCTS = [
-  "Big Bag",
-  "Embalagem industrial",
-  "Logística reversa",
-  "Produto especial",
+const INDUSTRIES = [
+  "Agronegócio",
+  "Alimentos e Bebidas",
+  "Construção Civil",
+  "Indústria Química",
+  "Indústria Farmacêutica",
+  "Logística e Transporte",
+  "Mineração",
+  "Papel e Celulose",
+  "Petróleo e Gás",
+  "Reciclagem e Resíduos",
+  "Setor Elétrico",
+  "Siderurgia e Metalurgia",
+  "Têxtil e Confecção",
+  "Setor Público",
   "Outros",
+];
+
+const CALLBACK_TIMES = [
+  "Manhã (08h–12h)",
+  "Tarde (12h–18h)",
+  "Qualquer horário",
 ];
 
 function formatPhone(digits) {
@@ -38,11 +53,13 @@ export default function LeadCaptureForm() {
 
   const [form, setForm] = useState({
     customerName: "",
+    companyName: "",
     phone: "",
     email: "",
-    product: "",
+    industry: "",
     priority: "",
-    prospectDate: todayISO(),
+    callbackDate: "",
+    callbackTime: "",
     notes: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -50,17 +67,14 @@ export default function LeadCaptureForm() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    document.title = company
-      ? `${company.name} · Contato comercial`
-      : "Sanwey · Contato comercial";
-  }, [company]);
+    document.title = "Fale com a Sanwey";
+  }, []);
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
   const canSubmit = useMemo(() => (
     form.customerName.trim().length >= 2 &&
     form.phone.replace(/\D/g, "").length >= 10 &&
-    form.prospectDate &&
     !submitting
   ), [form, submitting]);
 
@@ -92,15 +106,25 @@ export default function LeadCaptureForm() {
     setSubmitting(true);
     setError(null);
     try {
+      const notesParts = [];
+      if (form.companyName.trim()) notesParts.push(`Empresa: ${form.companyName.trim()}`);
+      if (form.callbackDate) {
+        const callbackLine = form.callbackTime
+          ? `Retorno preferido: ${form.callbackDate} · ${form.callbackTime}`
+          : `Retorno preferido: ${form.callbackDate}`;
+        notesParts.push(callbackLine);
+      }
+      if (form.notes.trim()) notesParts.push(form.notes.trim());
+
       const { error: err } = await supabase.rpc("submit_lead_capture", {
         p_company_id: companyId,
         p_customer_name: form.customerName.trim(),
         p_contact_phone: form.phone.replace(/\D/g, ""),
         p_contact_email: form.email.trim() || null,
-        p_product_interest: form.product || null,
+        p_product_interest: form.industry || null,
         p_priority: form.priority || null,
-        p_prospect_date: form.prospectDate,
-        p_notes: form.notes.trim() || null,
+        p_prospect_date: form.callbackDate || todayISO(),
+        p_notes: notesParts.length > 0 ? notesParts.join("\n\n") : null,
         p_source: source,
       });
       if (err) throw err;
@@ -129,7 +153,7 @@ export default function LeadCaptureForm() {
             Recebido!
           </h1>
           <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 360, margin: 0 }}>
-            Obrigado pelo contato. Um consultor da <strong>{company.name}</strong> entrará em contato em breve pelos dados informados.
+            Obrigado pelo contato. Um especialista da <strong>{company.name}</strong> entrará em contato em breve pelos dados informados.
           </p>
         </div>
       </ShellCard>
@@ -151,15 +175,15 @@ export default function LeadCaptureForm() {
           {company.name}
         </div>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#201a1a", margin: "0 0 6px", letterSpacing: "-0.02em" }}>
-          Fale com a {company.name}
+          Fale com a Sanwey
         </h1>
         <p style={{ color: "#5c5f60", fontSize: 14, margin: 0, lineHeight: 1.55 }}>
-          Preencha as informações abaixo. Um consultor entra em contato para entender sua necessidade.
+          Preencha as informações abaixo. Um especialista entra em contato para entender sua necessidade.
         </p>
       </header>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <Field label="Nome do Cliente" hint="Nome do cliente ou empresa" required>
+        <Field label="Nome do responsável" hint="Seu nome completo" required>
           <input
             type="text"
             value={form.customerName}
@@ -169,7 +193,17 @@ export default function LeadCaptureForm() {
           />
         </Field>
 
-        <Field label="Contato" hint="Telefone ou celular do cliente" required>
+        <Field label="Nome da empresa" hint="Empresa onde você trabalha">
+          <input
+            type="text"
+            value={form.companyName}
+            onChange={e => set("companyName", e.target.value)}
+            placeholder="Digite o nome da empresa …"
+            style={input}
+          />
+        </Field>
+
+        <Field label="Telefone" hint="Celular ou telefone fixo" required>
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{
               display: "flex", alignItems: "center", gap: 6,
@@ -188,7 +222,7 @@ export default function LeadCaptureForm() {
           </div>
         </Field>
 
-        <Field label="E-mail" hint="E-mail do cliente">
+        <Field label="E-mail" hint="Seu melhor e-mail para contato">
           <input
             type="email"
             value={form.email}
@@ -198,10 +232,10 @@ export default function LeadCaptureForm() {
           />
         </Field>
 
-        <Field label="Produto de Interesse" hint="Produto ou serviço de interesse">
+        <Field label="Setor da empresa" hint="Em qual setor sua empresa atua?">
           <select
-            value={form.product}
-            onChange={e => set("product", e.target.value)}
+            value={form.industry}
+            onChange={e => set("industry", e.target.value)}
             style={{
               ...input, appearance: "none", paddingRight: 32,
               backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
@@ -209,11 +243,11 @@ export default function LeadCaptureForm() {
             }}
           >
             <option value="">Escolha uma opção</option>
-            {DEFAULT_PRODUCTS.map(p => <option key={p} value={p}>{p}</option>)}
+            {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
           </select>
         </Field>
 
-        <Field label="Prioridade" hint="Nível de prioridade">
+        <Field label="Prioridade" hint="Com que urgência você precisa de atendimento?">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {PRIORITIES.map(p => {
               const selected = form.priority === p;
@@ -238,13 +272,27 @@ export default function LeadCaptureForm() {
           </div>
         </Field>
 
-        <Field label="Data de Prospecção" hint="Data inicial de contato" required>
-          <input
-            type="date"
-            value={form.prospectDate}
-            onChange={e => set("prospectDate", e.target.value)}
-            style={input}
-          />
+        <Field label="Preferência de retorno por telefone" hint="Caso queira, indique quando podemos ligar">
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input
+              type="date"
+              value={form.callbackDate}
+              onChange={e => set("callbackDate", e.target.value)}
+              style={{ ...input, flex: "1 1 140px" }}
+            />
+            <select
+              value={form.callbackTime}
+              onChange={e => set("callbackTime", e.target.value)}
+              style={{
+                ...input, flex: "1 1 160px", appearance: "none", paddingRight: 32,
+                backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+                backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", backgroundSize: "14px",
+              }}
+            >
+              <option value="">Horário preferido</option>
+              {CALLBACK_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
         </Field>
 
         <Field label="Mensagem (opcional)" hint="Conte um pouco sobre sua necessidade">

@@ -14,11 +14,4 @@ export const SKU_CATALOG = {
     { id: "rb-verde", name: "Resibag Resíduo Verde", unitPrice: 165 },
     { id: "rb-classe2", name: "Resibag Classe II", unitPrice: 175 },
   ],
-  montemor: [
-    { id: "mm-tecido-pp", name: "Tecido Polipropileno (kg)", unitPrice: 12 },
-    { id: "mm-linha-reforc", name: "Linha Reforçada (bobina)", unitPrice: 45 },
-    { id: "mm-alcas-jogo", name: "Jogo de Alças (4un)", unitPrice: 28 },
-    { id: "mm-bigbag-simples", name: "Big Bag Simples Standard", unitPrice: 95 },
-    { id: "mm-bigbag-tubular", name: "Big Bag Tubular Básico", unitPrice: 85 },
-  ],
 };

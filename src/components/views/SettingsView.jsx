@@ -8,7 +8,7 @@ import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { AI_PROVIDERS, AI_PROVIDER_MAP } from "../../constants/ai-providers";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import {
-  DASHBOARD_WIDGETS, NOTIFICATION_GROUPS, DENSITY_OPTIONS,
+  DASHBOARD_WIDGETS, NOTIFICATION_GROUPS,
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
 
@@ -614,45 +614,6 @@ export function SettingsView({
             {/* ── PREFERÊNCIAS ── */}
             {activeTab === "preferencias" && (
               <div className="space-y-4">
-                <Section
-                  title="Densidade"
-                  description="Ajusta o espaçamento geral da interface."
-                >
-                  <div className="flex gap-2">
-                    {DENSITY_OPTIONS.map(opt => {
-                      const active = settings.density === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => onUpdate({ density: opt.value })}
-                          className="px-4 py-2 text-sm font-medium rounded-lg border transition-all duration-150"
-                          style={{
-                            background: active ? NEUTRAL.graphite : "#FFFFFF",
-                            color: active ? "#FFFFFF" : NEUTRAL.slate,
-                            borderColor: active ? NEUTRAL.graphite : "#E5E7EB",
-                            boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
-                          }}
-                          onMouseEnter={e => {
-                            if (!active) {
-                              e.currentTarget.style.borderColor = "#B0B0B0";
-                              e.currentTarget.style.background = "#F5F5F5";
-                            }
-                          }}
-                          onMouseLeave={e => {
-                            if (!active) {
-                              e.currentTarget.style.borderColor = "#E5E7EB";
-                              e.currentTarget.style.background = "#FFFFFF";
-                            }
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </Section>
-
                 <Section
                   title="Empresas ativas"
                   description="Quais empresas aparecem no seletor do topo e nos filtros do app."

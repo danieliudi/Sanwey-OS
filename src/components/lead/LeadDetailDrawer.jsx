@@ -301,6 +301,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           background: "#FFFFFF",
           boxShadow: "0 24px 64px rgba(32,26,26,0.18)",
           maxHeight: "92vh",
+          overflow: "hidden",
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -368,7 +369,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
           {/* ───── LEFT SIDEBAR ───────────────────────────────────────── */}
           <aside
-            className="w-full lg:w-[320px] shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4"
+            className="w-full lg:w-[320px] shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-20 lg:pb-5"
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
             {/* Título do lead */}
@@ -778,7 +779,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           </aside>
 
           {/* ───── CENTER ─────────────────────────────────────────────── */}
-          <main className="flex-1 min-w-0 overflow-y-auto p-5 space-y-4">
+          <main className="flex-1 min-w-0 overflow-y-auto p-5 space-y-4 pb-20 lg:pb-5">
 
           {/* ── Pipeline stage progress bar ───────────────────────────────── */}
           <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
@@ -1089,7 +1090,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
           {/* ───── RIGHT SIDEBAR ─────────────────────────────────────── */}
           <aside
-            className="w-full lg:w-[240px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5"
+            className="w-full lg:w-[240px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 pb-20 lg:pb-5"
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
             <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>

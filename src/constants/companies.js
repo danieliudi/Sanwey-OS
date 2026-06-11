@@ -24,27 +24,15 @@ export const COMPANIES = {
   },
   industria: {
     id: "industria",
-    name: "Sanwey Indústria",
-    short: "Indústria",
-    primary: "#8C3A1E",
-    dark: "#5A230F",
-    light: "#F7ECE6",
-    active: "#BF5430",
-    accent: "#8C3A1E",
+    name: "Sanwey",
+    short: "Sanwey",
+    primary: "#b5000b",
+    dark: "#930007",
+    light: "#fef1f0",
+    active: "#e0000d",
+    accent: "#b5000b",
     description: "Fabricação de Sanbags e contentores flexíveis — atende carteira B2B complexa",
     focus: "Fabricação e parceria técnica",
-  },
-  montemor: {
-    id: "montemor",
-    name: "Sanwey Monte Mor",
-    short: "Monte Mor",
-    primary: "#6B4E1E",
-    dark: "#3E2D10",
-    light: "#F5EFE2",
-    active: "#A37830",
-    accent: "#6B4E1E",
-    description: "Produção de tecidos, linhas, alças e big bags simples",
-    focus: "Matéria-prima e linha de entrada",
   },
 };
 
@@ -63,4 +51,4 @@ export const NEUTRAL = {
   gold:      "#C49B2A",
 };
 
-export const COMPANY_IDS = ["industria", "resibag", "montemor"];
+export const COMPANY_IDS = ["industria", "resibag"];

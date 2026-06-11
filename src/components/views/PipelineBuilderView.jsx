@@ -17,7 +17,7 @@ import { SellerPreviewModal } from "../pipeline/SellerPreviewModal";
  *   - Matriz de transições com bulk actions por linha
  */
 
-const COMPANY_ORDER = ["industria", "resibag", "montemor"];
+const COMPANY_ORDER = ["industria", "resibag"];
 
 export function PipelineBuilderView({
   pipelines,
