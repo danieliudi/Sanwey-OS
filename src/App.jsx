@@ -293,7 +293,7 @@ export default function App() {
     if (!currentUser) return [];
     const enabled = new Set(settings.enabledCompanies);
     const base = isManager
-      ? ["industria", "resibag", "montemor"]
+      ? ["industria", "resibag"]
       : currentUser.companies;
     const filtered = base.filter(id => enabled.has(id));
     if (filtered.length === 0) return []; // edge case: user disabled all
@@ -749,7 +749,10 @@ export default function App() {
           <MobileBottomNav
             section={section}
             onSectionChange={setSection}
-            onMenuOpen={() => setSidebarMobileOpen(true)}
+            role={currentUser?.role}
+            navGroups={navGroups}
+            currentUser={currentUser}
+            onLogout={handleLogout}
           />
         </div>
       </div>

@@ -1,6 +1,6 @@
 export const DEFAULT_USERS = [
   { id: "u_daniel", name: "Daniel Yano", email: "daniel@sanwey.com.br", role: "gerente",
-    companies: ["industria", "montemor", "resibag"], initials: "DY",
+    companies: ["industria", "resibag"], initials: "DY",
     avatarBg: "#2D3436" },
   { id: "u_carlos", name: "Carlos Menezes", email: "carlos@sanwey.com.br", role: "vendedor",
     companies: ["resibag"], initials: "CM", avatarBg: "#1E4D8C" },
@@ -11,5 +11,5 @@ export const DEFAULT_USERS = [
   { id: "u_beatriz", name: "Beatriz Lima", email: "beatriz@sanwey.com.br", role: "vendedor",
     companies: ["industria"], initials: "BL", avatarBg: "#1E4D8C" },
   { id: "u_marcos", name: "Marcos Silva", email: "marcos@sanwey.com.br", role: "vendedor",
-    companies: ["industria", "montemor"], initials: "MS", avatarBg: "#6B4E1E" },
+    companies: ["industria"], initials: "MS", avatarBg: "#6B4E1E" },
 ];

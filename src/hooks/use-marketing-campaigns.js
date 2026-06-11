@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { MARKETING_STAGES } from "../constants/marketing-pipelines";
 
 const TABLE = "marketing_campaigns";
 
@@ -145,16 +146,20 @@ export function useMarketingCampaigns({ userId, role } = {}) {
 
   const changeStage = useCallback(async (id, stage) => {
     if (!isSupabaseConfigured || !canWrite) return;
-    const now = new Date().toISOString();
+    const now      = new Date().toISOString();
+    const current  = campaigns.find(c => c.id === id);
+    const stageName = MARKETING_STAGES.find(s => s.id === stage)?.name || stage;
+    const activity  = { text: `Movido para ${stageName}`, at: now };
+    const activities = [...(current?.activities || []), activity];
     const { error: err } = await supabase
       .from(TABLE)
-      .update({ stage, stage_changed_at: now })
+      .update({ stage, stage_changed_at: now, activities })
       .eq("id", id);
     if (err) throw err;
     setCampaigns(prev =>
-      prev.map(c => c.id === id ? { ...c, stage, stageChangedAt: now } : c)
+      prev.map(c => c.id === id ? { ...c, stage, stageChangedAt: now, activities } : c)
     );
-  }, [canWrite]);
+  }, [canWrite, campaigns]);
 
   const toggleStar = useCallback(async (id) => {
     if (!canWrite) return;

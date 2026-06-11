@@ -142,29 +142,6 @@ const SIGNALS_BY_COMPANY = {
       ],
     },
   ],
-  montemor: [
-    { id: "sig_m1", company: "montemor", source: "Produção", title: "Sanwey Indústria: pedido especial Petrobras",
-      excerpt: "Demanda urgente de tecido condutivo Type C para contrato off-shore.",
-      urgency: "alto", daysAgo: 1, affectedCount: 1,
-      affectedCompanies: [
-        { name: "Petrobras SA", cnpj: "33.000.167/0001-01", city: "Rio de Janeiro", state: "RJ", sector: "Petróleo e Gás" },
-      ],
-    },
-    { id: "sig_m2", company: "montemor", source: "Matéria-prima", title: "PP oscila +8% na semana",
-      excerpt: "Polipropileno granel em alta — impacto em custo de produção.",
-      urgency: "medio", daysAgo: 3, affectedCount: 1,
-      affectedCompanies: [
-        { name: "Braskem SA", cnpj: "42.150.391/0001-70", city: "São Paulo", state: "SP", sector: "Petroquímica" },
-      ],
-    },
-    { id: "sig_m3", company: "montemor", source: "Capacidade", title: "Ociosidade 15% no turno noturno",
-      excerpt: "Oportunidade para absorver demanda externa adicional.",
-      urgency: "informativo", daysAgo: 2, affectedCount: 1,
-      affectedCompanies: [
-        { name: "Embrapol Embalagens Industriais Ltda", cnpj: "58.741.932/0001-85", city: "Monte Mor", state: "SP", sector: "Embalagens Industriais" },
-      ],
-    },
-  ],
 };
 
 export function generateMarketSignals() {

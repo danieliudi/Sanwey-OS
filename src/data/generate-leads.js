@@ -125,34 +125,6 @@ const RESIBAG_DATA = [
     decisionMaker: { name: "Thiago Mendes", role: "Sustentabilidade" }, owner: "u_rafael" },
 ];
 
-const MONTEMOR_DATA = [
-  { company: "Sanwey Indústria (cliente interno)", sector: "Interno Grupo", city: "Taboão da Serra/SP",
-    trigger: "Produção", triggerLabel: "Pedido regular mensal",
-    evidence: "Pedido mensal recorrente — 25t tecido PP + 8k jogos de alças",
-    decisionMaker: { name: "Programação Sanwey", role: "PCP Industrial" }, owner: "u_marcos",
-    size: "Enterprise" },
-  { company: "Sanwey Indústria (cliente interno)", sector: "Interno Grupo", city: "Taboão da Serra/SP",
-    trigger: "Produção", triggerLabel: "Pedido especial Off-shore",
-    evidence: "Demanda adicional para contrato Petrobras — tecido condutivo Type C",
-    decisionMaker: { name: "Programação Sanwey", role: "PCP Industrial" }, owner: "u_marcos",
-    size: "Enterprise" },
-  { company: "Flexpak Embalagens (prospect externo)", sector: "Fabricante Concorrente", city: "Limeira/SP",
-    trigger: "Mercado", triggerLabel: "Oportunidade venda externa",
-    evidence: "Fabricante médio sem verticalização — pode comprar tecido e alças",
-    decisionMaker: { name: "Jorge Ávila", role: "Diretor Industrial" }, owner: null, size: "Mid-Market" },
-  { company: "Bag & Sack Brasil", sector: "Fabricante Concorrente", city: "Campinas/SP",
-    trigger: "Mercado", triggerLabel: "Cotação inicial",
-    evidence: "Contato inicial sondando fornecimento de linhas reforçadas",
-    decisionMaker: { name: "Rafael Moura", role: "Compras" }, owner: null, size: "PME" },
-  { company: "Embalagens Técnicas Paraná", sector: "Fabricante Concorrente", city: "Curitiba/PR",
-    trigger: "Mercado", triggerLabel: "Potencial parceria",
-    evidence: "Integração vertical possível com fornecimento regular",
-    decisionMaker: { name: "Luciana Prado", role: "Diretoria Industrial" }, owner: "u_marcos", size: "Mid-Market" },
-  { company: "BigBag Sul Manufacturing", sector: "Fabricante Concorrente", city: "Caxias do Sul/RS",
-    trigger: "Mercado", triggerLabel: "Abordagem inicial",
-    evidence: "Fabricante regional — potencial para tecido PP em escala",
-    decisionMaker: { name: "Henrique Scholtz", role: "Suprimentos" }, owner: null, size: "PME" },
-];
 
 function pickStage(rand) {
   const stages = ["prospeccao", "qualificacao", "visitas", "amostras", "negociacao", "ganho", "perdido"];
@@ -227,7 +199,6 @@ export function generateLeadsForAllCompanies() {
 
   INDUSTRIA_DATA.forEach(d => out.push(createLead("industria", { ...d, fitMin: 60, fitMax: 95 })));
   RESIBAG_DATA.forEach(d => out.push(createLead("resibag", { ...d, fitMin: 65, fitMax: 95 })));
-  MONTEMOR_DATA.forEach(d => out.push(createLead("montemor", { ...d, fitMin: 50, fitMax: 90 })));
 
   return out;
 }

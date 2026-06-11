@@ -71,7 +71,7 @@ export function PendingAssignmentScreen({ currentUser, onRefresh, onLogout }) {
           style={{ background: "#FFFBEB", color: "#92400E", border: "1px solid #FDE68A" }}
         >
           <strong>Dica:</strong> peça ao administrador para abrir <em>Usuários</em> e
-          atribuir pelo menos uma empresa (Indústria, Resibag ou Monte Mor)
+          atribuir pelo menos uma empresa (Sanwey ou Resibag)
           ao seu email. Depois clique em "Já fui liberado" abaixo.
         </div>
 
