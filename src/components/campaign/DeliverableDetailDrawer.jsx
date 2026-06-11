@@ -346,56 +346,6 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
   return null;
 }
 
-/* ── Stage progress bar ─────────────────────────────────────── */
-function DeliverableStageBar({ currentStageId }) {
-  const currentIdx = DELIVERABLE_STAGES.findIndex(s => s.id === currentStageId);
-  return (
-    <div style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
-        Etapa atual
-      </div>
-      <div style={{ display: "flex", alignItems: "flex-start" }}>
-        {DELIVERABLE_STAGES.map((s, idx) => {
-          const done   = idx < currentIdx;
-          const active = idx === currentIdx;
-          const prevDone = idx > 0 && (idx - 1) < currentIdx;
-          return (
-            <React.Fragment key={s.id}>
-              {idx > 0 && (
-                <div style={{ flex: 1, height: 2, marginTop: 9, background: prevDone ? DELIVERABLE_STAGES[idx - 1].color : "#E5E7EB", transition: "background 0.2s" }} />
-              )}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 50 }}>
-                <div style={{
-                  width: 20, height: 20, borderRadius: "50%",
-                  background: done ? s.color : active ? s.color : "#F1F3F5",
-                  border: `2px solid ${done || active ? s.color : "#D4D4D8"}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, transition: "all 0.2s",
-                }}>
-                  {done && (
-                    <svg width="10" height="10" viewBox="0 0 10 10">
-                      <polyline points="1.5,5 4,7.5 8.5,2" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                  {active && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "white" }} />}
-                </div>
-                <div style={{
-                  fontSize: 9, marginTop: 4, textAlign: "center",
-                  color: active ? s.color : done ? NEUTRAL.slate : "#C4C4C8",
-                  fontWeight: active ? 700 : 400, maxWidth: 48, lineHeight: 1.2,
-                  transition: "color 0.2s",
-                }}>
-                  {s.name}
-                </div>
-              </div>
-            </React.Fragment>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 /* ── Atividades tab ─────────────────────────────────────────── */
 function AtividadesTab({ activities }) {
   const sorted = [...(activities || [])].reverse();
@@ -1027,8 +977,6 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
           <main
             className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}
           >
-            <DeliverableStageBar currentStageId={item.stage} />
-
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
                 <SectionLabel>Fase atual</SectionLabel>

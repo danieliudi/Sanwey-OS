@@ -563,62 +563,6 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
   );
 }
 
-// ── Marketing stage bar ───────────────────────────────────────────────────────
-
-function MarketingStageBar({ currentStageId }) {
-  const nonTerminal = MARKETING_STAGES.filter(s => !s.terminal);
-  const currentIdx  = nonTerminal.findIndex(s => s.id === currentStageId);
-  const stageData   = MARKETING_STAGES.find(s => s.id === currentStageId);
-  const isTerminal  = Boolean(stageData?.terminal);
-
-  return (
-    <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-      <div className="text-[10px] font-semibold mb-3 tracking-widest uppercase" style={{ color: NEUTRAL.slate }}>
-        Etapa atual
-      </div>
-      <div className="flex items-start">
-        {nonTerminal.map((s, idx) => {
-          const done   = isTerminal || idx < currentIdx;
-          const active = !isTerminal && idx === currentIdx;
-          const prevDone = idx > 0 && (isTerminal || (idx - 1) < currentIdx);
-
-          return (
-            <React.Fragment key={s.id}>
-              {idx > 0 && (
-                <div style={{ flex: 1, height: 2, marginTop: 9, background: prevDone ? nonTerminal[idx - 1].color : "#E5E7EB", transition: "background 0.2s" }} />
-              )}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 44 }}>
-                <div style={{
-                  width: 20, height: 20, borderRadius: "50%",
-                  background: done ? s.color : active ? s.color : "#F1F3F5",
-                  border: `2px solid ${done || active ? s.color : "#D4D4D8"}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, transition: "all 0.2s",
-                }}>
-                  {done && (
-                    <svg width="10" height="10" viewBox="0 0 10 10">
-                      <polyline points="1.5,5 4,7.5 8.5,2" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                  {active && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "white" }} />}
-                </div>
-                <div style={{
-                  fontSize: 9, marginTop: 4, textAlign: "center",
-                  color: active ? s.color : done ? NEUTRAL.slate : "#C4C4C8",
-                  fontWeight: active ? 700 : 400, maxWidth: 42, lineHeight: 1.2,
-                  transition: "color 0.2s",
-                }}>
-                  {s.name}
-                </div>
-              </div>
-            </React.Fragment>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ── Main drawer ───────────────────────────────────────────────────────────────
 
 export function CampaignDetailDrawer({
@@ -1009,8 +953,6 @@ export function CampaignDetailDrawer({
           <main
             className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-4${mobileTab !== "stage" ? " hidden lg:block" : ""}`}
           >
-            <MarketingStageBar currentStageId={get("stage")} />
-
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
