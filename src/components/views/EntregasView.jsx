@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
-  MoreHorizontal, Filter, CalendarDays, LayoutGrid,
+  Filter, CalendarDays, LayoutGrid,
 } from "lucide-react";
+import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingCampaigns }    from "../../hooks/use-marketing-campaigns";
 import {
@@ -13,20 +14,7 @@ import { formatDateBR } from "../../utils/date";
 import { useUsersById }  from "../../hooks/use-users-by-id";
 import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
 
-const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
-
-/* ── Helpers ─────────────────────────────────────────────────── */
-function daysInStage(item) {
-  if (!item.stageChangedAt) return null;
-  return Math.floor((Date.now() - new Date(item.stageChangedAt).getTime()) / 86400000);
-}
-function agingColor(days) {
-  if (days === null) return null;
-  if (days > 14) return "#DC2626";
-  if (days > 7)  return "#D97706";
-  return "#16A34A";
-}
 
 /* ── CSV export ─────────────────────────────────────────────── */
 function exportCSV(deliverables) {
@@ -47,150 +35,6 @@ function exportCSV(deliverables) {
   const a    = document.createElement("a");
   a.href = url; a.download = "entregas.csv"; a.click();
   URL.revokeObjectURL(url);
-}
-
-/* ── Deliverable card ────────────────────────────────────────── */
-function DeliverableCard({ item, ownerName, onDragStart, canWrite, onClick, onMoveStage, onToggleStar }) {
-  const [menuOpen,  setMenuOpen]  = useState(false);
-  const menuRef = useRef(null);
-
-  const stage      = DELIVERABLE_STAGES.find(s => s.id === item.stage);
-  const isOverdue  = item.deadline && new Date(item.deadline) < new Date();
-  const priColor   = PRIORITY_COLORS[item.priority];
-  const days       = daysInStage(item);
-  const aColor     = agingColor(days);
-  const compColor  = item.companyIds?.[0] ? COMPANIES[item.companyIds[0]]?.primary : null;
-  const otherStages = DELIVERABLE_STAGES.filter(s => s.id !== item.stage);
-
-  /* Close menu on outside click */
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
-
-  return (
-    <div
-      draggable={canWrite}
-      onDragStart={() => canWrite && onDragStart?.(item)}
-      onClick={e => { if (!e.defaultPrevented) onClick?.(item); }}
-      style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
-        borderLeft: compColor ? `3px solid ${compColor}` : "3px solid #E5E7EB",
-        borderRadius: 10,
-        padding: "10px 12px",
-        boxShadow: "0 1px 4px rgba(32,26,26,0.06)",
-        cursor: "pointer",
-        transition: "box-shadow 0.12s, border-color 0.12s, transform 0.12s",
-        position: "relative",
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.boxShadow = "0 4px 16px rgba(32,26,26,0.10)";
-        e.currentTarget.style.transform = "translateY(-1px)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.boxShadow = "0 1px 4px rgba(32,26,26,0.06)";
-        e.currentTarget.style.transform = "translateY(0)";
-      }}
-    >
-      {/* Row 1: title + priority badge */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 6, marginBottom: 5 }}>
-        <div style={{ fontWeight: 600, fontSize: 13, lineHeight: 1.35, flex: 1, color: NEUTRAL.graphite }}>
-          {item.title}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-          {item.starred && <Star size={11} fill="#F59E0B" color="#F59E0B" />}
-          {priColor && (
-            <span style={{ fontSize: 9, fontWeight: 700, color: priColor, background: priColor + "18", border: `1px solid ${priColor}40`, borderRadius: 4, padding: "2px 5px" }}>
-              {PRIORITY_LABELS[item.priority]}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Row 2: requester · dept */}
-      {item.requesterName && (
-        <div style={{ fontSize: 11, color: NEUTRAL.slate, marginBottom: 5 }}>
-          {item.requesterName}{item.department ? ` · ${item.department}` : ""}
-        </div>
-      )}
-
-      {/* Row 3: owner + deadline */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11, color: NEUTRAL.slate }}>
-        {ownerName
-          ? <span style={{ padding: "2px 7px", borderRadius: 99, background: "#F3F4F6", color: NEUTRAL.slate, fontWeight: 500 }}>{ownerName}</span>
-          : <span />
-        }
-        {item.deadline && (
-          <span style={{ color: isOverdue ? "#DC2626" : NEUTRAL.slate, fontWeight: isOverdue ? 600 : 400 }}>
-            {formatDateBR(item.deadline)}
-          </span>
-        )}
-      </div>
-
-      {/* Row 4: aging badge + action buttons */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7, gap: 6 }}>
-        {days !== null && aColor
-          ? (
-            <span style={{ fontSize: 9, fontWeight: 700, color: aColor, background: aColor + "18", border: `1px solid ${aColor}40`, borderRadius: 4, padding: "2px 6px" }}>
-              {days === 0 ? "Hoje" : `${days}d nesta etapa`}
-            </span>
-          )
-          : <span />
-        }
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={e => e.preventDefault()}>
-          {/* Star toggle */}
-          {canWrite && (
-            <button
-              onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleStar?.(item.id); }}
-              title={item.starred ? "Remover dos favoritos" : "Favoritar"}
-              style={{ background: "none", border: "none", cursor: "pointer", color: item.starred ? "#F59E0B" : NEUTRAL.slate, padding: 3, borderRadius: 4, display: "flex" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
-            >
-              <Star size={12} fill={item.starred ? "#F59E0B" : "none"} />
-            </button>
-          )}
-          {/* Quick-move menu */}
-          {canWrite && (
-            <div ref={menuRef} style={{ position: "relative" }}>
-              <button
-                onClick={e => { e.preventDefault(); e.stopPropagation(); setMenuOpen(v => !v); }}
-                title="Mover para etapa"
-                style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 3, borderRadius: 4, display: "flex" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
-              >
-                <MoreHorizontal size={13} />
-              </button>
-              {menuOpen && (
-                <div
-                  style={{ position: "absolute", right: 0, bottom: "calc(100% + 4px)", background: "#FFF", border: "1px solid #E5E7EB", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 50, minWidth: 160, padding: "4px 0", overflow: "hidden" }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div style={{ fontSize: 9, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", padding: "6px 12px 4px" }}>Mover para</div>
-                  {otherStages.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={e => { e.preventDefault(); e.stopPropagation(); onMoveStage?.(item.id, s.id); setMenuOpen(false); }}
-                      style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 12px", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: NEUTRAL.graphite, textAlign: "left" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#F9FAFB"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
-                      {s.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 /* ── Create modal ────────────────────────────────────────────── */
@@ -506,6 +350,11 @@ export function EntregasView({ user, users = [] }) {
     return list;
   }, [deliverables, ownerFilter, companyFilter, starredOnly]);
 
+  const handleDragStart = useCallback((item) => setDraggedItem(item), []);
+  const handleDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
+  const handleDragLeave = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }, []);
+  const handleDragEnd   = useCallback(() => { setDraggedItem(null); setDragOverStage(null); }, []);
+
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedItem || !canWrite) return;
     if (draggedItem.stage !== toStage) await changeStage(draggedItem.id, toStage);
@@ -657,17 +506,19 @@ export function EntregasView({ user, users = [] }) {
                 {expanded && (
                   <div className="p-2.5 space-y-2" style={{ background: "#FAFAFA" }}>
                     {stageItems.length === 0 ? (
-                      <div className="text-center py-4 text-xs" style={{ color: NEUTRAL.slate }}>Sem entregas nesta etapa</div>
+                      <div className="text-center py-4 text-xs" style={{ color: NEUTRAL.slate }}>Nenhuma entrega nesta etapa</div>
                     ) : (
                       stageItems.map(item => (
-                        <DeliverableCard
+                        <DeliverableKanbanCard
                           key={item.id}
                           item={item}
                           ownerName={usersById.get(item.assignee)?.name || null}
-                          onDragStart={setDraggedItem}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
                           canWrite={canWrite}
                           onClick={setSelected}
-                          onMoveStage={canWrite ? changeStage : null}
+                          stages={DELIVERABLE_STAGES}
+                          onMoveToStage={canWrite ? changeStage : null}
                           onToggleStar={canWrite ? toggleStar : null}
                         />
                       ))
@@ -694,16 +545,16 @@ export function EntregasView({ user, users = [] }) {
           <div className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
             style={{ background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)" }} />
           <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
-            <div className="flex gap-3" style={{ minWidth: `${DELIVERABLE_STAGES.length * 272}px` }}>
+            <div className="flex gap-3" style={{ minWidth: `${DELIVERABLE_STAGES.length * 284}px` }}>
               {DELIVERABLE_STAGES.map(stage => {
                 const stageItems = filtered.filter(d => d.stage === stage.id);
                 const isOver     = dragOverStage === stage.id;
 
                 return (
                   <div key={stage.id}
-                    onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id); }}
-                    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }}
-                    onDrop={e => { e.preventDefault(); handleDrop(stage.id); }}
+                    onDragOver={e => handleDragOver(e, stage.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
                     style={{ width: 272, minWidth: 272, background: isOver ? "#F0F7FF" : "#fef1f0", borderColor: isOver ? stage.color + "70" : "#E5E7EB", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", minHeight: 480, flexShrink: 0 }}>
                     <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
@@ -729,22 +580,36 @@ export function EntregasView({ user, users = [] }) {
                       )}
                     </div>
 
-                    <div className="px-2 pt-1.5 pb-2 space-y-2 flex-1 overflow-y-auto" style={{ maxHeight: "62vh", minHeight: 80 }}>
+                    <div className="px-2 pt-0.5 pb-1 space-y-2 flex-1 overflow-y-auto" style={{ maxHeight: "62vh", minHeight: 80 }}>
                       {stageItems.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
                           style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}>
-                          {isOver ? <><Plus size={16} style={{ opacity: 0.5 }} /><span>Soltar aqui</span></> : <span style={{ opacity: 0.5 }}>Sem entregas</span>}
+                          {isOver ? (
+                            <>
+                              <Plus size={16} style={{ opacity: 0.5 }} />
+                              <span>Soltar aqui</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ opacity: 0.5 }}>Nenhuma entrega nesta etapa</span>
+                              {!stage.terminal && canWrite && (
+                                <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>
+                              )}
+                            </>
+                          )}
                         </div>
                       ) : (
                         stageItems.map(item => (
-                          <DeliverableCard
+                          <DeliverableKanbanCard
                             key={item.id}
                             item={item}
                             ownerName={usersById.get(item.assignee)?.name || null}
-                            onDragStart={setDraggedItem}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
                             canWrite={canWrite}
                             onClick={setSelected}
-                            onMoveStage={canWrite ? changeStage : null}
+                            stages={DELIVERABLE_STAGES}
+                            onMoveToStage={canWrite ? changeStage : null}
                             onToggleStar={canWrite ? toggleStar : null}
                           />
                         ))

@@ -567,6 +567,11 @@ export function MarketingView({ user, users = [] }) {
     URL.revokeObjectURL(url);
   }, [filteredCampaigns]);
 
+  const handleDragStart = useCallback((campaign) => setDraggedCampaign(campaign), []);
+  const handleDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
+  const handleDragLeave = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }, []);
+  const handleDragEnd   = useCallback(() => { setDraggedCampaign(null); setDragOverStage(null); }, []);
+
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedCampaign || !canWrite) return;
     if (draggedCampaign.stage !== toStage) {
@@ -751,8 +756,8 @@ export function MarketingView({ user, users = [] }) {
                           campaign={c}
                           ownerName={usersById.get(c.owner)?.name || null}
                           onClick={setSelected}
-                          onDragStart={c => setDraggedCampaign(c)}
-                          onDragEnd={() => setDraggedCampaign(null)}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
                           stages={MARKETING_STAGES}
                           onMoveToStage={changeStage}
                         />
@@ -784,7 +789,7 @@ export function MarketingView({ user, users = [] }) {
           <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
             <div
               className="flex gap-3"
-              style={{ minWidth: `${MARKETING_STAGES.length * 264}px` }}
+              style={{ minWidth: `${MARKETING_STAGES.length * 284}px` }}
             >
               {MARKETING_STAGES.map(stage => {
                 const stageCampaigns = filteredCampaigns.filter(c => c.stage === stage.id);
@@ -795,13 +800,13 @@ export function MarketingView({ user, users = [] }) {
                 return (
                   <div
                     key={stage.id}
-                    onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id); }}
-                    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }}
-                    onDrop={e => { e.preventDefault(); handleDrop(stage.id); }}
+                    onDragOver={e => handleDragOver(e, stage.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
                     style={{
-                      width: 264,
-                      minWidth: 264,
+                      width: 272,
+                      minWidth: 272,
                       background: isOver ? "#F0F7FF" : "#fef1f0",
                       borderColor: isOver ? stage.color + "70" : "#E5E7EB",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
@@ -851,7 +856,7 @@ export function MarketingView({ user, users = [] }) {
 
                     {/* Cards */}
                     <div
-                      className="px-2 pt-1.5 pb-2 space-y-2 flex-1 overflow-y-auto"
+                      className="px-2 pt-0.5 pb-1 space-y-2 flex-1 overflow-y-auto"
                       style={{ maxHeight: "62vh", minHeight: 80 }}
                     >
                       {stageCampaigns.length === 0 ? (
@@ -866,9 +871,9 @@ export function MarketingView({ user, users = [] }) {
                             </>
                           ) : (
                             <>
-                              <span style={{ opacity: 0.5 }}>Nenhuma campanha</span>
+                              <span style={{ opacity: 0.5 }}>Nenhuma campanha nesta etapa</span>
                               {!stage.terminal && canWrite && (
-                                <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste ou clique no "+" acima</span>
+                                <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>
                               )}
                             </>
                           )}
@@ -880,8 +885,8 @@ export function MarketingView({ user, users = [] }) {
                             campaign={c}
                             ownerName={usersById.get(c.owner)?.name || null}
                             onClick={setSelected}
-                            onDragStart={c => setDraggedCampaign(c)}
-                            onDragEnd={() => setDraggedCampaign(null)}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
                             stages={MARKETING_STAGES}
                             onMoveToStage={changeStage}
                           />
