@@ -481,6 +481,8 @@ export function EntregasView({ user, users = [] }) {
   const [quickAddStage,  setQuickAddStage]  = useState(null);
   const [selected,       setSelected]       = useState(null);
   const [viewMode,       setViewMode]       = useState("kanban");
+  const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["solicitacao"]));
+  const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   /* Filters */
   const [ownerFilter,    setOwnerFilter]    = useState("");
@@ -627,8 +629,68 @@ export function EntregasView({ user, users = [] }) {
 
       {loading && <div className="text-sm text-center py-8" style={{ color: NEUTRAL.slate }}>Carregando entregas…</div>}
 
-      {!loading && viewMode === "kanban" && (
-        <div className="relative">
+      {!loading && viewMode === "kanban" && (<>
+        {/* Mobile kanban: vertical collapsible stages */}
+        <div className="lg:hidden space-y-1.5 pb-24">
+          {DELIVERABLE_STAGES.map(stage => {
+            const stageItems = filtered.filter(d => d.stage === stage.id);
+            const expanded = expandedMobileStages.has(stage.id);
+            return (
+              <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
+                <button
+                  className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer"
+                  style={{ background: stage.color + "12", border: "none" }}
+                  onClick={() => toggleMobileStage(stage.id)}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
+                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
+                    {stage.sla && <span className="text-xs" style={{ color: stage.color + "88" }}>SLA {stage.sla}d</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+                      <ChevronDown size={13} />
+                    </div>
+                  </div>
+                </button>
+                {expanded && (
+                  <div className="p-2.5 space-y-2" style={{ background: "#FAFAFA" }}>
+                    {stageItems.length === 0 ? (
+                      <div className="text-center py-4 text-xs" style={{ color: NEUTRAL.slate }}>Sem entregas nesta etapa</div>
+                    ) : (
+                      stageItems.map(item => (
+                        <DeliverableCard
+                          key={item.id}
+                          item={item}
+                          ownerName={usersById.get(item.assignee)?.name || null}
+                          onDragStart={setDraggedItem}
+                          canWrite={canWrite}
+                          onClick={setSelected}
+                          onMoveStage={canWrite ? changeStage : null}
+                          onToggleStar={canWrite ? toggleStar : null}
+                        />
+                      ))
+                    )}
+                    {canWrite && !stage.terminal && (
+                      <button
+                        onClick={() => setQuickAddStage(stage.id)}
+                        className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+                        style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                      >
+                        <Plus size={12} />
+                        Nova entrega
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop kanban: horizontal scroll */}
+        <div className="hidden lg:block relative">
           <div className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
             style={{ background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)" }} />
           <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
@@ -694,7 +756,7 @@ export function EntregasView({ user, users = [] }) {
             </div>
           </div>
         </div>
-      )}
+      </>)}
 
       {!loading && viewMode === "calendar" && (
         <div className="text-center py-16" style={{ color: NEUTRAL.slate }}>

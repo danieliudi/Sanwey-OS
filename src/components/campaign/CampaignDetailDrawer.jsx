@@ -455,6 +455,7 @@ export function CampaignDetailDrawer({
 }) {
   const [tab, setTab] = useState("details");
   const [draft, setDraft] = useState({});
+  const [mobileTab, setMobileTab] = useState("info");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const saveTimeout = useRef(null);
@@ -481,6 +482,7 @@ export function CampaignDetailDrawer({
 
   useEffect(() => {
     setDraft({});
+    setMobileTab("info");
     pendingPatch.current = {};
   }, [campaign?.id]);
 
@@ -514,6 +516,8 @@ export function CampaignDetailDrawer({
 
   const ownerUser = users.find(u => u.id === get("owner"));
   const stage = MARKETING_STAGES.find(s => s.id === get("stage"));
+  const stageIdx = MARKETING_STAGES.findIndex(s => s.id === get("stage"));
+  const nextStage = stageIdx >= 0 && stageIdx < MARKETING_STAGES.length - 1 ? MARKETING_STAGES[stageIdx + 1] : null;
   const channelStyle = get("channel") ? (CHANNEL_COLORS[get("channel")] || null) : null;
 
   if (!campaign) return null;
@@ -532,9 +536,43 @@ export function CampaignDetailDrawer({
         className="fixed top-0 right-0 h-full z-50 flex flex-col shadow-2xl"
         style={{ width: "min(520px, 100vw)", background: "#FFFFFF" }}
       >
-        {/* Header */}
+        {/* Mobile header */}
+        <div className="lg:hidden shrink-0 flex flex-col" style={{ borderBottom: "1px solid #E5E7EB" }}>
+          <div className="flex items-center justify-between px-4 py-3">
+            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: NEUTRAL.slate }}>
+              <X size={20} />
+            </button>
+            <div className="flex-1 mx-3 text-center min-w-0">
+              <div className="font-bold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{get("name")}</div>
+              {stage && <div className="text-xs font-semibold" style={{ color: stage.color }}>{stage.name}</div>}
+            </div>
+            {canWrite && (
+              <button
+                onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
+                className="p-1.5 rounded-lg"
+                style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "#9CA3AF" }}
+              >
+                <Star size={16} fill={campaign.starred ? "#F59E0B" : "none"} />
+              </button>
+            )}
+          </div>
+          <div className="flex border-t" style={{ borderColor: "#E5E7EB" }}>
+            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setMobileTab(t.id)}
+                className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
+                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`, color: mobileTab === t.id ? "#1E4D8C" : NEUTRAL.slate }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop header */}
         <div
-          className="px-5 py-4 border-b flex items-start justify-between gap-3"
+          className="hidden lg:flex px-5 py-4 border-b items-start justify-between gap-3"
           style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
         >
           <div className="flex-1 min-w-0">
@@ -594,9 +632,9 @@ export function CampaignDetailDrawer({
           </div>
         </div>
 
-        {/* Stage selector */}
+        {/* Stage selector — desktop only */}
         {canWrite && (
-          <div className="px-5 py-2 border-b" style={{ borderColor: "#E5E7EB" }}>
+          <div className={`px-5 py-2 border-b${mobileTab !== "stage" ? " hidden lg:block" : " lg:block"}`} style={{ borderColor: "#E5E7EB" }}>
             <div className="flex gap-1.5 overflow-x-auto pb-0.5">
               {MARKETING_STAGES.map(s => (
                 <button
@@ -616,8 +654,41 @@ export function CampaignDetailDrawer({
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex border-b" style={{ borderColor: "#E5E7EB" }}>
+        {/* Mobile FASE ATUAL: full stage list */}
+        {mobileTab === "stage" && (
+          <div className="lg:hidden flex-1 overflow-y-auto p-4 pb-24 space-y-2">
+            {MARKETING_STAGES.map((s, idx) => {
+              const isCurrent = s.id === get("stage");
+              const isPast = idx < stageIdx;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => { if (canWrite) onUpdate?.(campaign.id, { stage: s.id, stageChangedAt: new Date().toISOString() }); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border cursor-pointer"
+                  style={{
+                    background: isCurrent ? s.color + "14" : "#FFFFFF",
+                    borderColor: isCurrent ? s.color : "#E5E7EB",
+                    textAlign: "left",
+                  }}
+                >
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: isCurrent ? s.color : isPast ? s.color + "44" : "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {isPast ? <Check size={14} color="#FFFFFF" /> : <span style={{ width: 8, height: 8, borderRadius: "50%", background: isCurrent ? "#FFFFFF" : s.color + "66", display: "block" }} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm" style={{ color: isCurrent ? s.color : NEUTRAL.graphite }}>{s.name}</div>
+                    {s.sla && <div className="text-xs" style={{ color: NEUTRAL.slate }}>SLA {s.sla}d</div>}
+                  </div>
+                  {isCurrent && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: s.color, color: "#FFFFFF" }}>ATUAL</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Desktop Tabs */}
+        <div className={`flex border-b${mobileTab !== "info" ? " hidden lg:flex" : " lg:flex"}`} style={{ borderColor: "#E5E7EB" }}>
           {TABS.map(t => {
             const Icon = t.icon;
             return (
@@ -642,7 +713,7 @@ export function CampaignDetailDrawer({
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className={`flex-1 overflow-y-auto p-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}>
           {tab === "details" && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -875,6 +946,23 @@ export function CampaignDetailDrawer({
 
           {tab === "activity" && (
             <ActivityLog activities={campaign.activities || []} />
+          )}
+        </div>
+
+        {/* Mobile sticky footer — Avançar CTA */}
+        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+          {nextStage ? (
+            <button
+              onClick={() => canWrite && onUpdate?.(campaign.id, { stage: nextStage.id, stageChangedAt: new Date().toISOString() })}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm cursor-pointer"
+              style={{ background: nextStage.color, color: "#FFFFFF", border: "none" }}
+            >
+              Avançar para {nextStage.name}
+            </button>
+          ) : (
+            <div className="text-xs text-center py-3" style={{ color: NEUTRAL.slate }}>
+              {stage?.terminal ? "Campanha encerrada" : "Última etapa"}
+            </div>
           )}
         </div>
       </div>

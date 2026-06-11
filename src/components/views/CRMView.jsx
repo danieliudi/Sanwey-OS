@@ -466,6 +466,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
+  const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["prospeccao"]));
+  const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const usersById = useUsersById(users);
   const { formConfig, updateFormConfig } = useLeadFormConfig();
@@ -660,8 +662,72 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           activeCompany={activeCompany}
           onLeadClick={onLeadClick}
         />
-      ) : (
-      <div className="relative">
+      ) : (<>
+      {/* Mobile kanban: vertical collapsible stages */}
+      <div className="lg:hidden space-y-1.5 pb-24">
+        {stages.map(stage => {
+          const bucket = byStage[stage.id] || { leads: [], total: 0 };
+          const expanded = expandedMobileStages.has(stage.id);
+          return (
+            <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
+              <button
+                className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer"
+                style={{ background: stage.color + "12", border: "none" }}
+                onClick={() => toggleMobileStage(stage.id)}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
+                  <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
+                  {bucket.total > 0 && <span className="text-xs font-semibold" style={{ color: stage.color + "99" }}>{formatK(bucket.total)}</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm" style={{ color: stage.color }}>{bucket.leads.length}</span>
+                  <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+                    <ChevronDown size={13} />
+                  </div>
+                </div>
+              </button>
+              {expanded && (
+                <div className="p-2.5 space-y-2" style={{ background: "#FAFAFA" }}>
+                  {bucket.leads.length === 0 ? (
+                    <div className="text-center py-4 text-xs" style={{ color: NEUTRAL.slate }}>Nenhum negócio nesta etapa</div>
+                  ) : (
+                    bucket.leads.map(lead => {
+                      const ownerName = lead.owner ? (usersById.get(lead.owner)?.name?.split(" ")[0] || "—") : null;
+                      return (
+                        <LeadKanbanCard
+                          key={lead.id}
+                          lead={lead}
+                          ownerName={ownerName}
+                          showOwnerFooter={isGroupView || isManager}
+                          isGroupView={isGroupView}
+                          onClick={onLeadClick}
+                          onDragStart={handleDragStart}
+                          stages={stages}
+                          onMoveToStage={onStageChange}
+                        />
+                      );
+                    })
+                  )}
+                  {onAddLead && !stage.terminal && (
+                    <button
+                      onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: isGroupView ? firstValidCompany : activeCompany })}
+                      className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+                      style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                    >
+                      <Plus size={12} />
+                      Nova oportunidade
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop kanban: horizontal scroll */}
+      <div className="hidden lg:block relative">
         {/* Fade gradient indicating more stages exist to the right */}
         <div
           className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
@@ -799,7 +865,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         </div>
       </div>
       </div>
-      )}
+      </>)}
 
       {/* ── Analytics panel (apenas no kanban) ── */}
       {viewMode === "kanban" && scopedLeads.length > 0 && (

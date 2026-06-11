@@ -788,6 +788,18 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
               {activeTab === "checklists"  && <ChecklistsTab deliverableId={item.id} canWrite={canWrite} userId={userId} />}
               {activeTab === "comentarios" && <ComentariosTab item={item} onUpdate={onUpdate} canWrite={canWrite} />}
             </div>
+            {/* Sticky Avançar footer */}
+            {nextStages.length > 0 && canWrite && (
+              <div style={{ flexShrink: 0, borderTop: "1px solid #E5E7EB", padding: "12px 16px", background: "#FFFFFF" }}>
+                <button
+                  onClick={() => handleMoveStage(nextStages[0].id)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px 0", borderRadius: 12, background: nextStages[0].color, color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14 }}
+                >
+                  Avançar para {nextStages[0].name}
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           /* ── Desktop: 3-column grid ── */
