@@ -975,7 +975,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
 
           {/* ── CENTER: stage bar + stage fields ── */}
           <main
-            className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}
+            className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-5${mobileTab !== "stage" ? " hidden lg:block" : ""}`}
           >
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
@@ -1001,30 +1001,6 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
               }
             </div>
           </main>
-
-          {/* Mobile FASE ATUAL panel */}
-          {mobileTab === "stage" && (
-            <div className="lg:hidden flex-1 overflow-y-auto p-4 pb-24 space-y-2">
-              {[...nextStages, ...prevStages].map(s => {
-                const isNext = nextStages.includes(s);
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => canWrite && handleMoveStage(s.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border cursor-pointer"
-                    style={{ background: isNext ? s.color + "14" : "#FFFFFF", borderColor: isNext ? s.color : "#E5E7EB", textAlign: "left" }}
-                  >
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: isNext ? s.color : "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {isNext ? <ArrowRight size={14} color="#FFFFFF" /> : <ArrowLeft size={14} color={NEUTRAL.slate} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm" style={{ color: isNext ? s.color : NEUTRAL.graphite }}>{s.name}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
 
           {/* ── RIGHT sidebar ── */}
           <aside
