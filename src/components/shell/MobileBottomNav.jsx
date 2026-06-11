@@ -4,13 +4,13 @@ import React, { useState } from "react";
 const ROLE_TABS = {
   admin: [
     { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "crm",                label: "Negócios",  icon: "handshake" },
+    { id: "crm",                label: "CRM",       icon: "handshake" },
     { id: "marketing",          label: "Campanhas", icon: "campaign" },
-    { id: "signals",            label: "Sinais",    icon: "monitoring" },
+    { id: "marketing-entregas", label: "Entregas",  icon: "inventory_2" },
   ],
   gerente: [
     { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "crm",                label: "Negócios",  icon: "handshake" },
+    { id: "crm",                label: "CRM",       icon: "handshake" },
     { id: "signals",            label: "Sinais",    icon: "monitoring" },
     { id: "explorer",           label: "Explorador",icon: "explore" },
   ],
@@ -28,13 +28,13 @@ const ROLE_TABS = {
   ],
   vendedor: [
     { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "crm",                label: "Negócios",  icon: "handshake" },
+    { id: "crm",                label: "CRM",       icon: "handshake" },
     { id: "signals",            label: "Sinais",    icon: "monitoring" },
     { id: "explorer",           label: "Explorador",icon: "explore" },
   ],
   consultor: [
     { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "crm",                label: "Negócios",  icon: "handshake" },
+    { id: "crm",                label: "CRM",       icon: "handshake" },
     { id: "signals",            label: "Sinais",    icon: "monitoring" },
     { id: "explorer",           label: "Explorador",icon: "explore" },
   ],
