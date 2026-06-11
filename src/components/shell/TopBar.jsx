@@ -35,21 +35,11 @@ export function TopBar({
         paddingRight: isDesktop ? 32 : 16,
       }}
     >
-      {/* Mobile: hamburger + brand name */}
+      {/* Mobile: brand name only — navigation handled by bottom nav */}
       {!isDesktop && (
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onMenuToggle}
-            className="flex items-center justify-center"
-            style={{ width: 40, height: 40, background: "transparent", border: "none", color: "#201a1a", cursor: "pointer", borderRadius: 8 }}
-            aria-label="Abrir menu"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 24 }}>menu</span>
-          </button>
-          <span style={{ fontWeight: 800, fontSize: 18, color: "#b5000b", letterSpacing: "-0.02em" }}>
-            Sanwey
-          </span>
-        </div>
+        <span style={{ fontWeight: 800, fontSize: 18, color: "#b5000b", letterSpacing: "-0.02em" }}>
+          Sanwey
+        </span>
       )}
 
       {/* Desktop: search bar */}

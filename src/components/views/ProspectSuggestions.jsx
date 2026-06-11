@@ -73,7 +73,7 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
 
   return (
     <div
-      className="p-4 rounded-xl border flex flex-col gap-3 transition-all duration-150"
+      className="p-4 rounded-xl border flex flex-col gap-3 transition-all duration-150 overflow-hidden min-w-0"
       style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div className="flex items-start justify-between gap-3">

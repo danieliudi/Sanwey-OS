@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
-  MoreHorizontal, Filter,
+  MoreHorizontal, Filter, CalendarDays, LayoutGrid,
 } from "lucide-react";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingCampaigns }    from "../../hooks/use-marketing-campaigns";
@@ -442,6 +442,29 @@ function KpiCard({ label, value, color }) {
   );
 }
 
+/* ── View toggle button ──────────────────────────────────────── */
+function ViewToggleButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      style={{
+        display: "flex", alignItems: "center", gap: 5,
+        padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
+        background: active ? "#1E4D8C" : "#FFFFFF",
+        color:      active ? "#FFFFFF"  : NEUTRAL.slate,
+        border: `1px solid ${active ? "#1E4D8C" : "#E5E7EB"}`,
+        cursor: "pointer",
+        transition: "all 0.15s",
+      }}
+    >
+      <Icon size={13} />
+      {label}
+    </button>
+  );
+}
+
 /* ── Main view ───────────────────────────────────────────────── */
 export function EntregasView({ user, users = [] }) {
   const {
@@ -457,6 +480,7 @@ export function EntregasView({ user, users = [] }) {
   const [dragOverStage,  setDragOverStage]  = useState(null);
   const [quickAddStage,  setQuickAddStage]  = useState(null);
   const [selected,       setSelected]       = useState(null);
+  const [viewMode,       setViewMode]       = useState("kanban");
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["solicitacao"]));
   const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -523,17 +547,24 @@ export function EntregasView({ user, users = [] }) {
           </div>
           <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>Kanban de entregas de campanha</p>
         </div>
-        {/* Export CSV */}
-        <button
-          onClick={() => exportCSV(filtered)}
-          title="Exportar CSV"
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#FFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12, fontWeight: 500, color: NEUTRAL.slate, cursor: "pointer" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#FFF"; e.currentTarget.style.color = NEUTRAL.slate; }}
-        >
-          <Download size={14} />
-          Exportar CSV
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* View toggle */}
+          <div style={{ display: "flex", gap: 4, background: "#F3F4F6", borderRadius: 10, padding: 3 }}>
+            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     />
+            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
+          </div>
+          {/* Export CSV */}
+          <button
+            onClick={() => exportCSV(filtered)}
+            title="Exportar CSV"
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#FFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12, fontWeight: 500, color: NEUTRAL.slate, cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#FFF"; e.currentTarget.style.color = NEUTRAL.slate; }}
+          >
+            <Download size={14} />
+            Exportar CSV
+          </button>
+        </div>
       </div>
 
       {/* KPI bar */}
@@ -598,9 +629,8 @@ export function EntregasView({ user, users = [] }) {
 
       {loading && <div className="text-sm text-center py-8" style={{ color: NEUTRAL.slate }}>Carregando entregas…</div>}
 
-      {!loading && (
-        <>
-        {/* ── Mobile kanban: vertical collapsible stages ────────────────── */}
+      {!loading && viewMode === "kanban" && (<>
+        {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
           {DELIVERABLE_STAGES.map(stage => {
             const stageItems = filtered.filter(d => d.stage === stage.id);
@@ -609,20 +639,17 @@ export function EntregasView({ user, users = [] }) {
               <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
                 <button
                   className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer"
-                  style={{ background: stage.color + "12" }}
+                  style={{ background: stage.color + "12", border: "none" }}
                   onClick={() => toggleMobileStage(stage.id)}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
                     <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
+                    {stage.sla && <span className="text-xs" style={{ color: stage.color + "88" }}>SLA {stage.sla}d</span>}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
-                    <div style={{
-                      width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`,
-                      display: "flex", alignItems: "center", justifyContent: "center", color: stage.color,
-                      transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0,
-                    }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
                       <ChevronDown size={13} />
                     </div>
                   </div>
@@ -630,9 +657,7 @@ export function EntregasView({ user, users = [] }) {
                 {expanded && (
                   <div className="p-2.5 space-y-2" style={{ background: "#FAFAFA" }}>
                     {stageItems.length === 0 ? (
-                      <div className="text-xs text-center py-5" style={{ color: NEUTRAL.slate }}>
-                        Nenhuma entrega nesta etapa
-                      </div>
+                      <div className="text-center py-4 text-xs" style={{ color: NEUTRAL.slate }}>Sem entregas nesta etapa</div>
                     ) : (
                       stageItems.map(item => (
                         <DeliverableCard
@@ -647,13 +672,13 @@ export function EntregasView({ user, users = [] }) {
                         />
                       ))
                     )}
-                    {!stage.terminal && canWrite && (
+                    {canWrite && !stage.terminal && (
                       <button
                         onClick={() => setQuickAddStage(stage.id)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed text-xs font-semibold transition-colors"
-                        style={{ borderColor: stage.color + "40", color: stage.color, background: "transparent" }}
+                        className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+                        style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
                       >
-                        <Plus size={13} />
+                        <Plus size={12} />
                         Nova entrega
                       </button>
                     )}
@@ -664,7 +689,7 @@ export function EntregasView({ user, users = [] }) {
           })}
         </div>
 
-        {/* ── Desktop kanban: horizontal scroll ──────────────────────────── */}
+        {/* Desktop kanban: horizontal scroll */}
         <div className="hidden lg:block relative">
           <div className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
             style={{ background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)" }} />
@@ -731,12 +756,19 @@ export function EntregasView({ user, users = [] }) {
             </div>
           </div>
         </div>
-        </>
+      </>)}
+
+      {!loading && viewMode === "calendar" && (
+        <div className="text-center py-16" style={{ color: NEUTRAL.slate }}>
+          <CalendarDays size={40} style={{ opacity: 0.3, margin: "0 auto 12px" }} />
+          <div className="font-semibold" style={{ fontSize: 15, marginBottom: 6, color: NEUTRAL.graphite }}>Vista de calendário em breve</div>
+          <div className="text-sm" style={{ color: NEUTRAL.slate }}>As entregas serão exibidas por prazo nesta visão.</div>
+        </div>
       )}
 
-      {!loading && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} />}
+      {!loading && viewMode === "kanban" && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} />}
 
-      {!loading && (
+      {!loading && viewMode === "kanban" && (
         <p className="text-xs text-center mt-3" style={{ color: NEUTRAL.slate }}>
           Arraste para mover · "+" para criar · Clique para ver detalhes
         </p>
@@ -766,7 +798,7 @@ export function EntregasView({ user, users = [] }) {
       />
     )}
 
-    {canWrite && (
+    {canWrite && viewMode === "kanban" && (
       <button
         className="fixed z-30 flex items-center gap-2 font-semibold shadow-lg left-6 lg:left-[312px] bottom-20 lg:bottom-6"
         style={{ height: 52, padding: "0 20px", background: "#1E4D8C", color: "#FFFFFF", border: "none", borderRadius: 26, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 16px rgba(30,77,140,0.35)" }}

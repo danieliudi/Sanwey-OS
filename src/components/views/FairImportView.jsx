@@ -199,9 +199,8 @@ function parseXLSX(buffer, users) {
 
 // ── Company options ──────────────────────────────────────────────────────────
 const COMPANY_OPTIONS = [
-  { value: "industria", label: "Sanwey Indústria" },
+  { value: "industria", label: "Sanwey" },
   { value: "resibag",   label: "Resibag" },
-  { value: "montemor",  label: "Monte Mor" },
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────

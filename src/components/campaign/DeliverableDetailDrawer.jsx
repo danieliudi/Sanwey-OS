@@ -490,10 +490,10 @@ function ComentariosTab({ item, onUpdate, canWrite }) {
 /* ── Main component ─────────────────────────────────────────── */
 export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, users = [], canWrite, userId }) {
   const [activeTab,    setActiveTab]   = useState("form");
-  const [mobileTab,    setMobileTab]   = useState("info");
   const [fieldValues,  setFieldValues] = useState(() => item.stageData?.[item.stage] ?? {});
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | null
   const [deleting,     setDeleting]    = useState(false);
+  const [isMobile,     setIsMobile]    = useState(() => window.innerWidth < 640);
 
   /* Refs to avoid stale closures in debounce */
   const fieldValuesRef = useRef(fieldValues);
@@ -507,7 +507,6 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
     setFieldValues(item.stageData?.[item.stage] ?? {});
     fieldValuesRef.current = item.stageData?.[item.stage] ?? {};
     setSaveStatus(null);
-    setMobileTab("info");
     if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
   }, [item.id, item.stage]);
 
@@ -517,6 +516,13 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
+
+  /* Mobile breakpoint */
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
 
   /* Stage meta */
   const stageInfo  = DELIVERABLE_STAGES.find(s => s.id === item.stage);
@@ -593,46 +599,11 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
 
       {/* Drawer */}
       <div
-        className="flex flex-col"
-        style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(960px, 100vw)", background: "#F3F4F6", zIndex: 201, boxShadow: "-8px 0 40px rgba(0,0,0,0.18)" }}
+        style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: isMobile ? "100vw" : "min(960px, 98vw)", background: "#F3F4F6", zIndex: 201, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.18)" }}
         onClick={e => e.stopPropagation()}
       >
-        {/* ── Mobile header ────────────────────────────────────────── */}
-        <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b shrink-0" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 6, display: "flex", flexShrink: 0 }}>
-            <X size={20} />
-          </button>
-          <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
-            {stageInfo && <div style={{ fontSize: 11, color: stageInfo.color, marginTop: 2 }}>{stageInfo.name}</div>}
-          </div>
-          {item.priority && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: priorityColor, background: priorityColor + "18", border: `1px solid ${priorityColor}40`, borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>
-              {priorityLabel}
-            </span>
-          )}
-        </div>
-
-        {/* ── Mobile tab bar ────────────────────────────────────────── */}
-        <div className="lg:hidden flex border-b shrink-0" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-          {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setMobileTab(t.id)}
-              style={{
-                flex: 1, padding: "12px 0", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
-                background: "transparent", border: "none", cursor: "pointer",
-                color: mobileTab === t.id ? "#1E4D8C" : NEUTRAL.slate,
-                borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`,
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Desktop header ────────────────────────────────────────── */}
-        <div className="hidden lg:flex items-center gap-3 shrink-0" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB", padding: "14px 20px" }}>
+        {/* Top bar */}
+        <div style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
               {item.starred && <Star size={14} fill="#F59E0B" color="#F59E0B" />}
@@ -663,30 +634,23 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
         </div>
 
         {/* Body */}
-        <div className={`flex-1 min-h-0 flex flex-col lg:grid lg:[grid-template-columns:240px_1fr_220px]`}>
-
-          {/* ── Col 1: Tabs (INFORMAÇÕES on mobile) ── */}
-          <div className={`${mobileTab !== "info" ? "hidden lg:flex" : "flex"} flex-col`} style={{ background: "#FFFFFF", borderRight: "1px solid #E5E7EB" }}>
-            {/* Tab bar */}
-            <div style={{ borderBottom: "1px solid #E5E7EB", flexShrink: 0 }}>
-              {TABS.map(tab => {
+        {isMobile ? (
+          /* ── Mobile: horizontal tabs + single scrollable column ── */
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+            {/* Horizontal scrollable tab bar */}
+            <div style={{ display: "flex", overflowX: "auto", flexShrink: 0, background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
+              {[...TABS, { id: "mover", label: "Mover", Icon: ArrowRight }].map(tab => {
                 const active = activeTab === tab.id;
                 return (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                     style={{
-                      display: "flex", alignItems: "center", gap: 7,
-                      width: "100%", padding: "10px 16px",
-                      background: active ? "#EFF6FF" : "transparent",
-                      border: "none",
-                      borderLeft: active ? "3px solid #1E4D8C" : "3px solid transparent",
-                      cursor: "pointer",
-                      fontSize: 12, fontWeight: active ? 700 : 500,
-                      color: active ? "#1E4D8C" : NEUTRAL.slate,
-                      textAlign: "left", transition: "all 0.1s",
-                    }}
-                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#F9FAFB"; }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}>
-                    <tab.Icon size={14} />
+                      display: "flex", alignItems: "center", gap: 5, flexShrink: 0,
+                      padding: "11px 14px", background: "none", border: "none",
+                      borderBottom: `2px solid ${active ? "#1E4D8C" : "transparent"}`,
+                      cursor: "pointer", fontSize: 12, fontWeight: active ? 700 : 500,
+                      color: active ? "#1E4D8C" : NEUTRAL.slate, whiteSpace: "nowrap",
+                    }}>
+                    <tab.Icon size={13} />
                     {tab.label}
                   </button>
                 );
@@ -694,7 +658,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             </div>
 
             {/* Tab content */}
-            <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: 16, background: "#FFFFFF" }}>
               {activeTab === "form" && (
                 <>
                   <SectionLabel>Formulário Inicial</SectionLabel>
@@ -708,22 +672,18 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                       <ReadValue value={val} />
                     </div>
                   ) : null)}
-
                   {item.description && (
                     <div style={{ marginBottom: 10 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Descrição</div>
                       <div style={{ fontSize: 12, color: NEUTRAL.graphite, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{item.description}</div>
                     </div>
                   )}
-
                   <div style={{ marginBottom: 10 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prazo</div>
                     {item.deadline
                       ? <span style={{ fontSize: 13, fontWeight: 600, color: new Date(item.deadline) < new Date() ? "#DC2626" : NEUTRAL.graphite }}>{formatDateBR(item.deadline)}</span>
-                      : <ReadValue value={null} />
-                    }
+                      : <ReadValue value={null} />}
                   </div>
-
                   {item.priority && (
                     <div style={{ marginBottom: 10 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prioridade</div>
@@ -733,6 +693,32 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                     </div>
                   )}
 
+                  {/* Stage fields inline */}
+                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #E5E7EB" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                      <SectionLabel>Fase atual</SectionLabel>
+                      {stageInfo && (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: stageInfo.color, background: stageInfo.color + "18", border: `1px solid ${stageInfo.color}40`, borderRadius: 5, padding: "2px 8px", marginTop: -14 }}>
+                          {stageInfo.name}
+                        </span>
+                      )}
+                      {saveStatus && (
+                        <span style={{ fontSize: 10, color: saveStatus === "saved" ? "#16A34A" : NEUTRAL.slate, marginTop: -14, marginLeft: "auto" }}>
+                          {saveStatus === "saving" ? "Salvando…" : "✓ Salvo"}
+                        </span>
+                      )}
+                    </div>
+                    {fields.length === 0
+                      ? <div style={{ fontSize: 12, color: NEUTRAL.slate }}>Nenhum campo para esta fase.</div>
+                      : fields.map(field => (
+                        <FieldRow key={field.key} label={field.label} required={field.required} hint={field.hint}>
+                          <StageFieldInput field={field} value={fieldValues[field.key]} onChange={val => handleFieldChange(field.key, val)} canWrite={canWrite} users={users} />
+                        </FieldRow>
+                      ))
+                    }
+                  </div>
+
+                  {/* Stage history */}
                   <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #E5E7EB" }}>
                     <SectionLabel>Histórico de Etapas</SectionLabel>
                     {(item.activities || []).filter(a => a.type === "stage_change").length === 0
@@ -748,124 +734,236 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                       ))
                     }
                   </div>
+
+                  {/* Delete */}
+                  {canWrite && (
+                    <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #E5E7EB" }}>
+                      <button onClick={handleDelete} disabled={deleting}
+                        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#DC2626", background: "transparent", border: "none", cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.5 : 1, padding: "2px 0" }}>
+                        <Trash2 size={13} />
+                        Remover entrega
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
+
+              {activeTab === "mover" && (
+                <>
+                  <SectionLabel>Mover card para fase</SectionLabel>
+                  {nextStages.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 10, color: NEUTRAL.slate, fontWeight: 600, marginBottom: 8, letterSpacing: "0.04em" }}>PRÓXIMAS</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {nextStages.map(s => (
+                          <button key={s.id} onClick={() => canWrite && handleMoveStage(s.id)} disabled={!canWrite}
+                            style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: s.color + "14", border: `1px solid ${s.color}50`, borderRadius: 10, cursor: canWrite ? "pointer" : "default", fontSize: 14, fontWeight: 600, color: s.color, textAlign: "left", opacity: canWrite ? 1 : 0.5 }}>
+                            <span style={{ width: 9, height: 9, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
+                            <span style={{ flex: 1 }}>{s.name}</span>
+                            <ArrowRight size={16} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {prevStages.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 10, color: NEUTRAL.slate, fontWeight: 600, marginBottom: 8, letterSpacing: "0.04em" }}>ANTERIORES</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {prevStages.map(s => (
+                          <button key={s.id} onClick={() => canWrite && handleMoveStage(s.id)} disabled={!canWrite}
+                            style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 10, cursor: canWrite ? "pointer" : "default", fontSize: 14, fontWeight: 500, color: NEUTRAL.slate, textAlign: "left", opacity: canWrite ? 1 : 0.5 }}>
+                            <ArrowLeft size={16} />
+                            <span style={{ flex: 1 }}>{s.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
               {activeTab === "atividades"  && <AtividadesTab activities={item.activities} />}
               {activeTab === "anexos"      && <AnexosTab deliverableId={item.id} canWrite={canWrite} userId={userId} />}
               {activeTab === "checklists"  && <ChecklistsTab deliverableId={item.id} canWrite={canWrite} userId={userId} />}
               {activeTab === "comentarios" && <ComentariosTab item={item} onUpdate={onUpdate} canWrite={canWrite} />}
             </div>
-
-            {/* Delete at bottom */}
-            {canWrite && (
-              <div style={{ padding: "12px 16px", borderTop: "1px solid #E5E7EB", flexShrink: 0 }}>
-                <button onClick={handleDelete} disabled={deleting}
-                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#DC2626", background: "transparent", border: "none", cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.5 : 1, padding: "2px 0" }}
-                  onMouseEnter={e => { e.currentTarget.style.opacity = "0.7"; }}
-                  onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}>
-                  <Trash2 size={13} />
-                  Remover entrega
+            {/* Sticky Avançar footer */}
+            {nextStages.length > 0 && canWrite && (
+              <div style={{ flexShrink: 0, borderTop: "1px solid #E5E7EB", padding: "12px 16px", background: "#FFFFFF" }}>
+                <button
+                  onClick={() => handleMoveStage(nextStages[0].id)}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px 0", borderRadius: 12, background: nextStages[0].color, color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14 }}
+                >
+                  Avançar para {nextStages[0].name}
+                  <ArrowRight size={16} />
                 </button>
               </div>
             )}
           </div>
+        ) : (
+          /* ── Desktop: 3-column grid ── */
+          <div style={{ display: "grid", gridTemplateColumns: "240px 1fr 220px", flex: 1, minHeight: 0 }}>
 
-          {/* ── Col 2: Stage fields (FASE ATUAL on mobile) ── */}
-          <div className={mobileTab !== "stage" ? "hidden lg:block" : "block"} style={{ background: "#FFFFFF", borderRight: "1px solid #E5E7EB", overflowY: "auto", padding: "24px 24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
-              <SectionLabel>Fase atual</SectionLabel>
-              {stageInfo && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: stageInfo.color, background: stageInfo.color + "18", border: `1px solid ${stageInfo.color}40`, borderRadius: 5, padding: "2px 8px", marginTop: -14 }}>
-                  {stageInfo.name}
-                </span>
-              )}
-              {saveStatus && (
-                <span style={{ fontSize: 10, color: saveStatus === "saved" ? "#16A34A" : NEUTRAL.slate, marginTop: -14, marginLeft: "auto" }}>
-                  {saveStatus === "saving" ? "Salvando…" : "✓ Salvo"}
-                </span>
+            {/* ── Col 1: Tabs ── */}
+            <div style={{ background: "#FFFFFF", borderRight: "1px solid #E5E7EB", display: "flex", flexDirection: "column" }}>
+              <div style={{ borderBottom: "1px solid #E5E7EB", flexShrink: 0 }}>
+                {TABS.map(tab => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 7,
+                        width: "100%", padding: "10px 16px",
+                        background: active ? "#EFF6FF" : "transparent",
+                        border: "none",
+                        borderLeft: active ? "3px solid #1E4D8C" : "3px solid transparent",
+                        cursor: "pointer",
+                        fontSize: 12, fontWeight: active ? 700 : 500,
+                        color: active ? "#1E4D8C" : NEUTRAL.slate,
+                        textAlign: "left", transition: "all 0.1s",
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#F9FAFB"; }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}>
+                      <tab.Icon size={14} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column" }}>
+                {activeTab === "form" && (
+                  <>
+                    <SectionLabel>Formulário Inicial</SectionLabel>
+                    {[
+                      { label: "Título",       val: item.title },
+                      { label: "Solicitante",  val: item.requesterName },
+                      { label: "Departamento", val: item.department },
+                    ].map(({ label, val }) => val ? (
+                      <div key={label} style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
+                        <ReadValue value={val} />
+                      </div>
+                    ) : null)}
+                    {item.description && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Descrição</div>
+                        <div style={{ fontSize: 12, color: NEUTRAL.graphite, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{item.description}</div>
+                      </div>
+                    )}
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prazo</div>
+                      {item.deadline
+                        ? <span style={{ fontSize: 13, fontWeight: 600, color: new Date(item.deadline) < new Date() ? "#DC2626" : NEUTRAL.graphite }}>{formatDateBR(item.deadline)}</span>
+                        : <ReadValue value={null} />}
+                    </div>
+                    {item.priority && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prioridade</div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: priorityColor, background: priorityColor + "18", border: `1px solid ${priorityColor}40`, borderRadius: 5, padding: "2px 8px", display: "inline-block" }}>
+                          {priorityLabel}
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #E5E7EB" }}>
+                      <SectionLabel>Histórico de Etapas</SectionLabel>
+                      {(item.activities || []).filter(a => a.type === "stage_change").length === 0
+                        ? <div style={{ fontSize: 11, color: NEUTRAL.slate }}>Nenhuma transição registrada.</div>
+                        : [...(item.activities || [])].filter(a => a.type === "stage_change").reverse().map((a, i) => (
+                          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 11 }}>
+                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#1E4D8C", marginTop: 4, flexShrink: 0 }} />
+                            <div>
+                              <div style={{ color: NEUTRAL.graphite }}>{a.description}</div>
+                              <div style={{ color: NEUTRAL.slate, fontSize: 10 }}>{new Date(a.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
+                            </div>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </>
+                )}
+                {activeTab === "atividades"  && <AtividadesTab activities={item.activities} />}
+                {activeTab === "anexos"      && <AnexosTab deliverableId={item.id} canWrite={canWrite} userId={userId} />}
+                {activeTab === "checklists"  && <ChecklistsTab deliverableId={item.id} canWrite={canWrite} userId={userId} />}
+                {activeTab === "comentarios" && <ComentariosTab item={item} onUpdate={onUpdate} canWrite={canWrite} />}
+              </div>
+              {canWrite && (
+                <div style={{ padding: "12px 16px", borderTop: "1px solid #E5E7EB", flexShrink: 0 }}>
+                  <button onClick={handleDelete} disabled={deleting}
+                    style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#DC2626", background: "transparent", border: "none", cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.5 : 1, padding: "2px 0" }}
+                    onMouseEnter={e => { e.currentTarget.style.opacity = "0.7"; }}
+                    onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}>
+                    <Trash2 size={13} />
+                    Remover entrega
+                  </button>
+                </div>
               )}
             </div>
 
-            {fields.length === 0
-              ? <div style={{ fontSize: 12, color: NEUTRAL.slate }}>Nenhum campo para esta fase.</div>
-              : fields.map(field => (
-                <FieldRow key={field.key} label={field.label} required={field.required} hint={field.hint}>
-                  <StageFieldInput
-                    field={field}
-                    value={fieldValues[field.key]}
-                    onChange={val => handleFieldChange(field.key, val)}
-                    canWrite={canWrite}
-                    users={users}
-                  />
-                </FieldRow>
-              ))
-            }
-          </div>
-
-          {/* ── Col 3: Move stage (desktop only) ── */}
-          <div className="hidden lg:block" style={{ background: "#F9FAFB", overflowY: "auto", padding: "24px 16px" }}>
-            <SectionLabel>Mover card para fase</SectionLabel>
-
-            {nextStages.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 10, color: NEUTRAL.slate, fontWeight: 600, marginBottom: 6, letterSpacing: "0.04em" }}>PRÓXIMAS</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {nextStages.map(s => (
-                    <button key={s.id} onClick={() => canWrite && handleMoveStage(s.id)} disabled={!canWrite}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", background: s.color + "14", border: `1px solid ${s.color}50`, borderRadius: 7, cursor: canWrite ? "pointer" : "default", fontSize: 12, fontWeight: 600, color: s.color, textAlign: "left", transition: "all 0.12s", opacity: canWrite ? 1 : 0.5 }}
-                      onMouseEnter={e => { if (canWrite) e.currentTarget.style.background = s.color + "28"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = s.color + "14"; }}>
-                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
-                      <span style={{ flex: 1 }}>{s.name}</span>
-                      <ArrowRight size={12} />
-                    </button>
-                  ))}
-                </div>
+            {/* ── Col 2: Stage fields ── */}
+            <div style={{ background: "#FFFFFF", borderRight: "1px solid #E5E7EB", overflowY: "auto", padding: "24px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
+                <SectionLabel>Fase atual</SectionLabel>
+                {stageInfo && (
+                  <span style={{ fontSize: 11, fontWeight: 600, color: stageInfo.color, background: stageInfo.color + "18", border: `1px solid ${stageInfo.color}40`, borderRadius: 5, padding: "2px 8px", marginTop: -14 }}>
+                    {stageInfo.name}
+                  </span>
+                )}
+                {saveStatus && (
+                  <span style={{ fontSize: 10, color: saveStatus === "saved" ? "#16A34A" : NEUTRAL.slate, marginTop: -14, marginLeft: "auto" }}>
+                    {saveStatus === "saving" ? "Salvando…" : "✓ Salvo"}
+                  </span>
+                )}
               </div>
-            )}
-
-            {prevStages.length > 0 && (
-              <div>
-                <div style={{ fontSize: 10, color: NEUTRAL.slate, fontWeight: 600, marginBottom: 6, letterSpacing: "0.04em" }}>ANTERIORES</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {prevStages.map(s => (
-                    <button key={s.id} onClick={() => canWrite && handleMoveStage(s.id)} disabled={!canWrite}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 7, cursor: canWrite ? "pointer" : "default", fontSize: 12, fontWeight: 500, color: NEUTRAL.slate, textAlign: "left", transition: "all 0.12s", opacity: canWrite ? 1 : 0.5 }}
-                      onMouseEnter={e => { if (canWrite) e.currentTarget.style.background = "#F3F4F6"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}>
-                      <ArrowLeft size={12} />
-                      <span style={{ flex: 1 }}>{s.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Mobile sticky footer: Avançar ────────────────────────── */}
-        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
-          {nextStages.length > 0 ? (
-            <button
-              onClick={() => canWrite && handleMoveStage(nextStages[0].id)}
-              disabled={!canWrite}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm"
-              style={{
-                background: canWrite ? nextStages[0].color : "#D1D5DB",
-                color: "#FFFFFF",
-                border: "none",
-                cursor: canWrite ? "pointer" : "default",
-              }}
-            >
-              Avançar para {nextStages[0].name}
-              <ArrowRight size={16} />
-            </button>
-          ) : (
-            <div className="text-xs text-center py-3" style={{ color: NEUTRAL.slate }}>
-              Etapa final atingida
+              {fields.length === 0
+                ? <div style={{ fontSize: 12, color: NEUTRAL.slate }}>Nenhum campo para esta fase.</div>
+                : fields.map(field => (
+                  <FieldRow key={field.key} label={field.label} required={field.required} hint={field.hint}>
+                    <StageFieldInput field={field} value={fieldValues[field.key]} onChange={val => handleFieldChange(field.key, val)} canWrite={canWrite} users={users} />
+                  </FieldRow>
+                ))
+              }
             </div>
-          )}
-        </div>
+
+            {/* ── Col 3: Move stage ── */}
+            <div style={{ background: "#F9FAFB", overflowY: "auto", padding: "24px 16px" }}>
+              <SectionLabel>Mover card para fase</SectionLabel>
+              {nextStages.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: NEUTRAL.slate, fontWeight: 600, marginBottom: 6, letterSpacing: "0.04em" }}>PRÓXIMAS</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {nextStages.map(s => (
+                      <button key={s.id} onClick={() => canWrite && handleMoveStage(s.id)} disabled={!canWrite}
+                        style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", background: s.color + "14", border: `1px solid ${s.color}50`, borderRadius: 7, cursor: canWrite ? "pointer" : "default", fontSize: 12, fontWeight: 600, color: s.color, textAlign: "left", transition: "all 0.12s", opacity: canWrite ? 1 : 0.5 }}
+                        onMouseEnter={e => { if (canWrite) e.currentTarget.style.background = s.color + "28"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = s.color + "14"; }}>
+                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
+                        <span style={{ flex: 1 }}>{s.name}</span>
+                        <ArrowRight size={12} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {prevStages.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, color: NEUTRAL.slate, fontWeight: 600, marginBottom: 6, letterSpacing: "0.04em" }}>ANTERIORES</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {prevStages.map(s => (
+                      <button key={s.id} onClick={() => canWrite && handleMoveStage(s.id)} disabled={!canWrite}
+                        style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 7, cursor: canWrite ? "pointer" : "default", fontSize: 12, fontWeight: 500, color: NEUTRAL.slate, textAlign: "left", transition: "all 0.12s", opacity: canWrite ? 1 : 0.5 }}
+                        onMouseEnter={e => { if (canWrite) e.currentTarget.style.background = "#F3F4F6"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}>
+                        <ArrowLeft size={12} />
+                        <span style={{ flex: 1 }}>{s.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

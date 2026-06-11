@@ -51,9 +51,8 @@ const BADGE_COLORS = [
 
 const COMPANY_OPTIONS = [
   { id: "all",       label: "Todas as empresas" },
-  { id: "industria", label: "Sanwey Indústria" },
+  { id: "industria", label: "Sanwey" },
   { id: "resibag",   label: "Resibag" },
-  { id: "montemor",  label: "Montemor" },
 ];
 
 // ── Main view ────────────────────────────────────────────────────────────────

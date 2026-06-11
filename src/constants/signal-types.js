@@ -13,10 +13,4 @@ export const SIGNAL_TYPES_BY_COMPANY = {
     { type: "ISO", label: "Mudança norma ISO", urgency: "informativo" },
     { type: "Licenciamento", label: "Novo licenciamento industrial", urgency: "alto" },
   ],
-  montemor: [
-    { type: "Produção", label: "Demanda de Sanwey Indústria", urgency: "alto" },
-    { type: "Matéria-prima", label: "Oscilação preço polipropileno", urgency: "medio" },
-    { type: "Capacidade", label: "Alerta de capacidade fabril", urgency: "alto" },
-    { type: "Mercado", label: "Oportunidade venda externa (futuro)", urgency: "informativo" },
-  ],
 };

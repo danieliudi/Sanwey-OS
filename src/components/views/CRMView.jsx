@@ -466,6 +466,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
+  const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["prospeccao"]));
+  const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const usersById = useUsersById(users);
   const { formConfig, updateFormConfig } = useLeadFormConfig();
@@ -474,10 +476,6 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const [showAIChat, setShowAIChat] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [editingStage, setEditingStage] = useState(null); // { stage, companyId }
-  const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["prospeccao"]));
-  const toggleMobileStage = (id) => setExpandedMobileStages(prev => {
-    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
-  });
 
   // user.companies may still contain legacy ids ("comercial") that the DB
   // check constraint rejects — pick the first one that's actually valid.
@@ -665,31 +663,26 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           onLeadClick={onLeadClick}
         />
       ) : (<>
-      {/* ── Mobile kanban: vertical collapsible stages ────────────────── */}
+      {/* Mobile kanban: vertical collapsible stages */}
       <div className="lg:hidden space-y-1.5 pb-24">
         {stages.map(stage => {
-          const bucket = byStage[stage.id] || { leads: [] };
+          const bucket = byStage[stage.id] || { leads: [], total: 0 };
           const expanded = expandedMobileStages.has(stage.id);
-          const colCompanyId = isGroupView ? firstValidCompany : activeCompany;
           return (
             <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
               <button
                 className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer"
-                style={{ background: stage.color + "12" }}
+                style={{ background: stage.color + "12", border: "none" }}
                 onClick={() => toggleMobileStage(stage.id)}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
                   <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
+                  {bucket.total > 0 && <span className="text-xs font-semibold" style={{ color: stage.color + "99" }}>{formatK(bucket.total)}</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm" style={{ color: stage.color }}>{bucket.leads.length}</span>
-                  <div style={{
-                    width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`,
-                    display: "flex", alignItems: "center", justifyContent: "center", color: stage.color,
-                    transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s",
-                    flexShrink: 0,
-                  }}>
+                  <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
                     <ChevronDown size={13} />
                   </div>
                 </div>
@@ -697,9 +690,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               {expanded && (
                 <div className="p-2.5 space-y-2" style={{ background: "#FAFAFA" }}>
                   {bucket.leads.length === 0 ? (
-                    <div className="text-xs text-center py-5" style={{ color: NEUTRAL.slate }}>
-                      Nenhum negócio nesta etapa
-                    </div>
+                    <div className="text-center py-4 text-xs" style={{ color: NEUTRAL.slate }}>Nenhum negócio nesta etapa</div>
                   ) : (
                     bucket.leads.map(lead => {
                       const ownerName = lead.owner ? (usersById.get(lead.owner)?.name?.split(" ")[0] || "—") : null;
@@ -718,14 +709,14 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                       );
                     })
                   )}
-                  {!stage.terminal && (
+                  {onAddLead && !stage.terminal && (
                     <button
-                      onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: colCompanyId })}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border-2 border-dashed text-xs font-semibold transition-colors"
-                      style={{ borderColor: stage.color + "40", color: stage.color, background: "transparent" }}
+                      onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: isGroupView ? firstValidCompany : activeCompany })}
+                      className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+                      style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
                     >
-                      <Plus size={13} />
-                      Novo negócio
+                      <Plus size={12} />
+                      Nova oportunidade
                     </button>
                   )}
                 </div>
@@ -735,7 +726,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         })}
       </div>
 
-      {/* ── Desktop kanban: horizontal scroll ──────────────────────────── */}
+      {/* Desktop kanban: horizontal scroll */}
       <div className="hidden lg:block relative">
         {/* Fade gradient indicating more stages exist to the right */}
         <div
@@ -929,7 +920,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     {/* Floating AI button */}
     <button
       onClick={() => setShowAIChat(v => !v)}
-      className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
+      className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 hidden lg:flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
       style={{ background: "#b5000b", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
       onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}

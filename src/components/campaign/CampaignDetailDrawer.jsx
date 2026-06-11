@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
-  Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
+  Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks, MessageSquare,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS } from "../../constants/marketing-pipelines";
@@ -357,13 +357,91 @@ function EditSelect({ value, onChange, options, placeholder = "Selecionar…" })
   );
 }
 
+// ── Comments tab ──────────────────────────────────────────────────────────────
+
+function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
+  const [notes, setNotes] = useState(campaign.notes || []);
+  const [newNote, setNewNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setNotes(campaign.notes || []); }, [campaign.id, campaign.notes]);
+
+  const handleAdd = async () => {
+    const text = newNote.trim();
+    if (!text || !canWrite || isAgencia) return;
+    setSaving(true);
+    const now = new Date().toISOString();
+    const updatedNotes = [...notes, { text, createdAt: now }];
+    const updatedActivities = [...(campaign.activities || []), { text: "Comentário adicionado", at: now }];
+    try {
+      await onUpdate?.(campaign.id, { notes: updatedNotes, activities: updatedActivities });
+      setNotes(updatedNotes);
+      setNewNote("");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {canWrite && !isAgencia && (
+        <div className="space-y-2">
+          <textarea
+            value={newNote}
+            onChange={e => setNewNote(e.target.value)}
+            placeholder="Escreva um comentário…"
+            rows={3}
+            className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
+            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+            onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+            onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAdd(); } }}
+          />
+          <div className="flex justify-end">
+            <button
+              onClick={handleAdd}
+              disabled={!newNote.trim() || saving}
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl"
+              style={{
+                background: newNote.trim() ? "#1E4D8C" : "#F3F4F6",
+                color: newNote.trim() ? "#FFF" : NEUTRAL.slate,
+                border: "none",
+                cursor: newNote.trim() ? "pointer" : "default",
+              }}
+            >
+              {saving ? "Salvando…" : "Comentar"}
+            </button>
+          </div>
+        </div>
+      )}
+      {notes.length === 0 ? (
+        <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>
+          Nenhum comentário ainda.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {[...notes].reverse().map((note, i) => (
+            <div key={i} className="p-3 rounded-xl border" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
+              <div className="text-xs whitespace-pre-wrap" style={{ color: NEUTRAL.graphite }}>{note.text}</div>
+              {note.createdAt && (
+                <div className="text-[10px] mt-1" style={{ color: NEUTRAL.slate }}>{formatDateBR(note.createdAt)}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main drawer ───────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: "details",   label: "Detalhes",  icon: FileText },
-  { id: "creative",  label: "Criativo",  icon: ListChecks },
-  { id: "files",     label: "Arquivos",  icon: Paperclip },
-  { id: "activity",  label: "Atividade", icon: Activity },
+  { id: "details",   label: "Detalhes",    icon: FileText },
+  { id: "creative",  label: "Criativo",    icon: ListChecks },
+  { id: "files",     label: "Arquivos",    icon: Paperclip },
+  { id: "comments",  label: "Comentários", icon: MessageSquare },
+  { id: "activity",  label: "Atividade",   icon: Activity },
 ];
 
 export function CampaignDetailDrawer({
@@ -376,8 +454,8 @@ export function CampaignDetailDrawer({
   currentUser,
 }) {
   const [tab, setTab] = useState("details");
-  const [mobileTab, setMobileTab] = useState("info");
   const [draft, setDraft] = useState({});
+  const [mobileTab, setMobileTab] = useState("info");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const saveTimeout = useRef(null);
@@ -404,8 +482,8 @@ export function CampaignDetailDrawer({
 
   useEffect(() => {
     setDraft({});
-    pendingPatch.current = {};
     setMobileTab("info");
+    pendingPatch.current = {};
   }, [campaign?.id]);
 
   const get = (field) =>
@@ -438,9 +516,9 @@ export function CampaignDetailDrawer({
 
   const ownerUser = users.find(u => u.id === get("owner"));
   const stage = MARKETING_STAGES.find(s => s.id === get("stage"));
-  const channelStyle = get("channel") ? (CHANNEL_COLORS[get("channel")] || null) : null;
   const stageIdx = MARKETING_STAGES.findIndex(s => s.id === get("stage"));
   const nextStage = stageIdx >= 0 && stageIdx < MARKETING_STAGES.length - 1 ? MARKETING_STAGES[stageIdx + 1] : null;
+  const channelStyle = get("channel") ? (CHANNEL_COLORS[get("channel")] || null) : null;
 
   if (!campaign) return null;
 
@@ -458,57 +536,43 @@ export function CampaignDetailDrawer({
         className="fixed top-0 right-0 h-full z-50 flex flex-col shadow-2xl"
         style={{ width: "min(520px, 100vw)", background: "#FFFFFF" }}
       >
-        {/* ── Mobile header ────────────────────────────────────────── */}
-        <div
-          className="lg:hidden flex items-center gap-3 px-4 py-3 border-b shrink-0"
-          style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
-        >
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg shrink-0"
-            style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate }}
-          >
-            <X size={20} />
-          </button>
-          <div className="flex-1 min-w-0 text-center">
-            <div className="font-bold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{get("name")}</div>
-            {stage && (
-              <div className="text-xs mt-0.5 truncate" style={{ color: stage.color }}>{stage.name}</div>
+        {/* Mobile header */}
+        <div className="lg:hidden shrink-0 flex flex-col" style={{ borderBottom: "1px solid #E5E7EB" }}>
+          <div className="flex items-center justify-between px-4 py-3">
+            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: NEUTRAL.slate }}>
+              <X size={20} />
+            </button>
+            <div className="flex-1 mx-3 text-center min-w-0">
+              <div className="font-bold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{get("name")}</div>
+              {stage && <div className="text-xs font-semibold" style={{ color: stage.color }}>{stage.name}</div>}
+            </div>
+            {canWrite && (
+              <button
+                onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
+                className="p-1.5 rounded-lg"
+                style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "#9CA3AF" }}
+              >
+                <Star size={16} fill={campaign.starred ? "#F59E0B" : "none"} />
+              </button>
             )}
           </div>
-          {canWrite && (
-            <button
-              title={campaign.starred ? "Remover destaque" : "Destacar"}
-              onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
-              className="p-1.5 rounded-lg shrink-0"
-              style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "#9CA3AF" }}
-            >
-              <Star size={16} fill={campaign.starred ? "#F59E0B" : "none"} />
-            </button>
-          )}
+          <div className="flex border-t" style={{ borderColor: "#E5E7EB" }}>
+            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setMobileTab(t.id)}
+                className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
+                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`, color: mobileTab === t.id ? "#1E4D8C" : NEUTRAL.slate }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* ── Mobile tab bar ────────────────────────────────────────── */}
-        <div className="lg:hidden flex border-b shrink-0" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
-          {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setMobileTab(t.id)}
-              className="flex-1 py-3 text-xs font-bold tracking-wider transition-colors"
-              style={{
-                background: "transparent", border: "none", cursor: "pointer",
-                color: mobileTab === t.id ? "#1E4D8C" : NEUTRAL.slate,
-                borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`,
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Desktop header ────────────────────────────────────────── */}
+        {/* Desktop header */}
         <div
-          className="hidden lg:flex px-5 py-4 border-b items-start justify-between gap-3 shrink-0"
+          className="hidden lg:flex px-5 py-4 border-b items-start justify-between gap-3"
           style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
         >
           <div className="flex-1 min-w-0">
@@ -568,9 +632,9 @@ export function CampaignDetailDrawer({
           </div>
         </div>
 
-        {/* Stage selector (desktop + mobile FASE ATUAL) */}
+        {/* Stage selector — desktop only */}
         {canWrite && (
-          <div className={`px-5 py-2 border-b shrink-0${mobileTab !== "stage" ? " hidden lg:block" : ""}`} style={{ borderColor: "#E5E7EB" }}>
+          <div className={`px-5 py-2 border-b${mobileTab !== "stage" ? " hidden lg:block" : " lg:block"}`} style={{ borderColor: "#E5E7EB" }}>
             <div className="flex gap-1.5 overflow-x-auto pb-0.5">
               {MARKETING_STAGES.map(s => (
                 <button
@@ -592,33 +656,30 @@ export function CampaignDetailDrawer({
 
         {/* Mobile FASE ATUAL: full stage list */}
         {mobileTab === "stage" && (
-          <div className="lg:hidden flex-1 overflow-y-auto px-4 py-3 space-y-2 pb-24">
+          <div className="lg:hidden flex-1 overflow-y-auto p-4 pb-24 space-y-2">
             {MARKETING_STAGES.map((s, idx) => {
               const isCurrent = s.id === get("stage");
               const isPast = idx < stageIdx;
               return (
                 <button
                   key={s.id}
-                  onClick={() => canWrite && onUpdate?.(campaign.id, { stage: s.id, stageChangedAt: new Date().toISOString() })}
-                  disabled={!canWrite}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all"
+                  onClick={() => { if (canWrite) onUpdate?.(campaign.id, { stage: s.id, stageChangedAt: new Date().toISOString() }); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border cursor-pointer"
                   style={{
-                    borderColor: isCurrent ? s.color : isPast ? s.color + "44" : "#E5E7EB",
-                    background: isCurrent ? s.color + "14" : isPast ? s.color + "08" : "#FFFFFF",
-                    cursor: canWrite ? "pointer" : "default",
+                    background: isCurrent ? s.color + "14" : "#FFFFFF",
+                    borderColor: isCurrent ? s.color : "#E5E7EB",
+                    textAlign: "left",
                   }}
                 >
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: isCurrent ? s.color : isPast ? s.color + "88" : "#D1D5DB", flexShrink: 0 }} />
-                  <span className="flex-1 text-sm font-semibold" style={{ color: isCurrent ? s.color : isPast ? NEUTRAL.slate : NEUTRAL.graphite }}>
-                    {s.name}
-                  </span>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: isCurrent ? s.color : isPast ? s.color + "44" : "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {isPast ? <Check size={14} color="#FFFFFF" /> : <span style={{ width: 8, height: 8, borderRadius: "50%", background: isCurrent ? "#FFFFFF" : s.color + "66", display: "block" }} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm" style={{ color: isCurrent ? s.color : NEUTRAL.graphite }}>{s.name}</div>
+                    {s.sla && <div className="text-xs" style={{ color: NEUTRAL.slate }}>SLA {s.sla}d</div>}
+                  </div>
                   {isCurrent && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: s.color + "22", color: s.color }}>
-                      ATUAL
-                    </span>
-                  )}
-                  {isPast && (
-                    <Check size={14} style={{ color: s.color, flexShrink: 0 }} strokeWidth={3} />
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: s.color, color: "#FFFFFF" }}>ATUAL</span>
                   )}
                 </button>
               );
@@ -626,8 +687,8 @@ export function CampaignDetailDrawer({
           </div>
         )}
 
-        {/* Tabs (INFORMAÇÕES on mobile, always on desktop) */}
-        <div className={`flex border-b shrink-0${mobileTab !== "info" ? " hidden lg:flex" : ""}`} style={{ borderColor: "#E5E7EB" }}>
+        {/* Desktop Tabs */}
+        <div className={`flex border-b${mobileTab !== "info" ? " hidden lg:flex" : " lg:flex"}`} style={{ borderColor: "#E5E7EB" }}>
           {TABS.map(t => {
             const Icon = t.icon;
             return (
@@ -651,7 +712,7 @@ export function CampaignDetailDrawer({
           })}
         </div>
 
-        {/* Tab content (INFORMAÇÕES on mobile, always on desktop) */}
+        {/* Tab content */}
         <div className={`flex-1 overflow-y-auto p-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}>
           {tab === "details" && (
             <div className="space-y-4">
@@ -874,34 +935,33 @@ export function CampaignDetailDrawer({
             />
           )}
 
+          {tab === "comments" && (
+            <ComentariosTab
+              campaign={campaign}
+              canWrite={canWrite}
+              isAgencia={isAgencia}
+              onUpdate={onUpdate}
+            />
+          )}
+
           {tab === "activity" && (
             <ActivityLog activities={campaign.activities || []} />
           )}
         </div>
 
-        {/* ── Mobile sticky footer: Avançar ────────────────────────── */}
+        {/* Mobile sticky footer — Avançar CTA */}
         <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
           {nextStage ? (
             <button
-              onClick={() => {
-                if (!canWrite || isAgencia) return;
-                onUpdate?.(campaign.id, { stage: nextStage.id, stageChangedAt: new Date().toISOString() });
-              }}
-              disabled={!canWrite || isAgencia}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm"
-              style={{
-                background: canWrite && !isAgencia ? nextStage.color : "#D1D5DB",
-                color: "#FFFFFF",
-                border: "none",
-                cursor: canWrite && !isAgencia ? "pointer" : "default",
-              }}
+              onClick={() => canWrite && onUpdate?.(campaign.id, { stage: nextStage.id, stageChangedAt: new Date().toISOString() })}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm cursor-pointer"
+              style={{ background: nextStage.color, color: "#FFFFFF", border: "none" }}
             >
               Avançar para {nextStage.name}
-              <span style={{ fontSize: 16 }}>→</span>
             </button>
           ) : (
             <div className="text-xs text-center py-3" style={{ color: NEUTRAL.slate }}>
-              {get("stage") === "encerrado" ? "Campanha encerrada" : "Etapa final da campanha"}
+              {stage?.terminal ? "Campanha encerrada" : "Última etapa"}
             </div>
           )}
         </div>

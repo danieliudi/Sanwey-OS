@@ -26,6 +26,5 @@ export function defaultPipelines() {
   return {
     industria: clone(),
     resibag: clone(),
-    montemor: clone(),
   };
 }

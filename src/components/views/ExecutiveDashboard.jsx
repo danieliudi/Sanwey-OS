@@ -177,7 +177,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b print:hidden" style={{ borderColor: "#E5E7EB" }}>
+      <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
         {TABS.map(t => {
           const active = tab === t.id;
           return (

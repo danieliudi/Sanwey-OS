@@ -56,6 +56,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
   useEffect(() => {
     setCustomDraft({});
+    setMobileTab("info");
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
   }, [lead?.id]);
 
@@ -112,7 +113,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
       setEditingContactEmail(false);
       setContactEmailDraft(lead.contactEmail || "");
       setNoteText("");
-      setMobileTab("info");
     }
   }, [lead?.id, lead?.stage]);
 
@@ -302,50 +302,50 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
         style={{
           background: "#FFFFFF",
           boxShadow: "0 24px 64px rgba(32,26,26,0.18)",
+          overflow: "hidden",
+          height: "100%",
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* ── Mobile header (fullscreen) ────────────────────────────── */}
-        <div
-          className="lg:hidden sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b"
-          style={{ background: "rgba(255,248,247,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
-        >
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer shrink-0"
-            style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
-            aria-label="Fechar"
-          >
-            <X size={20} />
-          </button>
-          <div className="flex-1 min-w-0 text-center">
-            <div className="font-bold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{lead.company}</div>
-            <div className="text-xs mt-0.5 truncate" style={{ color: NEUTRAL.slate }}>
-              {DEFAULT_PIPELINE_STAGES.find(s => s.id === lead.stage)?.name || lead.stage}
+        {/* Mobile header */}
+        <div className="lg:hidden sticky top-0 z-10 flex flex-col shrink-0" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
+          <div className="flex items-center justify-between px-4 py-3">
+            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: NEUTRAL.slate }}>
+              <X size={20} />
+            </button>
+            <div className="flex-1 mx-3 text-center min-w-0">
+              <div className="font-bold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{lead.company}</div>
+              <div className="text-xs" style={{ color: NEUTRAL.slate }}><CompanyTag companyId={lead.companyId} /></div>
+            </div>
+            <div className="flex items-center gap-1">
+              {canDelete && !confirmDelete && (
+                <button onClick={() => setConfirmDelete(true)} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: NEUTRAL.slate }}>
+                  <Trash2 size={16} />
+                </button>
+              )}
+              {canDelete && confirmDelete && (
+                <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "#B91C1C", color: "#FFFFFF", border: "none" }}>
+                  {deleting ? "…" : "Excluir"}
+                </button>
+              )}
             </div>
           </div>
-          <CompanyTag companyId={lead.companyId} />
+          {/* Mobile tab bar */}
+          <div className="flex border-t" style={{ borderColor: "#E5E7EB" }}>
+            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setMobileTab(t.id)}
+                className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
+                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`, color: mobileTab === t.id ? "#1E4D8C" : NEUTRAL.slate }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* ── Mobile tab bar ──────────────────────────────────────────── */}
-        <div className="lg:hidden flex border-b" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
-          {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setMobileTab(tab.id)}
-              className="flex-1 py-3 text-xs font-bold tracking-wider transition-colors"
-              style={{
-                background: "transparent", border: "none", cursor: "pointer",
-                color: mobileTab === tab.id ? company.primary : NEUTRAL.slate,
-                borderBottom: `2px solid ${mobileTab === tab.id ? company.primary : "transparent"}`,
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Desktop header ──────────────────────────────────────────── */}
+        {/* Desktop header */}
         <div
           className="hidden lg:flex sticky top-0 z-10 px-5 py-3.5 border-b items-center justify-between"
           style={{ background: "rgba(255,248,247,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
@@ -407,9 +407,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
         {/* ── BODY: 3 colunas (esquerda info / centro form da etapa / direita movimentação) ── */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
 
-          {/* ───── LEFT SIDEBAR (INFO tab on mobile) ────────────────── */}
+          {/* ───── LEFT SIDEBAR ───────────────────────────────────────── */}
           <aside
-            className={`w-full lg:w-[320px] shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4${mobileTab !== "info" ? " hidden lg:block" : ""}`}
+            className={`w-full lg:w-[320px] shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-20 lg:pb-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
             {/* Título do lead */}
@@ -818,8 +818,8 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             )}
           </aside>
 
-          {/* ───── CENTER (FASE ATUAL tab on mobile) ─────────────────── */}
-          <main className={`flex-1 min-w-0 overflow-y-auto p-5 space-y-4${mobileTab !== "stage" ? " hidden lg:block" : ""}`}>
+          {/* ───── CENTER ─────────────────────────────────────────────── */}
+          <main className={`flex-1 min-w-0 overflow-y-auto p-5 space-y-4 pb-20 lg:pb-5${mobileTab !== "stage" ? " hidden lg:block" : ""}`}>
 
           {/* ── Pipeline stage progress bar ───────────────────────────────── */}
           <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
@@ -1128,9 +1128,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           </div>
           </main>
 
-          {/* ───── RIGHT SIDEBAR (desktop only) ─────────────────────── */}
+          {/* ───── RIGHT SIDEBAR ─────────────────────────────────────── */}
           <aside
-            className="hidden lg:block w-[240px] shrink-0 overflow-y-auto border-l p-5"
+            className="hidden lg:block w-full lg:w-[240px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 pb-5"
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
             <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>
@@ -1192,13 +1192,13 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           </aside>
         </div>
 
-        {/* ── Mobile sticky footer: Avançar / Voltar ──────────────── */}
+        {/* Mobile sticky footer — Avançar CTA */}
         <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
           {stageNav.next ? (
             <button
               onClick={() => moveToStage(stageNav.next.id)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm"
-              style={{ background: company.primary, color: "#FFFFFF", border: "none", cursor: "pointer" }}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm cursor-pointer"
+              style={{ background: company.primary, color: "#FFFFFF", border: "none" }}
             >
               Avançar para {stageNav.next.name}
               <ArrowRight size={16} />
