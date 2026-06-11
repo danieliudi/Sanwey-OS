@@ -660,6 +660,7 @@ export function EntregasView({ user, users = [] }) {
         users={Array.from(usersById.values())}
         canWrite={canWrite}
         userId={user?.id}
+        currentUser={user}
       />
     )}
 

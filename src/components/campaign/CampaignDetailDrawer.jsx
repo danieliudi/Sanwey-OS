@@ -2,16 +2,20 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
-  MessageSquare, ArrowLeft, ArrowRight,
+  MessageSquare, ArrowLeft, ArrowRight, Sparkles, Mail, FileDown,
+  RotateCcw, Copy, Loader2, AlertCircle,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS } from "../../constants/marketing-pipelines";
 import { useMarketingCampaignAttachments } from "../../hooks/use-marketing-campaign-attachments";
+import { useAI } from "../../hooks/use-ai";
+import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ACCEPTED_TYPES = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.zip";
+const PURPLE = "#7C3AED";
 
 function fileIcon(mimeType) {
   if (!mimeType) return File;
@@ -25,6 +29,172 @@ function humanSize(bytes) {
   if (bytes < 1024)        return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// ── Pill SideTabs ─────────────────────────────────────────────────────────────
+
+const SIDE_TABS = [
+  { id: "form",        label: "Form",        icon: FileText },
+  { id: "atividades",  label: "Atividades",  icon: Activity },
+  { id: "ia",          label: "IA",          icon: Sparkles },
+  { id: "arquivos",    label: "Arquivos",    icon: Paperclip },
+  { id: "criativo",    label: "Criativo",    icon: ListChecks },
+  { id: "comentarios", label: "Comentários", icon: MessageSquare },
+  { id: "email",       label: "Email",       icon: Mail },
+  { id: "pdf",         label: "PDF",         icon: FileDown },
+];
+
+function SideTabs({ activeId, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {SIDE_TABS.map(t => {
+        const active = t.id === activeId;
+        const Icon   = t.icon;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full transition-colors cursor-pointer"
+            style={{
+              background:  active ? "#FFFFFF" : "transparent",
+              color:       active ? "#b5000b" : NEUTRAL.slate,
+              border:      active ? "1px solid #b5000b" : "1px solid transparent",
+              boxShadow:   active ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+            }}
+          >
+            <Icon size={11} />
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Placeholder panel ─────────────────────────────────────────────────────────
+
+function PlaceholderPanel({ label }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-10 gap-2">
+      <div className="text-sm font-semibold" style={{ color: NEUTRAL.slate }}>{label}</div>
+      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: NEUTRAL.slate }}>em breve</span>
+    </div>
+  );
+}
+
+// ── AI panel ──────────────────────────────────────────────────────────────────
+
+function CampaignAIPanel({ campaign, currentUser }) {
+  const { complete, isConfigured } = useAI(currentUser);
+  const [loading, setLoading] = useState(false);
+  const [result,  setResult]  = useState(null);
+  const [error,   setError]   = useState(null);
+  const [copied,  setCopied]  = useState(false);
+
+  const handleGenerate = async () => {
+    if (!isConfigured) return;
+    setLoading(true);
+    setResult(null);
+    setError(null);
+    setCopied(false);
+    try {
+      const text = await complete(campaignStageSuggestionPrompt(campaign));
+      setResult(text);
+    } catch (err) {
+      setError(err.message || "Erro ao gerar resposta.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (!result || !navigator.clipboard?.writeText) return;
+    navigator.clipboard.writeText(result).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="p-3 rounded-xl border" style={{ background: "#F5F3FF", borderColor: "#DDD6FE" }}>
+        <div className="flex items-center gap-2 mb-1.5">
+          <Sparkles size={13} style={{ color: PURPLE }} />
+          <span className="text-xs font-semibold" style={{ color: PURPLE }}>Sugestão de próxima etapa</span>
+          {!isConfigured && (
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full ml-auto"
+              style={{ background: "#FEF3C7", color: "#92400E" }}>
+              configure nas Configurações
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] mb-2.5 leading-relaxed" style={{ color: "#5B21B6" }}>
+          A IA analisa etapa, SLA, checklist e datas para recomendar se é hora de avançar.
+        </p>
+        <button
+          onClick={handleGenerate}
+          disabled={loading || !isConfigured}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
+          style={{
+            background: !isConfigured ? "#E5E7EB" : PURPLE,
+            color:      !isConfigured ? NEUTRAL.slate : "#FFFFFF",
+            border: "none",
+            cursor: loading || !isConfigured ? "not-allowed" : "pointer",
+            opacity: loading ? 0.8 : 1,
+          }}
+          title={!isConfigured ? "Configure sua LLM nas Configurações → Integrações de IA" : undefined}
+          onMouseEnter={e => { if (!loading && isConfigured) e.currentTarget.style.filter = "brightness(0.9)"; }}
+          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+        >
+          {loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+          {loading ? "Analisando…" : "Analisar campanha"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-xl"
+          style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }}>
+          <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {result && (
+        <div className="space-y-2">
+          <div className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-xl border"
+            style={{ background: "#FFFFFF", borderColor: "#DDD6FE", color: NEUTRAL.graphite }}>
+            {result}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleGenerate}
+              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer"
+              style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: "#E5E7EB" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = PURPLE; e.currentTarget.style.color = PURPLE; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; }}
+            >
+              <RotateCcw size={10} />
+              Regenerar
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer"
+              style={{
+                background: copied ? "#F0FDF4" : "#FFFFFF",
+                color:      copied ? "#16A34A" : NEUTRAL.slate,
+                borderColor: copied ? "#BBF7D0" : "#E5E7EB",
+              }}
+              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; } }}
+              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; } }}
+            >
+              {copied ? <Check size={10} /> : <Copy size={10} />}
+              {copied ? "Copiado!" : "Copiar"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Attachments panel ─────────────────────────────────────────────────────────
@@ -96,7 +266,6 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
           {error}
         </div>
       )}
-
       {loading && <div className="text-xs" style={{ color: NEUTRAL.slate }}>Carregando…</div>}
 
       {attachments.length > 0 && (
@@ -265,7 +434,7 @@ function ActivityLog({ activities }) {
         <div key={i} className="flex gap-2.5 text-xs" style={{ color: NEUTRAL.graphite }}>
           <div className="mt-0.5 flex-shrink-0 rounded-full" style={{ width: 6, height: 6, background: NEUTRAL.slate, marginTop: 6 }} />
           <div className="flex-1">
-            <span>{act.text || act.message || JSON.stringify(act)}</span>
+            <span>{act.text || act.message || act.description || JSON.stringify(act)}</span>
             {act.at && (
               <span className="ml-1.5" style={{ color: NEUTRAL.slate, fontSize: 10 }}>{formatDateBR(act.at)}</span>
             )}
@@ -394,71 +563,7 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
   );
 }
 
-// ── Marketing stage bar ───────────────────────────────────────────────────────
-
-function MarketingStageBar({ currentStageId }) {
-  const nonTerminal = MARKETING_STAGES.filter(s => !s.terminal);
-  const currentIdx  = nonTerminal.findIndex(s => s.id === currentStageId);
-  const stageData   = MARKETING_STAGES.find(s => s.id === currentStageId);
-  const isTerminal  = Boolean(stageData?.terminal);
-
-  return (
-    <div className="p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-      <div className="text-[10px] font-semibold mb-3 tracking-widest uppercase" style={{ color: NEUTRAL.slate }}>
-        Etapa atual
-      </div>
-      <div className="flex items-start">
-        {nonTerminal.map((s, idx) => {
-          const done   = isTerminal || idx < currentIdx;
-          const active = !isTerminal && idx === currentIdx;
-          const prevDone = idx > 0 && (isTerminal || (idx - 1) < currentIdx);
-
-          return (
-            <React.Fragment key={s.id}>
-              {idx > 0 && (
-                <div style={{ flex: 1, height: 2, marginTop: 9, background: prevDone ? nonTerminal[idx - 1].color : "#E5E7EB", transition: "background 0.2s" }} />
-              )}
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 44 }}>
-                <div style={{
-                  width: 20, height: 20, borderRadius: "50%",
-                  background: done ? s.color : active ? s.color : "#F1F3F5",
-                  border: `2px solid ${done || active ? s.color : "#D4D4D8"}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, transition: "all 0.2s",
-                }}>
-                  {done && (
-                    <svg width="10" height="10" viewBox="0 0 10 10">
-                      <polyline points="1.5,5 4,7.5 8.5,2" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                  {active && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "white" }} />}
-                </div>
-                <div style={{
-                  fontSize: 9, marginTop: 4, textAlign: "center",
-                  color: active ? s.color : done ? NEUTRAL.slate : "#C4C4C8",
-                  fontWeight: active ? 700 : 400, maxWidth: 42, lineHeight: 1.2,
-                  transition: "color 0.2s",
-                }}>
-                  {s.name}
-                </div>
-              </div>
-            </React.Fragment>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ── Main drawer ───────────────────────────────────────────────────────────────
-
-const TABS = [
-  { id: "details",  label: "Detalhes",    icon: FileText },
-  { id: "creative", label: "Criativo",    icon: ListChecks },
-  { id: "files",    label: "Arquivos",    icon: Paperclip },
-  { id: "comments", label: "Comentários", icon: MessageSquare },
-  { id: "activity", label: "Atividade",   icon: Activity },
-];
 
 export function CampaignDetailDrawer({
   campaign,
@@ -469,7 +574,7 @@ export function CampaignDetailDrawer({
   canWrite,
   currentUser,
 }) {
-  const [tab, setTab]                   = useState("details");
+  const [sideTab, setSideTab]           = useState("form");
   const [draft, setDraft]               = useState({});
   const [mobileTab, setMobileTab]       = useState("info");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -478,6 +583,7 @@ export function CampaignDetailDrawer({
   const pendingPatch = useRef({});
 
   const isAgencia = currentUser?.role === "agencia";
+  const isManager = ["admin", "gerente_marketing"].includes(currentUser?.role);
 
   const flushPending = useCallback(() => {
     if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
@@ -491,6 +597,7 @@ export function CampaignDetailDrawer({
   useEffect(() => {
     setDraft({});
     setMobileTab("info");
+    setSideTab("form");
     pendingPatch.current = {};
   }, [campaign?.id]);
 
@@ -534,6 +641,79 @@ export function CampaignDetailDrawer({
   const ownerUser = users.find(u => u.id === get("owner"));
 
   if (!campaign) return null;
+
+  // ── Render left tab content ─────────────────────────────────────────────────
+  function LeftTabContent() {
+    if (sideTab === "form") {
+      return (
+        <div className="space-y-3">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: NEUTRAL.slate }}>
+              Brief da campanha
+            </div>
+            {isAgencia
+              ? <div className="text-sm" style={{ color: NEUTRAL.graphite }}>{get("customFields")?.brief || "—"}</div>
+              : (
+                <textarea
+                  value={get("customFields")?.brief || ""}
+                  onChange={e => set("customFields", { ...(get("customFields") || {}), brief: e.target.value })}
+                  placeholder="Descreva o briefing desta campanha…"
+                  rows={4}
+                  className="w-full text-xs rounded-xl border px-3 py-2 outline-none resize-none"
+                  style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                  onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+                  onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+                />
+              )
+            }
+          </div>
+          <ActivityLog activities={campaign.activities || []} />
+        </div>
+      );
+    }
+    if (sideTab === "atividades") {
+      return <ActivityLog activities={campaign.activities || []} />;
+    }
+    if (sideTab === "ia") {
+      return (
+        <CampaignAIPanel
+          campaign={{ ...campaign, ...draft }}
+          currentUser={currentUser}
+        />
+      );
+    }
+    if (sideTab === "arquivos") {
+      return (
+        <AttachmentsPanel
+          campaign={campaign}
+          canDelete={canWrite && !isAgencia}
+          currentUserId={currentUser?.id}
+        />
+      );
+    }
+    if (sideTab === "criativo") {
+      return (
+        <ChecklistPanel
+          campaign={campaign}
+          onUpdate={(id, checklist) => onUpdate?.(id, { approvalChecklist: checklist })}
+          readOnly={isAgencia || !canWrite}
+        />
+      );
+    }
+    if (sideTab === "comentarios") {
+      return (
+        <ComentariosTab
+          campaign={campaign}
+          canWrite={canWrite}
+          isAgencia={isAgencia}
+          onUpdate={onUpdate}
+        />
+      );
+    }
+    if (sideTab === "email") return <PlaceholderPanel label="Integração de e-mail" />;
+    if (sideTab === "pdf")   return <PlaceholderPanel label="Exportar PDF" />;
+    return null;
+  }
 
   return (
     <div
@@ -668,7 +848,7 @@ export function CampaignDetailDrawer({
 
           {/* ── LEFT sidebar ── */}
           <aside
-            className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}
+            className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:flex lg:flex-col" : ""}`}
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
             {/* Campaign name */}
@@ -758,279 +938,227 @@ export function CampaignDetailDrawer({
               </a>
             )}
 
-            {/* Tab nav */}
-            <div className="pt-1">
-              <div className="flex flex-col gap-0.5">
-                {TABS.map(t => {
-                  const Icon = t.icon;
-                  const active = tab === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => setTab(t.id)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-left w-full transition-colors cursor-pointer"
-                      style={{
-                        background:  active ? "#1E4D8C14" : "transparent",
-                        color:       active ? "#1E4D8C" : NEUTRAL.slate,
-                        border:      "none",
-                        borderLeft:  `3px solid ${active ? "#1E4D8C" : "transparent"}`,
-                      }}
-                    >
-                      <Icon size={14} />
-                      {t.label}
-                    </button>
-                  );
-                })}
-              </div>
+            {/* ── Pill SideTabs ── */}
+            <div className="pt-1 border-t" style={{ borderColor: "#E5E7EB" }}>
+              <SideTabs activeId={sideTab} onChange={setSideTab} />
+            </div>
+
+            {/* ── Tab content ── */}
+            <div className="flex-1">
+              <LeftTabContent />
             </div>
           </aside>
 
-          {/* ── CENTER content ── */}
+          {/* ── CENTER content: always-visible form ── */}
           <main
-            className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-4${mobileTab !== "info" ? " hidden lg:block" : ""}`}
+            className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-4${mobileTab !== "stage" ? " hidden lg:block" : ""}`}
           >
-            <MarketingStageBar currentStageId={get("stage")} />
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Field label="Nome da campanha">
+                    {isAgencia
+                      ? <ReadValue value={get("name")} />
+                      : <EditInput value={get("name")} onChange={v => set("name", v)} placeholder="Nome da campanha" />}
+                  </Field>
+                </div>
 
-            {tab === "details" && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <Field label="Nome da campanha">
+                <div className="col-span-2">
+                  <Field label="Empresas">
+                    {isAgencia
+                      ? <ReadValue value={(get("companyIds") || []).map(id => COMPANIES[id]?.short || id).join(", ")} />
+                      : (
+                        <div className="flex flex-wrap gap-2">
+                          {COMPANY_IDS.map(id => {
+                            const selected = (get("companyIds") || []).includes(id);
+                            const co = COMPANIES[id];
+                            return (
+                              <button
+                                key={id}
+                                onClick={() => {
+                                  const cur = get("companyIds") || [];
+                                  set("companyIds", selected ? cur.filter(c => c !== id) : [...cur, id]);
+                                }}
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
+                                style={{ borderColor: selected ? co.primary : "#E5E7EB", background: selected ? co.primary + "22" : "#FFFFFF", color: selected ? co.primary : NEUTRAL.slate, cursor: "pointer" }}
+                              >
+                                {selected && <Check size={10} strokeWidth={3} />}
+                                {co.short}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                  </Field>
+                </div>
+
+                <Field label="Canal">
+                  {isAgencia
+                    ? <ReadValue value={get("channel")} />
+                    : <EditSelect value={get("channel")} onChange={v => set("channel", v)} options={MARKETING_CHANNELS} placeholder="Selecionar canal" />}
+                </Field>
+
+                <Field label="KPI principal">
+                  {isAgencia
+                    ? <ReadValue value={get("kpi")} />
+                    : <EditSelect value={get("kpi")} onChange={v => set("kpi", v)} options={MARKETING_KPIS} placeholder="Selecionar KPI" />}
+                </Field>
+
+                <Field label="Budget (R$)">
+                  {isAgencia
+                    ? <ReadValue value={get("budget") > 0 ? formatK(get("budget")) : null} />
+                    : <EditInput value={get("budget") || ""} onChange={v => set("budget", parseFloat(v) || 0)} type="number" placeholder="0" />}
+                </Field>
+
+                <Field label="Score de performance">
+                  {isAgencia
+                    ? <ReadValue value={get("performanceScore") > 0 ? String(get("performanceScore")) : null} />
+                    : <EditInput value={get("performanceScore") || ""} onChange={v => set("performanceScore", parseInt(v) || 0)} type="number" placeholder="0–100" />}
+                </Field>
+
+                <Field label="Data de lançamento">
+                  {isAgencia
+                    ? <ReadValue value={get("launchDate") ? formatDateBR(get("launchDate")) : null} />
+                    : <EditInput value={get("launchDate") ? String(get("launchDate")).slice(0, 10) : ""} onChange={v => set("launchDate", v ? new Date(v).toISOString() : null)} type="date" />}
+                </Field>
+
+                <Field label="Data de encerramento">
+                  {isAgencia
+                    ? <ReadValue value={get("endDate") ? formatDateBR(get("endDate")) : null} />
+                    : <EditInput value={get("endDate") ? String(get("endDate")).slice(0, 10) : ""} onChange={v => set("endDate", v ? new Date(v).toISOString() : null)} type="date" />}
+                </Field>
+
+                <div className="col-span-2">
+                  <Field label="Responsável interno">
+                    {isAgencia
+                      ? <ReadValue value={ownerUser?.name} />
+                      : (
+                        <EditSelect
+                          value={get("owner")}
+                          onChange={v => set("owner", v || null)}
+                          options={users.filter(u => ["marketing", "gerente_marketing", "admin"].includes(u.role)).map(u => ({ value: u.id, label: u.name }))}
+                          placeholder="Nenhum responsável"
+                        />
+                      )}
+                  </Field>
+                </div>
+
+                <div className="col-span-2">
+                  <Field label="Agência">
+                    {isAgencia
+                      ? <ReadValue value={get("agencyName")} />
+                      : <EditInput value={get("agencyName")} onChange={v => set("agencyName", v)} placeholder="Nome da agência" />}
+                  </Field>
+                </div>
+
+                <div className="col-span-2">
+                  <Field label="Link UTM / Campanha">
+                    {isAgencia
+                      ? (get("utmUrl")
+                        ? <a href={get("utmUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "#1E4D8C" }}>
+                            <Link size={11} /> {get("utmUrl")}
+                          </a>
+                        : <ReadValue value={null} />)
+                      : <EditInput value={get("utmUrl")} onChange={v => set("utmUrl", v)} placeholder="https://…" />}
+                  </Field>
+                </div>
+
+                <div className="col-span-2">
+                  <Field label="Pasta Google Drive">
+                    <div className="flex gap-2">
                       {isAgencia
-                        ? <ReadValue value={get("name")} />
-                        : <EditInput value={get("name")} onChange={v => set("name", v)} placeholder="Nome da campanha" />}
-                    </Field>
-                  </div>
-
-                  <div className="col-span-2">
-                    <Field label="Empresas">
-                      {isAgencia
-                        ? <ReadValue value={(get("companyIds") || []).map(id => COMPANIES[id]?.short || id).join(", ")} />
-                        : (
-                          <div className="flex flex-wrap gap-2">
-                            {COMPANY_IDS.map(id => {
-                              const selected = (get("companyIds") || []).includes(id);
-                              const co = COMPANIES[id];
-                              return (
-                                <button
-                                  key={id}
-                                  onClick={() => {
-                                    const cur = get("companyIds") || [];
-                                    set("companyIds", selected ? cur.filter(c => c !== id) : [...cur, id]);
-                                  }}
-                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
-                                  style={{ borderColor: selected ? co.primary : "#E5E7EB", background: selected ? co.primary + "22" : "#FFFFFF", color: selected ? co.primary : NEUTRAL.slate, cursor: "pointer" }}
-                                >
-                                  {selected && <Check size={10} strokeWidth={3} />}
-                                  {co.short}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                    </Field>
-                  </div>
-
-                  <Field label="Canal">
-                    {isAgencia
-                      ? <ReadValue value={get("channel")} />
-                      : <EditSelect value={get("channel")} onChange={v => set("channel", v)} options={MARKETING_CHANNELS} placeholder="Selecionar canal" />}
-                  </Field>
-
-                  <Field label="KPI principal">
-                    {isAgencia
-                      ? <ReadValue value={get("kpi")} />
-                      : <EditSelect value={get("kpi")} onChange={v => set("kpi", v)} options={MARKETING_KPIS} placeholder="Selecionar KPI" />}
-                  </Field>
-
-                  <Field label="Budget (R$)">
-                    {isAgencia
-                      ? <ReadValue value={get("budget") > 0 ? formatK(get("budget")) : null} />
-                      : <EditInput value={get("budget") || ""} onChange={v => set("budget", parseFloat(v) || 0)} type="number" placeholder="0" />}
-                  </Field>
-
-                  <Field label="Score de performance">
-                    {isAgencia
-                      ? <ReadValue value={get("performanceScore") > 0 ? String(get("performanceScore")) : null} />
-                      : <EditInput value={get("performanceScore") || ""} onChange={v => set("performanceScore", parseInt(v) || 0)} type="number" placeholder="0–100" />}
-                  </Field>
-
-                  <Field label="Data de lançamento">
-                    {isAgencia
-                      ? <ReadValue value={get("launchDate") ? formatDateBR(get("launchDate")) : null} />
-                      : <EditInput value={get("launchDate") ? String(get("launchDate")).slice(0, 10) : ""} onChange={v => set("launchDate", v ? new Date(v).toISOString() : null)} type="date" />}
-                  </Field>
-
-                  <Field label="Data de encerramento">
-                    {isAgencia
-                      ? <ReadValue value={get("endDate") ? formatDateBR(get("endDate")) : null} />
-                      : <EditInput value={get("endDate") ? String(get("endDate")).slice(0, 10) : ""} onChange={v => set("endDate", v ? new Date(v).toISOString() : null)} type="date" />}
-                  </Field>
-
-                  <div className="col-span-2">
-                    <Field label="Responsável interno">
-                      {isAgencia
-                        ? <ReadValue value={ownerUser?.name} />
-                        : (
-                          <EditSelect
-                            value={get("owner")}
-                            onChange={v => set("owner", v || null)}
-                            options={users.filter(u => ["marketing", "gerente_marketing", "admin"].includes(u.role)).map(u => ({ value: u.id, label: u.name }))}
-                            placeholder="Nenhum responsável"
-                          />
-                        )}
-                    </Field>
-                  </div>
-
-                  <div className="col-span-2">
-                    <Field label="Agência">
-                      {isAgencia
-                        ? <ReadValue value={get("agencyName")} />
-                        : <EditInput value={get("agencyName")} onChange={v => set("agencyName", v)} placeholder="Nome da agência" />}
-                    </Field>
-                  </div>
-
-                  <div className="col-span-2">
-                    <Field label="Link UTM / Campanha">
-                      {isAgencia
-                        ? (get("utmUrl")
-                          ? <a href={get("utmUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "#1E4D8C" }}>
-                              <Link size={11} /> {get("utmUrl")}
+                        ? (get("driveFolderUrl")
+                          ? <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "#1E4D8C" }}>
+                              <FolderOpen size={11} /> Abrir pasta no Drive
                             </a>
                           : <ReadValue value={null} />)
-                        : <EditInput value={get("utmUrl")} onChange={v => set("utmUrl", v)} placeholder="https://…" />}
-                    </Field>
-                  </div>
-
-                  <div className="col-span-2">
-                    <Field label="Pasta Google Drive">
-                      <div className="flex gap-2">
-                        {isAgencia
-                          ? (get("driveFolderUrl")
-                            ? <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "#1E4D8C" }}>
-                                <FolderOpen size={11} /> Abrir pasta no Drive
+                        : (
+                          <>
+                            <EditInput
+                              value={get("driveFolderUrl")}
+                              onChange={v => {
+                                set("driveFolderUrl", v);
+                                const m = v?.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+                                if (m) set("driveFolderId", m[1]);
+                                else set("driveFolderId", null);
+                              }}
+                              placeholder="https://drive.google.com/drive/folders/…"
+                            />
+                            {get("driveFolderUrl") && (
+                              <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer"
+                                className="flex items-center px-2.5 rounded-xl text-xs"
+                                style={{ background: "#F3F4F6", color: NEUTRAL.slate, border: "1px solid #E5E7EB", textDecoration: "none" }}>
+                                <ExternalLink size={12} />
                               </a>
-                            : <ReadValue value={null} />)
-                          : (
-                            <>
-                              <EditInput
-                                value={get("driveFolderUrl")}
-                                onChange={v => {
-                                  set("driveFolderUrl", v);
-                                  const m = v?.match(/\/folders\/([a-zA-Z0-9_-]+)/);
-                                  if (m) set("driveFolderId", m[1]);
-                                  else set("driveFolderId", null);
-                                }}
-                                placeholder="https://drive.google.com/drive/folders/…"
-                              />
-                              {get("driveFolderUrl") && (
-                                <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer"
-                                  className="flex items-center px-2.5 rounded-xl text-xs"
-                                  style={{ background: "#F3F4F6", color: NEUTRAL.slate, border: "1px solid #E5E7EB", textDecoration: "none" }}>
-                                  <ExternalLink size={12} />
-                                </a>
-                              )}
-                            </>
-                          )}
-                      </div>
-                    </Field>
-                  </div>
+                            )}
+                          </>
+                        )}
+                    </div>
+                  </Field>
                 </div>
               </div>
-            )}
-
-            {tab === "creative" && (
-              <ChecklistPanel
-                campaign={campaign}
-                onUpdate={(id, checklist) => onUpdate?.(id, { approvalChecklist: checklist })}
-                readOnly={false}
-              />
-            )}
-
-            {tab === "files" && (
-              <AttachmentsPanel
-                campaign={campaign}
-                canDelete={canWrite && !isAgencia}
-                currentUserId={currentUser?.id}
-              />
-            )}
-
-            {tab === "comments" && (
-              <ComentariosTab
-                campaign={campaign}
-                canWrite={canWrite}
-                isAgencia={isAgencia}
-                onUpdate={onUpdate}
-              />
-            )}
-
-            {tab === "activity" && (
-              <ActivityLog activities={campaign.activities || []} />
-            )}
-          </main>
-
-          {/* Mobile FASE ATUAL panel */}
-          {mobileTab === "stage" && (
-            <div className="lg:hidden flex-1 overflow-y-auto p-4 pb-24 space-y-2">
-              {MARKETING_STAGES.map((s, idx) => {
-                const isCurrent = s.id === get("stage");
-                const isPast    = idx < stageIdx;
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => { if (canWrite) moveToStage(s.id); }}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border cursor-pointer"
-                    style={{ background: isCurrent ? s.color + "14" : "#FFFFFF", borderColor: isCurrent ? s.color : "#E5E7EB", textAlign: "left" }}
-                  >
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: isCurrent ? s.color : isPast ? s.color + "44" : "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {isPast
-                        ? <Check size={14} color="#FFFFFF" />
-                        : <span style={{ width: 8, height: 8, borderRadius: "50%", background: isCurrent ? "#FFFFFF" : s.color + "66", display: "block" }} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm" style={{ color: isCurrent ? s.color : NEUTRAL.graphite }}>{s.name}</div>
-                      {s.sla && <div className="text-xs" style={{ color: NEUTRAL.slate }}>SLA {s.sla}d</div>}
-                    </div>
-                    {isCurrent && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: s.color, color: "#FFFFFF" }}>ATUAL</span>
-                    )}
-                  </button>
-                );
-              })}
             </div>
-          )}
+          </main>
 
           {/* ── RIGHT sidebar ── */}
           <aside
-            className="hidden lg:block w-full lg:w-[220px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5"
+            className="hidden lg:flex lg:flex-col w-full lg:w-[220px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4"
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
-            <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>
-              Mover campanha para etapa
+            <div>
+              <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>
+                Mover campanha para etapa
+              </div>
+              <div className="space-y-2">
+                {stageNav.next && (
+                  <button
+                    onClick={() => canWrite && moveToStage(stageNav.next.id)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                    style={{ background: stageNav.next.color + "14", color: stageNav.next.color, border: `1px solid ${stageNav.next.color}30` }}
+                    onMouseEnter={e => { e.currentTarget.style.background = stageNav.next.color + "22"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = stageNav.next.color + "14"; }}
+                  >
+                    <span>{stageNav.next.name}</span>
+                    <ArrowRight size={14} />
+                  </button>
+                )}
+                {stageNav.prev && (
+                  <button
+                    onClick={() => canWrite && moveToStage(stageNav.prev.id)}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+                  >
+                    <ArrowLeft size={13} />
+                    <span>{stageNav.prev.name}</span>
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              {stageNav.next && (
+
+            {/* AI move link */}
+            <div className="border-t pt-3 space-y-2" style={{ borderColor: "#E5E7EB" }}>
+              <button
+                onClick={() => setSideTab("ia")}
+                className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
+                style={{ background: "none", border: "none", color: NEUTRAL.slate, padding: 0, textAlign: "left" }}
+                onMouseEnter={e => { e.currentTarget.style.color = PURPLE; }}
+                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+              >
+                <Sparkles size={12} />
+                Mover cards com IA
+              </button>
+              {isManager && (
                 <button
-                  onClick={() => canWrite && moveToStage(stageNav.next.id)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
-                  style={{ background: stageNav.next.color + "14", color: stageNav.next.color, border: `1px solid ${stageNav.next.color}30` }}
-                  onMouseEnter={e => { e.currentTarget.style.background = stageNav.next.color + "22"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = stageNav.next.color + "14"; }}
+                  className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
+                  style={{ background: "none", border: "none", color: NEUTRAL.slate, padding: 0, textAlign: "left", opacity: 0.7 }}
+                  onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; e.currentTarget.style.opacity = "1"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.opacity = "0.7"; }}
+                  title="Configure automações de mover cards nas Configurações"
                 >
-                  <span>{stageNav.next.name}</span>
-                  <ArrowRight size={14} />
-                </button>
-              )}
-              {stageNav.prev && (
-                <button
-                  onClick={() => canWrite && moveToStage(stageNav.prev.id)}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                  style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
-                >
-                  <ArrowLeft size={13} />
-                  <span>{stageNav.prev.name}</span>
+                  <Activity size={12} />
+                  Configurar mover cards
                 </button>
               )}
             </div>
