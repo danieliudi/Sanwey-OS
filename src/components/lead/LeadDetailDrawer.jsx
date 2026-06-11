@@ -30,6 +30,7 @@ const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.
 export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, isManager, currentUser, onNavigateToPipelineBuilder }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
+  const [mobileTab, setMobileTab] = useState("info");
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -111,6 +112,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
       setEditingContactEmail(false);
       setContactEmailDraft(lead.contactEmail || "");
       setNoteText("");
+      setMobileTab("info");
     }
   }, [lead?.id, lead?.stage]);
 
@@ -289,24 +291,63 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center p-4 md:p-6"
+      className="fixed inset-0 z-40 flex lg:items-center lg:justify-center lg:p-6"
       style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-full max-w-6xl rounded-2xl flex flex-col"
+        className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-6xl lg:rounded-2xl lg:max-h-[92vh]"
         style={{
           background: "#FFFFFF",
           boxShadow: "0 24px 64px rgba(32,26,26,0.18)",
-          maxHeight: "92vh",
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Drawer header */}
+        {/* ── Mobile header (fullscreen) ────────────────────────────── */}
         <div
-          className="sticky top-0 z-10 px-5 py-3.5 border-b flex items-center justify-between"
+          className="lg:hidden sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b"
+          style={{ background: "rgba(255,248,247,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
+        >
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer shrink-0"
+            style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
+            aria-label="Fechar"
+          >
+            <X size={20} />
+          </button>
+          <div className="flex-1 min-w-0 text-center">
+            <div className="font-bold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{lead.company}</div>
+            <div className="text-xs mt-0.5 truncate" style={{ color: NEUTRAL.slate }}>
+              {DEFAULT_PIPELINE_STAGES.find(s => s.id === lead.stage)?.name || lead.stage}
+            </div>
+          </div>
+          <CompanyTag companyId={lead.companyId} />
+        </div>
+
+        {/* ── Mobile tab bar ──────────────────────────────────────────── */}
+        <div className="lg:hidden flex border-b" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+          {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setMobileTab(tab.id)}
+              className="flex-1 py-3 text-xs font-bold tracking-wider transition-colors"
+              style={{
+                background: "transparent", border: "none", cursor: "pointer",
+                color: mobileTab === tab.id ? company.primary : NEUTRAL.slate,
+                borderBottom: `2px solid ${mobileTab === tab.id ? company.primary : "transparent"}`,
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Desktop header ──────────────────────────────────────────── */}
+        <div
+          className="hidden lg:flex sticky top-0 z-10 px-5 py-3.5 border-b items-center justify-between"
           style={{ background: "rgba(255,248,247,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
         >
           <div className="flex items-center gap-2">
@@ -366,9 +407,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
         {/* ── BODY: 3 colunas (esquerda info / centro form da etapa / direita movimentação) ── */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
 
-          {/* ───── LEFT SIDEBAR ───────────────────────────────────────── */}
+          {/* ───── LEFT SIDEBAR (INFO tab on mobile) ────────────────── */}
           <aside
-            className="w-full lg:w-[320px] shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4"
+            className={`w-full lg:w-[320px] shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4${mobileTab !== "info" ? " hidden lg:block" : ""}`}
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
             {/* Título do lead */}
@@ -777,8 +818,8 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             )}
           </aside>
 
-          {/* ───── CENTER ─────────────────────────────────────────────── */}
-          <main className="flex-1 min-w-0 overflow-y-auto p-5 space-y-4">
+          {/* ───── CENTER (FASE ATUAL tab on mobile) ─────────────────── */}
+          <main className={`flex-1 min-w-0 overflow-y-auto p-5 space-y-4${mobileTab !== "stage" ? " hidden lg:block" : ""}`}>
 
           {/* ── Pipeline stage progress bar ───────────────────────────────── */}
           <PipelineStageBar currentStage={stage || lead.stage} companyColor={company.primary} />
@@ -1087,9 +1128,9 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           </div>
           </main>
 
-          {/* ───── RIGHT SIDEBAR ─────────────────────────────────────── */}
+          {/* ───── RIGHT SIDEBAR (desktop only) ─────────────────────── */}
           <aside
-            className="w-full lg:w-[240px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5"
+            className="hidden lg:block w-[240px] shrink-0 overflow-y-auto border-l p-5"
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
             <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>
@@ -1149,6 +1190,24 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               </a>
             </div>
           </aside>
+        </div>
+
+        {/* ── Mobile sticky footer: Avançar / Voltar ──────────────── */}
+        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+          {stageNav.next ? (
+            <button
+              onClick={() => moveToStage(stageNav.next.id)}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm"
+              style={{ background: company.primary, color: "#FFFFFF", border: "none", cursor: "pointer" }}
+            >
+              Avançar para {stageNav.next.name}
+              <ArrowRight size={16} />
+            </button>
+          ) : (
+            <div className="text-xs text-center py-3" style={{ color: NEUTRAL.slate }}>
+              {lead.stage === "ganho" ? "Negócio ganho 🎉" : lead.stage === "perdido" ? "Negócio encerrado" : "Etapa final"}
+            </div>
+          )}
         </div>
       </div>
     </div>

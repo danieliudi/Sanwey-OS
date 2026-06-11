@@ -376,6 +376,7 @@ export function CampaignDetailDrawer({
   currentUser,
 }) {
   const [tab, setTab] = useState("details");
+  const [mobileTab, setMobileTab] = useState("info");
   const [draft, setDraft] = useState({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -404,6 +405,7 @@ export function CampaignDetailDrawer({
   useEffect(() => {
     setDraft({});
     pendingPatch.current = {};
+    setMobileTab("info");
   }, [campaign?.id]);
 
   const get = (field) =>
@@ -437,6 +439,8 @@ export function CampaignDetailDrawer({
   const ownerUser = users.find(u => u.id === get("owner"));
   const stage = MARKETING_STAGES.find(s => s.id === get("stage"));
   const channelStyle = get("channel") ? (CHANNEL_COLORS[get("channel")] || null) : null;
+  const stageIdx = MARKETING_STAGES.findIndex(s => s.id === get("stage"));
+  const nextStage = stageIdx >= 0 && stageIdx < MARKETING_STAGES.length - 1 ? MARKETING_STAGES[stageIdx + 1] : null;
 
   if (!campaign) return null;
 
@@ -454,9 +458,57 @@ export function CampaignDetailDrawer({
         className="fixed top-0 right-0 h-full z-50 flex flex-col shadow-2xl"
         style={{ width: "min(520px, 100vw)", background: "#FFFFFF" }}
       >
-        {/* Header */}
+        {/* ── Mobile header ────────────────────────────────────────── */}
         <div
-          className="px-5 py-4 border-b flex items-start justify-between gap-3"
+          className="lg:hidden flex items-center gap-3 px-4 py-3 border-b shrink-0"
+          style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+        >
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg shrink-0"
+            style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate }}
+          >
+            <X size={20} />
+          </button>
+          <div className="flex-1 min-w-0 text-center">
+            <div className="font-bold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{get("name")}</div>
+            {stage && (
+              <div className="text-xs mt-0.5 truncate" style={{ color: stage.color }}>{stage.name}</div>
+            )}
+          </div>
+          {canWrite && (
+            <button
+              title={campaign.starred ? "Remover destaque" : "Destacar"}
+              onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
+              className="p-1.5 rounded-lg shrink-0"
+              style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "#9CA3AF" }}
+            >
+              <Star size={16} fill={campaign.starred ? "#F59E0B" : "none"} />
+            </button>
+          )}
+        </div>
+
+        {/* ── Mobile tab bar ────────────────────────────────────────── */}
+        <div className="lg:hidden flex border-b shrink-0" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+          {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setMobileTab(t.id)}
+              className="flex-1 py-3 text-xs font-bold tracking-wider transition-colors"
+              style={{
+                background: "transparent", border: "none", cursor: "pointer",
+                color: mobileTab === t.id ? "#1E4D8C" : NEUTRAL.slate,
+                borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Desktop header ────────────────────────────────────────── */}
+        <div
+          className="hidden lg:flex px-5 py-4 border-b items-start justify-between gap-3 shrink-0"
           style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
         >
           <div className="flex-1 min-w-0">
@@ -516,9 +568,9 @@ export function CampaignDetailDrawer({
           </div>
         </div>
 
-        {/* Stage selector */}
+        {/* Stage selector (desktop + mobile FASE ATUAL) */}
         {canWrite && (
-          <div className="px-5 py-2 border-b" style={{ borderColor: "#E5E7EB" }}>
+          <div className={`px-5 py-2 border-b shrink-0${mobileTab !== "stage" ? " hidden lg:block" : ""}`} style={{ borderColor: "#E5E7EB" }}>
             <div className="flex gap-1.5 overflow-x-auto pb-0.5">
               {MARKETING_STAGES.map(s => (
                 <button
@@ -538,8 +590,44 @@ export function CampaignDetailDrawer({
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex border-b" style={{ borderColor: "#E5E7EB" }}>
+        {/* Mobile FASE ATUAL: full stage list */}
+        {mobileTab === "stage" && (
+          <div className="lg:hidden flex-1 overflow-y-auto px-4 py-3 space-y-2 pb-24">
+            {MARKETING_STAGES.map((s, idx) => {
+              const isCurrent = s.id === get("stage");
+              const isPast = idx < stageIdx;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => canWrite && onUpdate?.(campaign.id, { stage: s.id, stageChangedAt: new Date().toISOString() })}
+                  disabled={!canWrite}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all"
+                  style={{
+                    borderColor: isCurrent ? s.color : isPast ? s.color + "44" : "#E5E7EB",
+                    background: isCurrent ? s.color + "14" : isPast ? s.color + "08" : "#FFFFFF",
+                    cursor: canWrite ? "pointer" : "default",
+                  }}
+                >
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: isCurrent ? s.color : isPast ? s.color + "88" : "#D1D5DB", flexShrink: 0 }} />
+                  <span className="flex-1 text-sm font-semibold" style={{ color: isCurrent ? s.color : isPast ? NEUTRAL.slate : NEUTRAL.graphite }}>
+                    {s.name}
+                  </span>
+                  {isCurrent && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: s.color + "22", color: s.color }}>
+                      ATUAL
+                    </span>
+                  )}
+                  {isPast && (
+                    <Check size={14} style={{ color: s.color, flexShrink: 0 }} strokeWidth={3} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Tabs (INFORMAÇÕES on mobile, always on desktop) */}
+        <div className={`flex border-b shrink-0${mobileTab !== "info" ? " hidden lg:flex" : ""}`} style={{ borderColor: "#E5E7EB" }}>
           {TABS.map(t => {
             const Icon = t.icon;
             return (
@@ -563,8 +651,8 @@ export function CampaignDetailDrawer({
           })}
         </div>
 
-        {/* Tab content */}
-        <div className="flex-1 overflow-y-auto p-5">
+        {/* Tab content (INFORMAÇÕES on mobile, always on desktop) */}
+        <div className={`flex-1 overflow-y-auto p-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}>
           {tab === "details" && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -788,6 +876,33 @@ export function CampaignDetailDrawer({
 
           {tab === "activity" && (
             <ActivityLog activities={campaign.activities || []} />
+          )}
+        </div>
+
+        {/* ── Mobile sticky footer: Avançar ────────────────────────── */}
+        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+          {nextStage ? (
+            <button
+              onClick={() => {
+                if (!canWrite || isAgencia) return;
+                onUpdate?.(campaign.id, { stage: nextStage.id, stageChangedAt: new Date().toISOString() });
+              }}
+              disabled={!canWrite || isAgencia}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm"
+              style={{
+                background: canWrite && !isAgencia ? nextStage.color : "#D1D5DB",
+                color: "#FFFFFF",
+                border: "none",
+                cursor: canWrite && !isAgencia ? "pointer" : "default",
+              }}
+            >
+              Avançar para {nextStage.name}
+              <span style={{ fontSize: 16 }}>→</span>
+            </button>
+          ) : (
+            <div className="text-xs text-center py-3" style={{ color: NEUTRAL.slate }}>
+              {get("stage") === "encerrado" ? "Campanha encerrada" : "Etapa final da campanha"}
+            </div>
           )}
         </div>
       </div>

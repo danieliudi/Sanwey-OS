@@ -490,6 +490,7 @@ function ComentariosTab({ item, onUpdate, canWrite }) {
 /* ── Main component ─────────────────────────────────────────── */
 export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, users = [], canWrite, userId }) {
   const [activeTab,    setActiveTab]   = useState("form");
+  const [mobileTab,    setMobileTab]   = useState("info");
   const [fieldValues,  setFieldValues] = useState(() => item.stageData?.[item.stage] ?? {});
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | null
   const [deleting,     setDeleting]    = useState(false);
@@ -506,6 +507,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
     setFieldValues(item.stageData?.[item.stage] ?? {});
     fieldValuesRef.current = item.stageData?.[item.stage] ?? {};
     setSaveStatus(null);
+    setMobileTab("info");
     if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
   }, [item.id, item.stage]);
 
@@ -591,11 +593,46 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
 
       {/* Drawer */}
       <div
-        style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(960px, 98vw)", background: "#F3F4F6", zIndex: 201, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.18)" }}
+        className="flex flex-col"
+        style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(960px, 100vw)", background: "#F3F4F6", zIndex: 201, boxShadow: "-8px 0 40px rgba(0,0,0,0.18)" }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Top bar */}
-        <div style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB", padding: "14px 20px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        {/* ── Mobile header ────────────────────────────────────────── */}
+        <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b shrink-0" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 6, display: "flex", flexShrink: 0 }}>
+            <X size={20} />
+          </button>
+          <div style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
+            {stageInfo && <div style={{ fontSize: 11, color: stageInfo.color, marginTop: 2 }}>{stageInfo.name}</div>}
+          </div>
+          {item.priority && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: priorityColor, background: priorityColor + "18", border: `1px solid ${priorityColor}40`, borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>
+              {priorityLabel}
+            </span>
+          )}
+        </div>
+
+        {/* ── Mobile tab bar ────────────────────────────────────────── */}
+        <div className="lg:hidden flex border-b shrink-0" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+          {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setMobileTab(t.id)}
+              style={{
+                flex: 1, padding: "12px 0", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+                background: "transparent", border: "none", cursor: "pointer",
+                color: mobileTab === t.id ? "#1E4D8C" : NEUTRAL.slate,
+                borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Desktop header ────────────────────────────────────────── */}
+        <div className="hidden lg:flex items-center gap-3 shrink-0" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB", padding: "14px 20px" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
               {item.starred && <Star size={14} fill="#F59E0B" color="#F59E0B" />}
@@ -626,10 +663,10 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
         </div>
 
         {/* Body */}
-        <div style={{ display: "grid", gridTemplateColumns: "240px 1fr 220px", flex: 1, minHeight: 0 }}>
+        <div className={`flex-1 min-h-0 flex flex-col lg:grid lg:[grid-template-columns:240px_1fr_220px]`}>
 
-          {/* ── Col 1: Tabs ── */}
-          <div style={{ background: "#FFFFFF", borderRight: "1px solid #E5E7EB", display: "flex", flexDirection: "column" }}>
+          {/* ── Col 1: Tabs (INFORMAÇÕES on mobile) ── */}
+          <div className={`${mobileTab !== "info" ? "hidden lg:flex" : "flex"} flex-col`} style={{ background: "#FFFFFF", borderRight: "1px solid #E5E7EB" }}>
             {/* Tab bar */}
             <div style={{ borderBottom: "1px solid #E5E7EB", flexShrink: 0 }}>
               {TABS.map(tab => {
@@ -733,8 +770,8 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             )}
           </div>
 
-          {/* ── Col 2: Stage fields (auto-save) ── */}
-          <div style={{ background: "#FFFFFF", borderRight: "1px solid #E5E7EB", overflowY: "auto", padding: "24px 24px" }}>
+          {/* ── Col 2: Stage fields (FASE ATUAL on mobile) ── */}
+          <div className={mobileTab !== "stage" ? "hidden lg:block" : "block"} style={{ background: "#FFFFFF", borderRight: "1px solid #E5E7EB", overflowY: "auto", padding: "24px 24px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
               <SectionLabel>Fase atual</SectionLabel>
               {stageInfo && (
@@ -765,8 +802,8 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             }
           </div>
 
-          {/* ── Col 3: Move stage ── */}
-          <div style={{ background: "#F9FAFB", overflowY: "auto", padding: "24px 16px" }}>
+          {/* ── Col 3: Move stage (desktop only) ── */}
+          <div className="hidden lg:block" style={{ background: "#F9FAFB", overflowY: "auto", padding: "24px 16px" }}>
             <SectionLabel>Mover card para fase</SectionLabel>
 
             {nextStages.length > 0 && (
@@ -804,6 +841,30 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── Mobile sticky footer: Avançar ────────────────────────── */}
+        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+          {nextStages.length > 0 ? (
+            <button
+              onClick={() => canWrite && handleMoveStage(nextStages[0].id)}
+              disabled={!canWrite}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm"
+              style={{
+                background: canWrite ? nextStages[0].color : "#D1D5DB",
+                color: "#FFFFFF",
+                border: "none",
+                cursor: canWrite ? "pointer" : "default",
+              }}
+            >
+              Avançar para {nextStages[0].name}
+              <ArrowRight size={16} />
+            </button>
+          ) : (
+            <div className="text-xs text-center py-3" style={{ color: NEUTRAL.slate }}>
+              Etapa final atingida
+            </div>
+          )}
         </div>
       </div>
     </>
