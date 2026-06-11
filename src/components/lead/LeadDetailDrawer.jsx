@@ -409,7 +409,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
           {/* ───── LEFT SIDEBAR ───────────────────────────────────────── */}
           <aside
-            className={`w-full lg:w-[320px] shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-20 lg:pb-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}
+            className={`w-full lg:w-[320px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
             {/* Título do lead */}
@@ -427,7 +427,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                   {!lead.cnpj && !lead.sector && !lead.city && <span className="italic">Sem dados</span>}
                 </div>
               </div>
-              <FitScoreCircle score={lead.fitScore} size={48} />
+              <div className="hidden lg:block"><FitScoreCircle score={lead.fitScore} size={48} /></div>
             </div>
 
             {/* Métricas compactas — Unidades / Prob. / Fechamento */}
@@ -452,12 +452,13 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               </div>
             </div>
 
-            {/* Receita Federal — compacto */}
+            {/* Receita Federal — escondido no mobile quando sem dados */}
             {isSupabaseConfigured && (
               <div
-                className="p-2.5 rounded-lg border flex items-start justify-between gap-2"
+                className={`p-2.5 rounded-lg border flex items-start justify-between gap-2${!enrichData && !enrichError ? " hidden lg:flex" : ""}`}
                 style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
               >
+                <div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] font-semibold mb-0.5 flex items-center gap-1" style={{ color: NEUTRAL.slate }}>
                     <Building2 size={11} />
@@ -511,27 +512,38 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                   onClick={handleEnrich} disabled={enriching || !lead.cnpj}>
                   {enriching ? "Buscando…" : enrichData ? "Re-buscar" : "Enriquecer"}
                 </Button>
+                </div>
               </div>
             )}
 
-            {/* Sinal de mercado — compacto */}
+            {/* Sinal de mercado — chip no mobile, card no desktop */}
             {(lead.triggerLabel || lead.evidence) && (
-              <div
-                className="p-2.5 rounded-lg"
-                style={{
-                  background: company.light,
-                  border: `1px solid ${company.primary}20`,
-                  borderLeft: `3px solid ${company.primary}`,
-                }}
-              >
-                <div className="text-[10px] font-semibold mb-0.5 flex items-center gap-1" style={{ color: company.dark }}>
-                  <AlertTriangle size={11} />
-                  {lead.triggerLabel ? `Gatilho · ${lead.triggerLabel}` : "Gatilho"}
+              <>
+                {/* Mobile: chip compacto */}
+                <div className="lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg" style={{ background: company.light, border: `1px solid ${company.primary}20` }}>
+                  <AlertTriangle size={11} style={{ color: company.dark, flexShrink: 0 }} />
+                  <span className="text-xs font-semibold truncate" style={{ color: company.dark }}>
+                    {lead.triggerLabel || "Gatilho detectado"}
+                  </span>
                 </div>
-                {lead.evidence && (
-                  <div className="text-xs line-clamp-3" style={{ color: NEUTRAL.graphite }}>{lead.evidence}</div>
-                )}
-              </div>
+                {/* Desktop: card completo */}
+                <div
+                  className="hidden lg:block p-2.5 rounded-lg"
+                  style={{
+                    background: company.light,
+                    border: `1px solid ${company.primary}20`,
+                    borderLeft: `3px solid ${company.primary}`,
+                  }}
+                >
+                  <div className="text-[10px] font-semibold mb-0.5 flex items-center gap-1" style={{ color: company.dark }}>
+                    <AlertTriangle size={11} />
+                    {lead.triggerLabel ? `Gatilho · ${lead.triggerLabel}` : "Gatilho"}
+                  </div>
+                  {lead.evidence && (
+                    <div className="text-xs line-clamp-3" style={{ color: NEUTRAL.graphite }}>{lead.evidence}</div>
+                  )}
+                </div>
+              </>
             )}
 
             {/* Decisor + infos do cliente */}
