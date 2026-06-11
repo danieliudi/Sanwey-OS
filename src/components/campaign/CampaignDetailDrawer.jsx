@@ -1007,7 +1007,7 @@ export function CampaignDetailDrawer({
 
           {/* ── CENTER content: always-visible form ── */}
           <main
-            className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-4${mobileTab !== "info" ? " hidden lg:block" : ""}`}
+            className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-4${mobileTab !== "stage" ? " hidden lg:block" : ""}`}
           >
             <MarketingStageBar currentStageId={get("stage")} />
 
@@ -1157,37 +1157,6 @@ export function CampaignDetailDrawer({
               </div>
             </div>
           </main>
-
-          {/* Mobile FASE ATUAL panel */}
-          {mobileTab === "stage" && (
-            <div className="lg:hidden flex-1 overflow-y-auto p-4 pb-24 space-y-2">
-              {MARKETING_STAGES.map((s, idx) => {
-                const isCurrent = s.id === get("stage");
-                const isPast    = idx < stageIdx;
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => { if (canWrite) moveToStage(s.id); }}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border cursor-pointer"
-                    style={{ background: isCurrent ? s.color + "14" : "#FFFFFF", borderColor: isCurrent ? s.color : "#E5E7EB", textAlign: "left" }}
-                  >
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: isCurrent ? s.color : isPast ? s.color + "44" : "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {isPast
-                        ? <Check size={14} color="#FFFFFF" />
-                        : <span style={{ width: 8, height: 8, borderRadius: "50%", background: isCurrent ? "#FFFFFF" : s.color + "66", display: "block" }} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm" style={{ color: isCurrent ? s.color : NEUTRAL.graphite }}>{s.name}</div>
-                      {s.sla && <div className="text-xs" style={{ color: NEUTRAL.slate }}>SLA {s.sla}d</div>}
-                    </div>
-                    {isCurrent && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: s.color, color: "#FFFFFF" }}>ATUAL</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
 
           {/* ── RIGHT sidebar ── */}
           <aside
