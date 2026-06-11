@@ -24,10 +24,11 @@ import { useLeadChecklists } from "../../hooks/use-lead-checklists";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { StageFieldInput } from "./StageFieldInput";
+import { ClientSelector } from "../client/ClientSelector";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, isManager, currentUser, onNavigateToPipelineBuilder }) {
+export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
   const [mobileTab, setMobileTab] = useState("info");
@@ -414,22 +415,36 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             className={`w-full lg:w-[320px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:block" : ""}`}
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
-            {/* Título do lead */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold mb-1" style={{ fontSize: 18, color: NEUTRAL.graphite, letterSpacing: "-0.02em", wordBreak: "break-word" }}>
-                  {lead.company}
-                </h2>
-                <div className="flex items-center gap-1.5 text-xs flex-wrap" style={{ color: NEUTRAL.slate }}>
-                  {lead.cnpj && <span className="font-mono">{lead.cnpj}</span>}
-                  {lead.cnpj && (lead.sector || lead.city) && <span>·</span>}
-                  {lead.sector && <span>{lead.sector}</span>}
-                  {lead.sector && lead.city && <span>·</span>}
-                  {lead.city && <span className="flex items-center gap-1"><MapPin size={11} />{lead.city}</span>}
-                  {!lead.cnpj && !lead.sector && !lead.city && <span className="italic">Sem dados</span>}
+            {/* Cliente vinculado — substitui o bloco de empresa */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: NEUTRAL.slate, letterSpacing: "0.06em" }}>
+                  Cliente
                 </div>
+                <div className="hidden lg:block"><FitScoreCircle score={lead.fitScore} size={40} /></div>
               </div>
-              <div className="hidden lg:block"><FitScoreCircle score={lead.fitScore} size={48} /></div>
+              <ClientSelector
+                value={lead.clientId}
+                clients={clients}
+                onChange={(id) => onUpdate(lead.id, { clientId: id })}
+                onCreate={onCreateClient ? async (name) => {
+                  const created = await onCreateClient({
+                    name: name || lead.company || "Novo cliente",
+                    cnpj: lead.cnpj || null,
+                    city: lead.city || null,
+                    state: lead.state || null,
+                  });
+                  if (created?.id) onUpdate(lead.id, { clientId: created.id });
+                } : undefined}
+              />
+              {!lead.clientId && (
+                <div className="flex items-center gap-1.5 text-xs flex-wrap mt-2" style={{ color: NEUTRAL.slate }}>
+                  <span>Lead:</span>
+                  <b style={{ color: NEUTRAL.graphite, fontWeight: 600 }}>{lead.company || "—"}</b>
+                  {lead.cnpj && <span className="font-mono">· {lead.cnpj}</span>}
+                  {lead.city && <span className="flex items-center gap-1">· <MapPin size={11} />{lead.city}</span>}
+                </div>
+              )}
             </div>
 
             {/* Métricas compactas — Unidades / Prob. / Fechamento */}

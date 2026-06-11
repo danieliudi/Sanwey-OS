@@ -47,6 +47,7 @@ function rowToLead(r) {
     orderCount: r.order_count ?? 0,
     customFields: r.custom_fields && typeof r.custom_fields === "object" ? r.custom_fields : {},
     nextFollowUp: r.next_follow_up,
+    clientId: r.client_id ?? null,
     createdAt: r.created_at,
     lastActivity: r.last_activity,
     stageChangedAt: r.stage_changed_at,
@@ -97,6 +98,7 @@ function leadToRow(l, extras = {}) {
     order_count: l.orderCount ?? 0,
     custom_fields: l.customFields && typeof l.customFields === "object" ? l.customFields : {},
     next_follow_up: l.nextFollowUp ?? null,
+    client_id: l.clientId ?? null,
     ...extras,
   };
 }
@@ -121,6 +123,7 @@ function patchToRow(patch) {
     stageChangedAt: "stage_changed_at",
     customFields: "custom_fields",
     nextFollowUp: "next_follow_up",
+    clientId: "client_id",
   };
   const out = {};
   for (const [k, v] of Object.entries(patch)) {

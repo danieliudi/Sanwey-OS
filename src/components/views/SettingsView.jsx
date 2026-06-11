@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
-  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy,
+  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -83,22 +83,22 @@ export function SettingsView({
   settings, onUpdate, onReset, onClearLocalData, currentUser,
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
-  usersPanel, onOpenClientImport, isManager = false,
+  usersPanel, clientsPanel, onOpenClientImport, isManager = false,
 }) {
   const [activeTab, setActiveTab] = useState("perfil");
   const tabs = useMemo(() => {
     if (!isManager) return PERSONAL_TABS;
-    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Usuários
+    // Manager order: Perfil, Preferências, Notificações, IA, Clientes, Captura, Dados, Usuários
     const list = [
       PERSONAL_TABS[0],
       MANAGER_TABS[0],
       PERSONAL_TABS[1],
       PERSONAL_TABS[2],
-      MANAGER_TABS[1],
-      MANAGER_TABS[2],
     ];
+    if (clientsPanel) list.push({ id: "clientes", label: "Clientes", icon: Users });
+    list.push(MANAGER_TABS[1], MANAGER_TABS[2]);
     return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
-  }, [isManager, usersPanel]);
+  }, [isManager, usersPanel, clientsPanel]);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [clearTyped, setClearTyped] = useState("");
 
@@ -1069,6 +1069,9 @@ export function SettingsView({
                 )}
               </Section>
             )}
+
+            {/* ── CLIENTES ── */}
+            {activeTab === "clientes" && clientsPanel}
 
             {/* ── USUÁRIOS ── */}
             {activeTab === "usuarios" && usersPanel}

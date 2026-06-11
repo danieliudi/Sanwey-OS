@@ -15,6 +15,7 @@ import { useCrossReferrals } from "./hooks/use-cross-referrals";
 import { useUserSettings } from "./hooks/use-user-settings";
 import { useSupabaseAuth } from "./hooks/use-supabase-auth";
 import { useLeads } from "./hooks/use-leads";
+import { useClients } from "./hooks/use-clients";
 import { useNotifications } from "./hooks/use-notifications";
 import { useProfiles } from "./hooks/use-profiles";
 import { useInvitations } from "./hooks/use-invitations";
@@ -35,6 +36,7 @@ import { CRMView } from "./components/views/CRMView";
 import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
 import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { UserManagementView } from "./components/views/UserManagementView";
+import { ClientsManager } from "./components/client/ClientsManager";
 import { SettingsView } from "./components/views/SettingsView";
 import { AgentActionsView } from "./components/views/AgentActionsView";
 import { FairImportView } from "./components/views/FairImportView";
@@ -115,6 +117,14 @@ export default function App() {
     role: currentUser?.role,
     companies: currentUser?.companies,
   });
+
+  const {
+    clients,
+    loading: clientsLoading,
+    createClient,
+    updateClient,
+    deleteClient,
+  } = useClients({ userId: currentUser?.id });
 
   // Signals are purely derived from the current date — no need to persist.
   const [signals] = useState(INITIAL_SIGNALS);
@@ -684,6 +694,16 @@ export default function App() {
               supabaseEnabled={supabaseEnabled}
               isManager={isManager}
               onOpenClientImport={isManager ? () => setClientImportOpen(true) : null}
+              clientsPanel={isManager ? (
+                <ClientsManager
+                  clients={clients}
+                  loading={clientsLoading}
+                  onCreate={createClient}
+                  onUpdate={updateClient}
+                  onDelete={deleteClient}
+                  canDelete={isManager}
+                />
+              ) : null}
               usersPanel={isManager ? (
                 <UserManagementView
                   users={users}
@@ -766,6 +786,8 @@ export default function App() {
           onAddActivity={addLeadActivity}
           allLeads={leads}
           users={users}
+          clients={clients}
+          onCreateClient={createClient}
           isManager={isManager}
           currentUser={currentUser}
           onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("pipeline-builder"); }}
