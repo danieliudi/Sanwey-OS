@@ -621,6 +621,8 @@ export default function App() {
               onAddLead={handleAddLead}
               visibleStages={settings.visibleKanbanStages}
               pipelineTransitions={pipelineTransitions}
+              clients={clients}
+              onCreateClient={createClient}
             />
           } />
           <Route path={ROUTES.agents} element={

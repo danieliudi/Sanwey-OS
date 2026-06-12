@@ -5,7 +5,6 @@ import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { CANONICAL_STATES } from "../../constants/taxonomy";
 import { FIELD_DEFS } from "../../constants/lead-form-fields";
 import { LeadFormBuilder } from "./LeadFormBuilder";
-import { useClients } from "../../hooks/use-clients";
 
 // ── Customer search helpers ───────────────────────────────────────────────────
 
@@ -236,9 +235,9 @@ export function LeadCreateModal({
   onUpdateFormConfig,
   existingLeads,
   onViewExisting,
+  clients,
+  createClient,
 }) {
-  const { clients, createClient } = useClients({ userId: currentUser?.id });
-
   const [values, setValues] = useState(() => ({
     owner: currentUser?.id || "",
     sector: currentUser?.sectors?.[0] || "",
