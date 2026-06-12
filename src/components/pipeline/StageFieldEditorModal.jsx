@@ -254,6 +254,13 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
     if (open) { setShowAdd(false); setOpError(null); }
   }, [open, stage?.id]);
 
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open, onClose]);
+
   if (!open || !stage) return null;
 
   const company = COMPANIES[companyId];

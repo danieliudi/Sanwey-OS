@@ -32,6 +32,13 @@ export function StageEditorModal({
     if (open) setDraft(stages.map(s => ({ ...s })));
   }, [open, stages]);
 
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open, onClose]);
+
   const countsByStage = useMemo(() => {
     const m = {};
     for (const l of leads || []) {

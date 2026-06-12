@@ -601,6 +601,12 @@ export function CampaignDetailDrawer({
     pendingPatch.current = {};
   }, [campaign?.id]);
 
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose?.(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
   const get = (field) => field in draft ? draft[field] : campaign[field];
 
   const set = useCallback((field, value) => {

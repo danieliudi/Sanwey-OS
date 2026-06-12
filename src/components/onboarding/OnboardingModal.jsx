@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { X, ArrowRight, Check } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import { ONBOARDING_STEPS } from "../../data/tutorials";
@@ -7,6 +7,12 @@ export function OnboardingModal({ currentUser, onDone }) {
   const role = currentUser?.role || "vendedor";
   const steps = ONBOARDING_STEPS[role] || ONBOARDING_STEPS.vendedor;
   const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onDone(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onDone]);
 
   const isLast = step === steps.length - 1;
   const current = steps[step];

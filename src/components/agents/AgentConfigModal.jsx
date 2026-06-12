@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { X, Info } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 
@@ -14,6 +14,13 @@ export function AgentConfigModal({
   isAgentEnabled,        // (companyId, agentId) → boolean
   toggleAgent,           // (companyId, agentId) → void
 }) {
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (

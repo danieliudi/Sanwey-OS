@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { X, ArrowRight, Lock, User } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
@@ -16,6 +16,13 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
   // Pra cada etapa de origem não-terminal, calcula destinos permitidos e
   // separa entre "Avançar" (índice maior, não-perdido), "Voltar" (índice
   // menor) e "Fechar" (terminais).
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open, onClose]);
+
   const flow = useMemo(() => {
     if (!open) return [];
     const allIds = stages.map(s => s.id);

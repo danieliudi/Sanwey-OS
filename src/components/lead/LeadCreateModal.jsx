@@ -5,6 +5,7 @@ import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { CANONICAL_STATES } from "../../constants/taxonomy";
 import { FIELD_DEFS } from "../../constants/lead-form-fields";
 import { LeadFormBuilder } from "./LeadFormBuilder";
+import { useClients } from "../../hooks/use-clients";
 
 // ── Customer search helpers ───────────────────────────────────────────────────
 
@@ -236,6 +237,8 @@ export function LeadCreateModal({
   existingLeads,
   onViewExisting,
 }) {
+  const { clients, createClient } = useClients({ userId: currentUser?.id });
+
   const [values, setValues] = useState(() => ({
     owner: currentUser?.id || "",
     sector: currentUser?.sectors?.[0] || "",
@@ -335,6 +338,32 @@ export function LeadCreateModal({
         decisionMaker: { name: "—", role: "—" },
         customFields: {},
       };
+      // Auto-link or create client record
+      const cnpjNorm = cnpjDigits(values.cnpj || "");
+      const nameLower = normalizeName(values.company || "");
+      let clientId = null;
+      if (cnpjNorm.length >= 8) {
+        const found = (clients || []).find(c => cnpjDigits(c.cnpj || "") === cnpjNorm);
+        if (found) clientId = found.id;
+      }
+      if (!clientId && nameLower.length >= 2) {
+        const found = (clients || []).find(c => normalizeName(c.name || "") === nameLower);
+        if (found) clientId = found.id;
+      }
+      if (!clientId && (values.company || "").trim().length >= 2) {
+        try {
+          const newClient = await createClient({
+            name: (values.company || "").trim(),
+            cnpj: values.cnpj || null,
+            city: values.city || null,
+            state: values.state || null,
+            companyIds: [companyId],
+          });
+          if (newClient?.id) clientId = newClient.id;
+        } catch { /* sem Drive nem errors — lead segue sem cliente */ }
+      }
+      if (clientId) lead.clientId = clientId;
+
       await onAdd(lead);
       onClose();
     } catch (err) {
