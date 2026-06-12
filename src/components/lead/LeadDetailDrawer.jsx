@@ -106,6 +106,41 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [lead, onClose]);
 
+  // Auto-link cliente em leads legados que ainda não têm clientId.
+  // Busca por CNPJ (exato) ou nome (case-insensitive). Se nada bater, cria.
+  const autoLinkedRef = useRef(new Set());
+  useEffect(() => {
+    if (!lead?.id || lead.clientId || autoLinkedRef.current.has(lead.id)) return;
+    if (!onCreateClient) return;
+    const cnpjDigits = (lead.cnpj || "").replace(/\D/g, "");
+    const nameLower = (lead.company || "").trim().toLowerCase();
+    if (cnpjDigits.length < 8 && nameLower.length < 2) return;
+    autoLinkedRef.current.add(lead.id);
+    (async () => {
+      let found = null;
+      if (cnpjDigits.length >= 8) {
+        found = (clients || []).find(c => (c.cnpj || "").replace(/\D/g, "") === cnpjDigits);
+      }
+      if (!found && nameLower.length >= 2) {
+        found = (clients || []).find(c => (c.name || "").trim().toLowerCase() === nameLower);
+      }
+      try {
+        if (found) {
+          onUpdate(lead.id, { clientId: found.id });
+        } else {
+          const created = await onCreateClient({
+            name: (lead.company || "Novo cliente").trim(),
+            cnpj: lead.cnpj || null,
+            city: lead.city || null,
+            state: lead.state || null,
+            companyIds: lead.companyId ? [lead.companyId] : [],
+          });
+          if (created?.id) onUpdate(lead.id, { clientId: created.id });
+        }
+      } catch { /* silencioso — drawer continua funcional sem vínculo */ }
+    })();
+  }, [lead?.id, lead?.clientId, lead?.cnpj, lead?.company, lead?.city, lead?.state, lead?.companyId, clients, onCreateClient, onUpdate]);
+
   useEffect(() => {
     if (lead) {
       setStage(lead.stage);
