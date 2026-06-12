@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  X, MapPin, AlertTriangle, Network, Package, Users, Sparkles, Copy, Send,
+  X, MapPin, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
-  Building2, RefreshCw, Check, Trash2, Mail, ChevronDown, ChevronUp,
+  Check, Trash2, Mail, ChevronDown, ChevronUp,
   Clock, MessageSquare, GitBranch, CalendarClock, ArrowLeft, ArrowRight, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
   File, FileImage, FileSpreadsheet, AlertCircle,
@@ -16,12 +16,10 @@ import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
 import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
-import { useCnpjLookup } from "../../hooks/use-cnpj-lookup";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
 import { useLeadChecklists } from "../../hooks/use-lead-checklists";
-import { isSupabaseConfigured } from "../../lib/supabase";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
@@ -43,7 +41,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   const [noteText, setNoteText] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
 
-  const { loading: enriching, error: enrichError, data: enrichData, lookup, reset: resetEnrich } = useCnpjLookup();
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
   const customValues = lead?.customFields || {};
@@ -94,8 +91,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
     setStage(toStage);
     onUpdate(lead.id, { stage: toStage, status: toStage, stageChangedAt: new Date().toISOString() });
   }, [lead, onUpdate]);
-
-  useEffect(() => { resetEnrich(); }, [lead?.id, resetEnrich]);
 
   useEffect(() => {
     if (!lead) return;
@@ -252,25 +247,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
     const href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailDraft)}`;
     window.location.href = href;
     onUpdate(lead.id, { lastActivity: new Date().toISOString() });
-  };
-
-  const handleEnrich = async () => {
-    if (!lead?.cnpj) return;
-    const res = await lookup(lead.cnpj);
-    if (!res) return;
-    const patch = {};
-    if (res.razaoSocial && !lead.razaoSocial) patch.razaoSocial = res.razaoSocial;
-    if (res.cnaeDesc) patch.sector = res.cnaeDesc;
-    if (res.cnae) patch.cnae = res.cnae;
-    if (res.size) patch.size = res.size;
-    if (res.city && res.city !== "—") patch.city = res.city;
-    if (res.state && res.state !== "—") patch.state = res.state;
-    if (res.telefone) patch.phone = res.telefone;
-    if (res.email) patch.contactEmail = res.email;
-    if (res.capitalSocial) patch.capitalSocial = res.capitalSocial;
-    if (res.address) patch.address = res.address;
-    if (res.situacao) patch.situacao = res.situacao;
-    if (Object.keys(patch).length > 0) onUpdate(lead.id, patch);
   };
 
   const handleSaveFollowUp = () => {
@@ -503,100 +479,6 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                 </div>
               </div>
             </div>
-
-            {/* Receita Federal — escondido no mobile quando sem dados */}
-            {isSupabaseConfigured && (
-              <div
-                className={`p-2.5 rounded-lg border flex items-start justify-between gap-2${!enrichData && !enrichError ? " hidden lg:flex" : ""}`}
-                style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
-              >
-                <div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-semibold mb-0.5 flex items-center gap-1" style={{ color: NEUTRAL.slate }}>
-                    <Building2 size={11} />
-                    Receita Federal
-                  </div>
-                  {enrichData ? (
-                    <div className="text-xs" style={{ color: NEUTRAL.graphite }}>
-                      <div className="font-semibold truncate">{enrichData.razaoSocial || enrichData.company}</div>
-                      <div className="truncate text-[11px]" style={{ color: NEUTRAL.slate }}>
-                        {enrichData.cnae} · {enrichData.porte || "—"} · {enrichData.situacao || "—"}
-                        {enrichData.capitalSocial > 0 && ` · ${formatBRL(enrichData.capitalSocial)}`}
-                      </div>
-                      {(enrichData.telefone || enrichData.email) && (
-                        <div className="mt-0.5 text-[11px] truncate" style={{ color: NEUTRAL.slate }}>
-                          {enrichData.telefone && <>📞 {enrichData.telefone}</>}
-                          {enrichData.telefone && enrichData.email && " · "}
-                          {enrichData.email && <>✉ {enrichData.email}</>}
-                        </div>
-                      )}
-                      {enrichData.cnd && (
-                        <div className="mt-1.5">
-                          <span
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold"
-                            style={{
-                              background:
-                                enrichData.cnd.status === "negativa" ? "#DCFCE7"
-                                : enrichData.cnd.status === "positiva_efeito_negativo" ? "#FEF3C7"
-                                : enrichData.cnd.status === "positiva" ? "#FEE2E2"
-                                : "#F3F4F6",
-                              color:
-                                enrichData.cnd.status === "negativa" ? "#16A34A"
-                                : enrichData.cnd.status === "positiva_efeito_negativo" ? "#D97706"
-                                : enrichData.cnd.status === "positiva" ? "#DC2626"
-                                : NEUTRAL.slate,
-                            }}
-                            title={enrichData.cnd.message || enrichData.cnd.label}
-                          >
-                            {enrichData.cnd.status === "negativa" ? "✓" : enrichData.cnd.status === "nao_verificado" ? "—" : "⚠"}{" "}
-                            {enrichData.cnd.label}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ) : enrichError ? (
-                    <div className="text-xs" style={{ color: "#B91C1C" }}>{enrichError.message || String(enrichError)}</div>
-                  ) : (
-                    <div className="text-[11px]" style={{ color: NEUTRAL.slate }}>Busca CNAE, porte, capital social e contatos.</div>
-                  )}
-                </div>
-                <Button variant="ghost" size="sm" icon={enriching ? RefreshCw : Building2}
-                  onClick={handleEnrich} disabled={enriching || !lead.cnpj}>
-                  {enriching ? "Buscando…" : enrichData ? "Re-buscar" : "Enriquecer"}
-                </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Sinal de mercado — chip no mobile, card no desktop */}
-            {(lead.triggerLabel || lead.evidence) && (
-              <>
-                {/* Mobile: chip compacto */}
-                <div className="lg:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg" style={{ background: company.light, border: `1px solid ${company.primary}20` }}>
-                  <AlertTriangle size={11} style={{ color: company.dark, flexShrink: 0 }} />
-                  <span className="text-xs font-semibold truncate" style={{ color: company.dark }}>
-                    {lead.triggerLabel || "Gatilho detectado"}
-                  </span>
-                </div>
-                {/* Desktop: card completo */}
-                <div
-                  className="hidden lg:block p-2.5 rounded-lg"
-                  style={{
-                    background: company.light,
-                    border: `1px solid ${company.primary}20`,
-                    borderLeft: `3px solid ${company.primary}`,
-                  }}
-                >
-                  <div className="text-[10px] font-semibold mb-0.5 flex items-center gap-1" style={{ color: company.dark }}>
-                    <AlertTriangle size={11} />
-                    {lead.triggerLabel ? `Gatilho · ${lead.triggerLabel}` : "Gatilho"}
-                  </div>
-                  {lead.evidence && (
-                    <div className="text-xs line-clamp-3" style={{ color: NEUTRAL.graphite }}>{lead.evidence}</div>
-                  )}
-                </div>
-              </>
-            )}
 
             {/* Decisor + infos do cliente */}
             <div className="flex items-center gap-3">
