@@ -27,6 +27,8 @@ const ROLE_OPTIONS_BASE = [
   { value: "marketing",         label: "Marketing" },
   { value: "gerente_marketing", label: "Gerente de Marketing" },
   { value: "agencia",           label: "Agência (Visitante)" },
+  { value: "rh",                label: "RH" },
+  { value: "gerente_rh",        label: "Gerente de RH" },
 ];
 
 const ROLE_OPTIONS_ADMIN = [
@@ -41,6 +43,8 @@ function roleLabel(role) {
   if (role === "marketing")         return "Marketing";
   if (role === "gerente_marketing") return "G. Marketing";
   if (role === "agencia")           return "Agência";
+  if (role === "rh")                return "RH";
+  if (role === "gerente_rh")        return "Ger. RH";
   return "Vendedor";
 }
 
@@ -51,6 +55,8 @@ function roleBadgeVariant(role) {
   if (role === "marketing")         return "primary";
   if (role === "gerente_marketing") return "primary";
   if (role === "agencia")           return "secondary";
+  if (role === "rh")                return "secondary";
+  if (role === "gerente_rh")        return "dark";
   return "default";
 }
 

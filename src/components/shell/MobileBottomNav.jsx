@@ -3,10 +3,10 @@ import React, { useState } from "react";
 /* ── Role-aware bottom tab sets ──────────────────────────────── */
 const ROLE_TABS = {
   admin: [
-    { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "crm",                label: "CRM",       icon: "handshake" },
-    { id: "marketing",          label: "Campanhas", icon: "campaign" },
-    { id: "marketing-entregas", label: "Entregas",  icon: "inventory_2" },
+    { id: "dashboard",       label: "Início",       icon: "home" },
+    { id: "crm",             label: "CRM",          icon: "handshake" },
+    { id: "marketing",       label: "Campanhas",    icon: "campaign" },
+    { id: "rh-funcionarios", label: "RH",           icon: "group" },
   ],
   gerente: [
     { id: "dashboard",          label: "Início",    icon: "home" },
@@ -42,11 +42,22 @@ const ROLE_TABS = {
     { id: "marketing",          label: "Campanhas", icon: "campaign" },
     { id: "marketing-entregas", label: "Entregas",  icon: "inventory_2" },
   ],
+  rh: [
+    { id: "rh-funcionarios", label: "Funcionários", icon: "group" },
+    { id: "rh-recrutamento", label: "Recrutamento", icon: "work" },
+    { id: "rh-ferias",       label: "Férias",       icon: "beach_access" },
+  ],
+  gerente_rh: [
+    { id: "rh-funcionarios", label: "Funcionários", icon: "group" },
+    { id: "rh-recrutamento", label: "Recrutamento", icon: "work" },
+    { id: "rh-ferias",       label: "Férias",       icon: "beach_access" },
+  ],
 };
 
 const ROLE_LABELS = {
   admin: "Administrador", gerente: "Gerente", gerente_marketing: "Ger. Marketing",
   marketing: "Marketing", vendedor: "Vendedor", consultor: "Consultor", agencia: "Agência",
+  rh: "RH", gerente_rh: "Gerente de RH",
 };
 
 function getRoleTabs(role) {

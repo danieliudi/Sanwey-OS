@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
-  Package, DollarSign,
+  Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -47,6 +47,9 @@ import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
 import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
+import { RHFuncionariosView } from "./components/views/RHFuncionariosView";
+import { RHRecrutamentoView } from "./components/views/RHRecrutamentoView";
+import { RHFeriasView } from "./components/views/RHFeriasView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -86,6 +89,10 @@ export default function App() {
   // isPureMarketing: only the marketing dept roles — drives sidebar and dashboard rendering
   const isPureMarketing    = ["marketing", "gerente_marketing"].includes(currentUser?.role);
   const isAgencia          = currentUser?.role === "agencia";
+  // RH roles
+  const isRHUser           = ["rh", "gerente_rh", "admin"].includes(currentUser?.role);
+  const isRHManager        = ["gerente_rh", "admin"].includes(currentUser?.role);
+  const isPureRH           = ["rh", "gerente_rh"].includes(currentUser?.role);
   const {
     users,
     loading: usersLoading,
@@ -368,6 +375,17 @@ export default function App() {
       groups.push({ label: "Marketing", items: mktItems });
     }
 
+    if (isRHUser) {
+      groups.push({
+        label: "Recursos Humanos",
+        items: [
+          { id: "rh-funcionarios", label: "Funcionários",  icon: Users },
+          { id: "rh-recrutamento", label: "Recrutamento",  icon: BriefcaseBusiness },
+          { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
+        ],
+      });
+    }
+
     if (isManager) {
       groups.push({
         label: "Inteligência",
@@ -422,6 +440,15 @@ export default function App() {
     const crmSections = ["crm", "signals", "explorer"];
     if (isPureMarketing && crmSections.includes(section)) {
       setSection("dashboard");
+    }
+    // RH sections only for rh/gerente_rh/admin
+    const rhSections = ["rh-funcionarios", "rh-recrutamento", "rh-ferias"];
+    if (!isRHUser && rhSections.includes(section)) {
+      setSection("dashboard");
+    }
+    // Pure RH users shouldn't access CRM sections
+    if (isPureRH && crmSections.includes(section)) {
+      setSection("rh-funcionarios");
     }
     // Agência can access marketing routes + their own profile (settings).
     const agenciaBlocked = ["crm", "signals", "explorer", "marketing-despesas", "dashboard", "tutorials"];
@@ -553,6 +580,8 @@ export default function App() {
           <Route path={ROUTES.dashboard} element={
             isAgencia ? (
               <Navigate to={ROUTES.marketing} replace />
+            ) : isPureRH ? (
+              <Navigate to={ROUTES["rh-funcionarios"]} replace />
             ) : isPureMarketing ? (
               <MarketingDashboardView user={currentUser} />
             ) : (
@@ -747,6 +776,21 @@ export default function App() {
             (isMarketingUser && !isAgencia)
               ? <DespesasView user={currentUser} users={users} />
               : <Navigate to={ROUTES.marketing} replace />
+          } />
+          <Route path={ROUTES["rh-funcionarios"]} element={
+            isRHUser
+              ? <RHFuncionariosView users={users} leads={leads} currentUser={currentUser} onUpdateUser={updateUser} canWrite={isRHManager} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["rh-recrutamento"]} element={
+            isRHUser
+              ? <RHRecrutamentoView user={currentUser} canWrite={isRHManager} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["rh-ferias"]} element={
+            isRHUser
+              ? <RHFeriasView currentUser={currentUser} users={users} canWrite={isRHManager} />
+              : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
           {/* Catch-all: rota desconhecida volta pro Início. */}
