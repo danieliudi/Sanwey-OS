@@ -136,6 +136,7 @@ export function useSupabaseAuth() {
         avatarUrl: profile.avatar_url || null,
         sectors: Array.isArray(profile.sectors) ? profile.sectors : [],
         supervisorId: profile.supervisor_id || null,
+        calendarToken: profile.calendar_token || null,
       }
     : null;
 

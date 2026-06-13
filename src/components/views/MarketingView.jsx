@@ -5,8 +5,10 @@ import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
 } from "../../constants/marketing-pipelines";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
+import { usePersonalEvents } from "../../hooks/use-personal-events";
 import { CampaignKanbanCard } from "../campaign/CampaignKanbanCard";
 import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
+import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
 import { Select } from "../ui/Select";
@@ -517,6 +519,13 @@ export function MarketingView({ user, users = [] }) {
     updateChecklist,
   } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
 
+  const {
+    events:        personalEvents,
+    createEvent:   createPersonalEvent,
+    updateEvent:   updatePersonalEvent,
+    deleteEvent:   deletePersonalEvent,
+  } = usePersonalEvents({ userId: user?.id });
+
   const usersById = useUsersById(users);
 
   const isManager  = user?.role === "gerente_marketing" || user?.role === "admin";
@@ -710,12 +719,20 @@ export function MarketingView({ user, users = [] }) {
         </div>
       )}
 
-      {/* Calendar placeholder */}
+      {/* Calendar view */}
       {!loading && viewMode === "calendar" && (
-        <div className="text-center py-16" style={{ color: NEUTRAL.slate }}>
-          <CalendarIcon size={40} style={{ opacity: 0.3, margin: "0 auto 12px" }} />
-          <div className="font-semibold">Vista de calendário em breve</div>
-        </div>
+        <CampaignCalendar
+          campaigns={filteredCampaigns}
+          personalEvents={personalEvents}
+          usersById={usersById}
+          onSelectCampaign={setSelected}
+          onCreatePersonalEvent={createPersonalEvent}
+          onUpdatePersonalEvent={updatePersonalEvent}
+          onDeletePersonalEvent={deletePersonalEvent}
+          canWrite={canWrite || user?.role !== "agencia"}
+          calendarToken={user?.calendarToken ?? null}
+          supabaseUrl={import.meta.env.VITE_SUPABASE_URL ?? null}
+        />
       )}
 
       {/* Kanban board */}
