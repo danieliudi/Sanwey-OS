@@ -555,11 +555,11 @@ export function RHFuncionariosView({
           gap: 12,
           flexWrap: "wrap",
         }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#16A34A", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFF", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--success)", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFF", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
             {pendingConversion.name?.[0]?.toUpperCase() || "?"}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "#15803D" }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>
               Candidato aprovado: {pendingConversion.name}
             </div>
             <div style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
@@ -572,7 +572,7 @@ export function RHFuncionariosView({
                 onClick={handleSendConversionInvite}
                 disabled={sendingInvite || !pendingConversion.email || !onCreateInvitation}
                 style={{
-                  background: "#16A34A", color: "#FFF", border: "none", borderRadius: 8,
+                  background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8,
                   padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer",
                   opacity: sendingInvite ? 0.7 : 1,
                 }}
@@ -580,7 +580,7 @@ export function RHFuncionariosView({
                 {sendingInvite ? "Enviando…" : "Enviar convite"}
               </button>
             ) : (
-              <span style={{ fontSize: 12, color: "#16A34A", fontWeight: 600 }}>✓ Convite enviado!</span>
+              <span style={{ fontSize: 12, color: "var(--success)", fontWeight: 600 }}>✓ Convite enviado!</span>
             )}
             <button
               onClick={onClearPendingConversion}
@@ -622,7 +622,7 @@ export function RHFuncionariosView({
       >
         {[
           { label: "Total",       value: stats.total,      color: "var(--text)" },
-          { label: "Ativos",      value: stats.ativos,     color: "#16A34A" },
+          { label: "Ativos",      value: stats.ativos,     color: "var(--success)" },
           { label: "Férias",      value: stats.ferias,     color: "#1E4D8C" },
           { label: "Desligados",  value: stats.desligados, color: "var(--text-dim)" },
         ].map((s) => (

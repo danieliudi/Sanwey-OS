@@ -394,8 +394,8 @@ export function SettingsView({
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left w-full"
                 style={{
                   background: active ? "#FBE9EB" : "transparent",
-                  color: active ? "#b5000b" : "var(--text-dim)",
-                  boxShadow: active ? "inset 3px 0 0 #b5000b" : "inset 3px 0 0 transparent",
+                  color: active ? "var(--accent)" : "var(--text-dim)",
+                  boxShadow: active ? "inset 3px 0 0 var(--accent)" : "inset 3px 0 0 transparent",
                   border: "none",
                   cursor: "pointer",
                 }}
@@ -754,7 +754,7 @@ export function SettingsView({
                 <div className="space-y-5">
                   {/* Status badge */}
                   {currentUser?.aiConfig?.provider && (
-                    <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "#DCFCE7", color: "#16A34A" }}>
+                    <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "#DCFCE7", color: "var(--success)" }}>
                       <CheckCircle2 size={13} />
                       <span className="font-semibold">
                         {AI_PROVIDER_MAP[currentUser.aiConfig.provider]?.name} — {currentUser.aiConfig.model} conectado
@@ -762,7 +762,7 @@ export function SettingsView({
                       <button
                         onClick={handleAiDisconnect}
                         className="ml-auto text-xs underline"
-                        style={{ color: "#16A34A", background: "none", border: "none", cursor: "pointer" }}
+                        style={{ color: "var(--success)", background: "none", border: "none", cursor: "pointer" }}
                       >
                         Desconectar
                       </button>
@@ -1094,7 +1094,7 @@ export function SettingsView({
           </p>
           <div
             className="p-3 rounded-lg text-xs flex items-start gap-2"
-            style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+            style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}
           >
             <AlertTriangle size={13} className="shrink-0 mt-0.5" />
             <span>Dados sincronizados com o Supabase serão excluídos do banco de dados permanentemente.</span>

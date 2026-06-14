@@ -396,7 +396,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
       <div className="grid md:grid-cols-2 gap-4">
         <div>
           <label className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-            style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}>
+            style={{ color: "var(--text-dim)", letterSpacing: "0.15em" }}>
             Nome da feira
           </label>
           <input
@@ -405,25 +405,25 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
             value={fairName}
             onChange={e => setFairName(e.target.value)}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none focus:ring-1"
-            style={{ borderColor: "#DCDCDC", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
           />
         </div>
 
         {phase === "idle" && (
           <div>
             <label className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block"
-              style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}>
+              style={{ color: "var(--text-dim)", letterSpacing: "0.15em" }}>
               Planilha (.xlsx)
             </label>
             <div
               className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-gray-50"
-              style={{ borderColor: "#DCDCDC", background: "#FAFAFA" }}
+              style={{ borderColor: "var(--border-strong)", background: "var(--surface-alt)" }}
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
             >
-              <Upload size={24} style={{ color: NEUTRAL.slate }} />
-              <span className="text-sm mt-2" style={{ color: NEUTRAL.slate }}>
+              <Upload size={24} style={{ color: "var(--text-dim)" }} />
+              <span className="text-sm mt-2" style={{ color: "var(--text-dim)" }}>
                 Arraste o arquivo ou clique para selecionar
               </span>
               <input
@@ -442,7 +442,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
             <button
               onClick={reset}
               className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border transition-colors hover:bg-gray-50"
-              style={{ borderColor: "#DCDCDC", color: NEUTRAL.slate }}
+              style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)" }}
             >
               <RefreshCw size={14} />Trocar arquivo
             </button>
@@ -452,11 +452,11 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
 
       {/* Stats bar */}
       {phase !== "idle" && (
-        <div className="flex flex-wrap gap-4 p-4 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}>
+        <div className="flex flex-wrap gap-4 p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
           <Stat label="Total parseado" value={rows.length} />
-          <Stat label="Selecionados" value={selectedRows.length} color={NEUTRAL.success} />
-          <Stat label="Duplicados" value={dupCount} color={dupCount > 0 ? NEUTRAL.amber : undefined} />
-          <Stat label="Sem responsável" value={unassignedCount} color={unassignedCount > 0 ? NEUTRAL.amber : undefined} />
+          <Stat label="Selecionados" value={selectedRows.length} color="var(--color-resibag)" />
+          <Stat label="Duplicados" value={dupCount} color={dupCount > 0 ? "var(--amber)" : undefined} />
+          <Stat label="Sem responsável" value={unassignedCount} color={unassignedCount > 0 ? "var(--amber)" : undefined} />
         </div>
       )}
 
@@ -465,16 +465,16 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
         <>
           {unassignedCount > 0 && (
             <div className="flex items-center gap-2 p-3 rounded-xl border-l-4 text-sm"
-              style={{ background: "#FFF9EC", borderLeftColor: NEUTRAL.amber, color: NEUTRAL.graphite }}>
-              <TriangleAlert size={14} style={{ color: NEUTRAL.amber, flexShrink: 0 }} />
+              style={{ background: "#FFF9EC", borderLeftColor: "var(--amber)", color: "var(--text)" }}>
+              <TriangleAlert size={14} style={{ color: "var(--amber)", flexShrink: 0 }} />
               {unassignedCount} lead{unassignedCount > 1 ? "s" : ""} sem vendedor atribuído — defina antes de importar ou deixe para o gerente redistribuir depois.
             </div>
           )}
 
-          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#EFEFEF" }}>
+          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
             {/* Table header */}
             <div className="grid text-[10px] uppercase font-bold tracking-widest px-3 py-2 border-b"
-              style={{ gridTemplateColumns: "32px 1fr 120px 140px 160px 100px 32px", background: "#F5F5F3", borderColor: "#EFEFEF", color: NEUTRAL.slate, letterSpacing: "0.12em" }}>
+              style={{ gridTemplateColumns: "32px 1fr 120px 140px 160px 100px 32px", background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text-dim)", letterSpacing: "0.12em" }}>
               <span></span>
               <span>Empresa / Contato</span>
               <span>Cidade/UF</span>

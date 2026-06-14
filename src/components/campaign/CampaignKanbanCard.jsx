@@ -17,7 +17,7 @@ function daysUntilDate(dateStr) {
 function slaStyle(daysInStage, sla) {
   if (!sla) return null;
   const ratio = daysInStage / sla;
-  if (ratio >= 1)   return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
+  if (ratio >= 1)   return { bg: "#FEE2E2", text: "var(--danger)", border: "#FECACA" };
   if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
   return null;
 }
@@ -35,7 +35,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
     !["ao_vivo", "encerrado", "analise"].includes(campaign.stage);
 
   const channelStyle = campaign.channel
-    ? (CHANNEL_COLORS[campaign.channel] || { bg: "#F3F4F6", text: "var(--text-dim)", border: "var(--border)" })
+    ? (CHANNEL_COLORS[campaign.channel] || { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" })
     : null;
 
   const accentColor = stage?.color || "var(--text-dim)";
@@ -77,7 +77,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
       }}
       onMouseLeave={e => {
         e.currentTarget.style.boxShadow = shadowBase;
-        e.currentTarget.style.borderColor = "#E5E7EB";
+        e.currentTarget.style.borderColor = "var(--border)";
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
@@ -90,7 +90,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
           {isUrgent && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-              style={{ fontSize: 10, background: "#FEE2E2", color: "#DC2626", border: "1px solid #FECACA" }}
+              style={{ fontSize: 10, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA" }}
               title={`Lançamento em ${daysToLaunch}d`}
             >
               <AlertTriangle size={8} strokeWidth={2.5} />
@@ -224,7 +224,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
         {campaign.kpi && (
           <span
             className="px-1.5 py-0.5 rounded-md text-[10px] font-medium"
-            style={{ background: "#F3F4F6", color: "var(--text-dim)", border: "1px solid #E5E7EB" }}
+            style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
           >
             {campaign.kpi}
           </span>

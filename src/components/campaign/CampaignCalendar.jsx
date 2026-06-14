@@ -85,8 +85,8 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
     try { await onDelete(event.id); onClose(); } finally { setSaving(false); }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", borderRadius: 8, border: "1px solid #D1D5DB", padding: "6px 10px", fontSize: 13, width: "100%", outline: "none" };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", borderRadius: 8, border: "1px solid #D1D5DB", padding: "6px 10px", fontSize: 13, width: "100%", outline: "none" };
 
   return (
     <div
@@ -94,14 +94,14 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFF", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", overflow: "hidden" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", overflow: "hidden" }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontWeight: 700, fontSize: 15, color: NEUTRAL.graphite }}>
+          <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>
             {isEdit ? "Editar evento" : "Novo evento pessoal"}
           </span>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4 }}>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4 }}>
             <X size={16} />
           </button>
         </div>
@@ -134,7 +134,7 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {PERSONAL_COLORS.map(c => (
                 <button key={c} type="button" onClick={() => setColor(c)}
-                  style={{ width: 24, height: 24, borderRadius: "50%", background: c, border: color === c ? `3px solid ${NEUTRAL.graphite}` : "2px solid transparent", cursor: "pointer", flexShrink: 0 }} />
+                  style={{ width: 24, height: 24, borderRadius: "50%", background: c, border: color === c ? `3px solid ${"var(--text)"}` : "2px solid transparent", cursor: "pointer", flexShrink: 0 }} />
               ))}
             </div>
           </div>
@@ -142,12 +142,12 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
           <div style={{ display: "flex", gap: 8, justifyContent: isEdit ? "space-between" : "flex-end" }}>
             {isEdit && (
               <button type="button" onClick={handleDelete} disabled={saving}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "#FEF2F2", color: "#DC2626", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "#FEF2F2", color: "var(--danger)", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                 <Trash2 size={13} /> Excluir
               </button>
             )}
             <button type="submit" disabled={saving || !title.trim() || !date}
-              style={{ background: color, color: "#FFF", border: "none", borderRadius: 8, padding: "7px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: saving || !title.trim() || !date ? 0.5 : 1 }}>
+              style={{ background: color, color: "var(--surface)", border: "none", borderRadius: 8, padding: "7px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: saving || !title.trim() || !date ? 0.5 : 1 }}>
               {saving ? "Salvando…" : isEdit ? "Salvar" : "Criar"}
             </button>
           </div>
@@ -187,15 +187,15 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFF", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", overflow: "hidden" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", overflow: "hidden" }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <span style={{ fontWeight: 700, fontSize: 15, color: NEUTRAL.graphite }}>Sincronizar calendário</span>
-            <p style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 2 }}>Exporte ou assine o calendário no Google Calendar / Apple Calendar / Outlook</p>
+            <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>Sincronizar calendário</span>
+            <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>Exporte ou assine o calendário no Google Calendar / Apple Calendar / Outlook</p>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4 }}>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4 }}>
             <X size={16} />
           </button>
         </div>
@@ -203,7 +203,7 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
         <div style={{ padding: "18px 20px 20px" }}>
           {/* Export section */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
               Exportar (importação única)
             </div>
             <button
@@ -217,7 +217,7 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
 
           {/* Subscription section */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
               URL de assinatura (sincronização automática)
             </div>
 
@@ -246,7 +246,7 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
               </div>
             )}
 
-            <div style={{ marginTop: 12, padding: "10px 12px", background: "#F9FAFB", borderRadius: 8, fontSize: 11, color: NEUTRAL.slate, lineHeight: 1.6 }}>
+            <div style={{ marginTop: 12, padding: "10px 12px", background: "var(--surface-alt)", borderRadius: 8, fontSize: 11, color: "var(--text-dim)", lineHeight: 1.6 }}>
               <strong>Como usar:</strong> No Google Calendar → "+" → "De URL" → cole a URL acima. O calendário se atualiza automaticamente a cada 24h.
             </div>
           </div>
@@ -261,14 +261,14 @@ function UrlRow({ label, desc, url, copied, onCopy, color }) {
     <div style={{ border: "1px solid #E5E7EB", borderRadius: 10, padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
         <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite }}>{label}</span>
-        <span style={{ fontSize: 11, color: NEUTRAL.slate }}>· {desc}</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{label}</span>
+        <span style={{ fontSize: 11, color: "var(--text-dim)" }}>· {desc}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <input readOnly value={url} onClick={e => e.target.select()}
-          style={{ flex: 1, fontSize: 10, color: NEUTRAL.slate, background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 6, padding: "4px 8px", outline: "none", overflow: "hidden", textOverflow: "ellipsis" }} />
+          style={{ flex: 1, fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", border: "1px solid #E5E7EB", borderRadius: 6, padding: "4px 8px", outline: "none", overflow: "hidden", textOverflow: "ellipsis" }} />
         <button onClick={onCopy}
-          style={{ display: "flex", alignItems: "center", gap: 5, background: copied ? "#D1FAE5" : "#F3F4F6", color: copied ? "#065F46" : NEUTRAL.graphite, border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+          style={{ display: "flex", alignItems: "center", gap: 5, background: copied ? "#D1FAE5" : "var(--surface-alt)", color: copied ? "#065F46" : "var(--text)", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
           <Link2 size={11} />
           {copied ? "Copiado!" : "Copiar"}
         </button>
@@ -439,15 +439,15 @@ export function CampaignCalendar({
       {/* Calendar header */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <h2 className="font-bold" style={{ fontSize: 20, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+          <h2 className="font-bold" style={{ fontSize: 20, color: "var(--text)", letterSpacing: "-0.01em" }}>
             {MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
           </h2>
           <button
             onClick={goToday}
             className="text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFF", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFF"; }}
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           >
             Hoje
           </button>
@@ -456,10 +456,10 @@ export function CampaignCalendar({
           <button
             onClick={() => setShowSync(true)}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-semibold transition-colors"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFF", cursor: "pointer" }}
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
             title="Sincronizar com Google Calendar / Apple Calendar"
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFF"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           >
             <CalendarDays size={13} />
             <span className="hidden sm:inline">Sincronizar</span>
@@ -468,17 +468,17 @@ export function CampaignCalendar({
           <div className="flex items-center gap-1">
             <button onClick={prevMonth}
               className="flex items-center justify-center rounded-lg border transition-colors"
-              style={{ width: 32, height: 32, background: "#FFF", borderColor: "#E5E7EB", color: NEUTRAL.slate, cursor: "pointer" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#FFF"; }}
+              style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
             >
               <ChevronLeft size={16} />
             </button>
             <button onClick={nextMonth}
               className="flex items-center justify-center rounded-lg border transition-colors"
-              style={{ width: 32, height: 32, background: "#FFF", borderColor: "#E5E7EB", color: NEUTRAL.slate, cursor: "pointer" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#FFF"; }}
+              style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
             >
               <ChevronRight size={16} />
             </button>
@@ -487,11 +487,11 @@ export function CampaignCalendar({
       </div>
 
       {/* Calendar grid */}
-      <div className="rounded-2xl border overflow-hidden" style={{ background: "#FFF", borderColor: "#E5E7EB" }}>
+      <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
         {/* Day-name header */}
         <div className="grid grid-cols-7" style={{ borderBottom: "1px solid #E5E7EB" }}>
           {DAY_SHORT.map((d, i) => (
-            <div key={d} className="text-center py-2 text-xs font-semibold" style={{ color: NEUTRAL.slate, borderRight: i < 6 ? "1px solid #E5E7EB" : "none" }}>
+            <div key={d} className="text-center py-2 text-xs font-semibold" style={{ color: "var(--text-dim)", borderRight: i < 6 ? "1px solid #E5E7EB" : "none" }}>
               {d}
             </div>
           ))}
@@ -526,8 +526,8 @@ export function CampaignCalendar({
                         className="flex items-center justify-center text-xs font-semibold select-none"
                         style={{
                           width: 26, height: 26, borderRadius: "50%",
-                          background: isToday ? NEUTRAL.red : "transparent",
-                          color: isToday ? "#FFF" : isCurrentMonth ? NEUTRAL.graphite : "#C5C9D0",
+                          background: isToday ? "var(--color-industria)" : "transparent",
+                          color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "#C5C9D0",
                           fontWeight: isToday ? 700 : 600,
                         }}
                       >
@@ -564,7 +564,7 @@ export function CampaignCalendar({
                       left, width, top,
                       height: EVENT_H,
                       background:   isPersonal ? evt.color + "22" : evt.color,
-                      color:        isPersonal ? evt.color         : "#FFF",
+                      color:        isPersonal ? evt.color         : "var(--surface)",
                       border:       isPersonal ? `1.5px solid ${evt.color}` : "none",
                       borderRadius: evt.isStart && evt.isEnd ? 5
                                   : evt.isStart              ? "5px 0 0 5px"
@@ -596,7 +596,7 @@ export function CampaignCalendar({
                     top:    MAX_TRACKS * (EVENT_H + EVENT_GAP),
                     fontSize: 10,
                     fontWeight: 600,
-                    color: NEUTRAL.slate,
+                    color: "var(--text-dim)",
                   }}
                 >
                   +{count} mais
@@ -609,21 +609,21 @@ export function CampaignCalendar({
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
-        <span className="text-xs font-semibold" style={{ color: NEUTRAL.slate }}>Etapas:</span>
+        <span className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>Etapas:</span>
         {MARKETING_STAGES.map(s => (
           <div key={s.id} className="flex items-center gap-1.5">
             <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
-            <span className="text-xs" style={{ color: NEUTRAL.slate }}>{s.name}</span>
+            <span className="text-xs" style={{ color: "var(--text-dim)" }}>{s.name}</span>
           </div>
         ))}
         <div className="flex items-center gap-1.5 ml-2">
           <div style={{ width: 10, height: 10, borderRadius: 3, border: "1.5px solid #6366F1", background: "#6366F122" }} />
-          <span className="text-xs" style={{ color: NEUTRAL.slate }}>Evento pessoal</span>
+          <span className="text-xs" style={{ color: "var(--text-dim)" }}>Evento pessoal</span>
         </div>
       </div>
 
       {canWrite && (
-        <p className="text-xs mt-2" style={{ color: NEUTRAL.slate }}>
+        <p className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
           Clique em um dia para adicionar um evento pessoal · Clique em uma campanha para ver detalhes
         </p>
       )}

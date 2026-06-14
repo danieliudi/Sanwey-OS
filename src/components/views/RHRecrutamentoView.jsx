@@ -472,9 +472,9 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
               alignItems: "center",
               gap: 12,
             }}>
-              <UserPlus size={20} style={{ color: "#16A34A", flexShrink: 0 }} />
+              <UserPlus size={20} style={{ color: "var(--success)", flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#15803D" }}>Candidato aprovado!</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>Candidato aprovado!</div>
                 <div style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
                   Converta para funcionário e preencha os dados de admissão.
                 </div>
@@ -482,7 +482,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
               <button
                 onClick={() => { onConvertToEmployee(candidato); onClose(); }}
                 style={{
-                  background: "#16A34A",
+                  background: "var(--success)",
                   color: "#FFF",
                   border: "none",
                   borderRadius: 8,
@@ -493,8 +493,8 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                   flexShrink: 0,
                   whiteSpace: "nowrap",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#15803D"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#16A34A"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--success)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "var(--success)"; }}
               >
                 Converter
               </button>
