@@ -322,12 +322,12 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
   if (phase === "done") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-        <CheckCircle2 size={56} color="#1A6E35" />
+        <CheckCircle2 size={56} color="var(--success)" />
         <div className="text-center">
-          <div className="text-2xl font-bold" style={{ color: NEUTRAL.graphite }}>
+          <div className="text-2xl font-bold" style={{ color: "var(--text)" }}>
             Import concluído
           </div>
-          <div className="text-base mt-1" style={{ color: NEUTRAL.slate }}>
+          <div className="text-base mt-1" style={{ color: "var(--text-dim)" }}>
             {importResult.ok} leads importados para "{fairName}"
             {importResult.skipped > 0 && ` · ${importResult.skipped} erros`}
           </div>
@@ -353,10 +353,10 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: NEUTRAL.graphite }}>
+          <h1 className="text-xl font-bold" style={{ color: "var(--text)" }}>
             Importar Leads de Feira
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             Sobe a planilha exportada do app da feira (Swapcard, RD Station Events, etc.) para distribuição de leads.
           </p>
         </div>
@@ -364,9 +364,9 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           href="/template-leads-feira.csv"
           download="template-leads-feira.csv"
           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF", textDecoration: "none" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#F5F5F3"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", textDecoration: "none" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
         >
           <Upload size={13} style={{ transform: "rotate(180deg)" }} />
           Baixar modelo .csv
