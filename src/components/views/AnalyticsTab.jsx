@@ -579,13 +579,13 @@ export function AnalyticsTab({ allLeads, period, users }) {
 function CompareCard({ label, curr, prev, fmt }) {
   const d = pctDelta(curr, prev);
   const Icon = d === null ? Minus : d > 0 ? TrendingUp : TrendingDown;
-  const color = d === null ? NEUTRAL.slate : d > 0 ? NEUTRAL.success : NEUTRAL.red;
+  const color = d === null ? "var(--text-dim)" : d > 0 ? "var(--color-resibag)" : "var(--color-industria)";
   return (
     <div
       className="rounded-xl border p-4"
-      style={{ borderColor: NEUTRAL.sombra, background: "#FFFFFF" }}
+      style={{ borderColor: "var(--border)", background: "var(--surface)" }}
     >
-      <div className="text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.slate }}>
+      <div className="text-xs font-semibold mb-1.5" style={{ color: "var(--text-dim)" }}>
         {label}
       </div>
       <div
@@ -594,7 +594,7 @@ function CompareCard({ label, curr, prev, fmt }) {
           fontFamily: "'Barlow Condensed', sans-serif",
           fontWeight: 900,
           fontSize: 28,
-          color: NEUTRAL.graphite,
+          color: "var(--text)",
         }}
       >
         {fmt(curr)}
@@ -606,7 +606,7 @@ function CompareCard({ label, curr, prev, fmt }) {
             {d > 0 ? "+" : ""}{d}% vs período anterior
           </span>
         ) : (
-          <span style={{ color: NEUTRAL.slate }}>
+          <span style={{ color: "var(--text-dim)" }}>
             {fmt(prev)} período anterior
           </span>
         )}
@@ -620,11 +620,11 @@ function SectionTitle({ children }) {
     <div className="flex items-center gap-3">
       <span
         className="text-xs font-bold uppercase shrink-0"
-        style={{ color: NEUTRAL.slate, letterSpacing: "0.1em" }}
+        style={{ color: "var(--text-dim)", letterSpacing: "0.1em" }}
       >
         {children}
       </span>
-      <div className="flex-1 h-px" style={{ background: NEUTRAL.sombra }} />
+      <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
     </div>
   );
 }
