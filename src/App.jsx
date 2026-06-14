@@ -679,6 +679,7 @@ export default function App() {
               onCreateClient={createClient}
               autoOpenCreate={crmAutoCreate}
               onAutoOpenHandled={() => setCrmAutoCreate(false)}
+              onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
             />
           } />
           <Route path={ROUTES.agents} element={

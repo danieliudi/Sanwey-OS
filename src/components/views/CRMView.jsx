@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Upload, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star } from "lucide-react";
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
 import { exportLeadsCSV } from "../../utils/export-leads";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -451,7 +451,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport }) {
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
   const isConsultor = user.role === "consultor";
@@ -592,6 +592,20 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Importar CSV */}
+          {isManager && onOpenImport && (
+            <button
+              onClick={onOpenImport}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+              style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.color = NEUTRAL.slate; }}
+              title="Importar leads via CSV ou Excel"
+            >
+              <Upload size={13} />
+              <span className="hidden sm:inline">Importar</span>
+            </button>
+          )}
           {/* Exportar CSV */}
           <button
             onClick={() => exportLeadsCSV(scopedLeads, users, pipelines)}

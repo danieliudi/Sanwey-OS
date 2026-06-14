@@ -120,6 +120,55 @@ export const VIDEO_TUTORIALS = {
 };
 VIDEO_TUTORIALS.admin = VIDEO_TUTORIALS.gerente;
 
+VIDEO_TUTORIALS.marketing = [
+  { id: "v-mkt1", title: "Visão geral do módulo de Marketing", description: "Campanhas", duration: null, url: null,
+    quickStart: { icon: "📣", steps: ["Acesse 'Campanhas' no menu lateral para ver o Kanban de marketing", "Cada coluna representa uma etapa: Briefing → Aprovação → Produção → Ao Vivo", "Clique em qualquer card para abrir os detalhes da campanha"] } },
+  { id: "v-mkt2", title: "Criando uma campanha", description: "Campanhas", duration: null, url: null,
+    quickStart: { icon: "➕", steps: ["Clique no '+' dentro de qualquer coluna para criar uma campanha na etapa", "Preencha nome, canal (Email/Social/Digital…), KPI e budget", "Defina a data de lançamento e o responsável — o card aparece no Kanban imediatamente"] } },
+  { id: "v-mkt3", title: "Gerenciando entregas da campanha", description: "Entregas", duration: null, url: null,
+    quickStart: { icon: "📦", steps: ["Acesse 'Entregas' no menu lateral para ver todas as demandas de produção", "Crie entregas vinculadas a uma campanha pela aba 'Entregas' no drawer da campanha", "Use prioridade (Baixa/Média/Alta) e prazo para organizar a fila de produção"] } },
+  { id: "v-mkt4", title: "Controlando despesas de marketing", description: "Despesas", duration: null, url: null,
+    quickStart: { icon: "💰", steps: ["Acesse 'Despesas' no menu lateral para registrar gastos por campanha", "Cada despesa tem categoria (Mídia Paga, Produção, Agência…) e valor", "O painel de totais mostra o budget consumido vs. disponível por campanha"] } },
+  { id: "v-mkt5", title: "Aba Criativo e checklist de aprovação", description: "Campanhas", duration: null, url: null,
+    quickStart: { icon: "✅", steps: ["Abra uma campanha e acesse a aba 'Criativo' no painel lateral", "Marque cada item do checklist de aprovação conforme for revisado", "A agência pode visualizar os itens marcados em tempo real"] } },
+];
+
+VIDEO_TUTORIALS.gerente_marketing = [
+  ...VIDEO_TUTORIALS.marketing,
+  { id: "v-gm1", title: "Dashboard de Marketing", description: "Visão Geral", duration: null, url: null,
+    quickStart: { icon: "📊", steps: ["Acesse 'Visão Geral' em Marketing para ver KPIs consolidados", "Acompanhe campanhas ativas, budget total e performance média", "Use o calendário para visualizar campanhas por data de lançamento"] } },
+  { id: "v-gm2", title: "Automações de Marketing", description: "Automações", duration: null, url: null,
+    quickStart: { icon: "⚡", steps: ["Acesse 'Automações' para criar regras específicas do módulo de Marketing", "Ative templates prontos: 'Campanha ao vivo' notifica a equipe automaticamente", "Defina alertas de SLA para campanhas paradas em Produção por mais de 10 dias"] } },
+];
+
+VIDEO_TUTORIALS.agencia = [
+  { id: "v-ag1", title: "Acesso da agência às campanhas", description: "Campanhas", duration: null, url: null,
+    quickStart: { icon: "🏢", steps: ["Você vê apenas as campanhas em que a sua agência está envolvida", "Clique em qualquer campanha para abrir o painel de detalhes", "Seus dados são somente leitura — exceto o checklist de aprovação e uploads de arquivos"] } },
+  { id: "v-ag2", title: "Enviando arquivos e comprovantes", description: "Campanhas", duration: null, url: null,
+    quickStart: { icon: "📎", steps: ["Abra uma campanha e acesse a aba 'Arquivos' no painel lateral", "Arraste ou clique para fazer upload de criativos, relatórios e comprovantes", "Os arquivos ficam vinculados à campanha e visíveis para toda a equipe Sanwey"] } },
+  { id: "v-ag3", title: "Checklist de aprovação", description: "Campanhas", duration: null, url: null,
+    quickStart: { icon: "✅", steps: ["Na aba 'Criativo', você pode marcar itens do checklist como comprovados", "Use isso para indicar que a agência entregou cada requisito da campanha", "A equipe interna recebe notificação quando itens são marcados"] } },
+];
+
+VIDEO_TUTORIALS.rh = [
+  { id: "v-rh1", title: "Visão geral do RH", description: "Visão Geral", duration: null, url: null,
+    quickStart: { icon: "👥", steps: ["Acesse 'Visão Geral' para ver o painel com funcionários, férias pendentes e vagas em aberto", "Os cards de KPI mostram ativos, de férias e afastados em tempo real", "Clique em 'Ver todas' em cada seção para ir ao módulo correspondente"] } },
+  { id: "v-rh2", title: "Gerenciando funcionários", description: "Funcionários", duration: null, url: null,
+    quickStart: { icon: "🧑‍💼", steps: ["Acesse 'Funcionários' para ver o cadastro completo da equipe", "Clique num funcionário para editar dados: cargo, departamento, data de admissão", "Use os filtros (Departamento, Status, Tipo de contrato) para encontrar rapidamente"] } },
+  { id: "v-rh3", title: "Processo de recrutamento", description: "Recrutamento", duration: null, url: null,
+    quickStart: { icon: "💼", steps: ["Acesse 'Recrutamento' para ver vagas abertas e candidatos no Kanban", "Crie vagas com cargo, departamento e requisitos; candidatos entram em 'Triagem'", "Arraste candidatos pelo pipeline: Triagem → Entrevista RH → Aprovado"] } },
+  { id: "v-rh4", title: "Solicitações de férias", description: "Férias", duration: null, url: null,
+    quickStart: { icon: "🏖️", steps: ["Acesse 'Férias & Licenças' para ver as solicitações pendentes", "Aprovadores: clique em 'Aprovar' ou 'Rejeitar' — o funcionário recebe e-mail automaticamente", "Visualize o calendário de ausências para checar conflitos de equipe"] } },
+];
+
+VIDEO_TUTORIALS.gerente_rh = [
+  ...VIDEO_TUTORIALS.rh,
+  { id: "v-grh1", title: "Conversão candidato → funcionário", description: "Recrutamento", duration: null, url: null,
+    quickStart: { icon: "🎉", steps: ["Quando um candidato chega em 'Aprovado', aparece o botão 'Converter'", "Clique em 'Converter' — você é levado para Funcionários com um banner de boas-vindas", "Use 'Enviar convite' para criar o acesso ao sistema para o novo funcionário"] } },
+  { id: "v-grh2", title: "Aprovação de férias em lote", description: "Férias", duration: null, url: null,
+    quickStart: { icon: "✅", steps: ["Acesse 'Férias & Licenças' e filtre por 'Pendente' para ver as aprovações em aberto", "Clique em cada solicitação para ver o período e checar o calendário de ausências", "Após aprovar/rejeitar, o sistema envia e-mail automático ao funcionário"] } },
+];
+
 export const FAQ_ITEMS = [
   {
     question: "Como faço para redefinir minha senha?",

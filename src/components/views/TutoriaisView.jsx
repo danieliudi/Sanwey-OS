@@ -3,7 +3,11 @@ import { Play, ChevronDown, ChevronUp, BookOpen, LifeBuoy, Zap, Bot, Copy, Check
 import { NEUTRAL } from "../../constants/companies";
 import { VIDEO_TUTORIALS, FAQ_ITEMS, AUTOMATION_GUIDE, AI_PROMPTS } from "../../data/tutorials";
 
-const ROLE_LABEL = { admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor" };
+const ROLE_LABEL = {
+  admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor",
+  marketing: "Marketing", gerente_marketing: "Gerente de Marketing",
+  agencia: "Agência", rh: "RH", gerente_rh: "Gerente de RH",
+};
 
 const TABS = [
   { id: "tutoriais", label: "Tutoriais", icon: BookOpen },
