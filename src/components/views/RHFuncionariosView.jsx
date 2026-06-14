@@ -47,7 +47,7 @@ function Avatar({ user, size = 36 }) {
       .slice(0, 2)
       .join("")
       .toUpperCase();
-  const bg = user.avatarBg || NEUTRAL.red;
+  const bg = user.avatarBg || "var(--color-industria)";
   return (
     <div
       style={{
@@ -168,20 +168,20 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
   const labelSt = {
     fontSize: 10,
     fontWeight: 700,
-    color: NEUTRAL.slate,
+    color: "var(--text-dim)",
     textTransform: "uppercase",
     letterSpacing: "0.06em",
     marginBottom: 4,
     display: "block",
   };
   const inputSt = {
-    borderColor: "#D1D5DB",
-    color: NEUTRAL.graphite,
+    borderColor: "var(--border-strong)",
+    color: "var(--text)",
     background: "#FAFAFA",
     fontSize: 13,
   };
   const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
-  const blurGray  = (e) => { e.target.style.borderColor = "#D1D5DB"; };
+  const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   return (
     <div
@@ -199,7 +199,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
     >
       <div
         style={{
-          background: "#FFFFFF",
+          background: "var(--surface)",
           borderRadius: 16,
           width: "100%",
           maxWidth: 560,
@@ -213,7 +213,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
         <div
           style={{
             padding: "20px 24px 16px",
-            borderBottom: "1px solid #F3F4F6",
+            borderBottom: "1px solid var(--border)",
             display: "flex",
             alignItems: "center",
             gap: 14,
@@ -221,10 +221,10 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
         >
           <Avatar user={user} size={48} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>
               {user.name || user.email}
             </div>
-            <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
               {user.email}
             </div>
             <div style={{ marginTop: 6 }}>
@@ -260,13 +260,13 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                 background: "transparent",
                 border: "none",
                 cursor: "pointer",
-                color: NEUTRAL.slate,
+                color: "var(--text-dim)",
                 padding: 6,
                 borderRadius: 8,
                 display: "flex",
                 alignItems: "center",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
             >
               <X size={18} />
@@ -278,7 +278,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
         <div style={{ padding: "20px 24px 24px" }}>
           {/* HR Fields */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontWeight: 700, fontSize: 12, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
               Dados do Funcionário
             </div>
 

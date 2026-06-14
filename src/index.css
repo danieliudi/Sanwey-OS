@@ -16,7 +16,7 @@
   /* Text */
   --text:          #37352F;
   --text-dim:      #57534E;
-  --text-faint:    #8A857C;
+  --text-faint:    #706C65;
 
   /* Action — único token white-label */
   --accent:        #37352F;
@@ -53,7 +53,7 @@
   --border-strong: #4A4A46;
   --text:          #EBEBDF;
   --text-dim:      #B5B3A8;
-  --text-faint:    #787470;
+  --text-faint:    #8C8882;
   --accent:        #EBEBDF;
   --accent-hover:  #FFFFFF;
 }

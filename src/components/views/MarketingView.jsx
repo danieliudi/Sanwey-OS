@@ -75,9 +75,9 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
   };
 
   const focusBlue = e => { e.target.style.borderColor = "#1E4D8C"; };
-  const blurGray  = e => { e.target.style.borderColor = "#D1D5DB"; };
-  const labelSt   = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
-  const inputSt   = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA" };
+  const blurGray  = e => { e.target.style.borderColor = "var(--border-strong)"; };
+  const labelSt   = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
+  const inputSt   = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA" };
 
   return (
     <div
@@ -85,11 +85,11 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--surface-alt)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
               Nova campanha

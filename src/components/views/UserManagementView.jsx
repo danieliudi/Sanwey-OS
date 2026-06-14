@@ -281,10 +281,10 @@ export function UserManagementView({
       {/* ── Page header ── */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: "#201a1a", letterSpacing: "-0.02em" }}>
+          <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: "var(--text)", letterSpacing: "-0.02em" }}>
             Equipe Comercial
           </h1>
-          <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
             Gerencie usuários, cargos e acessos do time
           </p>
         </div>
@@ -301,7 +301,7 @@ export function UserManagementView({
       {/* ── Summary stat cards ── */}
       <div className="grid grid-cols-3 gap-3">
         <StatMini label="Total" value={totalUsers} />
-        <StatMini label="Gerentes" value={managerCount} accent="#b5000b" />
+        <StatMini label="Gerentes" value={managerCount} accent="var(--color-industria)" />
         <StatMini label="Vendedores" value={sellerCount} />
       </div>
 
@@ -322,7 +322,7 @@ export function UserManagementView({
       {/* ── Pending invites ── */}
       {canManageInvites && invitations.length > 0 && (
         <div>
-          <div className="text-[10px] uppercase font-bold tracking-widest mb-2" style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}>
+          <div className="text-[10px] uppercase font-bold tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.15em" }}>
             Convites pendentes · {invitations.length}
           </div>
           <div className="space-y-2">
@@ -338,7 +338,7 @@ export function UserManagementView({
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="font-semibold text-sm" style={{ color: "#201a1a" }}>{inv.email}</span>
+                      <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>{inv.email}</span>
                       <Badge variant={roleBadgeVariant(inv.role)} size="sm">{roleLabel(inv.role)}</Badge>
                       <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
                         Aguardando
