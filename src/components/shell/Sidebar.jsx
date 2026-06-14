@@ -24,15 +24,15 @@ function useIsMobile() {
 const SIDEBAR_W = 288;
 
 const T = {
-  bg:          "#FFFFFF",
-  border:      "#E5E7EB",
-  text:        "#5c5f60",
-  textActive:  "#b5000b",
-  textOnSurface: "#201a1a",
-  activeBg:    "#fef1f0",
-  hoverBg:     "#f2e5e5",
-  activeStrip: "#b5000b",
-  groupLabel:  "#936e69",
+  bg:            "var(--surface)",
+  border:        "var(--border)",
+  text:          "var(--text-dim)",
+  textActive:    "var(--accent)",
+  textOnSurface: "var(--text)",
+  activeBg:      "var(--surface-alt)",
+  hoverBg:       "var(--surface-alt)",
+  activeStrip:   "var(--accent)",
+  groupLabel:    "var(--text-faint)",
 };
 
 const ROLE_LABEL = {
@@ -107,7 +107,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: "#b5000b",
+              background: "var(--accent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -121,8 +121,8 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             />
           </div>
           <div style={{ lineHeight: 1.3 }}>
-            <div style={{ color: "#201a1a", fontWeight: 700, fontSize: 14 }}>sanweyERP</div>
-            <div style={{ color: T.text, fontSize: 11 }}>Plataforma integrada</div>
+            <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 14 }}>sanweyERP</div>
+            <div style={{ color: "var(--text-faint)", fontSize: 11 }}>Plataforma integrada</div>
           </div>
         </div>
 
@@ -134,10 +134,10 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               style={{
                 width: "100%",
                 height: 44,
-                background: "#e30613",
-                color: "#ffffff",
+                background: "var(--accent)",
+                color: "var(--surface)",
                 border: "none",
-                borderRadius: 8,
+                borderRadius: "var(--radius-md)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -146,10 +146,10 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                 fontWeight: 600,
                 fontSize: 14,
                 cursor: "pointer",
-                transition: "filter 0.15s",
+                transition: "background 0.15s",
               }}
-              onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.92)"; }}
-              onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
               Novo Negócio
@@ -164,7 +164,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             return (
               <div key={gi} style={{ marginTop: gi === 0 ? 0 : 8 }}>
                 {gi > 0 && group.label && (
-                  <div style={{ height: 1, background: T.border, margin: "0 16px 8px" }} />
+                  <div style={{ height: 1, background: "var(--border)", margin: "0 16px 8px" }} />
                 )}
                 {group.label && (
                   <button
@@ -182,7 +182,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                     }}
                   >
                     <span style={{
-                      color: T.groupLabel,
+                      color: "var(--text-faint)",
                       fontSize: 10,
                       fontWeight: 700,
                       letterSpacing: "0.1em",
@@ -193,9 +193,9 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                     <ChevronDown
                       size={13}
                       strokeWidth={2.5}
-                      color={T.groupLabel}
                       style={{
                         flexShrink: 0,
+                        color: "var(--text-faint)",
                         transition: "transform 0.2s",
                         transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
                       }}
@@ -237,30 +237,30 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               alignItems: "center",
               gap: 10,
               padding: "8px 8px",
-              background: section === "settings" ? T.activeBg : "transparent",
+              background: section === "settings" ? "var(--surface-alt)" : "transparent",
               border: "none",
-              borderRadius: 8,
+              borderRadius: "var(--radius-sm)",
               cursor: "pointer",
               transition: "background 0.12s",
               textAlign: "left",
             }}
-            onMouseEnter={e => { if (section !== "settings") e.currentTarget.style.background = T.hoverBg; }}
+            onMouseEnter={e => { if (section !== "settings") e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { if (section !== "settings") e.currentTarget.style.background = "transparent"; }}
           >
             <div
               style={{
                 width: 36, height: 36,
                 borderRadius: "50%",
-                background: currentUser?.avatarUrl ? "transparent" : (currentUser?.avatarBg || "#b5000b"),
+                background: currentUser?.avatarUrl ? "transparent" : (currentUser?.avatarBg || "var(--surface-alt)"),
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontWeight: 700,
-                color: "#FFFFFF",
+                color: "var(--text-dim)",
                 fontSize: 12,
                 flexShrink: 0,
                 overflow: "hidden",
-                border: `2px solid ${section === "settings" ? "#b5000b" : "#E5E7EB"}`,
+                border: `2px solid ${section === "settings" ? "var(--accent)" : "var(--border)"}`,
               }}
             >
               {currentUser?.avatarUrl
@@ -268,10 +268,10 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                 : (currentUser?.initials || "?")}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: section === "settings" ? "#b5000b" : "#201a1a", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ color: section === "settings" ? "var(--accent)" : "var(--text)", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {currentUser?.name || "Convidado"}
               </div>
-              <div style={{ color: T.text, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ color: "var(--text-faint)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {ROLE_LABEL[currentUser?.role] || "—"}
               </div>
             </div>
@@ -282,17 +282,17 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             style={{
               background: "transparent",
               border: "none",
-              color: T.text,
+              color: "var(--text-faint)",
               cursor: "pointer",
               padding: 8,
-              borderRadius: 8,
+              borderRadius: "var(--radius-sm)",
               display: "flex",
               alignItems: "center",
               flexShrink: 0,
               transition: "background 0.12s, color 0.12s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = T.text; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--danger)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
           >
             <LogOut size={15} strokeWidth={2} />
           </button>
@@ -320,15 +320,15 @@ function NavItem({ icon: Icon, label, active, onClick }) {
         fontSize: 14,
         fontFamily: "inherit",
         fontWeight: active ? 700 : 500,
-        color: active ? T.textActive : hovered ? T.textOnSurface : T.text,
-        background: active ? T.activeBg : hovered ? "#f2e5e5" : "transparent",
+        color: active ? "var(--accent)" : hovered ? "var(--text)" : "var(--text-dim)",
+        background: active ? "var(--surface-alt)" : hovered ? "var(--surface-alt)" : "transparent",
         border: "none",
-        borderRight: active ? "4px solid #b5000b" : "4px solid transparent",
+        borderRight: active ? "3px solid var(--accent)" : "3px solid transparent",
         cursor: "pointer",
         textAlign: "left",
         whiteSpace: "nowrap",
         transition: "background 0.12s, color 0.12s, border-color 0.12s",
-        borderRadius: "0 8px 8px 0",
+        borderRadius: "0 var(--radius-sm) var(--radius-sm) 0",
         marginRight: 4,
       }}
     >

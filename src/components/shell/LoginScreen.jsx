@@ -7,9 +7,10 @@ import {
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 
-const ACCENT_RED = "#b5000b";   // primary DS
+const ACCENT_RED = "#b5000b";   // usado APENAS no painel esquerdo institucional (fundo escuro)
 const DARK_BG    = "#1A1414";   // painel esquerdo
-const CREAM      = "#fff8f7";   // surface
+const ACCENT     = "var(--accent)";     // painel direito — token white-label
+const ACCENT_RING = "rgba(55,53,47,0.10)";
 
 // LoginScreen com layout split institucional, espelhando o mockup novo:
 // - Esquerda escura com watermark grande do logo, headline e valores
@@ -25,7 +26,7 @@ export function LoginScreen({
   onMockLogin,
 }) {
   return (
-    <div className="min-h-screen flex" style={{ background: CREAM }}>
+    <div className="min-h-screen flex" style={{ background: "var(--bg)" }}>
       <LeftPanel />
 
       <div className="flex-1 flex flex-col relative">
@@ -51,7 +52,7 @@ export function LoginScreen({
               <p className="text-sm max-w-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>
                 Plataforma unificada de inteligência comercial<br />para as empresas do Grupo
               </p>
-              <span className="block mt-3" style={{ width: 36, height: 2, background: ACCENT_RED, borderRadius: 1 }} />
+              <span className="block mt-3" style={{ width: 36, height: 2, background: "var(--accent)", borderRadius: 1 }} />
             </div>
 
             {supabaseEnabled ? (
@@ -239,27 +240,27 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
 
   return (
     <div
-      className="rounded-2xl p-7 md:p-8"
+      className="rounded-lg p-7 md:p-8"
       style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
-        boxShadow: "0 30px 80px -20px rgba(20, 14, 14, 0.10), 0 8px 16px -8px rgba(20, 14, 14, 0.06)",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        boxShadow: "0 20px 60px -20px rgba(0,0,0,0.08)",
       }}
     >
       {/* Lock badge */}
       <div className="flex flex-col items-center mb-3">
         <div
           className="w-14 h-14 rounded-full flex items-center justify-center"
-          style={{ background: "#FBEAEC" }}
+          style={{ background: "var(--surface-alt)" }}
         >
-          <Lock size={22} style={{ color: ACCENT_RED }} />
+          <Lock size={22} style={{ color: "var(--text-dim)" }} />
         </div>
       </div>
 
-      <h2 className="text-center font-bold mb-1" style={{ fontSize: 22, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+      <h2 className="text-center font-bold mb-1" style={{ fontSize: 22, color: "var(--text)", letterSpacing: "-0.01em" }}>
         {mode === "recovery" ? "Recuperar senha" : isSignin ? "Acessar sua conta" : "Criar conta"}
       </h2>
-      <p className="text-center text-sm mb-5" style={{ color: NEUTRAL.slate }}>
+      <p className="text-center text-sm mb-5" style={{ color: "var(--text-dim)" }}>
         {mode === "recovery"
           ? "Informe seu e-mail e enviaremos um link para redefinir a senha."
           : isSignin
@@ -282,7 +283,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
             type="button"
             onClick={() => { setMode("signin"); setRecoverySent(false); setLocalError(null); }}
             className="mt-1 text-xs font-semibold underline"
-            style={{ color: ACCENT_RED }}
+            style={{ color: ACCENT }}
           >
             Voltar ao login
           </button>
@@ -338,12 +339,12 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
           <div className="flex items-center justify-between text-xs pt-1">
             <label className="flex items-center gap-1.5 cursor-pointer select-none">
               <CheckBox checked={remember} onChange={setRemember} />
-              <span style={{ color: NEUTRAL.graphite }}>Lembrar-me</span>
+              <span style={{ color: "var(--text-dim)" }}>Lembrar-me</span>
             </label>
             <button
               type="button"
               className="font-semibold hover:underline"
-              style={{ color: ACCENT_RED }}
+              style={{ color: ACCENT }}
               onClick={() => { setMode("recovery"); setLocalError(null); setRecoverySent(false); }}
             >
               Esqueci minha senha
@@ -364,10 +365,10 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
           <button
             type="submit"
             disabled={authLoading || recoveryLoading}
-            className="w-full p-3.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60 mt-2"
-            style={{ background: ACCENT_RED, fontSize: 15, boxShadow: "0 6px 16px -4px rgba(200, 32, 46, 0.4)" }}
-            onMouseEnter={e => { if (!authLoading && !recoveryLoading) e.currentTarget.style.filter = "brightness(0.92)"; }}
-            onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+            className="w-full p-3.5 rounded-lg font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60 mt-2"
+            style={{ background: ACCENT, fontSize: 15, color: "var(--surface)" }}
+            onMouseEnter={e => { if (!authLoading && !recoveryLoading) e.currentTarget.style.background = "var(--accent-hover)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = ACCENT; }}
           >
             {(authLoading || recoveryLoading) ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
             {mode === "recovery" ? "Enviar link de recuperação" : isSignin ? "Entrar" : "Criar conta"}
@@ -376,13 +377,13 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
         )}
       </form>
 
-      <div className="mt-5 text-xs text-center" style={{ color: NEUTRAL.slate }}>
+      <div className="mt-5 text-xs text-center" style={{ color: "var(--text-dim)" }}>
         {mode === "recovery" ? (
           <button
             type="button"
             onClick={() => { setMode("signin"); setLocalError(null); setRecoverySent(false); }}
             className="font-bold underline underline-offset-2 transition-opacity hover:opacity-70"
-            style={{ color: ACCENT_RED }}
+            style={{ color: ACCENT }}
           >
             ← Voltar ao login
           </button>
@@ -393,7 +394,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
               type="button"
               onClick={() => { setMode("signup"); setLocalError(null); }}
               className="font-bold underline underline-offset-2 transition-opacity hover:opacity-70"
-              style={{ color: ACCENT_RED }}
+              style={{ color: ACCENT }}
             >
               Criar conta
             </button>
@@ -405,7 +406,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
               type="button"
               onClick={() => { setMode("signin"); setLocalError(null); }}
               className="font-bold underline underline-offset-2 transition-opacity hover:opacity-70"
-              style={{ color: ACCENT_RED }}
+              style={{ color: ACCENT }}
             >
               Entrar
             </button>
@@ -443,19 +444,19 @@ export function PasswordResetScreen({ onReset }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: CREAM }}>
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--bg)" }}>
       <div
-        className="w-full max-w-md rounded-2xl p-8"
-        style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 20px 60px -20px rgba(20,14,14,0.12)" }}
+        className="w-full max-w-md rounded-lg p-8"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 20px 60px -20px rgba(0,0,0,0.10)" }}
       >
         <div className="flex flex-col items-center mb-6">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ background: "#FBEAEC" }}>
-            <KeyRound size={22} style={{ color: ACCENT_RED }} />
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ background: "var(--surface-alt)" }}>
+            <KeyRound size={22} style={{ color: "var(--text-dim)" }} />
           </div>
-          <h2 className="font-bold text-center" style={{ fontSize: 22, color: NEUTRAL.graphite }}>
+          <h2 className="font-bold text-center" style={{ fontSize: 22, color: "var(--text)" }}>
             Redefinir senha
           </h2>
-          <p className="text-sm text-center mt-1" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm text-center mt-1" style={{ color: "var(--text-dim)" }}>
             Escolha uma nova senha para sua conta.
           </p>
         </div>
@@ -492,8 +493,10 @@ export function PasswordResetScreen({ onReset }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full p-3.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60"
-              style={{ background: ACCENT_RED, fontSize: 15 }}
+              className="w-full p-3.5 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+              style={{ background: ACCENT, color: "var(--surface)", fontSize: 15 }}
+              onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "var(--accent-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = ACCENT; }}
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
               Salvar nova senha
@@ -509,21 +512,20 @@ export function PasswordResetScreen({ onReset }) {
 
 function Field({ label, type, value, onChange, placeholder, autoComplete, required, icon: Icon }) {
   const [focused, setFocused] = useState(false);
-  const borderColor = focused ? ACCENT_RED : "#E5E7EB";
   return (
     <label className="block">
-      <div className="text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>
+      <div className="text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
         {label}
       </div>
       <div
-        className="flex items-center gap-2 rounded-xl border px-3.5 py-2.5 transition-all"
+        className="flex items-center gap-2 rounded-sm border px-3.5 py-2.5 transition-all"
         style={{
-          borderColor,
-          background: "#FFFFFF",
-          boxShadow: focused ? `0 0 0 3px ${ACCENT_RED}1A` : "none",
+          borderColor: focused ? "var(--accent)" : "var(--border-strong)",
+          background: "var(--surface)",
+          boxShadow: focused ? `0 0 0 3px ${ACCENT_RING}` : "none",
         }}
       >
-        {Icon && <Icon size={15} style={{ color: NEUTRAL.slate }} />}
+        {Icon && <Icon size={15} style={{ color: "var(--text-faint)" }} />}
         <input
           type={type}
           value={value}
@@ -534,7 +536,7 @@ function Field({ label, type, value, onChange, placeholder, autoComplete, requir
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           className="flex-1 outline-none text-sm bg-transparent"
-          style={{ color: NEUTRAL.graphite }}
+          style={{ color: "var(--text)" }}
         />
       </div>
     </label>
@@ -543,21 +545,20 @@ function Field({ label, type, value, onChange, placeholder, autoComplete, requir
 
 function PasswordField({ value, onChange, autoComplete, show, onToggleShow, label = "Senha" }) {
   const [focused, setFocused] = useState(false);
-  const borderColor = focused ? ACCENT_RED : "#E5E7EB";
   return (
     <label className="block">
-      <div className="text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>
+      <div className="text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
         {label}
       </div>
       <div
-        className="flex items-center gap-2 rounded-xl border px-3.5 py-2.5 transition-all"
+        className="flex items-center gap-2 rounded-sm border px-3.5 py-2.5 transition-all"
         style={{
-          borderColor,
-          background: "#FFFFFF",
-          boxShadow: focused ? `0 0 0 3px ${ACCENT_RED}1A` : "none",
+          borderColor: focused ? "var(--accent)" : "var(--border-strong)",
+          background: "var(--surface)",
+          boxShadow: focused ? `0 0 0 3px ${ACCENT_RING}` : "none",
         }}
       >
-        <Lock size={15} style={{ color: NEUTRAL.slate }} />
+        <Lock size={15} style={{ color: "var(--text-faint)" }} />
         <input
           type={show ? "text" : "password"}
           value={value}
@@ -568,13 +569,13 @@ function PasswordField({ value, onChange, autoComplete, show, onToggleShow, labe
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           className="flex-1 outline-none text-sm bg-transparent"
-          style={{ color: NEUTRAL.graphite }}
+          style={{ color: "var(--text)" }}
         />
         <button
           type="button"
           onClick={onToggleShow}
           className="p-0.5 cursor-pointer"
-          style={{ color: NEUTRAL.slate }}
+          style={{ color: "var(--text-faint)" }}
           tabIndex={-1}
           aria-label={show ? "Ocultar senha" : "Mostrar senha"}
         >
@@ -594,8 +595,8 @@ function CheckBox({ checked, onChange }) {
       aria-checked={checked}
       className="w-4 h-4 rounded flex items-center justify-center transition-colors cursor-pointer shrink-0"
       style={{
-        background: checked ? ACCENT_RED : "#FFFFFF",
-        border: `1.5px solid ${checked ? ACCENT_RED : "#E5E7EB"}`,
+        background: checked ? "var(--accent)" : "var(--surface)",
+        border: `1.5px solid ${checked ? "var(--accent)" : "var(--border-strong)"}`,
       }}
     >
       {checked && (
@@ -612,17 +613,17 @@ function CheckBox({ checked, onChange }) {
 function MockLoginCard({ users, onMockLogin }) {
   return (
     <div
-      className="rounded-2xl p-7"
+      className="rounded-lg p-7"
       style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
-        boxShadow: "0 30px 80px -20px rgba(20, 14, 14, 0.10)",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        boxShadow: "0 20px 60px -20px rgba(0,0,0,0.08)",
       }}
     >
-      <h2 className="font-bold text-center mb-1" style={{ fontSize: 20, color: NEUTRAL.graphite }}>
+      <h2 className="font-bold text-center mb-1" style={{ fontSize: 20, color: "var(--text)" }}>
         Selecione seu perfil
       </h2>
-      <p className="text-center text-sm mb-5" style={{ color: NEUTRAL.slate }}>
+      <p className="text-center text-sm mb-5" style={{ color: "var(--text-dim)" }}>
         Modo demo — configure Supabase para autenticação real.
       </p>
       <div className="space-y-2">
@@ -632,15 +633,15 @@ function MockLoginCard({ users, onMockLogin }) {
             <button
               key={u.id}
               onClick={() => onMockLogin(u)}
-              className="w-full p-3 rounded-xl border flex items-center gap-3 transition-all duration-150 text-left cursor-pointer"
-              style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
+              className="w-full p-3 rounded-sm border flex items-center gap-3 transition-all duration-150 text-left cursor-pointer"
+              style={{ borderColor: "var(--border)", background: "var(--surface)" }}
               onMouseEnter={e => {
-                e.currentTarget.style.borderColor = ACCENT_RED;
-                e.currentTarget.style.background = "#FFF7F8";
+                e.currentTarget.style.borderColor = "var(--border-strong)";
+                e.currentTarget.style.background = "var(--surface-alt)";
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.borderColor = "#E5E7EB";
-                e.currentTarget.style.background = "#FFFFFF";
+                e.currentTarget.style.borderColor = "var(--border)";
+                e.currentTarget.style.background = "var(--surface)";
               }}
             >
               <div
@@ -650,13 +651,13 @@ function MockLoginCard({ users, onMockLogin }) {
                 {u.initials}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{u.name}</div>
-                <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+                <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{u.name}</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
                   {u.role === "gerente" ? "Gerente Comercial" : "Vendedor"} ·{" "}
                   {u.role === "gerente" ? "Acesso total" : companies.join(" · ")}
                 </div>
               </div>
-              <ChevronRight size={15} color={NEUTRAL.slate} style={{ opacity: 0.5 }} />
+              <ChevronRight size={15} style={{ color: "var(--text-faint)", opacity: 0.7 }} />
             </button>
           );
         })}
@@ -671,8 +672,8 @@ function ResourceFooter() {
   return (
     <div className="px-6 md:px-10 pb-6">
       <div
-        className="rounded-2xl border p-4 grid grid-cols-2 md:grid-cols-4 gap-4"
-        style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+        className="rounded-lg border p-4 grid grid-cols-2 md:grid-cols-4 gap-4"
+        style={{ background: "var(--surface)", borderColor: "var(--border)" }}
       >
         <ResourceItem
           icon={Megaphone}
@@ -702,12 +703,12 @@ function ResourceFooter() {
 function ResourceItem({ icon: Icon, title, desc }) {
   return (
     <div className="flex items-start gap-2.5">
-      <Icon size={20} strokeWidth={1.5} style={{ color: NEUTRAL.slate, marginTop: 2 }} className="shrink-0" />
+      <Icon size={20} strokeWidth={1.5} style={{ color: "var(--text-faint)", marginTop: 2 }} className="shrink-0" />
       <div className="min-w-0">
-        <div className="text-xs font-bold leading-tight mb-1" style={{ color: NEUTRAL.graphite }}>
+        <div className="text-xs font-bold leading-tight mb-1" style={{ color: "var(--text)" }}>
           {title}
         </div>
-        <div className="text-[11px] leading-snug" style={{ color: NEUTRAL.slate }}>
+        <div className="text-[11px] leading-snug" style={{ color: "var(--text-dim)" }}>
           {desc}
         </div>
       </div>
