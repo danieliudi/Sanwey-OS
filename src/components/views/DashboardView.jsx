@@ -3,7 +3,7 @@ import {
   Target, HandCoins, CheckCircle2, Gauge, ArrowRight, RefreshCcw, Download,
   Clock, CalendarClock, AlertTriangle, CalendarCheck,
 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { StatCard } from "../ui/StatCard";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
@@ -26,7 +26,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
   const isManager = user.role === "gerente" || user.role === "admin";
   const isConsultor = user.role === "consultor";
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
-  const accent = companyData?.primary || NEUTRAL.graphite;
+  const accent = companyData?.primary || "#37352F";
 
   const subordinateIds = useMemo(() => {
     if (user.role !== "vendedor") return new Set();
@@ -130,10 +130,10 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
       {/* Page header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             {greetingFor(user)}
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {isGroupView
               ? `${scopedLeads.length} leads em 4 empresas · ${scopedSignals.length} sinais ativos`
               : `${companyData?.name || "—"} · ${scopedLeads.length} leads · ${scopedSignals.length} sinais`}
@@ -190,10 +190,10 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+            <h2 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>
               Tarefas e prazos
             </h2>
-            <p className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+            <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
               Pendências dos seus negócios · próximos 7 dias e leads parados
             </p>
           </div>
@@ -213,7 +213,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
         {totalTasks === 0 ? (
           <div
             className="p-5 rounded-xl border text-center text-sm"
-            style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
           >
             Nada urgente por aqui. Seus negócios estão em dia.
           </div>
@@ -286,8 +286,8 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>Leads quentes</h2>
-              <p className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>Fit score ≥ 80 · ordenado por qualidade</p>
+              <h2 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>Leads quentes</h2>
+              <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>Fit score ≥ 80 · ordenado por qualidade</p>
             </div>
             <button
               onClick={() => onNavigate("crm")}
@@ -303,7 +303,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
             {hotLeads.length === 0 && (
               <div
                 className="p-6 rounded-xl border text-center text-sm"
-                style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
               >
                 Nenhum lead quente no momento
               </div>
@@ -318,10 +318,10 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
         <div>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+              <h2 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>
                 Sinais de mercado
               </h2>
-              <p className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+              <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
                 Alertas automáticos sobre empresas do seu pipeline · clique para ver detalhes
               </p>
             </div>
@@ -340,15 +340,15 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
               <div
                 key={s.id}
                 className="p-3.5 rounded-xl border transition-all duration-150 cursor-pointer"
-                style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 4px rgba(32,26,26,0.06)" }}
+                style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
                 onClick={() => onSignalClick?.(s)}
                 onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(32,26,26,0.10)";
-                  e.currentTarget.style.borderColor = "#e9bcb6";
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
+                  e.currentTarget.style.borderColor = "var(--border-strong)";
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow = "0 1px 4px rgba(32,26,26,0.06)";
-                  e.currentTarget.style.borderColor = "#E5E7EB";
+                  e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)";
+                  e.currentTarget.style.borderColor = "var(--border)";
                 }}
               >
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
@@ -358,10 +358,10 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
                     <UrgencyTag urgency={s.urgency} />
                   </div>
                 </div>
-                <div className="text-[13px] font-medium leading-snug line-clamp-2" style={{ color: NEUTRAL.graphite }}>
+                <div className="text-[13px] font-medium leading-snug line-clamp-2" style={{ color: "var(--text)" }}>
                   {s.title}
                 </div>
-                <div className="text-xs mt-2 flex items-center justify-between" style={{ color: NEUTRAL.slate }}>
+                <div className="text-xs mt-2 flex items-center justify-between" style={{ color: "var(--text-dim)" }}>
                   <span>{s.affectedCount} afetad{s.affectedCount === 1 ? "a" : "as"}</span>
                   <span>{s.daysAgo === 0 ? "Hoje" : `${s.daysAgo}d atrás`}</span>
                 </div>
@@ -378,11 +378,11 @@ function TaskBucket({ icon: Icon, tone, title, empty, items }) {
   return (
     <div
       className="rounded-xl border"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
       <div
         className="px-3.5 py-2.5 flex items-center gap-2"
-        style={{ borderBottom: "1px solid #F1F3F5" }}
+        style={{ borderBottom: "1px solid var(--surface-alt)" }}
       >
         <div
           className="rounded-md flex items-center justify-center"
@@ -390,7 +390,7 @@ function TaskBucket({ icon: Icon, tone, title, empty, items }) {
         >
           <Icon size={13} strokeWidth={2.4} />
         </div>
-        <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite, letterSpacing: "0.01em" }}>
+        <div className="text-xs font-semibold" style={{ color: "var(--text)", letterSpacing: "0.01em" }}>
           {title}
         </div>
         <div className="ml-auto text-xs font-semibold" style={{ color: tone }}>
@@ -399,7 +399,7 @@ function TaskBucket({ icon: Icon, tone, title, empty, items }) {
       </div>
       <div className="p-1.5">
         {items.length === 0 ? (
-          <div className="px-2 py-3 text-xs" style={{ color: NEUTRAL.slate }}>
+          <div className="px-2 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
             {empty}
           </div>
         ) : (
@@ -409,7 +409,7 @@ function TaskBucket({ icon: Icon, tone, title, empty, items }) {
               onClick={() => it.onClick?.(it.lead)}
               className="w-full text-left flex items-start gap-2 px-2.5 py-2 rounded-lg transition-colors duration-150"
               style={{ background: "transparent" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F8FAFB"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               <span
@@ -419,11 +419,11 @@ function TaskBucket({ icon: Icon, tone, title, empty, items }) {
               <div className="flex-1 min-w-0">
                 <div
                   className="text-[13px] font-semibold truncate"
-                  style={{ color: NEUTRAL.graphite }}
+                  style={{ color: "var(--text)" }}
                 >
                   {it.primary}
                 </div>
-                <div className="text-xs truncate" style={{ color: NEUTRAL.slate }}>
+                <div className="text-xs truncate" style={{ color: "var(--text-dim)" }}>
                   {it.secondary}
                 </div>
               </div>

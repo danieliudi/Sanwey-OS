@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Bell, Plus, CheckCircle2 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { Badge } from "../ui/Badge";
 import { CompanyTag } from "../ui/CompanyTag";
 import { UrgencyTag } from "../ui/UrgencyTag";
@@ -89,10 +89,10 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             Sinais de Mercado
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {scopedSignals.length} sinais monitorados · adaptado ao contexto de cada empresa
           </p>
         </div>
@@ -107,21 +107,21 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
                 onClick={() => setUrgencyFilter(f.key)}
                 className="px-3.5 py-1.5 text-sm font-medium rounded-full border transition-all duration-150"
                 style={{
-                  background: active ? NEUTRAL.graphite : "#FFFFFF",
-                  color: active ? "#FFFFFF" : NEUTRAL.slate,
-                  borderColor: active ? NEUTRAL.graphite : "#E0E0E0",
+                  background: active ? "var(--text)" : "var(--surface)",
+                  color: active ? "var(--surface)" : "var(--text-dim)",
+                  borderColor: active ? "var(--text)" : "var(--border)",
                   boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
                 }}
                 onMouseEnter={e => {
                   if (!active) {
-                    e.currentTarget.style.borderColor = "#B0B0B0";
-                    e.currentTarget.style.background = "#F5F5F5";
+                    e.currentTarget.style.borderColor = "var(--border-strong)";
+                    e.currentTarget.style.background = "var(--surface-alt)";
                   }
                 }}
                 onMouseLeave={e => {
                   if (!active) {
-                    e.currentTarget.style.borderColor = "#E0E0E0";
-                    e.currentTarget.style.background = "#FFFFFF";
+                    e.currentTarget.style.borderColor = "var(--border)";
+                    e.currentTarget.style.background = "var(--surface)";
                   }
                 }}
               >
@@ -139,20 +139,20 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
             key={s.id}
             className="p-5 rounded-xl border transition-all duration-150 cursor-pointer"
             style={{
-              background: "#FFFFFF",
-              borderColor: "#E5E7EB",
+              background: "var(--surface)",
+              borderColor: "var(--border)",
               borderLeftWidth: 4,
-              borderLeftColor: COMPANIES[s.company]?.primary || NEUTRAL.slate,
+              borderLeftColor: COMPANIES[s.company]?.primary || "var(--text-dim)",
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
             }}
             onClick={() => onSignalClick?.(s)}
             onMouseEnter={e => {
               e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
-              e.currentTarget.style.borderColor = "#D0D0D0";
+              e.currentTarget.style.borderColor = "var(--border-strong)";
             }}
             onMouseLeave={e => {
               e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
-              e.currentTarget.style.borderColor = "#E5E7EB";
+              e.currentTarget.style.borderColor = "var(--border)";
             }}
           >
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -162,15 +162,15 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
               </div>
               <UrgencyTag urgency={s.urgency} />
             </div>
-            <h3 className="font-semibold mb-2 leading-snug" style={{ fontSize: 14, color: NEUTRAL.graphite }}>
+            <h3 className="font-semibold mb-2 leading-snug" style={{ fontSize: 14, color: "var(--text)" }}>
               {s.title}
             </h3>
-            <p className="text-sm leading-relaxed mb-3" style={{ color: NEUTRAL.slate }}>
+            <p className="text-sm leading-relaxed mb-3" style={{ color: "var(--text-dim)" }}>
               {s.excerpt}
             </p>
             <div
               className="flex items-center justify-between text-xs pt-3 border-t"
-              style={{ borderColor: "#F0F0F0", color: NEUTRAL.slate }}
+              style={{ borderColor: "var(--surface-alt)", color: "var(--text-dim)" }}
             >
               <span>{s.affectedCount} afetad{s.affectedCount === 1 ? "a" : "as"}</span>
               <span>{s.date}</span>
@@ -178,7 +178,7 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
 
             {/* Create lead CTA */}
             {onAddLead && (
-              <div className="pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+              <div className="pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
                 {justAdded.has(s.id) ? (
                   <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "#16A34A" }}>
                     <CheckCircle2 size={12} />
@@ -196,22 +196,22 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
                         if (e.key === "Escape") setExpandedCreate(null);
                       }}
                       className="flex-1 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
-                      style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
-                      onFocus={e => { e.currentTarget.style.borderColor = "#b5000b"; }}
-                      onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
+                      style={{ borderColor: "var(--border)", color: "var(--text)" }}
+                      onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
                     />
                     <button
                       onClick={() => handleCreateLead(s)}
                       disabled={!createCompany.trim()}
                       className="text-xs px-2.5 py-1.5 rounded-lg font-semibold text-white"
-                      style={{ background: "#b5000b", border: "none", cursor: createCompany.trim() ? "pointer" : "not-allowed", opacity: createCompany.trim() ? 1 : 0.5 }}
+                      style={{ background: "var(--accent)", border: "none", cursor: createCompany.trim() ? "pointer" : "not-allowed", opacity: createCompany.trim() ? 1 : 0.5 }}
                     >
                       Criar
                     </button>
                     <button
                       onClick={() => setExpandedCreate(null)}
                       className="text-xs"
-                      style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                      style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
                     >
                       Cancelar
                     </button>
@@ -220,7 +220,7 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
                   <button
                     onClick={e => handleOpenCreate(s.id, e)}
                     className="text-xs font-semibold flex items-center gap-1 transition-colors"
-                    style={{ color: "#b5000b", background: "none", border: "none", cursor: "pointer" }}
+                    style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
                     onMouseEnter={e => { e.currentTarget.style.opacity = "0.75"; }}
                     onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
                   >

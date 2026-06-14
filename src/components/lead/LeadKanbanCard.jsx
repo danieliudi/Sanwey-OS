@@ -1,6 +1,6 @@
 import React, { memo, useRef, useState, useEffect } from "react";
 import { Clock, MoreVertical, ArrowRight } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { CompanyTag } from "../ui/CompanyTag";
 import { formatK } from "../../utils/currency";
@@ -32,9 +32,9 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
     ? stages.filter(s => s.id !== lead.stage && !s.terminal)
     : [];
 
-  const accentColor = COMPANIES[lead.companyId]?.primary || NEUTRAL.slate;
-  const shadowBase  = `inset 3px 0 0 ${accentColor}, 0 1px 4px rgba(32,26,26,0.06)`;
-  const shadowHover = `inset 3px 0 0 ${accentColor}, 0 4px 16px rgba(32,26,26,0.10)`;
+  const accentColor = COMPANIES[lead.companyId]?.primary || "var(--text-dim)";
+  const shadowBase  = `inset 3px 0 0 ${accentColor}, 0 1px 4px rgba(0,0,0,0.04)`;
+  const shadowHover = `inset 3px 0 0 ${accentColor}, 0 4px 16px rgba(0,0,0,0.08)`;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -53,25 +53,25 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
       onClick={() => { if (!menuOpen) onClick?.(lead); }}
       className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
       style={{
-        background: "#FFFFFF",
-        border: "1px solid #E5E7EB",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;
-        e.currentTarget.style.borderColor = "#e9bcb6";
+        e.currentTarget.style.borderColor = "var(--border-strong)";
         e.currentTarget.style.transform = "translateY(-1px)";
       }}
       onMouseLeave={e => {
         e.currentTarget.style.boxShadow = shadowBase;
-        e.currentTarget.style.borderColor = "#E5E7EB";
+        e.currentTarget.style.borderColor = "var(--border)";
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
       {/* Company + aging badge + score + menu */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: NEUTRAL.graphite }}>
+        <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: "var(--text)" }}>
           {lead.company}
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -100,7 +100,7 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: NEUTRAL.slate,
+                  color: "var(--text-dim)",
                   cursor: "pointer",
                   padding: 2,
                   borderRadius: 4,
@@ -108,8 +108,8 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
                   alignItems: "center",
                   lineHeight: 1,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "#b5000b"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
               >
                 <MoreVertical size={14} />
               </button>
@@ -119,8 +119,8 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
                     position: "absolute",
                     top: "calc(100% + 4px)",
                     right: 0,
-                    background: "#FFFFFF",
-                    border: "1px solid #E5E7EB",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
                     boxShadow: "0 8px 24px rgba(32,26,26,0.12)",
                     zIndex: 50,
@@ -134,7 +134,7 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
                       padding: "6px 12px 4px",
                       fontSize: 10,
                       fontWeight: 700,
-                      color: NEUTRAL.slate,
+                      color: "var(--text-dim)",
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
                     }}
@@ -159,12 +159,12 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
                         border: "none",
                         cursor: "pointer",
                         fontSize: 13,
-                        color: NEUTRAL.graphite,
+                        color: "var(--text)",
                         textAlign: "left",
                         transition: "background 0.1s",
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "#b5000b"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
                     >
                       <span
                         style={{
@@ -187,16 +187,16 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
       </div>
 
       {/* SKU */}
-      <div className="text-xs mb-2.5 line-clamp-1" style={{ color: NEUTRAL.slate }}>
+      <div className="text-xs mb-2.5 line-clamp-1" style={{ color: "var(--text-dim)" }}>
         {lead.skuName}
       </div>
 
       {/* Value + probability + close date */}
       <div className="flex items-center justify-between text-xs">
-        <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>
+        <span className="font-semibold" style={{ color: "var(--text)" }}>
           {formatK(lead.value)}
         </span>
-        <span style={{ color: NEUTRAL.slate }}>
+        <span style={{ color: "var(--text-dim)" }}>
           {probDisplay}% · {formatDateBR(lead.closeDate)}
         </span>
       </div>
@@ -205,7 +205,7 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
       {showOwnerFooter && lead.owner && (
         <div
           className="mt-2.5 pt-2 border-t text-[11px] flex items-center justify-between"
-          style={{ borderColor: "#F0F0F0", color: NEUTRAL.slate }}
+          style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}
         >
           <span>{ownerName || "—"}</span>
           {isGroupView && <CompanyTag companyId={lead.companyId} />}

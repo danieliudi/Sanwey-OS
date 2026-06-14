@@ -77,7 +77,7 @@ function StageCell({ stageId, isFirst, isPrevSame }) {
     return (
       <td
         className="text-center align-middle font-mono text-[11px]"
-        style={{ color: "#D1D5DB", borderRight: "1px solid #F3F4F6", width: 38, padding: "6px 4px" }}
+        style={{ color: "var(--border-strong)", borderRight: "1px solid var(--border)", width: 38, padding: "6px 4px" }}
       >
         —
       </td>
@@ -92,7 +92,7 @@ function StageCell({ stageId, isFirst, isPrevSame }) {
       style={{
         background: newPhase ? s.color : s.color + "30",
         color: newPhase ? "#FFFFFF" : s.color,
-        borderRight: "1px solid #F3F4F6",
+        borderRight: "1px solid var(--border)",
         width: 38,
         padding: "6px 4px",
       }}
@@ -173,15 +173,15 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <History size={22} style={{ color: NEUTRAL.graphite }} />
+            <History size={22} style={{ color: "var(--text)" }} />
             <h1
               className="font-bold leading-tight"
-              style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}
+              style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}
             >
               Histórico do Funil
             </h1>
           </div>
-          <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
             Movimentação dos clientes pelas etapas ao longo do tempo.
             Clientes que regressaram a uma etapa anterior aparecem marcados como{" "}
             <span style={{ color: NEUTRAL.amber, fontWeight: 600 }}>reciclados</span>.
@@ -192,13 +192,13 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
           disabled={loading}
           className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border transition-opacity"
           style={{
-            borderColor: "#D1D5DB",
-            color: NEUTRAL.slate,
-            background: "#FFFFFF",
+            borderColor: "var(--border-strong)",
+            color: "var(--text-dim)",
+            background: "var(--surface)",
             opacity: loading ? 0.5 : 1,
           }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "#F5F5F3"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "var(--surface-alt)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
         >
           <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
           Atualizar
@@ -252,7 +252,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
       {/* Legenda */}
       <div
         className="flex items-center gap-3 flex-wrap p-3 rounded-xl border text-xs"
-        style={{ background: "#FAFAFA", borderColor: "#EFEFEF", color: NEUTRAL.slate }}
+        style={{ background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text-dim)" }}
       >
         {DEFAULT_PIPELINE_STAGES.map(s => (
           <div key={s.id} className="flex items-center gap-1.5">
@@ -279,16 +279,16 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
       {!error && (
         <div
           className="rounded-xl border overflow-x-auto"
-          style={{ borderColor: "#EFEFEF", background: "#FFFFFF" }}
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
         >
           <table className="text-xs" style={{ minWidth: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr className="border-b" style={{ borderColor: "#EFEFEF", background: "#F9FAFB" }}>
+              <tr className="border-b" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
                 <th
                   className="text-left px-3 py-2.5 sticky left-0 z-10"
                   style={{
-                    color: NEUTRAL.slate,
-                    background: "#F9FAFB",
+                    color: "var(--text-dim)",
+                    background: "var(--surface-alt)",
                     fontWeight: 600,
                     minWidth: 240,
                   }}
@@ -298,20 +298,20 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                 {isGroupView && (
                   <th
                     className="text-left px-2 py-2.5"
-                    style={{ color: NEUTRAL.slate, fontWeight: 600, minWidth: 100 }}
+                    style={{ color: "var(--text-dim)", fontWeight: 600, minWidth: 100 }}
                   >
                     Empresa
                   </th>
                 )}
                 <th
                   className="text-left px-2 py-2.5"
-                  style={{ color: NEUTRAL.slate, fontWeight: 600, minWidth: 120 }}
+                  style={{ color: "var(--text-dim)", fontWeight: 600, minWidth: 120 }}
                 >
                   Vendedor
                 </th>
                 <th
                   className="text-center px-2 py-2.5"
-                  style={{ color: NEUTRAL.slate, fontWeight: 600, width: 60 }}
+                  style={{ color: "var(--text-dim)", fontWeight: 600, width: 60 }}
                   title="Quantas vezes o cliente regrediu para uma etapa anterior do funil"
                 >
                   Ciclos
@@ -321,10 +321,10 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                     key={i}
                     className="text-center px-1 py-2.5 font-mono"
                     style={{
-                      color: NEUTRAL.slate,
+                      color: "var(--text-dim)",
                       fontWeight: 600,
                       width: 38,
-                      borderLeft: "1px solid #EFEFEF",
+                      borderLeft: "1px solid var(--border)",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -339,7 +339,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                   <td
                     colSpan={4 + snapshotLabels.length + (isGroupView ? 1 : 0)}
                     className="text-center py-10 text-xs"
-                    style={{ color: NEUTRAL.slate }}
+                    style={{ color: "var(--text-dim)" }}
                   >
                     Nenhum cliente no escopo selecionado.
                   </td>
@@ -350,7 +350,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                   <td
                     colSpan={4 + snapshotLabels.length + (isGroupView ? 1 : 0)}
                     className="text-center py-10 text-xs"
-                    style={{ color: NEUTRAL.slate }}
+                    style={{ color: "var(--text-dim)" }}
                   >
                     Carregando histórico…
                   </td>
@@ -365,7 +365,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                   <tr
                     key={lead.id}
                     className="border-b"
-                    style={{ borderColor: "#F3F4F6", transition: "background 100ms" }}
+                    style={{ borderColor: "var(--border)", transition: "background 100ms" }}
                     onMouseEnter={e => { e.currentTarget.style.background = "#F9F9F8"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = ""; }}
                   >
@@ -374,7 +374,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                       style={{ background: "inherit", minWidth: 240 }}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>
+                        <span className="font-semibold" style={{ color: "var(--text)" }}>
                           {lead.company}
                         </span>
                         {recycles > 0 && (
@@ -388,12 +388,12 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] mt-0.5" style={{ color: NEUTRAL.slate }}>
+                      <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
                         {lead.city || "—"} · {lead.skuName || lead.sku || "—"}
                       </div>
                     </td>
                     {isGroupView && (
-                      <td className="px-2 py-2" style={{ color: NEUTRAL.graphite }}>
+                      <td className="px-2 py-2" style={{ color: "var(--text)" }}>
                         {companyMeta ? (
                           <span
                             className="inline-block w-2 h-2 rounded-full mr-1.5"
@@ -403,12 +403,12 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                         {companyMeta?.short || lead.companyId}
                       </td>
                     )}
-                    <td className="px-2 py-2" style={{ color: NEUTRAL.slate }}>
+                    <td className="px-2 py-2" style={{ color: "var(--text-dim)" }}>
                       {ownerName}
                     </td>
                     <td
                       className="text-center px-2 py-2 font-mono font-bold"
-                      style={{ color: recycles > 0 ? NEUTRAL.amber : "#D1D5DB" }}
+                      style={{ color: recycles > 0 ? NEUTRAL.amber : "var(--border-strong)" }}
                     >
                       {recycles}
                     </td>
@@ -430,7 +430,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
 
       <div
         className="p-3 rounded-xl text-xs"
-        style={{ background: "#F5F5F3", color: NEUTRAL.slate }}
+        style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}
       >
         <span className="font-semibold">Como ler:</span> a sigla mostra a etapa do cliente em cada{" "}
         {granularity === "monthly" ? "mês" : "semana"}.
