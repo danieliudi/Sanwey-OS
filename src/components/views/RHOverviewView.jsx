@@ -368,9 +368,9 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
-                    background: "var(--color-industria)"Tint,
+                    background: "color-mix(in srgb, var(--color-industria) 10%, transparent)",
                     color: "var(--color-industria)",
-                    border: `1px solid ${"var(--color-industria)"}33`,
+                    border: `1px solid color-mix(in srgb, var(--color-industria) 20%, transparent)`,
                     borderRadius: 99,
                     padding: "2px 10px",
                     fontSize: 12,
@@ -511,7 +511,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                     <div
                       key={req.id}
                       style={{
-                        background: "var(--amber)"Bg,
+                        background: "var(--amber-bg)",
                         border: `1px solid ${"var(--amber)"}33`,
                         borderRadius: 8,
                         padding: "10px 12px",

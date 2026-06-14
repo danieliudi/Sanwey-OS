@@ -540,7 +540,7 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
               onClick={handleAdd}
               disabled={!newNote.trim() || saving}
               className="px-3 py-1.5 text-xs font-semibold rounded-xl"
-              style={{ background: newNote.trim() ? "#1E4D8C" : "#F3F4F6", color: newNote.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newNote.trim() ? "pointer" : "default" }}
+              style={{ background: newNote.trim() ? "#1E4D8C" : "var(--surface-alt)", color: newNote.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newNote.trim() ? "pointer" : "default" }}
             >
               {saving ? "Salvando…" : "Comentar"}
             </button>
@@ -1019,25 +1019,25 @@ export function CampaignDetailDrawer({
 
             {/* Stats grid */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                 <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Budget</div>
                 <div className="text-sm font-bold mt-0.5" style={{ color: "var(--text)" }}>
                   {get("budget") > 0 ? formatK(get("budget")) : "—"}
                 </div>
               </div>
-              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                 <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Canal</div>
                 <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>
                   {get("channel") || "—"}
                 </div>
               </div>
-              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                 <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>KPI</div>
                 <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>
                   {get("kpi") || "—"}
                 </div>
               </div>
-              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                 <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Lançamento</div>
                 <div className="text-xs font-bold mt-0.5" style={{ color: "var(--text)" }}>
                   {get("launchDate") ? formatDateBR(get("launchDate")) : "—"}
@@ -1047,7 +1047,7 @@ export function CampaignDetailDrawer({
 
             {/* Agency */}
             {get("agencyName") && (
-              <div className="rounded-lg p-2.5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+              <div className="rounded-lg p-2.5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                 <div className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-dim)" }}>Agência</div>
                 <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>{get("agencyName")}</div>
               </div>

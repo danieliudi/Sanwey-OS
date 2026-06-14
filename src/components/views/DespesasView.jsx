@@ -350,7 +350,7 @@ export function DespesasView({ user, users = [] }) {
           value={filterCategory}
           onChange={e => setFilterCategory(e.target.value)}
           className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFF" }}
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
         >
           <option value="all">Todas as categorias</option>
           {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -359,7 +359,7 @@ export function DespesasView({ user, users = [] }) {
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
           className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFF" }}
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
         >
           <option value="all">Todos os status</option>
           <option value="pago">Pago</option>
@@ -369,7 +369,7 @@ export function DespesasView({ user, users = [] }) {
           value={filterCompany}
           onChange={e => setFilterCompany(e.target.value)}
           className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFF" }}
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
         >
           <option value="all">Todas as empresas</option>
           {COMPANY_IDS.map(id => (
@@ -379,21 +379,21 @@ export function DespesasView({ user, users = [] }) {
       </div>
 
       {loading && (
-        <div className="text-sm text-center py-8" style={{ color: NEUTRAL.slate }}>
+        <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>
           Carregando despesas…
         </div>
       )}
 
       {!loading && (
-        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
+        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
           <table className="w-full border-collapse">
             <thead>
-              <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
+              <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
                 {["Descrição", "Categoria", "Empresa(s)", "Valor", "Vencimento", "Status", ""].map(h => (
                   <th
                     key={h}
                     className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide"
-                    style={{ color: NEUTRAL.slate }}
+                    style={{ color: "var(--text-dim)" }}
                   >
                     {h}
                   </th>
@@ -403,7 +403,7 @@ export function DespesasView({ user, users = [] }) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-sm" style={{ color: NEUTRAL.slate }}>
+                  <td colSpan={7} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>
                     Nenhuma despesa encontrada com os filtros selecionados.
                   </td>
                 </tr>

@@ -461,7 +461,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
         {sellerData.length === 0 ? (
           <div
             className="mt-3 rounded-xl border p-8 text-center text-xs italic"
-            style={{ borderColor: NEUTRAL.sombra, background: "#FFFFFF", color: NEUTRAL.slate }}
+            style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text-dim)" }}
           >
             Sem dados de vendedores para esse período.
           </div>
@@ -483,7 +483,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                       dataKey="winRate"
                       position="right"
                       formatter={v => `${v}%`}
-                      style={{ fontSize: 10, fill: NEUTRAL.slate }}
+                      style={{ fontSize: 10, fill: "var(--text-dim)" }}
                     />
                     {sellerData.map((d, i) => (
                       <Cell key={i} fill={winRateColor(d.winRate)} />
@@ -495,20 +495,20 @@ export function AnalyticsTab({ allLeads, period, users }) {
 
             <div
               className="rounded-xl border overflow-hidden"
-              style={{ borderColor: NEUTRAL.sombra, background: "#FFFFFF" }}
+              style={{ borderColor: "var(--border)", background: "var(--surface)" }}
             >
-              <div className="px-5 py-3 border-b" style={{ borderColor: NEUTRAL.sombra }}>
-                <div className="text-sm font-bold" style={{ color: NEUTRAL.graphite }}>
+              <div className="px-5 py-3 border-b" style={{ borderColor: "var(--border)" }}>
+                <div className="text-sm font-bold" style={{ color: "var(--text)" }}>
                   Desempenho completo por vendedor
                 </div>
-                <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+                <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
                   Ciclo médio calculado sobre leads ganhos com data de fechamento registrada
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full" style={{ fontSize: 12 }}>
                   <thead>
-                    <tr className="border-b" style={{ borderColor: "#F0F0F0" }}>
+                    <tr className="border-b" style={{ borderColor: "var(--border)" }}>
                       {[
                         ["Vendedor", "left", "pl-5 pr-3"],
                         ["Leads", "right", "px-3"],
@@ -523,7 +523,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                         <th
                           key={h}
                           className={`py-2.5 font-semibold text-${align} ${cls} whitespace-nowrap`}
-                          style={{ color: NEUTRAL.slate }}
+                          style={{ color: "var(--text-dim)" }}
                         >
                           {h}
                         </th>
@@ -535,8 +535,8 @@ export function AnalyticsTab({ allLeads, period, users }) {
                       <tr
                         key={r.id}
                         className="border-b transition-colors"
-                        style={{ borderColor: "#F5F5F5" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = NEUTRAL.lightGray + "60"; }}
+                        style={{ borderColor: "var(--border)" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                       >
                         <td className="py-3 pl-5 pr-3 font-medium" style={{ color: NEUTRAL.graphite }}>
