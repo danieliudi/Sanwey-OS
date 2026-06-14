@@ -35,10 +35,10 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
     !["ao_vivo", "encerrado", "analise"].includes(campaign.stage);
 
   const channelStyle = campaign.channel
-    ? (CHANNEL_COLORS[campaign.channel] || { bg: "#F3F4F6", text: NEUTRAL.slate, border: "#E5E7EB" })
+    ? (CHANNEL_COLORS[campaign.channel] || { bg: "#F3F4F6", text: "var(--text-dim)", border: "var(--border)" })
     : null;
 
-  const accentColor = stage?.color || NEUTRAL.slate;
+  const accentColor = stage?.color || "var(--text-dim)";
   const shadowBase  = `inset 3px 0 0 ${accentColor}, 0 1px 4px rgba(32,26,26,0.06)`;
   const shadowHover = `inset 3px 0 0 ${accentColor}, 0 4px 16px rgba(32,26,26,0.10)`;
 
@@ -65,7 +65,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
       onClick={() => { if (!menuOpen) onClick?.(campaign); }}
       className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
       style={{
-        background: "#FFFFFF",
+        background: "var(--surface)",
         border: "1px solid #E5E7EB",
         boxShadow: shadowBase,
         position: "relative",
@@ -83,7 +83,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
     >
       {/* Header: name + badges + menu */}
       <div className="flex items-start justify-between gap-2 mb-1.5">
-        <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: NEUTRAL.graphite }}>
+        <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: "var(--text)" }}>
           {campaign.name}
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -118,7 +118,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: NEUTRAL.slate,
+                  color: "var(--text-dim)",
                   cursor: "pointer",
                   padding: 2,
                   borderRadius: 4,
@@ -126,8 +126,8 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                   alignItems: "center",
                   lineHeight: 1,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "var(--color-industria)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
               >
                 <MoreVertical size={14} />
               </button>
@@ -137,7 +137,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                     position: "absolute",
                     top: "calc(100% + 4px)",
                     right: 0,
-                    background: "#FFFFFF",
+                    background: "var(--surface)",
                     border: "1px solid #E5E7EB",
                     borderRadius: 8,
                     boxShadow: "0 8px 24px rgba(32,26,26,0.12)",
@@ -152,7 +152,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                       padding: "6px 12px 4px",
                       fontSize: 10,
                       fontWeight: 700,
-                      color: NEUTRAL.slate,
+                      color: "var(--text-dim)",
                       textTransform: "uppercase",
                       letterSpacing: "0.08em",
                     }}
@@ -177,12 +177,12 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                         border: "none",
                         cursor: "pointer",
                         fontSize: 13,
-                        color: NEUTRAL.graphite,
+                        color: "var(--text)",
                         textAlign: "left",
                         transition: "background 0.1s",
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "var(--color-industria)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
                     >
                       <span
                         style={{
@@ -206,7 +206,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
 
       {/* Company tag */}
       {companyLabels && (
-        <div className="text-[10px] mb-1.5" style={{ color: NEUTRAL.slate }}>
+        <div className="text-[10px] mb-1.5" style={{ color: "var(--text-dim)" }}>
           {companyLabels}
         </div>
       )}
@@ -224,7 +224,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
         {campaign.kpi && (
           <span
             className="px-1.5 py-0.5 rounded-md text-[10px] font-medium"
-            style={{ background: "#F3F4F6", color: NEUTRAL.slate, border: "1px solid #E5E7EB" }}
+            style={{ background: "#F3F4F6", color: "var(--text-dim)", border: "1px solid #E5E7EB" }}
           >
             {campaign.kpi}
           </span>
@@ -235,14 +235,14 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {campaign.budget > 0 && (
-            <span className="text-[11px] font-semibold" style={{ color: NEUTRAL.graphite }}>
+            <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>
               {formatK(campaign.budget)}
             </span>
           )}
           {campaign.launchDate && (
             <span
               className="text-[10px]"
-              style={{ color: daysToLaunch !== null && daysToLaunch <= 3 ? "#DC2626" : NEUTRAL.slate }}
+              style={{ color: daysToLaunch !== null && daysToLaunch <= 3 ? "var(--danger)" : "var(--text-dim)" }}
             >
               {daysToLaunch !== null
                 ? daysToLaunch < 0
@@ -259,7 +259,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
           {campaign.performanceScore > 0 && (
             <span
               className="inline-flex items-center gap-0.5 text-[10px] font-semibold"
-              style={{ color: NEUTRAL.slate }}
+              style={{ color: "var(--text-dim)" }}
             >
               <TrendingUp size={9} strokeWidth={2} />
               {campaign.performanceScore}

@@ -633,12 +633,12 @@ function ChartCard({ title, subtitle, children }) {
   return (
     <div
       className="rounded-xl border p-4"
-      style={{ borderColor: NEUTRAL.sombra, background: "#FFFFFF" }}
+      style={{ borderColor: "var(--border)", background: "var(--surface)" }}
     >
       <div className="mb-3">
-        <div className="text-sm font-bold" style={{ color: NEUTRAL.graphite }}>{title}</div>
+        <div className="text-sm font-bold" style={{ color: "var(--text)" }}>{title}</div>
         {subtitle && (
-          <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{subtitle}</div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{subtitle}</div>
         )}
       </div>
       {children}
@@ -650,7 +650,7 @@ function EmptyState() {
   return (
     <div
       className="flex items-center justify-center py-10 text-xs italic"
-      style={{ color: NEUTRAL.slate }}
+      style={{ color: "var(--text-dim)" }}
     >
       Sem dados para esse período e filtros.
     </div>
