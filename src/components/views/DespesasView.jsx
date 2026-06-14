@@ -295,12 +295,12 @@ export function DespesasView({ user, users = [] }) {
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <DollarSign size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 className="font-bold" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+            <DollarSign size={22} style={{ color: "var(--text)" }} />
+            <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
               Despesas
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             Controle de gastos e investimentos de marketing · Total filtrado: {formatK(totals.all)}
           </p>
         </div>
@@ -327,15 +327,15 @@ export function DespesasView({ user, users = [] }) {
           <div
             key={k.label}
             className="rounded-xl border px-4 py-3"
-            style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
           >
-            <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: NEUTRAL.slate }}>
+            <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>
               {k.label}
             </div>
             <div
               className="text-xl font-bold"
               style={{
-                color: k.amber ? "#D97706" : k.green ? "#16A34A" : NEUTRAL.graphite,
+                color: k.amber ? "var(--warning)" : k.green ? "var(--success)" : "var(--text)",
                 letterSpacing: "-0.02em",
               }}
             >

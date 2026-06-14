@@ -313,9 +313,9 @@ export function AnalyticsTab({ allLeads, period, users }) {
         <button
           onClick={() => exportCSV(currentLeads, usersById)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded border cursor-pointer transition-colors"
-          style={{ borderColor: NEUTRAL.sombra, color: NEUTRAL.graphite, background: "#FFFFFF" }}
-          onMouseEnter={e => { e.currentTarget.style.background = NEUTRAL.lightGray; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           title="Baixar todos os leads filtrados em CSV (abre no Excel)"
         >
           <Download size={12} />
@@ -352,7 +352,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                   <YAxis dataKey="state" type="category" tick={{ fontSize: 11 }} width={28} />
                   <Tooltip formatter={v => formatK(v)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="receita" name="Receita" stackId="a" fill={NEUTRAL.success} />
+                  <Bar dataKey="receita" name="Receita" stackId="a" fill="var(--color-resibag)" />
                   <Bar dataKey="pipeline" name="Pipeline" stackId="a" fill="#3B82F6" radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -371,7 +371,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                   <YAxis dataKey="city" type="category" tick={{ fontSize: 10 }} width={90} />
                   <Tooltip formatter={v => formatK(v)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="receita" name="Receita" stackId="a" fill={NEUTRAL.success} />
+                  <Bar dataKey="receita" name="Receita" stackId="a" fill="var(--color-resibag)" />
                   <Bar dataKey="pipeline" name="Pipeline" stackId="a" fill="#6366F1" radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -396,7 +396,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                   <YAxis dataKey="sector" type="category" tick={{ fontSize: 10 }} width={120} />
                   <Tooltip formatter={v => formatK(v)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="receita" name="Receita" stackId="a" fill={NEUTRAL.success} />
+                  <Bar dataKey="receita" name="Receita" stackId="a" fill="var(--color-resibag)" />
                   <Bar dataKey="pipeline" name="Pipeline" stackId="a" fill="#93C5FD" radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -434,14 +434,14 @@ export function AnalyticsTab({ allLeads, period, users }) {
                   <div key={d.label} className="flex items-center gap-2">
                     <div
                       className="w-3 h-3 rounded shrink-0"
-                      style={{ background: CLASS_COLORS[d.label] || NEUTRAL.slate }}
+                      style={{ background: CLASS_COLORS[d.label] || "var(--text-dim)" }}
                     />
-                    <span className="text-sm" style={{ color: NEUTRAL.graphite }}>{d.label}</span>
+                    <span className="text-sm" style={{ color: "var(--text)" }}>{d.label}</span>
                     <span
                       className="text-sm font-bold"
                       style={{
                         fontFamily: "'Barlow Condensed', sans-serif",
-                        color: CLASS_COLORS[d.label] || NEUTRAL.graphite,
+                        color: CLASS_COLORS[d.label] || "var(--text)",
                       }}
                     >
                       {d.value}

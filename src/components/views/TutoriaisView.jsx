@@ -481,36 +481,36 @@ export function TutoriaisView({ currentUser, onNavigate }) {
       {activeTab === "faq" && (
         <div
           className="rounded-xl border"
-          style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+          style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
         >
-          <div className="px-5 pt-5 pb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+          <div className="px-5 pt-5 pb-3 border-b" style={{ borderColor: "var(--border)" }}>
             <div className="flex items-center gap-2 mb-0.5">
-              <LifeBuoy size={15} style={{ color: NEUTRAL.red }} />
-              <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+              <LifeBuoy size={15} style={{ color: "var(--color-industria)" }} />
+              <h2 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>
                 Perguntas frequentes
               </h2>
             </div>
-            <p className="text-xs mb-3" style={{ color: NEUTRAL.slate }}>
+            <p className="text-xs mb-3" style={{ color: "var(--text-dim)" }}>
               Dúvidas comuns sobre uso da plataforma.
             </p>
             <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: NEUTRAL.slate }} />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-dim)" }} />
               <input
                 type="text"
                 value={faqSearch}
                 onChange={e => setFaqSearch(e.target.value)}
                 placeholder="Buscar pergunta..."
                 className="w-full text-xs rounded-lg border pl-8 pr-3 py-2 outline-none"
-                style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FAFAFA" }}
-                onFocus={e => { e.currentTarget.style.borderColor = "#b5000b"; }}
-                onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
+                style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface-alt)" }}
+                onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
               />
             </div>
           </div>
           <div className="px-5">
             {filteredFaq.length > 0
               ? filteredFaq.map((item, i) => <FAQItem key={i} item={item} />)
-              : <p className="py-6 text-xs text-center" style={{ color: NEUTRAL.slate }}>Nenhuma pergunta encontrada para "{faqSearch}".</p>
+              : <p className="py-6 text-xs text-center" style={{ color: "var(--text-dim)" }}>Nenhuma pergunta encontrada para "{faqSearch}".</p>
             }
           </div>
         </div>

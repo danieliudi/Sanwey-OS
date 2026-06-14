@@ -511,8 +511,8 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                     <div
                       key={req.id}
                       style={{
-                        background: NEUTRAL.amberBg,
-                        border: `1px solid ${NEUTRAL.amber}33`,
+                        background: "var(--amber)"Bg,
+                        border: `1px solid ${"var(--amber)"}33`,
                         borderRadius: 8,
                         padding: "10px 12px",
                       }}
@@ -525,7 +525,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                           marginBottom: 4,
                         }}
                       >
-                        <Clock size={12} color={NEUTRAL.amber} />
+                        <Clock size={12} color={"var(--amber)"} />
                         <span
                           style={{
                             fontSize: 13,
@@ -546,7 +546,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                             style={{
                               marginLeft: 4,
                               fontWeight: 600,
-                              color: NEUTRAL.amber,
+                              color: "var(--amber)",
                             }}
                           >
                             ({dias}d)
