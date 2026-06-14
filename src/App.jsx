@@ -21,6 +21,7 @@ import { useProfiles } from "./hooks/use-profiles";
 import { useInvitations } from "./hooks/use-invitations";
 import { usePipelineTransitions } from "./hooks/use-pipeline-transitions";
 import { useAutomations } from "./hooks/use-automations";
+import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
 import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScreen";
 import { Sidebar } from "./components/shell/Sidebar";
@@ -141,6 +142,13 @@ export default function App() {
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
   const pipelineTransitions = usePipelineTransitions();
   const { evaluateAutomations } = useAutomations();
+
+  const { campaigns } = useMarketingCampaigns({
+    userId: currentUser?.id,
+    role: currentUser?.role,
+    companies: currentUser?.companies,
+    enabled: Boolean(currentUser) && (isMarketingUser || isAgencia),
+  });
 
   const {
     notifications,
@@ -871,9 +879,13 @@ export default function App() {
         open={cmdOpen}
         onClose={() => setCmdOpen(false)}
         leads={leads}
+        campaigns={isMarketingUser || isAgencia ? campaigns : []}
+        employees={isRHUser ? users.filter(u => u.role === "rh" || u.role === "gerente_rh" || u.department) : []}
         users={users}
         pipelines={pipelines}
         onSelectLead={(lead) => { setSelectedLead(lead); setCmdOpen(false); }}
+        onSelectCampaign={() => { setSection("marketing"); setCmdOpen(false); }}
+        onSelectEmployee={() => { setSection("rh-funcionarios"); setCmdOpen(false); }}
       />
 
       <ImportModal

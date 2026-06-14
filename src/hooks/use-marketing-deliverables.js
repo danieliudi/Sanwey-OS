@@ -62,7 +62,7 @@ function deliverableToRow(d, extras = {}) {
   };
 }
 
-export function useMarketingDeliverables({ userId, role } = {}) {
+export function useMarketingDeliverables({ userId, role, campaignId } = {}) {
   const [deliverables, setDeliverables] = useState([]);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState(null);
@@ -77,10 +77,9 @@ export function useMarketingDeliverables({ userId, role } = {}) {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: err } = await supabase
-        .from(TABLE)
-        .select("*")
-        .order("created_at", { ascending: false });
+      let q = supabase.from(TABLE).select("*").order("created_at", { ascending: false });
+      if (campaignId) q = q.eq("campaign_id", campaignId);
+      const { data, error: err } = await q;
       if (err) throw err;
       setDeliverables((data || []).map(rowToDeliverable));
     } catch (e) {
@@ -88,16 +87,18 @@ export function useMarketingDeliverables({ userId, role } = {}) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [campaignId]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll, campaignId]);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     const channel = supabase
       .channel("marketing_deliverables_rt")
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
+        const matchesCampaign = !campaignId || payload.new?.campaign_id === campaignId;
         if (payload.eventType === "INSERT") {
+          if (!matchesCampaign) return;
           setDeliverables(prev =>
             prev.some(d => d.id === payload.new.id)
               ? prev.map(d => d.id === payload.new.id ? rowToDeliverable(payload.new) : d)

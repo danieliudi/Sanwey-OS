@@ -3,11 +3,12 @@ import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
   MessageSquare, ArrowLeft, ArrowRight, Sparkles, Mail, FileDown,
-  RotateCcw, Copy, Loader2, AlertCircle,
+  RotateCcw, Copy, Loader2, AlertCircle, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
-import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS } from "../../constants/marketing-pipelines";
+import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { useMarketingCampaignAttachments } from "../../hooks/use-marketing-campaign-attachments";
+import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
 import { formatK } from "../../utils/currency";
@@ -39,6 +40,7 @@ const SIDE_TABS = [
   { id: "ia",          label: "IA",          icon: Sparkles },
   { id: "arquivos",    label: "Arquivos",    icon: Paperclip },
   { id: "criativo",    label: "Criativo",    icon: ListChecks },
+  { id: "entregas",    label: "Entregas",    icon: Package },
   { id: "comentarios", label: "Comentários", icon: MessageSquare },
   { id: "email",       label: "Email",       icon: Mail },
   { id: "pdf",         label: "PDF",         icon: FileDown },
@@ -563,6 +565,125 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
   );
 }
 
+// ── Entregas tab ─────────────────────────────────────────────────────────────
+
+function EntregasTab({ campaign, canWrite }) {
+  const { deliverables, loading, createDeliverable } = useMarketingDeliverables({
+    campaignId: campaign.id,
+  });
+  const [creating, setCreating] = useState(false);
+  const [title, setTitle]       = useState("");
+  const [saving, setSaving]     = useState(false);
+
+  const stageMap = useMemo(() => {
+    const m = {};
+    DELIVERABLE_STAGES.forEach(s => { m[s.id] = s; });
+    return m;
+  }, []);
+
+  const priorityMap = useMemo(() => {
+    const m = {};
+    DELIVERABLE_PRIORITIES.forEach(p => { m[p.id] = p; });
+    return m;
+  }, []);
+
+  const handleCreate = async () => {
+    if (!title.trim()) return;
+    setSaving(true);
+    try {
+      await createDeliverable({
+        title: title.trim(),
+        campaignId: campaign.id,
+        companyIds: campaign.companyIds || [],
+        stage: "solicitacao",
+        stageChangedAt: new Date().toISOString(),
+        priority: "media",
+      });
+      setTitle("");
+      setCreating(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {canWrite && !creating && (
+        <button
+          onClick={() => setCreating(true)}
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-sm font-medium transition-colors cursor-pointer"
+          style={{ borderColor: "#E5E7EB", color: "#6B7280", background: "#FAFAFA" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "#FAFAFA"; e.currentTarget.style.color = "#6B7280"; }}
+        >
+          <Plus size={14} />
+          Nova entrega para esta campanha
+        </button>
+      )}
+      {creating && (
+        <div className="p-3 rounded-xl border space-y-2" style={{ borderColor: "#E5E7EB" }}>
+          <input
+            autoFocus
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") setCreating(false); }}
+            placeholder="Título da entrega..."
+            className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
+            style={{ borderColor: "#D1D5DB", fontSize: 13 }}
+          />
+          <div className="flex gap-2">
+            <button onClick={handleCreate} disabled={saving || !title.trim()}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+              style={{ background: "#b5000b", opacity: saving ? 0.6 : 1 }}>
+              {saving ? "Criando..." : "Criar"}
+            </button>
+            <button onClick={() => setCreating(false)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border"
+              style={{ borderColor: "#E5E7EB", color: "#6B7280" }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-6"><Loader2 size={18} className="animate-spin" style={{ color: "#6B7280" }} /></div>
+      ) : deliverables.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 gap-2" style={{ color: "#9CA3AF" }}>
+          <Package size={28} strokeWidth={1.2} />
+          <span className="text-xs">Nenhuma entrega vinculada</span>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {deliverables.map(d => {
+            const stage = stageMap[d.stage];
+            const prio  = priorityMap[d.priority];
+            return (
+              <div key={d.id} className="flex items-start gap-3 p-3 rounded-xl border" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: stage?.color || "#9CA3AF", marginTop: 4, flexShrink: 0 }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate" style={{ color: NEUTRAL.graphite }}>{d.title}</div>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="text-[11px]" style={{ color: stage?.color || NEUTRAL.slate }}>{stage?.name || d.stage}</span>
+                    {prio && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: prio.color + "1A", color: prio.color }}>
+                        {prio.label}
+                      </span>
+                    )}
+                    {d.deadline && (
+                      <span className="text-[10px]" style={{ color: "#9CA3AF" }}>até {formatDateBR(d.deadline)}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main drawer ───────────────────────────────────────────────────────────────
 
 export function CampaignDetailDrawer({
@@ -715,6 +836,9 @@ export function CampaignDetailDrawer({
           onUpdate={onUpdate}
         />
       );
+    }
+    if (sideTab === "entregas") {
+      return <EntregasTab campaign={campaign} canWrite={canWrite} />;
     }
     if (sideTab === "email") return <PlaceholderPanel label="Integração de e-mail" />;
     if (sideTab === "pdf")   return <PlaceholderPanel label="Exportar PDF" />;

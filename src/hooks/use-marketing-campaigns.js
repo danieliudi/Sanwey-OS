@@ -57,7 +57,7 @@ function campaignToRow(c, extras = {}) {
   };
 }
 
-export function useMarketingCampaigns({ userId, role } = {}) {
+export function useMarketingCampaigns({ userId, role, enabled = true } = {}) {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState(null);
@@ -68,7 +68,7 @@ export function useMarketingCampaigns({ userId, role } = {}) {
     role === "gerente_marketing";
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !enabled) return;
     setLoading(true);
     setError(null);
     try {
@@ -85,11 +85,11 @@ export function useMarketingCampaigns({ userId, role } = {}) {
     }
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { if (enabled) fetchAll(); }, [fetchAll, enabled]);
 
   // Real-time subscription
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !enabled) return;
     const channel = supabase
       .channel("marketing_campaigns_rt")
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {

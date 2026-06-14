@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Bot, Pencil } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star } from "lucide-react";
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
 import { exportLeadsCSV } from "../../utils/export-leads";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -627,6 +627,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               label="Kanban"
             />
             <ViewToggleButton
+              active={viewMode === "table"}
+              onClick={() => setViewMode("table")}
+              icon={List}
+              label="Tabela"
+            />
+            <ViewToggleButton
               active={viewMode === "calendar"}
               onClick={() => setViewMode("calendar")}
               icon={CalendarIcon}
@@ -669,6 +675,14 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           user={user}
           activeCompany={activeCompany}
           onLeadClick={onLeadClick}
+        />
+      ) : viewMode === "table" ? (
+        <LeadTableView
+          leads={scopedLeads}
+          stages={allStages}
+          users={usersById}
+          onLeadClick={onLeadClick}
+          isGroupView={isGroupView}
         />
       ) : (<>
       {/* Mobile kanban: vertical collapsible stages */}
@@ -888,6 +902,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         </p>
       )}
 
+      {viewMode === "table" && (
+        <p className="text-xs text-center" style={{ color: NEUTRAL.slate }}>
+          Clique numa linha para ver detalhes · Clique no cabeçalho para ordenar
+        </p>
+      )}
+
       {/* Lead create modal */}
       <LeadCreateModal
         open={Boolean(createModalStage)}
@@ -977,6 +997,225 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         </button>
       )}
     </>
+  );
+}
+
+// ── Lead Table View ───────────────────────────────────────────────────────────
+
+const TABLE_COLS = [
+  { id: "starred",   label: "",             width: 36,  sortable: false },
+  { id: "company",   label: "Empresa",      width: null, sortable: true },
+  { id: "stage",     label: "Etapa",        width: 140,  sortable: true },
+  { id: "value",     label: "Valor",        width: 110,  sortable: true },
+  { id: "fitScore",  label: "Fit",          width: 70,   sortable: true },
+  { id: "sector",    label: "Setor",        width: 140,  sortable: true },
+  { id: "owner",     label: "Responsável",  width: 140,  sortable: true },
+  { id: "stageChangedAt", label: "Última mov.", width: 120, sortable: true },
+];
+
+function SortIcon({ col, sortCol, sortDir }) {
+  if (sortCol !== col) return <ArrowUpDown size={11} style={{ color: "#D1D5DB", flexShrink: 0 }} />;
+  return sortDir === "asc"
+    ? <ArrowUp size={11} style={{ color: "#1E4D8C", flexShrink: 0 }} />
+    : <ArrowDown size={11} style={{ color: "#1E4D8C", flexShrink: 0 }} />;
+}
+
+function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
+  const [sortCol, setSortCol] = useState("stageChangedAt");
+  const [sortDir, setSortDir] = useState("desc");
+  const [hoveredRow, setHoveredRow] = useState(null);
+
+  const stageMap = useMemo(() => {
+    const m = {};
+    (stages || []).forEach(s => { m[s.id] = s; });
+    return m;
+  }, [stages]);
+
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  };
+
+  const sorted = useMemo(() => {
+    const arr = [...leads];
+    arr.sort((a, b) => {
+      let va, vb;
+      switch (sortCol) {
+        case "company":   va = a.company?.toLowerCase() || ""; vb = b.company?.toLowerCase() || ""; break;
+        case "stage":     va = stageMap[a.stage]?.name || a.stage || ""; vb = stageMap[b.stage]?.name || b.stage || ""; break;
+        case "value":     va = a.value || 0; vb = b.value || 0; break;
+        case "fitScore":  va = a.fitScore || 0; vb = b.fitScore || 0; break;
+        case "sector":    va = a.sector?.toLowerCase() || ""; vb = b.sector?.toLowerCase() || ""; break;
+        case "owner":     va = users?.[a.owner]?.name?.toLowerCase() || ""; vb = users?.[b.owner]?.name?.toLowerCase() || ""; break;
+        case "stageChangedAt": va = a.stageChangedAt || a.createdAt || ""; vb = b.stageChangedAt || b.createdAt || ""; break;
+        default:          va = ""; vb = "";
+      }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  }, [leads, sortCol, sortDir, stageMap, users]);
+
+  const fmt = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  };
+
+  if (leads.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3" style={{ color: NEUTRAL.slate }}>
+        <List size={40} strokeWidth={1} />
+        <span className="text-sm">Nenhum lead encontrado</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "#E5E7EB" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
+            {TABLE_COLS.map(col => (
+              <th
+                key={col.id}
+                style={{
+                  width: col.width || undefined,
+                  padding: col.id === "starred" ? "10px 8px 10px 12px" : "10px 12px",
+                  textAlign: "left",
+                  fontWeight: 600,
+                  fontSize: 11,
+                  color: NEUTRAL.slate,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  cursor: col.sortable ? "pointer" : "default",
+                  userSelect: "none",
+                  whiteSpace: "nowrap",
+                }}
+                onClick={col.sortable ? () => handleSort(col.id) : undefined}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  {col.label}
+                  {col.sortable && <SortIcon col={col.id} sortCol={sortCol} sortDir={sortDir} />}
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((lead, idx) => {
+            const stage = stageMap[lead.stage];
+            const owner = users?.[lead.owner];
+            const isHovered = hoveredRow === lead.id;
+            const companyInfo = isGroupView ? COMPANIES[lead.companyId] : null;
+            return (
+              <tr
+                key={lead.id}
+                onClick={() => onLeadClick?.(lead)}
+                onMouseEnter={() => setHoveredRow(lead.id)}
+                onMouseLeave={() => setHoveredRow(null)}
+                style={{
+                  borderBottom: idx < sorted.length - 1 ? "1px solid #F3F4F6" : "none",
+                  background: isHovered ? "#fef1f0" : "transparent",
+                  cursor: "pointer",
+                  transition: "background 100ms",
+                }}
+              >
+                {/* Star */}
+                <td style={{ padding: "10px 4px 10px 12px", width: 36 }}>
+                  {lead.starred && <Star size={13} fill="#F59E0B" color="#F59E0B" />}
+                </td>
+                {/* Company */}
+                <td style={{ padding: "10px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    {companyInfo && (
+                      <span
+                        style={{
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                          background: companyInfo.primary, color: "#FFF",
+                          fontSize: 9, fontWeight: 800,
+                        }}
+                      >
+                        {companyInfo.short?.[0] || "?"}
+                      </span>
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240 }}>
+                        {lead.company}
+                      </div>
+                      {lead.sector && (
+                        <div style={{ fontSize: 11, color: NEUTRAL.slate, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {lead.sector}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </td>
+                {/* Stage */}
+                <td style={{ padding: "10px 12px" }}>
+                  {stage ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
+                      <span style={{ color: stage.color, fontWeight: 600, fontSize: 12 }}>{stage.name}</span>
+                    </span>
+                  ) : <span style={{ color: NEUTRAL.slate }}>—</span>}
+                </td>
+                {/* Value */}
+                <td style={{ padding: "10px 12px", fontWeight: 600, color: lead.value > 0 ? "#15803D" : NEUTRAL.slate }}>
+                  {lead.value > 0 ? `R$ ${formatK(lead.value)}` : "—"}
+                </td>
+                {/* Fit Score */}
+                <td style={{ padding: "10px 12px" }}>
+                  {lead.fitScore > 0 ? (
+                    <span style={{
+                      display: "inline-block",
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      background: lead.fitScore >= 80 ? "#DCFCE7" : lead.fitScore >= 50 ? "#FEF3C7" : "#FEE2E2",
+                      color: lead.fitScore >= 80 ? "#15803D" : lead.fitScore >= 50 ? "#B45309" : "#B91C1C",
+                    }}>
+                      {lead.fitScore}
+                    </span>
+                  ) : <span style={{ color: NEUTRAL.slate }}>—</span>}
+                </td>
+                {/* Sector */}
+                <td style={{ padding: "10px 12px", color: NEUTRAL.slate, maxWidth: 140 }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
+                    {lead.sector || "—"}
+                  </span>
+                </td>
+                {/* Owner */}
+                <td style={{ padding: "10px 12px" }}>
+                  {owner ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span style={{
+                        width: 24, height: 24, borderRadius: "50%",
+                        background: owner.avatarBg || NEUTRAL.graphite,
+                        color: "#FFF", fontSize: 10, fontWeight: 700,
+                        display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>
+                        {owner.initials || owner.name?.[0]?.toUpperCase() || "?"}
+                      </span>
+                      <span style={{ color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }}>
+                        {owner.name}
+                      </span>
+                    </span>
+                  ) : <span style={{ color: NEUTRAL.slate }}>—</span>}
+                </td>
+                {/* Last move */}
+                <td style={{ padding: "10px 12px", color: NEUTRAL.slate, fontSize: 12 }}>
+                  {fmt(lead.stageChangedAt || lead.createdAt)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
