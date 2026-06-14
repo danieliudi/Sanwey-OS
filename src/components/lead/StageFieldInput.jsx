@@ -15,7 +15,7 @@ export function StageFieldInput({ field, value, onChange, users, companyId }) {
     outline: "none",
     boxSizing: "border-box",
   };
-  const handleFocus = e => { e.target.style.borderColor = "#b5000b"; e.target.style.boxShadow = "0 0 0 2px rgba(199,33,43,.1)"; };
+  const handleFocus = e => { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 2px rgba(199,33,43,.1)"; };
   const handleBlur  = e => { e.target.style.borderColor = "#D1D5DB"; e.target.style.boxShadow = "none"; };
 
   const t = field.fieldType;
@@ -56,7 +56,7 @@ export function StageFieldInput({ field, value, onChange, users, companyId }) {
   if (t === "checkbox") {
     return (
       <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-        <input type="checkbox" checked={Boolean(value)} onChange={e => onChange(e.target.checked)} style={{ accentColor: "#b5000b" }} />
+        <input type="checkbox" checked={Boolean(value)} onChange={e => onChange(e.target.checked)} style={{ accentColor: "var(--accent)" }} />
         <span style={{ fontSize: 13, color: NEUTRAL.graphite }}>{field.placeholder || "Sim"}</span>
       </label>
     );
@@ -80,7 +80,7 @@ export function StageFieldInput({ field, value, onChange, users, companyId }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {opts.map(o => (
           <label key={o} style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
-            <input type="radio" name={field.fieldKey} value={o} checked={value === o} onChange={() => onChange(o)} style={{ accentColor: "#b5000b" }} />
+            <input type="radio" name={field.fieldKey} value={o} checked={value === o} onChange={() => onChange(o)} style={{ accentColor: "var(--accent)" }} />
             {o}
           </label>
         ))}
@@ -95,7 +95,7 @@ export function StageFieldInput({ field, value, onChange, users, companyId }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {opts.map(o => (
           <label key={o} style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
-            <input type="checkbox" checked={arr.includes(o)} onChange={() => toggle(o)} style={{ accentColor: "#b5000b" }} />
+            <input type="checkbox" checked={arr.includes(o)} onChange={() => toggle(o)} style={{ accentColor: "var(--accent)" }} />
             {o}
           </label>
         ))}

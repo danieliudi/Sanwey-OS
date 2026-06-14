@@ -126,7 +126,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                   alignItems: "center",
                   lineHeight: 1,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "var(--color-industria)"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--color-industria)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
               >
                 <MoreVertical size={14} />
@@ -181,7 +181,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                         textAlign: "left",
                         transition: "background 0.1s",
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "var(--color-industria)"; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--color-industria)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
                     >
                       <span

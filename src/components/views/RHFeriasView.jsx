@@ -153,8 +153,8 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
   };
 
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", fontSize: 13 };
-  const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
+  const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   return (
@@ -233,12 +233,12 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
             {dias > 0 && (
               <div
                 style={{
-                  background: "#EFF6FF",
+                  background: "var(--surface-alt)",
                   border: "1px solid #BFDBFE",
                   borderRadius: 10,
                   padding: "8px 14px",
                   fontSize: 12,
-                  color: "#1E4D8C",
+                  color: "var(--accent)",
                   fontWeight: 600,
                   display: "flex",
                   alignItems: "center",
@@ -275,7 +275,7 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
             <button
               type="submit"
               disabled={saving}
-              style={{ flex: 1, background: "#1E4D8C", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
+              style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
             >
               {saving ? "Enviando…" : "Enviar solicitação"}
             </button>
@@ -466,7 +466,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
         <button
           onClick={() => setShowSolicitar(true)}
           style={{
-            background: "#1E4D8C",
+            background: "var(--accent)",
             color: "#FFF",
             borderRadius: 10,
             padding: "8px 16px",

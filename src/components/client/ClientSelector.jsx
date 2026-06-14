@@ -111,7 +111,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
           <button
             onClick={() => { setOpen(true); }}
             className="flex items-center gap-1 mt-3 text-xs font-semibold"
-            style={{ color: "#1E4D8C", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
             <RotateCcw size={12} /> Trocar cliente
           </button>
@@ -123,7 +123,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
   // ── Estado B: buscando ──
   if (open) {
     return (
-      <div ref={boxRef} className="rounded-xl bg-white overflow-hidden" style={{ border: "1.5px solid #1E4D8C" }}>
+      <div ref={boxRef} className="rounded-xl bg-white overflow-hidden" style={{ border: "1.5px solid var(--accent)" }}>
         <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: "1px solid #E5E7EB" }}>
           <Search size={15} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
           <input
@@ -163,7 +163,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
             <button
               onClick={() => { setOpen(false); onCreate(query.trim()); }}
               className="w-full text-left flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold"
-              style={{ color: "#1E4D8C", background: "none", border: "none", cursor: "pointer" }}
+              style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
             >
               <Plus size={13} /> Cadastrar novo cliente
             </button>
@@ -182,7 +182,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
       style={{
         border: "1.5px dashed #CBD5E1",
         background: "#FFFFFF",
-        color: disabled ? NEUTRAL.slate : "#1E4D8C",
+        color: disabled ? NEUTRAL.slate : "var(--accent)",
         cursor: disabled ? "default" : "pointer",
       }}
     >

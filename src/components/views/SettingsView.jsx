@@ -460,7 +460,7 @@ export function SettingsView({
                         className="w-16 h-16 rounded-full flex items-center justify-center overflow-hidden font-bold text-white"
                         style={{
                           fontSize: 22,
-                          background: profileForm.avatarUrl ? "transparent" : (currentUser?.avatarBg || "#1E4D8C"),
+                          background: profileForm.avatarUrl ? "transparent" : (currentUser?.avatarBg || "var(--accent)"),
                         }}
                       >
                         {profileForm.avatarUrl
@@ -629,7 +629,7 @@ export function SettingsView({
                           onClick={() => toggleCompany(id)}
                           className="p-3 rounded-lg border flex items-center gap-2.5 transition-all duration-150 text-left"
                           style={{
-                            background: enabled ? c.light : "#FAFAFA",
+                            background: enabled ? c.light : "var(--surface)",
                             borderColor: enabled ? c.primary + "80" : "var(--border)",
                             boxShadow: enabled ? `0 0 0 1px ${c.primary}40` : "none",
                           }}
@@ -642,7 +642,7 @@ export function SettingsView({
                           onMouseLeave={e => {
                             if (!enabled) {
                               e.currentTarget.style.borderColor = "var(--border)";
-                              e.currentTarget.style.background = "#FAFAFA";
+                              e.currentTarget.style.background = "var(--surface)";
                             }
                           }}
                         >
@@ -805,7 +805,7 @@ export function SettingsView({
                             key={m.id}
                             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
                             style={{
-                              background: aiForm.model === m.id ? NEUTRAL.red + "0F" : "#FAFAFA",
+                              background: aiForm.model === m.id ? NEUTRAL.red + "0F" : "var(--surface)",
                               borderColor: aiForm.model === m.id ? NEUTRAL.red : "var(--border)",
                             }}
                           >
@@ -850,7 +850,7 @@ export function SettingsView({
                           onChange={e => { setAiForm(f => ({ ...f, apiKey: e.target.value })); setAiTestResult(null); }}
                           placeholder={selectedProvider.keyPlaceholder}
                           className="w-full text-sm rounded-xl border px-3 py-2.5 outline-none pr-16"
-                          style={{ borderColor: "var(--border)", color: "var(--text)", background: "#FAFAFA", fontFamily: "monospace" }}
+                          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", fontFamily: "monospace" }}
                           onFocus={e => { e.currentTarget.style.borderColor = "var(--color-industria)"; }}
                           onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
                         />
@@ -1041,7 +1041,7 @@ export function SettingsView({
                     );
                   })}
                 </div>
-                <div className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style={{ background: "#EFF6FF", color: "#1E40AF", border: "1px solid #BFDBFE" }}>
+                <div className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style={{ background: "var(--surface-alt)", color: "#1E40AF", border: "1px solid #BFDBFE" }}>
                   <Link2 size={13} className="shrink-0 mt-0.5" />
                   <div>
                     <strong>Dica:</strong> adicione <code>?src=instagram</code>, <code>?src=whatsapp</code> ou outro identificador ao final da URL para rastrear a origem da captura no card do lead.

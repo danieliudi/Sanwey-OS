@@ -533,7 +533,7 @@ export default function App() {
   return (
     <div
       style={{
-        background: "#fff8f7",
+        background: "var(--bg)",
         fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         color: "#201a1a",
         minHeight: "100vh",
@@ -588,7 +588,7 @@ export default function App() {
               <div className="flex gap-2">
                 <button onClick={() => { setSection("dashboard"); reset(); }}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg"
-                        style={{ background: "#1E4D8C", color: "#FFFFFF" }}>
+                        style={{ background: "var(--accent)", color: "#FFFFFF" }}>
                   Voltar ao Início
                 </button>
                 <button onClick={() => window.location.reload()}

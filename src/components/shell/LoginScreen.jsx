@@ -7,7 +7,7 @@ import {
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 
-const ACCENT_RED = "#b5000b";   // usado APENAS no painel esquerdo institucional (fundo escuro)
+const ACCENT_RED = "#C7212B";   // usado APENAS no painel esquerdo institucional (fundo escuro)
 const DARK_BG    = "#1A1414";   // painel esquerdo
 const ACCENT     = "var(--accent)";     // painel direito — token white-label
 const ACCENT_RING = "rgba(55,53,47,0.10)";

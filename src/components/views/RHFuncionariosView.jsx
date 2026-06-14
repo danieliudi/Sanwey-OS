@@ -177,10 +177,10 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
   const inputSt = {
     borderColor: "var(--border-strong)",
     color: "var(--text)",
-    background: "#FAFAFA",
+    background: "var(--surface)",
     fontSize: 13,
   };
-  const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
+  const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   return (
@@ -236,9 +236,9 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
               <button
                 onClick={() => setEditing(true)}
                 style={{
-                  background: "#EFF6FF",
+                  background: "var(--surface-alt)",
                   border: "none",
-                  color: "#1E4D8C",
+                  color: "var(--accent)",
                   borderRadius: 8,
                   padding: "6px 12px",
                   fontSize: 12,
@@ -248,8 +248,8 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                   alignItems: "center",
                   gap: 5,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#DBEAFE"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#EFF6FF"; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               >
                 <Pencil size={13} /> Editar
               </button>
@@ -433,7 +433,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                 disabled={saving}
                 style={{
                   flex: 1,
-                  background: "#1E4D8C",
+                  background: "var(--accent)",
                   color: "#FFF",
                   borderRadius: 10,
                   padding: "8px 16px",
@@ -623,7 +623,7 @@ export function RHFuncionariosView({
         {[
           { label: "Total",       value: stats.total,      color: "var(--text)" },
           { label: "Ativos",      value: stats.ativos,     color: "var(--success)" },
-          { label: "Férias",      value: stats.ferias,     color: "#1E4D8C" },
+          { label: "Férias",      value: stats.ferias,     color: "var(--accent)" },
           { label: "Desligados",  value: stats.desligados, color: "var(--text-dim)" },
         ].map((s) => (
           <div

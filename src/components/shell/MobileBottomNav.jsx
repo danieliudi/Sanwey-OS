@@ -107,12 +107,12 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
                   style={{
                     display: "flex", alignItems: "center", gap: 14,
                     width: "100%", padding: "13px 20px",
-                    background: active ? "#fef1f0" : "transparent",
+                    background: active ? "var(--surface-alt)" : "transparent",
                     border: "none",
-                    borderLeft: `3px solid ${active ? "#b5000b" : "transparent"}`,
+                    borderLeft: `3px solid ${active ? "var(--accent)" : "transparent"}`,
                     cursor: "pointer",
                     fontSize: 15, fontWeight: active ? 700 : 500,
-                    color: active ? "#b5000b" : "#201a1a",
+                    color: active ? "var(--accent)" : "#201a1a",
                     textAlign: "left",
                     fontFamily: "inherit",
                   }}
@@ -125,7 +125,7 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
           </div>
         ))}
 
-        <div style={{ borderTop: "1px solid #F3F4F6", margin: "4px 0" }} />
+        <div style={{ borderTop: "1px solid var(--surface-alt)", margin: "4px 0" }} />
 
         {/* User info + settings + logout */}
         <div style={{ padding: "12px 20px 0" }}>
@@ -133,7 +133,7 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
               <div style={{
                 width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
-                background: "#b5000b",
+                background: "var(--accent)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: "#FFF", fontWeight: 700, fontSize: 16,
               }}>
@@ -187,9 +187,9 @@ export function MobileBottomNav({ section, onSectionChange, role, navGroups, cur
               onClick={() => onSectionChange(id)}
               className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors duration-200"
               style={{
-                background: active ? "#fef1f0" : "transparent",
+                background: active ? "var(--surface-alt)" : "transparent",
                 border: "none",
-                color: active ? "#b5000b" : "#5c5f60",
+                color: active ? "var(--accent)" : "#5c5f60",
                 cursor: "pointer",
                 padding: "4px 0",
                 fontFamily: "inherit",

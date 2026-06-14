@@ -132,7 +132,7 @@ export function useSupabaseAuth() {
         role: profile.role || "vendedor",
         companies: profile.companies || [],
         initials: profile.initials || (profile.name || session.user.email).slice(0, 2).toUpperCase(),
-        avatarBg: profile.avatar_bg || "#1E4D8C",
+        avatarBg: profile.avatar_bg || "#1D4ED8",
         avatarUrl: profile.avatar_url || null,
         sectors: Array.isArray(profile.sectors) ? profile.sectors : [],
         supervisorId: profile.supervisor_id || null,

@@ -4,7 +4,7 @@ import { useAI } from "../../hooks/use-ai";
 import { pipelineChatPrompt } from "../../constants/ai-prompts";
 import { NEUTRAL } from "../../constants/companies";
 
-const RED = "#b5000b";
+const RED = "var(--accent)";
 
 export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }) {
   const { complete, isConfigured } = useAI(currentUser);
@@ -99,7 +99,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
             onClick={onClose}
             className="p-1.5 rounded-lg transition-colors"
             style={{ color: NEUTRAL.slate, background: "transparent", border: "none", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = NEUTRAL.graphite; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = NEUTRAL.graphite; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
           >
             <X size={16} />
@@ -162,7 +162,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                   style={
                     isError
                       ? { background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }
-                      : { background: "#fef1f0", color: NEUTRAL.graphite }
+                      : { background: "var(--surface-alt)", color: NEUTRAL.graphite }
                   }
                 >
                   {isError && <AlertCircle size={12} style={{ display: "inline", marginRight: 4 }} />}
@@ -176,7 +176,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
             <div className="flex justify-start">
               <div
                 className="flex items-center gap-2 text-sm px-3 py-2 rounded-2xl rounded-tl-sm"
-                style={{ background: "#fef1f0", color: NEUTRAL.slate }}
+                style={{ background: "var(--surface-alt)", color: NEUTRAL.slate }}
               >
                 <Loader2 size={13} className="animate-spin" />
                 Analisando pipeline...
@@ -190,7 +190,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
         {/* Input area */}
         <div
           className="px-4 py-3 border-t flex-shrink-0"
-          style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+          style={{ borderColor: "#E5E7EB", background: "var(--surface-alt)" }}
         >
           <div
             className="flex items-end gap-2 rounded-xl border"
@@ -218,7 +218,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
               disabled={!isConfigured || loading || !input.trim()}
               className="m-1.5 p-2 rounded-lg flex-shrink-0 transition-all active:scale-95"
               style={{
-                background: !isConfigured || !input.trim() || loading ? "#F3F4F6" : RED,
+                background: !isConfigured || !input.trim() || loading ? "var(--surface-alt)" : RED,
                 color: !isConfigured || !input.trim() || loading ? NEUTRAL.slate : "#FFFFFF",
                 border: "none",
                 cursor: !isConfigured || !input.trim() || loading ? "not-allowed" : "pointer",

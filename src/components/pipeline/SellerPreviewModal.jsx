@@ -76,7 +76,7 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
             onClick={onClose}
             className="p-1.5 rounded-lg cursor-pointer"
             style={{ color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             aria-label="Fechar"
           >
@@ -90,7 +90,7 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
             <div
               key={from.id}
               className="rounded-xl border p-3"
-              style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+              style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}
             >
               {/* Origem */}
               <div className="flex items-center gap-2 mb-2">
@@ -127,7 +127,7 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t flex items-center justify-end" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
+        <div className="px-5 py-3 border-t flex items-center justify-end" style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}>
           <button
             onClick={onClose}
             className="px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer"

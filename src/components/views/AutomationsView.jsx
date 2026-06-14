@@ -119,9 +119,9 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
         <button
           onClick={() => openBuilder()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-          style={{ background: "#1E4D8C", color: "#FFFFFF" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#163a6b"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#1E4D8C"; }}
+          style={{ background: "var(--accent)", color: "#FFFFFF" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
         >
           <Plus size={15} />
           Nova automação
@@ -191,11 +191,11 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
               onClick={() => setModuleTab(t.id)}
               className="px-3 py-2 text-xs font-medium border-b-2 transition-colors"
               style={{
-                borderBottomColor: moduleTab === t.id ? "#1E4D8C" : "transparent",
-                color:             moduleTab === t.id ? "#1E4D8C" : "var(--text-dim)",
+                borderBottomColor: moduleTab === t.id ? "var(--accent)" : "transparent",
+                color:             moduleTab === t.id ? "var(--accent)" : "var(--text-dim)",
                 background:        "none",
                 border:            "none",
-                borderBottom:      `2px solid ${moduleTab === t.id ? "#1E4D8C" : "transparent"}`,
+                borderBottom:      `2px solid ${moduleTab === t.id ? "var(--accent)" : "transparent"}`,
                 cursor:            "pointer",
               }}
             >
@@ -291,7 +291,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
           title={rule.enabled ? "Desativar" : "Ativar"}
         >
           {rule.enabled
-            ? <ToggleRight size={22} style={{ color: "#1E4D8C" }} />
+            ? <ToggleRight size={22} style={{ color: "var(--accent)" }} />
             : <ToggleLeft  size={22} style={{ color: "var(--text-faint)" }} />
           }
         </button>
@@ -494,7 +494,7 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
         {/* Modal header */}
         <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "var(--surface-alt)" }}>
           <div className="flex items-center gap-2">
-            <Zap size={18} style={{ color: "#1E4D8C" }} />
+            <Zap size={18} style={{ color: "var(--accent)" }} />
             <span className="font-bold text-sm" style={{ color: "var(--text)" }}>Nova automação</span>
           </div>
           <button
@@ -516,14 +516,14 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
                 onClick={() => i < step && setStep(i)}
                 className="flex items-center gap-1.5 text-xs font-semibold"
                 style={{
-                  color: i === step ? "#1E4D8C" : i < step ? "var(--text-dim)" : "var(--border-strong)",
+                  color: i === step ? "var(--accent)" : i < step ? "var(--text-dim)" : "var(--border-strong)",
                   cursor: i < step ? "pointer" : "default",
                 }}
               >
                 <span
                   className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                   style={{
-                    background: i === step ? "#1E4D8C" : i < step ? "var(--border)" : "var(--surface-alt)",
+                    background: i === step ? "var(--accent)" : i < step ? "var(--border)" : "var(--surface-alt)",
                     color: i === step ? "#FFFFFF" : i < step ? "var(--text-dim)" : "var(--border-strong)",
                   }}
                 >
@@ -568,11 +568,11 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
               disabled={!canNext()}
               className="px-4 py-2 rounded-xl text-sm font-semibold"
               style={{
-                background: canNext() ? "#1E4D8C" : "var(--border)",
+                background: canNext() ? "var(--accent)" : "var(--border)",
                 color: canNext() ? "#FFFFFF" : "var(--text-faint)",
               }}
-              onMouseEnter={e => { if (canNext()) e.currentTarget.style.background = "#163a6b"; }}
-              onMouseLeave={e => { if (canNext()) e.currentTarget.style.background = "#1E4D8C"; }}
+              onMouseEnter={e => { if (canNext()) e.currentTarget.style.background = "var(--accent-hover)"; }}
+              onMouseLeave={e => { if (canNext()) e.currentTarget.style.background = "var(--accent)"; }}
             >
               Próximo
             </button>
@@ -582,11 +582,11 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
               disabled={!canNext()}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
               style={{
-                background: canNext() ? "#1E4D8C" : "var(--border)",
+                background: canNext() ? "var(--accent)" : "var(--border)",
                 color: canNext() ? "#FFFFFF" : "var(--text-faint)",
               }}
-              onMouseEnter={e => { if (canNext()) e.currentTarget.style.background = "#163a6b"; }}
-              onMouseLeave={e => { if (canNext()) e.currentTarget.style.background = "#1E4D8C"; }}
+              onMouseEnter={e => { if (canNext()) e.currentTarget.style.background = "var(--accent-hover)"; }}
+              onMouseLeave={e => { if (canNext()) e.currentTarget.style.background = "var(--accent)"; }}
             >
               <Zap size={13} />
               Criar automação
@@ -628,9 +628,9 @@ function StepIdentification({ rule, setRule }) {
               onClick={() => setRule(r => ({ ...r, module: m.id }))}
               className="flex-1 py-2 text-xs font-semibold rounded-xl border transition-colors"
               style={{
-                borderColor: (rule.module ?? "crm") === m.id ? "#1E4D8C" : "var(--border)",
-                background:  (rule.module ?? "crm") === m.id ? "#EFF6FF" : "var(--surface-alt)",
-                color:       (rule.module ?? "crm") === m.id ? "#1E4D8C" : "var(--text-dim)",
+                borderColor: (rule.module ?? "crm") === m.id ? "var(--accent)" : "var(--border)",
+                background:  (rule.module ?? "crm") === m.id ? "var(--surface-alt)" : "var(--surface-alt)",
+                color:       (rule.module ?? "crm") === m.id ? "var(--accent)" : "var(--text-dim)",
                 cursor:      "pointer",
               }}
             >
@@ -680,15 +680,15 @@ function StepTrigger({ rule, allStages, setTrigger }) {
                 onClick={() => setTrigger({ type: type.id })}
                 className="flex items-start gap-2.5 p-3 rounded-xl border text-left"
                 style={{
-                  borderColor: active ? "#1E4D8C" : "var(--border)",
-                  background: active ? "#EFF6FF" : "var(--surface-alt)",
+                  borderColor: active ? "var(--accent)" : "var(--border)",
+                  background: active ? "var(--surface-alt)" : "var(--surface-alt)",
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--bg)"; }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
               >
-                <Icon size={14} style={{ color: active ? "#1E4D8C" : "var(--text-dim)", marginTop: 1 }} />
+                <Icon size={14} style={{ color: active ? "var(--accent)" : "var(--text-dim)", marginTop: 1 }} />
                 <div>
-                  <div className="text-xs font-semibold" style={{ color: active ? "#1E4D8C" : "var(--text)" }}>
+                  <div className="text-xs font-semibold" style={{ color: active ? "var(--accent)" : "var(--text)" }}>
                     {type.label}
                   </div>
                   <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>{type.desc}</div>
@@ -806,7 +806,7 @@ function StepTrigger({ rule, allStages, setTrigger }) {
       {t.type === "lead_created" && (
         <div
           className="rounded-xl border px-4 py-3 text-xs"
-          style={{ borderColor: "#BFDBFE", background: "#EFF6FF", color: "#1E40AF" }}
+          style={{ borderColor: "#BFDBFE", background: "var(--surface-alt)", color: "#1E40AF" }}
         >
           Este gatilho dispara sempre que um novo card é criado no pipeline.
         </div>
@@ -834,15 +834,15 @@ function StepAction({ rule, allStages, setAction }) {
                 onClick={() => setAction({ type: type.id })}
                 className="flex items-start gap-2.5 p-3 rounded-xl border text-left"
                 style={{
-                  borderColor: active ? "#1E4D8C" : "var(--border)",
-                  background: active ? "#EFF6FF" : "var(--surface-alt)",
+                  borderColor: active ? "var(--accent)" : "var(--border)",
+                  background: active ? "var(--surface-alt)" : "var(--surface-alt)",
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--bg)"; }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
               >
-                <Icon size={14} style={{ color: active ? "#1E4D8C" : "var(--text-dim)", marginTop: 1 }} />
+                <Icon size={14} style={{ color: active ? "var(--accent)" : "var(--text-dim)", marginTop: 1 }} />
                 <div>
-                  <div className="text-xs font-semibold" style={{ color: active ? "#1E4D8C" : "var(--text)" }}>
+                  <div className="text-xs font-semibold" style={{ color: active ? "var(--accent)" : "var(--text)" }}>
                     {type.label}
                   </div>
                   <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>{type.desc}</div>
@@ -1023,7 +1023,7 @@ function TemplateGallery({ onUseTemplate }) {
       <div className="flex items-center justify-between mb-3 flex-wrap gap-1">
         <div>
           <div className="flex items-center gap-1.5">
-            <Zap size={14} style={{ color: "#1E4D8C" }} />
+            <Zap size={14} style={{ color: "var(--accent)" }} />
             <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>
               Templates prontos
             </h3>
@@ -1042,8 +1042,8 @@ function TemplateGallery({ onUseTemplate }) {
             className="text-left rounded-lg border p-3 transition-all cursor-pointer"
             style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
             onMouseEnter={e => {
-              e.currentTarget.style.borderColor = "#1E4D8C";
-              e.currentTarget.style.background = "#EFF6FF";
+              e.currentTarget.style.borderColor = "var(--accent)";
+              e.currentTarget.style.background = "var(--surface-alt)";
             }}
             onMouseLeave={e => {
               e.currentTarget.style.borderColor = "var(--border)";
@@ -1062,7 +1062,7 @@ function TemplateGallery({ onUseTemplate }) {
               </div>
             </div>
             <div className="mt-2 flex items-center justify-between">
-              <div className="text-[11px] font-semibold flex items-center gap-1" style={{ color: "#1E4D8C" }}>
+              <div className="text-[11px] font-semibold flex items-center gap-1" style={{ color: "var(--accent)" }}>
                 <Plus size={10} />
                 Usar este template
               </div>

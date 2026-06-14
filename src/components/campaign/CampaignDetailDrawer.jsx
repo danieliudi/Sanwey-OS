@@ -238,9 +238,9 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
         onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(Array.from(e.dataTransfer.files)); }}
         onClick={() => inputRef.current?.click()}
         className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-6 gap-2 cursor-pointer transition-colors"
-        style={{ borderColor: dragOver ? "#1E4D8C" : "var(--border)", background: dragOver ? "#EFF6FF" : "var(--surface-alt)" }}
+        style={{ borderColor: dragOver ? "var(--accent)" : "var(--border)", background: dragOver ? "var(--surface-alt)" : "var(--surface-alt)" }}
       >
-        <Upload size={20} style={{ color: dragOver ? "#1E4D8C" : "var(--text-dim)" }} />
+        <Upload size={20} style={{ color: dragOver ? "var(--accent)" : "var(--text-dim)" }} />
         <div className="text-xs font-medium" style={{ color: "var(--text-dim)" }}>
           {uploading ? "Enviando…" : "Arraste ou clique para enviar"}
         </div>
@@ -403,14 +403,14 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addItem(); } }}
             className="flex-1 text-xs rounded-xl border px-3 py-2 outline-none"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}
-            onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+            onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
             onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
           />
           <button
             onClick={addItem}
             disabled={!newLabel.trim()}
             className="flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-xl"
-            style={{ background: newLabel.trim() ? "#1E4D8C" : "var(--surface-alt)", color: newLabel.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newLabel.trim() ? "pointer" : "default" }}
+            style={{ background: newLabel.trim() ? "var(--accent)" : "var(--surface-alt)", color: newLabel.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newLabel.trim() ? "pointer" : "default" }}
           >
             <Plus size={12} />
             Adicionar
@@ -471,7 +471,7 @@ function EditInput({ value, onChange, type = "text", placeholder = "" }) {
       placeholder={placeholder}
       className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
       style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-      onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+      onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
       onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
     />
   );
@@ -484,7 +484,7 @@ function EditSelect({ value, onChange, options, placeholder = "Selecionar…" })
       onChange={e => onChange(e.target.value)}
       className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
       style={{ borderColor: "var(--border)", color: value ? "var(--text)" : "var(--text-faint)", background: "var(--surface)" }}
-      onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+      onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
       onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
     >
       <option value="">{placeholder}</option>
@@ -531,7 +531,7 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
             rows={3}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
             style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-            onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+            onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
             onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
             onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAdd(); } }}
           />
@@ -540,7 +540,7 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
               onClick={handleAdd}
               disabled={!newNote.trim() || saving}
               className="px-3 py-1.5 text-xs font-semibold rounded-xl"
-              style={{ background: newNote.trim() ? "#1E4D8C" : "var(--surface-alt)", color: newNote.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newNote.trim() ? "pointer" : "default" }}
+              style={{ background: newNote.trim() ? "var(--accent)" : "var(--surface-alt)", color: newNote.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newNote.trim() ? "pointer" : "default" }}
             >
               {saving ? "Salvando…" : "Comentar"}
             </button>
@@ -613,7 +613,7 @@ function EntregasTab({ campaign, canWrite }) {
           onClick={() => setCreating(true)}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-sm font-medium transition-colors cursor-pointer"
           style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface-alt)" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "var(--color-industria)"; }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--color-industria)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text-dim)"; }}
         >
           <Plus size={14} />
@@ -788,7 +788,7 @@ export function CampaignDetailDrawer({
                   rows={4}
                   className="w-full text-xs rounded-xl border px-3 py-2 outline-none resize-none"
                   style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-                  onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+                  onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
                   onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
                 />
               )
@@ -884,7 +884,7 @@ export function CampaignDetailDrawer({
                 key={t.id}
                 onClick={() => setMobileTab(t.id)}
                 className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
-                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`, color: mobileTab === t.id ? "#1E4D8C" : "var(--text-dim)" }}
+                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "var(--accent)" : "transparent"}`, color: mobileTab === t.id ? "var(--accent)" : "var(--text-dim)" }}
               >
                 {t.label}
               </button>
@@ -994,7 +994,7 @@ export function CampaignDetailDrawer({
               {get("performanceScore") > 0 && (
                 <div
                   className="hidden lg:flex items-center justify-center rounded-full shrink-0 font-bold"
-                  style={{ width: 48, height: 48, background: "#1E4D8C14", color: "#1E4D8C", border: "2px solid #1E4D8C30", fontSize: 16 }}
+                  style={{ width: 48, height: 48, background: "color-mix(in srgb, var(--accent) 8%, transparent)", color: "var(--accent)", border: "2px solid color-mix(in srgb, var(--accent) 19%, transparent)", fontSize: 16 }}
                 >
                   {get("performanceScore")}
                 </div>
@@ -1060,7 +1060,7 @@ export function CampaignDetailDrawer({
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "#1E4D8C", textDecoration: "none" }}
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--accent)", textDecoration: "none" }}
               >
                 <FolderOpen size={13} />
                 Pasta no Google Drive
@@ -1185,7 +1185,7 @@ export function CampaignDetailDrawer({
                   <Field label="Link UTM / Campanha">
                     {isAgencia
                       ? (get("utmUrl")
-                        ? <a href={get("utmUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "#1E4D8C" }}>
+                        ? <a href={get("utmUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "var(--accent)" }}>
                             <Link size={11} /> {get("utmUrl")}
                           </a>
                         : <ReadValue value={null} />)
@@ -1198,7 +1198,7 @@ export function CampaignDetailDrawer({
                     <div className="flex gap-2">
                       {isAgencia
                         ? (get("driveFolderUrl")
-                          ? <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "#1E4D8C" }}>
+                          ? <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "var(--accent)" }}>
                               <FolderOpen size={11} /> Abrir pasta no Drive
                             </a>
                           : <ReadValue value={null} />)

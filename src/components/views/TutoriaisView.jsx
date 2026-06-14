@@ -42,7 +42,7 @@ function VideoCard({ video, onNavigate }) {
               <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "var(--text)" }}>
                 <span
                   className="shrink-0 flex items-center justify-center rounded-full font-bold"
-                  style={{ width: 18, height: 18, minWidth: 18, background: "#b5000b12", color: "#b5000b", fontSize: 10 }}
+                  style={{ width: 18, height: 18, minWidth: 18, background: "color-mix(in srgb, var(--accent) 7%, transparent)", color: "var(--accent)", fontSize: 10 }}
                 >
                   {i + 1}
                 </span>
@@ -432,7 +432,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
           {/* CTA */}
           <div
             className="rounded-xl border p-5 flex items-center justify-between gap-4"
-            style={{ background: "#fef1f0", borderColor: "var(--border)" }}
+            style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}
           >
             <div>
               <p className="font-semibold text-sm mb-0.5" style={{ color: "var(--text)" }}>
@@ -452,7 +452,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
         <div className="space-y-5">
           <div
             className="rounded-xl border p-5"
-            style={{ background: "#fef1f0", borderColor: "var(--border)" }}
+            style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}
           >
             <div className="flex items-start gap-3">
               <Bot size={18} style={{ color: "var(--color-industria)", flexShrink: 0, marginTop: 2 }} />

@@ -232,8 +232,8 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
     {
       label: "De Férias",
       value: totalFerias,
-      icon: <Calendar size={20} color="#1E4D8C" />,
-      accent: "#1E4D8C",
+      icon: <Calendar size={20} color="var(--accent)" />,
+      accent: "var(--accent)",
     },
     {
       label: "Afastados",

@@ -67,7 +67,7 @@ export function ClientsManager({ clients = [], loading, onCreate, onUpdate, onDe
     }));
   };
 
-  const inputStyle = { borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "#fff8f7" };
+  const inputStyle = { borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "var(--surface)" };
   const onFocusRed = e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = "0 0 0 3px rgba(199,33,43,0.12)"; };
   const onBlurRed = e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; };
 
@@ -93,7 +93,7 @@ export function ClientsManager({ clients = [], loading, onCreate, onUpdate, onDe
       </div>
 
       {/* Search */}
-      <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg border" style={{ borderColor: "#E5E7EB", background: "#fff8f7" }}>
+      <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg border" style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}>
         <Search size={15} style={{ color: NEUTRAL.slate }} />
         <input
           value={query}

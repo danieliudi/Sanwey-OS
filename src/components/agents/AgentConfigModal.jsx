@@ -43,7 +43,7 @@ export function AgentConfigModal({
             onClick={onClose}
             className="p-1.5 rounded-lg cursor-pointer"
             style={{ color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             aria-label="Fechar"
           >
@@ -54,7 +54,7 @@ export function AgentConfigModal({
         {/* Aviso */}
         <div
           className="px-5 py-2.5 text-xs border-b flex items-start gap-2"
-          style={{ background: "#EFF6FF", borderColor: "#BFDBFE", color: "#1E40AF" }}
+          style={{ background: "var(--surface-alt)", borderColor: "#BFDBFE", color: "#1E40AF" }}
         >
           <Info size={12} className="shrink-0 mt-0.5" />
           <span>
@@ -68,7 +68,7 @@ export function AgentConfigModal({
           <div className="rounded-lg border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ background: "#FAFAFA" }}>
+                <tr style={{ background: "var(--surface-alt)" }}>
                   <th className="text-left p-3 text-[10px] font-bold uppercase" style={{ color: NEUTRAL.slate, letterSpacing: "0.06em" }}>
                     Agente
                   </th>
@@ -85,7 +85,7 @@ export function AgentConfigModal({
                   })}
                 </tr>
               </thead>
-              <tbody className="divide-y" style={{ borderColor: "#F3F4F6" }}>
+              <tbody className="divide-y" style={{ borderColor: "var(--surface-alt)" }}>
                 {agentOrder.map(agentId => {
                   const agent = agents[agentId];
                   if (!agent) return null;
@@ -131,11 +131,11 @@ export function AgentConfigModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t flex items-center justify-end" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
+        <div className="px-5 py-3 border-t flex items-center justify-end" style={{ borderColor: "#E5E7EB", background: "var(--surface-alt)" }}>
           <button
             onClick={onClose}
             className="px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer"
-            style={{ background: "#1E4D8C", color: "#FFFFFF" }}
+            style={{ background: "var(--accent)", color: "#FFFFFF" }}
           >
             Fechar
           </button>

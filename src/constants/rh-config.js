@@ -26,7 +26,7 @@ export const RH_CONTRACT_TYPES = [
 
 export const RH_EMPLOYEE_STATUSES = [
   { id: "ativo",      label: "Ativo",      color: "#16A34A", bg: "#DCFCE7" },
-  { id: "ferias",     label: "Férias",     color: "#1E4D8C", bg: "#DBEAFE" },
+  { id: "ferias",     label: "Férias",     color: "#1D4ED8", bg: "#DBEAFE" },
   { id: "afastado",   label: "Afastado",   color: "#D97706", bg: "#FEF3C7" },
   { id: "desligado",  label: "Desligado",  color: "#6B7280", bg: "#F3F4F6" },
 ];

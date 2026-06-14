@@ -144,7 +144,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
                 onClick={() => setPeriod(p.id)}
                 className="px-2.5 py-1.5 text-xs font-semibold cursor-pointer transition-colors"
                 style={{
-                  background: period === p.id ? "#1E4D8C" : "var(--surface)",
+                  background: period === p.id ? "var(--accent)" : "var(--surface)",
                   color: period === p.id ? "#FFFFFF" : "var(--text-dim)",
                 }}
               >
@@ -188,7 +188,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
               className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
               style={{
                 color: active ? "var(--text)" : "var(--text-dim)",
-                borderBottomColor: active ? "#1E4D8C" : "transparent",
+                borderBottomColor: active ? "var(--accent)" : "transparent",
                 letterSpacing: "0.08em",
               }}
             >
@@ -288,7 +288,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
         <div className="space-y-2">
           <div
             className="text-sm leading-relaxed whitespace-pre-line p-3 rounded-lg border"
-            style={{ background: "#fef1f0", borderColor: "var(--border)", color: "var(--text)" }}
+            style={{ background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text)" }}
           >
             {result}
           </div>
@@ -387,7 +387,7 @@ function AIExecutivePanel({ leads, users, currentUser }) {
       <div className="grid md:grid-cols-2 gap-4">
         <AISection
           icon={TrendingUp}
-          iconColor="#1E4D8C"
+          iconColor="var(--accent)"
           title="Forecast Executivo"
           description="Previsão de receita realizável e principais riscos do pipeline atual"
           onGenerate={isConfigured ? handleForecast : undefined}
@@ -397,7 +397,7 @@ function AIExecutivePanel({ leads, users, currentUser }) {
         />
         <AISection
           icon={Bot}
-          iconColor="#b5000b"
+          iconColor="var(--accent)"
           title="Diagnóstico de Funil"
           description="Identifica gargalos, hipóteses de causa e ações corretivas priorizadas"
           onGenerate={isConfigured ? handleFunnel : undefined}

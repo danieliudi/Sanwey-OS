@@ -208,7 +208,7 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
             </div>
             <button
               onClick={onExport}
-              style={{ display: "flex", alignItems: "center", gap: 8, background: "#F0F7FF", color: "#1E4D8C", border: "1px solid #BFDBFE", borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%" }}
+              style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--surface-alt)", color: "var(--accent)", border: "1px solid var(--border)", borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", width: "100%" }}
             >
               <Download size={15} />
               Baixar .ics (campanhas + eventos pessoais)
@@ -241,7 +241,7 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
                   url={marketingUrl}
                   copied={copied === "marketing"}
                   onCopy={() => copyUrl(marketingUrl, "marketing")}
-                  color="#1E4D8C"
+                  color="var(--accent)"
                 />
               </div>
             )}

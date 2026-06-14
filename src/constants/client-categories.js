@@ -4,8 +4,8 @@
 
 export const CLIENT_CATEGORIES = [
   { value: "posto",      label: "Posto",      color: "#1A6E35" },
-  { value: "condominio", label: "Condomínio", color: "#1E4D8C" },
-  { value: "industria",  label: "Indústria",  color: "#b5000b" },
+  { value: "condominio", label: "Condomínio", color: "#1D4ED8" },
+  { value: "industria",  label: "Indústria",  color: "#C7212B" },
   { value: "comercio",   label: "Comércio",   color: "#E8920A" },
   { value: "transporte", label: "Transporte", color: "#7C3AED" },
   { value: "outro",      label: "Outro",      color: "#6B7280" },

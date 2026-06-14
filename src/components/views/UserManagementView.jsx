@@ -14,7 +14,7 @@ import { CompanyTag } from "../ui/CompanyTag";
 
 const EMPTY_FORM = {
   id: null, name: "", email: "", role: "vendedor",
-  companies: [], initials: "", avatarBg: "#1E4D8C",
+  companies: [], initials: "", avatarBg: "var(--accent)",
   sectors: [], supervisorId: "",
 };
 
@@ -445,8 +445,8 @@ export function UserManagementView({
                           <button
                             onClick={() => setMenuOpenId(menuOpen ? null : u.id)}
                             className="rounded-lg flex items-center justify-center transition-colors"
-                            style={{ width: 32, height: 32, background: menuOpen ? "#fef1f0" : "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
+                            style={{ width: 32, height: 32, background: menuOpen ? "var(--surface-alt)" : "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                             onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background = "transparent"; }}
                           >
                             <MoreVertical size={15} />
@@ -460,7 +460,7 @@ export function UserManagementView({
                                 <button
                                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors"
                                   style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text)" }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                                   onClick={() => { setMenuOpenId(null); startEdit(u); }}
                                 >
@@ -488,7 +488,7 @@ export function UserManagementView({
                     <div className="flex items-center gap-1.5 flex-wrap mt-2">
                       <Badge variant={roleBadgeVariant(u.role)} size="sm">{roleLabel(u.role)}</Badge>
                       {isSelf && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#fef1f0", color: "var(--accent)" }}>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--surface-alt)", color: "var(--accent)" }}>
                           Você
                         </span>
                       )}
@@ -533,7 +533,7 @@ export function UserManagementView({
                       background: "transparent",
                       cursor: canEdit(u) ? "pointer" : "default",
                     }}
-                    onMouseEnter={e => { if (canEdit(u)) { e.currentTarget.style.background = "#fef1f0"; } }}
+                    onMouseEnter={e => { if (canEdit(u)) { e.currentTarget.style.background = "var(--surface-alt)"; } }}
                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                   >
                     <User size={15} />

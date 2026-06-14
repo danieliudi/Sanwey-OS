@@ -135,7 +135,7 @@ export function StageEditorModal({
             onClick={onClose}
             className="p-1.5 rounded-lg cursor-pointer"
             style={{ color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             aria-label="Fechar"
           >
@@ -186,7 +186,7 @@ export function StageEditorModal({
                 className="rounded-lg border p-2 grid items-center gap-2"
                 style={{
                   borderColor: dragIdx === idx ? accent : "#E5E7EB",
-                  background: isTerminal ? "#FAFAFA" : "#FFFFFF",
+                  background: isTerminal ? "var(--surface)" : "#FFFFFF",
                   opacity: dragIdx != null && dragIdx !== idx ? 0.7 : 1,
                   gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
                 }}
@@ -297,9 +297,9 @@ export function StageEditorModal({
           <button
             onClick={handleAdd}
             className="w-full flex items-center justify-center gap-1.5 p-2.5 text-xs font-semibold rounded-lg border-2 border-dashed cursor-pointer"
-            style={{ borderColor: "#D1D5DB", color: NEUTRAL.slate, background: "#FAFAFA" }}
+            style={{ borderColor: "#D1D5DB", color: NEUTRAL.slate, background: "var(--surface)" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; e.currentTarget.style.background = accent + "08"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.background = "#FAFAFA"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.background = "var(--surface)"; }}
           >
             <Plus size={13} />
             Adicionar etapa
@@ -307,7 +307,7 @@ export function StageEditorModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t flex items-center justify-between" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
+        <div className="px-5 py-3 border-t flex items-center justify-between" style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}>
           <button
             onClick={handleReset}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"

@@ -60,7 +60,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
     boxSizing: "border-box",
   };
 
-  const handleFocus = e => { e.target.style.borderColor = "#b5000b"; e.target.style.boxShadow = "0 0 0 2px rgba(199,33,43,.1)"; };
+  const handleFocus = e => { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 2px rgba(199,33,43,.1)"; };
   const handleBlur  = e => { e.target.style.borderColor = "#D1D5DB"; e.target.style.boxShadow = "none"; };
 
   if (def.type === "sector") {
@@ -71,7 +71,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
         style={{ ...baseStyle, appearance: "none", paddingRight: 32,
           backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
           backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", backgroundSize: "14px",
-          borderColor: configEntry.required && !value ? "#b5000b" : "#D1D5DB",
+          borderColor: configEntry.required && !value ? "var(--accent)" : "#D1D5DB",
         }}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -473,7 +473,7 @@ export function LeadCreateModal({
                     }}
                   >
                     {entry.required && (
-                      <span style={{ color: "#b5000b", marginRight: 2 }}>*</span>
+                      <span style={{ color: "var(--accent)", marginRight: 2 }}>*</span>
                     )}
                     {def.label}
                   </label>
@@ -492,7 +492,7 @@ export function LeadCreateModal({
                     style={{
                       marginBottom: 16,
                       padding: "10px 12px",
-                      background: "#EFF6FF",
+                      background: "var(--surface-alt)",
                       border: "1px solid #BFDBFE",
                       borderRadius: 8,
                       fontSize: 12,
@@ -534,7 +534,7 @@ export function LeadCreateModal({
                               background: "#FFFFFF", border: "1px solid #DBEAFE",
                               cursor: "pointer", color: NEUTRAL.graphite,
                             }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#F0F7FF"; e.currentTarget.style.borderColor = "#93C5FD"; }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "#93C5FD"; }}
                             onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "#DBEAFE"; }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -587,13 +587,13 @@ export function LeadCreateModal({
             disabled={isSubmitDisabled}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-colors"
             style={{
-              background: isSubmitDisabled ? "#9CA3AF" : "#b5000b",
+              background: isSubmitDisabled ? "#9CA3AF" : "var(--accent)",
               color: "#FFFFFF",
               border: "none",
               cursor: isSubmitDisabled ? "not-allowed" : "pointer",
             }}
             onMouseEnter={e => { if (!isSubmitDisabled) e.currentTarget.style.background = "#8B1419"; }}
-            onMouseLeave={e => { if (!isSubmitDisabled) e.currentTarget.style.background = isSubmitDisabled ? "#9CA3AF" : "#b5000b"; }}
+            onMouseLeave={e => { if (!isSubmitDisabled) e.currentTarget.style.background = isSubmitDisabled ? "#9CA3AF" : "var(--accent)"; }}
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? "Criando…" : "Criar card"}

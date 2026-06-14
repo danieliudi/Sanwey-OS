@@ -137,7 +137,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
               <YAxis tick={{ fontSize: 10 }} tickFormatter={formatK} />
               <Tooltip formatter={(v) => formatK(v)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="valor"    name="Pipeline" fill="#1E4D8C" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="valor"    name="Pipeline" fill="#1D4ED8" radius={[6, 6, 0, 0]} />
               <Bar dataKey="forecast" name="Forecast" fill="#10B981" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

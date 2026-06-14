@@ -74,10 +74,10 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
     }
   };
 
-  const focusBlue = e => { e.target.style.borderColor = "#1E4D8C"; };
+  const focusBlue = e => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = e => { e.target.style.borderColor = "var(--border-strong)"; };
   const labelSt   = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
-  const inputSt   = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA" };
+  const inputSt   = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" };
 
   return (
     <div
@@ -271,7 +271,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
             type="submit"
             disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "#1E4D8C", color: "#FFF", opacity: saving || !name.trim() ? 0.5 : 1, border: "none", cursor: saving || !name.trim() ? "default" : "pointer" }}
+            style={{ background: "var(--accent)", color: "#FFF", opacity: saving || !name.trim() ? 0.5 : 1, border: "none", cursor: saving || !name.trim() ? "default" : "pointer" }}
           >
             {saving ? "Criando…" : "Criar campanha"}
           </button>
@@ -492,7 +492,7 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
       aria-selected={active}
       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
       style={{
-        background: active ? "#1E4D8C" : "var(--surface)",
+        background: active ? "var(--accent)" : "var(--surface)",
         color: active ? "#FFFFFF" : "var(--text-dim)",
       }}
       onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
@@ -797,7 +797,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                   </div>
                 </button>
                 {expanded && (
-                  <div className="p-2.5 space-y-2" style={{ background: "#FAFAFA" }}>
+                  <div className="p-2.5 space-y-2" style={{ background: "var(--surface)" }}>
                     {stageCampaigns.length === 0 ? (
                       <div className="text-center py-4 text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma campanha nesta etapa</div>
                     ) : (
@@ -858,7 +858,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                     style={{
                       width: 272,
                       minWidth: 272,
-                      background: isOver ? "#F0F7FF" : "#fef1f0",
+                      background: isOver ? "var(--surface-alt)" : "var(--surface-alt)",
                       borderColor: isOver ? stage.color + "70" : "var(--border)",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
                       minHeight: 480,
@@ -995,7 +995,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         style={{
           height: 52,
           padding: "0 20px",
-          background: "#1E4D8C",
+          background: "var(--accent)",
           color: "#FFFFFF",
           border: "none",
           borderRadius: 26,

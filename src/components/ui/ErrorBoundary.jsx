@@ -37,7 +37,7 @@ export class ErrorBoundary extends React.Component {
           <button
             onClick={this.reset}
             className="px-3 py-1.5 text-xs font-semibold rounded-lg"
-            style={{ background: "#1E4D8C", color: "#FFFFFF" }}
+            style={{ background: "var(--accent)", color: "#FFFFFF" }}
           >
             Fechar
           </button>

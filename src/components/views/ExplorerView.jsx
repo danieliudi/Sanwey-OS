@@ -92,10 +92,10 @@ export function ExplorerView({
               className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
               style={{
                 color: activeTab === t.id ? "var(--text)" : "var(--text-dim)",
-                borderBottomColor: activeTab === t.id ? "#1E4D8C" : "transparent",
+                borderBottomColor: activeTab === t.id ? "var(--accent)" : "transparent",
                 background: "none",
                 border: "none",
-                borderBottom: `2px solid ${activeTab === t.id ? "#1E4D8C" : "transparent"}`,
+                borderBottom: `2px solid ${activeTab === t.id ? "var(--accent)" : "transparent"}`,
                 letterSpacing: "0.08em",
               }}
             >

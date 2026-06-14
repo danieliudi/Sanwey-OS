@@ -11,7 +11,7 @@ import { AgentConfigModal } from "../agents/AgentConfigModal";
 
 // ── Agent metadata ─────────────────────────────────────────────────────────
 const AGENTS = {
-  sdr_q:    { label: "SDR-Q",     sub: "Qualificador",         Icon: Target,    color: "#1E4D8C", bg: "#EBF0F9" },
+  sdr_q:    { label: "SDR-Q",     sub: "Qualificador",         Icon: Target,    color: "var(--accent)", bg: "#EBF0F9" },
   scout:    { label: "SCOUT",     sub: "Inteligência de Conta", Icon: Telescope, color: "#6B21A8", bg: "#F5F0FB" },
   cadencia: { label: "CADÊNCIA",  sub: "Follow-up Engine",      Icon: Repeat2,   color: "#C2410C", bg: "#FEF3EC" },
   sentinela:{ label: "SENTINELA", sub: "Monitor de Funil",      Icon: Shield,    color: "#B91C1C", bg: "#FEF2F2" },
@@ -22,8 +22,8 @@ const AGENTS = {
 const PRIORITY = {
   urgent: { label: "Urgente",  color: "#B91C1C", bg: "#FEF2F2" },
   high:   { label: "Alta",     color: "#C2410C", bg: "#FEF3EC" },
-  normal: { label: "Normal",   color: "#1E4D8C", bg: "#EBF0F9" },
-  low:    { label: "Baixa",    color: "#6B7280", bg: "#F3F4F6" },
+  normal: { label: "Normal",   color: "var(--accent)", bg: "#EBF0F9" },
+  low:    { label: "Baixa",    color: "#6B7280", bg: "var(--surface-alt)" },
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -48,7 +48,7 @@ function ActionCard({ action, agent, onResolve, resolving }) {
   return (
     <div
       className="rounded-xl border"
-      style={{ borderColor: "#EFEFEF", background: "#FAFAFA" }}
+      style={{ borderColor: "#EFEFEF", background: "var(--surface)" }}
     >
       {/* Header row */}
       <div className="px-4 py-3 flex items-start gap-3">
@@ -185,7 +185,7 @@ function ActionCard({ action, agent, onResolve, resolving }) {
           <span
             className="text-[10px] font-bold px-2 py-0.5 rounded-full"
             style={{
-              background: action.status === "approved" ? "#E8F2EC" : action.status === "rejected" ? "#FEF2F2" : "#F3F4F6",
+              background: action.status === "approved" ? "#E8F2EC" : action.status === "rejected" ? "#FEF2F2" : "var(--surface-alt)",
               color: action.status === "approved" ? "var(--success)" : action.status === "rejected" ? "var(--danger)" : "var(--text-dim)",
             }}
           >
@@ -385,7 +385,7 @@ export function AgentActionsView({ currentUser, activeCompany }) {
             </h1>
             <span
               className="inline-flex items-center justify-center rounded-full cursor-help"
-              style={{ width: 18, height: 18, background: "#F3F4F6", color: "var(--text-dim)" }}
+              style={{ width: 18, height: 18, background: "var(--surface-alt)", color: "var(--text-dim)" }}
               title={
                 "Agentes de IA que monitoram a carteira e sugerem ações — você aprova, rejeita ou ignora.\n\n" +
                 "Use para receber recomendações proativas:\n" +
@@ -502,7 +502,7 @@ export function AgentActionsView({ currentUser, activeCompany }) {
         <div className="py-20 text-center space-y-3">
           <div
             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"
-            style={{ background: "#F3F4F6" }}
+            style={{ background: "var(--surface-alt)" }}
           >
             <TrendingUp size={24} style={{ color: "#9CA3AF" }} />
           </div>

@@ -38,9 +38,9 @@ function LeadResultRow({ item, users, pipelines, highlighted, onSelect }) {
       aria-selected={highlighted}
       onClick={onSelect}
       className="flex items-center gap-3 px-4 py-3 cursor-pointer"
-      style={{ background: highlighted ? "#fef1f0" : "transparent", transition: "background 100ms" }}
-      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = highlighted ? "#fef1f0" : "transparent"; }}
+      style={{ background: highlighted ? "var(--surface-alt)" : "transparent", transition: "background 100ms" }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = highlighted ? "var(--surface-alt)" : "transparent"; }}
     >
       <div className="shrink-0 flex items-center justify-center rounded-lg font-bold select-none"
         style={{ width: 36, height: 36, fontSize: 15, ...badgeStyle }}>
@@ -79,13 +79,13 @@ function CampaignResultRow({ item, highlighted, onSelect }) {
       aria-selected={highlighted}
       onClick={onSelect}
       className="flex items-center gap-3 px-4 py-3 cursor-pointer"
-      style={{ background: highlighted ? "#fef1f0" : "transparent", transition: "background 100ms" }}
-      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = highlighted ? "#fef1f0" : "transparent"; }}
+      style={{ background: highlighted ? "var(--surface-alt)" : "transparent", transition: "background 100ms" }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = highlighted ? "var(--surface-alt)" : "transparent"; }}
     >
       <div className="shrink-0 flex items-center justify-center rounded-lg select-none"
-        style={{ width: 36, height: 36, background: "#1E4D8C1A" }}>
-        <Megaphone size={16} style={{ color: "#1E4D8C" }} />
+        style={{ width: 36, height: 36, background: "color-mix(in srgb, var(--accent) 10%, transparent)" }}>
+        <Megaphone size={16} style={{ color: "var(--accent)" }} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
@@ -112,9 +112,9 @@ function EmployeeResultRow({ item, highlighted, onSelect }) {
       aria-selected={highlighted}
       onClick={onSelect}
       className="flex items-center gap-3 px-4 py-3 cursor-pointer"
-      style={{ background: highlighted ? "#fef1f0" : "transparent", transition: "background 100ms" }}
-      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = highlighted ? "#fef1f0" : "transparent"; }}
+      style={{ background: highlighted ? "var(--surface-alt)" : "transparent", transition: "background 100ms" }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = highlighted ? "var(--surface-alt)" : "transparent"; }}
     >
       <div className="shrink-0 flex items-center justify-center rounded-full font-bold text-white select-none"
         style={{ width: 36, height: 36, fontSize: 15, background: user.avatarBg || NEUTRAL.graphite }}>
@@ -301,7 +301,7 @@ export function CommandPalette({
             aria-autocomplete="list"
             aria-controls="cmd-results"
           />
-          <kbd style={{ fontSize: 10, color: "#9CA3AF", background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 4, padding: "2px 5px" }}>
+          <kbd style={{ fontSize: 10, color: "#9CA3AF", background: "var(--surface-alt)", border: "1px solid #E5E7EB", borderRadius: 4, padding: "2px 5px" }}>
             ESC
           </kbd>
         </div>
@@ -356,7 +356,7 @@ export function CommandPalette({
 
         {/* Footer hint */}
         {results.length > 0 && (
-          <div style={{ borderTop: "1px solid #F3F4F6", padding: "8px 16px", display: "flex", gap: 16, fontSize: 11, color: "#9CA3AF" }}>
+          <div style={{ borderTop: "1px solid var(--surface-alt)", padding: "8px 16px", display: "flex", gap: 16, fontSize: 11, color: "#9CA3AF" }}>
             <span>↑↓ navegar</span>
             <span>↵ abrir</span>
             <span>Esc fechar</span>

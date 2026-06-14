@@ -226,7 +226,7 @@ function StagePipelineBar({ campaigns }) {
 
 // ── Channel chart ───────────────────────────────────────────────────────────────
 
-const CH_COLORS = ["#7C3AED", "#1E4D8C", "#D97706", "#16A34A", "#DC2626", "#9CA3AF"];
+const CH_COLORS = ["#7C3AED", "#1D4ED8", "#D97706", "#16A34A", "#DC2626", "#9CA3AF"];
 
 function ChannelChart({ campaigns, primaryColor }) {
   const data = useMemo(() => {
@@ -344,7 +344,7 @@ function BurnRateChart({ expenses, primaryColor }) {
 
 const CAT_COLORS = {
   "Mídia Paga":  "#7C3AED",
-  "Produção":    "#1E4D8C",
+  "Produção":    "#1D4ED8",
   "Agência":     "#D97706",
   "Ferramentas": "#16A34A",
   "Eventos":     "#DC2626",

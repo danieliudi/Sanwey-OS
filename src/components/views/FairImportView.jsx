@@ -556,8 +556,8 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
           disabled={isDup}
           className="w-5 h-5 rounded border flex items-center justify-center transition-colors"
           style={{
-            borderColor: row._selected ? company?.primary || "#1E4D8C" : "#DCDCDC",
-            background: row._selected ? company?.primary || "#1E4D8C" : "#FFFFFF",
+            borderColor: row._selected ? company?.primary || "var(--accent)" : "#DCDCDC",
+            background: row._selected ? company?.primary || "var(--accent)" : "#FFFFFF",
           }}
         >
           {row._selected && <Check size={10} color="#FFFFFF" />}
@@ -634,7 +634,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
       {/* Expanded detail */}
       {expanded && (
         <div className="px-10 pb-3 pt-1 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs border-t"
-          style={{ borderColor: "#EFF2F5", background: "#FAFAFA" }}>
+          style={{ borderColor: "#EFF2F5", background: "var(--surface)" }}>
           <DetailField label="CNPJ" value={row.cnpj || "—"} />
           <DetailField label="Email" value={row.contactEmail || "—"} />
           <DetailField label="Telefone" value={row.phone || "—"} />

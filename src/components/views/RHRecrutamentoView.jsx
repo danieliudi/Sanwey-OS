@@ -112,8 +112,8 @@ function NovaVagaModal({ onSave, onClose }) {
   };
 
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", fontSize: 13 };
-  const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
+  const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   return (
@@ -186,7 +186,7 @@ function NovaVagaModal({ onSave, onClose }) {
             <button
               type="submit"
               disabled={saving}
-              style={{ flex: 1, background: "#1E4D8C", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
+              style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
             >
               {saving ? "Criando…" : "Criar vaga"}
             </button>
@@ -248,8 +248,8 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
   };
 
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", fontSize: 13 };
-  const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
+  const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   const stageInfo = RH_RECRUITMENT_STAGES.find((s) => s.id === stage);
@@ -314,7 +314,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
           )}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "#1E4D8C", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Adicionando…" : "Adicionar candidato"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -510,7 +510,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
               {canWrite && !addingNote && (
                 <button
                   onClick={() => setAddingNote(true)}
-                  style={{ background: "#EFF6FF", border: "none", color: "#1E4D8C", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                  style={{ background: "var(--surface-alt)", border: "none", color: "var(--accent)", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                 >
                   <Plus size={11} /> Nota
                 </button>
@@ -526,15 +526,15 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                   rows={3}
                   autoFocus
                   className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-                  style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", fontSize: 13 }}
-                  onFocus={(e) => { e.target.style.borderColor = "#1E4D8C"; }}
+                  style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+                  onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
                   onBlur={(e) => { e.target.style.borderColor = "var(--border-strong)"; }}
                 />
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={handleAddNote}
                     disabled={savingNote || !noteText.trim()}
-                    style={{ background: "#1E4D8C", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
+                    style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
                   >
                     {savingNote ? "Salvando…" : "Salvar"}
                   </button>
@@ -806,7 +806,7 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
           <button
             onClick={() => setQuickAddVaga(true)}
             style={{
-              background: "#1E4D8C",
+              background: "var(--accent)",
               color: "#FFF",
               borderRadius: 10,
               padding: "8px 16px",
@@ -871,7 +871,7 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
           }}
           className="flex-col md:flex-row"
         >
-          <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
+          <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
             {RH_RECRUITMENT_STAGES.map((stage) => (
               <KanbanColumn
                 key={stage.id}

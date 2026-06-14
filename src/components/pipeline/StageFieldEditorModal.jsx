@@ -39,7 +39,7 @@ const INPUT_BASE = {
   boxSizing: "border-box",
 };
 
-function focusStyle(e) { e.target.style.borderColor = "#b5000b"; e.target.style.boxShadow = "0 0 0 2px rgba(181,0,11,.12)"; }
+function focusStyle(e) { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 2px color-mix(in srgb, var(--accent) 12%, transparent)"; }
 function blurStyle(e)  { e.target.style.borderColor = "#D1D5DB"; e.target.style.boxShadow = "none"; }
 
 // ── AddFieldForm ──────────────────────────────────────────────────────────────

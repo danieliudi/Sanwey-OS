@@ -434,7 +434,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   padding: "40px 24px",
                   textAlign: "center",
                   cursor: "pointer",
-                  background: isDragging ? "#FBE9EB" : "#fff8f7",
+                  background: isDragging ? "#FBE9EB" : "var(--surface)",
                   transition: "all 0.15s",
                 }}
               >

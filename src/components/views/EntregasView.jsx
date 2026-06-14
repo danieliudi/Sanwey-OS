@@ -92,10 +92,10 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
     }
   };
 
-  const focusBlue = e => { e.target.style.borderColor = "#1E4D8C"; };
+  const focusBlue = e => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = e => { e.target.style.borderColor = "#D1D5DB"; };
   const labelSt   = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
-  const inputSt   = { borderColor: "#D1D5DB", color: "var(--text)", background: "#FAFAFA" };
+  const inputSt   = { borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" };
 
   return (
     <div
@@ -106,7 +106,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Novo Entregável</div>
             {stage && (
@@ -118,7 +118,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
           </div>
           <button type="button" onClick={onClose}
             style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
             <X size={18} />
           </button>
@@ -212,7 +212,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
 
           <button type="submit" disabled={saving || !title.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "#1E4D8C", color: "#FFF", opacity: (saving || !title.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !title.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !title.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !title.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar novo card"}
           </button>
         </form>
@@ -296,9 +296,9 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
       style={{
         display: "flex", alignItems: "center", gap: 5,
         padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
-        background: active ? "#1E4D8C" : "var(--surface)",
+        background: active ? "var(--accent)" : "var(--surface)",
         color:      active ? "#FFFFFF"  : "var(--text-dim)",
-        border: `1px solid ${active ? "#1E4D8C" : "var(--border)"}`,
+        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
         cursor: "pointer",
         transition: "all 0.15s",
       }}
@@ -428,11 +428,11 @@ export function EntregasView({ user, users = [] }) {
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <button
           onClick={() => setShowFilters(v => !v)}
-          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "#1E4D8C" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "#EFF6FF" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "#1E4D8C" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "var(--surface-alt)" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
           <Filter size={12} />
           Filtros
           {activeFilterCount > 0 && (
-            <span style={{ background: "#1E4D8C", color: "#FFF", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px", marginLeft: 2 }}>{activeFilterCount}</span>
+            <span style={{ background: "var(--accent)", color: "#FFF", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px", marginLeft: 2 }}>{activeFilterCount}</span>
           )}
         </button>
 
@@ -556,7 +556,7 @@ export function EntregasView({ user, users = [] }) {
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                    style={{ width: 272, minWidth: 272, background: isOver ? "#F0F7FF" : "#fef1f0", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", minHeight: 480, flexShrink: 0 }}>
+                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", minHeight: 480, flexShrink: 0 }}>
                     <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
                     <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
                       style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
@@ -667,7 +667,7 @@ export function EntregasView({ user, users = [] }) {
     {canWrite && viewMode === "kanban" && (
       <button
         className="fixed z-30 flex items-center gap-2 font-semibold shadow-lg left-6 lg:left-[312px] bottom-20 lg:bottom-6"
-        style={{ height: 52, padding: "0 20px", background: "#1E4D8C", color: "#FFFFFF", border: "none", borderRadius: 26, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 16px rgba(30,77,140,0.35)" }}
+        style={{ height: 52, padding: "0 20px", background: "var(--accent)", color: "#FFFFFF", border: "none", borderRadius: 26, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 16px rgba(30,77,140,0.35)" }}
         onClick={() => setQuickAddStage("solicitacao")}
         onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
         onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}

@@ -97,7 +97,7 @@ function DeliverableKanbanCardImpl({
       {/* Owner pill + deadline */}
       <div className="flex items-center justify-between text-[11px] mb-2" style={{ color: NEUTRAL.slate }}>
         {ownerName
-          ? <span className="px-1.5 py-0.5 rounded-full" style={{ background: "#F3F4F6", fontWeight: 500 }}>{ownerName}</span>
+          ? <span className="px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-alt)", fontWeight: 500 }}>{ownerName}</span>
           : <span />
         }
         {item.deadline && (
@@ -128,7 +128,7 @@ function DeliverableKanbanCardImpl({
               title={item.starred ? "Remover dos favoritos" : "Favoritar"}
               className="flex items-center justify-center rounded-md p-1 transition-colors"
               style={{ color: item.starred ? "#F59E0B" : NEUTRAL.slate, background: "transparent", border: "none" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               <Star size={12} fill={item.starred ? "#F59E0B" : "none"} />
@@ -140,7 +140,7 @@ function DeliverableKanbanCardImpl({
                 onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
                 className="flex items-center justify-center rounded-md p-1 transition-colors"
                 style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                 title="Mover para etapa"
               >

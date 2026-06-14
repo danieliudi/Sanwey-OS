@@ -8,8 +8,8 @@ import {
 } from "../../constants/ai-prompts";
 import { NEUTRAL } from "../../constants/companies";
 
-const RED = "#b5000b";
-const CREAM = "#fef1f0";
+const RED = "var(--accent)";
+const CREAM = "var(--surface-alt)";
 const BORDER = "#E5E7EB";
 const BG = "#F1EDE8";
 

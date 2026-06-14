@@ -13,7 +13,7 @@ const TYPE_ICON = {
 const TYPE_COLOR = {
   followup: "#F59E0B",
   stage_changed: NEUTRAL.slate,
-  lead_assigned: "#b5000b",
+  lead_assigned: "var(--accent)",
   default: NEUTRAL.slate,
 };
 
@@ -88,7 +88,7 @@ export function NotificationCenter({
               width: unreadCount > 9 ? 16 : 14,
               height: 14,
               fontSize: 9,
-              background: "#b5000b",
+              background: "var(--accent)",
               lineHeight: 1,
             }}
           >
@@ -111,10 +111,10 @@ export function NotificationCenter({
           {/* Header */}
           <div
             className="flex items-center justify-between px-4 py-3 border-b"
-            style={{ borderColor: "#E5E7EB", background: "#fef1f0" }}
+            style={{ borderColor: "#E5E7EB", background: "var(--surface-alt)" }}
           >
             <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
-              Notificações {unreadCount > 0 && <span style={{ color: "#b5000b" }}>({unreadCount})</span>}
+              Notificações {unreadCount > 0 && <span style={{ color: "var(--accent)" }}>({unreadCount})</span>}
             </span>
             <div className="flex items-center gap-1">
               {unreadCount > 0 && (
@@ -188,7 +188,7 @@ export function NotificationCenter({
                       onClick={() => handleNotifClick(notif)}
                       className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors"
                       style={{ background: notif.read ? "#FFFFFF" : "#FBF9F7" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = notif.read ? "#FFFFFF" : "#FBF9F7"; }}
                     >
                       <div
@@ -211,7 +211,7 @@ export function NotificationCenter({
                       {!notif.read && (
                         <div
                           className="w-2 h-2 rounded-full shrink-0 mt-1.5"
-                          style={{ background: "#b5000b" }}
+                          style={{ background: "var(--accent)" }}
                         />
                       )}
                     </div>

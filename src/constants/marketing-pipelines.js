@@ -1,5 +1,5 @@
 export const MARKETING_STAGES = [
-  { id: "briefing",  name: "Briefing",   color: "#1E4D8C", sla: 3 },
+  { id: "briefing",  name: "Briefing",   color: "#1D4ED8", sla: 3 },
   { id: "aprovacao", name: "Aprovação",  color: "#EA7309", sla: 5 },
   { id: "producao",  name: "Produção",   color: "#D97706", sla: 14 },
   { id: "revisao",   name: "Revisão",    color: "#7C3AED", sla: 5 },

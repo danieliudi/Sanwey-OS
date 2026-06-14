@@ -15,7 +15,7 @@ export function Select({ value, onChange, options, placeholder, className = "" }
           color: value ? NEUTRAL.graphite : NEUTRAL.slate,
           "--tw-ring-color": "rgba(199,33,43,.15)",
         }}
-        onFocus={e => { e.currentTarget.style.borderColor = "#b5000b"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(181,0,11,0.08)"; }}
+        onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent)"; }}
         onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.boxShadow = "none"; }}
       >
         {placeholder && <option value="">{placeholder}</option>}

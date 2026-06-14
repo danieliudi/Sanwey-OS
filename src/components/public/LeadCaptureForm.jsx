@@ -49,7 +49,7 @@ export default function LeadCaptureForm() {
 
   const companyId = COMPANY_IDS.includes(slug) ? slug : null;
   const company = companyId ? COMPANIES[companyId] : null;
-  const accent = company?.primary || "#b5000b";
+  const accent = company?.primary || "#C7212B";
 
   const [form, setForm] = useState({
     customerName: "",
@@ -360,7 +360,7 @@ function Field({ label, hint, required, children }) {
   return (
     <div>
       <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 2 }}>
-        {required && <span style={{ color: "#b5000b", marginRight: 4 }}>*</span>}
+        {required && <span style={{ color: "#C7212B", marginRight: 4 }}>*</span>}
         {label}
       </label>
       {hint && <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8 }}>{hint}</div>}
@@ -369,7 +369,7 @@ function Field({ label, hint, required, children }) {
   );
 }
 
-function ShellCard({ children, accent = "#b5000b" }) {
+function ShellCard({ children, accent = "#C7212B" }) {
   return (
     <div style={{
       minHeight: "100vh",

@@ -136,7 +136,7 @@ export function StageFieldsEditor({
             )}
             {existing.map((f, idx) => (
               <div key={f.id} className="rounded-lg border p-3 flex items-center gap-2"
-                   style={{ borderColor: "#E8E8E8", background: "#FAFAFA" }}>
+                   style={{ borderColor: "#E8E8E8", background: "var(--surface-alt)" }}>
                 <GripVertical size={14} color={NEUTRAL.slate} />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold flex items-center gap-2" style={{ color: NEUTRAL.graphite }}>
@@ -156,7 +156,7 @@ export function StageFieldsEditor({
                         style={{ color: NEUTRAL.slate }} title="Descer"><ArrowDown size={14} /></button>
                 <button onClick={() => setDraft({ ...f })}
                         className="text-xs font-semibold px-2.5 py-1 rounded-lg cursor-pointer"
-                        style={{ background: "#EFF6FF", color: "#1E40AF" }}>Editar</button>
+                        style={{ background: "var(--surface-alt)", color: "#1E40AF" }}>Editar</button>
                 <button onClick={() => handleDelete(f.id)}
                         className="p-1.5 rounded cursor-pointer"
                         style={{ color: "#B91C1C" }} title="Remover"><Trash2 size={14} /></button>
@@ -237,7 +237,7 @@ export function StageFieldsEditor({
           {!draft && (
             <button onClick={startNewField}
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-semibold cursor-pointer"
-                    style={{ borderColor: "#E5E7EB", borderStyle: "dashed", color: "#1E4D8C", background: "#FFFFFF" }}>
+                    style={{ borderColor: "#E5E7EB", borderStyle: "dashed", color: "var(--accent)", background: "#FFFFFF" }}>
               <Plus size={14} />
               Adicionar campo
             </button>

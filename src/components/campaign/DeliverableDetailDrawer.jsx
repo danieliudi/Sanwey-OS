@@ -83,8 +83,8 @@ function SideTabs({ activeId, onChange }) {
               padding: "4px 10px", fontSize: 11, fontWeight: 500,
               borderRadius: 9999,
               background:  active ? "#FFFFFF" : "transparent",
-              color:       active ? "#b5000b" : NEUTRAL.slate,
-              border:      active ? "1px solid #b5000b" : "1px solid transparent",
+              color:       active ? "var(--accent)" : NEUTRAL.slate,
+              border:      active ? "1px solid var(--accent)" : "1px solid transparent",
               boxShadow:   active ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
               cursor: "pointer", transition: "all 0.1s",
             }}
@@ -103,7 +103,7 @@ function PlaceholderPanel({ label }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 0", gap: 8 }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.slate }}>{label}</div>
-      <span style={{ fontSize: 11, padding: "2px 10px", borderRadius: 9999, background: "#F3F4F6", color: NEUTRAL.slate }}>em breve</span>
+      <span style={{ fontSize: 11, padding: "2px 10px", borderRadius: 9999, background: "var(--surface-alt)", color: NEUTRAL.slate }}>em breve</span>
     </div>
   );
 }
@@ -221,9 +221,9 @@ function DeliverableAIPanel({ item, currentUser }) {
 const inputBase = {
   width: "100%", fontSize: 13, borderRadius: 6,
   border: "1px solid #D1D5DB", padding: "7px 10px",
-  background: "#FAFAFA", color: NEUTRAL.graphite, outline: "none",
+  background: "var(--surface)", color: NEUTRAL.graphite, outline: "none",
 };
-const focusBorder = e => { e.target.style.borderColor = "#1E4D8C"; };
+const focusBorder = e => { e.target.style.borderColor = "var(--accent)"; };
 const blurBorder  = e => { e.target.style.borderColor = "#D1D5DB"; };
 
 /* ── Small primitives ───────────────────────────────────────── */
@@ -307,7 +307,7 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
           <label key={o.v} style={{ display: "flex", alignItems: "center", gap: 8, cursor: disabled ? "default" : "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
             <input type="radio" name={field.key} value={o.v} checked={value === o.v}
               onChange={() => !disabled && onChange(o.v)} disabled={disabled}
-              style={{ accentColor: "#1E4D8C" }} />
+              style={{ accentColor: "var(--accent)" }} />
             {o.l}
           </label>
         ))}
@@ -321,7 +321,7 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
           <label key={String(o.v)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: disabled ? "default" : "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
             <input type="radio" name={field.key} value={String(o.v)} checked={value === o.v}
               onChange={() => !disabled && onChange(o.v)} disabled={disabled}
-              style={{ accentColor: "#1E4D8C" }} />
+              style={{ accentColor: "var(--accent)" }} />
             {o.l}
           </label>
         ))}
@@ -336,7 +336,7 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
           <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, cursor: disabled ? "default" : "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
             <input type="checkbox" checked={checked.includes(opt)}
               onChange={() => { if (!disabled) onChange(checked.includes(opt) ? checked.filter(x => x !== opt) : [...checked, opt]); }}
-              disabled={disabled} style={{ accentColor: "#1E4D8C", width: 14, height: 14 }} />
+              disabled={disabled} style={{ accentColor: "var(--accent)", width: 14, height: 14 }} />
             {opt}
           </label>
         ))}
@@ -352,7 +352,7 @@ function AtividadesTab({ activities }) {
   if (sorted.length === 0) {
     return <div style={{ fontSize: 12, color: NEUTRAL.slate, textAlign: "center", marginTop: 32 }}>Nenhuma atividade registrada.</div>;
   }
-  const typeColor = { stage_change: "#1E4D8C", field_save: "#16A34A", note_added: "#7C3AED", created: "#D97706" };
+  const typeColor = { stage_change: "var(--accent)", field_save: "#16A34A", note_added: "#7C3AED", created: "#D97706" };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       {sorted.map((a, i) => (
@@ -417,13 +417,13 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
           onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(Array.from(e.dataTransfer.files)); }}
           onClick={() => inputRef.current?.click()}
           style={{
-            borderRadius: 10, border: `2px dashed ${dragOver ? "#1E4D8C" : "#D1D5DB"}`,
-            background: dragOver ? "#EFF6FF" : "#FAFAFA",
+            borderRadius: 10, border: `2px dashed ${dragOver ? "var(--accent)" : "#D1D5DB"}`,
+            background: dragOver ? "var(--surface-alt)" : "var(--surface)",
             padding: "20px 12px", textAlign: "center", cursor: "pointer",
             transition: "all 0.15s",
           }}
         >
-          <Upload size={18} style={{ color: dragOver ? "#1E4D8C" : NEUTRAL.slate, margin: "0 auto 6px" }} />
+          <Upload size={18} style={{ color: dragOver ? "var(--accent)" : NEUTRAL.slate, margin: "0 auto 6px" }} />
           <div style={{ fontSize: 12, color: NEUTRAL.slate, fontWeight: 500 }}>
             {uploading ? "Enviando…" : "Arraste ou clique para enviar"}
           </div>
@@ -510,7 +510,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
               </div>
               {total > 0 && (
                 <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, overflow: "hidden" }}>
-                  <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? "#16A34A" : "#1E4D8C", transition: "width 0.3s" }} />
+                  <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? "#16A34A" : "var(--accent)", transition: "width 0.3s" }} />
                 </div>
               )}
               {canWrite && (
@@ -559,7 +559,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddItem(cl.id); } }}
                   />
                   <button onClick={() => handleAddItem(cl.id)}
-                    style={{ background: "#1E4D8C", border: "none", borderRadius: 6, color: "#FFF", padding: "0 10px", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                    style={{ background: "var(--accent)", border: "none", borderRadius: 6, color: "#FFF", padding: "0 10px", cursor: "pointer", display: "flex", alignItems: "center" }}>
                     <Plus size={13} />
                   </button>
                 </div>
@@ -572,8 +572,8 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
         <button
           onClick={async () => { setCreating(true); await createChecklist({ createdBy: userId }); setCreating(false); }}
           disabled={creating}
-          style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#1E4D8C", background: "transparent", border: "1px dashed #BFDBFE", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontWeight: 500, justifyContent: "center" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#EFF6FF"; }}
+          style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--accent)", background: "transparent", border: "1px dashed #BFDBFE", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontWeight: 500, justifyContent: "center" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
           <Plus size={13} />
           {creating ? "Criando…" : "Nova checklist"}
@@ -615,7 +615,7 @@ function ComentariosTab({ item, onUpdate, canWrite }) {
         {notes.length === 0
           ? <div style={{ fontSize: 12, color: NEUTRAL.slate, textAlign: "center", marginTop: 20 }}>Nenhum comentário ainda.</div>
           : [...notes].reverse().map((n, i) => (
-            <div key={i} style={{ marginBottom: 10, padding: "10px 12px", background: "#F3F4F6", borderRadius: 8 }}>
+            <div key={i} style={{ marginBottom: 10, padding: "10px 12px", background: "var(--surface-alt)", borderRadius: 8 }}>
               <div style={{ fontSize: 13, color: NEUTRAL.graphite, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{n.text}</div>
               {n.createdAt && (
                 <div style={{ fontSize: 10, color: NEUTRAL.slate, marginTop: 4 }}>
@@ -636,7 +636,7 @@ function ComentariosTab({ item, onUpdate, canWrite }) {
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           />
           <button onClick={handleSend} disabled={sending || !text.trim()}
-            style={{ background: "#1E4D8C", color: "#FFF", border: "none", borderRadius: 6, padding: "0 14px", cursor: (sending || !text.trim()) ? "default" : "pointer", opacity: (sending || !text.trim()) ? 0.5 : 1, display: "flex", alignItems: "center" }}>
+            style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 6, padding: "0 14px", cursor: (sending || !text.trim()) ? "default" : "pointer", opacity: (sending || !text.trim()) ? 0.5 : 1, display: "flex", alignItems: "center" }}>
             <Send size={14} />
           </button>
         </div>
@@ -767,7 +767,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
               ? <div style={{ fontSize: 11, color: NEUTRAL.slate }}>Nenhuma transição registrada.</div>
               : [...(item.activities || [])].filter(a => a.type === "stage_change").reverse().map((a, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 11 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#1E4D8C", marginTop: 4, flexShrink: 0 }} />
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", marginTop: 4, flexShrink: 0 }} />
                   <div>
                     <div style={{ color: NEUTRAL.graphite }}>{a.description}</div>
                     <div style={{ color: NEUTRAL.slate, fontSize: 10 }}>{new Date(a.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
@@ -824,7 +824,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                 key={t.id}
                 onClick={() => setMobileTab(t.id)}
                 className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
-                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`, color: mobileTab === t.id ? "#1E4D8C" : NEUTRAL.slate }}
+                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "var(--accent)" : "transparent"}`, color: mobileTab === t.id ? "var(--accent)" : NEUTRAL.slate }}
               >
                 {t.label}
               </button>
@@ -852,7 +852,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             )}
             {companyLabels && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: "#F3F4F6", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}>
+                style={{ background: "var(--surface-alt)", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}>
                 {companyLabels}
               </span>
             )}
@@ -910,7 +910,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
           {/* ── LEFT sidebar ── */}
           <aside
             className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4${mobileTab !== "info" ? " hidden lg:flex lg:flex-col" : ""}`}
-            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+            style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}
           >
             {/* Item header */}
             <div>
@@ -1005,7 +1005,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
           {/* ── RIGHT sidebar ── */}
           <aside
             className="hidden lg:flex lg:flex-col w-full lg:w-[220px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4"
-            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+            style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}
           >
             <div>
               <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>
@@ -1031,7 +1031,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                     disabled={!canWrite}
                     className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                     style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB", opacity: canWrite ? 1 : 0.5 }}
-                    onMouseEnter={e => { if (canWrite) e.currentTarget.style.background = "#F3F4F6"; }}
+                    onMouseEnter={e => { if (canWrite) e.currentTarget.style.background = "var(--surface-alt)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
                   >
                     <ArrowLeft size={13} />
