@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, ChevronDown } from "lucide-react";
+
+const STORAGE_KEY = "sidebar_collapsed_groups";
+
+function loadCollapsed() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveCollapsed(state) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(() => window.innerWidth < 1024);
@@ -33,14 +43,25 @@ const ROLE_LABEL = {
   marketing:         "Marketing",
   gerente_marketing: "Gerente de Marketing",
   agencia:           "Agência",
+  rh:                "RH",
+  gerente_rh:        "Gerente de RH",
 };
 
 export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout, mobileOpen, onMobileClose }) {
   const isMobile = useIsMobile();
+  const [collapsed, setCollapsed] = useState(loadCollapsed);
 
   const handleNavClick = (itemId) => {
     onSectionChange(itemId);
     if (isMobile) onMobileClose?.();
+  };
+
+  const toggleGroup = (label) => {
+    setCollapsed(prev => {
+      const next = { ...prev, [label]: !prev[label] };
+      saveCollapsed(next);
+      return next;
+    });
   };
 
   const sidebarStyle = {
@@ -106,7 +127,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         </div>
 
         {/* ── CTA ── */}
-        {currentUser?.role !== "agencia" && (
+        {!["agencia", "rh", "gerente_rh"].includes(currentUser?.role) && (
           <div style={{ padding: "16px 16px 8px" }}>
             <button
               onClick={() => handleNavClick("crm")}
@@ -138,37 +159,61 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
 
         {/* ── Nav ── */}
         <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "4px 0 8px", scrollbarWidth: "none" }}>
-          {navGroups.map((group, gi) => (
-            <div key={gi} style={{ marginTop: gi === 0 ? 0 : 8 }}>
-              {gi > 0 && group.label && (
-                <div style={{ height: 1, background: T.border, margin: "0 16px 8px" }} />
-              )}
-              {group.label && (
-                <div
-                  style={{
-                    padding: "2px 20px 4px",
-                    color: T.groupLabel,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    pointerEvents: "none",
-                  }}
-                >
-                  {group.label}
-                </div>
-              )}
-              {group.items.map((item) => (
-                <NavItem
-                  key={item.id}
-                  icon={item.icon}
-                  label={item.label}
-                  active={section === item.id}
-                  onClick={() => handleNavClick(item.id)}
-                />
-              ))}
-            </div>
-          ))}
+          {navGroups.map((group, gi) => {
+            const isCollapsed = group.label ? !!collapsed[group.label] : false;
+            return (
+              <div key={gi} style={{ marginTop: gi === 0 ? 0 : 8 }}>
+                {gi > 0 && group.label && (
+                  <div style={{ height: 1, background: T.border, margin: "0 16px 8px" }} />
+                )}
+                {group.label && (
+                  <button
+                    onClick={() => toggleGroup(group.label)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "2px 12px 4px 20px",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <span style={{
+                      color: T.groupLabel,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                    }}>
+                      {group.label}
+                    </span>
+                    <ChevronDown
+                      size={13}
+                      strokeWidth={2.5}
+                      color={T.groupLabel}
+                      style={{
+                        flexShrink: 0,
+                        transition: "transform 0.2s",
+                        transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                      }}
+                    />
+                  </button>
+                )}
+                {!isCollapsed && group.items.map((item) => (
+                  <NavItem
+                    key={item.id}
+                    icon={item.icon}
+                    label={item.label}
+                    active={section === item.id}
+                    onClick={() => handleNavClick(item.id)}
+                  />
+                ))}
+              </div>
+            );
+          })}
         </nav>
 
         {/* ── User footer ── */}
