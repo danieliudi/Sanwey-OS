@@ -39,7 +39,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
       <div
         className="leading-none mb-1.5"
         style={{
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          fontFamily: "Inter, sans-serif",
           fontWeight: 800,
           fontSize: compact ? 26 : 32,
           color: accent ? "#FFFFFF" : "var(--text)",

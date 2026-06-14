@@ -375,7 +375,7 @@ function ShellCard({ children, accent = "#b5000b" }) {
       minHeight: "100vh",
       background: "#F9FAFB",
       padding: "32px 16px",
-      fontFamily: "'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     }}>
       <div style={{
         maxWidth: 560,

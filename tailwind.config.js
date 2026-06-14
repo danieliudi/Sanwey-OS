@@ -77,7 +77,7 @@ export default {
         full:    "9999px",
       },
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
       },
       spacing: {
         "touch":   "48px",

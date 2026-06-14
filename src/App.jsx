@@ -534,7 +534,7 @@ export default function App() {
     <div
       style={{
         background: "#fff8f7",
-        fontFamily: "'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         color: "#201a1a",
         minHeight: "100vh",
         width: "100%",
