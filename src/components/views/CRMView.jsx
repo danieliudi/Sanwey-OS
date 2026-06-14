@@ -22,9 +22,9 @@ const TERMINAL = new Set(["ganho", "perdido"]);
 // ── Quick-add form ────────────────────────────────────────────────────────────
 
 const SELECT_STYLE = {
-  borderColor: "#D1D5DB",
-  color: NEUTRAL.graphite,
-  background: "#FFFFFF",
+  borderColor: "var(--border-strong)",
+  color: "var(--text)",
+  background: "var(--surface)",
   padding: "6px 22px 6px 8px",
   appearance: "none",
   WebkitAppearance: "none",
@@ -130,7 +130,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
     <form
       onSubmit={handleSubmit}
       className="mx-2 mb-2 rounded-xl border p-2.5 space-y-2"
-      style={{ background: "#FFFFFF", borderColor: "#E0E7FF" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
       <input
         ref={inputRef}
@@ -139,9 +139,9 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         value={company}
         onChange={e => setCompany(e.target.value)}
         className="w-full text-xs rounded-lg border px-2.5 py-1.5 outline-none"
-        style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-        onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-        onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+        style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+        onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+        onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
       />
       <select
         value={sector}
@@ -149,8 +149,8 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         className="w-full text-xs rounded-lg border outline-none"
         style={{
           ...SELECT_STYLE,
-          borderColor: !sector ? "#b5000b" : "#D1D5DB",
-          color: sector ? NEUTRAL.graphite : NEUTRAL.slate,
+          borderColor: !sector ? "var(--accent)" : "var(--border-strong)",
+          color: sector ? "var(--text)" : "var(--text-dim)",
         }}
         required
       >
@@ -166,9 +166,9 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
           value={value}
           onChange={e => setValue(e.target.value)}
           className="flex-1 min-w-0 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
-          style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
-          onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-          onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+          style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+          onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+          onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
         />
         {ownerOptions.length > 1 && (
           <select
@@ -186,7 +186,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
         )}
       </div>
       {customFieldsDef.length > 0 && (
-        <div className="space-y-2 pt-1 mt-1 border-t" style={{ borderColor: "#F0F0F0" }}>
+        <div className="space-y-2 pt-1 mt-1 border-t" style={{ borderColor: "var(--surface-alt)" }}>
           {customFieldsDef.map(f => (
             <DynamicField
               key={f.id}
@@ -203,9 +203,9 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
           type="submit"
           disabled={saving || !company.trim() || !sector}
           className="flex-1 text-xs font-semibold py-1.5 rounded-lg transition-opacity"
-          style={{ background: "#1E4D8C", color: "#FFFFFF", opacity: saving || !company.trim() || !sector ? 0.5 : 1 }}
-          onMouseEnter={e => { if (!saving && company.trim() && sector) e.currentTarget.style.background = "#163a6b"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#1E4D8C"; }}
+          style={{ background: "var(--accent)", color: "#FFFFFF", opacity: saving || !company.trim() || !sector ? 0.5 : 1 }}
+          onMouseEnter={e => { if (!saving && company.trim() && sector) e.currentTarget.style.background = "var(--accent-hover)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
         >
           {saving ? "Salvando…" : "Criar card"}
         </button>
@@ -213,9 +213,9 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
           type="button"
           onClick={onCancel}
           className="px-2.5 text-xs rounded-lg border"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFFFFF" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+          style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
         >
           <X size={12} />
         </button>
@@ -274,8 +274,8 @@ function KpiCard({ label, value, sub }) {
     <div
       className="rounded-xl border"
       style={{
-        background: "#FFFFFF",
-        borderColor: "#E5E7EB",
+        background: "var(--surface)",
+        borderColor: "var(--border)",
         padding: "12px 16px",
         boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
       }}
@@ -284,7 +284,7 @@ function KpiCard({ label, value, sub }) {
         style={{
           fontSize: 10,
           fontWeight: 600,
-          color: NEUTRAL.slate,
+          color: "var(--text-dim)",
           textTransform: "uppercase",
           letterSpacing: "0.08em",
           marginBottom: 4,
@@ -296,7 +296,7 @@ function KpiCard({ label, value, sub }) {
         style={{
           fontSize: 20,
           fontWeight: 700,
-          color: NEUTRAL.graphite,
+          color: "var(--text)",
           letterSpacing: "-0.02em",
           lineHeight: 1.1,
         }}
@@ -304,7 +304,7 @@ function KpiCard({ label, value, sub }) {
         {value}
       </div>
       {sub && (
-        <div style={{ fontSize: 10, color: NEUTRAL.slate, marginTop: 3 }}>{sub}</div>
+        <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 3 }}>{sub}</div>
       )}
     </div>
   );
@@ -339,9 +339,9 @@ function AnalyticsPanel({ scopedLeads, stages }) {
       <button
         onClick={() => setOpen(v => !v)}
         className="flex items-center gap-1.5 text-xs font-medium transition-colors duration-150"
-        style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
-        onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
-        onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+        style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+        onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
       >
         <TrendingUp size={13} strokeWidth={2} />
         <span>Análise do funil</span>
@@ -357,9 +357,9 @@ function AnalyticsPanel({ scopedLeads, stages }) {
       {open && (
         <div
           className="rounded-2xl border mt-3 p-5"
-          style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
         >
-          <div className="text-xs font-semibold mb-4" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs font-semibold mb-4" style={{ color: "var(--text-dim)" }}>
             Distribuição por etapa
           </div>
           <div
@@ -372,7 +372,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
                 <div className="flex items-center justify-between mb-1.5">
                   <div
                     className="text-xs font-semibold flex items-center gap-1.5"
-                    style={{ color: NEUTRAL.graphite }}
+                    style={{ color: "var(--text)" }}
                   >
                     <span
                       style={{
@@ -386,7 +386,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
                     />
                     {stage.name}
                   </div>
-                  <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+                  <div className="text-xs" style={{ color: "var(--text-dim)" }}>
                     {count} · {formatK(total)}
                   </div>
                 </div>
@@ -395,7 +395,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
                 <div
                   style={{
                     height: 6,
-                    background: "#F1F3F5",
+                    background: "var(--surface-alt)",
                     borderRadius: 3,
                     overflow: "hidden",
                     marginBottom: 6,
@@ -416,7 +416,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
                 <div
                   style={{
                     height: 3,
-                    background: "#F1F3F5",
+                    background: "var(--surface-alt)",
                     borderRadius: 3,
                     overflow: "hidden",
                     marginBottom: 5,
@@ -435,7 +435,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
                 </div>
 
                 {/* Avg days */}
-                <div style={{ fontSize: 10, color: NEUTRAL.slate }}>
+                <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
                   {avgDays !== null
                     ? `Média ${avgDays}d nesta etapa`
                     : count > 0 ? "Sem tempo registrado" : "—"}
@@ -581,10 +581,10 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             Pipeline
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {scopedLeads.length} oportunidades
             {summary.pipelineValue > 0 && ` · ${formatK(summary.pipelineValue)} em aberto`}
             {summary.won > 0 && ` · ${summary.won} ganho${summary.won !== 1 ? "s" : ""}`}
@@ -597,9 +597,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             <button
               onClick={onOpenImport}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
-              style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.color = NEUTRAL.slate; }}
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
               title="Importar leads via CSV ou Excel"
             >
               <Upload size={13} />
@@ -611,17 +611,17 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             onClick={() => exportLeadsCSV(scopedLeads, users, pipelines)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
             style={{
-              background: "#FFFFFF",
-              borderColor: "#E5E7EB",
-              color: NEUTRAL.slate,
+              background: "var(--surface)",
+              borderColor: "var(--border)",
+              color: "var(--text-dim)",
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = "#F3F4F6";
-              e.currentTarget.style.color = NEUTRAL.graphite;
+              e.currentTarget.style.background = "var(--surface-alt)";
+              e.currentTarget.style.color = "var(--text)";
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = "#FFFFFF";
-              e.currentTarget.style.color = NEUTRAL.slate;
+              e.currentTarget.style.background = "var(--surface)";
+              e.currentTarget.style.color = "var(--text-dim)";
             }}
             title="Exportar leads filtrados como CSV"
           >
@@ -631,7 +631,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           {/* Toggle Kanban / Calendário */}
           <div
             className="inline-flex rounded-lg border overflow-hidden"
-            style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
+            style={{ borderColor: "var(--border)", background: "var(--surface)" }}
             role="tablist"
           >
             <ViewToggleButton
@@ -724,9 +724,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 </div>
               </button>
               {expanded && (
-                <div className="p-2.5 space-y-2" style={{ background: "#FAFAFA" }}>
+                <div className="p-2.5 space-y-2" style={{ background: "var(--surface-alt)" }}>
                   {bucket.leads.length === 0 ? (
-                    <div className="text-center py-4 text-xs" style={{ color: NEUTRAL.slate }}>Nenhum negócio nesta etapa</div>
+                    <div className="text-center py-4 text-xs" style={{ color: "var(--text-dim)" }}>Nenhum negócio nesta etapa</div>
                   ) : (
                     bucket.leads.map(lead => {
                       const ownerName = lead.owner ? (usersById.get(lead.owner)?.name?.split(" ")[0] || "—") : null;
@@ -796,8 +796,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 style={{
                   width: 272,
                   minWidth: 272,
-                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "#F0F7FF" : "#fef1f0",
-                  borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "70" : isOver && !canAccept ? "#FECACA" : "#E5E7EB",
+                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "var(--surface-alt)" : "var(--surface-alt)",
+                  borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "70" : isOver && !canAccept ? "#FECACA" : "var(--border)",
                   boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
                 }}
               >
@@ -811,20 +811,20 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 />
                 <div
                   className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                  style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}
+                  style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
                 >
                   <div className="min-w-0 flex-1">
                     <div
                       className="font-semibold flex items-center gap-1.5"
                       style={{
-                        color: NEUTRAL.graphite,
+                        color: "var(--text)",
                         fontSize: 11,
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
                       }}
                     >
                       <span>{stage.name}</span>
-                      <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>
+                      <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>
                         ({bucket.leads.length})
                       </span>
                     </div>
@@ -833,7 +833,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         Transição bloqueada
                       </div>
                     ) : (
-                      <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate, fontWeight: 600 }}>
+                      <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", fontWeight: 600 }}>
                         {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}
                       </div>
                     )}
@@ -842,9 +842,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                     <button
                       onClick={() => setEditingStage({ stage, companyId: colCompanyId })}
                       className="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer transition-colors text-xs font-semibold"
-                      style={{ color: NEUTRAL.slate, background: "transparent", border: "1px solid transparent" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                      style={{ color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                       title="Editar campos desta etapa"
                     >
                       <Settings size={11} />
@@ -861,7 +861,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   {bucket.leads.length === 0 ? (
                     <div
                       className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
-                      style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}
+                      style={{ borderColor: isOver ? stage.color + "40" : "var(--border)", color: "var(--text-dim)" }}
                     >
                       {isOver ? (
                         <>
@@ -911,13 +911,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       )}
 
       {viewMode === "kanban" && (
-        <p className="text-xs text-center" style={{ color: NEUTRAL.slate }}>
+        <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
           Arraste para mover entre etapas · Clique no card para ver detalhes
         </p>
       )}
 
       {viewMode === "table" && (
-        <p className="text-xs text-center" style={{ color: NEUTRAL.slate }}>
+        <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
           Clique numa linha para ver detalhes · Clique no cabeçalho para ordenar
         </p>
       )}
@@ -967,7 +967,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     <button
       onClick={() => setShowAIChat(v => !v)}
       className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 hidden lg:flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
-      style={{ background: "#b5000b", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
+      style={{ background: "var(--accent)", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
       onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
     >
@@ -990,7 +990,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           style={{
             height: 52,
             padding: "0 20px",
-            background: "#b5000b",
+            background: "var(--accent)",
             color: "#FFFFFF",
             border: "none",
             borderRadius: 26,
@@ -1028,10 +1028,10 @@ const TABLE_COLS = [
 ];
 
 function SortIcon({ col, sortCol, sortDir }) {
-  if (sortCol !== col) return <ArrowUpDown size={11} style={{ color: "#D1D5DB", flexShrink: 0 }} />;
+  if (sortCol !== col) return <ArrowUpDown size={11} style={{ color: "var(--border-strong)", flexShrink: 0 }} />;
   return sortDir === "asc"
-    ? <ArrowUp size={11} style={{ color: "#1E4D8C", flexShrink: 0 }} />
-    : <ArrowDown size={11} style={{ color: "#1E4D8C", flexShrink: 0 }} />;
+    ? <ArrowUp size={11} style={{ color: "var(--accent)", flexShrink: 0 }} />
+    : <ArrowDown size={11} style={{ color: "var(--accent)", flexShrink: 0 }} />;
 }
 
 function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
@@ -1079,7 +1079,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
 
   if (leads.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3" style={{ color: NEUTRAL.slate }}>
+      <div className="flex flex-col items-center justify-center py-20 gap-3" style={{ color: "var(--text-dim)" }}>
         <List size={40} strokeWidth={1} />
         <span className="text-sm">Nenhum lead encontrado</span>
       </div>
@@ -1087,10 +1087,10 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "#E5E7EB" }}>
+    <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border)" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
         <thead>
-          <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
             {TABLE_COLS.map(col => (
               <th
                 key={col.id}
@@ -1100,7 +1100,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
                   textAlign: "left",
                   fontWeight: 600,
                   fontSize: 11,
-                  color: NEUTRAL.slate,
+                  color: "var(--text-dim)",
                   letterSpacing: "0.04em",
                   textTransform: "uppercase",
                   cursor: col.sortable ? "pointer" : "default",
@@ -1130,8 +1130,8 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
                 onMouseEnter={() => setHoveredRow(lead.id)}
                 onMouseLeave={() => setHoveredRow(null)}
                 style={{
-                  borderBottom: idx < sorted.length - 1 ? "1px solid #F3F4F6" : "none",
-                  background: isHovered ? "#fef1f0" : "transparent",
+                  borderBottom: idx < sorted.length - 1 ? "1px solid var(--surface-alt)" : "none",
+                  background: isHovered ? "var(--surface-alt)" : "transparent",
                   cursor: "pointer",
                   transition: "background 100ms",
                 }}
@@ -1156,11 +1156,11 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
                       </span>
                     )}
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240 }}>
+                      <div style={{ fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240 }}>
                         {lead.company}
                       </div>
                       {lead.sector && (
-                        <div style={{ fontSize: 11, color: NEUTRAL.slate, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div style={{ fontSize: 11, color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {lead.sector}
                         </div>
                       )}
@@ -1174,10 +1174,10 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
                       <span style={{ color: stage.color, fontWeight: 600, fontSize: 12 }}>{stage.name}</span>
                     </span>
-                  ) : <span style={{ color: NEUTRAL.slate }}>—</span>}
+                  ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
                 </td>
                 {/* Value */}
-                <td style={{ padding: "10px 12px", fontWeight: 600, color: lead.value > 0 ? "#15803D" : NEUTRAL.slate }}>
+                <td style={{ padding: "10px 12px", fontWeight: 600, color: lead.value > 0 ? "#15803D" : "var(--text-dim)" }}>
                   {lead.value > 0 ? `R$ ${formatK(lead.value)}` : "—"}
                 </td>
                 {/* Fit Score */}
@@ -1194,10 +1194,10 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
                     }}>
                       {lead.fitScore}
                     </span>
-                  ) : <span style={{ color: NEUTRAL.slate }}>—</span>}
+                  ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
                 </td>
                 {/* Sector */}
-                <td style={{ padding: "10px 12px", color: NEUTRAL.slate, maxWidth: 140 }}>
+                <td style={{ padding: "10px 12px", color: "var(--text-dim)", maxWidth: 140 }}>
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
                     {lead.sector || "—"}
                   </span>
@@ -1214,14 +1214,14 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
                       }}>
                         {owner.initials || owner.name?.[0]?.toUpperCase() || "?"}
                       </span>
-                      <span style={{ color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }}>
+                      <span style={{ color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }}>
                         {owner.name}
                       </span>
                     </span>
-                  ) : <span style={{ color: NEUTRAL.slate }}>—</span>}
+                  ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
                 </td>
                 {/* Last move */}
-                <td style={{ padding: "10px 12px", color: NEUTRAL.slate, fontSize: 12 }}>
+                <td style={{ padding: "10px 12px", color: "var(--text-dim)", fontSize: 12 }}>
                   {fmt(lead.stageChangedAt || lead.createdAt)}
                 </td>
               </tr>
@@ -1241,11 +1241,11 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
       aria-selected={active}
       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
       style={{
-        background: active ? "#1E4D8C" : "#FFFFFF",
-        color: active ? "#FFFFFF" : NEUTRAL.slate,
+        background: active ? "var(--accent)" : "var(--surface)",
+        color: active ? "#FFFFFF" : "var(--text-dim)",
       }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#F3F4F6"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "#FFFFFF"; }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
     >
       <Icon size={13} />
       {label}
