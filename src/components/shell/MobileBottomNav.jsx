@@ -18,13 +18,13 @@ const ROLE_TABS = {
     { id: "dashboard",          label: "Início",    icon: "home" },
     { id: "marketing",          label: "Campanhas", icon: "campaign" },
     { id: "marketing-entregas", label: "Entregas",  icon: "inventory_2" },
-    { id: "signals",            label: "Sinais",    icon: "monitoring" },
+    { id: "marketing-despesas", label: "Despesas",  icon: "payments" },
   ],
   marketing: [
     { id: "dashboard",          label: "Início",    icon: "home" },
     { id: "marketing",          label: "Campanhas", icon: "campaign" },
     { id: "marketing-entregas", label: "Entregas",  icon: "inventory_2" },
-    { id: "signals",            label: "Sinais",    icon: "monitoring" },
+    { id: "marketing-despesas", label: "Despesas",  icon: "payments" },
   ],
   vendedor: [
     { id: "dashboard",          label: "Início",    icon: "home" },
