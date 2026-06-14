@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 
 export function Modal({ open, onClose, title, children, width = 560 }) {
   useEffect(() => {
@@ -20,18 +19,27 @@ export function Modal({ open, onClose, title, children, width = 560 }) {
       aria-modal="true"
     >
       <div
-        className="rounded-2xl shadow-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-        style={{ background: "#FFFFFF", maxWidth: width, boxShadow: "0 24px 64px rgba(32,26,26,0.16)" }}
+        className="rounded-lg shadow-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        style={{
+          background: "var(--surface)",
+          maxWidth: width,
+          boxShadow: "0 24px 64px rgba(0,0,0,0.14)",
+        }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "#E5E7EB" }}>
-          <h3 className="font-semibold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>{title}</h3>
+        <div
+          className="flex items-center justify-between px-6 py-4 border-b"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <h3 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>
+            {title}
+          </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            className="p-1.5 rounded-sm transition-colors"
+            style={{ color: "var(--text-faint)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
             aria-label="Fechar"
           >
             <X size={18} />

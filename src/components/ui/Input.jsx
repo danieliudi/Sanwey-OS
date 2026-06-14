@@ -1,5 +1,4 @@
 import React from "react";
-import { NEUTRAL } from "../../constants/companies";
 
 export function Input({ value, onChange, placeholder, icon: Icon, type = "text", className = "" }) {
   return (
@@ -8,7 +7,7 @@ export function Input({ value, onChange, placeholder, icon: Icon, type = "text",
         <Icon
           size={15}
           className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-          color={NEUTRAL.slate}
+          style={{ color: "var(--text-faint)" }}
           strokeWidth={2}
         />
       )}
@@ -17,17 +16,22 @@ export function Input({ value, onChange, placeholder, icon: Icon, type = "text",
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full py-2 text-sm rounded-lg border transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-0"
+        className="w-full py-2 text-sm rounded-sm border transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-0"
         style={{
           paddingLeft: Icon ? 38 : 12,
           paddingRight: 12,
-          borderColor: "#E5E7EB",
-          background: "#FFFFFF",
-          color: NEUTRAL.graphite,
-          "--tw-ring-color": "rgba(199,33,43,.15)",
+          borderColor: "var(--border-strong)",
+          background: "var(--surface)",
+          color: "var(--text)",
         }}
-        onFocus={e => { e.currentTarget.style.borderColor = "#b5000b"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(181,0,11,0.08)"; }}
-        onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.boxShadow = "none"; }}
+        onFocus={e => {
+          e.currentTarget.style.borderColor = "var(--accent)";
+          e.currentTarget.style.boxShadow = "0 0 0 3px rgba(55,53,47,0.10)";
+        }}
+        onBlur={e => {
+          e.currentTarget.style.borderColor = "var(--border-strong)";
+          e.currentTarget.style.boxShadow = "none";
+        }}
       />
     </div>
   );
