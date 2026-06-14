@@ -4,6 +4,30 @@ export default {
   theme: {
     extend: {
       colors: {
+        /* ── Design System semantic tokens (mapeia CSS vars) ── */
+        bg:               "var(--bg)",
+        surface:          "var(--surface)",
+        "surface-alt":    "var(--surface-alt)",
+        border:           "var(--border)",
+        "border-strong":  "var(--border-strong)",
+        text:             "var(--text)",
+        "text-dim":       "var(--text-dim)",
+        "text-faint":     "var(--text-faint)",
+        accent:           "var(--accent)",
+        "accent-hover":   "var(--accent-hover)",
+        success:          "var(--success)",
+        warning:          "var(--warning)",
+        danger:           "var(--danger)",
+
+        /* ── Product tokens (company identity) ── */
+        "color-resibag":   "var(--color-resibag)",
+        "color-industria": "var(--color-industria)",
+
+        /* ── Semantic extras ── */
+        amber:            "var(--amber)",
+        "amber-bg":       "var(--amber-bg)",
+
+        /* ── Legacy aliases (mantidos para views existentes — remover na Fase 1) ── */
         primary:          "#b5000b",
         "primary-container": "#e30613",
         "primary-fixed":  "#ffdad5",
@@ -18,7 +42,6 @@ export default {
         "tertiary-container": "#0071d4",
         "on-tertiary":    "#ffffff",
         "on-tertiary-container": "#f5f7ff",
-        surface:          "#fff8f7",
         "surface-white":  "#FFFFFF",
         "surface-bright": "#fff8f7",
         "surface-dim":    "#e4d7d7",
@@ -41,26 +64,23 @@ export default {
         "error-container": "#ffdad6",
         "on-error":       "#ffffff",
         "danger-dark":    "#C7212B",
-        amber:            "#E8920A",
-        "amber-bg":       "#FEF3C7",
-        success:          "#16A34A",
       },
       borderRadius: {
         none:    "0",
-        sm:      "2px",
-        DEFAULT: "0.25rem",
-        md:      "0.25rem",
-        lg:      "0.5rem",
-        xl:      "0.75rem",
-        "2xl":   "1rem",
-        "3xl":   "1.25rem",
+        sm:      "var(--radius-sm)",
+        DEFAULT: "var(--radius-sm)",
+        md:      "var(--radius-sm)",
+        lg:      "var(--radius-md)",
+        xl:      "10px",
+        "2xl":   "12px",
+        "3xl":   "16px",
         full:    "9999px",
       },
       fontFamily: {
         sans: ["Plus Jakarta Sans", "Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
       },
       spacing: {
-        "touch":  "48px",
+        "touch":   "48px",
         "sidebar": "288px",
         "topbar":  "64px",
       },

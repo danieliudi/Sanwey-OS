@@ -2,28 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Design System v1 — Notion tone ─────────────────────────────────────── */
 :root {
-  /* CRM Elite Design System */
-  --primary:              #b5000b;
-  --primary-container:    #e30613;
-  --on-primary:           #ffffff;
-  --secondary:            #5c5f60;
-  --tertiary:             #0059a8;
-  --surface:              #fff8f7;
-  --surface-white:        #FFFFFF;
-  --surface-container-low:    #fef1f0;
-  --surface-container-high:   #f2e5e5;
-  --surface-container-highest: #ede0df;
-  --on-surface:           #201a1a;
-  --on-surface-variant:   #5e3f3b;
-  --border-subtle:        #E5E7EB;
-  --outline:              #936e69;
-  --gray-text:            #6B7280;
-  --amber:                #E8920A;
-  --amber-bg:             #FEF3C7;
-  --success:              #16A34A;
-  --sidebar-width:        288px;
-  --topbar-height:        64px;
+  /* Surface */
+  --bg:            #FBFBFA;
+  --surface:       #FFFFFF;
+  --surface-alt:   #F7F6F3;
+
+  /* Borders */
+  --border:        #E9E8E5;
+  --border-strong: #DEDCD7;
+
+  /* Text */
+  --text:          #37352F;
+  --text-dim:      #57534E;
+  --text-faint:    #8A857C;
+
+  /* Action — único token white-label */
+  --accent:        #37352F;
+  --accent-hover:  #2A2925;
+
+  /* Semantic status */
+  --success:       #15803D;
+  --warning:       #B45309;
+  --danger:        #B91C1C;
+
+  /* Shape */
+  --radius-sm:     6px;
+  --radius-md:     8px;
+
+  /* Product tokens — identidade de empresa (não white-label) */
+  --color-resibag:   #16A34A;
+  --color-industria: #C7212B;
+
+  /* Semantic extras */
+  --amber:         #E8920A;
+  --amber-bg:      #FEF3C7;
+
+  /* Layout */
+  --sidebar-width: 288px;
+  --topbar-height: 64px;
+}
+
+/* ─── Dark mode ───────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:            #1A1A18;
+  --surface:       #242422;
+  --surface-alt:   #2C2C29;
+  --border:        #3A3A36;
+  --border-strong: #4A4A46;
+  --text:          #EBEBDF;
+  --text-dim:      #B5B3A8;
+  --text-faint:    #787470;
+  --accent:        #EBEBDF;
+  --accent-hover:  #FFFFFF;
 }
 
 html, body, #root {
@@ -45,8 +77,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: "Plus Jakarta Sans", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--surface);
-  color: var(--on-surface);
+  background: var(--bg);
+  color: var(--text);
 }
 
 #root {
@@ -65,8 +97,7 @@ body {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Print: esconde shell (sidebar, header, footer) e mantém só o conteúdo
-   da rota — usado pelo botão "Exportar PDF" no Painel da Presidência. */
+/* Print: esconde shell e mantém só o conteúdo da rota */
 @media print {
   aside, header, footer { display: none !important; }
   main { padding: 0 !important; }
