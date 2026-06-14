@@ -802,7 +802,7 @@ export default function App() {
           } />
           <Route path={ROUTES["marketing-despesas"]} element={
             (isMarketingUser && !isAgencia)
-              ? <DespesasView user={currentUser} users={users} />
+              ? <DespesasView user={currentUser} users={users} campaigns={campaigns} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["rh-overview"]} element={

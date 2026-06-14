@@ -33,7 +33,7 @@ function StatusBadge({ status }) {
   );
 }
 
-function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
+function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser }) {
   const [form, setForm] = useState(() => ({
     ...EMPTY_FORM,
     companyIds: currentUser?.companies?.length > 0 ? [currentUser.companies[0]] : [],
@@ -119,9 +119,23 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
             onChange={e => set("description", e.target.value)}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
             style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
-            onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+            onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
             onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
           />
+
+          {campaigns.length > 0 && (
+            <select
+              value={form.campaignId || ""}
+              onChange={e => set("campaignId", e.target.value || null)}
+              className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+              style={{ borderColor: "var(--border-strong)", color: form.campaignId ? "var(--text)" : "var(--text-dim)", background: "var(--surface)" }}
+            >
+              <option value="">Sem campanha vinculada</option>
+              {campaigns.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
 
           <div className="flex gap-2">
             <select
@@ -153,7 +167,7 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
               step="0.01"
               className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
               style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
-              onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
               onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
             />
             <input
@@ -162,7 +176,7 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
               onChange={e => set("dueDate", e.target.value)}
               className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
               style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)" }}
-              onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
               onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
             />
           </div>
@@ -202,7 +216,7 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
             rows={2}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
             style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
-            onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
+            onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
             onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
           />
 
@@ -217,7 +231,7 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
               type="submit"
               disabled={saving || !form.description.trim()}
               className="flex-1 text-sm font-semibold py-2 rounded-xl"
-              style={{ background: "#1E4D8C", color: "#FFF", opacity: saving || !form.description.trim() ? 0.5 : 1, border: "none", cursor: saving || !form.description.trim() ? "default" : "pointer" }}
+              style={{ background: "var(--accent)", color: "#FFF", opacity: saving || !form.description.trim() ? 0.5 : 1, border: "none", cursor: saving || !form.description.trim() ? "default" : "pointer" }}
             >
               {saving ? "Salvando…" : "Salvar"}
             </button>
@@ -236,7 +250,7 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
   );
 }
 
-export function DespesasView({ user, users = [] }) {
+export function DespesasView({ user, users = [], campaigns = [] }) {
   const {
     expenses,
     loading,
@@ -245,6 +259,8 @@ export function DespesasView({ user, users = [] }) {
     updateExpense,
     deleteExpense,
   } = useMarketingExpenses({ userId: user?.id, role: user?.role });
+
+  const campaignMap = useMemo(() => Object.fromEntries(campaigns.map(c => [c.id, c])), [campaigns]);
 
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus]     = useState("all");
@@ -308,9 +324,9 @@ export function DespesasView({ user, users = [] }) {
           <button
             onClick={openNew}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "#1E4D8C", color: "#FFF", border: "none", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#163a6b"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#1E4D8C"; }}
+            style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
           >
             <Plus size={15} />
             Nova Despesa
@@ -389,7 +405,7 @@ export function DespesasView({ user, users = [] }) {
           <table className="w-full border-collapse">
             <thead>
               <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
-                {["Descrição", "Categoria", "Empresa(s)", "Valor", "Vencimento", "Status", ""].map(h => (
+                {["Descrição", "Campanha", "Categoria", "Empresa(s)", "Valor", "Vencimento", "Status", ""].map(h => (
                   <th
                     key={h}
                     className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide"
@@ -403,7 +419,7 @@ export function DespesasView({ user, users = [] }) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>
+                  <td colSpan={8} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>
                     Nenhuma despesa encontrada com os filtros selecionados.
                   </td>
                 </tr>
@@ -422,6 +438,12 @@ export function DespesasView({ user, users = [] }) {
                         {expense.notes}
                       </div>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)", maxWidth: 140 }}>
+                    {expense.campaignId && campaignMap[expense.campaignId]
+                      ? <span className="truncate block" title={campaignMap[expense.campaignId].name}>{campaignMap[expense.campaignId].name}</span>
+                      : <span style={{ color: "var(--text-faint)" }}>—</span>
+                    }
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
                     {expense.category}
@@ -468,7 +490,7 @@ export function DespesasView({ user, users = [] }) {
                             display: "flex",
                             alignItems: "center",
                           }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#EFF6FF"; e.currentTarget.style.color = "#1E4D8C"; }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
                           onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
                         >
                           <Pencil size={13} />
@@ -506,7 +528,7 @@ export function DespesasView({ user, users = [] }) {
       {modalOpen && (
         <ExpenseModal
           initial={modalExpense}
-          users={users}
+          campaigns={campaigns}
           onSave={handleSave}
           onClose={closeModal}
           currentUser={user}
