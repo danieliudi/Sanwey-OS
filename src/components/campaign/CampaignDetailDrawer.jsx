@@ -552,7 +552,7 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
       ) : (
         <div className="space-y-2">
           {[...notes].reverse().map((note, i) => (
-            <div key={i} className="p-3 rounded-xl border" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
+            <div key={i} className="p-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
               <div className="text-xs whitespace-pre-wrap" style={{ color: "var(--text)" }}>{note.text}</div>
               {note.createdAt && (
                 <div className="text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>{formatDateBR(note.createdAt)}</div>
@@ -612,16 +612,16 @@ function EntregasTab({ campaign, canWrite }) {
         <button
           onClick={() => setCreating(true)}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-sm font-medium transition-colors cursor-pointer"
-          style={{ borderColor: "#E5E7EB", color: "#6B7280", background: "#FAFAFA" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "#b5000b"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "#FAFAFA"; e.currentTarget.style.color = "#6B7280"; }}
+          style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface-alt)" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; e.currentTarget.style.color = "var(--color-industria)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text-dim)"; }}
         >
           <Plus size={14} />
           Nova entrega para esta campanha
         </button>
       )}
       {creating && (
-        <div className="p-3 rounded-xl border space-y-2" style={{ borderColor: "#E5E7EB" }}>
+        <div className="p-3 rounded-xl border space-y-2" style={{ borderColor: "var(--border)" }}>
           <input
             autoFocus
             value={title}
@@ -629,12 +629,12 @@ function EntregasTab({ campaign, canWrite }) {
             onKeyDown={e => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") setCreating(false); }}
             placeholder="Título da entrega..."
             className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
-            style={{ borderColor: "#D1D5DB", fontSize: 13 }}
+            style={{ borderColor: "var(--border-strong)", fontSize: 13 }}
           />
           <div className="flex gap-2">
             <button onClick={handleCreate} disabled={saving || !title.trim()}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
-              style={{ background: "#b5000b", opacity: saving ? 0.6 : 1 }}>
+              style={{ background: "var(--color-industria)", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Criando..." : "Criar"}
             </button>
             <button onClick={() => setCreating(false)}
@@ -787,9 +787,9 @@ export function CampaignDetailDrawer({
                   placeholder="Descreva o briefing desta campanha…"
                   rows={4}
                   className="w-full text-xs rounded-xl border px-3 py-2 outline-none resize-none"
-                  style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
+                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
                   onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-                  onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+                  onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
                 />
               )
             }

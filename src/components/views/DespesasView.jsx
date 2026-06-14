@@ -24,7 +24,7 @@ function StatusBadge({ status }) {
       className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
       style={{
         background: isPago ? "#DCFCE7" : "#FEF3C7",
-        color:      isPago ? "#15803D" : "#D97706",
+        color:      isPago ? "var(--success)" : "var(--warning)",
         border:     `1px solid ${isPago ? "#BBF7D0" : "#FDE68A"}`,
       }}
     >
@@ -89,7 +89,7 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
     >
       <div
         style={{
-          background: "#FFFFFF",
+          background: "var(--surface)",
           borderRadius: 16,
           boxShadow: "0 24px 64px rgba(32,26,26,0.18)",
           width: "100%",
@@ -99,12 +99,12 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <div className="font-bold text-base" style={{ color: NEUTRAL.graphite }}>
+          <div className="font-bold text-base" style={{ color: "var(--text)" }}>
             {initial?.id ? "Editar despesa" : "Nova despesa"}
           </div>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", color: NEUTRAL.slate, cursor: "pointer", padding: 4, borderRadius: 6 }}
+            style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", padding: 4, borderRadius: 6 }}
           >
             <X size={16} />
           </button>

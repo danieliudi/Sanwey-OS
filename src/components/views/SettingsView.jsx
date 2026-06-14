@@ -1088,7 +1088,7 @@ export function SettingsView({
         width={440}
       >
         <div className="px-6 py-5 space-y-4">
-          <p className="text-sm leading-relaxed" style={{ color: NEUTRAL.graphite }}>
+          <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
             Esta ação removerá <strong>todos os {leadsCount} leads</strong> do CRM.
             Ela é <strong>irreversível</strong> e não pode ser desfeita.
           </p>
@@ -1100,8 +1100,8 @@ export function SettingsView({
             <span>Dados sincronizados com o Supabase serão excluídos do banco de dados permanentemente.</span>
           </div>
           <div>
-            <label className="text-xs font-semibold block mb-1.5" style={{ color: NEUTRAL.slate }}>
-              Digite <strong style={{ color: NEUTRAL.graphite }}>LIMPAR</strong> para confirmar
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: "var(--text-dim)" }}>
+              Digite <strong style={{ color: "var(--text)" }}>LIMPAR</strong> para confirmar
             </label>
             <input
               type="text"
@@ -1110,16 +1110,16 @@ export function SettingsView({
               placeholder="LIMPAR"
               autoFocus
               className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
-              onFocus={e => { e.currentTarget.style.borderColor = "#DC2626"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
+              style={{ borderColor: "var(--border)", color: "var(--text)" }}
+              onFocus={e => { e.currentTarget.style.borderColor = "var(--danger)"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
             />
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={() => setClearConfirmOpen(false)}
               className="px-4 py-2 text-sm rounded-lg border"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFFFFF" }}
+              style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
             >
               Cancelar
             </button>
@@ -1128,7 +1128,7 @@ export function SettingsView({
               disabled={clearTyped !== "LIMPAR"}
               className="px-4 py-2 text-sm rounded-lg font-semibold text-white transition-opacity"
               style={{
-                background: "#DC2626",
+                background: "var(--danger)",
                 opacity: clearTyped === "LIMPAR" ? 1 : 0.4,
                 cursor: clearTyped === "LIMPAR" ? "pointer" : "not-allowed",
                 border: "none",

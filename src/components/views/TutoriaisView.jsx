@@ -320,7 +320,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl border" style={{ background: "#F8F9FA", borderColor: "#E5E7EB" }}>
+      <div className="flex gap-1 p-1 rounded-xl border" style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}>
         {TABS.map(tab => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -330,8 +330,8 @@ export function TutoriaisView({ currentUser, onNavigate }) {
               onClick={() => setActiveTab(tab.id)}
               className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer"
               style={{
-                background: active ? "#FFFFFF" : "transparent",
-                color: active ? NEUTRAL.graphite : NEUTRAL.slate,
+                background: active ? "var(--surface)" : "transparent",
+                color: active ? "var(--text)" : "var(--text-dim)",
                 boxShadow: active ? "0 1px 3px rgba(0,0,0,0.10)" : "none",
                 border: "none",
               }}
@@ -347,13 +347,13 @@ export function TutoriaisView({ currentUser, onNavigate }) {
       {activeTab === "tutoriais" && (
         <div className="space-y-6">
           <div>
-            <h2 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+            <h2 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
               Vídeos tutoriais
             </h2>
             <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
               {videos.map(v => <VideoCard key={v.id} video={v} onNavigate={onNavigate} />)}
             </div>
-            <p className="text-xs mt-3" style={{ color: NEUTRAL.slate }}>
+            <p className="text-xs mt-3" style={{ color: "var(--text-dim)" }}>
               Os vídeos serão publicados em breve. Quando disponíveis, aparecerão automaticamente nesta tela.
             </p>
           </div>
@@ -382,9 +382,9 @@ export function TutoriaisView({ currentUser, onNavigate }) {
           {/* Steps */}
           <div
             className="rounded-xl border p-5"
-            style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+            style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
           >
-            <h2 className="font-semibold mb-5" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+            <h2 className="font-semibold mb-5" style={{ fontSize: 15, color: "var(--text)" }}>
               Como criar uma automação — passo a passo
             </h2>
             <div className="space-y-0">
@@ -393,7 +393,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
                   <div className="flex flex-col items-center">
                     <div
                       className="flex items-center justify-center rounded-full font-bold text-sm shrink-0"
-                      style={{ width: 32, height: 32, background: "#b5000b", color: "#FFFFFF", fontSize: 13 }}
+                      style={{ width: 32, height: 32, background: "var(--accent)", color: "#FFFFFF", fontSize: 13 }}
                     >
                       {step.number}
                     </div>

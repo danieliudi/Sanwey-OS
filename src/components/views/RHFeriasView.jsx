@@ -618,8 +618,8 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                   return (
                     <tr
                       key={req.id}
-                      style={{ borderBottom: "1px solid #E5E7EB" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
+                      style={{ borderBottom: "1px solid var(--border)" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                     >
                       <td className="px-4 py-3">
@@ -656,7 +656,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                               title="Aprovar"
                               style={{
                                 background: "#DCFCE7",
-                                color: "#16A34A",
+                                color: "var(--success)",
                                 border: "1px solid #BBF7D0",
                                 borderRadius: 7,
                                 padding: "3px 10px",
@@ -677,7 +677,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                               title="Recusar"
                               style={{
                                 background: "#FEE2E2",
-                                color: "#B91C1C",
+                                color: "var(--danger)",
                                 border: "1px solid #FECACA",
                                 borderRadius: 7,
                                 padding: "3px 10px",

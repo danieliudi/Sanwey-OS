@@ -68,7 +68,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
         company: (l.company || "—").slice(0, 28),
         valor: l.value || 0,
         empresa: COMPANIES[l.companyId]?.short || l.companyId,
-        fill: COMPANIES[l.companyId]?.primary || NEUTRAL.graphite,
+        fill: COMPANIES[l.companyId]?.primary || "var(--text)",
       }));
   }, [leads]);
 

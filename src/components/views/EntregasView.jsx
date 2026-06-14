@@ -453,7 +453,7 @@ export function EntregasView({ user, users = [] }) {
               const sel = companyFilter.includes(id);
               return (
                 <button key={id} onClick={() => toggleCompanyFilter(id)}
-                  style={{ padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, border: `1px solid ${sel ? co.primary : "var(--border)"}`, background: sel ? co.primary + "22" : "#FFF", color: sel ? co.primary : "var(--text-dim)", cursor: "pointer" }}>
+                  style={{ padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, border: `1px solid ${sel ? co.primary : "var(--border)"}`, background: sel ? co.primary + "22" : "var(--surface)", color: sel ? co.primary : "var(--text-dim)", cursor: "pointer" }}>
                   {co.short}
                 </button>
               );
