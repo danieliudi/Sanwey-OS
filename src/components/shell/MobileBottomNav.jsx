@@ -43,14 +43,16 @@ const ROLE_TABS = {
     { id: "marketing-entregas", label: "Entregas",  icon: "inventory_2" },
   ],
   rh: [
-    { id: "rh-funcionarios", label: "Funcionários", icon: "group" },
-    { id: "rh-recrutamento", label: "Recrutamento", icon: "work" },
-    { id: "rh-ferias",       label: "Férias",       icon: "beach_access" },
+    { id: "rh-overview",     label: "Visão Geral",  icon: "dashboard" },
+    { id: "rh-funcionarios", label: "Funcionários",  icon: "group" },
+    { id: "rh-recrutamento", label: "Recrutamento",  icon: "work" },
+    { id: "rh-ferias",       label: "Férias",        icon: "beach_access" },
   ],
   gerente_rh: [
-    { id: "rh-funcionarios", label: "Funcionários", icon: "group" },
-    { id: "rh-recrutamento", label: "Recrutamento", icon: "work" },
-    { id: "rh-ferias",       label: "Férias",       icon: "beach_access" },
+    { id: "rh-overview",     label: "Visão Geral",  icon: "dashboard" },
+    { id: "rh-funcionarios", label: "Funcionários",  icon: "group" },
+    { id: "rh-recrutamento", label: "Recrutamento",  icon: "work" },
+    { id: "rh-ferias",       label: "Férias",        icon: "beach_access" },
   ],
 };
 

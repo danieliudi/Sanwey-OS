@@ -47,6 +47,7 @@ import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
 import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
+import { RHOverviewView } from "./components/views/RHOverviewView";
 import { RHFuncionariosView } from "./components/views/RHFuncionariosView";
 import { RHRecrutamentoView } from "./components/views/RHRecrutamentoView";
 import { RHFeriasView } from "./components/views/RHFeriasView";
@@ -379,8 +380,9 @@ export default function App() {
       groups.push({
         label: "Recursos Humanos",
         items: [
-          { id: "rh-funcionarios", label: "Funcionários",  icon: Users },
-          { id: "rh-recrutamento", label: "Recrutamento",  icon: BriefcaseBusiness },
+          { id: "rh-overview",     label: "Visão Geral",      icon: LayoutDashboard },
+          { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
+          { id: "rh-recrutamento", label: "Recrutamento",      icon: BriefcaseBusiness },
           { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
         ],
       });
@@ -442,13 +444,13 @@ export default function App() {
       setSection("dashboard");
     }
     // RH sections only for rh/gerente_rh/admin
-    const rhSections = ["rh-funcionarios", "rh-recrutamento", "rh-ferias"];
+    const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias"];
     if (!isRHUser && rhSections.includes(section)) {
       setSection("dashboard");
     }
     // Pure RH users shouldn't access CRM sections
     if (isPureRH && crmSections.includes(section)) {
-      setSection("rh-funcionarios");
+      setSection("rh-overview");
     }
     // Agência can access marketing routes + their own profile (settings).
     const agenciaBlocked = ["crm", "signals", "explorer", "marketing-despesas", "dashboard", "tutorials"];
@@ -581,7 +583,7 @@ export default function App() {
             isAgencia ? (
               <Navigate to={ROUTES.marketing} replace />
             ) : isPureRH ? (
-              <Navigate to={ROUTES["rh-funcionarios"]} replace />
+              <Navigate to={ROUTES["rh-overview"]} replace />
             ) : isPureMarketing ? (
               <MarketingDashboardView user={currentUser} />
             ) : (
@@ -776,6 +778,11 @@ export default function App() {
             (isMarketingUser && !isAgencia)
               ? <DespesasView user={currentUser} users={users} />
               : <Navigate to={ROUTES.marketing} replace />
+          } />
+          <Route path={ROUTES["rh-overview"]} element={
+            isRHUser
+              ? <RHOverviewView currentUser={currentUser} users={users} canWrite={isRHManager} onNavigate={setSection} />
+              : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-funcionarios"]} element={
             isRHUser
