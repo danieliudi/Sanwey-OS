@@ -180,7 +180,7 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
             {onAddLead && (
               <div className="pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
                 {justAdded.has(s.id) ? (
-                  <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "#16A34A" }}>
+                  <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--success)" }}>
                     <CheckCircle2 size={12} />
                     Lead adicionado ao pipeline
                   </div>

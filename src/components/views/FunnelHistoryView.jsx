@@ -184,7 +184,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
           <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
             Movimentação dos clientes pelas etapas ao longo do tempo.
             Clientes que regressaram a uma etapa anterior aparecem marcados como{" "}
-            <span style={{ color: NEUTRAL.amber, fontWeight: 600 }}>reciclados</span>.
+            <span style={{ color: "var(--amber)", fontWeight: 600 }}>reciclados</span>.
           </p>
         </div>
         <button
@@ -270,7 +270,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
       {error && (
         <div
           className="px-4 py-3 rounded-xl text-sm"
-          style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+          style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}
         >
           Erro ao carregar histórico: {error.message || String(error)}
         </div>
@@ -366,7 +366,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                     key={lead.id}
                     className="border-b"
                     style={{ borderColor: "var(--border)", transition: "background 100ms" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#F9F9F8"; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = ""; }}
                   >
                     <td
@@ -380,7 +380,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                         {recycles > 0 && (
                           <span
                             className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ background: "#FEF3EC", color: NEUTRAL.amber }}
+                            style={{ background: "#FEF3EC", color: "var(--amber)" }}
                             title={`${recycles} reciclagem${recycles > 1 ? "s" : ""}`}
                           >
                             <Repeat2 size={10} />
@@ -408,7 +408,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                     </td>
                     <td
                       className="text-center px-2 py-2 font-mono font-bold"
-                      style={{ color: recycles > 0 ? NEUTRAL.amber : "var(--border-strong)" }}
+                      style={{ color: recycles > 0 ? "var(--amber)" : "var(--border-strong)" }}
                     >
                       {recycles}
                     </td>

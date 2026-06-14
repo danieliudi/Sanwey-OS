@@ -25,21 +25,21 @@ function VideoCard({ video, onNavigate }) {
     return (
       <div
         className="flex flex-col rounded-xl border overflow-hidden"
-        style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
       >
         <div
           className="px-4 py-3 flex items-center gap-2 border-b"
-          style={{ background: "#F7F7F5", borderColor: "#F0F0F0" }}
+          style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}
         >
           <span style={{ fontSize: 18 }}>{video.quickStart.icon}</span>
-          <span className="font-bold text-sm leading-snug" style={{ color: NEUTRAL.graphite }}>
+          <span className="font-bold text-sm leading-snug" style={{ color: "var(--text)" }}>
             {video.title}
           </span>
         </div>
         <div className="p-4 flex-1 flex flex-col gap-2">
           <div className="space-y-1.5">
             {video.quickStart.steps.map((step, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs" style={{ color: NEUTRAL.graphite }}>
+              <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "var(--text)" }}>
                 <span
                   className="shrink-0 flex items-center justify-center rounded-full font-bold"
                   style={{ width: 18, height: 18, minWidth: 18, background: "#b5000b12", color: "#b5000b", fontSize: 10 }}
@@ -54,7 +54,7 @@ function VideoCard({ video, onNavigate }) {
             <button
               onClick={() => onNavigate(video.description.toLowerCase().replace(/\s+/g, "-"))}
               className="mt-2 inline-flex items-center gap-1 text-xs font-semibold"
-              style={{ color: "#b5000b", background: "none", border: "none", cursor: "pointer" }}
+              style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
             >
               Ir para {video.description} <ArrowRight size={11} />
             </button>
@@ -67,7 +67,7 @@ function VideoCard({ video, onNavigate }) {
   return (
     <div
       className="flex flex-col rounded-xl border overflow-hidden"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div
         className="relative flex items-center justify-center"
@@ -88,7 +88,7 @@ function VideoCard({ video, onNavigate }) {
               className="flex items-center justify-center rounded-full"
               style={{ width: 48, height: 48, background: "#E5E7EB" }}
             >
-              <Play size={20} style={{ color: NEUTRAL.slate, marginLeft: 2 }} />
+              <Play size={20} style={{ color: "var(--text-dim)", marginLeft: 2 }} />
             </div>
             <span
               className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -100,14 +100,14 @@ function VideoCard({ video, onNavigate }) {
         )}
       </div>
       <div className="p-4 flex-1 flex flex-col">
-        <div className="font-semibold text-sm mb-1 leading-snug" style={{ color: NEUTRAL.graphite }}>
+        <div className="font-semibold text-sm mb-1 leading-snug" style={{ color: "var(--text)" }}>
           {video.title}
         </div>
-        <div className="text-xs leading-relaxed flex-1" style={{ color: NEUTRAL.slate }}>
+        <div className="text-xs leading-relaxed flex-1" style={{ color: "var(--text-dim)" }}>
           {video.description}
         </div>
         {video.duration && (
-          <div className="text-xs mt-2 font-medium" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs mt-2 font-medium" style={{ color: "var(--text-dim)" }}>
             {video.duration}
           </div>
         )}
@@ -117,7 +117,7 @@ function VideoCard({ video, onNavigate }) {
             target="_blank"
             rel="noopener noreferrer"
             className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold"
-            style={{ color: NEUTRAL.red }}
+            style={{ color: "var(--color-industria)" }}
           >
             <Play size={12} /> Assistir
           </a>
@@ -132,19 +132,19 @@ function VideoCard({ video, onNavigate }) {
 function FAQItem({ item }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b last:border-b-0" style={{ borderColor: "#E5E7EB" }}>
+    <div className="border-b last:border-b-0" style={{ borderColor: "var(--border)" }}>
       <button
         className="w-full flex items-center justify-between gap-3 py-4 text-left"
         onClick={() => setOpen(o => !o)}
         style={{ background: "none", border: "none", cursor: "pointer" }}
       >
-        <span className="text-sm font-semibold" style={{ color: NEUTRAL.graphite }}>{item.question}</span>
+        <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>{item.question}</span>
         {open
-          ? <ChevronUp size={15} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
-          : <ChevronDown size={15} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />}
+          ? <ChevronUp size={15} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
+          : <ChevronDown size={15} style={{ color: "var(--text-dim)", flexShrink: 0 }} />}
       </button>
       {open && (
-        <div className="pb-4 text-sm leading-relaxed" style={{ color: NEUTRAL.slate }}>
+        <div className="pb-4 text-sm leading-relaxed" style={{ color: "var(--text-dim)" }}>
           {item.answer}
         </div>
       )}
@@ -158,12 +158,12 @@ function RecipeCard({ recipe }) {
   return (
     <div
       className="rounded-xl border p-4 flex flex-col gap-3"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <span style={{ fontSize: 20 }}>{recipe.emoji}</span>
-          <span className="font-semibold text-sm leading-snug" style={{ color: NEUTRAL.graphite }}>
+          <span className="font-semibold text-sm leading-snug" style={{ color: "var(--text)" }}>
             {recipe.title}
           </span>
         </div>
@@ -183,7 +183,7 @@ function RecipeCard({ recipe }) {
           >
             Gatilho
           </span>
-          <span className="text-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>{recipe.trigger}</span>
+          <span className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>{recipe.trigger}</span>
         </div>
         {recipe.condition && (
           <div className="flex gap-2 items-start">
@@ -193,7 +193,7 @@ function RecipeCard({ recipe }) {
             >
               Condição
             </span>
-            <span className="text-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>{recipe.condition}</span>
+            <span className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>{recipe.condition}</span>
           </div>
         )}
         <div className="flex gap-2 items-start">
@@ -203,7 +203,7 @@ function RecipeCard({ recipe }) {
           >
             Ação
           </span>
-          <span className="text-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>{recipe.action}</span>
+          <span className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>{recipe.action}</span>
         </div>
       </div>
     </div>
@@ -224,16 +224,16 @@ function PromptCard({ prompt }) {
   return (
     <div
       className="group flex items-start justify-between gap-3 rounded-lg border px-3.5 py-3 transition-colors duration-100 cursor-pointer"
-      style={{ background: "#FAFAFA", borderColor: "#E5E7EB" }}
+      style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}
       onClick={handleCopy}
-      onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.borderColor = "#D1D5DB"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = "#FAFAFA"; e.currentTarget.style.borderColor = "#E5E7EB"; }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; }}
     >
-      <span className="text-sm leading-relaxed" style={{ color: NEUTRAL.graphite }}>{prompt}</span>
+      <span className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>{prompt}</span>
       <span className="shrink-0 mt-0.5">
         {copied
-          ? <Check size={14} style={{ color: "#16A34A" }} />
-          : <Copy size={14} style={{ color: NEUTRAL.slate }} />}
+          ? <Check size={14} style={{ color: "var(--success)" }} />
+          : <Copy size={14} style={{ color: "var(--text-dim)" }} />}
       </span>
     </div>
   );
@@ -244,7 +244,7 @@ function PromptCategorySection({ category }) {
   return (
     <div
       className="rounded-xl border overflow-hidden"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <button
         className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left"
@@ -258,7 +258,7 @@ function PromptCategorySection({ category }) {
           >
             {category.icon}
           </div>
-          <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
+          <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
             {category.category}
           </span>
           <span
@@ -270,13 +270,13 @@ function PromptCategorySection({ category }) {
         </div>
         <ChevronDown
           size={15}
-          style={{ color: NEUTRAL.slate, flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}
+          style={{ color: "var(--text-dim)", flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}
         />
       </button>
 
       {open && (
-        <div className="px-5 pb-5 space-y-2 border-t" style={{ borderColor: "#F0F0F0" }}>
-          <p className="text-xs pt-3 mb-3" style={{ color: NEUTRAL.slate }}>
+        <div className="px-5 pb-5 space-y-2 border-t" style={{ borderColor: "var(--border)" }}>
+          <p className="text-xs pt-3 mb-3" style={{ color: "var(--text-dim)" }}>
             Clique em qualquer pergunta para copiar e colar no assistente de IA.
           </p>
           {category.prompts.map((p, i) => (
@@ -309,13 +309,13 @@ export function TutoriaisView({ currentUser, onNavigate }) {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <BookOpen size={18} style={{ color: NEUTRAL.red }} />
-          <h1 className="font-bold" style={{ fontSize: 22, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+          <BookOpen size={18} style={{ color: "var(--color-industria)" }} />
+          <h1 className="font-bold" style={{ fontSize: 22, color: "var(--text)", letterSpacing: "-0.02em" }}>
             Ajuda & Tutoriais
           </h1>
         </div>
-        <p className="text-sm" style={{ color: NEUTRAL.slate }}>
-          Conteúdo para <strong style={{ color: NEUTRAL.graphite }}>{ROLE_LABEL[role] || role}</strong> — aprenda a usar o CRM e a IA no seu dia a dia.
+        <p className="text-sm" style={{ color: "var(--text-dim)" }}>
+          Conteúdo para <strong style={{ color: "var(--text)" }}>{ROLE_LABEL[role] || role}</strong> — aprenda a usar o CRM e a IA no seu dia a dia.
         </p>
       </div>
 

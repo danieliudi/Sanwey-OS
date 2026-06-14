@@ -45,10 +45,10 @@ export function ExplorerView({
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             Explorador de Mercado
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             Descubra novos prospects · cruze sinais públicos · adicione ao CRM com um clique
           </p>
         </div>
@@ -81,7 +81,7 @@ export function ExplorerView({
 
       {/* Tab bar — only when fair import panel is available */}
       {fairImportPanel && (
-        <div className="flex items-center gap-1 border-b" style={{ borderColor: "#E5E7EB" }}>
+        <div className="flex items-center gap-1 border-b" style={{ borderColor: "var(--border)" }}>
           {[
             { id: "explorador", label: "Explorador" },
             { id: "feira",      label: "Importar feira" },
@@ -91,7 +91,7 @@ export function ExplorerView({
               onClick={() => setActiveTab(t.id)}
               className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
               style={{
-                color: activeTab === t.id ? NEUTRAL.graphite : NEUTRAL.slate,
+                color: activeTab === t.id ? "var(--text)" : "var(--text-dim)",
                 borderBottomColor: activeTab === t.id ? "#1E4D8C" : "transparent",
                 background: "none",
                 border: "none",
@@ -121,10 +121,10 @@ export function ExplorerView({
         )}
 
         {/* Filter card */}
-        <div className={`p-4 rounded-xl border${!isSupabaseConfigured ? " lg:col-span-2" : ""}`} style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div className={`p-4 rounded-xl border${!isSupabaseConfigured ? " lg:col-span-2" : ""}`} style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
           <div className="flex items-center gap-2 mb-3">
-            <Filter size={13} color={NEUTRAL.graphite} />
-            <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
+            <Filter size={13} color="var(--text)" />
+            <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
               Filtros da curadoria
             </span>
           </div>
@@ -158,10 +158,10 @@ export function ExplorerView({
           </div>
           <div className="pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium" style={{ color: NEUTRAL.slate }}>
+              <span className="text-xs font-medium" style={{ color: "var(--text-dim)" }}>
                 Fit mínimo
               </span>
-              <span className="font-bold text-sm" style={{ color: NEUTRAL.graphite }}>{filters.fitMin}</span>
+              <span className="font-bold text-sm" style={{ color: "var(--text)" }}>{filters.fitMin}</span>
             </div>
             <input
               type="range"
@@ -171,7 +171,7 @@ export function ExplorerView({
               value={filters.fitMin}
               onChange={e => setFilters(prev => ({ ...prev, fitMin: parseInt(e.target.value, 10) }))}
               className="w-full"
-              style={{ accentColor: NEUTRAL.graphite }}
+              style={{ accentColor: "var(--text)" }}
             />
           </div>
         </div>
@@ -197,9 +197,9 @@ export function ExplorerView({
       {leads.length === 0 && onLoadDemoLeads && (
         <div
           className="p-4 rounded-xl border flex items-center justify-between gap-3 flex-wrap"
-          style={{ background: NEUTRAL.warmWhite || "#FAFAFA", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+          style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
         >
-          <div className="text-sm" style={{ color: NEUTRAL.slate }}>
+          <div className="text-sm" style={{ color: "var(--text-dim)" }}>
             CRM ainda vazio. Carregue dados de demonstração para ver o pipeline completo.
           </div>
           <div className="flex gap-2">

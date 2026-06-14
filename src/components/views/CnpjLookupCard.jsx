@@ -96,20 +96,20 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
   return (
     <div
       className="p-5 rounded-xl border"
-      style={{ background: "#FFFFFF", borderColor: "#EFEFEF" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
       <div className="flex items-center gap-2 mb-4">
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center"
           style={{ background: NEUTRAL.graphite + "10" }}
         >
-          <Building2 size={16} color={NEUTRAL.graphite} />
+          <Building2 size={16} color="var(--text)" />
         </div>
         <div>
-          <h2 className="font-bold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+          <h2 className="font-bold" style={{ fontSize: 15, color: "var(--text)" }}>
             Buscar empresa por CNPJ
           </h2>
-          <p className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <p className="text-xs" style={{ color: "var(--text-dim)" }}>
             Puxa dados oficiais da Receita Federal (BrasilAPI) e adiciona como lead
           </p>
         </div>
@@ -139,7 +139,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
           </Button>
         )}
       </div>
-      <div className="text-[10px] mb-3" style={{ color: NEUTRAL.slate }}
+      <div className="text-[10px] mb-3" style={{ color: "var(--text-dim)" }}
         onKeyDown={handleKey}
       >
         Pressione Enter para buscar.
@@ -148,7 +148,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
       {error && (
         <div
           className="p-3 rounded-xl flex items-start gap-2 text-xs"
-          style={{ background: "#FEF2F2", color: "#B91C1C" }}
+          style={{ background: "#FEF2F2", color: "var(--danger)" }}
         >
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <div>{error.message || String(error)}</div>
@@ -159,17 +159,17 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
         <div className="space-y-3">
           <div
             className="p-4 rounded-xl border"
-            style={{ background: NEUTRAL.warmWhite, borderColor: "#EFEFEF" }}
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
           >
             <div className="flex items-start justify-between gap-3 mb-2">
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-base" style={{ color: NEUTRAL.graphite }}>
+                <div className="font-bold text-base" style={{ color: "var(--text)" }}>
                   {data.company || data.razaoSocial || "—"}
                 </div>
                 {data.company && data.razaoSocial && data.company !== data.razaoSocial && (
-                  <div className="text-xs" style={{ color: NEUTRAL.slate }}>{data.razaoSocial}</div>
+                  <div className="text-xs" style={{ color: "var(--text-dim)" }}>{data.razaoSocial}</div>
                 )}
-                <div className="text-xs font-mono mt-0.5" style={{ color: NEUTRAL.slate }}>
+                <div className="text-xs font-mono mt-0.5" style={{ color: "var(--text-dim)" }}>
                   {formatMask(data.cnpj)}
                 </div>
               </div>
@@ -178,7 +178,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
                   className="px-2 py-0.5 rounded-xl text-[10px] uppercase font-semibold"
                   style={{
                     background: data.situacao.toUpperCase() === "ATIVA" ? "#E8F2EC" : "#FEF2F2",
-                    color: data.situacao.toUpperCase() === "ATIVA" ? NEUTRAL.success : "#B91C1C",
+                    color: data.situacao.toUpperCase() === "ATIVA" ? "var(--color-resibag)" : "var(--danger)",
                   }}
                 >
                   {data.situacao}
@@ -186,51 +186,51 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
               )}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-2 text-xs" style={{ color: NEUTRAL.graphite }}>
+            <div className="grid md:grid-cols-2 gap-2 text-xs" style={{ color: "var(--text)" }}>
               <div className="flex items-start gap-1.5">
-                <Briefcase size={12} className="mt-0.5 shrink-0" color={NEUTRAL.slate} />
+                <Briefcase size={12} className="mt-0.5 shrink-0" color="var(--text-dim)" />
                 <span>
                   <strong>CNAE {data.cnae}</strong> — {data.cnaeDesc || "—"}
                 </span>
               </div>
               <div className="flex items-start gap-1.5">
-                <MapPin size={12} className="mt-0.5 shrink-0" color={NEUTRAL.slate} />
+                <MapPin size={12} className="mt-0.5 shrink-0" color="var(--text-dim)" />
                 <span>{data.city || "—"}</span>
               </div>
               {data.porte && (
                 <div className="flex items-start gap-1.5">
-                  <Building2 size={12} className="mt-0.5 shrink-0" color={NEUTRAL.slate} />
+                  <Building2 size={12} className="mt-0.5 shrink-0" color="var(--text-dim)" />
                   <span>{data.porte} · {data.size}</span>
                 </div>
               )}
               {data.capitalSocial > 0 && (
                 <div className="flex items-start gap-1.5">
-                  <span className="text-[10px]" style={{ color: NEUTRAL.slate }}>Capital</span>
+                  <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>Capital</span>
                   <span>{formatBRL(data.capitalSocial)}</span>
                 </div>
               )}
               {data.telefone && (
                 <div className="flex items-start gap-1.5">
-                  <Phone size={12} className="mt-0.5 shrink-0" color={NEUTRAL.slate} />
+                  <Phone size={12} className="mt-0.5 shrink-0" color="var(--text-dim)" />
                   <span>{data.telefone}</span>
                 </div>
               )}
               {data.email && (
                 <div className="flex items-start gap-1.5">
-                  <Mail size={12} className="mt-0.5 shrink-0" color={NEUTRAL.slate} />
+                  <Mail size={12} className="mt-0.5 shrink-0" color="var(--text-dim)" />
                   <span>{data.email}</span>
                 </div>
               )}
               {data.address && (
                 <div className="flex items-start gap-1.5 md:col-span-2">
-                  <MapPin size={12} className="mt-0.5 shrink-0" color={NEUTRAL.slate} />
-                  <span style={{ color: NEUTRAL.slate }}>{data.address}</span>
+                  <MapPin size={12} className="mt-0.5 shrink-0" color="var(--text-dim)" />
+                  <span style={{ color: "var(--text-dim)" }}>{data.address}</span>
                 </div>
               )}
             </div>
 
             {data.cached && (
-              <div className="text-[10px] mt-2" style={{ color: NEUTRAL.slate }}>
+              <div className="text-[10px] mt-2" style={{ color: "var(--text-dim)" }}>
                 cache · atualizado em {new Date(data.fetchedAt).toLocaleString("pt-BR")}
               </div>
             )}
@@ -239,7 +239,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
           {added ? (
             <div
               className="p-3 rounded-xl flex items-center gap-2 text-xs"
-              style={{ background: "#E8F2EC", color: NEUTRAL.success }}
+              style={{ background: "#E8F2EC", color: "var(--color-resibag)" }}
             >
               <CheckCircle2 size={14} />
               Lead adicionado. Vá pro final da lista ou filtre pelo CNPJ.
@@ -248,7 +248,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
             <div>
               <div
                 className="text-[10px] uppercase font-bold tracking-widest mb-2"
-                style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+                style={{ color: "var(--text-dim)", letterSpacing: "0.15em" }}
               >
                 Adicionar como lead em qual empresa do grupo?
               </div>
@@ -264,9 +264,9 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
                         onClick={() => setTargetCompany(id)}
                         className="px-2.5 py-1.5 text-xs rounded-xl border transition-all flex items-center gap-1.5"
                         style={{
-                          background: active ? c.light : "#FFFFFF",
-                          borderColor: active ? c.primary : "#EFEFEF",
-                          color: active ? c.dark : NEUTRAL.graphite,
+                          background: active ? c.light : "var(--surface)",
+                          borderColor: active ? c.primary : "var(--border)",
+                          color: active ? c.dark : "var(--text)",
                         }}
                       >
                         <div className="w-2 h-2 rounded-full" style={{ background: c.primary }} />

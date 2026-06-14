@@ -58,9 +58,9 @@ function SideTabs({ activeId, onChange }) {
             onClick={() => onChange(t.id)}
             className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full transition-colors cursor-pointer"
             style={{
-              background:  active ? "#FFFFFF" : "transparent",
-              color:       active ? "#b5000b" : NEUTRAL.slate,
-              border:      active ? "1px solid #b5000b" : "1px solid transparent",
+              background:  active ? "var(--surface)" : "transparent",
+              color:       active ? "var(--color-industria)" : "var(--text-dim)",
+              border:      active ? "1px solid var(--color-industria)" : "1px solid transparent",
               boxShadow:   active ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
             }}
           >
@@ -78,8 +78,8 @@ function SideTabs({ activeId, onChange }) {
 function PlaceholderPanel({ label }) {
   return (
     <div className="flex flex-col items-center justify-center py-10 gap-2">
-      <div className="text-sm font-semibold" style={{ color: NEUTRAL.slate }}>{label}</div>
-      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: NEUTRAL.slate }}>em breve</span>
+      <div className="text-sm font-semibold" style={{ color: "var(--text-dim)" }}>{label}</div>
+      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>em breve</span>
     </div>
   );
 }
@@ -138,8 +138,8 @@ function CampaignAIPanel({ campaign, currentUser }) {
           disabled={loading || !isConfigured}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
           style={{
-            background: !isConfigured ? "#E5E7EB" : PURPLE,
-            color:      !isConfigured ? NEUTRAL.slate : "#FFFFFF",
+            background: !isConfigured ? "var(--border)" : PURPLE,
+            color:      !isConfigured ? "var(--text-dim)" : "#FFFFFF",
             border: "none",
             cursor: loading || !isConfigured ? "not-allowed" : "pointer",
             opacity: loading ? 0.8 : 1,
@@ -164,16 +164,16 @@ function CampaignAIPanel({ campaign, currentUser }) {
       {result && (
         <div className="space-y-2">
           <div className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-xl border"
-            style={{ background: "#FFFFFF", borderColor: "#DDD6FE", color: NEUTRAL.graphite }}>
+            style={{ background: "var(--surface)", borderColor: "#DDD6FE", color: "var(--text)" }}>
             {result}
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleGenerate}
               className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer"
-              style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: "#E5E7EB" }}
+              style={{ background: "var(--surface)", color: "var(--text-dim)", borderColor: "var(--border)" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = PURPLE; e.currentTarget.style.color = PURPLE; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; }}
             >
               <RotateCcw size={10} />
               Regenerar
@@ -182,12 +182,12 @@ function CampaignAIPanel({ campaign, currentUser }) {
               onClick={handleCopy}
               className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer"
               style={{
-                background: copied ? "#F0FDF4" : "#FFFFFF",
-                color:      copied ? "#16A34A" : NEUTRAL.slate,
-                borderColor: copied ? "#BBF7D0" : "#E5E7EB",
+                background: copied ? "#F0FDF4" : "var(--surface)",
+                color:      copied ? "var(--success)" : "var(--text-dim)",
+                borderColor: copied ? "#BBF7D0" : "var(--border)",
               }}
-              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; } }}
+              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
+              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; } }}
             >
               {copied ? <Check size={10} /> : <Copy size={10} />}
               {copied ? "Copiado!" : "Copiar"}
@@ -238,13 +238,13 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
         onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(Array.from(e.dataTransfer.files)); }}
         onClick={() => inputRef.current?.click()}
         className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-6 gap-2 cursor-pointer transition-colors"
-        style={{ borderColor: dragOver ? "#1E4D8C" : "#E5E7EB", background: dragOver ? "#EFF6FF" : "#FAFAFA" }}
+        style={{ borderColor: dragOver ? "#1E4D8C" : "var(--border)", background: dragOver ? "#EFF6FF" : "var(--surface-alt)" }}
       >
-        <Upload size={20} style={{ color: dragOver ? "#1E4D8C" : NEUTRAL.slate }} />
-        <div className="text-xs font-medium" style={{ color: NEUTRAL.slate }}>
+        <Upload size={20} style={{ color: dragOver ? "#1E4D8C" : "var(--text-dim)" }} />
+        <div className="text-xs font-medium" style={{ color: "var(--text-dim)" }}>
           {uploading ? "Enviando…" : "Arraste ou clique para enviar"}
         </div>
-        <div className="text-[10px]" style={{ color: "#9CA3AF" }}>
+        <div className="text-[10px]" style={{ color: "var(--text-faint)" }}>
           PDF, Word, Excel, imagens, vídeos — máx 50 MB
           {campaign.driveFolderUrl && " · salvo no Google Drive"}
         </div>
@@ -259,16 +259,16 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
       </div>
 
       {fileError && (
-        <div className="text-xs rounded-md px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}>
+        <div className="text-xs rounded-md px-3 py-2" style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}>
           {fileError}
         </div>
       )}
       {error && (
-        <div className="text-xs rounded-md px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}>
+        <div className="text-xs rounded-md px-3 py-2" style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}>
           {error}
         </div>
       )}
-      {loading && <div className="text-xs" style={{ color: NEUTRAL.slate }}>Carregando…</div>}
+      {loading && <div className="text-xs" style={{ color: "var(--text-dim)" }}>Carregando…</div>}
 
       {attachments.length > 0 && (
         <div className="space-y-1.5">
@@ -278,12 +278,12 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
               <div
                 key={att.id}
                 className="flex items-center gap-3 p-2.5 rounded-xl border"
-                style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+                style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
               >
-                <Icon size={16} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
+                <Icon size={16} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium truncate" style={{ color: NEUTRAL.graphite }}>{att.file_name}</div>
-                  <div className="text-[10px]" style={{ color: NEUTRAL.slate }}>
+                  <div className="text-xs font-medium truncate" style={{ color: "var(--text)" }}>{att.file_name}</div>
+                  <div className="text-[10px]" style={{ color: "var(--text-dim)" }}>
                     {humanSize(att.file_size)}
                     {att.drive_url && " · Drive"}
                   </div>
@@ -293,7 +293,7 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
                     <a href={att.drive_url} target="_blank" rel="noreferrer" title="Abrir no Drive"
                       onClick={e => e.stopPropagation()}
                       className="p-1 rounded-lg"
-                      style={{ color: NEUTRAL.slate }}
+                      style={{ color: "var(--text-dim)" }}
                     >
                       <ExternalLink size={13} />
                     </a>
@@ -302,7 +302,7 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
                     title="Baixar"
                     onClick={() => handleDownload(att)}
                     className="p-1 rounded-lg"
-                    style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                    style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
                   >
                     <Download size={13} />
                   </button>
@@ -311,7 +311,7 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
                       title="Remover"
                       onClick={() => remove(att)}
                       className="p-1 rounded-lg"
-                      style={{ color: "#DC2626", background: "none", border: "none", cursor: "pointer" }}
+                      style={{ color: "var(--danger)", background: "none", border: "none", cursor: "pointer" }}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -324,7 +324,7 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
       )}
 
       {!loading && attachments.length === 0 && (
-        <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>
+        <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>
           Nenhum arquivo anexado ainda.
         </div>
       )}
@@ -361,30 +361,30 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
   return (
     <div className="space-y-3">
       {items.length > 0 && (
-        <div className="text-xs" style={{ color: NEUTRAL.slate }}>{done}/{items.length} itens confirmados</div>
+        <div className="text-xs" style={{ color: "var(--text-dim)" }}>{done}/{items.length} itens confirmados</div>
       )}
       <div className="space-y-1.5">
         {items.map((item, idx) => (
           <div
             key={idx}
             className="flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer"
-            style={{ borderColor: item.done ? "#BBF7D0" : "#E5E7EB", background: item.done ? "#F0FDF4" : "#FAFAFA" }}
+            style={{ borderColor: item.done ? "#BBF7D0" : "var(--border)", background: item.done ? "#F0FDF4" : "var(--surface-alt)" }}
             onClick={() => toggle(idx)}
           >
             <div
               className="flex items-center justify-center rounded-md flex-shrink-0 transition-colors"
-              style={{ width: 18, height: 18, border: item.done ? "none" : "2px solid #D1D5DB", background: item.done ? "#16A34A" : "transparent" }}
+              style={{ width: 18, height: 18, border: item.done ? "none" : "2px solid var(--border-strong)", background: item.done ? "var(--success)" : "transparent" }}
             >
               {item.done && <Check size={11} style={{ color: "#FFF" }} strokeWidth={3} />}
             </div>
-            <span className="flex-1 text-xs" style={{ color: item.done ? "#15803D" : NEUTRAL.graphite, textDecoration: item.done ? "line-through" : "none" }}>
+            <span className="flex-1 text-xs" style={{ color: item.done ? "var(--success)" : "var(--text)", textDecoration: item.done ? "line-through" : "none" }}>
               {item.label}
             </span>
             {!readOnly && (
               <button
                 onClick={e => { e.stopPropagation(); removeItem(idx); }}
                 className="p-0.5 rounded"
-                style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", opacity: 0.6 }}
+                style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", opacity: 0.6 }}
               >
                 <X size={11} />
               </button>
@@ -402,15 +402,15 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
             onChange={e => setNewLabel(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addItem(); } }}
             className="flex-1 text-xs rounded-xl border px-3 py-2 outline-none"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}
             onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-            onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+            onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
           />
           <button
             onClick={addItem}
             disabled={!newLabel.trim()}
             className="flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-xl"
-            style={{ background: newLabel.trim() ? "#1E4D8C" : "#F3F4F6", color: newLabel.trim() ? "#FFF" : NEUTRAL.slate, border: "none", cursor: newLabel.trim() ? "pointer" : "default" }}
+            style={{ background: newLabel.trim() ? "#1E4D8C" : "var(--surface-alt)", color: newLabel.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newLabel.trim() ? "pointer" : "default" }}
           >
             <Plus size={12} />
             Adicionar
@@ -418,7 +418,7 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
         </div>
       )}
       {items.length === 0 && readOnly && (
-        <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>Nenhum item de aprovação configurado.</div>
+        <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Nenhum item de aprovação configurado.</div>
       )}
     </div>
   );
@@ -428,17 +428,17 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
 
 function ActivityLog({ activities }) {
   if (!activities || activities.length === 0) {
-    return <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>Sem atividades registradas.</div>;
+    return <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Sem atividades registradas.</div>;
   }
   return (
     <div className="space-y-2">
       {[...activities].reverse().map((act, i) => (
-        <div key={i} className="flex gap-2.5 text-xs" style={{ color: NEUTRAL.graphite }}>
-          <div className="mt-0.5 flex-shrink-0 rounded-full" style={{ width: 6, height: 6, background: NEUTRAL.slate, marginTop: 6 }} />
+        <div key={i} className="flex gap-2.5 text-xs" style={{ color: "var(--text)" }}>
+          <div className="mt-0.5 flex-shrink-0 rounded-full" style={{ width: 6, height: 6, background: "var(--text-dim)", marginTop: 6 }} />
           <div className="flex-1">
             <span>{act.text || act.message || act.description || JSON.stringify(act)}</span>
             {act.at && (
-              <span className="ml-1.5" style={{ color: NEUTRAL.slate, fontSize: 10 }}>{formatDateBR(act.at)}</span>
+              <span className="ml-1.5" style={{ color: "var(--text-dim)", fontSize: 10 }}>{formatDateBR(act.at)}</span>
             )}
           </div>
         </div>
@@ -452,14 +452,14 @@ function ActivityLog({ activities }) {
 function Field({ label, children }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: NEUTRAL.slate }}>{label}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>{label}</div>
       {children}
     </div>
   );
 }
 
 function ReadValue({ value, empty = "—" }) {
-  return <div className="text-sm" style={{ color: value ? NEUTRAL.graphite : "#9CA3AF" }}>{value || empty}</div>;
+  return <div className="text-sm" style={{ color: value ? "var(--text)" : "var(--text-faint)" }}>{value || empty}</div>;
 }
 
 function EditInput({ value, onChange, type = "text", placeholder = "" }) {
@@ -470,9 +470,9 @@ function EditInput({ value, onChange, type = "text", placeholder = "" }) {
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-      style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+      style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
       onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-      onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+      onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
     />
   );
 }
@@ -483,9 +483,9 @@ function EditSelect({ value, onChange, options, placeholder = "Selecionar…" })
       value={value || ""}
       onChange={e => onChange(e.target.value)}
       className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-      style={{ borderColor: "#E5E7EB", color: value ? NEUTRAL.graphite : "#9CA3AF", background: "#FFFFFF" }}
+      style={{ borderColor: "var(--border)", color: value ? "var(--text)" : "var(--text-faint)", background: "var(--surface)" }}
       onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-      onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+      onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
     >
       <option value="">{placeholder}</option>
       {options.map(o => (
@@ -530,9 +530,9 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
             placeholder="Escreva um comentário…"
             rows={3}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
             onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-            onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+            onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
             onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAdd(); } }}
           />
           <div className="flex justify-end">
@@ -540,7 +540,7 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
               onClick={handleAdd}
               disabled={!newNote.trim() || saving}
               className="px-3 py-1.5 text-xs font-semibold rounded-xl"
-              style={{ background: newNote.trim() ? "#1E4D8C" : "#F3F4F6", color: newNote.trim() ? "#FFF" : NEUTRAL.slate, border: "none", cursor: newNote.trim() ? "pointer" : "default" }}
+              style={{ background: newNote.trim() ? "#1E4D8C" : "#F3F4F6", color: newNote.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newNote.trim() ? "pointer" : "default" }}
             >
               {saving ? "Salvando…" : "Comentar"}
             </button>
@@ -548,14 +548,14 @@ function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
         </div>
       )}
       {notes.length === 0 ? (
-        <div className="text-xs text-center py-4" style={{ color: NEUTRAL.slate }}>Nenhum comentário ainda.</div>
+        <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Nenhum comentário ainda.</div>
       ) : (
         <div className="space-y-2">
           {[...notes].reverse().map((note, i) => (
             <div key={i} className="p-3 rounded-xl border" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
-              <div className="text-xs whitespace-pre-wrap" style={{ color: NEUTRAL.graphite }}>{note.text}</div>
+              <div className="text-xs whitespace-pre-wrap" style={{ color: "var(--text)" }}>{note.text}</div>
               {note.createdAt && (
-                <div className="text-[10px] mt-1" style={{ color: NEUTRAL.slate }}>{formatDateBR(note.createdAt)}</div>
+                <div className="text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>{formatDateBR(note.createdAt)}</div>
               )}
             </div>
           ))}
@@ -662,9 +662,9 @@ function EntregasTab({ campaign, canWrite }) {
               <div key={d.id} className="flex items-start gap-3 p-3 rounded-xl border" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: stage?.color || "#9CA3AF", marginTop: 4, flexShrink: 0 }} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate" style={{ color: NEUTRAL.graphite }}>{d.title}</div>
+                  <div className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{d.title}</div>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-[11px]" style={{ color: stage?.color || NEUTRAL.slate }}>{stage?.name || d.stage}</span>
+                    <span className="text-[11px]" style={{ color: stage?.color || "var(--text-dim)" }}>{stage?.name || d.stage}</span>
                     {prio && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: prio.color + "1A", color: prio.color }}>
                         {prio.label}
@@ -775,11 +775,11 @@ export function CampaignDetailDrawer({
       return (
         <div className="space-y-3">
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: NEUTRAL.slate }}>
+            <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)" }}>
               Brief da campanha
             </div>
             {isAgencia
-              ? <div className="text-sm" style={{ color: NEUTRAL.graphite }}>{get("customFields")?.brief || "—"}</div>
+              ? <div className="text-sm" style={{ color: "var(--text)" }}>{get("customFields")?.brief || "—"}</div>
               : (
                 <textarea
                   value={get("customFields")?.brief || ""}
@@ -787,7 +787,7 @@ export function CampaignDetailDrawer({
                   placeholder="Descreva o briefing desta campanha…"
                   rows={4}
                   className="w-full text-xs rounded-xl border px-3 py-2 outline-none resize-none"
-                  style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                  style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
                   onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
                   onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
                 />
@@ -861,11 +861,11 @@ export function CampaignDetailDrawer({
         {/* Mobile header */}
         <div className="lg:hidden sticky top-0 z-10 flex flex-col shrink-0" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
           <div className="flex items-center justify-between px-4 py-3">
-            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: NEUTRAL.slate }}>
+            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
               <X size={20} />
             </button>
             <div className="flex-1 mx-3 text-center min-w-0">
-              <div className="font-bold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{get("name")}</div>
+              <div className="font-bold text-sm truncate" style={{ color: "var(--text)" }}>{get("name")}</div>
               {stage && <div className="text-xs font-semibold" style={{ color: stage.color }}>{stage.name}</div>}
             </div>
             {canWrite && (
@@ -884,7 +884,7 @@ export function CampaignDetailDrawer({
                 key={t.id}
                 onClick={() => setMobileTab(t.id)}
                 className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
-                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`, color: mobileTab === t.id ? "#1E4D8C" : NEUTRAL.slate }}
+                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "#1E4D8C" : "transparent"}`, color: mobileTab === t.id ? "#1E4D8C" : "var(--text-dim)" }}
               >
                 {t.label}
               </button>
@@ -906,7 +906,7 @@ export function CampaignDetailDrawer({
             )}
             {get("channel") && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: "#F3F4F6", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}>
+                style={{ background: "#F3F4F6", color: "var(--text)", border: "1px solid #E5E7EB" }}>
                 {get("channel")}
               </span>
             )}
@@ -923,9 +923,9 @@ export function CampaignDetailDrawer({
                 onClick={() => setConfirmDelete(v => !v)}
                 title="Excluir campanha"
                 className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                style={{ color: NEUTRAL.slate, background: "none", border: "none" }}
+                style={{ color: "var(--text-dim)", background: "none", border: "none" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
               >
                 <Trash2 size={16} />
               </button>
@@ -942,7 +942,7 @@ export function CampaignDetailDrawer({
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: NEUTRAL.slate, background: "none", border: "none" }}
+              style={{ color: "var(--text-dim)", background: "none", border: "none" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
@@ -966,7 +966,7 @@ export function CampaignDetailDrawer({
             <button
               onClick={() => setConfirmDelete(false)}
               className="px-3 py-1.5 text-xs rounded-xl border"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFF", cursor: "pointer" }}
+              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFF", cursor: "pointer" }}
             >
               Cancelar
             </button>
@@ -984,10 +984,10 @@ export function CampaignDetailDrawer({
             {/* Campaign name */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <h2 className="font-bold mb-1" style={{ fontSize: 18, color: NEUTRAL.graphite, letterSpacing: "-0.02em", wordBreak: "break-word" }}>
+                <h2 className="font-bold mb-1" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.02em", wordBreak: "break-word" }}>
                   {get("name")}
                 </h2>
-                <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+                <div className="text-xs" style={{ color: "var(--text-dim)" }}>
                   {(get("companyIds") || []).map(id => COMPANIES[id]?.short || id).join(", ") || <span className="italic">Sem empresa</span>}
                 </div>
               </div>
@@ -1020,26 +1020,26 @@ export function CampaignDetailDrawer({
             {/* Stats grid */}
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Budget</div>
-                <div className="text-sm font-bold mt-0.5" style={{ color: NEUTRAL.graphite }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Budget</div>
+                <div className="text-sm font-bold mt-0.5" style={{ color: "var(--text)" }}>
                   {get("budget") > 0 ? formatK(get("budget")) : "—"}
                 </div>
               </div>
               <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Canal</div>
-                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: NEUTRAL.graphite }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Canal</div>
+                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>
                   {get("channel") || "—"}
                 </div>
               </div>
               <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>KPI</div>
-                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: NEUTRAL.graphite }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>KPI</div>
+                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>
                   {get("kpi") || "—"}
                 </div>
               </div>
               <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>Lançamento</div>
-                <div className="text-xs font-bold mt-0.5" style={{ color: NEUTRAL.graphite }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Lançamento</div>
+                <div className="text-xs font-bold mt-0.5" style={{ color: "var(--text)" }}>
                   {get("launchDate") ? formatDateBR(get("launchDate")) : "—"}
                 </div>
               </div>
@@ -1048,8 +1048,8 @@ export function CampaignDetailDrawer({
             {/* Agency */}
             {get("agencyName") && (
               <div className="rounded-lg p-2.5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: NEUTRAL.slate }}>Agência</div>
-                <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>{get("agencyName")}</div>
+                <div className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-dim)" }}>Agência</div>
+                <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>{get("agencyName")}</div>
               </div>
             )}
 
@@ -1110,7 +1110,7 @@ export function CampaignDetailDrawer({
                                   set("companyIds", selected ? cur.filter(c => c !== id) : [...cur, id]);
                                 }}
                                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
-                                style={{ borderColor: selected ? co.primary : "#E5E7EB", background: selected ? co.primary + "22" : "#FFFFFF", color: selected ? co.primary : NEUTRAL.slate, cursor: "pointer" }}
+                                style={{ borderColor: selected ? co.primary : "#E5E7EB", background: selected ? co.primary + "22" : "#FFFFFF", color: selected ? co.primary : "var(--text-dim)", cursor: "pointer" }}
                               >
                                 {selected && <Check size={10} strokeWidth={3} />}
                                 {co.short}
@@ -1217,7 +1217,7 @@ export function CampaignDetailDrawer({
                             {get("driveFolderUrl") && (
                               <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer"
                                 className="flex items-center px-2.5 rounded-xl text-xs"
-                                style={{ background: "#F3F4F6", color: NEUTRAL.slate, border: "1px solid #E5E7EB", textDecoration: "none" }}>
+                                style={{ background: "#F3F4F6", color: "var(--text-dim)", border: "1px solid #E5E7EB", textDecoration: "none" }}>
                                 <ExternalLink size={12} />
                               </a>
                             )}
@@ -1236,7 +1236,7 @@ export function CampaignDetailDrawer({
             style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
           >
             <div>
-              <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>
+              <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
                 Mover campanha para etapa
               </div>
               <div className="space-y-2">
@@ -1256,7 +1256,7 @@ export function CampaignDetailDrawer({
                   <button
                     onClick={() => canWrite && moveToStage(stageNav.prev.id)}
                     className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                    style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}
+                    style={{ background: "#FFFFFF", color: "var(--text)", border: "1px solid #E5E7EB" }}
                     onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
                   >
@@ -1272,9 +1272,9 @@ export function CampaignDetailDrawer({
               <button
                 onClick={() => setSideTab("ia")}
                 className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
-                style={{ background: "none", border: "none", color: NEUTRAL.slate, padding: 0, textAlign: "left" }}
+                style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0, textAlign: "left" }}
                 onMouseEnter={e => { e.currentTarget.style.color = PURPLE; }}
-                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
               >
                 <Sparkles size={12} />
                 Mover cards com IA
@@ -1282,9 +1282,9 @@ export function CampaignDetailDrawer({
               {isManager && (
                 <button
                   className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
-                  style={{ background: "none", border: "none", color: NEUTRAL.slate, padding: 0, textAlign: "left", opacity: 0.7 }}
-                  onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; e.currentTarget.style.opacity = "1"; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.opacity = "0.7"; }}
+                  style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0, textAlign: "left", opacity: 0.7 }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.opacity = "1"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.opacity = "0.7"; }}
                   title="Configure automações de mover cards nas Configurações"
                 >
                   <Activity size={12} />
@@ -1306,7 +1306,7 @@ export function CampaignDetailDrawer({
               Avançar para {stageNav.next.name}
             </button>
           ) : (
-            <div className="text-xs text-center py-3" style={{ color: NEUTRAL.slate }}>
+            <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
               {stage?.terminal ? "Campanha encerrada" : "Última etapa"}
             </div>
           )}

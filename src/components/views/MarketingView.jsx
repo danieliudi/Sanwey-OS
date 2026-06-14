@@ -91,21 +91,21 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
         {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--surface-alt)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>
               Nova campanha
             </div>
             {stage && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
-                <span style={{ fontSize: 11, color: NEUTRAL.slate, fontWeight: 500 }}>{stage.name}</span>
+                <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 500 }}>{stage.name}</span>
               </div>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 6, borderRadius: 8, display: "flex", alignItems: "center" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex", alignItems: "center" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >
             <X size={18} />
@@ -116,7 +116,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           {/* Nome */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelSt}>Nome da campanha <span style={{ color: "#DC2626" }}>*</span></label>
+            <label style={labelSt}>Nome da campanha <span style={{ color: "var(--danger)" }}>*</span></label>
             <input
               autoFocus
               type="text"
@@ -132,7 +132,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
 
           {/* Empresa */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelSt}>Empresa <span style={{ color: "#DC2626" }}>*</span></label>
+            <label style={labelSt}>Empresa <span style={{ color: "var(--danger)" }}>*</span></label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {COMPANY_IDS.map(id => {
                 const co = COMPANIES[id];
@@ -147,9 +147,9 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
                       borderRadius: 99,
                       fontSize: 11,
                       fontWeight: 600,
-                      border: `1px solid ${sel ? co.primary : "#E5E7EB"}`,
-                      background: sel ? co.primary + "22" : "#FFF",
-                      color: sel ? co.primary : NEUTRAL.slate,
+                      border: `1px solid ${sel ? co.primary : "var(--border)"}`,
+                      background: sel ? co.primary + "22" : "var(--surface)",
+                      color: sel ? co.primary : "var(--text-dim)",
                       cursor: "pointer",
                       transition: "all 0.1s",
                     }}
@@ -169,7 +169,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
                 value={channel}
                 onChange={e => setChannel(e.target.value)}
                 className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-                style={{ ...inputSt, color: channel ? NEUTRAL.graphite : NEUTRAL.slate }}
+                style={{ ...inputSt, color: channel ? "var(--text)" : "var(--text-dim)" }}
               >
                 <option value="">Selecionar</option>
                 {MARKETING_CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
@@ -181,7 +181,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
                 value={kpi}
                 onChange={e => setKpi(e.target.value)}
                 className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-                style={{ ...inputSt, color: kpi ? NEUTRAL.graphite : NEUTRAL.slate }}
+                style={{ ...inputSt, color: kpi ? "var(--text)" : "var(--text-dim)" }}
               >
                 <option value="">Selecionar</option>
                 {MARKETING_KPIS.map(k => <option key={k} value={k}>{k}</option>)}
@@ -210,7 +210,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
                 value={owner}
                 onChange={e => setOwner(e.target.value)}
                 className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-                style={{ ...inputSt, color: owner ? NEUTRAL.graphite : NEUTRAL.slate }}
+                style={{ ...inputSt, color: owner ? "var(--text)" : "var(--text-dim)" }}
               >
                 <option value="">Selecionar</option>
                 {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -262,7 +262,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
           </div>
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
+            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
               {error}
             </div>
           )}
@@ -288,8 +288,8 @@ function KpiCard({ label, value, sub, red }) {
     <div
       className="rounded-xl border"
       style={{
-        background: "#FFFFFF",
-        borderColor: "#E5E7EB",
+        background: "var(--surface)",
+        borderColor: "var(--border)",
         padding: "12px 16px",
         boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
       }}
@@ -298,7 +298,7 @@ function KpiCard({ label, value, sub, red }) {
         style={{
           fontSize: 10,
           fontWeight: 600,
-          color: NEUTRAL.slate,
+          color: "var(--text-dim)",
           textTransform: "uppercase",
           letterSpacing: "0.08em",
           marginBottom: 4,
@@ -310,7 +310,7 @@ function KpiCard({ label, value, sub, red }) {
         style={{
           fontSize: 20,
           fontWeight: 700,
-          color: red ? "#DC2626" : NEUTRAL.graphite,
+          color: red ? "var(--danger)" : "var(--text)",
           letterSpacing: "-0.02em",
           lineHeight: 1.1,
         }}
@@ -318,7 +318,7 @@ function KpiCard({ label, value, sub, red }) {
         {value}
       </div>
       {sub && (
-        <div style={{ fontSize: 10, color: NEUTRAL.slate, marginTop: 3 }}>{sub}</div>
+        <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 3 }}>{sub}</div>
       )}
     </div>
   );
@@ -376,9 +376,9 @@ function AnalyticsPanel({ campaigns }) {
       <button
         onClick={() => setOpen(v => !v)}
         className="flex items-center gap-1.5 text-xs font-medium transition-colors duration-150"
-        style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
-        onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
-        onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+        style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+        onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
       >
         <TrendingUp size={13} strokeWidth={2} />
         <span>Análise das campanhas</span>
@@ -394,9 +394,9 @@ function AnalyticsPanel({ campaigns }) {
       {open && (
         <div
           className="rounded-2xl border mt-3 p-5"
-          style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}
+          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
         >
-          <div className="text-xs font-semibold mb-4" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs font-semibold mb-4" style={{ color: "var(--text-dim)" }}>
             Distribuição por etapa
           </div>
           <div
@@ -408,7 +408,7 @@ function AnalyticsPanel({ campaigns }) {
                 <div className="flex items-center justify-between mb-1.5">
                   <div
                     className="text-xs font-semibold flex items-center gap-1.5"
-                    style={{ color: NEUTRAL.graphite }}
+                    style={{ color: "var(--text)" }}
                   >
                     <span
                       style={{
@@ -422,7 +422,7 @@ function AnalyticsPanel({ campaigns }) {
                     />
                     {stage.name}
                   </div>
-                  <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+                  <div className="text-xs" style={{ color: "var(--text-dim)" }}>
                     {count} · {formatK(totalBudget)}
                   </div>
                 </div>
@@ -468,7 +468,7 @@ function AnalyticsPanel({ campaigns }) {
                   />
                 </div>
 
-                <div style={{ fontSize: 10, color: NEUTRAL.slate }}>
+                <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
                   {avgDays !== null
                     ? `Média ${avgDays}d nesta etapa`
                     : count > 0 ? "Sem tempo registrado" : "—"}
@@ -492,11 +492,11 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
       aria-selected={active}
       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
       style={{
-        background: active ? "#1E4D8C" : "#FFFFFF",
-        color: active ? "#FFFFFF" : NEUTRAL.slate,
+        background: active ? "#1E4D8C" : "var(--surface)",
+        color: active ? "#FFFFFF" : "var(--text-dim)",
       }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#F3F4F6"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "#FFFFFF"; }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
     >
       <Icon size={13} />
       {label}
@@ -622,12 +622,12 @@ export function MarketingView({ user, users = [] }) {
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Megaphone size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 className="font-bold" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+            <Megaphone size={22} style={{ color: "var(--text)" }} />
+            <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
               Marketing
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             Kanban de campanhas {isAgencia ? "· acesso de visitante" : ""}
           </p>
         </div>
@@ -635,9 +635,9 @@ export function MarketingView({ user, users = [] }) {
           <button
             onClick={exportCampaignsCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
-            style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.color = NEUTRAL.slate; }}
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
             title="Exportar campanhas como CSV"
           >
             <Download size={13} />
@@ -645,7 +645,7 @@ export function MarketingView({ user, users = [] }) {
           </button>
           <div
             className="inline-flex rounded-lg border overflow-hidden"
-            style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
+            style={{ borderColor: "var(--border)", background: "var(--surface)" }}
             role="tablist"
           >
             <ViewToggleButton
@@ -681,7 +681,7 @@ export function MarketingView({ user, users = [] }) {
           value={filterCompany}
           onChange={e => setFilterCompany(e.target.value)}
           className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFF" }}
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
         >
           <option value="all">Todas as empresas</option>
           {COMPANY_IDS.map(id => (
@@ -692,7 +692,7 @@ export function MarketingView({ user, users = [] }) {
           value={filterChannel}
           onChange={e => setFilterChannel(e.target.value)}
           className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFF" }}
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
         >
           <option value="all">Todos os canais</option>
           {MARKETING_CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
@@ -701,9 +701,9 @@ export function MarketingView({ user, users = [] }) {
           onClick={() => setFilterStarred(v => !v)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl border transition-colors"
           style={{
-            borderColor: filterStarred ? "#F59E0B" : "#E5E7EB",
-            background:  filterStarred ? "#FEF3C7" : "#FFF",
-            color:       filterStarred ? "#D97706" : NEUTRAL.slate,
+            borderColor: filterStarred ? "#F59E0B" : "var(--border)",
+            background:  filterStarred ? "var(--amber-bg)" : "var(--surface)",
+            color:       filterStarred ? "var(--warning)" : "var(--text-dim)",
             cursor:      "pointer",
           }}
         >
@@ -714,7 +714,7 @@ export function MarketingView({ user, users = [] }) {
 
       {/* Loading state */}
       {loading && (
-        <div className="text-sm text-center py-8" style={{ color: NEUTRAL.slate }}>
+        <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>
           Carregando campanhas…
         </div>
       )}
@@ -765,7 +765,7 @@ export function MarketingView({ user, users = [] }) {
                 {expanded && (
                   <div className="p-2.5 space-y-2" style={{ background: "#FAFAFA" }}>
                     {stageCampaigns.length === 0 ? (
-                      <div className="text-center py-4 text-xs" style={{ color: NEUTRAL.slate }}>Nenhuma campanha nesta etapa</div>
+                      <div className="text-center py-4 text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma campanha nesta etapa</div>
                     ) : (
                       stageCampaigns.map(c => (
                         <CampaignKanbanCard
@@ -801,7 +801,7 @@ export function MarketingView({ user, users = [] }) {
         <div className="hidden lg:block relative">
           <div
             className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
-            style={{ background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)" }}
+            style={{ background: "linear-gradient(to left, var(--bg) 0%, transparent 100%)" }}
           />
           <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
             <div
@@ -825,7 +825,7 @@ export function MarketingView({ user, users = [] }) {
                       width: 272,
                       minWidth: 272,
                       background: isOver ? "#F0F7FF" : "#fef1f0",
-                      borderColor: isOver ? stage.color + "70" : "#E5E7EB",
+                      borderColor: isOver ? stage.color + "70" : "var(--border)",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
                       minHeight: 480,
                       flexShrink: 0,
@@ -837,22 +837,22 @@ export function MarketingView({ user, users = [] }) {
                     {/* Column header */}
                     <div
                       className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                      style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}
+                      style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
                     >
                       <div className="min-w-0 flex-1">
                         <div
                           className="font-semibold flex items-center gap-1.5"
                           style={{
-                            color: NEUTRAL.graphite,
+                            color: "var(--text)",
                             fontSize: 11,
                             letterSpacing: "0.08em",
                             textTransform: "uppercase",
                           }}
                         >
                           <span>{stage.name}</span>
-                          <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>({count})</span>
+                          <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({count})</span>
                         </div>
-                        <div className="text-xs mt-0.5 font-semibold" style={{ color: NEUTRAL.slate }}>
+                        <div className="text-xs mt-0.5 font-semibold" style={{ color: "var(--text-dim)" }}>
                           {totalBudget > 0 ? formatK(totalBudget) : "R$ 0"}
                           {stage.sla && <span style={{ fontWeight: 400, marginLeft: 6 }}>· SLA {stage.sla}d</span>}
                         </div>
@@ -861,9 +861,9 @@ export function MarketingView({ user, users = [] }) {
                         <button
                           onClick={() => setQuickAddStage(quickAddStage === stage.id ? null : stage.id)}
                           className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 28, height: 28, color: NEUTRAL.slate, background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                           title="Adicionar campanha nesta etapa"
                         >
                           <Plus size={14} />
@@ -879,7 +879,7 @@ export function MarketingView({ user, users = [] }) {
                       {stageCampaigns.length === 0 ? (
                         <div
                           className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
-                          style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}
+                          style={{ borderColor: isOver ? stage.color + "40" : "var(--border)", color: "var(--text-dim)" }}
                         >
                           {isOver ? (
                             <>
@@ -924,7 +924,7 @@ export function MarketingView({ user, users = [] }) {
       )}
 
       {!loading && viewMode === "kanban" && (
-        <p className="text-xs text-center mt-3" style={{ color: NEUTRAL.slate }}>
+        <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
           Arraste para mover · Use "+" no cabeçalho ou o botão flutuante para criar · Clique no card para ver detalhes
         </p>
       )}

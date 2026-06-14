@@ -37,7 +37,7 @@ function shortMonth(date) {
 
 // ── Sparkline SVG ───────────────────────────────────────────────────────────────
 
-function Sparkline({ values = [], color = "#b5000b", w = 70, h = 32 }) {
+function Sparkline({ values = [], color = "var(--color-industria)", w = 70, h = 32 }) {
   if (values.length < 2) return <div style={{ width: w, height: h }} />;
   const max = Math.max(...values) || 1;
   const min = Math.min(...values);
@@ -71,8 +71,8 @@ function MoMBadge({ delta, invert }) {
   if (delta === null || delta === undefined || !Number.isFinite(delta)) return null;
   const up  = invert ? delta < 0 : delta > 0;
   const dn  = invert ? delta > 0 : delta < 0;
-  const color = delta === 0 ? NEUTRAL.slate : up ? "#16A34A" : "#DC2626";
-  const bg    = delta === 0 ? "#F3F4F6" : up ? "#DCFCE7" : "#FEE2E2";
+  const color = delta === 0 ? "var(--text-dim)" : up ? "#16A34A" : "#DC2626";
+  const bg    = delta === 0 ? "var(--surface-alt)" : up ? "#DCFCE7" : "#FEE2E2";
   const Icon  = delta > 0 ? ArrowUp : delta < 0 ? ArrowDown : null;
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 2,
@@ -87,7 +87,7 @@ function MoMBadge({ delta, invert }) {
 
 function CompanyTabs({ selected, onChange, companyIds }) {
   const tabs = [
-    { id: "all", short: "Todas", primary: NEUTRAL.graphite },
+    { id: "all", short: "Todas", primary: "var(--text)" },
     ...companyIds.map(id => COMPANIES[id]).filter(Boolean),
   ];
   return (
@@ -97,9 +97,9 @@ function CompanyTabs({ selected, onChange, companyIds }) {
         return (
           <button key={co.id} onClick={() => onChange(co.id)} style={{
             padding: "5px 14px", borderRadius: 20,
-            border: `1.5px solid ${active ? co.primary : "#E5E7EB"}`,
-            background: active ? co.primary : "#FFFFFF",
-            color: active ? "#FFFFFF" : NEUTRAL.slate,
+            border: `1.5px solid ${active ? co.primary : "var(--border)"}`,
+            background: active ? co.primary : "var(--surface)",
+            color: active ? "#FFFFFF" : "var(--text-dim)",
             fontWeight: active ? 700 : 500, fontSize: 12,
             cursor: "pointer", transition: "all 0.15s",
             letterSpacing: "0.01em", fontFamily: "inherit",
@@ -118,8 +118,8 @@ function CompanyTabs({ selected, onChange, companyIds }) {
 function KpiCard({ icon: Icon, label, value, sub, delta, invertDelta, color, sparkline }) {
   return (
     <div style={{
-      background: "#FFFFFF",
-      border: "1px solid #E5E7EB",
+      background: "var(--surface)",
+      border: "1px solid var(--border)",
       borderRadius: 12,
       padding: "16px 18px",
       display: "flex", flexDirection: "column", gap: 2,
@@ -139,15 +139,15 @@ function KpiCard({ icon: Icon, label, value, sub, delta, invertDelta, color, spa
         </div>
         {sparkline && <Sparkline values={sparkline} color={color} />}
       </div>
-      <div style={{ fontSize: 30, fontWeight: 800, color: NEUTRAL.graphite, lineHeight: 1,
+      <div style={{ fontSize: 30, fontWeight: 800, color: "var(--text)", lineHeight: 1,
                     marginTop: 8, letterSpacing: "-0.03em" }}>
         {value}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, color: NEUTRAL.slate, fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 500 }}>{label}</span>
         <MoMBadge delta={delta} invert={invertDelta} />
       </div>
-      {sub && <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 1 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>{sub}</div>}
     </div>
   );
 }
@@ -157,19 +157,19 @@ function KpiCard({ icon: Icon, label, value, sub, delta, invertDelta, color, spa
 function Panel({ title, subtitle, children }) {
   return (
     <div style={{
-      background: "#FFFFFF", border: "1px solid #E5E7EB",
+      background: "var(--surface)", border: "1px solid var(--border)",
       borderRadius: 12, padding: "18px 20px",
     }}>
       {(title || subtitle) && (
         <div style={{ marginBottom: 14 }}>
           {title && (
-            <div style={{ fontSize: 12, fontWeight: 700, color: NEUTRAL.graphite,
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)",
                           letterSpacing: "0.06em", textTransform: "uppercase" }}>
               {title}
             </div>
           )}
           {subtitle && (
-            <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 3 }}>{subtitle}</div>
+            <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>{subtitle}</div>
           )}
         </div>
       )}
@@ -180,7 +180,7 @@ function Panel({ title, subtitle, children }) {
 
 function EmptyState({ children }) {
   return (
-    <div style={{ padding: "24px 0", textAlign: "center", color: NEUTRAL.slate, fontSize: 12 }}>
+    <div style={{ padding: "24px 0", textAlign: "center", color: "var(--text-dim)", fontSize: 12 }}>
       {children}
     </div>
   );
@@ -213,8 +213,8 @@ function StagePipelineBar({ campaigns }) {
         {stages.map(s => (
           <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-            <span style={{ color: NEUTRAL.slate }}>{s.name}</span>
-            <span style={{ fontWeight: 700, color: NEUTRAL.graphite, fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ color: "var(--text-dim)" }}>{s.name}</span>
+            <span style={{ fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
               {s.count}
             </span>
           </div>
@@ -251,11 +251,11 @@ function ChannelChart({ campaigns, primaryColor }) {
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: primaryColor || d.color, flexShrink: 0 }} />
-              <span style={{ color: NEUTRAL.graphite, fontWeight: 500 }}>{d.name}</span>
+              <span style={{ color: "var(--text)", fontWeight: 500 }}>{d.name}</span>
             </div>
-            <span style={{ color: NEUTRAL.slate, fontVariantNumeric: "tabular-nums" }}>{d.count}</span>
+            <span style={{ color: "var(--text-dim)", fontVariantNumeric: "tabular-nums" }}>{d.count}</span>
           </div>
-          <div style={{ height: 7, background: "#F3F4F6", borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ height: 7, background: "var(--surface-alt)", borderRadius: 4, overflow: "hidden" }}>
             <div style={{
               height: "100%", width: `${(d.count / max) * 100}%`,
               background: `linear-gradient(90deg, ${primaryColor || d.color}, ${(primaryColor || d.color)}bb)`,
@@ -287,11 +287,11 @@ function MonthlyTrendChart({ data, primaryColor }) {
             <stop offset="95%" stopColor={sec} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <XAxis dataKey="month" stroke={NEUTRAL.slate} fontSize={11} tickLine={false} axisLine={false} />
-        <YAxis allowDecimals={false} stroke={NEUTRAL.slate} fontSize={10} tickLine={false} axisLine={false} />
+        <XAxis dataKey="month" stroke={"var(--text-dim)"} fontSize={11} tickLine={false} axisLine={false} />
+        <YAxis allowDecimals={false} stroke={"var(--text-dim)"} fontSize={10} tickLine={false} axisLine={false} />
         <Tooltip
-          contentStyle={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
-          labelStyle={{ color: NEUTRAL.graphite, fontWeight: 600 }}
+          contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
+          labelStyle={{ color: "var(--text)", fontWeight: 600 }}
         />
         <Area type="monotone" dataKey="campanhas" name="Campanhas" stroke={primaryColor} strokeWidth={2}
               fill="url(#gc)" dot={{ r: 3, fill: primaryColor }} activeDot={{ r: 5 }} />
@@ -323,14 +323,14 @@ function BurnRateChart({ expenses, primaryColor }) {
   return (
     <ResponsiveContainer width="100%" height={160}>
       <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
-        <XAxis dataKey="month" stroke={NEUTRAL.slate} fontSize={11} tickLine={false} axisLine={false} />
-        <YAxis stroke={NEUTRAL.slate} fontSize={10} tickLine={false} axisLine={false}
+        <XAxis dataKey="month" stroke={"var(--text-dim)"} fontSize={11} tickLine={false} axisLine={false} />
+        <YAxis stroke={"var(--text-dim)"} fontSize={10} tickLine={false} axisLine={false}
                tickFormatter={v => formatK(v)} />
         <Tooltip
-          cursor={{ fill: "#F9FAFB" }}
-          contentStyle={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
+          cursor={{ fill: "var(--surface-alt)" }}
+          contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
           formatter={v => [formatBRL(v), "Gasto"]}
-          labelStyle={{ color: NEUTRAL.graphite, fontWeight: 600 }}
+          labelStyle={{ color: "var(--text)", fontWeight: 600 }}
         />
         <Bar dataKey="total" radius={[5, 5, 0, 0]}>
           {data.map((d, i) => <Cell key={i} fill={d.isCurrent ? primaryColor : primaryColor + "40"} />)}
@@ -371,7 +371,7 @@ function CategoryDonut({ expenses }) {
               {data.map((d, i) => <Cell key={i} fill={CAT_COLORS[d.name] || "#9CA3AF"} />)}
             </Pie>
             <Tooltip
-              contentStyle={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12 }}
+              contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
               formatter={v => [formatBRL(v)]}
             />
           </PieChart>
@@ -381,10 +381,10 @@ function CategoryDonut({ expenses }) {
         {data.map(d => (
           <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: CAT_COLORS[d.name] || "#9CA3AF", flexShrink: 0 }} />
-            <span style={{ color: NEUTRAL.graphite, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ color: "var(--text)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {d.name}
             </span>
-            <span style={{ color: NEUTRAL.slate, fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ color: "var(--text-dim)", fontVariantNumeric: "tabular-nums" }}>
               {Math.round((d.value / total) * 100)}%
             </span>
           </div>
@@ -411,19 +411,19 @@ function AgencyMetrics({ deliverables, primaryColor }) {
     return { sla, avgLead, stuck, total: done.length };
   }, [deliverables]);
 
-  const slaColor = m.sla == null ? NEUTRAL.slate : m.sla >= 80 ? "#16A34A" : m.sla >= 60 ? "#D97706" : "#DC2626";
+  const slaColor = m.sla == null ? "var(--text-dim)" : m.sla >= 80 ? "#16A34A" : m.sla >= 60 ? "#D97706" : "#DC2626";
 
   const card = (value, label, sub, color, warn) => (
     <div style={{
-      background: warn ? "#FFF7ED" : "#FFFFFF",
-      border: `1px solid ${warn ? "#FED7AA" : "#E5E7EB"}`,
+      background: warn ? "#FFF7ED" : "var(--surface)",
+      border: `1px solid ${warn ? "#FED7AA" : "var(--border)"}`,
       borderRadius: 12, padding: "16px 18px", textAlign: "center", flex: 1,
     }}>
       <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: "-0.02em", lineHeight: 1 }}>
         {value}
       </div>
-      <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 5, fontWeight: 600 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 2 }}>{sub}</div>}
+      <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 5, fontWeight: 600 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>{sub}</div>}
     </div>
   );
 
@@ -432,7 +432,7 @@ function AgencyMetrics({ deliverables, primaryColor }) {
       {card(m.sla != null ? `${m.sla}%` : "—", "SLA cumprido",
             m.total > 0 ? `${m.total} entregas` : "sem entregas", slaColor, false)}
       {card(m.avgLead != null ? `${m.avgLead}d` : "—", "Lead time médio",
-            "Pendente → Entregue", primaryColor || NEUTRAL.graphite, false)}
+            "Pendente → Entregue", primaryColor || "var(--text)", false)}
       {card(m.stuck, "Presas em revisão",
             "Mais de 3 dias", m.stuck > 0 ? "#D97706" : "#16A34A", m.stuck > 0)}
     </div>
@@ -462,9 +462,9 @@ function TopPerformanceList({ campaigns, primaryColor }) {
           <div key={c.id}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, width: 16,
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", width: 16,
                                fontVariantNumeric: "tabular-nums" }}>{i + 1}</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite,
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)",
                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {c.name}
                 </span>
@@ -498,7 +498,7 @@ function TopPerformanceList({ campaigns, primaryColor }) {
 
 function SectionLabel({ children }) {
   return (
-    <div style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, letterSpacing: "0.1em",
+    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", letterSpacing: "0.1em",
                   textTransform: "uppercase", marginBottom: 10, marginTop: 20 }}>
       {children}
     </div>
@@ -523,8 +523,8 @@ export function MarketingDashboardView({ user }) {
 
   const [selectedCompany, setSelectedCompany] = useState("all");
   const co           = selectedCompany !== "all" ? (COMPANIES[selectedCompany] || null) : null;
-  const primaryColor = co?.primary || "#b5000b";
-  const accentColor  = co?.active  || "#b5000b";
+  const primaryColor = co?.primary || "var(--color-industria)";
+  const accentColor  = co?.active  || "var(--color-industria)";
 
   // ── Filtered slices ──
   const fCampaigns = useMemo(() =>
@@ -614,12 +614,12 @@ export function MarketingDashboardView({ user }) {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between",
                       flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: co ? co.primary : NEUTRAL.graphite,
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: co ? co.primary : "var(--text)",
                          letterSpacing: "-0.02em", lineHeight: 1, margin: 0,
                          transition: "color 0.3s ease" }}>
               {greeting}, {user?.name?.split(" ")[0] || "—"}
             </h1>
-            <p style={{ fontSize: 13, color: NEUTRAL.slate, margin: "5px 0 0" }}>
+            <p style={{ fontSize: 13, color: "var(--text-dim)", margin: "5px 0 0" }}>
               Dashboard de Marketing
               {co && <> · <strong style={{ color: co.primary }}>{co.name}</strong></>}
               {" "}· {fCampaigns.length} campanha{fCampaigns.length !== 1 ? "s" : ""}
@@ -630,9 +630,9 @@ export function MarketingDashboardView({ user }) {
           {kpi.live > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
                           borderRadius: 20, background: "#DCFCE7", border: "1px solid #86EFAC" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16A34A",
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success)",
                              boxShadow: "0 0 0 3px #16A34A33" }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#15803D" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--success)" }}>
                 {kpi.live} ao vivo
               </span>
             </div>
@@ -654,7 +654,7 @@ export function MarketingDashboardView({ user }) {
         />
         <KpiCard
           icon={Zap} label="Ao vivo agora" value={kpi.live}
-          color={kpi.live > 0 ? "#16A34A" : NEUTRAL.slate}
+          color={kpi.live > 0 ? "#16A34A" : "var(--text-dim)"}
           sub={kpi.live > 0 ? "em exibição" : "nenhuma ao vivo"}
         />
         <KpiCard
@@ -670,7 +670,7 @@ export function MarketingDashboardView({ user }) {
           icon={Award} label="Performance médio"
           value={kpi.avgScore != null ? kpi.avgScore : "—"}
           sub={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "ótimo" : kpi.avgScore >= 60 ? "bom" : "atenção") : "sem dados"}
-          color={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "#16A34A" : kpi.avgScore >= 60 ? "#D97706" : "#DC2626") : NEUTRAL.slate}
+          color={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "#16A34A" : kpi.avgScore >= 60 ? "#D97706" : "#DC2626") : "var(--text-dim)"}
         />
       </div>
 

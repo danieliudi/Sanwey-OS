@@ -129,23 +129,23 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
       {/* Header com filtros e ações */}
       <div className="flex items-start justify-between flex-wrap gap-3 print:hidden">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             Painel Executivo
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             Visão consolidada do Grupo · {filteredLeads.length} leads · {PERIODS.find(p => p.id === period)?.label}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
             {PERIODS.map(p => (
               <button
                 key={p.id}
                 onClick={() => setPeriod(p.id)}
                 className="px-2.5 py-1.5 text-xs font-semibold cursor-pointer transition-colors"
                 style={{
-                  background: period === p.id ? "#1E4D8C" : "#FFFFFF",
-                  color: period === p.id ? "#FFFFFF" : NEUTRAL.slate,
+                  background: period === p.id ? "#1E4D8C" : "var(--surface)",
+                  color: period === p.id ? "#FFFFFF" : "var(--text-dim)",
                 }}
               >
                 {p.label}
@@ -155,9 +155,9 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
           <button
             onClick={() => window.print()}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
             title="Imprimir / salvar como PDF"
           >
             <Printer size={11} />
@@ -168,7 +168,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
 
       {/* KPI strip — sempre visível */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Pipeline aberto"     sublabel="Em aberto" accent={NEUTRAL.graphite} />
+        <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Pipeline aberto"     sublabel="Em aberto" accent={"var(--text)"} />
         <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
         <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
         <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
@@ -177,7 +177,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
+      <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto" style={{ borderColor: "var(--border)" }}>
         {TABS.map(t => {
           const active = tab === t.id;
           return (
@@ -187,7 +187,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
               title={t.hint}
               className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
               style={{
-                color: active ? NEUTRAL.graphite : NEUTRAL.slate,
+                color: active ? "var(--text)" : "var(--text-dim)",
                 borderBottomColor: active ? "#1E4D8C" : "transparent",
                 letterSpacing: "0.08em",
               }}
@@ -241,7 +241,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
   return (
     <div
       className="rounded-xl border p-5 space-y-4"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div className="flex items-start gap-3">
         <div
@@ -251,8 +251,8 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
           <Icon size={17} style={{ color: iconColor }} />
         </div>
         <div>
-          <h3 className="font-semibold" style={{ fontSize: 14, color: NEUTRAL.graphite }}>{title}</h3>
-          <p className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{description}</p>
+          <h3 className="font-semibold" style={{ fontSize: 14, color: "var(--text)" }}>{title}</h3>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{description}</p>
         </div>
       </div>
 
@@ -261,7 +261,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
         disabled={loading}
         className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150 active:scale-95"
         style={{
-          background: "#b5000b",
+          background: "var(--accent)",
           color: "#FFFFFF",
           border: "none",
           cursor: loading ? "not-allowed" : "pointer",
@@ -277,7 +277,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
       {error && (
         <div
           className="flex items-start gap-2 text-sm px-3 py-2.5 rounded-lg"
-          style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }}
+          style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}
         >
           <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
           <span>{error}</span>
@@ -288,7 +288,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
         <div className="space-y-2">
           <div
             className="text-sm leading-relaxed whitespace-pre-line p-3 rounded-lg border"
-            style={{ background: "#fef1f0", borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+            style={{ background: "#fef1f0", borderColor: "var(--border)", color: "var(--text)" }}
           >
             {result}
           </div>
@@ -296,9 +296,9 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
             <button
               onClick={onGenerate}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
-              style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: "#E5E7EB", cursor: "pointer" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; }}
+              style={{ background: "var(--surface)", color: "var(--text-dim)", borderColor: "var(--border)", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; }}
             >
               <RotateCcw size={11} />
               Regenerar
@@ -307,13 +307,13 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
               onClick={handleCopy}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
               style={{
-                background: copied ? "#F0FDF4" : "#FFFFFF",
-                color: copied ? "#16A34A" : NEUTRAL.slate,
-                borderColor: copied ? "#BBF7D0" : "#E5E7EB",
+                background: copied ? "#F0FDF4" : "var(--surface)",
+                color: copied ? "#16A34A" : "var(--text-dim)",
+                borderColor: copied ? "#BBF7D0" : "var(--border)",
                 cursor: "pointer",
               }}
-              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; } }}
+              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
+              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; } }}
             >
               {copied ? "Copiado!" : "Copiar"}
             </button>
@@ -367,10 +367,10 @@ function AIExecutivePanel({ leads, users, currentUser }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-semibold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
+          <h2 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>
             Inteligência Artificial Executiva
           </h2>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             Análises geradas pela IA com base nos dados do pipeline filtrado
           </p>
         </div>
@@ -417,8 +417,8 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
     <div className="space-y-5">
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Pipeline por empresa */}
-        <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-          <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+        <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
             Pipeline por empresa
           </h3>
           <div className="space-y-4">
@@ -429,11 +429,11 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full" style={{ background: m.company.primary }} />
-                      <span className="text-sm font-medium" style={{ color: NEUTRAL.graphite }}>
+                      <span className="text-sm font-medium" style={{ color: "var(--text)" }}>
                         {m.company.name}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold font-mono" style={{ color: NEUTRAL.graphite }}>
+                    <span className="text-sm font-semibold font-mono" style={{ color: "var(--text)" }}>
                       {formatK(m.pipeline)}
                     </span>
                   </div>
@@ -443,7 +443,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
                       style={{ width: `${pct}%`, background: m.company.primary }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-xs mt-1.5" style={{ color: NEUTRAL.slate }}>
+                  <div className="flex items-center justify-between text-xs mt-1.5" style={{ color: "var(--text-dim)" }}>
                     <span>{m.open} ativo{m.open !== 1 ? "s" : ""}</span>
                     <span>{m.won} ganho · {m.lost} perdido</span>
                   </div>
@@ -454,18 +454,18 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
         </div>
 
         {/* Funil de conversão */}
-        <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-          <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+        <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
             Funil de conversão (Grupo)
           </h3>
           <div className="space-y-2.5">
             {funnelStages.map(({ stage, count, pct }) => (
               <div key={stage.id}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium" style={{ color: NEUTRAL.graphite }}>
+                  <span className="text-sm font-medium" style={{ color: "var(--text)" }}>
                     {stage.name}
                   </span>
-                  <span className="text-xs" style={{ color: NEUTRAL.slate }}>{count} leads</span>
+                  <span className="text-xs" style={{ color: "var(--text-dim)" }}>{count} leads</span>
                 </div>
                 <div className="h-5 rounded-lg overflow-hidden" style={{ background: "#EFF2F5" }}>
                   <div
@@ -482,19 +482,19 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
       </div>
 
       {/* Matriz por empresa */}
-      <div className="rounded-xl border p-5" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-        <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+      <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
           Desempenho por empresa · matriz
         </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b" style={{ borderColor: "#F0F0F0" }}>
+              <tr className="border-b" style={{ borderColor: "var(--border)" }}>
                 {["Empresa", "Leads", "Pipeline", "Forecast", "Ganho", "Ativação", "Parados"].map((h, i) => (
                   <th
                     key={h}
                     className={`py-2.5 text-xs font-semibold ${i === 0 ? "text-left pr-3" : "text-right px-3"}`}
-                    style={{ color: NEUTRAL.slate }}
+                    style={{ color: "var(--text-dim)" }}
                   >
                     {h}
                   </th>
@@ -503,33 +503,33 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
             </thead>
             <tbody>
               {metricsByCompany.map(m => (
-                <tr key={m.id} className="border-b" style={{ borderColor: "#F5F5F5" }}>
+                <tr key={m.id} className="border-b" style={{ borderColor: "var(--border)" }}>
                   <td className="py-3 pr-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: m.company.primary }} />
-                      <span className="font-medium" style={{ color: NEUTRAL.graphite }}>
+                      <span className="font-medium" style={{ color: "var(--text)" }}>
                         {m.company.name}
                       </span>
                     </div>
                   </td>
-                  <td className="text-right py-3 px-3 font-mono" style={{ color: NEUTRAL.graphite }}>
+                  <td className="text-right py-3 px-3 font-mono" style={{ color: "var(--text)" }}>
                     {m.leadsCount}
                   </td>
-                  <td className="text-right py-3 px-3 font-mono font-semibold" style={{ color: NEUTRAL.graphite }}>
+                  <td className="text-right py-3 px-3 font-mono font-semibold" style={{ color: "var(--text)" }}>
                     {formatK(m.pipeline)}
                   </td>
                   <td className="text-right py-3 px-3 font-mono" style={{ color: "#0F766E" }}>
                     {formatK(m.forecast)}
                   </td>
-                  <td className="text-right py-3 px-3 font-mono" style={{ color: NEUTRAL.success }}>
+                  <td className="text-right py-3 px-3 font-mono" style={{ color: "var(--color-resibag)" }}>
                     {formatK(m.wonValue)}
                   </td>
-                  <td className="text-right py-3 px-3 font-mono" style={{ color: NEUTRAL.graphite }}>
+                  <td className="text-right py-3 px-3 font-mono" style={{ color: "var(--text)" }}>
                     {m.activationRate}%
                   </td>
                   <td
                     className="text-right py-3 pl-3 font-mono"
-                    style={{ color: m.stale > 3 ? NEUTRAL.red : NEUTRAL.slate }}
+                    style={{ color: m.stale > 3 ? "var(--color-industria)" : "var(--text-dim)" }}
                   >
                     {m.stale}
                   </td>

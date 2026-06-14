@@ -26,7 +26,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
   const isManager = user.role === "gerente" || user.role === "admin";
   const isConsultor = user.role === "consultor";
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
-  const accent = companyData?.primary || "#37352F";
+  const accent = companyData?.primary || "var(--text)";
 
   const subordinateIds = useMemo(() => {
     if (user.role !== "vendedor") return new Set();
@@ -221,7 +221,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
             <TaskBucket
               icon={AlertTriangle}
-              tone="#DC2626"
+              tone="var(--danger)"
               title="Fechamento atrasado"
               empty="Nenhum vencido"
               items={tasks.overdue.slice(0, 4).map(({ lead, close }) => ({
@@ -235,7 +235,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
             />
             <TaskBucket
               icon={CalendarCheck}
-              tone="#047857"
+              tone="var(--success)"
               title="Follow-ups agendados"
               empty="Sem follow-up nos próximos 7 dias"
               items={tasks.followUps.slice(0, 4).map(({ lead, when, isLate }) => ({
@@ -244,7 +244,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
                 primary: lead.company,
                 secondary: `${stageLabel(lead.stage)} · ${formatDateBR(when)}`,
                 badge: isLate ? `${daysSince(when)}d atraso` : formatDateBR(when),
-                badgeTone: isLate ? "#DC2626" : "#047857",
+                badgeTone: isLate ? "var(--danger)" : "var(--success)",
                 onClick: onLeadClick,
               }))}
             />
@@ -264,7 +264,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
             />
             <TaskBucket
               icon={Clock}
-              tone="#B45309"
+              tone="var(--warning)"
               title="Leads parados"
               empty="Tudo com atividade recente"
               items={tasks.stale.slice(0, 4).map(({ lead, idle }) => ({

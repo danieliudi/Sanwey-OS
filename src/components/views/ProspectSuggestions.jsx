@@ -74,35 +74,35 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
   return (
     <div
       className="p-4 rounded-xl border flex flex-col gap-3 transition-all duration-150 overflow-hidden min-w-0"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span
               className="px-2 py-0.5 text-[10px] font-semibold rounded-full"
-              style={{ background: NEUTRAL.graphite, color: "#FFFFFF" }}
+              style={{ background: "var(--text)", color: "#FFFFFF" }}
             >
               {seed.source === "curadoria" ? "Curadoria" : seed.source}
             </span>
-            <span className="text-[10px] font-medium" style={{ color: NEUTRAL.slate }}>
+            <span className="text-[10px] font-medium" style={{ color: "var(--text-dim)" }}>
               {seed.sector}
             </span>
           </div>
-          <div className="font-bold leading-tight truncate" style={{ color: NEUTRAL.graphite, fontSize: 17 }}>
+          <div className="font-bold leading-tight truncate" style={{ color: "var(--text)", fontSize: 17 }}>
             {seed.company}
           </div>
           {seed.razao_social && seed.razao_social !== seed.company && (
-            <div className="text-sm truncate" style={{ color: NEUTRAL.slate }}>{seed.razao_social}</div>
+            <div className="text-sm truncate" style={{ color: "var(--text-dim)" }}>{seed.razao_social}</div>
           )}
-          <div className="text-xs font-mono mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs font-mono mt-0.5" style={{ color: "var(--text-dim)" }}>
             {formatCnpj(seed.cnpj)}
           </div>
         </div>
         <FitScoreCircle score={seed.fit_score || 65} size={44} />
       </div>
 
-      <div className="flex items-center gap-3 text-sm flex-wrap" style={{ color: NEUTRAL.slate }}>
+      <div className="flex items-center gap-3 text-sm flex-wrap" style={{ color: "var(--text-dim)" }}>
         <div className="flex items-center gap-1">
           <MapPin size={12} />
           <span>{seed.city || seed.state}</span>
@@ -124,7 +124,7 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
       {seed.evidence && (
         <div
           className="text-sm p-2.5 rounded-lg flex gap-2"
-          style={{ background: NEUTRAL.warmWhite, color: NEUTRAL.graphite, lineHeight: 1.5 }}
+          style={{ background: "var(--surface)", color: "var(--text)", lineHeight: 1.5 }}
         >
           <Flame size={13} className="shrink-0 mt-0.5" color={NEUTRAL.amber} />
           <span>{seed.evidence}</span>
@@ -135,7 +135,7 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
         <div className="space-y-1">
           <div
             className="text-xs font-semibold flex items-center gap-1"
-            style={{ color: NEUTRAL.slate }}
+            style={{ color: "var(--text-dim)" }}
           >
             <Database size={11} />
             Sinais de bases públicas
@@ -145,13 +145,13 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
               <span
                 key={idx}
                 className="px-2 py-0.5 rounded-lg border text-xs flex items-center gap-1 max-w-full overflow-hidden"
-                style={{ borderColor: "#E5E7EB", background: "#FAFAFA", color: NEUTRAL.graphite }}
+                style={{ borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text)" }}
                 title={`${sig.source} · ${sig.label}${sig.detail ? ` · ${sig.detail}` : ""}`}
               >
-                <strong className="shrink-0" style={{ color: NEUTRAL.graphite }}>{sig.source}</strong>
-                <span className="shrink-0" style={{ color: NEUTRAL.slate }}>·</span>
-                <span className="truncate" style={{ color: NEUTRAL.slate }}>{sig.label}</span>
-                {sig.year && <span style={{ color: NEUTRAL.slate }}>· {sig.year}</span>}
+                <strong className="shrink-0" style={{ color: "var(--text)" }}>{sig.source}</strong>
+                <span className="shrink-0" style={{ color: "var(--text-dim)" }}>·</span>
+                <span className="truncate" style={{ color: "var(--text-dim)" }}>{sig.label}</span>
+                {sig.year && <span style={{ color: "var(--text-dim)" }}>· {sig.year}</span>}
               </span>
             ))}
           </div>
@@ -161,13 +161,13 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
       {added ? (
         <div
           className="p-2.5 rounded-lg flex items-center gap-2 text-xs"
-          style={{ background: "#E8F2EC", color: NEUTRAL.success }}
+          style={{ background: "#E8F2EC", color: "var(--color-resibag)" }}
         >
           <CheckCircle2 size={14} />
           Adicionado como lead em {COMPANIES[target]?.short}. Ver na aba Kanban.
         </div>
       ) : (
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t" style={{ borderColor: "#EFEFEF" }}>
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t" style={{ borderColor: "var(--border)" }}>
           <div className="flex flex-wrap gap-1 flex-1 min-w-0">
             {accessibleCompanies.map(id => {
               const c = COMPANIES[id];
@@ -181,9 +181,9 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
                   onClick={() => setTarget(id)}
                   className="px-2.5 py-1 text-[11px] rounded-full border transition-all flex items-center gap-1"
                   style={{
-                    background: active ? c.light : "#FFFFFF",
-                    borderColor: active ? c.primary : "#EFEFEF",
-                    color: active ? c.dark : NEUTRAL.graphite,
+                    background: active ? c.light : "var(--surface)",
+                    borderColor: active ? c.primary : "var(--border)",
+                    color: active ? c.dark : "var(--text)",
                     fontWeight: active ? 700 : 500,
                   }}
                   title={suggested ? "Sugestão de fit" : ""}
@@ -247,33 +247,33 @@ export function ProspectSuggestions({ filters, leads, accessibleCompanies, onAdd
   return (
     <div
       className="rounded-xl border overflow-hidden"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div
         className="px-4 py-3.5 border-b flex items-center justify-between gap-3 flex-wrap"
-        style={{ background: "#F7F7F5", borderColor: "#F0F0F0" }}
+        style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}
       >
         <div className="flex items-center gap-2">
-          <Sparkles size={14} color={NEUTRAL.graphite} />
-          <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
+          <Sparkles size={14} color="var(--text)" />
+          <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
             Sugestões de prospecção
           </span>
-          <span className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <span className="text-xs" style={{ color: "var(--text-dim)" }}>
             · {filtered.length} candidatas
           </span>
         </div>
-        <div className="text-[11px]" style={{ color: NEUTRAL.slate }}>
+        <div className="text-[11px]" style={{ color: "var(--text-dim)" }}>
           CNAE/UF · ComexStat · BNDES · IBGE · IBAMA · ANP · ANDA · SNIC
         </div>
       </div>
 
       {loading ? (
-        <div className="p-10 flex items-center justify-center gap-2 text-sm" style={{ color: NEUTRAL.slate }}>
+        <div className="p-10 flex items-center justify-center gap-2 text-sm" style={{ color: "var(--text-dim)" }}>
           <Loader2 size={14} className="animate-spin" />
           Carregando sugestões…
         </div>
       ) : error ? (
-        <div className="p-6 flex items-start gap-2 text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+        <div className="p-6 flex items-start gap-2 text-xs" style={{ background: "#FEF2F2", color: "var(--danger)" }}>
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <div className="flex-1">
             <div className="font-semibold mb-1">Não foi possível carregar sugestões</div>
@@ -282,7 +282,7 @@ export function ProspectSuggestions({ filters, leads, accessibleCompanies, onAdd
           </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="py-10 px-6 text-center text-sm" style={{ color: NEUTRAL.slate }}>
+        <div className="py-10 px-6 text-center text-sm" style={{ color: "var(--text-dim)" }}>
           Nenhuma sugestão bate com os filtros atuais. Relaxe o filtro ou limpe para ver todas.
         </div>
       ) : (
@@ -301,7 +301,7 @@ export function ProspectSuggestions({ filters, leads, accessibleCompanies, onAdd
           {filtered.length > 30 && (
             <div
               className="px-4 py-3 text-center text-xs border-t"
-              style={{ color: NEUTRAL.slate, background: "#F7F7F5", borderColor: "#F0F0F0" }}
+              style={{ color: "var(--text-dim)", background: "var(--surface-alt)", borderColor: "var(--border)" }}
             >
               Mostrando 30 de {filtered.length} sugestões · refine os filtros
             </div>

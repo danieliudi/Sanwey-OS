@@ -46,7 +46,7 @@ function InitialsAvatar({ name, size = 32 }) {
         width: size,
         height: size,
         borderRadius: "50%",
-        background: NEUTRAL.red,
+        background: "var(--color-industria)",
         color: "#FFF",
         display: "flex",
         alignItems: "center",
@@ -71,8 +71,8 @@ function StarRating({ value = 0, max = 5, onChange }) {
         <Star
           key={i}
           size={12}
-          fill={i < value ? "#F59E0B" : "none"}
-          stroke={i < value ? "#F59E0B" : "#D1D5DB"}
+          fill={i < value ? "var(--amber)" : "none"}
+          stroke={i < value ? "var(--amber)" : "var(--border-strong)"}
           style={{ cursor: onChange ? "pointer" : "default", flexShrink: 0 }}
           onClick={() => onChange && onChange(i + 1)}
         />
@@ -111,10 +111,10 @@ function NovaVagaModal({ onSave, onClose }) {
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", fontSize: 13 };
   const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
-  const blurGray  = (e) => { e.target.style.borderColor = "#D1D5DB"; };
+  const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   return (
     <div
@@ -122,12 +122,12 @@ function NovaVagaModal({ onSave, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>Nova Vaga</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex" }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>Nova Vaga</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
             <X size={18} />
           </button>
         </div>
@@ -177,7 +177,7 @@ function NovaVagaModal({ onSave, onClose }) {
           </div>
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
+            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
               {error}
             </div>
           )}
@@ -193,7 +193,7 @@ function NovaVagaModal({ onSave, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+              style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
             >
               Cancelar
             </button>
@@ -247,10 +247,10 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", fontSize: 13 };
   const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
-  const blurGray  = (e) => { e.target.style.borderColor = "#D1D5DB"; };
+  const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   const stageInfo = RH_RECRUITMENT_STAGES.find((s) => s.id === stage);
 
@@ -260,20 +260,20 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>Novo Candidato</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>Novo Candidato</div>
             {stageInfo && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} />
-                <span style={{ fontSize: 11, color: NEUTRAL.slate, fontWeight: 500 }}>{stageInfo.name}</span>
+                <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 500 }}>{stageInfo.name}</span>
               </div>
             )}
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex" }}>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
             <X size={18} />
           </button>
         </div>
@@ -308,7 +308,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
           </div>
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
+            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
               {error}
             </div>
           )}
@@ -317,7 +317,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
             <button type="submit" disabled={saving} style={{ flex: 1, background: "#1E4D8C", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Adicionando…" : "Adicionar candidato"}
             </button>
-            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}>
+            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
               Cancelar
             </button>
           </div>
@@ -362,7 +362,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 
   return (
     <>
@@ -379,7 +379,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
           right: 0,
           bottom: 0,
           width: "min(480px, 100vw)",
-          background: "#FFFFFF",
+          background: "var(--surface)",
           zIndex: 1000,
           display: "flex",
           flexDirection: "column",
@@ -389,20 +389,20 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <InitialsAvatar name={candidato.name} size={44} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>{candidato.name}</div>
-            {candidato.email && <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 2 }}>{candidato.email}</div>}
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{candidato.name}</div>
+            {candidato.email && <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{candidato.email}</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} />
                 {stageInfo.name}
               </span>
-              <span style={{ fontSize: 11, color: NEUTRAL.slate }}>{days}d nesta etapa</span>
+              <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{days}d nesta etapa</span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
             <X size={18} />
           </button>
         </div>
@@ -418,7 +418,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
             ].map((f) => (
               <div key={f.label}>
                 <div style={labelSt}>{f.label}</div>
-                <div style={{ fontSize: 13, color: NEUTRAL.graphite, fontWeight: 500 }}>{f.value}</div>
+                <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
               </div>
             ))}
             <div>
@@ -504,7 +504,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
           {/* Notes */}
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontWeight: 700, fontSize: 12, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: 6 }}>
                 <MessageSquare size={12} /> Notas
               </div>
               {canWrite && !addingNote && (
@@ -526,9 +526,9 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                   rows={3}
                   autoFocus
                   className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-                  style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 }}
+                  style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", fontSize: 13 }}
                   onFocus={(e) => { e.target.style.borderColor = "#1E4D8C"; }}
-                  onBlur={(e) => { e.target.style.borderColor = "#D1D5DB"; }}
+                  onBlur={(e) => { e.target.style.borderColor = "var(--border-strong)"; }}
                 />
                 <div className="flex gap-2 mt-2">
                   <button
@@ -540,7 +540,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                   </button>
                   <button
                     onClick={() => { setAddingNote(false); setNoteText(""); }}
-                    style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+                    style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
                   >
                     Cancelar
                   </button>
@@ -549,7 +549,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
             )}
 
             {(candidato.notes || []).length === 0 && !addingNote ? (
-              <div style={{ textAlign: "center", padding: "24px 0", color: NEUTRAL.slate, fontSize: 12, opacity: 0.6 }}>
+              <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-dim)", fontSize: 12, opacity: 0.6 }}>
                 Nenhuma nota registrada
               </div>
             ) : (
@@ -557,10 +557,10 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                 {[...(candidato.notes || [])].reverse().map((note, i) => (
                   <div
                     key={i}
-                    style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "10px 12px" }}
+                    style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}
                   >
-                    <div style={{ fontSize: 12, color: NEUTRAL.graphite, lineHeight: 1.5 }}>{note.text}</div>
-                    <div style={{ fontSize: 10, color: NEUTRAL.slate, marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{note.text}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
                       {note.created_at ? fmt(note.created_at) : "—"}
                     </div>
                   </div>
@@ -582,8 +582,8 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
   return (
     <div
       style={{
-        background: "#F9FAFB",
-        border: "1px solid #E5E7EB",
+        background: "var(--surface-alt)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         minWidth: 240,
         width: 240,
@@ -595,10 +595,10 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
     >
       {/* Column header */}
       <div
-        style={{ padding: "10px 12px 8px", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: 8 }}
+        style={{ padding: "10px 12px 8px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}
       >
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
-        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: "var(--text)", letterSpacing: "-0.01em" }}>
           {stage.name}
         </span>
         <span
@@ -616,7 +616,7 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
         <button
           onClick={() => setCollapsed((c) => !c)}
           className="md:hidden"
-          style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 2, display: "flex" }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
         >
           <ChevronDown size={14} style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }} />
         </button>
@@ -635,7 +635,7 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
       {!collapsed && (
         <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
           {candidatos.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 8px", color: NEUTRAL.slate, fontSize: 11, opacity: 0.5 }}>
+            <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
               Nenhum candidato
             </div>
           ) : (
@@ -647,24 +647,24 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
                   key={c.id}
                   onClick={() => onCardClick(c)}
                   style={{
-                    background: "#FFFFFF",
-                    border: "1px solid #E5E7EB",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 10,
                     padding: "10px 12px",
                     cursor: "pointer",
                     transition: "box-shadow 0.1s",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.boxShadow = "none"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.boxShadow = "none"; }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                     <InitialsAvatar name={c.name} size={28} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {c.name}
                       </div>
                       {vagaTitle && (
-                        <div style={{ fontSize: 10, color: NEUTRAL.slate, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div style={{ fontSize: 10, color: "var(--text-dim)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                           {vagaTitle}
                         </div>
                       )}
@@ -672,11 +672,11 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <StarRating value={c.rating || 0} />
-                    <span style={{ fontSize: 10, color: NEUTRAL.slate }}>{days}d</span>
+                    <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{days}d</span>
                   </div>
                   {c.source && (
                     <div style={{ marginTop: 5 }}>
-                      <span style={{ fontSize: 10, color: NEUTRAL.slate, background: "#F3F4F6", borderRadius: 99, padding: "1px 7px" }}>
+                      <span style={{ fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 99, padding: "1px 7px" }}>
                         {c.source}
                       </span>
                     </div>
@@ -793,12 +793,12 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Briefcase size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em", margin: 0 }}>
+            <Briefcase size={22} style={{ color: "var(--text)" }} />
+            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>
               Recrutamento
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             Kanban de candidatos · {candidatos.length} candidato{candidatos.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -832,9 +832,9 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
               key={v.id}
               onClick={() => setSelectedVaga(v.id)}
               style={{
-                background: selectedVaga === v.id ? NEUTRAL.red : "#FFFFFF",
-                color: selectedVaga === v.id ? "#FFF" : NEUTRAL.graphite,
-                border: `1px solid ${selectedVaga === v.id ? NEUTRAL.red : "#E5E7EB"}`,
+                background: selectedVaga === v.id ? "var(--color-industria)" : "var(--surface)",
+                color: selectedVaga === v.id ? "#FFF" : "var(--text)",
+                border: `1px solid ${selectedVaga === v.id ? "var(--color-industria)" : "var(--border)"}`,
                 borderRadius: 99,
                 padding: "5px 14px",
                 fontSize: 12,
@@ -851,14 +851,14 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
 
       {/* Kanban board */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: NEUTRAL.slate, fontSize: 13 }}>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>
           Carregando…
         </div>
       ) : !isSupabaseConfigured ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <Briefcase size={48} style={{ color: NEUTRAL.slate, opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: NEUTRAL.slate, fontWeight: 500 }}>Supabase não configurado</div>
-          <div style={{ fontSize: 12, color: NEUTRAL.slate, opacity: 0.6, marginTop: 4 }}>Configure as variáveis de ambiente para usar o módulo de recrutamento</div>
+          <Briefcase size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Supabase não configurado</div>
+          <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>Configure as variáveis de ambiente para usar o módulo de recrutamento</div>
         </div>
       ) : (
         <div

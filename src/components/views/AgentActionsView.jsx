@@ -63,28 +63,28 @@ function ActionCard({ action, agent, onResolve, resolving }) {
             </span>
             {/* Lead company */}
             {action.leads?.company && (
-              <span className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+              <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
                 {action.leads.company}
               </span>
             )}
             {action.leads?.stage && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{ background: "#EFEFEF", color: NEUTRAL.slate }}>
+                style={{ background: "#EFEFEF", color: "var(--text-dim)" }}>
                 {action.leads.stage}
               </span>
             )}
             {payload.days_stale && (
-              <span className="flex items-center gap-1 text-[10px]" style={{ color: NEUTRAL.slate }}>
+              <span className="flex items-center gap-1 text-[10px]" style={{ color: "var(--text-dim)" }}>
                 <Clock size={10} />
                 {payload.days_stale}d parado
               </span>
             )}
           </div>
-          <p className="text-sm font-semibold leading-snug" style={{ color: NEUTRAL.graphite }}>
+          <p className="text-sm font-semibold leading-snug" style={{ color: "var(--text)" }}>
             {action.title}
           </p>
           {action.summary && (
-            <p className="text-xs mt-1 leading-relaxed" style={{ color: NEUTRAL.slate }}>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--text-dim)" }}>
               {action.summary}
             </p>
           )}
@@ -98,7 +98,7 @@ function ActionCard({ action, agent, onResolve, resolving }) {
           <button
             onClick={() => setExpanded(v => !v)}
             className="shrink-0 p-1 rounded-xl"
-            style={{ color: NEUTRAL.slate }}
+            style={{ color: "var(--text-dim)" }}
             title={expanded ? "Recolher" : "Ver draft"}
           >
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -108,22 +108,22 @@ function ActionCard({ action, agent, onResolve, resolving }) {
 
       {/* Expanded payload */}
       {expanded && (payload.draft_email || payload.recommended_action) && (
-        <div className="mx-4 mb-3 rounded-xl border" style={{ borderColor: "#E5E7EB", background: "#F8F9FA" }}>
+        <div className="mx-4 mb-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "#F8F9FA" }}>
           {payload.subject && (
             <div className="px-3 pt-3 pb-1 flex items-center gap-2">
               <Mail size={11} style={{ color: agent.color }} />
               <span className="text-[10px] font-bold" style={{ color: agent.color }}>
                 Assunto
               </span>
-              <span className="text-xs" style={{ color: NEUTRAL.graphite }}>{payload.subject}</span>
+              <span className="text-xs" style={{ color: "var(--text)" }}>{payload.subject}</span>
             </div>
           )}
           {payload.draft_email && (
             <div className="px-3 py-2">
-              <p className="text-[10px] font-bold mb-1" style={{ color: NEUTRAL.slate }}>
+              <p className="text-[10px] font-bold mb-1" style={{ color: "var(--text-dim)" }}>
                 Draft de Reativação
               </p>
-              <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: NEUTRAL.graphite }}>
+              <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "var(--text)" }}>
                 {payload.draft_email}
               </p>
             </div>
@@ -131,7 +131,7 @@ function ActionCard({ action, agent, onResolve, resolving }) {
           {payload.recommended_action && (
             <div className="px-3 pb-3 pt-1 flex items-start gap-2">
               <Zap size={11} className="mt-0.5 shrink-0" style={{ color: "#C2410C" }} />
-              <p className="text-xs" style={{ color: NEUTRAL.graphite }}>
+              <p className="text-xs" style={{ color: "var(--text)" }}>
                 <span className="font-semibold">Próximo passo: </span>
                 {payload.recommended_action}
               </p>
@@ -147,9 +147,9 @@ function ActionCard({ action, agent, onResolve, resolving }) {
             onClick={() => onResolve(action.id, "approved")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-opacity"
-            style={{ background: "#1A6E35", color: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
+            style={{ background: "var(--success)", color: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
             onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "#155d2b"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#1A6E35"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--success)"; }}
           >
             <CheckCircle2 size={12} />
             Aprovar
@@ -158,7 +158,7 @@ function ActionCard({ action, agent, onResolve, resolving }) {
             onClick={() => onResolve(action.id, "rejected")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-opacity"
-            style={{ borderColor: "#B91C1C", color: "#B91C1C", background: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
+            style={{ borderColor: "var(--danger)", color: "var(--danger)", background: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
             onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "#FEF2F2"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
           >
@@ -169,8 +169,8 @@ function ActionCard({ action, agent, onResolve, resolving }) {
             onClick={() => onResolve(action.id, "ignored")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-opacity"
-            style={{ borderColor: "#D1D5DB", color: NEUTRAL.slate, background: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
-            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "#F9FAFB"; }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
+            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
           >
             <EyeOff size={12} />
@@ -186,7 +186,7 @@ function ActionCard({ action, agent, onResolve, resolving }) {
             className="text-[10px] font-bold px-2 py-0.5 rounded-full"
             style={{
               background: action.status === "approved" ? "#E8F2EC" : action.status === "rejected" ? "#FEF2F2" : "#F3F4F6",
-              color: action.status === "approved" ? "#1A6E35" : action.status === "rejected" ? "#B91C1C" : NEUTRAL.slate,
+              color: action.status === "approved" ? "var(--success)" : action.status === "rejected" ? "var(--danger)" : "var(--text-dim)",
             }}
           >
             {action.status === "approved" ? "Aprovado" : action.status === "rejected" ? "Rejeitado" : "Ignorado"}
@@ -200,12 +200,12 @@ function ActionCard({ action, agent, onResolve, resolving }) {
 // ── Agent section ──────────────────────────────────────────────────────────
 function AgentSection({ agentId, actions, onResolve, resolving }) {
   const [open, setOpen] = useState(true);
-  const meta = AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: NEUTRAL.slate, bg: "#F3F4F6" };
+  const meta = AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: "var(--text-dim)", bg: "var(--surface-alt)" };
   const { Icon } = meta;
   const pendingCount = actions.filter(a => a.status === "pending").length;
 
   return (
-    <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
+    <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       {/* Section header */}
       <button
         onClick={() => setOpen(v => !v)}
@@ -223,7 +223,7 @@ function AgentSection({ agentId, actions, onResolve, resolving }) {
             <span className="text-sm font-bold" style={{ color: meta.color }}>
               {meta.label}
             </span>
-            <span className="text-xs" style={{ color: NEUTRAL.slate }}>
+            <span className="text-xs" style={{ color: "var(--text-dim)" }}>
               {meta.sub}
             </span>
           </div>
@@ -237,7 +237,7 @@ function AgentSection({ agentId, actions, onResolve, resolving }) {
               {pendingCount}
             </span>
           )}
-          <span style={{ color: NEUTRAL.slate }}>
+          <span style={{ color: "var(--text-dim)" }}>
             {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </span>
         </div>
@@ -376,16 +376,16 @@ export function AgentActionsView({ currentUser, activeCompany }) {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <Bot size={22} style={{ color: NEUTRAL.graphite }} />
+            <Bot size={22} style={{ color: "var(--text)" }} />
             <h1
               className="font-bold leading-tight"
-              style={{ fontSize: 28, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}
+              style={{ fontSize: 28, color: "var(--text)", letterSpacing: "-0.02em" }}
             >
               Time de Agentes
             </h1>
             <span
               className="inline-flex items-center justify-center rounded-full cursor-help"
-              style={{ width: 18, height: 18, background: "#F3F4F6", color: NEUTRAL.slate }}
+              style={{ width: 18, height: 18, background: "#F3F4F6", color: "var(--text-dim)" }}
               title={
                 "Agentes de IA que monitoram a carteira e sugerem ações — você aprova, rejeita ou ignora.\n\n" +
                 "Use para receber recomendações proativas:\n" +
@@ -401,7 +401,7 @@ export function AgentActionsView({ currentUser, activeCompany }) {
               <Info size={11} />
             </span>
           </div>
-          <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
             {loading
               ? "Carregando sugestões…"
               : totalPending > 0
@@ -414,9 +414,9 @@ export function AgentActionsView({ currentUser, activeCompany }) {
             <button
               onClick={() => setConfigOpen(true)}
               className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl border cursor-pointer"
-              style={{ borderColor: "#D1D5DB", color: NEUTRAL.slate, background: "#FFFFFF" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+              style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
             >
               <Settings size={12} />
               Configurar agentes
@@ -427,9 +427,9 @@ export function AgentActionsView({ currentUser, activeCompany }) {
             disabled={loading}
             className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl border transition-opacity"
             style={{
-              borderColor: "#D1D5DB",
-              color: NEUTRAL.slate,
-              background: "#FFFFFF",
+              borderColor: "var(--border-strong)",
+              color: "var(--text-dim)",
+              background: "var(--surface)",
               opacity: loading ? 0.5 : 1,
             }}
           >
@@ -456,8 +456,8 @@ export function AgentActionsView({ currentUser, activeCompany }) {
               onClick={() => setStatusFilter(f.key)}
               className="px-3 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all"
               style={{
-                color: active ? NEUTRAL.graphite : NEUTRAL.slate,
-                borderBottomColor: active ? NEUTRAL.graphite : "transparent",
+                color: active ? "var(--text)" : "var(--text-dim)",
+                borderBottomColor: active ? "var(--text)" : "transparent",
                 letterSpacing: "0.08em",
               }}
             >
@@ -481,7 +481,7 @@ export function AgentActionsView({ currentUser, activeCompany }) {
 
       {/* Loading */}
       {loading && (
-        <div className="py-16 text-center text-xs" style={{ color: NEUTRAL.slate }}>
+        <div className="py-16 text-center text-xs" style={{ color: "var(--text-dim)" }}>
           Carregando sugestões dos agentes…
         </div>
       )}
@@ -507,10 +507,10 @@ export function AgentActionsView({ currentUser, activeCompany }) {
             <TrendingUp size={24} style={{ color: "#9CA3AF" }} />
           </div>
           <div>
-            <p className="text-sm font-semibold" style={{ color: NEUTRAL.graphite }}>
+            <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
               {statusFilter === "pending" ? "Nenhuma sugestão pendente" : "Nenhuma ação encontrada"}
             </p>
-            <p className="text-xs mt-1" style={{ color: NEUTRAL.slate }}>
+            <p className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
               {statusFilter === "pending"
                 ? "O pipeline está em dia. Os agentes monitoram continuamente."
                 : "Tente ajustar o filtro de status."}

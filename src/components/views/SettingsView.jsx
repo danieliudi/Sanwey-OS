@@ -16,14 +16,14 @@ function Section({ title, description, children }) {
   return (
     <div
       className="p-5 rounded-xl border"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
     >
       <div className="mb-4">
-        <h2 className="font-semibold" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+        <h2 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>
           {title}
         </h2>
         {description && (
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: NEUTRAL.slate }}>{description}</p>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--text-dim)" }}>{description}</p>
         )}
       </div>
       {children}
@@ -38,9 +38,9 @@ function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
       style={{ opacity: disabled ? 0.5 : 1 }}
     >
       <div>
-        <div className="text-sm font-medium" style={{ color: NEUTRAL.graphite }}>{label}</div>
+        <div className="text-sm font-medium" style={{ color: "var(--text)" }}>{label}</div>
         {sublabel && (
-          <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{sublabel}</div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{sublabel}</div>
         )}
       </div>
       <input
@@ -49,7 +49,7 @@ function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
         onChange={onChange}
         disabled={disabled}
         className="w-4 h-4 cursor-pointer"
-        style={{ accentColor: NEUTRAL.graphite }}
+        style={{ accentColor: "var(--text)" }}
       />
     </label>
   );
@@ -363,10 +363,10 @@ export function SettingsView({
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             {isManager ? "Configurações" : "Meu perfil"}
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {isManager
               ? "Gerencie seu perfil, preferências e integrações"
               : "Atualize seus dados, notificações e integrações pessoais"}
@@ -394,7 +394,7 @@ export function SettingsView({
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left w-full"
                 style={{
                   background: active ? "#FBE9EB" : "transparent",
-                  color: active ? "#b5000b" : "#6B7280",
+                  color: active ? "#b5000b" : "var(--text-dim)",
                   boxShadow: active ? "inset 3px 0 0 #b5000b" : "inset 3px 0 0 transparent",
                   border: "none",
                   cursor: "pointer",
@@ -402,13 +402,13 @@ export function SettingsView({
                 onMouseEnter={e => {
                   if (!active) {
                     e.currentTarget.style.background = "#F1EDE8";
-                    e.currentTarget.style.color = "#201a1a";
+                    e.currentTarget.style.color = "var(--text)";
                   }
                 }}
                 onMouseLeave={e => {
                   if (!active) {
                     e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#6B7280";
+                    e.currentTarget.style.color = "var(--text-dim)";
                   }
                 }}
               >
@@ -433,8 +433,8 @@ export function SettingsView({
                   onClick={() => setActiveTab(tab.id)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold shrink-0 transition-all"
                   style={{
-                    background: active ? "#b5000b" : "#F1EDE8",
-                    color: active ? "#FFFFFF" : "#6B7280",
+                    background: active ? "var(--accent)" : "#F1EDE8",
+                    color: active ? "#FFFFFF" : "var(--text-dim)",
                     border: "none",
                     cursor: "pointer",
                   }}
@@ -471,23 +471,23 @@ export function SettingsView({
                         onClick={() => fileRef.current?.click()}
                         title="Alterar foto"
                         className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center"
-                        style={{ background: NEUTRAL.red, color: "#FFF", border: "2px solid #FFF", cursor: "pointer" }}
+                        style={{ background: "var(--color-industria)", color: "#FFF", border: "2px solid #FFF", cursor: "pointer" }}
                       >
                         <Camera size={11} />
                       </button>
                       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
                     </div>
                     <div>
-                      <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>{currentUser?.name}</div>
-                      <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{currentUser?.email}</div>
-                      <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{ROLE_LABEL[currentUser?.role] || currentUser?.role}</div>
+                      <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{currentUser?.name}</div>
+                      <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{currentUser?.email}</div>
+                      <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{ROLE_LABEL[currentUser?.role] || currentUser?.role}</div>
                     </div>
                   </div>
 
                   {/* Fields */}
                   <div className="space-y-3 mb-4">
                     <div>
-                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                         Nome
                       </label>
                       <input
@@ -495,13 +495,13 @@ export function SettingsView({
                         value={profileForm.name}
                         onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))}
                         className="w-full rounded-lg border px-3 py-2 text-sm"
-                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "#fff8f7" }}
-                        onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
-                        onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
+                        style={{ borderColor: "var(--border)", color: "var(--text)", outline: "none", background: "var(--surface)" }}
+                        onFocus={e => { e.target.style.borderColor = "var(--color-industria)"; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                        onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
                     </div>
                     <div>
-                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                         Email
                       </label>
                       <input
@@ -509,12 +509,12 @@ export function SettingsView({
                         value={profileForm.email}
                         onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))}
                         className="w-full rounded-lg border px-3 py-2 text-sm"
-                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "#fff8f7" }}
-                        onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
-                        onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
+                        style={{ borderColor: "var(--border)", color: "var(--text)", outline: "none", background: "var(--surface)" }}
+                        onFocus={e => { e.target.style.borderColor = "var(--color-industria)"; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                        onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
                       {!supabaseEnabled && (
-                        <p className="text-xs mt-1" style={{ color: NEUTRAL.slate }}>Modo offline — email salvo localmente.</p>
+                        <p className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>Modo offline — email salvo localmente.</p>
                       )}
                     </div>
                   </div>
@@ -524,7 +524,7 @@ export function SettingsView({
                       className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg mb-3"
                       style={{
                         background: profileFeedback.type === "success" ? "#F0FDF4" : "#FEF2F2",
-                        color: profileFeedback.type === "success" ? "#16A34A" : "#B91C1C",
+                        color: profileFeedback.type === "success" ? "var(--success)" : "var(--danger)",
                         border: `1px solid ${profileFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
                       }}
                     >
@@ -537,7 +537,7 @@ export function SettingsView({
                     onClick={handleProfileSave}
                     disabled={profileSaving}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all"
-                    style={{ background: NEUTRAL.red, opacity: profileSaving ? 0.7 : 1, cursor: profileSaving ? "not-allowed" : "pointer" }}
+                    style={{ background: "var(--color-industria)", opacity: profileSaving ? 0.7 : 1, cursor: profileSaving ? "not-allowed" : "pointer" }}
                   >
                     {profileSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                     Salvar alterações
@@ -547,7 +547,7 @@ export function SettingsView({
                 <Section title="Alterar senha" description="Disponível apenas com autenticação ativa.">
                   <div className="space-y-3 mb-4">
                     <div>
-                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                         Nova senha
                       </label>
                       <input
@@ -556,13 +556,13 @@ export function SettingsView({
                         onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
                         placeholder="Mínimo 6 caracteres"
                         className="w-full rounded-lg border px-3 py-2 text-sm"
-                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "#fff8f7" }}
-                        onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
-                        onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
+                        style={{ borderColor: "var(--border)", color: "var(--text)", outline: "none", background: "var(--surface)" }}
+                        onFocus={e => { e.target.style.borderColor = "var(--color-industria)"; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                        onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
                     </div>
                     <div>
-                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                         Confirmar nova senha
                       </label>
                       <input
@@ -571,9 +571,9 @@ export function SettingsView({
                         onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
                         placeholder="Repita a nova senha"
                         className="w-full rounded-lg border px-3 py-2 text-sm"
-                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, outline: "none", background: "#fff8f7" }}
-                        onFocus={e => { e.target.style.borderColor = NEUTRAL.red; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
-                        onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
+                        style={{ borderColor: "var(--border)", color: "var(--text)", outline: "none", background: "var(--surface)" }}
+                        onFocus={e => { e.target.style.borderColor = "var(--color-industria)"; e.target.style.boxShadow = `0 0 0 3px rgba(199,33,43,0.12)`; }}
+                        onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
                       />
                     </div>
                   </div>
@@ -583,7 +583,7 @@ export function SettingsView({
                       className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg mb-3"
                       style={{
                         background: passwordFeedback.type === "success" ? "#F0FDF4" : "#FEF2F2",
-                        color: passwordFeedback.type === "success" ? "#16A34A" : "#B91C1C",
+                        color: passwordFeedback.type === "success" ? "var(--success)" : "var(--danger)",
                         border: `1px solid ${passwordFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
                       }}
                     >
@@ -597,9 +597,9 @@ export function SettingsView({
                     disabled={passwordSaving || !passwordForm.newPassword}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
                     style={{
-                      background: "#FFF",
-                      color: NEUTRAL.graphite,
-                      borderColor: "#E5E7EB",
+                      background: "var(--surface)",
+                      color: "var(--text)",
+                      borderColor: "var(--border)",
                       opacity: (passwordSaving || !passwordForm.newPassword) ? 0.5 : 1,
                       cursor: (passwordSaving || !passwordForm.newPassword) ? "not-allowed" : "pointer",
                     }}
@@ -630,7 +630,7 @@ export function SettingsView({
                           className="p-3 rounded-lg border flex items-center gap-2.5 transition-all duration-150 text-left"
                           style={{
                             background: enabled ? c.light : "#FAFAFA",
-                            borderColor: enabled ? c.primary + "80" : "#E5E7EB",
+                            borderColor: enabled ? c.primary + "80" : "var(--border)",
                             boxShadow: enabled ? `0 0 0 1px ${c.primary}40` : "none",
                           }}
                           onMouseEnter={e => {
@@ -641,7 +641,7 @@ export function SettingsView({
                           }}
                           onMouseLeave={e => {
                             if (!enabled) {
-                              e.currentTarget.style.borderColor = "#E5E7EB";
+                              e.currentTarget.style.borderColor = "var(--border)";
                               e.currentTarget.style.background = "#FAFAFA";
                             }
                           }}
@@ -649,7 +649,7 @@ export function SettingsView({
                           <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.primary }} />
                           <span
                             className="font-medium text-sm flex-1 leading-tight"
-                            style={{ color: enabled ? c.dark : NEUTRAL.graphite }}
+                            style={{ color: enabled ? c.dark : "var(--text)" }}
                           >
                             {c.name}
                           </span>
@@ -711,7 +711,7 @@ export function SettingsView({
                         >
                           <span
                             className="font-bold tracking-wide"
-                            style={{ fontSize: 10, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em" }}
+                            style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
                           >
                             {group.label}
                           </span>
@@ -725,7 +725,7 @@ export function SettingsView({
                                   onUpdate({ notifications: { ...settings.notifications, ...update } });
                                 }}
                                 className="text-[10px] font-semibold"
-                                style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                                style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
                               >
                                 {allOn ? "Desativar todos" : "Ativar todos"}
                               </button>
@@ -771,7 +771,7 @@ export function SettingsView({
 
                   {/* Provider picker */}
                   <div>
-                    <label className="text-xs font-semibold block mb-2" style={{ color: NEUTRAL.slate }}>
+                    <label className="text-xs font-semibold block mb-2" style={{ color: "var(--text-dim)" }}>
                       Provedor de IA
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -781,9 +781,9 @@ export function SettingsView({
                           onClick={() => handleAiProviderChange(p.id)}
                           className="py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all"
                           style={{
-                            background: aiForm.provider === p.id ? NEUTRAL.red + "0F" : "#FFFFFF",
-                            borderColor: aiForm.provider === p.id ? NEUTRAL.red : "#E5E7EB",
-                            color: aiForm.provider === p.id ? NEUTRAL.red : NEUTRAL.graphite,
+                            background: aiForm.provider === p.id ? NEUTRAL.red + "0F" : "var(--surface)",
+                            borderColor: aiForm.provider === p.id ? NEUTRAL.red : "var(--border)",
+                            color: aiForm.provider === p.id ? NEUTRAL.red : "var(--text)",
                             cursor: "pointer",
                           }}
                         >
@@ -796,7 +796,7 @@ export function SettingsView({
                   {/* Model picker */}
                   {selectedProvider && (
                     <div>
-                      <label className="text-xs font-semibold block mb-2" style={{ color: NEUTRAL.slate }}>
+                      <label className="text-xs font-semibold block mb-2" style={{ color: "var(--text-dim)" }}>
                         Modelo
                       </label>
                       <div className="flex flex-col gap-1.5">
@@ -806,7 +806,7 @@ export function SettingsView({
                             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
                             style={{
                               background: aiForm.model === m.id ? NEUTRAL.red + "0F" : "#FAFAFA",
-                              borderColor: aiForm.model === m.id ? NEUTRAL.red : "#E5E7EB",
+                              borderColor: aiForm.model === m.id ? NEUTRAL.red : "var(--border)",
                             }}
                           >
                             <input
@@ -815,9 +815,9 @@ export function SettingsView({
                               value={m.id}
                               checked={aiForm.model === m.id}
                               onChange={() => setAiForm(f => ({ ...f, model: m.id }))}
-                              style={{ accentColor: NEUTRAL.red }}
+                              style={{ accentColor: "var(--color-industria)" }}
                             />
-                            <span className="text-xs font-medium" style={{ color: NEUTRAL.graphite }}>{m.name}</span>
+                            <span className="text-xs font-medium" style={{ color: "var(--text)" }}>{m.name}</span>
                           </label>
                         ))}
                       </div>
@@ -828,7 +828,7 @@ export function SettingsView({
                   {selectedProvider && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-semibold" style={{ color: NEUTRAL.slate }}>
+                        <label className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>
                           <Key size={11} className="inline mr-1" />Chave de API
                         </label>
                         <a
@@ -838,7 +838,7 @@ export function SettingsView({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs flex items-center gap-1"
-                          style={{ color: NEUTRAL.red }}
+                          style={{ color: "var(--color-industria)" }}
                         >
                           <ExternalLink size={10} />Obter chave
                         </a>
@@ -850,20 +850,20 @@ export function SettingsView({
                           onChange={e => { setAiForm(f => ({ ...f, apiKey: e.target.value })); setAiTestResult(null); }}
                           placeholder={selectedProvider.keyPlaceholder}
                           className="w-full text-sm rounded-xl border px-3 py-2.5 outline-none pr-16"
-                          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FAFAFA", fontFamily: "monospace" }}
-                          onFocus={e => { e.currentTarget.style.borderColor = NEUTRAL.red; }}
-                          onBlur={e => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
+                          style={{ borderColor: "var(--border)", color: "var(--text)", background: "#FAFAFA", fontFamily: "monospace" }}
+                          onFocus={e => { e.currentTarget.style.borderColor = "var(--color-industria)"; }}
+                          onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
                         />
                         <button
                           type="button"
                           onClick={() => setAiKeyVisible(v => !v)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-xs"
-                          style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                          style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
                         >
                           {aiKeyVisible ? "Ocultar" : "Mostrar"}
                         </button>
                       </div>
-                      <p className="text-[11px] mt-1" style={{ color: NEUTRAL.slate }}>
+                      <p className="text-[11px] mt-1" style={{ color: "var(--text-dim)" }}>
                         {selectedProvider.keyHint}
                       </p>
                     </div>
@@ -875,7 +875,7 @@ export function SettingsView({
                       className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs"
                       style={{
                         background: aiTestResult === 'ok' ? "#DCFCE7" : "#FEE2E2",
-                        color: aiTestResult === 'ok' ? "#16A34A" : "#DC2626",
+                        color: aiTestResult === 'ok' ? "var(--success)" : "var(--danger)",
                       }}
                     >
                       {aiTestResult === 'ok' ? <CheckCircle2 size={13} /> : <Zap size={13} />}
@@ -891,9 +891,9 @@ export function SettingsView({
                         disabled={aiTesting}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-all"
                         style={{
-                          background: "#FFFFFF",
-                          borderColor: "#E5E7EB",
-                          color: NEUTRAL.graphite,
+                          background: "var(--surface)",
+                          borderColor: "var(--border)",
+                          color: "var(--text)",
                           cursor: aiTesting ? "wait" : "pointer",
                         }}
                       >
@@ -905,7 +905,7 @@ export function SettingsView({
                         disabled={aiSaving}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
                         style={{
-                          background: aiSaving ? "#E5E7EB" : NEUTRAL.red,
+                          background: aiSaving ? "#E5E7EB" : "var(--color-industria)",
                           border: "none",
                           cursor: aiSaving ? "wait" : "pointer",
                         }}
@@ -919,7 +919,7 @@ export function SettingsView({
                       className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
                       style={{
                         background: aiSaveFeedback.type === "success" ? "#DCFCE7" : "#FEF2F2",
-                        color: aiSaveFeedback.type === "success" ? "#16A34A" : "#B91C1C",
+                        color: aiSaveFeedback.type === "success" ? "var(--success)" : "var(--danger)",
                       }}
                     >
                       {aiSaveFeedback.type === "success" ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
@@ -954,18 +954,18 @@ export function SettingsView({
                       icon={Trash2}
                       onClick={handleClearLeads}
                       disabled={leadsCount === 0}
-                      style={{ color: "#DC2626", borderColor: "#FECACA" }}
+                      style={{ color: "var(--danger)", borderColor: "#FECACA" }}
                     >
                       Limpar todos os leads
                     </Button>
                     {leadsCount > 0 && (
-                      <span className="self-center text-xs flex items-center gap-1" style={{ color: "#DC2626" }}>
+                      <span className="self-center text-xs flex items-center gap-1" style={{ color: "var(--danger)" }}>
                         <AlertTriangle size={11} />
                         Ação irreversível
                       </span>
                     )}
                   </div>
-                  <p className="text-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>
+                  <p className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
                     Gera ~68 empresas fictícias distribuídas nas 4 unidades, com setor, estado, porte e
                     funil. Preenche os dropdowns do Explorador, Kanban e Executivo para testes.
                   </p>
@@ -1002,7 +1002,7 @@ export function SettingsView({
                     const c = COMPANIES[id];
                     const url = `${window.location.origin}/captura/${id}`;
                     return (
-                      <div key={id} className="p-3.5 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+                      <div key={id} className="p-3.5 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
                         <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
                           <div className="flex items-center gap-2">
                             <span
@@ -1016,9 +1016,9 @@ export function SettingsView({
                             <button
                               onClick={() => navigator.clipboard?.writeText(url)}
                               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
-                              style={{ background: "#FFFFFF", color: NEUTRAL.graphite, borderColor: "#E5E7EB" }}
-                              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+                              style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
                               title="Copiar link"
                             >
                               <Copy size={12} />
@@ -1036,7 +1036,7 @@ export function SettingsView({
                             </a>
                           </div>
                         </div>
-                        <code style={{ fontSize: 12, color: NEUTRAL.slate, wordBreak: "break-all" }}>{url}</code>
+                        <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>{url}</code>
                       </div>
                     );
                   })}
@@ -1053,10 +1053,10 @@ export function SettingsView({
                   <div className="mt-6 pt-5 border-t" style={{ borderColor: "#F0F0F0" }}>
                     <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
                       <div>
-                        <div className="font-semibold text-sm" style={{ color: NEUTRAL.graphite, marginBottom: 2 }}>
+                        <div className="font-semibold text-sm" style={{ color: "var(--text)", marginBottom: 2 }}>
                           Importar planilha de clientes
                         </div>
-                        <p className="text-xs" style={{ color: NEUTRAL.slate, marginBottom: 0, maxWidth: 480 }}>
+                        <p className="text-xs" style={{ color: "var(--text-dim)", marginBottom: 0, maxWidth: 480 }}>
                           Envie um arquivo .xlsx ou .csv com clientes ativos e inativos. A plataforma deduplica
                           automaticamente por CNPJ — registros já cadastrados são ignorados.
                         </p>

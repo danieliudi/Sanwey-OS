@@ -94,8 +94,8 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
 
   const focusBlue = e => { e.target.style.borderColor = "#1E4D8C"; };
   const blurGray  = e => { e.target.style.borderColor = "#D1D5DB"; };
-  const labelSt   = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
-  const inputSt   = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA" };
+  const labelSt   = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
+  const inputSt   = { borderColor: "#D1D5DB", color: "var(--text)", background: "#FAFAFA" };
 
   return (
     <div
@@ -103,21 +103,21 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite }}>Novo Entregável</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Novo Entregável</div>
             {stage && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, display: "inline-block" }} />
-                <span style={{ fontSize: 11, color: NEUTRAL.slate }}>{stage.name}</span>
+                <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{stage.name}</span>
               </div>
             )}
           </div>
           <button type="button" onClick={onClose}
-            style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 6, borderRadius: 8, display: "flex" }}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
             <X size={18} />
@@ -137,7 +137,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
             <label style={labelSt}>* Departamento</label>
             <select value={department} onChange={e => setDepartment(e.target.value)}
               className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-              style={{ ...inputSt, color: department ? NEUTRAL.graphite : NEUTRAL.slate }}>
+              style={{ ...inputSt, color: department ? "var(--text)" : "var(--text-dim)" }}>
               <option value="">Escolha uma opção</option>
               {DELIVERABLE_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -171,7 +171,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
               <div style={{ display: "flex", gap: 6, paddingTop: 2 }}>
                 {DELIVERABLE_PRIORITIES.map(p => (
                   <button key={p.id} type="button" onClick={() => setPriority(p.id)}
-                    style={{ flex: 1, padding: "5px 0", borderRadius: 8, fontSize: 11, fontWeight: 700, border: `1px solid ${priority === p.id ? p.color : "#E5E7EB"}`, background: priority === p.id ? p.color + "18" : "#FFF", color: priority === p.id ? p.color : NEUTRAL.slate, cursor: "pointer" }}>
+                    style={{ flex: 1, padding: "5px 0", borderRadius: 8, fontSize: 11, fontWeight: 700, border: `1px solid ${priority === p.id ? p.color : "var(--border)"}`, background: priority === p.id ? p.color + "18" : "var(--surface)", color: priority === p.id ? p.color : "var(--text-dim)", cursor: "pointer" }}>
                     {p.label}
                   </button>
                 ))}
@@ -186,7 +186,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
                 const co = COMPANIES[id]; const sel = companyIds.includes(id);
                 return (
                   <button key={id} type="button" onClick={() => toggleCompany(id)}
-                    style={{ padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, border: `1px solid ${sel ? co.primary : "#E5E7EB"}`, background: sel ? co.primary + "22" : "#FFF", color: sel ? co.primary : NEUTRAL.slate, cursor: "pointer" }}>
+                    style={{ padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, border: `1px solid ${sel ? co.primary : "var(--border)"}`, background: sel ? co.primary + "22" : "var(--surface)", color: sel ? co.primary : "var(--text-dim)", cursor: "pointer" }}>
                     {co.short}
                   </button>
                 );
@@ -199,7 +199,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
               <label style={labelSt}>Campanha relacionada</label>
               <select value={campaignId} onChange={e => setCampaignId(e.target.value)}
                 className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-                style={{ ...inputSt, color: campaignId ? NEUTRAL.graphite : NEUTRAL.slate }}>
+                style={{ ...inputSt, color: campaignId ? "var(--text)" : "var(--text-dim)" }}>
                 <option value="">Nenhuma (opcional)</option>
                 {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -239,32 +239,32 @@ function AnalyticsPanel({ deliverables }) {
     <div style={{ marginTop: 8 }}>
       <button onClick={() => setOpen(v => !v)}
         className="flex items-center gap-1.5 text-xs font-medium transition-colors duration-150"
-        style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
-        onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
-        onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}>
+        style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
+        onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}>
         <TrendingUp size={13} strokeWidth={2} />
         <span>Análise das entregas</span>
         <ChevronDown size={13} style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
       </button>
       {open && (
-        <div className="rounded-2xl border mt-3 p-5" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-          <div className="text-xs font-semibold mb-4" style={{ color: NEUTRAL.slate }}>Distribuição por etapa</div>
+        <div className="rounded-2xl border mt-3 p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="text-xs font-semibold mb-4" style={{ color: "var(--text-dim)" }}>Distribuição por etapa</div>
           <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
             {stageStats.map(({ stage, count, overdue, avgDays }) => (
               <div key={stage.id}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: NEUTRAL.graphite }}>
+                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text)" }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, display: "inline-block", flexShrink: 0 }} />
                     {stage.name}
                   </div>
-                  <div className="text-xs" style={{ color: overdue > 0 ? "#DC2626" : NEUTRAL.slate }}>
+                  <div className="text-xs" style={{ color: overdue > 0 ? "var(--danger)" : "var(--text-dim)" }}>
                     {count}{overdue > 0 ? ` · ${overdue} atrasada${overdue !== 1 ? "s" : ""}` : ""}
                   </div>
                 </div>
                 <div style={{ height: 6, background: "#F1F3F5", borderRadius: 3, overflow: "hidden", marginBottom: 6 }}>
                   <div style={{ height: "100%", width: `${(count / maxCount) * 100}%`, background: stage.color, borderRadius: 3, transition: "width 0.4s ease" }} />
                 </div>
-                <div style={{ fontSize: 10, color: NEUTRAL.slate }}>
+                <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
                   {avgDays !== null ? `Média ${avgDays}d · SLA: ${stage.sla ?? "—"}d` : count > 0 ? "Sem tempo registrado" : "—"}
                 </div>
               </div>
@@ -279,9 +279,9 @@ function AnalyticsPanel({ deliverables }) {
 /* ── KPI card ─────────────────────────────────────────────────── */
 function KpiCard({ label, value, color }) {
   return (
-    <div className="rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", padding: "12px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: color || NEUTRAL.graphite, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{value}</div>
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)", padding: "12px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: color || "var(--text)", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{value}</div>
     </div>
   );
 }
@@ -296,9 +296,9 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
       style={{
         display: "flex", alignItems: "center", gap: 5,
         padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
-        background: active ? "#1E4D8C" : "#FFFFFF",
-        color:      active ? "#FFFFFF"  : NEUTRAL.slate,
-        border: `1px solid ${active ? "#1E4D8C" : "#E5E7EB"}`,
+        background: active ? "#1E4D8C" : "var(--surface)",
+        color:      active ? "#FFFFFF"  : "var(--text-dim)",
+        border: `1px solid ${active ? "#1E4D8C" : "var(--border)"}`,
         cursor: "pointer",
         transition: "all 0.15s",
       }}
@@ -389,16 +389,16 @@ export function EntregasView({ user, users = [] }) {
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Package size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 className="font-bold" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+            <Package size={22} style={{ color: "var(--text)" }} />
+            <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
               Entregas
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>Kanban de entregas de campanha</p>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de entregas de campanha</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {/* View toggle */}
-          <div style={{ display: "flex", gap: 4, background: "#F3F4F6", borderRadius: 10, padding: 3 }}>
+          <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     />
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
           </div>
@@ -406,9 +406,9 @@ export function EntregasView({ user, users = [] }) {
           <button
             onClick={() => exportCSV(filtered)}
             title="Exportar CSV"
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#FFF", border: "1px solid #E5E7EB", borderRadius: 8, fontSize: 12, fontWeight: 500, color: NEUTRAL.slate, cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFF"; e.currentTarget.style.color = NEUTRAL.slate; }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
           >
             <Download size={14} />
             Exportar CSV
@@ -420,15 +420,15 @@ export function EntregasView({ user, users = [] }) {
       <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
         <KpiCard label="Total"       value={String(kpis.total)} />
         <KpiCard label="Solicitação" value={String(kpis.solicitacao)} />
-        <KpiCard label="Em Produção" value={String(kpis.em_producao)} color="#D97706" />
-        <KpiCard label="Entregue"    value={String(kpis.entregue)} color="#16A34A" />
+        <KpiCard label="Em Produção" value={String(kpis.em_producao)} color="var(--warning)" />
+        <KpiCard label="Entregue"    value={String(kpis.entregue)} color="var(--success)" />
       </div>
 
       {/* Filter toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <button
           onClick={() => setShowFilters(v => !v)}
-          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "#1E4D8C" : "#E5E7EB"}`, background: showFilters || activeFilterCount > 0 ? "#EFF6FF" : "#FFF", color: showFilters || activeFilterCount > 0 ? "#1E4D8C" : NEUTRAL.slate, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "#1E4D8C" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "#EFF6FF" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "#1E4D8C" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
           <Filter size={12} />
           Filtros
           {activeFilterCount > 0 && (
@@ -441,7 +441,7 @@ export function EntregasView({ user, users = [] }) {
             {/* Owner filter (managers only) */}
             {isManager && (
               <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}
-                style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid #E5E7EB", fontSize: 12, color: ownerFilter ? NEUTRAL.graphite : NEUTRAL.slate, background: "#FFF", outline: "none", cursor: "pointer" }}>
+                style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 12, color: ownerFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
                 <option value="">Todos responsáveis</option>
                 {Array.from(usersById.values()).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
@@ -453,7 +453,7 @@ export function EntregasView({ user, users = [] }) {
               const sel = companyFilter.includes(id);
               return (
                 <button key={id} onClick={() => toggleCompanyFilter(id)}
-                  style={{ padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, border: `1px solid ${sel ? co.primary : "#E5E7EB"}`, background: sel ? co.primary + "22" : "#FFF", color: sel ? co.primary : NEUTRAL.slate, cursor: "pointer" }}>
+                  style={{ padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, border: `1px solid ${sel ? co.primary : "var(--border)"}`, background: sel ? co.primary + "22" : "#FFF", color: sel ? co.primary : "var(--text-dim)", cursor: "pointer" }}>
                   {co.short}
                 </button>
               );
@@ -461,14 +461,14 @@ export function EntregasView({ user, users = [] }) {
 
             {/* Starred */}
             <button onClick={() => setStarredOnly(v => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "#E5E7EB"}`, background: starredOnly ? "#FFFBEB" : "#FFF", color: starredOnly ? "#D97706" : NEUTRAL.slate, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "var(--border)"}`, background: starredOnly ? "#FFFBEB" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
               <Star size={11} fill={starredOnly ? "#F59E0B" : "none"} />
               Favoritos
             </button>
 
             {activeFilterCount > 0 && (
               <button onClick={() => { setOwnerFilter(""); setCompanyFilter([]); setStarredOnly(false); }}
-                style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#DC2626", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
+                style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--danger)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
                 <X size={11} /> Limpar
               </button>
             )}
@@ -476,7 +476,7 @@ export function EntregasView({ user, users = [] }) {
         )}
       </div>
 
-      {loading && <div className="text-sm text-center py-8" style={{ color: NEUTRAL.slate }}>Carregando entregas…</div>}
+      {loading && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando entregas…</div>}
 
       {!loading && viewMode === "kanban" && (<>
         {/* Mobile kanban: vertical collapsible stages */}
@@ -504,9 +504,9 @@ export function EntregasView({ user, users = [] }) {
                   </div>
                 </button>
                 {expanded && (
-                  <div className="p-2.5 space-y-2" style={{ background: "#FAFAFA" }}>
+                  <div className="p-2.5 space-y-2" style={{ background: "var(--surface-alt)" }}>
                     {stageItems.length === 0 ? (
-                      <div className="text-center py-4 text-xs" style={{ color: NEUTRAL.slate }}>Nenhuma entrega nesta etapa</div>
+                      <div className="text-center py-4 text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma entrega nesta etapa</div>
                     ) : (
                       stageItems.map(item => (
                         <DeliverableKanbanCard
@@ -543,7 +543,7 @@ export function EntregasView({ user, users = [] }) {
         {/* Desktop kanban: horizontal scroll */}
         <div className="hidden lg:block relative">
           <div className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
-            style={{ background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)" }} />
+            style={{ background: "linear-gradient(to left, var(--bg) 0%, transparent 100%)" }} />
           <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
             <div className="flex gap-3" style={{ minWidth: `${DELIVERABLE_STAGES.length * 284}px` }}>
               {DELIVERABLE_STAGES.map(stage => {
@@ -556,24 +556,24 @@ export function EntregasView({ user, users = [] }) {
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                    style={{ width: 272, minWidth: 272, background: isOver ? "#F0F7FF" : "#fef1f0", borderColor: isOver ? stage.color + "70" : "#E5E7EB", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", minHeight: 480, flexShrink: 0 }}>
+                    style={{ width: 272, minWidth: 272, background: isOver ? "#F0F7FF" : "#fef1f0", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", minHeight: 480, flexShrink: 0 }}>
                     <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
                     <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                      style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}>
+                      style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold flex items-center gap-1.5"
-                          style={{ color: NEUTRAL.graphite, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                          style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                           <span>{stage.name}</span>
-                          <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>({stageItems.length})</span>
+                          <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({stageItems.length})</span>
                         </div>
-                        {stage.sla && <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>SLA {stage.sla}d</div>}
+                        {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
                       </div>
                       {canWrite && !stage.terminal && (
                         <button onClick={() => setQuickAddStage(stage.id)}
                           className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 28, height: 28, color: NEUTRAL.slate, background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                           title="Adicionar entrega">
                           <Plus size={14} />
                         </button>
@@ -583,7 +583,7 @@ export function EntregasView({ user, users = [] }) {
                     <div className="px-2 pt-0.5 pb-1 space-y-2 flex-1 overflow-y-auto" style={{ maxHeight: "62vh", minHeight: 80 }}>
                       {stageItems.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
-                          style={{ borderColor: isOver ? stage.color + "40" : "#E5E7EB", color: NEUTRAL.slate }}>
+                          style={{ borderColor: isOver ? stage.color + "40" : "var(--border)", color: "var(--text-dim)" }}>
                           {isOver ? (
                             <>
                               <Plus size={16} style={{ opacity: 0.5 }} />
@@ -624,17 +624,17 @@ export function EntregasView({ user, users = [] }) {
       </>)}
 
       {!loading && viewMode === "calendar" && (
-        <div className="text-center py-16" style={{ color: NEUTRAL.slate }}>
+        <div className="text-center py-16" style={{ color: "var(--text-dim)" }}>
           <CalendarDays size={40} style={{ opacity: 0.3, margin: "0 auto 12px" }} />
-          <div className="font-semibold" style={{ fontSize: 15, marginBottom: 6, color: NEUTRAL.graphite }}>Vista de calendário em breve</div>
-          <div className="text-sm" style={{ color: NEUTRAL.slate }}>As entregas serão exibidas por prazo nesta visão.</div>
+          <div className="font-semibold" style={{ fontSize: 15, marginBottom: 6, color: "var(--text)" }}>Vista de calendário em breve</div>
+          <div className="text-sm" style={{ color: "var(--text-dim)" }}>As entregas serão exibidas por prazo nesta visão.</div>
         </div>
       )}
 
       {!loading && viewMode === "kanban" && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} />}
 
       {!loading && viewMode === "kanban" && (
-        <p className="text-xs text-center mt-3" style={{ color: NEUTRAL.slate }}>
+        <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
           Arraste para mover · "+" para criar · Clique para ver detalhes
         </p>
       )}

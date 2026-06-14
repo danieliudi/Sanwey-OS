@@ -30,10 +30,10 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+        <h1 className="font-bold leading-tight" style={{ fontSize: 28, color: "var(--text)", letterSpacing: "-0.02em" }}>
           Indicações Cruzadas
         </h1>
-        <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+        <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
           Visibilidade exclusiva do gerente · overlap de clientes · sugestões de cross-sell
         </p>
       </div>
@@ -51,7 +51,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Network size={16} color={NEUTRAL.amber} />
-            <h2 className="font-bold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
+            <h2 className="font-bold" style={{ fontSize: 16, color: "var(--text)" }}>
               Overlap — mesmo cliente em múltiplas empresas
             </h2>
           </div>
@@ -60,28 +60,28 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
               <div
                 key={o.id}
                 className="p-5 rounded-xl border"
-                style={{ background: "#FFFFFF", borderColor: NEUTRAL.amber + "40", borderLeftWidth: 4 }}
+                style={{ background: "var(--surface)", borderColor: NEUTRAL.amber + "40", borderLeftWidth: 4 }}
               >
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
+                      <h3 className="font-bold" style={{ fontSize: 16, color: "var(--text)" }}>
                         {o.companyName}
                       </h3>
                       <Badge variant="urgent">Overlap</Badge>
                     </div>
-                    <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+                    <div className="text-xs" style={{ color: "var(--text-dim)" }}>
                       {o.sector} · {o.city}
                     </div>
                   </div>
                   <div className="text-right">
                     <div
                       className="text-[10px] uppercase font-bold tracking-widest"
-                      style={{ color: NEUTRAL.slate, letterSpacing: "0.15em" }}
+                      style={{ color: "var(--text-dim)", letterSpacing: "0.15em" }}
                     >
                       Valor consolidado
                     </div>
-                    <div className="font-bold text-lg" style={{ color: NEUTRAL.graphite }}>
+                    <div className="font-bold text-lg" style={{ color: "var(--text)" }}>
                       {formatK(o.totalValue)}
                     </div>
                   </div>
@@ -93,20 +93,20 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                       <div
                         key={l.id}
                         className="p-3 rounded-xl flex items-center justify-between flex-wrap gap-2"
-                        style={{ background: "#F5F5F3" }}
+                        style={{ background: "var(--surface-alt)" }}
                       >
                         <div className="flex items-center gap-3">
                           <CompanyTag companyId={l.companyId} />
-                          <span className="text-xs" style={{ color: NEUTRAL.graphite }}>
+                          <span className="text-xs" style={{ color: "var(--text)" }}>
                             Responsável: <strong>{u?.name || "—"}</strong>
                           </span>
-                          <span className="text-xs" style={{ color: NEUTRAL.slate }}>
+                          <span className="text-xs" style={{ color: "var(--text-dim)" }}>
                             · Etapa: {l.stage}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <FitScoreCircle score={l.fitScore} size={26} />
-                          <span className="font-mono text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+                          <span className="font-mono text-xs font-semibold" style={{ color: "var(--text)" }}>
                             {formatK(l.value)}
                           </span>
                         </div>
@@ -129,8 +129,8 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
       {suggestions.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles size={16} color={NEUTRAL.success} />
-            <h2 className="font-bold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
+            <Sparkles size={16} color="var(--color-resibag)" />
+            <h2 className="font-bold" style={{ fontSize: 16, color: "var(--text)" }}>
               Sugestões de cross-sell
             </h2>
           </div>
@@ -139,37 +139,37 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
               <div
                 key={s.id}
                 className="p-5 rounded-xl border"
-                style={{ background: "#FFFFFF", borderColor: NEUTRAL.success + "40", borderLeftWidth: 4 }}
+                style={{ background: "var(--surface)", borderColor: "var(--color-resibag)" + "40", borderLeftWidth: 4 }}
               >
                 <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
                   <div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h3 className="font-bold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
+                      <h3 className="font-bold" style={{ fontSize: 16, color: "var(--text)" }}>
                         {s.companyName}
                       </h3>
                       <Badge variant="success">Confiança {s.confidence}%</Badge>
                     </div>
-                    <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+                    <div className="text-xs" style={{ color: "var(--text-dim)" }}>
                       {s.sector} · {s.city}
                     </div>
                   </div>
                 </div>
                 <div
                   className="mb-3 p-3 rounded-xl flex items-center gap-3"
-                  style={{ background: "#F5F5F3" }}
+                  style={{ background: "var(--surface-alt)" }}
                 >
                   <CompanyTag companyId={Array.isArray(s.presentIn) ? s.presentIn[0] : null} />
-                  <ArrowRight size={14} color={NEUTRAL.slate} />
+                  <ArrowRight size={14} color="var(--text-dim)" />
                   <CompanyTag companyId={s.suggestedFor} />
                 </div>
-                <div className="text-sm mb-4" style={{ color: NEUTRAL.graphite }}>
+                <div className="text-sm mb-4" style={{ color: "var(--text)" }}>
                   <strong>Racional:</strong> {s.reason}
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <Button
                     variant="primary"
                     icon={CheckCircle2}
-                    accent={NEUTRAL.success}
+                    accent="var(--color-resibag)"
                     onClick={() => onApprove(s.id)}
                   >
                     Aprovar indicação
@@ -177,9 +177,9 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                   <button
                     onClick={() => onReject(s.id)}
                     className="text-xs flex items-center gap-1"
-                    style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
-                    onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                    style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
                   >
                     <X size={12} />
                     Rejeitar

@@ -91,13 +91,13 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <Zap size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+            <Zap size={22} style={{ color: "var(--text)" }} />
+            <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
               Automações
             </h1>
             <span
               className="inline-flex items-center justify-center rounded-full cursor-help"
-              style={{ width: 18, height: 18, background: "#F3F4F6", color: NEUTRAL.slate }}
+              style={{ width: 18, height: 18, background: "var(--surface-alt)", color: "var(--text-dim)" }}
               title={
                 "Regras automáticas que executam sozinhas — sem IA, sem aprovação.\n\n" +
                 "Use para ações mecânicas e previsíveis:\n" +
@@ -112,7 +112,7 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
               <Info size={11} />
             </span>
           </div>
-          <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
             Regras automáticas sem IA — {stats.enabled} ativa{stats.enabled !== 1 ? "s" : ""} de {stats.total}
           </p>
         </div>
@@ -137,12 +137,12 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
             <div
               key={t.id}
               className="rounded-xl border px-4 py-3 flex items-center gap-3"
-              style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+              style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
             >
-              <Icon size={16} style={{ color: NEUTRAL.slate }} />
+              <Icon size={16} style={{ color: "var(--text-dim)" }} />
               <div>
-                <div className="text-lg font-bold leading-none" style={{ color: NEUTRAL.graphite }}>{count}</div>
-                <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{t.label}</div>
+                <div className="text-lg font-bold leading-none" style={{ color: "var(--text)" }}>{count}</div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{t.label}</div>
               </div>
             </div>
           );
@@ -153,17 +153,17 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
       {automations.length === 0 && (
         <div
           className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-10 gap-3"
-          style={{ borderColor: "#E5E7EB" }}
+          style={{ borderColor: "var(--border)" }}
         >
-          <Zap size={32} style={{ color: "#D1D5DB" }} />
-          <p className="text-sm font-semibold" style={{ color: NEUTRAL.slate }}>Nenhuma automação criada</p>
-          <p className="text-xs text-center max-w-md" style={{ color: "#9CA3AF" }}>
+          <Zap size={32} style={{ color: "var(--border-strong)" }} />
+          <p className="text-sm font-semibold" style={{ color: "var(--text-dim)" }}>Nenhuma automação criada</p>
+          <p className="text-xs text-center max-w-md" style={{ color: "var(--text-faint)" }}>
             Escolha um template abaixo para começar — ou crie do zero se preferir.
           </p>
           <button
             onClick={() => openBuilder()}
             className="mt-1 text-xs"
-            style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+            style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
           >
             Criar automação personalizada
           </button>
@@ -179,7 +179,7 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
 
       {/* Module filter tabs */}
       {automations.length > 0 && (
-        <div className="flex gap-1 border-b" style={{ borderColor: "#E5E7EB" }}>
+        <div className="flex gap-1 border-b" style={{ borderColor: "var(--border)" }}>
           {[
             { id: "all",       label: `Todas (${automations.length})` },
             { id: "crm",       label: `CRM (${stats.byModule?.crm || 0})` },
@@ -192,7 +192,7 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
               className="px-3 py-2 text-xs font-medium border-b-2 transition-colors"
               style={{
                 borderBottomColor: moduleTab === t.id ? "#1E4D8C" : "transparent",
-                color:             moduleTab === t.id ? "#1E4D8C" : NEUTRAL.slate,
+                color:             moduleTab === t.id ? "#1E4D8C" : "var(--text-dim)",
                 background:        "none",
                 border:            "none",
                 borderBottom:      `2px solid ${moduleTab === t.id ? "#1E4D8C" : "transparent"}`,
@@ -207,8 +207,8 @@ export function AutomationsView({ leads, pipelines, activeCompany }) {
 
       {/* Automation list */}
       {automations.length > 0 && (
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
-          <div className="divide-y" style={{ borderColor: "#F3F4F6" }}>
+        <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+          <div className="divide-y" style={{ borderColor: "var(--surface-alt)" }}>
             {automations.filter(rule => moduleTab === "all" || (rule.module ?? "crm") === moduleTab).map(rule => (
               <AutomationRow
                 key={rule.id}
@@ -282,7 +282,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
   }, [rule.action, allStages, actionType]);
 
   return (
-    <div style={{ background: rule.enabled ? "#FFFFFF" : "#FAFAFA" }}>
+    <div style={{ background: rule.enabled ? "var(--surface)" : "var(--surface-alt)" }}>
       <div className="px-4 py-3.5 flex items-center gap-3">
         {/* Toggle */}
         <button
@@ -292,7 +292,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
         >
           {rule.enabled
             ? <ToggleRight size={22} style={{ color: "#1E4D8C" }} />
-            : <ToggleLeft  size={22} style={{ color: "#9CA3AF" }} />
+            : <ToggleLeft  size={22} style={{ color: "var(--text-faint)" }} />
           }
         </button>
 
@@ -300,13 +300,13 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
         <button className="flex-1 min-w-0 text-left flex items-center gap-3" onClick={onExpand}>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-semibold" style={{ color: rule.enabled ? NEUTRAL.graphite : NEUTRAL.slate }}>
+              <span className="text-sm font-semibold" style={{ color: rule.enabled ? "var(--text)" : "var(--text-dim)" }}>
                 {rule.name || "Sem nome"}
               </span>
               {company && company.id !== "all" && (
                 <span
                   className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                  style={{ background: COMPANIES[rule.companyId]?.primary + "18" || "#F3F4F6", color: COMPANIES[rule.companyId]?.primary || NEUTRAL.slate }}
+                  style={{ background: COMPANIES[rule.companyId]?.primary + "18" || "var(--surface-alt)", color: COMPANIES[rule.companyId]?.primary || "var(--text-dim)" }}
                 >
                   {company.label}
                 </span>
@@ -316,7 +316,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
                   className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
                   style={{
                     background: rule.module === "marketing" ? "#FDF4FF" : "#F0FDF4",
-                    color:      rule.module === "marketing" ? "#7C3AED" : "#15803D",
+                    color:      rule.module === "marketing" ? "#7C3AED" : "var(--success)",
                     border:     `1px solid ${rule.module === "marketing" ? "#E9D5FF" : "#BBF7D0"}`,
                   }}
                 >
@@ -324,7 +324,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs flex-wrap" style={{ color: NEUTRAL.slate }}>
+            <div className="flex items-center gap-1.5 mt-1 text-xs flex-wrap" style={{ color: "var(--text-dim)" }}>
               <TriggerIcon size={11} />
               <span>{triggerLabel}</span>
               <ArrowRight size={10} />
@@ -332,7 +332,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
               <span>{actionLabel}</span>
             </div>
           </div>
-          <span style={{ color: NEUTRAL.slate }}>
+          <span style={{ color: "var(--text-dim)" }}>
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </span>
         </button>
@@ -341,9 +341,9 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
         <button
           onClick={onDelete}
           className="shrink-0 p-1.5 rounded-lg"
-          style={{ color: "#9CA3AF" }}
+          style={{ color: "var(--text-faint)" }}
           onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "#EF4444"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9CA3AF"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
           title="Excluir automação"
         >
           <Trash2 size={14} />
@@ -354,7 +354,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
       {expanded && (
         <div
           className="px-4 pb-4 pt-1"
-          style={{ borderTop: "1px solid #F3F4F6" }}
+          style={{ borderTop: "1px solid var(--surface-alt)" }}
         >
           <AutomationDetail rule={rule} allStages={allStages} />
         </div>
@@ -371,45 +371,45 @@ function AutomationDetail({ rule, allStages }) {
 
   return (
     <div className="grid sm:grid-cols-2 gap-4 mt-2">
-      <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
-        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: NEUTRAL.slate }}>Gatilho</div>
-        <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+      <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
+        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Gatilho</div>
+        <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>
           {TRIGGER_TYPES.find(t2 => t2.id === t?.type)?.label || t?.type}
         </div>
         {t?.type === "stage_change" && (
-          <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
             De: <b>{allStages.find(s => s.id === t.fromStage)?.name || "Qualquer"}</b>
             {" → "}
             Para: <b>{allStages.find(s => s.id === t.toStage)?.name || "Qualquer"}</b>
           </div>
         )}
         {t?.type === "field_value" && (
-          <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
             Campo <b>{t.field}</b> {OPERATORS.find(o => o.id === t.operator)?.label} <b>"{t.value}"</b>
           </div>
         )}
         {t?.type === "time_in_stage" && (
-          <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
             <b>{t.days || 0} dias</b> na etapa <b>{allStages.find(s => s.id === t.stageId)?.name || t.stageId}</b>
           </div>
         )}
         {t?.type === "lead_created" && (
-          <div className="text-xs" style={{ color: NEUTRAL.slate }}>Ao criar novo card</div>
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>Ao criar novo card</div>
         )}
       </div>
 
-      <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
-        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: NEUTRAL.slate }}>Ação</div>
-        <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+      <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
+        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Ação</div>
+        <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>
           {ACTION_TYPES.find(a2 => a2.id === a?.type)?.label || a?.type}
         </div>
         {a?.type === "move_stage" && (
-          <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
             Mover para <b>{allStages.find(s => s.id === a.targetStage)?.name || a.targetStage}</b>
           </div>
         )}
         {a?.type === "set_field" && (
-          <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
             Definir <b>{a.field}</b> = "<b>{a.fieldValue}</b>"
           </div>
         )}
@@ -424,7 +424,7 @@ function AutomationDetail({ rule, allStages }) {
           </div>
         )}
         {a?.type === "notify" && (
-          <div className="text-xs" style={{ color: NEUTRAL.slate }}>"{a.message}"</div>
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>"{a.message}"</div>
         )}
       </div>
     </div>
@@ -489,19 +489,19 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
     >
       <div
         className="w-full max-w-lg rounded-2xl shadow-2xl flex flex-col"
-        style={{ background: "#FFFFFF", maxHeight: "90vh" }}
+        style={{ background: "var(--surface)", maxHeight: "90vh" }}
       >
         {/* Modal header */}
-        <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "#F3F4F6" }}>
+        <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "var(--surface-alt)" }}>
           <div className="flex items-center gap-2">
             <Zap size={18} style={{ color: "#1E4D8C" }} />
-            <span className="font-bold text-sm" style={{ color: NEUTRAL.graphite }}>Nova automação</span>
+            <span className="font-bold text-sm" style={{ color: "var(--text)" }}>Nova automação</span>
           </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg"
-            style={{ color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            style={{ color: "var(--text-dim)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >
             <X size={16} />
@@ -516,15 +516,15 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
                 onClick={() => i < step && setStep(i)}
                 className="flex items-center gap-1.5 text-xs font-semibold"
                 style={{
-                  color: i === step ? "#1E4D8C" : i < step ? "#6B7280" : "#D1D5DB",
+                  color: i === step ? "#1E4D8C" : i < step ? "var(--text-dim)" : "var(--border-strong)",
                   cursor: i < step ? "pointer" : "default",
                 }}
               >
                 <span
                   className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                   style={{
-                    background: i === step ? "#1E4D8C" : i < step ? "#E5E7EB" : "#F3F4F6",
-                    color: i === step ? "#FFFFFF" : i < step ? "#6B7280" : "#D1D5DB",
+                    background: i === step ? "#1E4D8C" : i < step ? "var(--border)" : "var(--surface-alt)",
+                    color: i === step ? "#FFFFFF" : i < step ? "var(--text-dim)" : "var(--border-strong)",
                   }}
                 >
                   {i + 1}
@@ -532,7 +532,7 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
                 {s}
               </button>
               {i < steps.length - 1 && (
-                <span className="mx-2 text-xs" style={{ color: "#E5E7EB" }}>›</span>
+                <span className="mx-2 text-xs" style={{ color: "var(--border)" }}>›</span>
               )}
             </React.Fragment>
           ))}
@@ -552,12 +552,12 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t flex items-center justify-between" style={{ borderColor: "#F3F4F6" }}>
+        <div className="px-5 py-4 border-t flex items-center justify-between" style={{ borderColor: "var(--surface-alt)" }}>
           <button
             onClick={() => step > 0 ? setStep(s => s - 1) : onClose()}
             className="px-4 py-2 rounded-xl text-sm border font-medium"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >
             {step === 0 ? "Cancelar" : "Voltar"}
@@ -568,8 +568,8 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
               disabled={!canNext()}
               className="px-4 py-2 rounded-xl text-sm font-semibold"
               style={{
-                background: canNext() ? "#1E4D8C" : "#E5E7EB",
-                color: canNext() ? "#FFFFFF" : "#9CA3AF",
+                background: canNext() ? "#1E4D8C" : "var(--border)",
+                color: canNext() ? "#FFFFFF" : "var(--text-faint)",
               }}
               onMouseEnter={e => { if (canNext()) e.currentTarget.style.background = "#163a6b"; }}
               onMouseLeave={e => { if (canNext()) e.currentTarget.style.background = "#1E4D8C"; }}
@@ -582,8 +582,8 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
               disabled={!canNext()}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
               style={{
-                background: canNext() ? "#1E4D8C" : "#E5E7EB",
-                color: canNext() ? "#FFFFFF" : "#9CA3AF",
+                background: canNext() ? "#1E4D8C" : "var(--border)",
+                color: canNext() ? "#FFFFFF" : "var(--text-faint)",
               }}
               onMouseEnter={e => { if (canNext()) e.currentTarget.style.background = "#163a6b"; }}
               onMouseLeave={e => { if (canNext()) e.currentTarget.style.background = "#1E4D8C"; }}
@@ -604,7 +604,7 @@ function StepIdentification({ rule, setRule }) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>
+        <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
           Nome da automação <span style={{ color: "#EF4444" }}>*</span>
         </label>
         <input
@@ -613,13 +613,13 @@ function StepIdentification({ rule, setRule }) {
           onChange={e => setRule(r => ({ ...r, name: e.target.value }))}
           placeholder="Ex: Mover lead ganho para onboarding"
           className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+          style={{ borderColor: "var(--border)", color: "var(--text)" }}
           onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-          onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+          onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
         />
       </div>
       <div>
-        <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Módulo</label>
+        <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Módulo</label>
         <div className="flex gap-2">
           {MODULE_OPTIONS.map(m => (
             <button
@@ -628,9 +628,9 @@ function StepIdentification({ rule, setRule }) {
               onClick={() => setRule(r => ({ ...r, module: m.id }))}
               className="flex-1 py-2 text-xs font-semibold rounded-xl border transition-colors"
               style={{
-                borderColor: (rule.module ?? "crm") === m.id ? "#1E4D8C" : "#E5E7EB",
-                background:  (rule.module ?? "crm") === m.id ? "#EFF6FF" : "#FAFAFA",
-                color:       (rule.module ?? "crm") === m.id ? "#1E4D8C" : NEUTRAL.slate,
+                borderColor: (rule.module ?? "crm") === m.id ? "#1E4D8C" : "var(--border)",
+                background:  (rule.module ?? "crm") === m.id ? "#EFF6FF" : "var(--surface-alt)",
+                color:       (rule.module ?? "crm") === m.id ? "#1E4D8C" : "var(--text-dim)",
                 cursor:      "pointer",
               }}
             >
@@ -638,19 +638,19 @@ function StepIdentification({ rule, setRule }) {
             </button>
           ))}
         </div>
-        <p className="text-[10px] mt-1.5" style={{ color: NEUTRAL.slate }}>
+        <p className="text-[10px] mt-1.5" style={{ color: "var(--text-dim)" }}>
           {(rule.module ?? "crm") === "crm" ? "Avalia leads no pipeline de CRM." :
            (rule.module ?? "crm") === "marketing" ? "Avalia campanhas no Kanban de Marketing." :
            "Avalia em todos os módulos."}
         </p>
       </div>
       <div>
-        <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Empresa</label>
+        <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Empresa</label>
         <select
           value={rule.companyId}
           onChange={e => setRule(r => ({ ...r, companyId: e.target.value }))}
           className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-          style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
         >
           {COMPANY_OPTIONS.map(c => (
             <option key={c.id} value={c.id}>{c.label}</option>
@@ -667,7 +667,7 @@ function StepTrigger({ rule, allStages, setTrigger }) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs font-semibold mb-2" style={{ color: NEUTRAL.graphite }}>
+        <label className="block text-xs font-semibold mb-2" style={{ color: "var(--text)" }}>
           Tipo de gatilho
         </label>
         <div className="grid grid-cols-2 gap-2">
@@ -680,18 +680,18 @@ function StepTrigger({ rule, allStages, setTrigger }) {
                 onClick={() => setTrigger({ type: type.id })}
                 className="flex items-start gap-2.5 p-3 rounded-xl border text-left"
                 style={{
-                  borderColor: active ? "#1E4D8C" : "#E5E7EB",
-                  background: active ? "#EFF6FF" : "#FAFAFA",
+                  borderColor: active ? "#1E4D8C" : "var(--border)",
+                  background: active ? "#EFF6FF" : "var(--surface-alt)",
                 }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#F3F4F6"; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "#FAFAFA"; }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--bg)"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
               >
-                <Icon size={14} style={{ color: active ? "#1E4D8C" : NEUTRAL.slate, marginTop: 1 }} />
+                <Icon size={14} style={{ color: active ? "#1E4D8C" : "var(--text-dim)", marginTop: 1 }} />
                 <div>
-                  <div className="text-xs font-semibold" style={{ color: active ? "#1E4D8C" : NEUTRAL.graphite }}>
+                  <div className="text-xs font-semibold" style={{ color: active ? "#1E4D8C" : "var(--text)" }}>
                     {type.label}
                   </div>
-                  <div className="text-[10px] mt-0.5" style={{ color: NEUTRAL.slate }}>{type.desc}</div>
+                  <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>{type.desc}</div>
                 </div>
               </button>
             );
@@ -703,24 +703,24 @@ function StepTrigger({ rule, allStages, setTrigger }) {
       {t.type === "stage_change" && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>De (etapa)</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>De (etapa)</label>
             <select
               value={t.fromStage || ""}
               onChange={e => setTrigger({ fromStage: e.target.value })}
               className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
             >
               <option value="">Qualquer etapa</option>
               {allStages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Para (etapa)</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Para (etapa)</label>
             <select
               value={t.toStage || ""}
               onChange={e => setTrigger({ toStage: e.target.value })}
               className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
             >
               <option value="">Qualquer etapa</option>
               {allStages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -732,12 +732,12 @@ function StepTrigger({ rule, allStages, setTrigger }) {
       {t.type === "field_value" && (
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Campo</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Campo</label>
             <select
               value={t.field || ""}
               onChange={e => setTrigger({ field: e.target.value })}
               className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
             >
               <option value="">Selecionar campo...</option>
               {LEAD_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -745,27 +745,27 @@ function StepTrigger({ rule, allStages, setTrigger }) {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Operador</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Operador</label>
               <select
                 value={t.operator || "eq"}
                 onChange={e => setTrigger({ operator: e.target.value })}
                 className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
-                style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
               >
                 {OPERATORS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Valor</label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Valor</label>
               <input
                 type="text"
                 value={t.value || ""}
                 onChange={e => setTrigger({ value: e.target.value })}
                 placeholder="Valor..."
                 className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
-                style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+                style={{ borderColor: "var(--border)", color: "var(--text)" }}
                 onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-                onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+                onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
               />
             </div>
           </div>
@@ -775,19 +775,19 @@ function StepTrigger({ rule, allStages, setTrigger }) {
       {t.type === "time_in_stage" && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Etapa</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Etapa</label>
             <select
               value={t.stageId || ""}
               onChange={e => setTrigger({ stageId: e.target.value })}
               className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
             >
               <option value="">Qualquer etapa</option>
               {allStages.filter(s => !s.terminal).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Dias parado</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Dias parado</label>
             <input
               type="number"
               min="1"
@@ -795,9 +795,9 @@ function StepTrigger({ rule, allStages, setTrigger }) {
               onChange={e => setTrigger({ days: parseInt(e.target.value) || 0 })}
               placeholder="Ex: 7"
               className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+              style={{ borderColor: "var(--border)", color: "var(--text)" }}
               onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-              onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
             />
           </div>
         </div>
@@ -821,7 +821,7 @@ function StepAction({ rule, allStages, setAction }) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs font-semibold mb-2" style={{ color: NEUTRAL.graphite }}>
+        <label className="block text-xs font-semibold mb-2" style={{ color: "var(--text)" }}>
           Tipo de ação
         </label>
         <div className="grid grid-cols-2 gap-2">
@@ -834,18 +834,18 @@ function StepAction({ rule, allStages, setAction }) {
                 onClick={() => setAction({ type: type.id })}
                 className="flex items-start gap-2.5 p-3 rounded-xl border text-left"
                 style={{
-                  borderColor: active ? "#1E4D8C" : "#E5E7EB",
-                  background: active ? "#EFF6FF" : "#FAFAFA",
+                  borderColor: active ? "#1E4D8C" : "var(--border)",
+                  background: active ? "#EFF6FF" : "var(--surface-alt)",
                 }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#F3F4F6"; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "#FAFAFA"; }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--bg)"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
               >
-                <Icon size={14} style={{ color: active ? "#1E4D8C" : NEUTRAL.slate, marginTop: 1 }} />
+                <Icon size={14} style={{ color: active ? "#1E4D8C" : "var(--text-dim)", marginTop: 1 }} />
                 <div>
-                  <div className="text-xs font-semibold" style={{ color: active ? "#1E4D8C" : NEUTRAL.graphite }}>
+                  <div className="text-xs font-semibold" style={{ color: active ? "#1E4D8C" : "var(--text)" }}>
                     {type.label}
                   </div>
-                  <div className="text-[10px] mt-0.5" style={{ color: NEUTRAL.slate }}>{type.desc}</div>
+                  <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>{type.desc}</div>
                 </div>
               </button>
             );
@@ -856,14 +856,14 @@ function StepAction({ rule, allStages, setAction }) {
       {/* Action config */}
       {a.type === "move_stage" && (
         <div>
-          <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>
+          <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
             Mover para
           </label>
           <select
             value={a.targetStage || ""}
             onChange={e => setAction({ targetStage: e.target.value })}
             className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
           >
             <option value="">Selecionar etapa...</option>
             {allStages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -874,28 +874,28 @@ function StepAction({ rule, allStages, setAction }) {
       {a.type === "set_field" && (
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Campo</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Campo</label>
             <select
               value={a.field || ""}
               onChange={e => setAction({ field: e.target.value })}
               className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
             >
               <option value="">Selecionar campo...</option>
               {LEAD_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Novo valor</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Novo valor</label>
             <input
               type="text"
               value={a.fieldValue || ""}
               onChange={e => setAction({ fieldValue: e.target.value })}
               placeholder="Valor a definir..."
               className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+              style={{ borderColor: "var(--border)", color: "var(--text)" }}
               onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-              onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
             />
           </div>
         </div>
@@ -904,20 +904,20 @@ function StepAction({ rule, allStages, setAction }) {
       {a.type === "add_badge" && (
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Texto do badge</label>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Texto do badge</label>
             <input
               type="text"
               value={a.badge || ""}
               onChange={e => setAction({ badge: e.target.value })}
               placeholder="Ex: Urgente, Hot lead, VIP..."
               className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+              style={{ borderColor: "var(--border)", color: "var(--text)" }}
               onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-              onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-2" style={{ color: NEUTRAL.graphite }}>Cor do badge</label>
+            <label className="block text-xs font-semibold mb-2" style={{ color: "var(--text)" }}>Cor do badge</label>
             <div className="flex gap-2 flex-wrap">
               {BADGE_COLORS.map(c => (
                 <button
@@ -926,7 +926,7 @@ function StepAction({ rule, allStages, setAction }) {
                   className="w-7 h-7 rounded-full border-2 transition-transform"
                   style={{
                     background: c.hex,
-                    borderColor: a.badgeColor === c.hex ? NEUTRAL.graphite : "transparent",
+                    borderColor: a.badgeColor === c.hex ? "var(--text)" : "transparent",
                     transform: a.badgeColor === c.hex ? "scale(1.2)" : "scale(1)",
                   }}
                   title={c.label}
@@ -936,7 +936,7 @@ function StepAction({ rule, allStages, setAction }) {
           </div>
           {a.badge && (
             <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: NEUTRAL.slate }}>Preview:</span>
+              <span className="text-xs" style={{ color: "var(--text-dim)" }}>Preview:</span>
               <span
                 className="px-2.5 py-0.5 rounded-full text-xs font-semibold"
                 style={{ background: (a.badgeColor || "#6366F1") + "20", color: a.badgeColor || "#6366F1" }}
@@ -950,16 +950,16 @@ function StepAction({ rule, allStages, setAction }) {
 
       {a.type === "notify" && (
         <div>
-          <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Mensagem do alerta</label>
+          <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Mensagem do alerta</label>
           <textarea
             value={a.message || ""}
             onChange={e => setAction({ message: e.target.value })}
             placeholder="Ex: Lead sem movimento há 7 dias — revisar estratégia"
             rows={3}
             className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none resize-none"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}
             onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-            onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+            onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
           />
         </div>
       )}
@@ -972,17 +972,17 @@ function StepAction({ rule, allStages, setAction }) {
 function HowItWorks() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
+    <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full px-4 py-3 flex items-center justify-between text-left"
-        style={{ background: "#F8F9FA" }}
+        style={{ background: "var(--surface-alt)" }}
       >
-        <span className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>Como as automações funcionam?</span>
-        {open ? <ChevronUp size={13} style={{ color: NEUTRAL.slate }} /> : <ChevronDown size={13} style={{ color: NEUTRAL.slate }} />}
+        <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>Como as automações funcionam?</span>
+        {open ? <ChevronUp size={13} style={{ color: "var(--text-dim)" }} /> : <ChevronDown size={13} style={{ color: "var(--text-dim)" }} />}
       </button>
       {open && (
-        <div className="px-4 py-3 text-xs space-y-2" style={{ color: NEUTRAL.slate, borderTop: "1px solid #F3F4F6" }}>
+        <div className="px-4 py-3 text-xs space-y-2" style={{ color: "var(--text-dim)", borderTop: "1px solid var(--surface-alt)" }}>
           <p>As automações são <strong>regras locais</strong>, avaliadas no browser sempre que um card é atualizado. Sem chamadas de API, sem IA — custo zero.</p>
           <p><strong>Gatilhos disponíveis:</strong> mudança de etapa, valor de campo, tempo parado em etapa, criação de card.</p>
           <p><strong>Ações disponíveis:</strong> mover o card para outra etapa, alterar um campo, adicionar badge visual, ou exibir alerta.</p>
@@ -1018,17 +1018,17 @@ function TemplateGallery({ onUseTemplate }) {
   return (
     <div
       className="rounded-xl border p-4"
-      style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
+      style={{ borderColor: "var(--border)", background: "var(--surface)" }}
     >
       <div className="flex items-center justify-between mb-3 flex-wrap gap-1">
         <div>
           <div className="flex items-center gap-1.5">
             <Zap size={14} style={{ color: "#1E4D8C" }} />
-            <h3 className="text-sm font-bold" style={{ color: NEUTRAL.graphite }}>
+            <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>
               Templates prontos
             </h3>
           </div>
-          <p className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
             Use como ponto de partida — depois você pode ajustar antes de salvar.
           </p>
         </div>
@@ -1040,23 +1040,23 @@ function TemplateGallery({ onUseTemplate }) {
             key={t.id}
             onClick={() => onUseTemplate(t)}
             className="text-left rounded-lg border p-3 transition-all cursor-pointer"
-            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+            style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
             onMouseEnter={e => {
               e.currentTarget.style.borderColor = "#1E4D8C";
               e.currentTarget.style.background = "#EFF6FF";
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.borderColor = "#E5E7EB";
-              e.currentTarget.style.background = "#FAFAFA";
+              e.currentTarget.style.borderColor = "var(--border)";
+              e.currentTarget.style.background = "var(--surface-alt)";
             }}
           >
             <div className="flex items-start gap-2">
               <span className="text-lg leading-none mt-0.5">{t.icon}</span>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold leading-snug" style={{ color: NEUTRAL.graphite }}>
+                <div className="text-xs font-bold leading-snug" style={{ color: "var(--text)" }}>
                   {t.title}
                 </div>
-                <div className="text-[11px] mt-1 leading-snug" style={{ color: NEUTRAL.slate }}>
+                <div className="text-[11px] mt-1 leading-snug" style={{ color: "var(--text-dim)" }}>
                   {t.summary}
                 </div>
               </div>
@@ -1071,7 +1071,7 @@ function TemplateGallery({ onUseTemplate }) {
                   className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
                   style={{
                     background: t.rule.module === "marketing" ? "#FDF4FF" : "#F0FDF4",
-                    color:      t.rule.module === "marketing" ? "#7C3AED" : "#15803D",
+                    color:      t.rule.module === "marketing" ? "#7C3AED" : "var(--success)",
                   }}
                 >
                   {t.rule.module === "marketing" ? "Marketing" : "Universal"}

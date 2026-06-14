@@ -333,20 +333,20 @@ export function UserManagementView({
                 style={{ background: "#FFFBEB", borderColor: "#FCD34D" }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "var(--amber-bg)", color: "#92400E" }}>
                     <Mail size={18} />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>{inv.email}</span>
                       <Badge variant={roleBadgeVariant(inv.role)} size="sm">{roleLabel(inv.role)}</Badge>
-                      <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                      <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full" style={{ background: "var(--amber-bg)", color: "#92400E" }}>
                         Aguardando
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {inv.companies.length === 0
-                        ? <span className="text-[11px] italic" style={{ color: NEUTRAL.slate }}>Sem empresas</span>
+                        ? <span className="text-[11px] italic" style={{ color: "var(--text-dim)" }}>Sem empresas</span>
                         : inv.companies.map(c => <CompanyTag key={c} companyId={c} size="sm" />)
                       }
                     </div>
@@ -368,7 +368,7 @@ export function UserManagementView({
 
       {/* ── Search ── */}
       <div className="relative">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: NEUTRAL.slate }} />
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-dim)" }} />
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -376,21 +376,21 @@ export function UserManagementView({
           className="w-full rounded-xl border text-sm transition-all"
           style={{
             paddingLeft: 42, paddingRight: 16, height: 48,
-            borderColor: "#E5E7EB", background: "#FFFFFF", color: "#201a1a", outline: "none",
+            borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)", outline: "none",
           }}
-          onFocus={e => { e.target.style.borderColor = "#b5000b"; e.target.style.boxShadow = "0 0 0 3px rgba(181,0,11,0.08)"; }}
-          onBlur={e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; }}
+          onFocus={e => { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 3px rgba(181,0,11,0.08)"; }}
+          onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
         />
       </div>
 
       {/* ── User cards ── */}
       {loading && users.length === 0 ? (
-        <div className="p-10 flex items-center justify-center gap-2 text-sm" style={{ color: NEUTRAL.slate }}>
+        <div className="p-10 flex items-center justify-center gap-2 text-sm" style={{ color: "var(--text-dim)" }}>
           <Loader2 size={14} className="animate-spin" />
           Carregando usuários…
         </div>
       ) : filteredUsers.length === 0 ? (
-        <div className="p-8 text-center rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}>
+        <div className="p-8 text-center rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}>
           Nenhum usuário encontrado.
         </div>
       ) : (
@@ -406,8 +406,8 @@ export function UserManagementView({
                 key={u.id}
                 className="rounded-xl border flex flex-col"
                 style={{
-                  background: "#FFFFFF",
-                  borderColor: pending ? "#FCD34D" : "#E5E7EB",
+                  background: "var(--surface)",
+                  borderColor: pending ? "#FCD34D" : "var(--border)",
                   boxShadow: "0 1px 4px rgba(32,26,26,0.06)",
                   overflow: "hidden",
                 }}
@@ -418,7 +418,7 @@ export function UserManagementView({
                   <div className="relative shrink-0">
                     <div
                       className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-white"
-                      style={{ background: u.avatarBg || "#b5000b", fontSize: 20, overflow: "hidden" }}
+                      style={{ background: u.avatarBg || "var(--accent)", fontSize: 20, overflow: "hidden" }}
                     >
                       {u.avatarUrl
                         ? <img src={u.avatarUrl} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -431,10 +431,10 @@ export function UserManagementView({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="font-bold text-[15px] leading-tight truncate" style={{ color: "#201a1a" }}>
+                        <div className="font-bold text-[15px] leading-tight truncate" style={{ color: "var(--text)" }}>
                           {u.name}
                         </div>
-                        <div className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+                        <div className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
                           {u.email || "—"}
                         </div>
                       </div>
@@ -445,7 +445,7 @@ export function UserManagementView({
                           <button
                             onClick={() => setMenuOpenId(menuOpen ? null : u.id)}
                             className="rounded-lg flex items-center justify-center transition-colors"
-                            style={{ width: 32, height: 32, background: menuOpen ? "#fef1f0" : "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate }}
+                            style={{ width: 32, height: 32, background: menuOpen ? "#fef1f0" : "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}
                             onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
                             onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background = "transparent"; }}
                           >
@@ -454,12 +454,12 @@ export function UserManagementView({
                           {menuOpen && (
                             <div
                               className="absolute right-0 top-9 rounded-xl border flex flex-col overflow-hidden z-20"
-                              style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "0 8px 24px rgba(32,26,26,0.12)", minWidth: 160 }}
+                              style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 8px 24px rgba(32,26,26,0.12)", minWidth: 160 }}
                             >
                               {canEdit(u) && (
                                 <button
                                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors"
-                                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "#201a1a" }}
+                                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text)" }}
                                   onMouseEnter={e => { e.currentTarget.style.background = "#fef1f0"; }}
                                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                                   onClick={() => { setMenuOpenId(null); startEdit(u); }}
@@ -470,7 +470,7 @@ export function UserManagementView({
                               {canDelete(u) && (
                                 <button
                                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors"
-                                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "#ba1a1a" }}
+                                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--danger)" }}
                                   onMouseEnter={e => { e.currentTarget.style.background = "#ffdad6"; }}
                                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                                   onClick={() => remove(u.id)}
@@ -488,12 +488,12 @@ export function UserManagementView({
                     <div className="flex items-center gap-1.5 flex-wrap mt-2">
                       <Badge variant={roleBadgeVariant(u.role)} size="sm">{roleLabel(u.role)}</Badge>
                       {isSelf && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#fef1f0", color: "#b5000b" }}>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#fef1f0", color: "var(--accent)" }}>
                           Você
                         </span>
                       )}
                       {pending && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--amber-bg)", color: "#92400E" }}>
                           Sem empresa
                         </span>
                       )}
@@ -514,10 +514,10 @@ export function UserManagementView({
                 </div>
 
                 {/* Stats strip */}
-                <div className="border-t mx-0 grid grid-cols-3 divide-x" style={{ borderColor: "#E5E7EB" }}>
+                <div className="border-t mx-0 grid grid-cols-3 divide-x" style={{ borderColor: "var(--border)" }}>
                   <StatStrip label="Leads" value={stats.total} />
                   <StatStrip label="Abertos" value={stats.open} />
-                  <StatStrip label="Ganhos" value={stats.won} accent="#16A34A" />
+                  <StatStrip label="Ganhos" value={stats.won} accent="var(--success)" />
                 </div>
 
                 {/* Ver Perfil button */}
@@ -528,8 +528,8 @@ export function UserManagementView({
                     className="w-full rounded-xl border font-semibold text-sm flex items-center justify-center gap-2 transition-all"
                     style={{
                       height: 44,
-                      borderColor: canEdit(u) ? "#b5000b" : "#E5E7EB",
-                      color: canEdit(u) ? "#b5000b" : NEUTRAL.slate,
+                      borderColor: canEdit(u) ? "var(--accent)" : "var(--border)",
+                      color: canEdit(u) ? "var(--accent)" : "var(--text-dim)",
                       background: "transparent",
                       cursor: canEdit(u) ? "pointer" : "default",
                     }}
@@ -572,10 +572,10 @@ export function UserManagementView({
                 return (
                   <button key={id} type="button" onClick={() => toggleCompany(id)}
                     className="p-3 rounded-xl border flex items-center gap-2 transition-all"
-                    style={{ background: selected ? c.light : "#FFFFFF", borderColor: selected ? c.primary : "#E5E7EB" }}
+                    style={{ background: selected ? c.light : "var(--surface)", borderColor: selected ? c.primary : "var(--border)" }}
                   >
                     <div className="w-3 h-3 rounded-full" style={{ background: c.primary }} />
-                    <span className="font-semibold text-sm flex-1 text-left" style={{ color: selected ? c.dark : "#201a1a" }}>{c.name}</span>
+                    <span className="font-semibold text-sm flex-1 text-left" style={{ color: selected ? c.dark : "var(--text)" }}>{c.name}</span>
                     {selected && <Check size={14} color={c.primary} />}
                   </button>
                 );
@@ -590,14 +590,14 @@ export function UserManagementView({
                 return (
                   <button key={s} type="button" onClick={() => toggleSector(s)}
                     className="p-2.5 rounded-xl border flex items-center gap-2 transition-all text-left"
-                    style={{ background: selected ? "#EEF2FF" : "#FFFFFF", borderColor: selected ? "#6366F1" : "#E5E7EB" }}
+                    style={{ background: selected ? "#EEF2FF" : "var(--surface)", borderColor: selected ? "#6366F1" : "var(--border)" }}
                   >
                     <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all"
-                      style={{ background: selected ? "#6366F1" : "transparent", borderColor: selected ? "#6366F1" : "#D1D5DB" }}
+                      style={{ background: selected ? "#6366F1" : "transparent", borderColor: selected ? "#6366F1" : "var(--border-strong)" }}
                     >
                       {selected && <Check size={11} color="#FFFFFF" />}
                     </div>
-                    <span className="text-xs font-semibold leading-tight" style={{ color: selected ? "#3730A3" : "#201a1a" }}>{s}</span>
+                    <span className="text-xs font-semibold leading-tight" style={{ color: selected ? "#3730A3" : "var(--text)" }}>{s}</span>
                   </button>
                 );
               })}
@@ -610,10 +610,10 @@ export function UserManagementView({
             </div>
           )}
           {modalError && (
-            <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "#ba1a1a" }}>{modalError}</div>
+            <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "var(--danger)" }}>{modalError}</div>
           )}
         </div>
-        <div className="px-6 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "#E5E7EB", background: "#fef1f0" }}>
+        <div className="px-6 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
           <Button variant="ghost" onClick={closeModal} disabled={saving}>Cancelar</Button>
           <Button variant="primary" icon={saving ? Loader2 : Save} onClick={save} disabled={!canSave || saving}>
             {saving ? "Salvando…" : "Salvar"}
@@ -627,7 +627,7 @@ export function UserManagementView({
           <div>
             <FieldLabel>E-mail *</FieldLabel>
             <Input value={inviteForm.email} onChange={e => setInviteForm(prev => ({ ...prev, email: e.target.value }))} placeholder="email@sanwey.com.br" icon={Mail} type="email" />
-            <div className="text-[11px] mt-1.5" style={{ color: NEUTRAL.slate }}>
+            <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
               A pessoa precisa criar a conta na tela de login com este mesmo e-mail.
             </div>
           </div>
@@ -644,10 +644,10 @@ export function UserManagementView({
                 return (
                   <button key={id} type="button" onClick={() => toggleInviteCompany(id)}
                     className="p-3 rounded-xl border flex items-center gap-2 transition-all"
-                    style={{ background: selected ? c.light : "#FFFFFF", borderColor: selected ? c.primary : "#E5E7EB" }}
+                    style={{ background: selected ? c.light : "var(--surface)", borderColor: selected ? c.primary : "var(--border)" }}
                   >
                     <div className="w-3 h-3 rounded-full" style={{ background: c.primary }} />
-                    <span className="font-semibold text-sm flex-1 text-left" style={{ color: selected ? c.dark : "#201a1a" }}>{c.name}</span>
+                    <span className="font-semibold text-sm flex-1 text-left" style={{ color: selected ? c.dark : "var(--text)" }}>{c.name}</span>
                     {selected && <Check size={14} color={c.primary} />}
                   </button>
                 );
@@ -662,14 +662,14 @@ export function UserManagementView({
                 return (
                   <button key={s} type="button" onClick={() => toggleInviteSector(s)}
                     className="p-2.5 rounded-xl border flex items-center gap-2 transition-all text-left"
-                    style={{ background: selected ? "#EEF2FF" : "#FFFFFF", borderColor: selected ? "#6366F1" : "#E5E7EB" }}
+                    style={{ background: selected ? "#EEF2FF" : "var(--surface)", borderColor: selected ? "#6366F1" : "var(--border)" }}
                   >
                     <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all"
-                      style={{ background: selected ? "#6366F1" : "transparent", borderColor: selected ? "#6366F1" : "#D1D5DB" }}
+                      style={{ background: selected ? "#6366F1" : "transparent", borderColor: selected ? "#6366F1" : "var(--border-strong)" }}
                     >
                       {selected && <Check size={11} color="#FFFFFF" />}
                     </div>
-                    <span className="text-xs font-semibold leading-tight" style={{ color: selected ? "#3730A3" : "#201a1a" }}>{s}</span>
+                    <span className="text-xs font-semibold leading-tight" style={{ color: selected ? "#3730A3" : "var(--text)" }}>{s}</span>
                   </button>
                 );
               })}
@@ -682,7 +682,7 @@ export function UserManagementView({
             </div>
           )}
           {inviteError && (
-            <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "#ba1a1a" }}>{inviteError}</div>
+            <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "var(--danger)" }}>{inviteError}</div>
           )}
           {inviteJustSent && (
             <div className="p-2.5 rounded-xl text-xs flex items-start gap-2" style={{ background: "#ECFDF5", color: "#065F46" }}>
@@ -691,7 +691,7 @@ export function UserManagementView({
             </div>
           )}
         </div>
-        <div className="px-6 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "#E5E7EB", background: "#fef1f0" }}>
+        <div className="px-6 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
           <Button variant="ghost" onClick={closeInvite} disabled={inviting}>Fechar</Button>
           <Button variant="primary" icon={inviting ? Loader2 : Send} onClick={submitInvite} disabled={inviting || !inviteForm.email.trim()}>
             {inviting ? "Enviando…" : "Enviar convite"}
@@ -702,13 +702,13 @@ export function UserManagementView({
       {/* ── Confirm dialog ── */}
       <Modal open={!!confirmDialog} onClose={() => setConfirmDialog(null)} title="Confirmar ação" width={400}>
         <div className="p-6">
-          <p className="text-sm mb-6" style={{ color: "#201a1a", lineHeight: 1.6 }}>{confirmDialog?.message}</p>
+          <p className="text-sm mb-6" style={{ color: "var(--text)", lineHeight: 1.6 }}>{confirmDialog?.message}</p>
           <div className="flex items-center justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirmDialog(null)}>Cancelar</Button>
             <Button
               variant="primary"
               onClick={confirmDialog?.onConfirm}
-              style={{ background: "#ba1a1a" }}
+              style={{ background: "var(--danger)" }}
             >
               Confirmar
             </Button>
@@ -723,9 +723,9 @@ export function UserManagementView({
 
 function StatMini({ label, value, accent }) {
   return (
-    <div className="rounded-xl border p-4" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
-      <div className="text-xs font-semibold mb-1" style={{ color: "#6B7280" }}>{label}</div>
-      <div className="font-bold" style={{ fontSize: 28, color: accent || "#201a1a", lineHeight: 1, letterSpacing: "-0.02em" }}>
+    <div className="rounded-xl border p-4" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="text-xs font-semibold mb-1" style={{ color: "var(--text-dim)" }}>{label}</div>
+      <div className="font-bold" style={{ fontSize: 28, color: accent || "var(--text)", lineHeight: 1, letterSpacing: "-0.02em" }}>
         {value}
       </div>
     </div>
@@ -735,10 +735,10 @@ function StatMini({ label, value, accent }) {
 function StatStrip({ label, value, accent }) {
   return (
     <div className="py-3 px-4 text-center">
-      <div className="text-[10px] uppercase font-bold tracking-wider mb-0.5" style={{ color: "#6B7280", letterSpacing: "0.08em" }}>
+      <div className="text-[10px] uppercase font-bold tracking-wider mb-0.5" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
         {label}
       </div>
-      <div className="font-bold text-lg" style={{ color: accent || "#201a1a", letterSpacing: "-0.01em" }}>
+      <div className="font-bold text-lg" style={{ color: accent || "var(--text)", letterSpacing: "-0.01em" }}>
         {value}
       </div>
     </div>
@@ -747,7 +747,7 @@ function StatStrip({ label, value, accent }) {
 
 function FieldLabel({ children }) {
   return (
-    <label className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block" style={{ color: "#6B7280", letterSpacing: "0.15em" }}>
+    <label className="text-[10px] uppercase font-bold tracking-widest mb-1.5 block" style={{ color: "var(--text-dim)", letterSpacing: "0.15em" }}>
       {children}
     </label>
   );

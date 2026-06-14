@@ -43,7 +43,7 @@ export function PipelineBuilderView({
   }, [pipelines, activeCompany]);
 
   const companyData = COMPANIES[activeCompany];
-  const accent = companyData?.primary || NEUTRAL.graphite;
+  const accent = companyData?.primary || "var(--text)";
   const hasCustomRules = Boolean(transitions.rules[activeCompany]);
 
   const sourceStages = stages.filter(s => !s.lost);
@@ -58,12 +58,12 @@ export function PipelineBuilderView({
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <GitBranch size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
+            <GitBranch size={22} style={{ color: "var(--text)" }} />
+            <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
               Pipeline Builder
             </h1>
           </div>
-          <p className="text-sm mt-1" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
             Configure as etapas e as transições permitidas em cada empresa.
           </p>
         </div>
@@ -72,9 +72,9 @@ export function PipelineBuilderView({
           <button
             onClick={() => setPreviewOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           >
             <Eye size={11} />
             Preview vendedor
@@ -82,9 +82,9 @@ export function PipelineBuilderView({
           <button
             onClick={() => setEditorOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           >
             <Pencil size={11} />
             Editar etapas
@@ -92,7 +92,7 @@ export function PipelineBuilderView({
 
           {/* Company tabs */}
           <div className="overflow-x-auto max-w-full" style={{ scrollbarWidth: "none" }}>
-            <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: "#F5F5F3", borderColor: "#E5E5E5", width: "max-content" }}>
+            <div className="flex items-center gap-1 rounded-xl border p-1" style={{ background: "var(--surface-alt)", borderColor: "var(--border)", width: "max-content" }}>
               {companies.map(id => {
                 const c = COMPANIES[id];
                 const active = activeCompany === id;
@@ -102,12 +102,12 @@ export function PipelineBuilderView({
                     onClick={() => setActiveCompany(id)}
                     className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
                     style={{
-                      background: active ? "#FFFFFF" : "transparent",
-                      color: active ? (c?.primary || NEUTRAL.graphite) : NEUTRAL.slate,
+                      background: active ? "var(--surface)" : "transparent",
+                      color: active ? (c?.primary || "var(--text)") : "var(--text-dim)",
                       boxShadow: active ? "0 1px 4px rgba(0,0,0,0.10)" : "none",
                     }}
                     onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(0,0,0,0.04)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = active ? "#FFFFFF" : "transparent"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = active ? "var(--surface)" : "transparent"; }}
                   >
                     <span className="w-2 h-2 rounded-full" style={{ background: c?.primary }} />
                     {c?.short || id}
@@ -122,7 +122,7 @@ export function PipelineBuilderView({
       {/* Flow diagram */}
       <div
         className="rounded-xl border p-5"
-        style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+        style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
       >
         <div className="flex items-center gap-0 overflow-x-auto pb-2" style={{ scrollbarWidth: "thin" }}>
           {stages.map((stage, idx) => (
@@ -132,8 +132,8 @@ export function PipelineBuilderView({
                 className="shrink-0 rounded-xl border flex flex-col"
                 style={{
                   minWidth: 130,
-                  background: "#FFFFFF",
-                  borderColor: "#E5E7EB",
+                  background: "var(--surface)",
+                  borderColor: "var(--border)",
                   borderTopWidth: 3,
                   borderTopColor: stage.color,
                   overflow: "hidden",
@@ -158,7 +158,7 @@ export function PipelineBuilderView({
                       className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
                       style={{
                         background: stage.won ? "#E8F2EC" : "#FEF2F2",
-                        color: stage.won ? "#1A6E35" : "#B91C1C",
+                        color: stage.won ? "#1A6E35" : "var(--danger)",
                       }}
                     >
                       {stage.won ? "Terminal" : "Perdido"}
@@ -170,12 +170,12 @@ export function PipelineBuilderView({
                 <div className="px-3 pb-3">
                   <div
                     className="font-semibold leading-snug text-xs"
-                    style={{ color: NEUTRAL.graphite }}
+                    style={{ color: "var(--text)" }}
                   >
                     {stage.name}
                   </div>
                   {Number.isFinite(stage.probability) && !stage.terminal && (
-                    <div className="text-[10px] mt-0.5 font-medium" style={{ color: NEUTRAL.slate }}>
+                    <div className="text-[10px] mt-0.5 font-medium" style={{ color: "var(--text-dim)" }}>
                       {stage.probability}%
                     </div>
                   )}
@@ -194,16 +194,16 @@ export function PipelineBuilderView({
       </div>
 
       {/* Transition matrix */}
-      <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
+      <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
         <div
           className="px-4 py-3 flex items-center justify-between"
-          style={{ background: "#F8F9FA", borderBottom: "1px solid #E5E7EB" }}
+          style={{ background: "var(--surface-alt)", borderBottom: `1px solid var(--border)` }}
         >
           <div>
-            <span className="text-sm font-semibold" style={{ color: NEUTRAL.graphite }}>
+            <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
               Regras de transição
             </span>
-            <span className="ml-2 text-xs" style={{ color: NEUTRAL.slate }}>
+            <span className="ml-2 text-xs" style={{ color: "var(--text-dim)" }}>
               {hasCustomRules
                 ? "Regras personalizadas ativas"
                 : "Todas as transições permitidas (padrão)"}
@@ -213,9 +213,9 @@ export function PipelineBuilderView({
             <button
               onClick={() => transitions.resetCompany(activeCompany)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFFFFF" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.borderColor = "#FECACA"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.borderColor = "#E5E7EB"; }}
+              style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.borderColor = "#FECACA"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "var(--border)"; }}
             >
               <RotateCcw size={11} />
               Resetar para padrão
@@ -262,7 +262,7 @@ export function PipelineBuilderView({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-5 text-xs flex-wrap" style={{ color: NEUTRAL.slate }}>
+      <div className="flex items-center gap-5 text-xs flex-wrap" style={{ color: "var(--text-dim)" }}>
         <div className="flex items-center gap-2">
           <PillSample allowed />
           Transição permitida
@@ -304,7 +304,7 @@ function StageRow({
     <div>
       <div
         className="w-full flex items-center gap-3 px-4 py-3"
-        style={{ background: "#FAFAFA" }}
+        style={{ background: "var(--surface-alt)" }}
       >
         <button
           onClick={() => setExpanded(v => !v)}
@@ -314,10 +314,10 @@ function StageRow({
           <span className="text-xs font-bold" style={{ color: fromStage.color, minWidth: 16 }}>
             {fromStage.code}
           </span>
-          <span className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+          <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
             De: {fromStage.name}
           </span>
-          <span className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <span className="text-xs" style={{ color: "var(--text-dim)" }}>
             · {allowedDests.length} de {possibleDests.length} destinos
           </span>
         </button>
@@ -330,7 +330,7 @@ function StageRow({
           <button
             onClick={() => setExpanded(v => !v)}
             className="p-1 ml-1 cursor-pointer"
-            style={{ color: NEUTRAL.slate }}
+            style={{ color: "var(--text-dim)" }}
             aria-label={expanded ? "Recolher" : "Expandir"}
           >
             {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -362,16 +362,16 @@ function BulkBtn({ onClick, icon: Icon, label, tone }) {
     <button
       onClick={onClick}
       className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded-md border cursor-pointer transition-colors"
-      style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFFFFF" }}
+      style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = tone;
         e.currentTarget.style.color = tone;
         e.currentTarget.style.background = tone + "0D";
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = "#E5E7EB";
-        e.currentTarget.style.color = NEUTRAL.slate;
-        e.currentTarget.style.background = "#FFFFFF";
+        e.currentTarget.style.borderColor = "var(--border)";
+        e.currentTarget.style.color = "var(--text-dim)";
+        e.currentTarget.style.background = "var(--surface)";
       }}
       title={label}
     >
@@ -409,13 +409,13 @@ function DestPill({ stage, allowed, onClick }) {
       onClick={onClick}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer"
       style={{
-        background: "#F9FAFB",
+        background: "var(--surface-alt)",
         color: "#9CA3AF",
-        border: "1px dashed #D1D5DB",
+        border: "1px dashed var(--border-strong)",
         textDecoration: "line-through",
       }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = stage.color; e.currentTarget.style.color = stage.color; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = "#9CA3AF"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "#9CA3AF"; }}
       title={`Permitir transição para ${stage.name}`}
     >
       <Lock size={11} />
@@ -436,7 +436,7 @@ function PillSample({ allowed }) {
   ) : (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"
-      style={{ background: "#F9FAFB", color: "#9CA3AF", border: "1px dashed #D1D5DB", textDecoration: "line-through" }}
+      style={{ background: "var(--surface-alt)", color: "#9CA3AF", border: "1px dashed var(--border-strong)", textDecoration: "line-through" }}
     >
       <Lock size={9} /> bloq
     </span>

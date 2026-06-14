@@ -32,9 +32,9 @@ function leaveTypeLabel(typeId) {
 
 function statusConfig(status) {
   switch (status) {
-    case "aprovado":  return { label: "Aprovado",  color: "#16A34A", bg: "#DCFCE7" };
-    case "recusado":  return { label: "Recusado",  color: "#B91C1C", bg: "#FEE2E2" };
-    default:          return { label: "Pendente",  color: "#D97706", bg: "#FEF3C7" };
+    case "aprovado":  return { label: "Aprovado",  color: "var(--success)", bg: "#DCFCE7" };
+    case "recusado":  return { label: "Recusado",  color: "var(--danger)", bg: "#FEE2E2" };
+    default:          return { label: "Pendente",  color: "var(--warning)", bg: "#FEF3C7" };
   }
 }
 
@@ -70,7 +70,7 @@ function UserAvatar({ user, size = 30 }) {
         width: size,
         height: size,
         borderRadius: "50%",
-        background: NEUTRAL.red,
+        background: "var(--color-industria)",
         color: "#FFF",
         display: "flex",
         alignItems: "center",
@@ -152,10 +152,10 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", fontSize: 13 };
   const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
-  const blurGray  = (e) => { e.target.style.borderColor = "#D1D5DB"; };
+  const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   return (
     <div
@@ -163,22 +163,22 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>
               Solicitar Afastamento
             </div>
-            <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
               {currentUser?.name || currentUser?.email}
             </div>
           </div>
           <button
             onClick={onClose}
-            style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex" }}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}
           >
             <X size={18} />
           </button>
@@ -266,7 +266,7 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
           </div>
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0 0" }}>
+            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0 0" }}>
               {error}
             </div>
           )}
@@ -282,7 +282,7 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+              style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
             >
               Cancelar
             </button>
@@ -454,12 +454,12 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <CalendarCheck size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em", margin: 0 }}>
+            <CalendarCheck size={22} style={{ color: "var(--text)" }} />
+            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>
               Férias & Licenças
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             Gestão de solicitações de afastamento
           </p>
         </div>
@@ -489,23 +489,23 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
         style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}
       >
         {[
-          { label: "Pendentes",           value: stats.pendentes,   color: NEUTRAL.amber,   icon: <Clock size={14} style={{ color: NEUTRAL.amber }} /> },
-          { label: "Aprovadas este mês",  value: stats.aprovadosMes, color: "#16A34A",      icon: <Check size={14} style={{ color: "#16A34A" }} /> },
-          { label: "Dias em férias agora", value: stats.diasAtivos,  color: NEUTRAL.graphite, icon: <Calendar size={14} style={{ color: NEUTRAL.graphite }} /> },
+          { label: "Pendentes",           value: stats.pendentes,   color: "var(--amber)",   icon: <Clock size={14} style={{ color: "var(--amber)" }} /> },
+          { label: "Aprovadas este mês",  value: stats.aprovadosMes, color: "var(--success)",      icon: <Check size={14} style={{ color: "var(--success)" }} /> },
+          { label: "Dias em férias agora", value: stats.diasAtivos,  color: "var(--text)", icon: <Calendar size={14} style={{ color: "var(--text)" }} /> },
         ].map((s) => (
           <div
             key={s.label}
             className="rounded-xl border"
             style={{
-              background: "#FFFFFF",
-              borderColor: "#E5E7EB",
+              background: "var(--surface)",
+              borderColor: "var(--border)",
               padding: "12px 16px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
               {s.icon}
-              <div style={{ fontSize: 10, fontWeight: 600, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 {s.label}
               </div>
             </div>
@@ -519,14 +519,14 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap mb-4">
         {/* Pill tabs */}
-        <div style={{ display: "flex", gap: 4, background: "#F3F4F6", borderRadius: 10, padding: 3 }}>
+        <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
           {PILL_TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
               style={{
-                background: filterStatus === tab.id ? "#FFFFFF" : "transparent",
-                color: filterStatus === tab.id ? NEUTRAL.graphite : NEUTRAL.slate,
+                background: filterStatus === tab.id ? "var(--surface)" : "transparent",
+                color: filterStatus === tab.id ? "var(--text)" : "var(--text-dim)",
                 border: "none",
                 borderRadius: 8,
                 padding: "4px 12px",
@@ -547,9 +547,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
           <button
             onClick={() => setOnlyMine((v) => !v)}
             style={{
-              background: onlyMine ? NEUTRAL.red : "#FFFFFF",
-              color: onlyMine ? "#FFF" : NEUTRAL.slate,
-              border: `1px solid ${onlyMine ? NEUTRAL.red : "#E5E7EB"}`,
+              background: onlyMine ? "var(--color-industria)" : "var(--surface)",
+              color: onlyMine ? "#FFF" : "var(--text-dim)",
+              border: `1px solid ${onlyMine ? "var(--color-industria)" : "var(--border)"}`,
               borderRadius: 8,
               padding: "4px 12px",
               fontSize: 12,
@@ -569,39 +569,39 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
 
       {/* Content */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: NEUTRAL.slate, fontSize: 13 }}>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>
           Carregando…
         </div>
       ) : !isSupabaseConfigured ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <Calendar size={48} style={{ color: NEUTRAL.slate, opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: NEUTRAL.slate, fontWeight: 500 }}>Supabase não configurado</div>
-          <div style={{ fontSize: 12, color: NEUTRAL.slate, opacity: 0.6, marginTop: 4 }}>
+          <Calendar size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Supabase não configurado</div>
+          <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>
             Configure as variáveis de ambiente para usar este módulo
           </div>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <CalendarCheck size={48} style={{ color: NEUTRAL.slate, opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: NEUTRAL.slate, fontWeight: 500 }}>
+          <CalendarCheck size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>
             Nenhuma solicitação encontrada
           </div>
-          <div style={{ fontSize: 12, color: NEUTRAL.slate, opacity: 0.6, marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>
             {filterStatus !== "todas" ? "Tente mudar o filtro de status" : "As solicitações aparecerão aqui"}
           </div>
         </div>
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
+          <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
             <table className="w-full border-collapse">
               <thead>
-                <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
+                <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
                   {["Funcionário", "Tipo", "Período", "Dias", "Status", "Aprovado por", ""].map((h) => (
                     <th
                       key={h}
                       className="text-left px-4 py-2.5"
-                      style={{ fontSize: 10, fontWeight: 600, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}
+                      style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}
                     >
                       {h}
                     </th>
@@ -626,25 +626,25 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <UserAvatar user={profile} size={30} />
                           <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.graphite }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
                               {profile?.name || "Desconhecido"}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3" style={{ fontSize: 12, color: NEUTRAL.graphite }}>
+                      <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text)" }}>
                         {leaveTypeLabel(req.type)}
                       </td>
-                      <td className="px-4 py-3" style={{ fontSize: 12, color: NEUTRAL.slate, whiteSpace: "nowrap" }}>
+                      <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)", whiteSpace: "nowrap" }}>
                         {fmt(req.start_date)} – {fmt(req.end_date)}
                       </td>
-                      <td className="px-4 py-3" style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite }}>
+                      <td className="px-4 py-3" style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
                         {dias}d
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={req.status} />
                       </td>
-                      <td className="px-4 py-3" style={{ fontSize: 12, color: NEUTRAL.slate }}>
+                      <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
                         {req.approver?.name || "—"}
                       </td>
                       <td className="px-4 py-3">
@@ -723,13 +723,13 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
                     <UserAvatar user={profile} size={36} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: NEUTRAL.graphite }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>
                         {profile?.name || "Desconhecido"}
                       </div>
-                      <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 1 }}>
+                      <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 1 }}>
                         {leaveTypeLabel(req.type)}
                       </div>
-                      <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
                         {fmt(req.start_date)} – {fmt(req.end_date)} · {dias}d
                       </div>
                     </div>
@@ -737,7 +737,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                   </div>
 
                   {req.notes && (
-                    <div style={{ fontSize: 11, color: NEUTRAL.slate, background: "#F9FAFB", borderRadius: 8, padding: "6px 10px", marginBottom: 10, lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)", background: "#F9FAFB", borderRadius: 8, padding: "6px 10px", marginBottom: 10, lineHeight: 1.4 }}>
                       {req.notes}
                     </div>
                   )}

@@ -106,15 +106,15 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
   return (
     <div className="grid lg:grid-cols-[1fr,320px] gap-4">
       {/* Calendário */}
-      <div className="rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB" }}>
+      <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
         {/* Cabeçalho */}
-        <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "#E5E7EB" }}>
+        <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
           <div className="flex items-center gap-3">
             <button
               onClick={goPrev}
               className="p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: NEUTRAL.slate }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+              style={{ color: "var(--text-dim)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               aria-label="Mês anterior"
             >
@@ -123,35 +123,35 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
             <button
               onClick={goNext}
               className="p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: NEUTRAL.slate }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+              style={{ color: "var(--text-dim)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               aria-label="Próximo mês"
             >
               <ChevronRight size={16} />
             </button>
-            <h2 className="font-semibold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
-              {MONTHS[month]} <span style={{ color: NEUTRAL.slate, fontWeight: 500 }}>{cursor.getFullYear()}</span>
+            <h2 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>
+              {MONTHS[month]} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>{cursor.getFullYear()}</span>
             </h2>
           </div>
           <button
             onClick={goToday}
             className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           >
             Hoje
           </button>
         </div>
 
         {/* Cabeçalho dos dias da semana */}
-        <div className="grid grid-cols-7 border-b" style={{ borderColor: "#E5E7EB" }}>
+        <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
           {WEEKDAYS.map(w => (
             <div
               key={w}
               className="px-2 py-2 text-[10px] font-bold uppercase text-center"
-              style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}
+              style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}
             >
               {w}
             </div>
@@ -173,18 +173,18 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
                 className="text-left p-1.5 border-r border-b transition-colors cursor-pointer flex flex-col gap-1"
                 style={{
                   borderColor: "#F0F0F0",
-                  background: isSelected ? "#EFF6FF" : isToday ? "#FFFBEB" : "#FFFFFF",
+                  background: isSelected ? "#EFF6FF" : isToday ? "#FFFBEB" : "var(--surface)",
                   opacity: inMonth ? 1 : 0.4,
                 }}
                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#F8FAFC"; }}
                 onMouseLeave={e => {
-                  if (!isSelected) e.currentTarget.style.background = isToday ? "#FFFBEB" : "#FFFFFF";
+                  if (!isSelected) e.currentTarget.style.background = isToday ? "#FFFBEB" : "var(--surface)";
                 }}
               >
                 <span
                   className="text-xs font-semibold leading-none"
                   style={{
-                    color: isToday ? "#B45309" : inMonth ? NEUTRAL.graphite : NEUTRAL.slate,
+                    color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)",
                   }}
                 >
                   {d.getDate()}
@@ -194,7 +194,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
                     <EventPill key={idx} event={ev} onClick={onLeadClick} />
                   ))}
                   {events.length > 3 && (
-                    <span className="text-[10px] font-semibold" style={{ color: NEUTRAL.slate }}>
+                    <span className="text-[10px] font-semibold" style={{ color: "var(--text-dim)" }}>
                       +{events.length - 3}
                     </span>
                   )}
@@ -205,7 +205,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
         </div>
 
         {/* Legenda */}
-        <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap text-[11px] border-t" style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate }}>
+        <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap text-[11px] border-t" style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}>
           <LegendDot color="#047857" icon={CalendarCheck} label="Follow-up agendado" />
           <LegendDot color="#1E3A8A" icon={CalendarClock} label="Previsão de fechamento" />
           <LegendDot color="#DC2626" icon={AlertTriangle} label="Fechamento atrasado" />
@@ -213,7 +213,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
       </div>
 
       {/* Sidebar lateral com detalhes do dia selecionado */}
-      <div className="rounded-xl border p-3" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", minHeight: 200 }}>
+      <div className="rounded-xl border p-3" style={{ background: "var(--surface)", borderColor: "var(--border)", minHeight: 200 }}>
         {selectedDay ? (
           <DaySidebar
             day={selectedDay}
@@ -223,11 +223,11 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
           />
         ) : (
           <div className="text-center py-8 px-4">
-            <CalendarClock size={28} color={NEUTRAL.slate} className="mx-auto mb-2 opacity-50" />
-            <div className="text-sm font-semibold mb-1" style={{ color: NEUTRAL.graphite }}>
+            <CalendarClock size={28} color="var(--text-dim)" className="mx-auto mb-2 opacity-50" />
+            <div className="text-sm font-semibold mb-1" style={{ color: "var(--text)" }}>
               Selecione um dia
             </div>
-            <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>
               Clique numa data do calendário para ver todos os compromissos daquele dia.
             </div>
           </div>
@@ -279,18 +279,18 @@ function DaySidebar({ day, events, onLeadClick, onClose }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-[10px] font-bold uppercase" style={{ color: NEUTRAL.slate, letterSpacing: "0.08em" }}>
+          <div className="text-[10px] font-bold uppercase" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
             {events.length} compromisso{events.length !== 1 ? "s" : ""}
           </div>
-          <div className="text-sm font-semibold capitalize" style={{ color: NEUTRAL.graphite }}>
+          <div className="text-sm font-semibold capitalize" style={{ color: "var(--text)" }}>
             {headerStr}
           </div>
         </div>
         <button
           onClick={onClose}
           className="text-[11px] font-semibold px-2 py-1 rounded cursor-pointer"
-          style={{ color: NEUTRAL.slate, background: "transparent" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
+          style={{ color: "var(--text-dim)", background: "transparent" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
         >
           Fechar
@@ -298,7 +298,7 @@ function DaySidebar({ day, events, onLeadClick, onClose }) {
       </div>
 
       {events.length === 0 ? (
-        <div className="text-xs italic py-6 text-center" style={{ color: NEUTRAL.slate }}>
+        <div className="text-xs italic py-6 text-center" style={{ color: "var(--text-dim)" }}>
           Nenhum compromisso neste dia.
         </div>
       ) : (
@@ -311,9 +311,9 @@ function DaySidebar({ day, events, onLeadClick, onClose }) {
                 key={i}
                 onClick={() => onLeadClick?.(ev.lead)}
                 className="w-full text-left rounded-lg border p-2.5 transition-colors cursor-pointer"
-                style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.borderColor = "#D1D5DB"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "#E5E7EB"; }}
+                style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.borderColor = "var(--border)"; }}
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span
@@ -331,10 +331,10 @@ function DaySidebar({ day, events, onLeadClick, onClose }) {
                     </span>
                   )}
                 </div>
-                <div className="text-sm font-semibold truncate" style={{ color: NEUTRAL.graphite }}>
+                <div className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>
                   {ev.lead.company}
                 </div>
-                <div className="text-[11px] mt-0.5 flex items-center gap-2" style={{ color: NEUTRAL.slate }}>
+                <div className="text-[11px] mt-0.5 flex items-center gap-2" style={{ color: "var(--text-dim)" }}>
                   <span>{STAGE_NAME[ev.lead.stage] || ev.lead.stage}</span>
                   {Number.isFinite(ev.lead.value) && ev.lead.value > 0 && (
                     <>
