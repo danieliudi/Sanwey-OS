@@ -411,19 +411,19 @@ export function DespesasView({ user, users = [] }) {
               {filtered.map(expense => (
                 <tr
                   key={expense.id}
-                  style={{ borderBottom: "1px solid #E5E7EB" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#F9FAFB"; }}
+                  style={{ borderBottom: "1px solid var(--border)" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                 >
-                  <td className="px-4 py-3 text-sm font-medium" style={{ color: NEUTRAL.graphite, maxWidth: 220 }}>
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)", maxWidth: 220 }}>
                     <div className="truncate">{expense.description}</div>
                     {expense.notes && (
-                      <div className="text-[11px] truncate mt-0.5" style={{ color: NEUTRAL.slate }}>
+                      <div className="text-[11px] truncate mt-0.5" style={{ color: "var(--text-dim)" }}>
                         {expense.notes}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: NEUTRAL.slate }}>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
                     {expense.category}
                   </td>
                   <td className="px-4 py-3">
@@ -443,10 +443,10 @@ export function DespesasView({ user, users = [] }) {
                       })}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold" style={{ color: NEUTRAL.graphite }}>
+                  <td className="px-4 py-3 text-sm font-semibold" style={{ color: "var(--text)" }}>
                     {formatK(expense.amount || 0)}
                   </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: NEUTRAL.slate }}>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
                     {formatDateBR(expense.dueDate)}
                   </td>
                   <td className="px-4 py-3">
@@ -461,7 +461,7 @@ export function DespesasView({ user, users = [] }) {
                           style={{
                             background: "none",
                             border: "none",
-                            color: NEUTRAL.slate,
+                            color: "var(--text-dim)",
                             cursor: "pointer",
                             padding: 4,
                             borderRadius: 6,
@@ -469,7 +469,7 @@ export function DespesasView({ user, users = [] }) {
                             alignItems: "center",
                           }}
                           onMouseEnter={e => { e.currentTarget.style.background = "#EFF6FF"; e.currentTarget.style.color = "#1E4D8C"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
                         >
                           <Pencil size={13} />
                         </button>
@@ -481,15 +481,15 @@ export function DespesasView({ user, users = [] }) {
                           style={{
                             background: "none",
                             border: "none",
-                            color: NEUTRAL.slate,
+                            color: "var(--text-dim)",
                             cursor: "pointer",
                             padding: 4,
                             borderRadius: 6,
                             display: "flex",
                             alignItems: "center",
                           }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "#DC2626"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "var(--danger)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
                         >
                           <Trash2 size={13} />
                         </button>

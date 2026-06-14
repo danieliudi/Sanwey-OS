@@ -539,26 +539,26 @@ export function AnalyticsTab({ allLeads, period, users }) {
                         onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                       >
-                        <td className="py-3 pl-5 pr-3 font-medium" style={{ color: NEUTRAL.graphite }}>
+                        <td className="py-3 pl-5 pr-3 font-medium" style={{ color: "var(--text)" }}>
                           {r.name.split(" ").slice(0, 2).join(" ")}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono" style={{ color: NEUTRAL.graphite }}>{r.total}</td>
+                        <td className="py-3 px-3 text-right font-mono" style={{ color: "var(--text)" }}>{r.total}</td>
                         <td className="py-3 px-3 text-right font-mono" style={{ color: "#3B82F6" }}>{r.open}</td>
-                        <td className="py-3 px-3 text-right font-mono" style={{ color: NEUTRAL.success }}>{r.won}</td>
-                        <td className="py-3 px-3 text-right font-mono" style={{ color: NEUTRAL.red }}>{r.lost}</td>
+                        <td className="py-3 px-3 text-right font-mono" style={{ color: "var(--color-resibag)" }}>{r.won}</td>
+                        <td className="py-3 px-3 text-right font-mono" style={{ color: "var(--color-industria)" }}>{r.lost}</td>
                         <td
                           className="py-3 px-3 text-right font-mono font-semibold"
                           style={{ color: winRateColor(r.winRate) }}
                         >
                           {r.winRate}%
                         </td>
-                        <td className="py-3 px-3 text-right font-mono" style={{ color: NEUTRAL.graphite }}>
+                        <td className="py-3 px-3 text-right font-mono" style={{ color: "var(--text)" }}>
                           {formatK(r.wonValue)}
                         </td>
-                        <td className="py-3 px-3 text-right font-mono" style={{ color: NEUTRAL.graphite }}>
+                        <td className="py-3 px-3 text-right font-mono" style={{ color: "var(--text)" }}>
                           {r.avgTicket > 0 ? formatK(r.avgTicket) : "—"}
                         </td>
-                        <td className="py-3 pl-3 pr-5 text-right font-mono" style={{ color: NEUTRAL.slate }}>
+                        <td className="py-3 pl-3 pr-5 text-right font-mono" style={{ color: "var(--text-dim)" }}>
                           {r.avgCycle !== null ? `${r.avgCycle}d` : "—"}
                         </td>
                       </tr>

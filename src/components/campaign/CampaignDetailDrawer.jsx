@@ -1296,7 +1296,7 @@ export function CampaignDetailDrawer({
         </div>
 
         {/* Mobile sticky footer — Avançar CTA */}
-        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           {stageNav.next ? (
             <button
               onClick={() => canWrite && moveToStage(stageNav.next.id)}

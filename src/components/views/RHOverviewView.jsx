@@ -226,8 +226,8 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
     {
       label: "Ativos",
       value: totalAtivos,
-      icon: <UserCheck size={20} color="#16A34A" />,
-      accent: "#16A34A",
+      icon: <UserCheck size={20} color="var(--success)" />,
+      accent: "var(--success)",
     },
     {
       label: "De Férias",
@@ -238,14 +238,14 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
     {
       label: "Afastados",
       value: totalAfastados,
-      icon: <UserMinus size={20} color="#D97706" />,
-      accent: "#D97706",
+      icon: <UserMinus size={20} color="var(--warning)" />,
+      accent: "var(--warning)",
     },
   ];
 
   const card = {
-    background: "#FFF",
-    border: `1px solid ${"var(--border)"}`,
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
     borderRadius: 10,
     boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
   };
@@ -512,7 +512,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                       key={req.id}
                       style={{
                         background: "var(--amber-bg)",
-                        border: `1px solid ${"var(--amber)"}33`,
+                        border: "1px solid color-mix(in srgb, var(--amber) 20%, transparent)",
                         borderRadius: 8,
                         padding: "10px 12px",
                       }}
