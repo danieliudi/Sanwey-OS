@@ -118,9 +118,9 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
             value={form.description}
             onChange={e => set("description", e.target.value)}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-            style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
             onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-            onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+            onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
           />
 
           <div className="flex gap-2">
@@ -128,7 +128,7 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
               value={form.category}
               onChange={e => set("category", e.target.value)}
               className="flex-1 text-sm rounded-xl border outline-none px-3 py-2"
-              style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
             >
               {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -136,7 +136,7 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
               value={form.status}
               onChange={e => set("status", e.target.value)}
               className="flex-1 text-sm rounded-xl border outline-none px-3 py-2"
-              style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
             >
               <option value="pendente">Pendente</option>
               <option value="pago">Pago</option>
@@ -152,23 +152,23 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
               min="0"
               step="0.01"
               className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
               onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-              onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
             />
             <input
               type="date"
               value={form.dueDate}
               onChange={e => set("dueDate", e.target.value)}
               className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: form.dueDate ? NEUTRAL.graphite : NEUTRAL.slate }}
+              style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)" }}
               onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-              onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
             />
           </div>
 
           <div>
-            <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: NEUTRAL.slate }}>
+            <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
               Empresas
             </div>
             <div className="flex flex-wrap gap-1.5">

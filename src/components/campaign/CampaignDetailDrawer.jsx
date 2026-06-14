@@ -639,7 +639,7 @@ function EntregasTab({ campaign, canWrite }) {
             </button>
             <button onClick={() => setCreating(false)}
               className="px-3 py-1.5 rounded-lg text-xs font-medium border"
-              style={{ borderColor: "#E5E7EB", color: "#6B7280" }}>
+              style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}>
               Cancelar
             </button>
           </div>
@@ -647,9 +647,9 @@ function EntregasTab({ campaign, canWrite }) {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-6"><Loader2 size={18} className="animate-spin" style={{ color: "#6B7280" }} /></div>
+        <div className="flex items-center justify-center py-6"><Loader2 size={18} className="animate-spin" style={{ color: "var(--text-dim)" }} /></div>
       ) : deliverables.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 gap-2" style={{ color: "#9CA3AF" }}>
+        <div className="flex flex-col items-center justify-center py-8 gap-2" style={{ color: "var(--text-faint)" }}>
           <Package size={28} strokeWidth={1.2} />
           <span className="text-xs">Nenhuma entrega vinculada</span>
         </div>
@@ -659,7 +659,7 @@ function EntregasTab({ campaign, canWrite }) {
             const stage = stageMap[d.stage];
             const prio  = priorityMap[d.priority];
             return (
-              <div key={d.id} className="flex items-start gap-3 p-3 rounded-xl border" style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}>
+              <div key={d.id} className="flex items-start gap-3 p-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: stage?.color || "#9CA3AF", marginTop: 4, flexShrink: 0 }} />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{d.title}</div>
@@ -671,7 +671,7 @@ function EntregasTab({ campaign, canWrite }) {
                       </span>
                     )}
                     {d.deadline && (
-                      <span className="text-[10px]" style={{ color: "#9CA3AF" }}>até {formatDateBR(d.deadline)}</span>
+                      <span className="text-[10px]" style={{ color: "var(--text-faint)" }}>até {formatDateBR(d.deadline)}</span>
                     )}
                   </div>
                 </div>
@@ -855,7 +855,7 @@ export function CampaignDetailDrawer({
     >
       <div
         className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-6xl lg:rounded-2xl lg:max-h-[92vh]"
-        style={{ background: "#FFFFFF", boxShadow: "0 24px 64px rgba(32,26,26,0.18)", overflow: "hidden", height: "100%" }}
+        style={{ background: "var(--surface)", boxShadow: "0 24px 64px rgba(32,26,26,0.18)", overflow: "hidden", height: "100%" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Mobile header */}

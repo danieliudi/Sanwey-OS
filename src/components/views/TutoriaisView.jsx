@@ -398,14 +398,14 @@ export function TutoriaisView({ currentUser, onNavigate }) {
                       {step.number}
                     </div>
                     {i < AUTOMATION_GUIDE.steps.length - 1 && (
-                      <div className="w-px flex-1 my-1" style={{ background: "#E5E7EB", minHeight: 24 }} />
+                      <div className="w-px flex-1 my-1" style={{ background: "var(--border)", minHeight: 24 }} />
                     )}
                   </div>
                   <div className="pb-5">
-                    <p className="font-semibold text-sm mb-0.5" style={{ color: NEUTRAL.graphite }}>
+                    <p className="font-semibold text-sm mb-0.5" style={{ color: "var(--text)" }}>
                       {step.title}
                     </p>
-                    <p className="text-sm leading-relaxed" style={{ color: NEUTRAL.slate }}>
+                    <p className="text-sm leading-relaxed" style={{ color: "var(--text-dim)" }}>
                       {step.description}
                     </p>
                   </div>
@@ -416,10 +416,10 @@ export function TutoriaisView({ currentUser, onNavigate }) {
 
           {/* Recipes */}
           <div>
-            <h2 className="font-semibold mb-1" style={{ fontSize: 15, color: NEUTRAL.graphite }}>
+            <h2 className="font-semibold mb-1" style={{ fontSize: 15, color: "var(--text)" }}>
               Receitas prontas
             </h2>
-            <p className="text-xs mb-4" style={{ color: NEUTRAL.slate }}>
+            <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>
               Exemplos de automações que você pode replicar diretamente no seu pipeline.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">

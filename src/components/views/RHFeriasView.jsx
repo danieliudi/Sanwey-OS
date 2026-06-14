@@ -714,8 +714,8 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                 <div
                   key={req.id}
                   style={{
-                    background: "#FFFFFF",
-                    border: "1px solid #E5E7EB",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 12,
                     padding: "14px 16px",
                   }}
@@ -737,7 +737,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                   </div>
 
                   {req.notes && (
-                    <div style={{ fontSize: 11, color: "var(--text-dim)", background: "#F9FAFB", borderRadius: 8, padding: "6px 10px", marginBottom: 10, lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 8, padding: "6px 10px", marginBottom: 10, lineHeight: 1.4 }}>
                       {req.notes}
                     </div>
                   )}
@@ -750,7 +750,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                         style={{
                           flex: 1,
                           background: "#DCFCE7",
-                          color: "#16A34A",
+                          color: "var(--success)",
                           border: "1px solid #BBF7D0",
                           borderRadius: 8,
                           padding: "6px",
@@ -772,7 +772,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
                         style={{
                           flex: 1,
                           background: "#FEE2E2",
-                          color: "#B91C1C",
+                          color: "var(--danger)",
                           border: "1px solid #FECACA",
                           borderRadius: 8,
                           padding: "6px",

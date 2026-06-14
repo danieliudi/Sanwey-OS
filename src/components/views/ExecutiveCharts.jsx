@@ -151,7 +151,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
               <YAxis dataKey="stage" type="category" tick={{ fontSize: 11 }} width={90} />
               <Tooltip />
               <Bar dataKey="count" radius={[0, 6, 6, 0]}>
-                <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: NEUTRAL.graphite }} />
+                <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: "var(--text)" }} />
                 {funnelData.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Bar>
             </BarChart>
@@ -170,7 +170,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
               <YAxis dataKey="company" type="category" tick={{ fontSize: 11 }} width={180} />
               <Tooltip formatter={(v) => formatK(v)} />
               <Bar dataKey="valor" radius={[0, 6, 6, 0]}>
-                <LabelList dataKey="valor" position="right" formatter={(v) => formatK(v)} style={{ fontSize: 10, fill: NEUTRAL.graphite }} />
+                <LabelList dataKey="valor" position="right" formatter={(v) => formatK(v)} style={{ fontSize: 10, fill: "var(--text)" }} />
                 {topLeads.map((d, i) => <Cell key={i} fill={d.fill} />)}
               </Bar>
             </BarChart>
@@ -246,11 +246,11 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
 
 function ChartCard({ title, subtitle, children }) {
   return (
-    <div className="rounded-xl border p-4" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+    <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
       <div className="mb-2">
-        <div className="text-sm font-bold" style={{ color: NEUTRAL.graphite }}>{title}</div>
+        <div className="text-sm font-bold" style={{ color: "var(--text)" }}>{title}</div>
         {subtitle && (
-          <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{subtitle}</div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{subtitle}</div>
         )}
       </div>
       {children}
@@ -260,7 +260,7 @@ function ChartCard({ title, subtitle, children }) {
 
 function EmptyState() {
   return (
-    <div className="flex items-center justify-center py-12 text-xs italic" style={{ color: NEUTRAL.slate }}>
+    <div className="flex items-center justify-center py-12 text-xs italic" style={{ color: "var(--text-dim)" }}>
       Sem dados para esse período.
     </div>
   );
