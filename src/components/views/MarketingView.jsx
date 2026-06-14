@@ -506,7 +506,7 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function MarketingView({ user, users = [] }) {
+export function MarketingView({ user, users = [], evaluateAutomations, pushNotification }) {
   const {
     campaigns,
     loading,
@@ -518,6 +518,21 @@ export function MarketingView({ user, users = [] }) {
     toggleStar,
     updateChecklist,
   } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
+
+  const fireAutomations = useCallback((campaign, prev, eventType) => {
+    if (!evaluateAutomations) return;
+    const { patches: _p, notifications } = evaluateAutomations(campaign, prev, eventType, "marketing");
+    notifications.forEach(n => {
+      if (pushNotification) {
+        pushNotification({
+          type: "automation",
+          title: `Automação: ${n.ruleName}`,
+          body: n.message,
+          campaignId: campaign.id,
+        });
+      }
+    });
+  }, [evaluateAutomations, pushNotification]);
 
   const {
     events:        personalEvents,
@@ -581,14 +596,23 @@ export function MarketingView({ user, users = [] }) {
   const handleDragLeave = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }, []);
   const handleDragEnd   = useCallback(() => { setDraggedCampaign(null); setDragOverStage(null); }, []);
 
+  const handleStageChange = useCallback(async (campaignId, toStage) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    const prev = campaign ? { ...campaign } : null;
+    await changeStage(campaignId, toStage);
+    if (campaign) {
+      fireAutomations({ ...campaign, stage: toStage }, prev, "stage_change");
+    }
+  }, [campaigns, changeStage, fireAutomations]);
+
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedCampaign || !canWrite) return;
     if (draggedCampaign.stage !== toStage) {
-      await changeStage(draggedCampaign.id, toStage);
+      await handleStageChange(draggedCampaign.id, toStage);
     }
     setDraggedCampaign(null);
     setDragOverStage(null);
-  }, [draggedCampaign, canWrite, changeStage]);
+  }, [draggedCampaign, canWrite, handleStageChange]);
 
   const handleUpdate = useCallback(async (id, patch) => {
     if (isAgencia && Object.keys(patch).length === 1 && "approvalChecklist" in patch) {
@@ -597,9 +621,15 @@ export function MarketingView({ user, users = [] }) {
       return;
     }
     if (!canWrite) return;
+    const current = campaigns.find(c => c.id === id);
     await updateCampaign(id, patch);
     if (selected?.id === id) setSelected(prev => ({ ...prev, ...patch }));
-  }, [canWrite, isAgencia, updateCampaign, updateChecklist, selected]);
+    if (current && patch.stage && patch.stage !== current.stage) {
+      fireAutomations({ ...current, ...patch }, current, "stage_change");
+    } else if (current && patch.budget !== undefined) {
+      fireAutomations({ ...current, ...patch }, current, "field_value");
+    }
+  }, [canWrite, isAgencia, updateCampaign, updateChecklist, selected, campaigns, fireAutomations]);
 
   const handleDelete = useCallback(async (id) => {
     if (!canWrite) return;
@@ -607,8 +637,12 @@ export function MarketingView({ user, users = [] }) {
   }, [canWrite, deleteCampaign]);
 
   const handleQuickAdd = useCallback(async (campaign) => {
-    await createCampaign(campaign);
-  }, [createCampaign]);
+    const created = await createCampaign(campaign);
+    if (created) {
+      fireAutomations(created, null, "lead_created");
+      fireAutomations(created, null, "field_value");
+    }
+  }, [createCampaign, fireAutomations]);
 
   const syncSelected = useMemo(() => {
     if (!selected) return null;
@@ -776,7 +810,7 @@ export function MarketingView({ user, users = [] }) {
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                           stages={MARKETING_STAGES}
-                          onMoveToStage={changeStage}
+                          onMoveToStage={handleStageChange}
                         />
                       ))
                     )}
@@ -905,7 +939,7 @@ export function MarketingView({ user, users = [] }) {
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
                             stages={MARKETING_STAGES}
-                            onMoveToStage={changeStage}
+                            onMoveToStage={handleStageChange}
                           />
                         ))
                       )}

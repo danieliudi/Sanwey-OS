@@ -792,7 +792,7 @@ export default function App() {
           } />
           <Route path={ROUTES.marketing} element={
             (isMarketingUser || isAgencia)
-              ? <MarketingView user={currentUser} users={users} />
+              ? <MarketingView user={currentUser} users={users} evaluateAutomations={evaluateAutomations} pushNotification={pushNotification} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["marketing-entregas"]} element={
