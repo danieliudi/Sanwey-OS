@@ -47,7 +47,7 @@ const ROLE_LABEL = {
   gerente_rh:        "Gerente de RH",
 };
 
-export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout, mobileOpen, onMobileClose }) {
+export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout, mobileOpen, onMobileClose, onNewLead }) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(loadCollapsed);
 
@@ -130,7 +130,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         {!["agencia", "rh", "gerente_rh"].includes(currentUser?.role) && (
           <div style={{ padding: "16px 16px 8px" }}>
             <button
-              onClick={() => handleNavClick("crm")}
+              onClick={() => { if (onNewLead) { onNewLead(); if (isMobile) onMobileClose?.(); } else handleNavClick("crm"); }}
               style={{
                 width: "100%",
                 height: 44,

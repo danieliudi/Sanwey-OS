@@ -320,10 +320,47 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
 
   useEffect(() => { loadRequests(); }, [loadRequests]);
 
+  // ── Email helper ────────────────────────────────────────────────────────────
+  const sendRhEmail = useCallback(async (type, req, extraVars = {}) => {
+    try {
+      // Fetch employee email from profiles if not already present
+      let toEmail = req.profiles?.email || null;
+      if (!toEmail && req.user_id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", req.user_id)
+          .single();
+        toEmail = profile?.email || null;
+      }
+      if (!toEmail) return; // skip silently — no email available
+
+      await supabase.functions.invoke("rh-send-email", {
+        body: {
+          type,
+          to: toEmail,
+          variables: {
+            EMPLOYEE_NAME: req.profiles?.name || "",
+            LEAVE_TYPE:    leaveTypeLabel(req.type),
+            START_DATE:    fmt(req.start_date),
+            END_DATE:      fmt(req.end_date),
+            DAYS_COUNT:    String(calcDias(req.start_date, req.end_date)),
+            APP_URL:       window.location.origin,
+            ...extraVars,
+          },
+        },
+      });
+    } catch (err) {
+      // Non-blocking — log but don't surface to user
+      console.warn("[RHFeriasView] sendRhEmail error:", err);
+    }
+  }, []);
+
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleApprove = async (id) => {
     setActionLoading(id + "_aprovar");
     try {
+      const req = requests.find((r) => r.id === id);
       const { error } = await supabase
         .from("rh_ferias")
         .update({
@@ -340,6 +377,11 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
               : r
           )
         );
+        if (req) {
+          sendRhEmail("ferias_aprovadas", req, {
+            APPROVED_BY: currentUser?.name || currentUser?.email || "",
+          });
+        }
       }
     } finally {
       setActionLoading(null);
@@ -349,6 +391,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
   const handleReject = async (id) => {
     setActionLoading(id + "_recusar");
     try {
+      const req = requests.find((r) => r.id === id);
       const { error } = await supabase
         .from("rh_ferias")
         .update({ status: "recusado" })
@@ -357,6 +400,12 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
         setRequests((prev) =>
           prev.map((r) => (r.id === id ? { ...r, status: "recusado" } : r))
         );
+        if (req) {
+          sendRhEmail("ferias_rejeitadas", req, {
+            REASON:       req.notes || "Não informado",
+            MANAGER_NAME: currentUser?.name || currentUser?.email || "",
+          });
+        }
       }
     } finally {
       setActionLoading(null);

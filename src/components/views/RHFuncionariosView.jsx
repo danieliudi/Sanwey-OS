@@ -15,6 +15,7 @@ import {
   RH_CONTRACT_TYPES,
   RH_EMPLOYEE_STATUSES,
 } from "../../constants/rh-config";
+import { supabase } from "../../lib/supabase";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -120,6 +121,9 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
   const handleSave = async () => {
     setSaving(true);
     setError(null);
+    // Detect if admission_date is being set for the first time
+    const hadAdmissionDate = !!user.admission_date;
+    const nowHasAdmissionDate = !!form.admission_date;
     try {
       await onUpdateUser(user.id, {
         job_title:       form.job_title       || null,
@@ -130,6 +134,30 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
         salary:          form.salary !== "" ? parseFloat(form.salary) : null,
       });
       setEditing(false);
+
+      // Send welcome email only when admission_date is set for the first time
+      if (!hadAdmissionDate && nowHasAdmissionDate && user.email) {
+        try {
+          const startDate = new Date(form.admission_date).toLocaleDateString("pt-BR");
+          await supabase.functions.invoke("rh-send-email", {
+            body: {
+              type: "welcome",
+              to: user.email,
+              variables: {
+                EMPLOYEE_NAME: user.name || user.email,
+                JOB_TITLE:     form.job_title     || "—",
+                DEPARTMENT:    form.department    || "—",
+                MANAGER_NAME:  "RH Grupo Sanwey",
+                START_DATE:    startDate,
+                APP_URL:       window.location.origin,
+              },
+            },
+          });
+        } catch (emailErr) {
+          // Non-blocking — log but don't surface to user
+          console.warn("[RHFuncionariosView] welcome email error:", emailErr);
+        }
+      }
     } catch (err) {
       setError(err?.message || "Erro ao salvar.");
     } finally {

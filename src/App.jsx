@@ -157,6 +157,7 @@ export default function App() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [selectedSignal, setSelectedSignal] = useState(null);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+  const [crmAutoCreate, setCrmAutoCreate] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [clientImportOpen, setClientImportOpen] = useState(false);
 
@@ -282,24 +283,36 @@ export default function App() {
   const handleStageChange = useCallback(async (id, stage) => {
     const prev = leads.find(l => l.id === id);
     await changeStage(id, stage);
-    // Run automation rules for stage_change event (non-blocking)
     if (prev && prev.stage !== stage) {
       const updated = { ...prev, stage, stageChangedAt: new Date().toISOString() };
-      const { patches } = evaluateAutomations(updated, prev, "stage_change");
+      const { patches, notifications: autoNotifs } = evaluateAutomations(updated, prev, "stage_change");
       for (const p of patches) {
         await updateLeadRemote(p.leadId, p.patch).catch(() => {});
       }
+      // Notify on terminal stage changes
+      if (stage === "ganho") {
+        pushNotification({ type: "lead_won", title: "Negócio fechado!", body: `${prev.company} foi marcado como ganho.`, leadId: id, companyId: prev.companyId });
+      } else if (stage === "perdido") {
+        pushNotification({ type: "lead_lost", title: "Lead marcado como perdido", body: `${prev.company} foi movido para Perdido.`, leadId: id, companyId: prev.companyId });
+      }
+      // Notify for each automation that fired
+      for (const n of (autoNotifs || [])) {
+        pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: id, companyId: prev.companyId });
+      }
     }
-  }, [changeStage, leads, evaluateAutomations, updateLeadRemote]);
+  }, [changeStage, leads, evaluateAutomations, updateLeadRemote, pushNotification]);
 
   // Wrapped addLead that fires lead_created automations after creation
   const handleAddLead = useCallback(async (lead) => {
     await addLead(lead);
-    const { patches } = evaluateAutomations(lead, null, "lead_created");
+    const { patches, notifications: autoNotifs } = evaluateAutomations(lead, null, "lead_created");
     for (const p of patches) {
       await updateLeadRemote(p.leadId, p.patch).catch(() => {});
     }
-  }, [addLead, evaluateAutomations, updateLeadRemote]);
+    for (const n of (autoNotifs || [])) {
+      pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: lead.id, companyId: lead.companyId });
+    }
+  }, [addLead, evaluateAutomations, updateLeadRemote, pushNotification]);
 
   const closeDrawer = useCallback(() => setSelectedLead(null), []);
 
@@ -528,6 +541,7 @@ export default function App() {
         onLogout={handleLogout}
         mobileOpen={sidebarMobileOpen}
         onMobileClose={() => setSidebarMobileOpen(false)}
+        onNewLead={() => { setSection("crm"); navigate(ROUTES.crm); setCrmAutoCreate(true); }}
       />
 
       <div className="flex flex-col min-w-0 lg:ml-[288px]" style={{ minHeight: "100vh", overflowX: "clip" }}>
@@ -654,6 +668,8 @@ export default function App() {
               pipelineTransitions={pipelineTransitions}
               clients={clients}
               onCreateClient={createClient}
+              autoOpenCreate={crmAutoCreate}
+              onAutoOpenHandled={() => setCrmAutoCreate(false)}
             />
           } />
           <Route path={ROUTES.agents} element={

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Bot, Pencil } from "lucide-react";
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
 import { exportLeadsCSV } from "../../utils/export-leads";
@@ -451,7 +451,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled }) {
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
   const isConsultor = user.role === "consultor";
@@ -490,6 +490,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
 
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
   const accent = companyData?.primary || NEUTRAL.graphite;
+
+  useEffect(() => {
+    if (!autoOpenCreate) return;
+    const firstStage = stages.find(s => !s.terminal);
+    if (firstStage) setCreateModalStage({ stageId: firstStage.id, stage: firstStage, companyId: isGroupView ? firstValidCompany : activeCompany });
+    onAutoOpenHandled?.();
+  }, [autoOpenCreate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const companyScopedLeads = useMemo(() => {
     let s = leads;
