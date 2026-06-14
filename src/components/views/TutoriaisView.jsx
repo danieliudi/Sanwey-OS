@@ -432,17 +432,17 @@ export function TutoriaisView({ currentUser, onNavigate }) {
           {/* CTA */}
           <div
             className="rounded-xl border p-5 flex items-center justify-between gap-4"
-            style={{ background: "#fef1f0", borderColor: "#E5E7EB" }}
+            style={{ background: "#fef1f0", borderColor: "var(--border)" }}
           >
             <div>
-              <p className="font-semibold text-sm mb-0.5" style={{ color: NEUTRAL.graphite }}>
+              <p className="font-semibold text-sm mb-0.5" style={{ color: "var(--text)" }}>
                 Pronto para criar sua primeira automação?
               </p>
-              <p className="text-xs" style={{ color: NEUTRAL.slate }}>
+              <p className="text-xs" style={{ color: "var(--text-dim)" }}>
                 Acesse o menu Automações para começar. Disponível para Gerentes e Admins.
               </p>
             </div>
-            <ChevronRight size={18} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
+            <ChevronRight size={18} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
           </div>
         </div>
       )}
@@ -452,16 +452,16 @@ export function TutoriaisView({ currentUser, onNavigate }) {
         <div className="space-y-5">
           <div
             className="rounded-xl border p-5"
-            style={{ background: "#fef1f0", borderColor: "#E5E7EB" }}
+            style={{ background: "#fef1f0", borderColor: "var(--border)" }}
           >
             <div className="flex items-start gap-3">
-              <Bot size={18} style={{ color: NEUTRAL.red, flexShrink: 0, marginTop: 2 }} />
+              <Bot size={18} style={{ color: "var(--color-industria)", flexShrink: 0, marginTop: 2 }} />
               <div>
-                <p className="text-sm font-semibold mb-1" style={{ color: NEUTRAL.graphite }}>
+                <p className="text-sm font-semibold mb-1" style={{ color: "var(--text)" }}>
                   Como usar o assistente de IA
                 </p>
-                <p className="text-sm leading-relaxed" style={{ color: NEUTRAL.slate }}>
-                  Na tela de Negócios, clique em <strong style={{ color: NEUTRAL.graphite }}>"Perguntar à IA"</strong> para abrir o chat.
+                <p className="text-sm leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                  Na tela de Negócios, clique em <strong style={{ color: "var(--text)" }}>"Perguntar à IA"</strong> para abrir o chat.
                   O assistente lê seu pipeline em tempo real e responde em linguagem natural.
                   Copie qualquer pergunta abaixo e cole no chat para começar.
                 </p>

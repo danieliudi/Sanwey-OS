@@ -65,7 +65,7 @@ function stageInfo(stageId) {
   return (
     RH_RECRUITMENT_STAGES.find((s) => s.id === stageId) || {
       name: stageId || "—",
-      color: NEUTRAL.slate,
+      color: "var(--text-dim)",
     }
   );
 }
@@ -77,7 +77,7 @@ function Avatar({ name, bg, size = 34 }) {
         width: size,
         height: size,
         borderRadius: "50%",
-        background: bg || NEUTRAL.red,
+        background: bg || "var(--color-industria)",
         color: "#FFF",
         display: "flex",
         alignItems: "center",
@@ -102,7 +102,7 @@ function SectionHeader({ title, action, onAction }) {
         justifyContent: "space-between",
         paddingBottom: 10,
         marginBottom: 14,
-        borderBottom: `1px solid ${NEUTRAL.sombra}`,
+        borderBottom: `1px solid ${"var(--border)"}`,
       }}
     >
       <span
@@ -110,7 +110,7 @@ function SectionHeader({ title, action, onAction }) {
           fontSize: 11,
           fontWeight: 700,
           textTransform: "uppercase",
-          color: NEUTRAL.slate,
+          color: "var(--text-dim)",
           letterSpacing: "0.08em",
         }}
       >
@@ -123,7 +123,7 @@ function SectionHeader({ title, action, onAction }) {
             background: "none",
             border: "none",
             cursor: "pointer",
-            color: NEUTRAL.red,
+            color: "var(--color-industria)",
             fontSize: 12,
             fontWeight: 600,
             display: "flex",
@@ -145,7 +145,7 @@ function EmptyState({ text }) {
     <div
       style={{
         textAlign: "center",
-        color: NEUTRAL.slate,
+        color: "var(--text-dim)",
         fontSize: 13,
         padding: "24px 0",
       }}
@@ -220,8 +220,8 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
     {
       label: "Total de Funcionários",
       value: totalFuncionarios,
-      icon: <Users size={20} color={NEUTRAL.slate} />,
-      accent: NEUTRAL.graphite,
+      icon: <Users size={20} color={"var(--text-dim)"} />,
+      accent: "var(--text)",
     },
     {
       label: "Ativos",
@@ -245,13 +245,13 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
 
   const card = {
     background: "#FFF",
-    border: `1px solid ${NEUTRAL.sombra}`,
+    border: `1px solid ${"var(--border)"}`,
     borderRadius: 10,
     boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: NEUTRAL.warmWhite }}>
+    <div style={{ minHeight: "100vh", background: "var(--surface)" }}>
       <div
         style={{
           padding: "24px 32px",
@@ -274,7 +274,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
             style={{
               fontSize: 22,
               fontWeight: 800,
-              color: NEUTRAL.graphite,
+              color: "var(--text)",
               margin: 0,
               letterSpacing: "-0.01em",
             }}
@@ -284,7 +284,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
           <p
             style={{
               fontSize: 13,
-              color: NEUTRAL.slate,
+              color: "var(--text-dim)",
               margin: "4px 0 0",
               textTransform: "capitalize",
             }}
@@ -335,7 +335,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
               >
                 {sc.value}
               </span>
-              <span style={{ fontSize: 13, color: NEUTRAL.slate, fontWeight: 500 }}>
+              <span style={{ fontSize: 13, color: "var(--text-dim)", fontWeight: 500 }}>
                 {sc.label}
               </span>
             </div>
@@ -358,7 +358,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
               onAction={() => onNavigate?.("rh-recrutamento")}
             />
             {loadingVagas ? (
-              <div style={{ color: NEUTRAL.slate, fontSize: 13 }}>Carregando...</div>
+              <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
             ) : vagas.length === 0 ? (
               <EmptyState text="Nenhuma vaga em aberto" />
             ) : (
@@ -368,9 +368,9 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
-                    background: NEUTRAL.redTint,
-                    color: NEUTRAL.red,
-                    border: `1px solid ${NEUTRAL.red}33`,
+                    background: "var(--color-industria)"Tint,
+                    color: "var(--color-industria)",
+                    border: `1px solid ${"var(--color-industria)"}33`,
                     borderRadius: 99,
                     padding: "2px 10px",
                     fontSize: 12,
@@ -399,7 +399,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                             style={{
                               fontSize: 13,
                               fontWeight: 600,
-                              color: NEUTRAL.graphite,
+                              color: "var(--text)",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
@@ -410,7 +410,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                           <div
                             style={{
                               fontSize: 11,
-                              color: NEUTRAL.slate,
+                              color: "var(--text-dim)",
                               marginTop: 1,
                             }}
                           >
@@ -457,7 +457,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                         style={{
                           fontSize: 13,
                           fontWeight: 600,
-                          color: NEUTRAL.graphite,
+                          color: "var(--text)",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -468,7 +468,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                       <div
                         style={{
                           fontSize: 11,
-                          color: NEUTRAL.slate,
+                          color: "var(--text-dim)",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -480,7 +480,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                     <div
                       style={{
                         fontSize: 11,
-                        color: NEUTRAL.slate,
+                        color: "var(--text-dim)",
                         flexShrink: 0,
                       }}
                     >
@@ -499,7 +499,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
               onAction={() => onNavigate?.("rh-ferias")}
             />
             {loadingFerias ? (
-              <div style={{ color: NEUTRAL.slate, fontSize: 13 }}>Carregando...</div>
+              <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
             ) : ferias.length === 0 ? (
               <EmptyState text="Nenhuma solicitação pendente" />
             ) : (
@@ -530,14 +530,14 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                           style={{
                             fontSize: 13,
                             fontWeight: 600,
-                            color: NEUTRAL.graphite,
+                            color: "var(--text)",
                           }}
                         >
                           {employee?.name || "—"}
                         </span>
                       </div>
                       <div
-                        style={{ fontSize: 11, color: NEUTRAL.slate, lineHeight: 1.5 }}
+                        style={{ fontSize: 11, color: "var(--text-dim)", lineHeight: 1.5 }}
                       >
                         {leaveTypeLabel(req.type)} · {fmt(req.start_date)} →{" "}
                         {fmt(req.end_date)}
@@ -594,7 +594,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                         style={{
                           fontSize: 12,
                           fontWeight: 500,
-                          color: NEUTRAL.graphite,
+                          color: "var(--text)",
                         }}
                       >
                         {dept}
@@ -602,19 +602,19 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                       <span
                         style={{
                           fontSize: 12,
-                          color: NEUTRAL.slate,
+                          color: "var(--text-dim)",
                           display: "flex",
                           gap: 6,
                         }}
                       >
-                        <strong style={{ color: NEUTRAL.graphite }}>{count}</strong>
+                        <strong style={{ color: "var(--text)" }}>{count}</strong>
                         <span>({totalPct}%)</span>
                       </span>
                     </div>
                     <div
                       style={{
                         height: 6,
-                        background: NEUTRAL.sombra,
+                        background: "var(--border)",
                         borderRadius: 99,
                         overflow: "hidden",
                       }}
@@ -623,7 +623,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                         style={{
                           height: "100%",
                           width: `${pct}%`,
-                          background: NEUTRAL.red,
+                          background: "var(--color-industria)",
                           borderRadius: 99,
                           transition: "width 0.4s ease",
                         }}

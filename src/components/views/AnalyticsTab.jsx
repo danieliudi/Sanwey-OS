@@ -112,13 +112,13 @@ const CLASS_COLORS = {
   "Classe C": "#EAB308",
   "Classe D": "#9CA3AF",
   "Classe X": "#B91C1C",
-  "Classe —": "#E5E7EB",
+  "Classe —": "var(--border)",
 };
 
 function winRateColor(rate) {
-  if (rate >= 50) return NEUTRAL.success;
-  if (rate >= 25) return NEUTRAL.amber;
-  return NEUTRAL.red;
+  if (rate >= 50) return "var(--color-resibag)";
+  if (rate >= 25) return "var(--amber)";
+  return "var(--color-industria)";
 }
 
 // ── AnalyticsTab ──────────────────────────────────────────────────────────────
@@ -274,13 +274,13 @@ export function AnalyticsTab({ allLeads, period, users }) {
   // ─────────────────────────────────────────────────────────────────────────
 
   const selFilter = {
-    borderColor: NEUTRAL.sombra,
-    background: "#FFFFFF",
-    color: NEUTRAL.graphite,
+    borderColor: "var(--border)",
+    background: "var(--surface)",
+    color: "var(--text)",
     fontSize: 12,
     padding: "6px 10px",
     borderRadius: 3,
-    border: `1px solid ${NEUTRAL.sombra}`,
+    border: `1px solid var(--border)`,
     outline: "none",
     cursor: "pointer",
   };
@@ -306,7 +306,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
 
         <div className="flex-1 min-w-0" />
 
-        <span className="text-xs" style={{ color: NEUTRAL.slate }}>
+        <span className="text-xs" style={{ color: "var(--text-dim)" }}>
           {currentLeads.length} lead{currentLeads.length !== 1 ? "s" : ""}
         </span>
 

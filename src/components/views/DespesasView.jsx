@@ -182,9 +182,9 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
                     onClick={() => toggleCompany(id)}
                     className="px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors"
                     style={{
-                      borderColor: sel ? co.primary : "#E5E7EB",
-                      background:  sel ? co.primary + "22" : "#FFF",
-                      color:       sel ? co.primary : NEUTRAL.slate,
+                      borderColor: sel ? co.primary : "var(--border)",
+                      background:  sel ? co.primary + "22" : "var(--surface)",
+                      color:       sel ? co.primary : "var(--text-dim)",
                       cursor:      "pointer",
                     }}
                   >
@@ -201,13 +201,13 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
             onChange={e => set("notes", e.target.value)}
             rows={2}
             className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-            style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
             onFocus={e => { e.target.style.borderColor = "#1E4D8C"; }}
-            onBlur={e => { e.target.style.borderColor = "#D1D5DB"; }}
+            onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
           />
 
           {error && (
-            <div className="text-[12px] rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+            <div className="text-[12px] rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "var(--danger)" }}>
               {error}
             </div>
           )}
@@ -225,7 +225,7 @@ function ExpenseModal({ initial, users, onSave, onClose, currentUser }) {
               type="button"
               onClick={onClose}
               className="px-4 text-sm rounded-xl border"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFF", cursor: "pointer" }}
+              style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
             >
               Cancelar
             </button>

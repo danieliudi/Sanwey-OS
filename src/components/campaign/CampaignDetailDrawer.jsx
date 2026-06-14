@@ -660,7 +660,7 @@ function EntregasTab({ campaign, canWrite }) {
             const prio  = priorityMap[d.priority];
             return (
               <div key={d.id} className="flex items-start gap-3 p-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: stage?.color || "#9CA3AF", marginTop: 4, flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: stage?.color || "var(--text-faint)", marginTop: 4, flexShrink: 0 }} />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{d.title}</div>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -859,7 +859,7 @@ export function CampaignDetailDrawer({
         onClick={e => e.stopPropagation()}
       >
         {/* Mobile header */}
-        <div className="lg:hidden sticky top-0 z-10 flex flex-col shrink-0" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
+        <div className="lg:hidden sticky top-0 z-10 flex flex-col shrink-0" style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
           <div className="flex items-center justify-between px-4 py-3">
             <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
               <X size={20} />
@@ -872,13 +872,13 @@ export function CampaignDetailDrawer({
               <button
                 onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
                 className="p-1.5 rounded-lg"
-                style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "#9CA3AF" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "var(--text-faint)" }}
               >
                 <Star size={16} fill={campaign.starred ? "#F59E0B" : "none"} />
               </button>
             )}
           </div>
-          <div className="flex border-t" style={{ borderColor: "#E5E7EB" }}>
+          <div className="flex border-t" style={{ borderColor: "var(--border)" }}>
             {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
               <button
                 key={t.id}
@@ -895,7 +895,7 @@ export function CampaignDetailDrawer({
         {/* Desktop header */}
         <div
           className="hidden lg:flex sticky top-0 z-10 px-5 py-3.5 border-b items-center justify-between shrink-0"
-          style={{ background: "rgba(255,255,255,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
+          style={{ background: "rgba(255,255,255,0.97)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}
         >
           <div className="flex items-center gap-2 flex-wrap">
             {stage && (
@@ -906,7 +906,7 @@ export function CampaignDetailDrawer({
             )}
             {get("channel") && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: "#F3F4F6", color: "var(--text)", border: "1px solid #E5E7EB" }}>
+                style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}>
                 {get("channel")}
               </span>
             )}
@@ -924,7 +924,7 @@ export function CampaignDetailDrawer({
                 title="Excluir campanha"
                 className="p-1.5 rounded-lg transition-colors cursor-pointer"
                 style={{ color: "var(--text-dim)", background: "none", border: "none" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "var(--danger)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
               >
                 <Trash2 size={16} />
@@ -934,7 +934,7 @@ export function CampaignDetailDrawer({
               <button
                 onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
                 className="p-1.5 rounded-lg"
-                style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "#9CA3AF" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "var(--text-faint)" }}
               >
                 <Star size={16} fill={campaign.starred ? "#F59E0B" : "none"} />
               </button>
@@ -954,19 +954,19 @@ export function CampaignDetailDrawer({
         {/* Confirm delete bar */}
         {confirmDelete && canWrite && !isAgencia && (
           <div className="shrink-0 px-5 py-2.5 flex items-center gap-3 border-b" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>
-            <span className="text-xs font-semibold flex-1" style={{ color: "#B91C1C" }}>Confirmar exclusão desta campanha?</span>
+            <span className="text-xs font-semibold flex-1" style={{ color: "var(--danger)" }}>Confirmar exclusão desta campanha?</span>
             <button
               onClick={handleDelete}
               disabled={deleting}
               className="px-3 py-1.5 text-xs font-semibold rounded-xl"
-              style={{ background: "#DC2626", color: "#FFF", border: "none", cursor: "pointer" }}
+              style={{ background: "var(--danger)", color: "#FFF", border: "none", cursor: "pointer" }}
             >
               {deleting ? "Excluindo…" : "Sim, excluir"}
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
               className="px-3 py-1.5 text-xs rounded-xl border"
-              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFF", cursor: "pointer" }}
+              style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
             >
               Cancelar
             </button>
@@ -979,7 +979,7 @@ export function CampaignDetailDrawer({
           {/* ── LEFT sidebar ── */}
           <aside
             className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:flex lg:flex-col" : ""}`}
-            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+            style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
             {/* Campaign name */}
             <div className="flex items-start justify-between gap-3">
@@ -1060,7 +1060,7 @@ export function CampaignDetailDrawer({
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium"
-                style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", color: "#1E4D8C", textDecoration: "none" }}
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "#1E4D8C", textDecoration: "none" }}
               >
                 <FolderOpen size={13} />
                 Pasta no Google Drive
@@ -1069,7 +1069,7 @@ export function CampaignDetailDrawer({
             )}
 
             {/* ── Pill SideTabs ── */}
-            <div className="pt-1 border-t" style={{ borderColor: "#E5E7EB" }}>
+            <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
               <SideTabs activeId={sideTab} onChange={setSideTab} />
             </div>
 
@@ -1110,7 +1110,7 @@ export function CampaignDetailDrawer({
                                   set("companyIds", selected ? cur.filter(c => c !== id) : [...cur, id]);
                                 }}
                                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
-                                style={{ borderColor: selected ? co.primary : "#E5E7EB", background: selected ? co.primary + "22" : "#FFFFFF", color: selected ? co.primary : "var(--text-dim)", cursor: "pointer" }}
+                                style={{ borderColor: selected ? co.primary : "var(--border)", background: selected ? co.primary + "22" : "var(--surface)", color: selected ? co.primary : "var(--text-dim)", cursor: "pointer" }}
                               >
                                 {selected && <Check size={10} strokeWidth={3} />}
                                 {co.short}
@@ -1217,7 +1217,7 @@ export function CampaignDetailDrawer({
                             {get("driveFolderUrl") && (
                               <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer"
                                 className="flex items-center px-2.5 rounded-xl text-xs"
-                                style={{ background: "#F3F4F6", color: "var(--text-dim)", border: "1px solid #E5E7EB", textDecoration: "none" }}>
+                                style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)", textDecoration: "none" }}>
                                 <ExternalLink size={12} />
                               </a>
                             )}
@@ -1233,7 +1233,7 @@ export function CampaignDetailDrawer({
           {/* ── RIGHT sidebar ── */}
           <aside
             className="hidden lg:flex lg:flex-col w-full lg:w-[220px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4"
-            style={{ borderColor: "#E5E7EB", background: "#FAFAFA" }}
+            style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
             <div>
               <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
@@ -1256,9 +1256,9 @@ export function CampaignDetailDrawer({
                   <button
                     onClick={() => canWrite && moveToStage(stageNav.prev.id)}
                     className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                    style={{ background: "#FFFFFF", color: "var(--text)", border: "1px solid #E5E7EB" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#F3F4F6"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+                    style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
                   >
                     <ArrowLeft size={13} />
                     <span>{stageNav.prev.name}</span>
@@ -1268,7 +1268,7 @@ export function CampaignDetailDrawer({
             </div>
 
             {/* AI move link */}
-            <div className="border-t pt-3 space-y-2" style={{ borderColor: "#E5E7EB" }}>
+            <div className="border-t pt-3 space-y-2" style={{ borderColor: "var(--border)" }}>
               <button
                 onClick={() => setSideTab("ia")}
                 className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
