@@ -362,7 +362,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
         {/* Desktop header */}
         <div
           className="hidden lg:flex sticky top-0 z-10 px-5 py-3.5 border-b items-center justify-between"
-          style={{ background: "rgba(255,248,247,0.97)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}
+          style={{ background: "var(--surface)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}
         >
           <div className="flex items-center gap-2">
             <CompanyTag companyId={lead.companyId} />

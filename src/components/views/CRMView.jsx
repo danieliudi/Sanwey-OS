@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Upload, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star } from "lucide-react";
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
 import { exportLeadsCSV } from "../../utils/export-leads";
-import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { Select } from "../ui/Select";
@@ -489,7 +489,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   ), [allStages, visibleStages]);
 
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
-  const accent = companyData?.primary || NEUTRAL.graphite;
+  const accent = companyData?.primary || "#37352F";
 
   useEffect(() => {
     if (!autoOpenCreate) return;
@@ -1208,7 +1208,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <span style={{
                         width: 24, height: 24, borderRadius: "50%",
-                        background: owner.avatarBg || NEUTRAL.graphite,
+                        background: owner.avatarBg || "#37352F",
                         color: "#FFF", fontSize: 10, fontWeight: 700,
                         display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                       }}>
