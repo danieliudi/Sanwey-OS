@@ -9,6 +9,7 @@ import {
   X,
   MessageSquare,
   ArrowRight,
+  UserPlus,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import {
@@ -328,7 +329,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
 
 // ── Candidato Drawer ──────────────────────────────────────────────────────────
 
-function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote, onRatingChange, onClose }) {
+function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote, onRatingChange, onClose, onConvertToEmployee }) {
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
@@ -456,6 +457,47 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Convert to employee — only when aprovado */}
+          {canWrite && candidato.stage === "aprovado" && onConvertToEmployee && (
+            <div style={{
+              background: "#F0FDF4",
+              border: "1px solid #BBF7D0",
+              borderRadius: 12,
+              padding: "14px 16px",
+              marginBottom: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}>
+              <UserPlus size={20} style={{ color: "#16A34A", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#15803D" }}>Candidato aprovado!</div>
+                <div style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
+                  Converta para funcionário e preencha os dados de admissão.
+                </div>
+              </div>
+              <button
+                onClick={() => { onConvertToEmployee(candidato); onClose(); }}
+                style={{
+                  background: "#16A34A",
+                  color: "#FFF",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "6px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#15803D"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#16A34A"; }}
+              >
+                Converter
+              </button>
             </div>
           )}
 
@@ -651,7 +693,7 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
 
 // ── Main View ─────────────────────────────────────────────────────────────────
 
-export function RHRecrutamentoView({ user, canWrite }) {
+export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
   const [vagas, setVagas]                   = useState([]);
   const [candidatos, setCandidatos]         = useState([]);
   const [loading, setLoading]               = useState(true);
@@ -885,6 +927,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           onAddNote={handleAddNote}
           onRatingChange={handleRatingChange}
           onClose={() => setSelectedCandidato(null)}
+          onConvertToEmployee={onConvertToEmployee}
         />
       )}
     </div>
