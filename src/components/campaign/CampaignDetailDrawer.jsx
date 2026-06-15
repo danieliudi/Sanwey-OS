@@ -684,6 +684,269 @@ function EntregasTab({ campaign, canWrite }) {
   );
 }
 
+// ── Stage-specific field helpers ─────────────────────────────────────────────
+
+function UserPickerField({ label, required, value, onChange, users, disabled }) {
+  const selectedUser = users.find(u => u.id === value);
+  return (
+    <div>
+      <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+        {required && <span style={{ color: "var(--accent)" }}>* </span>}{label}
+      </div>
+      {selectedUser ? (
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border" style={{ background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text)" }}>
+            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0" style={{ background: selectedUser.avatarBg || "var(--accent)" }}>
+              {selectedUser.initials}
+            </div>
+            {selectedUser.name}
+            {!disabled && (
+              <button onClick={() => onChange(null)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 2, color: "var(--text-faint)", display: "flex" }}>
+                <X size={11} />
+              </button>
+            )}
+          </div>
+          {!disabled && (
+            <button onClick={() => onChange(null)} className="text-xs" style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+              Alterar
+            </button>
+          )}
+        </div>
+      ) : (
+        !disabled && (
+          <select
+            value=""
+            onChange={e => e.target.value && onChange(e.target.value)}
+            className="text-xs rounded-lg border outline-none w-full py-1.5 px-2"
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
+          >
+            <option value="">+ Adicionar responsável</option>
+            {users.filter(u => ["marketing","gerente_marketing","admin","gerente"].includes(u.role)).map(u => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        )
+      )}
+    </div>
+  );
+}
+
+function BriefingFields({ getCf, setCf, users, disabled, onOpenAttachments }) {
+  const statuses = [
+    { value: "em_andamento", label: "Em andamento" },
+    { value: "concluido",    label: "Concluído" },
+    { value: "pendente",     label: "Pendente" },
+  ];
+  return (
+    <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
+      <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+        Planejamento
+      </div>
+
+      <UserPickerField
+        label="Responsável pelo Planejamento"
+        required
+        value={getCf("briefing_owner")}
+        onChange={v => setCf("briefing_owner", v)}
+        users={users}
+        disabled={disabled}
+      />
+
+      <div>
+        <div className="text-xs font-semibold mb-2" style={{ color: "var(--text)" }}>
+          <span style={{ color: "var(--accent)" }}>* </span>Status do Planejamento
+        </div>
+        <div className="text-xs mb-2" style={{ color: "var(--text-faint)" }}>Informe o status atual do planejamento.</div>
+        <div className="space-y-1.5">
+          {statuses.map(s => (
+            <label key={s.value} className="flex items-center gap-2 cursor-pointer" style={{ opacity: disabled ? 0.6 : 1 }}>
+              <input
+                type="radio"
+                name="briefing_status"
+                value={s.value}
+                checked={getCf("briefing_status") === s.value}
+                onChange={() => !disabled && setCf("briefing_status", s.value)}
+                style={{ accentColor: "var(--accent)" }}
+                disabled={disabled}
+              />
+              <span className="text-xs" style={{ color: "var(--text)" }}>{s.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Recursos Necessários</div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Liste os recursos necessários para o planejamento.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("briefing_resources") || "—"}</div>
+          : <textarea
+              value={getCf("briefing_resources") || ""}
+              onChange={e => setCf("briefing_resources", e.target.value)}
+              placeholder="Digite aqui ..."
+              rows={3}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none resize-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Data de Revisão</div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Informe a data para revisão do planejamento.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("briefing_review_date") ? new Date(getCf("briefing_review_date")).toLocaleDateString("pt-BR") : "—"}</div>
+          : <input
+              type="date"
+              value={getCf("briefing_review_date") ? String(getCf("briefing_review_date")).slice(0, 10) : ""}
+              onChange={e => setCf("briefing_review_date", e.target.value || null)}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Anexos do Planejamento</div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Adicione documentos ou arquivos relevantes ao planejamento.</div>
+        <button
+          onClick={onOpenAttachments}
+          className="flex items-center gap-1.5 text-xs"
+          style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+        >
+          <Plus size={12} />
+          Adicionar novos arquivos
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const DEFAULT_CHECKLIST = [
+  { id: "arte",       label: "Arte finalizada" },
+  { id: "textos",     label: "Textos revisados" },
+  { id: "orcamento",  label: "Orçamento aprovado" },
+  { id: "links",      label: "Links testados" },
+  { id: "legal",      label: "Conformidade legal verificada" },
+];
+
+function AprovacaoFields({ getCf, setCf, users, disabled }) {
+  const storedChecklist = getCf("aprovacao_checklist");
+  const checklist = Array.isArray(storedChecklist)
+    ? storedChecklist
+    : DEFAULT_CHECKLIST.map(item => ({ ...item, checked: false }));
+
+  const toggleCheck = (id) => {
+    if (disabled) return;
+    const updated = checklist.map(item =>
+      item.id === id ? { ...item, checked: !item.checked } : item
+    );
+    setCf("aprovacao_checklist", updated);
+  };
+
+  return (
+    <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
+      <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+        Aprovação
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+          <span style={{ color: "var(--accent)" }}>* </span>Aprovação do Documento
+        </div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Confirmação de que o documento foi aprovado internamente.</div>
+        <div className="space-y-1.5">
+          {[{ value: "aprovado", label: "Aprovado" }, { value: "reprovado", label: "Reprovado" }].map(s => (
+            <label key={s.value} className="flex items-center gap-2 cursor-pointer" style={{ opacity: disabled ? 0.6 : 1 }}>
+              <input
+                type="radio"
+                name="aprovacao_status"
+                value={s.value}
+                checked={getCf("aprovacao_status") === s.value}
+                onChange={() => !disabled && setCf("aprovacao_status", s.value)}
+                style={{ accentColor: "var(--accent)" }}
+                disabled={disabled}
+              />
+              <span className="text-xs" style={{ color: "var(--text)" }}>{s.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <UserPickerField
+        label="Responsável pela Aprovação"
+        required
+        value={getCf("aprovacao_owner")}
+        onChange={v => setCf("aprovacao_owner", v)}
+        users={users}
+        disabled={disabled}
+      />
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+          <span style={{ color: "var(--accent)" }}>* </span>Data de Aprovação
+        </div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Data em que a aprovação foi realizada.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("aprovacao_date") ? new Date(getCf("aprovacao_date")).toLocaleDateString("pt-BR") : "—"}</div>
+          : <input
+              type="date"
+              value={getCf("aprovacao_date") ? String(getCf("aprovacao_date")).slice(0, 10) : ""}
+              onChange={e => setCf("aprovacao_date", e.target.value || null)}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Comentários sobre a Aprovação</div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Comentários adicionais sobre o processo de aprovação.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("aprovacao_comments") || "—"}</div>
+          : <textarea
+              value={getCf("aprovacao_comments") || ""}
+              onChange={e => setCf("aprovacao_comments", e.target.value)}
+              placeholder="Digite aqui ..."
+              rows={3}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none resize-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+          <span style={{ color: "var(--accent)" }}>* </span>Checklist de Requisitos
+        </div>
+        <div className="text-xs mb-2" style={{ color: "var(--text-faint)" }}>Lista dos requisitos que devem ser cumpridos para aprovação.</div>
+        <div className="space-y-2">
+          {checklist.map(item => (
+            <label key={item.id} className="flex items-center gap-2 cursor-pointer" style={{ opacity: disabled ? 0.6 : 1 }}>
+              <input
+                type="checkbox"
+                checked={!!item.checked}
+                onChange={() => toggleCheck(item.id)}
+                style={{ accentColor: "var(--accent)", width: 14, height: 14 }}
+                disabled={disabled}
+              />
+              <span className="text-xs" style={{ color: "var(--text)", textDecoration: item.checked ? "line-through" : "none", opacity: item.checked ? 0.6 : 1 }}>{item.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main drawer ───────────────────────────────────────────────────────────────
 
 export function CampaignDetailDrawer({
@@ -766,6 +1029,9 @@ export function CampaignDetailDrawer({
   }, [campaign, onUpdate]);
 
   const ownerUser = users.find(u => u.id === get("owner"));
+
+  const getCf = (key) => (get("customFields") || {})[key];
+  const setCf = (key, val) => set("customFields", { ...(get("customFields") || {}), [key]: val });
 
   if (!campaign) return null;
 
@@ -1227,6 +1493,25 @@ export function CampaignDetailDrawer({
                   </Field>
                 </div>
               </div>
+
+              {/* Stage-specific fields */}
+              {stage?.id === "briefing" && (
+                <BriefingFields
+                  getCf={getCf}
+                  setCf={setCf}
+                  users={users}
+                  disabled={!canWrite || isAgencia}
+                  onOpenAttachments={() => setSideTab("attachments")}
+                />
+              )}
+              {stage?.id === "aprovacao" && (
+                <AprovacaoFields
+                  getCf={getCf}
+                  setCf={setCf}
+                  users={users}
+                  disabled={!canWrite || isAgencia}
+                />
+              )}
             </div>
           </main>
 

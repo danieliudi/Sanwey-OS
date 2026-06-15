@@ -123,56 +123,76 @@ export function ExplorerView({
         {/* Filter card */}
         <div className={`p-4 rounded-xl border${!isSupabaseConfigured ? " lg:col-span-2" : ""}`} style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
           <div className="flex items-center gap-2 mb-3">
-            <Filter size={13} color="var(--text)" />
-            <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
-              Filtros da curadoria
-            </span>
+            <Filter size={13} color="var(--text-dim)" />
+            <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>Filtros da curadoria</span>
+            {activeCount > 0 && (
+              <button onClick={reset} className="ml-auto text-xs" style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                Limpar ({activeCount})
+              </button>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <Input
+
+          {/* Search */}
+          <div className="relative mb-2">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--text-faint)" }} />
+            <input
               value={filters.search}
               onChange={e => setFilters(prev => ({ ...prev, search: e.target.value }))}
               placeholder="Empresa ou CNPJ..."
-              icon={Search}
-              className="col-span-2"
-            />
-            <Select
-              value={filters.sector}
-              onChange={e => setFilters(prev => ({ ...prev, sector: e.target.value }))}
-              placeholder="Todos setores"
-              options={CANONICAL_SECTORS}
-            />
-            <Select
-              value={filters.state}
-              onChange={e => setFilters(prev => ({ ...prev, state: e.target.value }))}
-              placeholder="Todos estados"
-              options={CANONICAL_STATES}
-            />
-            <Select
-              value={filters.size}
-              onChange={e => setFilters(prev => ({ ...prev, size: e.target.value }))}
-              placeholder="Qualquer porte"
-              options={SIZE_OPTIONS}
-              className="col-span-2"
+              className="w-full text-xs rounded-lg pl-7 pr-3 py-2 border outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
             />
           </div>
-          <div className="pt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium" style={{ color: "var(--text-dim)" }}>
-                Fit mínimo
-              </span>
-              <span className="font-bold text-sm" style={{ color: "var(--text)" }}>{filters.fitMin}</span>
-            </div>
+
+          {/* Pill filters row */}
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {[
+              { key: "sector", placeholder: "Setor", options: CANONICAL_SECTORS },
+              { key: "state",  placeholder: "UF",    options: CANONICAL_STATES },
+              { key: "size",   placeholder: "Porte", options: SIZE_OPTIONS },
+            ].map(({ key, placeholder, options }) => {
+              const active = filters[key] !== "";
+              return (
+                <select
+                  key={key}
+                  value={filters[key]}
+                  onChange={e => setFilters(prev => ({ ...prev, [key]: e.target.value }))}
+                  className="text-xs rounded-full border outline-none cursor-pointer"
+                  style={{
+                    padding: "3px 24px 3px 10px",
+                    borderColor: active ? "var(--accent)" : "var(--border)",
+                    background: active ? "color-mix(in srgb, var(--accent) 8%, var(--surface))" : "var(--surface)",
+                    color: active ? "var(--accent)" : "var(--text-dim)",
+                    fontWeight: active ? 600 : 400,
+                    appearance: "none",
+                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 6px center",
+                    backgroundSize: "11px",
+                  }}
+                >
+                  <option value="">{placeholder}</option>
+                  {options.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              );
+            })}
+          </div>
+
+          {/* Fit mínimo compact */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs shrink-0" style={{ color: "var(--text-dim)" }}>Fit min</span>
             <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
+              type="range" min="0" max="100" step="5"
               value={filters.fitMin}
               onChange={e => setFilters(prev => ({ ...prev, fitMin: parseInt(e.target.value, 10) }))}
-              className="w-full"
-              style={{ accentColor: "var(--text)" }}
+              className="flex-1"
+              style={{ accentColor: "var(--accent)", height: 4 }}
             />
+            <span className="text-xs font-bold w-6 text-right shrink-0" style={{ color: filters.fitMin > 0 ? "var(--accent)" : "var(--text-faint)" }}>
+              {filters.fitMin}
+            </span>
           </div>
         </div>
       </div>
