@@ -814,16 +814,6 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                         />
                       ))
                     )}
-                    {canWrite && !stage.terminal && (
-                      <button
-                        onClick={() => setQuickAddStage(stage.id)}
-                        className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                        style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
-                      >
-                        <Plus size={12} />
-                        Nova campanha
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
@@ -891,18 +881,6 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           {stage.sla && <span style={{ fontWeight: 400, marginLeft: 6 }}>· SLA {stage.sla}d</span>}
                         </div>
                       </div>
-                      {canWrite && !stage.terminal && (
-                        <button
-                          onClick={() => setQuickAddStage(quickAddStage === stage.id ? null : stage.id)}
-                          className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                          title="Adicionar campanha nesta etapa"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      )}
                     </div>
 
                     {/* Cards */}

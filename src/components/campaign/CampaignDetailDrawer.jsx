@@ -3,7 +3,7 @@ import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
   MessageSquare, ArrowLeft, ArrowRight, Sparkles, Mail, FileDown,
-  RotateCcw, Copy, Loader2, AlertCircle, Package, ChevronDown,
+  RotateCcw, Copy, Loader2, AlertCircle, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
@@ -402,7 +402,7 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
             value={newLabel}
             onChange={e => setNewLabel(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addItem(); } }}
-            className="flex-1 text-xs rounded-xl border px-3 py-2 outline-none"
+            className="flex-1 min-w-0 text-xs rounded-xl border px-3 py-2 outline-none"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}
             onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
             onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
@@ -1169,7 +1169,6 @@ export function CampaignDetailDrawer({
   const [sideTab, setSideTab]           = useState("form");
   const [draft, setDraft]               = useState({});
   const [mobileTab, setMobileTab]       = useState("info");
-  const [accordionOpen, setAccordionOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting]         = useState(false);
   const saveTimeout  = useRef(null);
@@ -1247,31 +1246,116 @@ export function CampaignDetailDrawer({
   // ── Render left tab content ─────────────────────────────────────────────────
   function LeftTabContent() {
     if (sideTab === "form") {
-      const initialRows = [
-        { label: "Empresas",      value: (get("companyIds") || []).map(id => COMPANIES[id]?.short || id).join(", ") },
-        { label: "Canal",         value: get("channel") },
-        { label: "KPI principal", value: get("kpi") },
-        { label: "Budget",        value: get("budget") > 0 ? formatK(get("budget")) : null },
-        { label: "Lançamento",    value: get("launchDate") ? formatDateBR(get("launchDate")) : null },
-        { label: "Encerramento",  value: get("endDate") ? formatDateBR(get("endDate")) : null },
-        { label: "Responsável",   value: ownerUser?.name },
-        { label: "Agência",       value: get("agencyName") },
-      ];
       return (
         <div className="space-y-3">
-          <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-            <div className="text-xs font-semibold mb-3" style={{ color: "var(--accent)" }}>
-              Formulário Inicial
-            </div>
-            <dl className="space-y-2.5">
-              {initialRows.map(({ label, value }) => (
-                <div key={label}>
-                  <dt className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>{label}</dt>
-                  <dd><ReadValue value={value} /></dd>
+          <Field label="Nome da campanha">
+            {isAgencia
+              ? <ReadValue value={get("name")} />
+              : <EditInput value={get("name")} onChange={v => set("name", v)} placeholder="Nome da campanha" />}
+          </Field>
+
+          <Field label="Empresas">
+            {isAgencia
+              ? <ReadValue value={(get("companyIds") || []).map(id => COMPANIES[id]?.short || id).join(", ")} />
+              : (
+                <div className="flex flex-wrap gap-1.5">
+                  {COMPANY_IDS.map(id => {
+                    const selected = (get("companyIds") || []).includes(id);
+                    const co = COMPANIES[id];
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => {
+                          const cur = get("companyIds") || [];
+                          set("companyIds", selected ? cur.filter(c => c !== id) : [...cur, id]);
+                        }}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-colors"
+                        style={{ borderColor: selected ? co.primary : "var(--border)", background: selected ? co.primary + "22" : "var(--surface)", color: selected ? co.primary : "var(--text-dim)", cursor: "pointer" }}
+                      >
+                        {selected && <Check size={9} strokeWidth={3} />}
+                        {co.short}
+                      </button>
+                    );
+                  })}
                 </div>
-              ))}
-            </dl>
+              )}
+          </Field>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Canal">
+              {isAgencia ? <ReadValue value={get("channel")} /> : <EditSelect value={get("channel")} onChange={v => set("channel", v)} options={MARKETING_CHANNELS} placeholder="Canal" />}
+            </Field>
+            <Field label="KPI">
+              {isAgencia ? <ReadValue value={get("kpi")} /> : <EditSelect value={get("kpi")} onChange={v => set("kpi", v)} options={MARKETING_KPIS} placeholder="KPI" />}
+            </Field>
+            <Field label="Budget (R$)">
+              {isAgencia ? <ReadValue value={get("budget") > 0 ? formatK(get("budget")) : null} /> : <EditInput value={get("budget") || ""} onChange={v => set("budget", parseFloat(v) || 0)} type="number" placeholder="0" />}
+            </Field>
+            <Field label="Performance">
+              {isAgencia ? <ReadValue value={get("performanceScore") > 0 ? String(get("performanceScore")) : null} /> : <EditInput value={get("performanceScore") || ""} onChange={v => set("performanceScore", parseInt(v) || 0)} type="number" placeholder="0–100" />}
+            </Field>
+            <Field label="Lançamento">
+              {isAgencia ? <ReadValue value={get("launchDate") ? formatDateBR(get("launchDate")) : null} /> : <EditInput value={get("launchDate") ? String(get("launchDate")).slice(0, 10) : ""} onChange={v => set("launchDate", v ? new Date(v).toISOString() : null)} type="date" />}
+            </Field>
+            <Field label="Encerramento">
+              {isAgencia ? <ReadValue value={get("endDate") ? formatDateBR(get("endDate")) : null} /> : <EditInput value={get("endDate") ? String(get("endDate")).slice(0, 10) : ""} onChange={v => set("endDate", v ? new Date(v).toISOString() : null)} type="date" />}
+            </Field>
           </div>
+
+          <Field label="Responsável interno">
+            {isAgencia
+              ? <ReadValue value={ownerUser?.name} />
+              : (
+                <EditSelect
+                  value={get("owner")}
+                  onChange={v => set("owner", v || null)}
+                  options={users.filter(u => ["marketing","gerente_marketing","admin"].includes(u.role)).map(u => ({ value: u.id, label: u.name }))}
+                  placeholder="Nenhum responsável"
+                />
+              )}
+          </Field>
+
+          <Field label="Agência">
+            {isAgencia ? <ReadValue value={get("agencyName")} /> : <EditInput value={get("agencyName")} onChange={v => set("agencyName", v)} placeholder="Nome da agência" />}
+          </Field>
+
+          <Field label="Link UTM">
+            {isAgencia
+              ? (get("utmUrl")
+                ? <a href={get("utmUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "var(--accent)" }}><Link size={11} /> {get("utmUrl")}</a>
+                : <ReadValue value={null} />)
+              : <EditInput value={get("utmUrl")} onChange={v => set("utmUrl", v)} placeholder="https://…" />}
+          </Field>
+
+          <Field label="Pasta Google Drive">
+            <div className="flex gap-2">
+              {isAgencia
+                ? (get("driveFolderUrl")
+                  ? <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "var(--accent)" }}><FolderOpen size={11} /> Abrir pasta</a>
+                  : <ReadValue value={null} />)
+                : (
+                  <>
+                    <EditInput
+                      value={get("driveFolderUrl")}
+                      onChange={v => {
+                        set("driveFolderUrl", v);
+                        const m = v?.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+                        if (m) set("driveFolderId", m[1]);
+                        else set("driveFolderId", null);
+                      }}
+                      placeholder="https://drive.google.com/…"
+                    />
+                    {get("driveFolderUrl") && (
+                      <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer"
+                        className="flex items-center px-2 rounded-xl text-xs shrink-0"
+                        style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)", textDecoration: "none" }}>
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
+                  </>
+                )}
+            </div>
+          </Field>
 
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)" }}>
@@ -1290,8 +1374,7 @@ export function CampaignDetailDrawer({
                   onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
                   onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
                 />
-              )
-            }
+              )}
           </div>
           <ActivityLog activities={campaign.activities || []} />
         </div>
@@ -1477,7 +1560,7 @@ export function CampaignDetailDrawer({
 
           {/* ── LEFT sidebar ── */}
           <aside
-            className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:flex lg:flex-col" : ""}`}
+            className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto overflow-x-hidden border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:flex lg:flex-col" : ""}`}
             style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
             {/* Campaign name */}
@@ -1583,172 +1666,6 @@ export function CampaignDetailDrawer({
             className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-4${mobileTab !== "stage" ? " hidden lg:block" : ""}`}
           >
             <div className="space-y-4">
-              {/* ── Accordeão: Dados da campanha ── */}
-              <div className="rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                <button
-                  type="button"
-                  onClick={() => setAccordionOpen(o => !o)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-left"
-                  style={{ background: "transparent", border: "none", cursor: "pointer" }}
-                >
-                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
-                    Dados da campanha
-                  </span>
-                  <ChevronDown
-                    size={14}
-                    style={{ color: "var(--text-faint)", transform: accordionOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-                  />
-                </button>
-
-                {accordionOpen && (
-                  <div className="px-4 pb-4 space-y-4 border-t" style={{ borderColor: "var(--border)" }}>
-                    <div className="grid grid-cols-2 gap-4 pt-4">
-                      <div className="col-span-2">
-                        <Field label="Nome da campanha">
-                          {isAgencia
-                            ? <ReadValue value={get("name")} />
-                            : <EditInput value={get("name")} onChange={v => set("name", v)} placeholder="Nome da campanha" />}
-                        </Field>
-                      </div>
-
-                      <div className="col-span-2">
-                        <Field label="Empresas">
-                          {isAgencia
-                            ? <ReadValue value={(get("companyIds") || []).map(id => COMPANIES[id]?.short || id).join(", ")} />
-                            : (
-                              <div className="flex flex-wrap gap-2">
-                                {COMPANY_IDS.map(id => {
-                                  const selected = (get("companyIds") || []).includes(id);
-                                  const co = COMPANIES[id];
-                                  return (
-                                    <button
-                                      key={id}
-                                      onClick={() => {
-                                        const cur = get("companyIds") || [];
-                                        set("companyIds", selected ? cur.filter(c => c !== id) : [...cur, id]);
-                                      }}
-                                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors"
-                                      style={{ borderColor: selected ? co.primary : "var(--border)", background: selected ? co.primary + "22" : "var(--surface)", color: selected ? co.primary : "var(--text-dim)", cursor: "pointer" }}
-                                    >
-                                      {selected && <Check size={10} strokeWidth={3} />}
-                                      {co.short}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                        </Field>
-                      </div>
-
-                      <Field label="Canal">
-                        {isAgencia
-                          ? <ReadValue value={get("channel")} />
-                          : <EditSelect value={get("channel")} onChange={v => set("channel", v)} options={MARKETING_CHANNELS} placeholder="Selecionar canal" />}
-                      </Field>
-
-                      <Field label="KPI principal">
-                        {isAgencia
-                          ? <ReadValue value={get("kpi")} />
-                          : <EditSelect value={get("kpi")} onChange={v => set("kpi", v)} options={MARKETING_KPIS} placeholder="Selecionar KPI" />}
-                      </Field>
-
-                      <Field label="Budget (R$)">
-                        {isAgencia
-                          ? <ReadValue value={get("budget") > 0 ? formatK(get("budget")) : null} />
-                          : <EditInput value={get("budget") || ""} onChange={v => set("budget", parseFloat(v) || 0)} type="number" placeholder="0" />}
-                      </Field>
-
-                      <Field label="Score de performance">
-                        {isAgencia
-                          ? <ReadValue value={get("performanceScore") > 0 ? String(get("performanceScore")) : null} />
-                          : <EditInput value={get("performanceScore") || ""} onChange={v => set("performanceScore", parseInt(v) || 0)} type="number" placeholder="0–100" />}
-                      </Field>
-
-                      <Field label="Data de lançamento">
-                        {isAgencia
-                          ? <ReadValue value={get("launchDate") ? formatDateBR(get("launchDate")) : null} />
-                          : <EditInput value={get("launchDate") ? String(get("launchDate")).slice(0, 10) : ""} onChange={v => set("launchDate", v ? new Date(v).toISOString() : null)} type="date" />}
-                      </Field>
-
-                      <Field label="Data de encerramento">
-                        {isAgencia
-                          ? <ReadValue value={get("endDate") ? formatDateBR(get("endDate")) : null} />
-                          : <EditInput value={get("endDate") ? String(get("endDate")).slice(0, 10) : ""} onChange={v => set("endDate", v ? new Date(v).toISOString() : null)} type="date" />}
-                      </Field>
-
-                      <div className="col-span-2">
-                        <Field label="Responsável interno">
-                          {isAgencia
-                            ? <ReadValue value={ownerUser?.name} />
-                            : (
-                              <EditSelect
-                                value={get("owner")}
-                                onChange={v => set("owner", v || null)}
-                                options={users.filter(u => ["marketing", "gerente_marketing", "admin"].includes(u.role)).map(u => ({ value: u.id, label: u.name }))}
-                                placeholder="Nenhum responsável"
-                              />
-                            )}
-                        </Field>
-                      </div>
-
-                      <div className="col-span-2">
-                        <Field label="Agência">
-                          {isAgencia
-                            ? <ReadValue value={get("agencyName")} />
-                            : <EditInput value={get("agencyName")} onChange={v => set("agencyName", v)} placeholder="Nome da agência" />}
-                        </Field>
-                      </div>
-
-                      <div className="col-span-2">
-                        <Field label="Link UTM / Campanha">
-                          {isAgencia
-                            ? (get("utmUrl")
-                              ? <a href={get("utmUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "var(--accent)" }}>
-                                  <Link size={11} /> {get("utmUrl")}
-                                </a>
-                              : <ReadValue value={null} />)
-                            : <EditInput value={get("utmUrl")} onChange={v => set("utmUrl", v)} placeholder="https://…" />}
-                        </Field>
-                      </div>
-
-                      <div className="col-span-2">
-                        <Field label="Pasta Google Drive">
-                          <div className="flex gap-2">
-                            {isAgencia
-                              ? (get("driveFolderUrl")
-                                ? <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer" className="text-xs flex items-center gap-1" style={{ color: "var(--accent)" }}>
-                                    <FolderOpen size={11} /> Abrir pasta no Drive
-                                  </a>
-                                : <ReadValue value={null} />)
-                              : (
-                                <>
-                                  <EditInput
-                                    value={get("driveFolderUrl")}
-                                    onChange={v => {
-                                      set("driveFolderUrl", v);
-                                      const m = v?.match(/\/folders\/([a-zA-Z0-9_-]+)/);
-                                      if (m) set("driveFolderId", m[1]);
-                                      else set("driveFolderId", null);
-                                    }}
-                                    placeholder="https://drive.google.com/drive/folders/…"
-                                  />
-                                  {get("driveFolderUrl") && (
-                                    <a href={get("driveFolderUrl")} target="_blank" rel="noreferrer"
-                                      className="flex items-center px-2.5 rounded-xl text-xs"
-                                      style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)", textDecoration: "none" }}>
-                                      <ExternalLink size={12} />
-                                    </a>
-                                  )}
-                                </>
-                              )}
-                          </div>
-                        </Field>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* Stage-specific fields */}
               {stage?.id === "briefing" && (
                 <BriefingFields
