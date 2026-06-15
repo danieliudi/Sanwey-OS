@@ -81,6 +81,11 @@
   --accent-tint:   color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
+/* Native form controls in dark mode */
+[data-theme="dark"] select {
+  color-scheme: dark;
+}
+
 html, body, #root {
   height: 100%;
 }

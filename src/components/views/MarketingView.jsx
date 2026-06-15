@@ -271,7 +271,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
             type="submit"
             disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: saving || !name.trim() ? 0.5 : 1, border: "none", cursor: saving || !name.trim() ? "default" : "pointer" }}
+            style={{ background: "var(--color-industria)", color: "#FFF", opacity: saving || !name.trim() ? 0.5 : 1, border: "none", cursor: saving || !name.trim() ? "default" : "pointer" }}
           >
             {saving ? "Criando…" : "Criar campanha"}
           </button>
@@ -973,13 +973,13 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         style={{
           height: 52,
           padding: "0 20px",
-          background: "var(--accent)",
+          background: "var(--color-industria)",
           color: "#FFFFFF",
           border: "none",
           borderRadius: 26,
           fontSize: 14,
           cursor: "pointer",
-          boxShadow: "0 4px 16px rgba(30,77,140,0.35)",
+          boxShadow: "0 4px 16px rgba(199,33,43,0.35)",
         }}
         onClick={() => setQuickAddStage("briefing")}
         onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}

@@ -26,7 +26,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
   const isManager = user.role === "gerente" || user.role === "admin";
   const isConsultor = user.role === "consultor";
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
-  const accent = companyData?.primary || "var(--text)";
+  const accent = companyData?.primary || null;
 
   const subordinateIds = useMemo(() => {
     if (user.role !== "vendedor") return new Set();
@@ -151,8 +151,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
           </Button>
           {isManager && (
             <Button
-              variant="primary"
-              accent={accent}
+              variant="secondary"
               icon={Download}
               size="sm"
               onClick={() => exportLeadsToCSV(scopedLeads, { usersById })}

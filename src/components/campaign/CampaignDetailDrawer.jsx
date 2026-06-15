@@ -1283,10 +1283,10 @@ export function CampaignDetailDrawer({
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="Canal">
-              {isAgencia ? <ReadValue value={get("channel")} /> : <EditSelect value={get("channel")} onChange={v => set("channel", v)} options={MARKETING_CHANNELS} placeholder="Canal" />}
+              {isAgencia ? <ReadValue value={get("channel")} /> : <EditSelect value={get("channel")} onChange={v => set("channel", v)} options={MARKETING_CHANNELS} placeholder="Selecionar canal" />}
             </Field>
             <Field label="KPI">
-              {isAgencia ? <ReadValue value={get("kpi")} /> : <EditSelect value={get("kpi")} onChange={v => set("kpi", v)} options={MARKETING_KPIS} placeholder="KPI" />}
+              {isAgencia ? <ReadValue value={get("kpi")} /> : <EditSelect value={get("kpi")} onChange={v => set("kpi", v)} options={MARKETING_KPIS} placeholder="Selecionar KPI" />}
             </Field>
             <Field label="Budget (R$)">
               {isAgencia ? <ReadValue value={get("budget") > 0 ? formatK(get("budget")) : null} /> : <EditInput value={get("budget") || ""} onChange={v => set("budget", parseFloat(v) || 0)} type="number" placeholder="0" />}
@@ -1315,8 +1315,8 @@ export function CampaignDetailDrawer({
               )}
           </Field>
 
-          <Field label="Agência">
-            {isAgencia ? <ReadValue value={get("agencyName")} /> : <EditInput value={get("agencyName")} onChange={v => set("agencyName", v)} placeholder="Nome da agência" />}
+          <Field label="Responsável pela Execução">
+            {isAgencia ? <ReadValue value={get("execResponsible")} /> : <EditInput value={get("execResponsible")} onChange={v => set("execResponsible", v)} placeholder="Nome do responsável pela execução" />}
           </Field>
 
           <Field label="Link UTM">
@@ -1627,11 +1627,11 @@ export function CampaignDetailDrawer({
               </div>
             </div>
 
-            {/* Agency */}
-            {get("agencyName") && (
+            {/* Exec responsible */}
+            {get("execResponsible") && (
               <div className="rounded-lg p-2.5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-dim)" }}>Agência</div>
-                <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>{get("agencyName")}</div>
+                <div className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-dim)" }}>Resp. Execução</div>
+                <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>{get("execResponsible")}</div>
               </div>
             )}
 
@@ -1657,7 +1657,7 @@ export function CampaignDetailDrawer({
 
             {/* ── Tab content ── */}
             <div className="flex-1">
-              <LeftTabContent />
+              {LeftTabContent()}
             </div>
           </aside>
 
