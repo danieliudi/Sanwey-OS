@@ -56,13 +56,14 @@ function SideTabs({ activeId, onChange }) {
           <button
             key={t.id}
             onClick={() => onChange(t.id)}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer"
             style={{
               background:  active ? "var(--surface)" : "transparent",
-              color:       active ? "var(--color-industria)" : "var(--text-dim)",
-              border:      active ? "1px solid var(--color-industria)" : "1px solid transparent",
-              boxShadow:   active ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+              color:       active ? "var(--accent)" : "var(--text-dim)",
+              border:      `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
             }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
           >
             <Icon size={11} />
             {t.label}
@@ -1246,8 +1247,32 @@ export function CampaignDetailDrawer({
   // ── Render left tab content ─────────────────────────────────────────────────
   function LeftTabContent() {
     if (sideTab === "form") {
+      const initialRows = [
+        { label: "Empresas",      value: (get("companyIds") || []).map(id => COMPANIES[id]?.short || id).join(", ") },
+        { label: "Canal",         value: get("channel") },
+        { label: "KPI principal", value: get("kpi") },
+        { label: "Budget",        value: get("budget") > 0 ? formatK(get("budget")) : null },
+        { label: "Lançamento",    value: get("launchDate") ? formatDateBR(get("launchDate")) : null },
+        { label: "Encerramento",  value: get("endDate") ? formatDateBR(get("endDate")) : null },
+        { label: "Responsável",   value: ownerUser?.name },
+        { label: "Agência",       value: get("agencyName") },
+      ];
       return (
         <div className="space-y-3">
+          <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <div className="text-xs font-semibold mb-3" style={{ color: "var(--accent)" }}>
+              Formulário Inicial
+            </div>
+            <dl className="space-y-2.5">
+              {initialRows.map(({ label, value }) => (
+                <div key={label}>
+                  <dt className="text-[10px] font-bold uppercase tracking-wide mb-0.5" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>{label}</dt>
+                  <dd><ReadValue value={value} /></dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)" }}>
               Brief da campanha

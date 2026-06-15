@@ -79,15 +79,16 @@ function SideTabs({ activeId, onChange }) {
             key={t.id}
             onClick={() => onChange(t.id)}
             style={{
-              display: "flex", alignItems: "center", gap: 4,
-              padding: "4px 10px", fontSize: 11, fontWeight: 500,
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "4px 10px", fontSize: 11, fontWeight: 600,
               borderRadius: 9999,
-              background:  active ? "#FFFFFF" : "transparent",
-              color:       active ? "var(--accent)" : NEUTRAL.slate,
-              border:      active ? "1px solid var(--accent)" : "1px solid transparent",
-              boxShadow:   active ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-              cursor: "pointer", transition: "all 0.1s",
+              background:  active ? "var(--surface)" : "transparent",
+              color:       active ? "var(--accent)" : "var(--text-dim)",
+              border:      `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+              cursor: "pointer", transition: "background 0.1s",
             }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
           >
             <Icon size={11} />
             {t.label}
