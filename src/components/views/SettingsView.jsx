@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
-  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users,
+  Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -65,11 +65,32 @@ const ROLE_LABEL = {
   agencia:           "Agência",
 };
 
+const ACCENT_PRESETS = [
+  { label: "Carvão",    value: "#37352F", hover: "#2A2925" },
+  { label: "Vermelho",  value: "#C7212B", hover: "#8B1419" },
+  { label: "Verde",     value: "#16A34A", hover: "#15803D" },
+  { label: "Azul",      value: "#1D4ED8", hover: "#1E3A8A" },
+  { label: "Roxo",      value: "#7C3AED", hover: "#6D28D9" },
+  { label: "Laranja",   value: "#EA7309", hover: "#C25F00" },
+  { label: "Rosa",      value: "#DB2777", hover: "#BE185D" },
+];
+
+function applyAccentGlobal(accent, hover) {
+  const isDark = document.documentElement.dataset.theme === "dark";
+  localStorage.setItem("sanwey-accent", accent);
+  localStorage.setItem("sanwey-accent-hover", hover);
+  if (!isDark) {
+    document.documentElement.style.setProperty("--accent", accent);
+    document.documentElement.style.setProperty("--accent-hover", hover);
+  }
+}
+
 // Personal tabs available to every authenticated user.
 const PERSONAL_TABS = [
   { id: "perfil",        label: "Perfil",          icon: User    },
   { id: "notificacoes", label: "Notificações",     icon: Bell    },
   { id: "ia",            label: "Integrações IA",  icon: Bot     },
+  { id: "aparencia",     label: "Aparência",       icon: Palette },
 ];
 
 // Manager-only tabs added on top of the personal ones.
@@ -101,6 +122,40 @@ export function SettingsView({
   }, [isManager, usersPanel, clientsPanel]);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [clearTyped, setClearTyped] = useState("");
+
+  // ── Appearance / theme colors ────────────────────────────────────────
+  const [accentColor, setAccentColor] = useState(
+    () => localStorage.getItem("sanwey-accent") || "#37352F"
+  );
+  const [hoverColor, setHoverColor] = useState(
+    () => localStorage.getItem("sanwey-accent-hover") || "#2A2925"
+  );
+
+  const handleAccentPreset = (preset) => {
+    setAccentColor(preset.value);
+    setHoverColor(preset.hover);
+    applyAccentGlobal(preset.value, preset.hover);
+  };
+
+  const handleAccentInput = (color) => {
+    setAccentColor(color);
+    applyAccentGlobal(color, hoverColor);
+  };
+
+  const handleHoverInput = (color) => {
+    setHoverColor(color);
+    applyAccentGlobal(accentColor, color);
+  };
+
+  const handleResetAccent = () => {
+    const def = ACCENT_PRESETS[0];
+    setAccentColor(def.value);
+    setHoverColor(def.hover);
+    localStorage.removeItem("sanwey-accent");
+    localStorage.removeItem("sanwey-accent-hover");
+    document.documentElement.style.removeProperty("--accent");
+    document.documentElement.style.removeProperty("--accent-hover");
+  };
 
   // ── Profile form ────────────────────────────────────────────────────
   const [profileForm, setProfileForm] = useState({
@@ -393,7 +448,7 @@ export function SettingsView({
                 onClick={() => setActiveTab(tab.id)}
                 className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left w-full"
                 style={{
-                  background: active ? "#FBE9EB" : "transparent",
+                  background: active ? "var(--accent-tint)" : "transparent",
                   color: active ? "var(--accent)" : "var(--text-dim)",
                   boxShadow: active ? "inset 3px 0 0 var(--accent)" : "inset 3px 0 0 transparent",
                   border: "none",
@@ -401,7 +456,7 @@ export function SettingsView({
                 }}
                 onMouseEnter={e => {
                   if (!active) {
-                    e.currentTarget.style.background = "#F1EDE8";
+                    e.currentTarget.style.background = "var(--surface-alt)";
                     e.currentTarget.style.color = "var(--text)";
                   }
                 }}
@@ -523,7 +578,7 @@ export function SettingsView({
                     <div
                       className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg mb-3"
                       style={{
-                        background: profileFeedback.type === "success" ? "#F0FDF4" : "#FEF2F2",
+                        background: profileFeedback.type === "success" ? "var(--success-bg)" : "var(--danger-bg)",
                         color: profileFeedback.type === "success" ? "var(--success)" : "var(--danger)",
                         border: `1px solid ${profileFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
                       }}
@@ -582,7 +637,7 @@ export function SettingsView({
                     <div
                       className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg mb-3"
                       style={{
-                        background: passwordFeedback.type === "success" ? "#F0FDF4" : "#FEF2F2",
+                        background: passwordFeedback.type === "success" ? "var(--success-bg)" : "var(--danger-bg)",
                         color: passwordFeedback.type === "success" ? "var(--success)" : "var(--danger)",
                         border: `1px solid ${passwordFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
                       }}
@@ -754,7 +809,7 @@ export function SettingsView({
                 <div className="space-y-5">
                   {/* Status badge */}
                   {currentUser?.aiConfig?.provider && (
-                    <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "#DCFCE7", color: "var(--success)" }}>
+                    <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
                       <CheckCircle2 size={13} />
                       <span className="font-semibold">
                         {AI_PROVIDER_MAP[currentUser.aiConfig.provider]?.name} — {currentUser.aiConfig.model} conectado
@@ -874,7 +929,7 @@ export function SettingsView({
                     <div
                       className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs"
                       style={{
-                        background: aiTestResult === 'ok' ? "#DCFCE7" : "#FEE2E2",
+                        background: aiTestResult === 'ok' ? "var(--success-bg)" : "var(--danger-bg)",
                         color: aiTestResult === 'ok' ? "var(--success)" : "var(--danger)",
                       }}
                     >
@@ -918,7 +973,7 @@ export function SettingsView({
                     <div
                       className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
                       style={{
-                        background: aiSaveFeedback.type === "success" ? "#DCFCE7" : "#FEF2F2",
+                        background: aiSaveFeedback.type === "success" ? "var(--success-bg)" : "var(--danger-bg)",
                         color: aiSaveFeedback.type === "success" ? "var(--success)" : "var(--danger)",
                       }}
                     >
@@ -930,11 +985,153 @@ export function SettingsView({
               </Section>
             )}
 
+            {/* ── APARÊNCIA ── */}
+            {activeTab === "aparencia" && (
+              <div className="space-y-4">
+                <Section
+                  title="Cor de destaque"
+                  description="Aplicada em botões, links ativos, barras de progresso e destaques em todo o sistema."
+                >
+                  {/* Preset swatches */}
+                  <div className="mb-4">
+                    <div className="text-xs font-semibold mb-2" style={{ color: "var(--text-dim)" }}>Paletas prontas</div>
+                    <div className="flex flex-wrap gap-2">
+                      {ACCENT_PRESETS.map(p => {
+                        const active = accentColor === p.value;
+                        return (
+                          <button
+                            key={p.value}
+                            onClick={() => handleAccentPreset(p)}
+                            title={p.label}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                            style={{
+                              background: active ? p.value + "18" : "var(--surface)",
+                              borderColor: active ? p.value : "var(--border)",
+                              color: active ? p.value : "var(--text-dim)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <span
+                              className="w-3.5 h-3.5 rounded-full shrink-0"
+                              style={{ background: p.value, border: "2px solid " + p.value + "40" }}
+                            />
+                            {p.label}
+                            {active && <Check size={11} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Custom pickers */}
+                  <div className="grid grid-cols-2 gap-4 mb-5">
+                    <div>
+                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Cor principal
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={accentColor}
+                          onChange={e => handleAccentInput(e.target.value)}
+                          className="w-9 h-9 rounded-lg border cursor-pointer"
+                          style={{ borderColor: "var(--border)", padding: 2 }}
+                        />
+                        <input
+                          type="text"
+                          value={accentColor}
+                          onChange={e => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) handleAccentInput(e.target.value); }}
+                          className="flex-1 text-xs rounded-lg border px-2 py-1.5 outline-none font-mono"
+                          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Cor hover
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={hoverColor}
+                          onChange={e => handleHoverInput(e.target.value)}
+                          className="w-9 h-9 rounded-lg border cursor-pointer"
+                          style={{ borderColor: "var(--border)", padding: 2 }}
+                        />
+                        <input
+                          type="text"
+                          value={hoverColor}
+                          onChange={e => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) handleHoverInput(e.target.value); }}
+                          className="flex-1 text-xs rounded-lg border px-2 py-1.5 outline-none font-mono"
+                          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live preview */}
+                  <div className="p-4 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
+                    <div className="text-xs font-semibold mb-3" style={{ color: "var(--text-dim)" }}>Pré-visualização</div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
+                        style={{ background: accentColor, cursor: "default" }}
+                      >
+                        Botão primário
+                      </button>
+                      <button
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border"
+                        style={{ color: accentColor, borderColor: accentColor, background: accentColor + "10", cursor: "default" }}
+                      >
+                        Botão secundário
+                      </button>
+                      <span
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                        style={{ background: accentColor + "18", color: accentColor, border: `1px solid ${accentColor}30` }}
+                      >
+                        Badge destaque
+                      </span>
+                      <span
+                        className="text-sm font-medium underline cursor-default"
+                        style={{ color: accentColor }}
+                      >
+                        Link ativo
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      onClick={handleResetAccent}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all"
+                      style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+                    >
+                      <RotateCcw size={12} />
+                      Restaurar padrão
+                    </button>
+                    <span className="text-xs" style={{ color: "var(--text-faint)" }}>
+                      A cor é salva localmente neste navegador.
+                    </span>
+                  </div>
+                </Section>
+
+                <Section
+                  title="Modo escuro"
+                  description="O botão de alternância fica no canto superior direito da barra de navegação."
+                >
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                    Use o ícone <strong style={{ color: "var(--text)" }}>lua / sol</strong> na barra superior para alternar entre modo claro e escuro.
+                    A preferência é salva automaticamente.
+                  </p>
+                </Section>
+              </div>
+            )}
+
             {/* ── DADOS ── */}
             {activeTab === "dados" && (
               <div className="space-y-4">
                 {!supabaseEnabled && (
-                  <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" }}>
+                  <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid #FCD34D" }}>
                     Modo offline — dados armazenados localmente neste navegador.
                   </div>
                 )}

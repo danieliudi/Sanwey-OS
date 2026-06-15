@@ -2,6 +2,20 @@ import React, { useEffect, useState } from "react";
 import { Search, Moon, Sun } from "lucide-react";
 import { NotificationCenter } from "./NotificationCenter";
 
+function applyCustomAccent(isDark) {
+  if (isDark) {
+    document.documentElement.style.removeProperty("--accent");
+    document.documentElement.style.removeProperty("--accent-hover");
+  } else {
+    const accent = localStorage.getItem("sanwey-accent");
+    const hover  = localStorage.getItem("sanwey-accent-hover");
+    if (accent) document.documentElement.style.setProperty("--accent", accent);
+    else        document.documentElement.style.removeProperty("--accent");
+    if (hover)  document.documentElement.style.setProperty("--accent-hover", hover);
+    else        document.documentElement.style.removeProperty("--accent-hover");
+  }
+}
+
 function useTheme() {
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem("ds-theme");
@@ -13,13 +27,16 @@ function useTheme() {
       const next = !prev;
       document.documentElement.dataset.theme = next ? "dark" : "light";
       localStorage.setItem("ds-theme", next ? "dark" : "light");
+      applyCustomAccent(next);
       return next;
     });
   };
 
   useEffect(() => {
     const saved = localStorage.getItem("ds-theme");
-    if (saved === "dark") document.documentElement.dataset.theme = "dark";
+    const isDark = saved === "dark";
+    if (isDark) document.documentElement.dataset.theme = "dark";
+    applyCustomAccent(isDark);
   }, []);
 
   return { dark, toggle };

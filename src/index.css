@@ -39,6 +39,14 @@
   --amber:         #E8920A;
   --amber-bg:      #FEF3C7;
 
+  /* Status backgrounds (light mode) */
+  --success-bg:    #DCFCE7;
+  --danger-bg:     #FEF2F2;
+  --warning-bg:    #FEF3C7;
+
+  /* Tinted accent for active/hover states */
+  --accent-tint:   color-mix(in srgb, var(--accent) 8%, transparent);
+
   /* Layout */
   --sidebar-width: 288px;
   --topbar-height: 64px;
@@ -56,6 +64,21 @@
   --text-faint:    #8C8882;
   --accent:        #EBEBDF;
   --accent-hover:  #FFFFFF;
+
+  /* Semantic colors — brighter for dark backgrounds */
+  --success:       #4ADE80;
+  --warning:       #FBBF24;
+  --danger:        #F87171;
+  --amber:         #FBBF24;
+  --amber-bg:      rgba(251, 191, 36, 0.12);
+
+  /* Status backgrounds — dark translucent tints */
+  --success-bg:    rgba(74, 222, 128, 0.12);
+  --danger-bg:     rgba(248, 113, 113, 0.12);
+  --warning-bg:    rgba(251, 191, 36, 0.12);
+
+  /* Tinted accent for active/hover states */
+  --accent-tint:   color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 html, body, #root {

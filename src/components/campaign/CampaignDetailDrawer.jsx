@@ -39,7 +39,7 @@ const SIDE_TABS = [
   { id: "atividades",  label: "Atividades",  icon: Activity },
   { id: "ia",          label: "IA",          icon: Sparkles },
   { id: "arquivos",    label: "Arquivos",    icon: Paperclip },
-  { id: "criativo",    label: "Criativo",    icon: ListChecks },
+  { id: "criativo",    label: "Checklist",   icon: ListChecks },
   { id: "entregas",    label: "Entregas",    icon: Package },
   { id: "comentarios", label: "Comentários", icon: MessageSquare },
   { id: "email",       label: "Email",       icon: Mail },
