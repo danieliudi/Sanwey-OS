@@ -947,6 +947,213 @@ function AprovacaoFields({ getCf, setCf, users, disabled }) {
   );
 }
 
+const ANALYSIS_METHODS = [
+  "Google Analytics",
+  "Meta Ads Manager",
+  "Pesquisa de satisfação",
+  "Teste A/B",
+  "Relatório de mídia paga",
+  "Análise qualitativa",
+  "Outro",
+];
+
+function ProducaoFields({ getCf, setCf, users, disabled }) {
+  const statuses = [
+    { value: "nao_iniciado", label: "Não Iniciado" },
+    { value: "em_progresso", label: "Em Progresso" },
+    { value: "concluido",    label: "Concluído" },
+  ];
+  return (
+    <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
+      <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+        Execução
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+          <span style={{ color: "var(--accent)" }}>* </span>Execução da Tarefa
+        </div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Descrição detalhada da tarefa a ser executada.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("producao_task") || "—"}</div>
+          : <textarea
+              value={getCf("producao_task") || ""}
+              onChange={e => setCf("producao_task", e.target.value)}
+              placeholder="Digite aqui ..."
+              rows={3}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none resize-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+          <span style={{ color: "var(--accent)" }}>* </span>Data de Execução
+        </div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Data em que a execução da tarefa será realizada.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("producao_date") ? new Date(getCf("producao_date")).toLocaleDateString("pt-BR") : "—"}</div>
+          : <input
+              type="date"
+              value={getCf("producao_date") ? String(getCf("producao_date")).slice(0, 10) : ""}
+              onChange={e => setCf("producao_date", e.target.value || null)}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+
+      <UserPickerField
+        label="Responsável pela Execução"
+        required
+        value={getCf("producao_owner")}
+        onChange={v => setCf("producao_owner", v)}
+        users={users}
+        disabled={disabled}
+      />
+
+      <div>
+        <div className="text-xs font-semibold mb-2" style={{ color: "var(--text)" }}>
+          <span style={{ color: "var(--accent)" }}>* </span>Status da Execução
+        </div>
+        <div className="text-xs mb-2" style={{ color: "var(--text-faint)" }}>Status atual da execução da tarefa.</div>
+        <div className="space-y-1.5">
+          {statuses.map(s => (
+            <label key={s.value} className="flex items-center gap-2 cursor-pointer" style={{ opacity: disabled ? 0.6 : 1 }}>
+              <input
+                type="radio"
+                name="producao_status"
+                value={s.value}
+                checked={getCf("producao_status") === s.value}
+                onChange={() => !disabled && setCf("producao_status", s.value)}
+                style={{ accentColor: "var(--accent)" }}
+                disabled={disabled}
+              />
+              <span className="text-xs" style={{ color: "var(--text)" }}>{s.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Recursos Utilizados</div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Lista de recursos utilizados durante a execução.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("producao_resources") || "—"}</div>
+          : <textarea
+              value={getCf("producao_resources") || ""}
+              onChange={e => setCf("producao_resources", e.target.value)}
+              placeholder="Digite aqui ..."
+              rows={3}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none resize-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+    </div>
+  );
+}
+
+function RevisaoFields({ getCf, setCf, users, disabled }) {
+  return (
+    <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
+      <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+        Análise dos Resultados
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+          <span style={{ color: "var(--accent)" }}>* </span>Métodos de Análise
+        </div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Selecione os métodos utilizados para análise dos resultados.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("revisao_method") || "—"}</div>
+          : <select
+              value={getCf("revisao_method") || ""}
+              onChange={e => setCf("revisao_method", e.target.value || null)}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: getCf("revisao_method") ? "var(--text)" : "var(--text-faint)", background: "var(--surface)" }}
+            >
+              <option value="">Escolha uma opção</option>
+              {ANALYSIS_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+        }
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+          <span style={{ color: "var(--accent)" }}>* </span>Data de Conclusão da Análise
+        </div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Informe a data em que a análise dos resultados foi concluída.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("revisao_date") ? new Date(getCf("revisao_date")).toLocaleDateString("pt-BR") : "—"}</div>
+          : <input
+              type="date"
+              value={getCf("revisao_date") ? String(getCf("revisao_date")).slice(0, 10) : ""}
+              onChange={e => setCf("revisao_date", e.target.value || null)}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+
+      <UserPickerField
+        label="Responsável pela Análise"
+        required
+        value={getCf("revisao_owner")}
+        onChange={v => setCf("revisao_owner", v)}
+        users={users}
+        disabled={disabled}
+      />
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Resumo dos Resultados</div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Forneça um resumo detalhado dos resultados obtidos.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("revisao_summary") || "—"}</div>
+          : <textarea
+              value={getCf("revisao_summary") || ""}
+              onChange={e => setCf("revisao_summary", e.target.value)}
+              placeholder="Digite aqui ..."
+              rows={3}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none resize-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Feedback sobre os Resultados</div>
+        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>Adicione comentários ou feedback sobre os resultados analisados.</div>
+        {disabled
+          ? <div className="text-xs" style={{ color: "var(--text)" }}>{getCf("revisao_feedback") || "—"}</div>
+          : <textarea
+              value={getCf("revisao_feedback") || ""}
+              onChange={e => setCf("revisao_feedback", e.target.value)}
+              placeholder="Digite aqui ..."
+              rows={3}
+              className="w-full text-xs rounded-lg border px-3 py-2 outline-none resize-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+        }
+      </div>
+    </div>
+  );
+}
+
 // ── Main drawer ───────────────────────────────────────────────────────────────
 
 export function CampaignDetailDrawer({
@@ -1506,6 +1713,22 @@ export function CampaignDetailDrawer({
               )}
               {stage?.id === "aprovacao" && (
                 <AprovacaoFields
+                  getCf={getCf}
+                  setCf={setCf}
+                  users={users}
+                  disabled={!canWrite || isAgencia}
+                />
+              )}
+              {stage?.id === "producao" && (
+                <ProducaoFields
+                  getCf={getCf}
+                  setCf={setCf}
+                  users={users}
+                  disabled={!canWrite || isAgencia}
+                />
+              )}
+              {stage?.id === "revisao" && (
+                <RevisaoFields
                   getCf={getCf}
                   setCf={setCf}
                   users={users}

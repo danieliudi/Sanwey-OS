@@ -3,9 +3,7 @@ export const MARKETING_STAGES = [
   { id: "aprovacao", name: "Aprovação",  color: "#EA7309", sla: 5 },
   { id: "producao",  name: "Produção",   color: "#D97706", sla: 14 },
   { id: "revisao",   name: "Revisão",    color: "#7C3AED", sla: 5 },
-  { id: "agendado",  name: "Agendado",   color: "#2563EB", sla: null },
   { id: "ao_vivo",   name: "Ao Vivo",    color: "#16A34A", sla: null },
-  { id: "analise",   name: "Análise",    color: "#475569", sla: 7 },
   { id: "encerrado", name: "Encerrado",  color: "#9CA3AF", sla: null, terminal: true },
 ];
 
@@ -96,19 +94,6 @@ export const MARKETING_AUTOMATION_TEMPLATES = [
       module: "marketing",
       trigger: { type: "stage_change", toStage: "ao_vivo" },
       action:  { type: "notify", message: "Campanha entrou no ar — acompanhar performance." },
-    },
-  },
-  {
-    id: "mkt-encerrado-para-analise",
-    icon: "📊",
-    title: "Mover encerrado para Análise",
-    summary: "Após 3 dias em 'Encerrado', move a campanha para 'Análise' automaticamente.",
-    rule: {
-      name: "Auto · encerrado → análise após 3 dias",
-      companyId: "all",
-      module: "marketing",
-      trigger: { type: "time_in_stage", stageId: "encerrado", days: 3 },
-      action:  { type: "move_stage", targetStage: "analise" },
     },
   },
 ];
