@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import {
   Target, HandCoins, CheckCircle2, Gauge, RefreshCcw, Download,
-  Clock, CalendarClock, AlertTriangle, CalendarCheck,
+  Clock, CalendarClock, AlertTriangle, CalendarCheck, ArrowRight,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { StatCard } from "../ui/StatCard";
