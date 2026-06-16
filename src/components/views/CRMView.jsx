@@ -654,34 +654,31 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             />
           </div>
           {isManager && (
-            <Select
-              value={ownerFilter}
-              onChange={e => setOwnerFilter(e.target.value)}
-              options={ownerOptions}
-              className="w-full sm:w-44"
-            />
-          )}
-          {isManager && accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
-            <Select
-              value={activeCompany}
-              onChange={e => onCompanyChange(e.target.value)}
-              options={[
-                { value: "all", label: "Todas as empresas" },
-                ...accessibleCompanies.filter(id => id !== "all").map(id => ({
-                  value: id,
-                  label: COMPANIES[id]?.short || id,
-                })),
-              ]}
-              className="w-full sm:w-44"
-            />
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Select
+                value={ownerFilter}
+                onChange={e => setOwnerFilter(e.target.value)}
+                options={ownerOptions}
+                className="flex-1 min-w-0 sm:w-44"
+              />
+              {accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
+                <Select
+                  value={activeCompany}
+                  onChange={e => onCompanyChange(e.target.value)}
+                  options={[
+                    { value: "all", label: "Todas as empresas" },
+                    ...accessibleCompanies.filter(id => id !== "all").map(id => ({
+                      value: id,
+                      label: COMPANIES[id]?.short || id,
+                    })),
+                  ]}
+                  className="flex-1 min-w-0 sm:w-44"
+                />
+              )}
+            </div>
           )}
         </div>
       </div>
-
-      {/* ── KPI bar (apenas no kanban) ── */}
-      {viewMode === "kanban" && scopedLeads.length > 0 && (
-        <KpiBar scopedLeads={scopedLeads} />
-      )}
 
       {viewMode === "calendar" ? (
         <PipelineCalendarView
