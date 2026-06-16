@@ -1563,92 +1563,26 @@ export function CampaignDetailDrawer({
             className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto overflow-x-hidden border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:flex lg:flex-col" : ""}`}
             style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
-            {/* Campaign name */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <h2 className="font-bold mb-1" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.02em", wordBreak: "break-word" }}>
-                  {get("name")}
-                </h2>
-                <div className="text-xs" style={{ color: "var(--text-dim)" }}>
-                  {(get("companyIds") || []).map(id => COMPANIES[id]?.short || id).join(", ") || <span className="italic">Sem empresa</span>}
-                </div>
-              </div>
-              {get("performanceScore") > 0 && (
-                <div
-                  className="hidden lg:flex items-center justify-center rounded-full shrink-0 font-bold"
-                  style={{ width: 48, height: 48, background: "color-mix(in srgb, var(--accent) 8%, transparent)", color: "var(--accent)", border: "2px solid color-mix(in srgb, var(--accent) 19%, transparent)", fontSize: 16 }}
-                >
-                  {get("performanceScore")}
+            {/* Campaign name + company pills */}
+            <div>
+              <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.02em", wordBreak: "break-word", marginBottom: 8 }}>
+                {get("name")}
+              </h2>
+              {(get("companyIds") || []).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {(get("companyIds") || []).map(id => {
+                    const co = COMPANIES[id];
+                    if (!co) return null;
+                    return (
+                      <span key={id} className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                        style={{ background: co.primary + "18", color: co.primary, border: `1px solid ${co.primary}30` }}>
+                        {co.short}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
             </div>
-
-            {/* Company pills */}
-            {(get("companyIds") || []).length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {(get("companyIds") || []).map(id => {
-                  const co = COMPANIES[id];
-                  if (!co) return null;
-                  return (
-                    <span key={id} className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                      style={{ background: co.primary + "18", color: co.primary, border: `1px solid ${co.primary}30` }}>
-                      {co.short}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Stats grid */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Budget</div>
-                <div className="text-sm font-bold mt-0.5" style={{ color: "var(--text)" }}>
-                  {get("budget") > 0 ? formatK(get("budget")) : "—"}
-                </div>
-              </div>
-              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Canal</div>
-                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>
-                  {get("channel") || "—"}
-                </div>
-              </div>
-              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>KPI</div>
-                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>
-                  {get("kpi") || "—"}
-                </div>
-              </div>
-              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Lançamento</div>
-                <div className="text-xs font-bold mt-0.5" style={{ color: "var(--text)" }}>
-                  {get("launchDate") ? formatDateBR(get("launchDate")) : "—"}
-                </div>
-              </div>
-            </div>
-
-            {/* Exec responsible */}
-            {get("execResponsible") && (
-              <div className="rounded-lg p-2.5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-dim)" }}>Resp. Execução</div>
-                <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>{get("execResponsible")}</div>
-              </div>
-            )}
-
-            {/* Drive link */}
-            {get("driveFolderUrl") && (
-              <a
-                href={get("driveFolderUrl")}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--accent)", textDecoration: "none" }}
-              >
-                <FolderOpen size={13} />
-                Pasta no Google Drive
-                <ExternalLink size={11} style={{ marginLeft: "auto" }} />
-              </a>
-            )}
 
             {/* ── Pill SideTabs ── */}
             <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
