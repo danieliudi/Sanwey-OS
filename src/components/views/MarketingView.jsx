@@ -283,32 +283,35 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
 
 // ── KPI cards ─────────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, sub, red }) {
+function KpiCard({ label, value, red }) {
   return (
     <div
       className="rounded-xl border"
       style={{
         background: "var(--surface)",
         borderColor: "var(--border)",
-        padding: "12px 16px",
+        padding: "8px 10px",
         boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
       }}
     >
       <div
         style={{
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: 600,
           color: "var(--text-dim)",
           textTransform: "uppercase",
           letterSpacing: "0.08em",
-          marginBottom: 4,
+          marginBottom: 3,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
         }}
       >
         {label}
       </div>
       <div
         style={{
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: 700,
           color: red ? "var(--danger)" : "var(--text)",
           letterSpacing: "-0.02em",
@@ -317,9 +320,6 @@ function KpiCard({ label, value, sub, red }) {
       >
         {value}
       </div>
-      {sub && (
-        <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 3 }}>{sub}</div>
-      )}
     </div>
   );
 }
@@ -327,7 +327,6 @@ function KpiCard({ label, value, sub, red }) {
 function KpiBar({ campaigns }) {
   const active      = campaigns.filter(c => !["encerrado"].includes(c.stage)).length;
   const totalBudget = campaigns.reduce((s, c) => s + (c.budget || 0), 0);
-  const live        = campaigns.filter(c => c.stage === "ao_vivo").length;
   const urgent      = campaigns.filter(c => {
     if (!c.launchDate) return false;
     const d = Math.floor((new Date(c.launchDate).getTime() - Date.now()) / 86400000);
@@ -335,14 +334,10 @@ function KpiBar({ campaigns }) {
   }).length;
 
   return (
-    <div
-      className="grid gap-3"
-      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", marginBottom: 4 }}
-    >
+    <div className="grid grid-cols-3 gap-2 mb-3">
       <KpiCard label="Campanhas ativas" value={String(active)} />
       <KpiCard label="Budget total"     value={formatK(totalBudget)} />
-      <KpiCard label="Ao Vivo"          value={String(live)} />
-      <KpiCard label="URGENTE"          value={String(urgent)} red={urgent > 0} />
+      <KpiCard label="Urgente"          value={String(urgent)} red={urgent > 0} />
     </div>
   );
 }
