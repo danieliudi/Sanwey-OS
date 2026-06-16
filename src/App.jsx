@@ -452,6 +452,10 @@ export default function App() {
 
   // Keep vendedor off restricted sections even if state was stale.
   useEffect(() => {
+    // Don't redirect while auth is still loading — currentUser is null and
+    // all role flags are false, which would kick the user to "/" on refresh.
+    if (!currentUser) return;
+
     const managerOnly = ["executive", "agents", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users"];
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
@@ -480,7 +484,7 @@ export default function App() {
       setSection("marketing");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isManager, isMarketingUser, isPureMarketing, isAgencia, section]);
+  }, [currentUser, isManager, isMarketingUser, isPureMarketing, isAgencia, section]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
