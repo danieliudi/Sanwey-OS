@@ -416,14 +416,6 @@ export function EntregasView({ user, users = [] }) {
         </div>
       </div>
 
-      {/* KPI bar */}
-      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
-        <KpiCard label="Total"       value={String(kpis.total)} />
-        <KpiCard label="Solicitação" value={String(kpis.solicitacao)} />
-        <KpiCard label="Em Produção" value={String(kpis.em_producao)} color="var(--warning)" />
-        <KpiCard label="Entregue"    value={String(kpis.entregue)} color="var(--success)" />
-      </div>
-
       {/* Filter toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <button
