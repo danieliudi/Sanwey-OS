@@ -615,11 +615,9 @@ export default function App() {
                 activeCompany={activeCompany}
                 leads={leads}
                 users={users}
-                signals={signals}
                 pipelines={pipelines}
                 onNavigate={setSection}
                 onLeadClick={setSelectedLead}
-                onSignalClick={setSelectedSignal}
                 visibleWidgets={settings.visibleDashboardWidgets}
               />
             )

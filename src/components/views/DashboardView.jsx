@@ -1,15 +1,11 @@
 import React, { useMemo } from "react";
 import {
-  Target, HandCoins, CheckCircle2, Gauge, ArrowRight, RefreshCcw, Download,
+  Target, HandCoins, CheckCircle2, Gauge, RefreshCcw, Download,
   Clock, CalendarClock, AlertTriangle, CalendarCheck,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { StatCard } from "../ui/StatCard";
 import { Button } from "../ui/Button";
-import { Badge } from "../ui/Badge";
-import { CompanyTag } from "../ui/CompanyTag";
-import { UrgencyTag } from "../ui/UrgencyTag";
-import { LeadCard } from "../lead/LeadCard";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, daysSince } from "../../utils/date";
 import { exportLeadsToCSV } from "../../utils/export-csv";
@@ -19,7 +15,7 @@ import { isStale, daysIdle } from "../../utils/pipeline-metrics";
 const TERMINAL = new Set(["ganho", "perdido"]);
 const CLOSING_HORIZON_DAYS = 7;
 
-export function DashboardView({ user, activeCompany, leads, users = [], signals, onNavigate, onLeadClick, onSignalClick, visibleWidgets, pipelines }) {
+export function DashboardView({ user, activeCompany, leads, users = [], onNavigate, onLeadClick, visibleWidgets, pipelines }) {
   const usersById = useUsersById(users);
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
   const isGroupView = activeCompany === "all";
@@ -47,11 +43,6 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
     return s;
   }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, isConsultor, subordinateIds]);
 
-  const scopedSignals = useMemo(
-    () => (isGroupView ? signals : signals.filter(s => s.company === activeCompany)),
-    [signals, activeCompany, isGroupView],
-  );
-
   const stats = useMemo(() => {
     let pipelineValue = 0, wonValue = 0, wonCount = 0, openCount = 0;
     let fitSum = 0, fitCount70 = 0, newCount = 0;
@@ -66,12 +57,6 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
     return { pipelineValue, wonValue, wonCount, openCount, avgFit, fitCount70, newCount };
   }, [scopedLeads]);
 
-  const hotLeads = useMemo(() => (
-    scopedLeads
-      .filter(l => l.fitScore >= 80 && !TERMINAL.has(l.stage))
-      .sort((a, b) => b.fitScore - a.fitScore)
-      .slice(0, 6)
-  ), [scopedLeads]);
 
   // Derived from CRM leads — surfaces what needs attention this week.
   const tasks = useMemo(() => {
@@ -135,8 +120,8 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {isGroupView
-              ? `${scopedLeads.length} leads em 4 empresas · ${scopedSignals.length} sinais ativos`
-              : `${companyData?.name || "—"} · ${scopedLeads.length} leads · ${scopedSignals.length} sinais`}
+              ? `${scopedLeads.length} leads em 4 empresas`
+              : `${companyData?.name || "—"} · ${scopedLeads.length} leads`}
             {totalTasks > 0 && ` · ${totalTasks} pendência${totalTasks !== 1 ? "s" : ""}`}
           </p>
         </div>
@@ -279,96 +264,6 @@ export function DashboardView({ user, activeCompany, leads, users = [], signals,
         )}
       </div>
 
-      {/* Main content */}
-      <div className="grid lg:grid-cols-3 gap-5">
-        {/* Hot leads */}
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>Leads quentes</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>Fit score ≥ 80 · ordenado por qualidade</p>
-            </div>
-            <button
-              onClick={() => onNavigate("crm")}
-              className="text-xs font-semibold flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all duration-150"
-              style={{ color: accent, background: accent + "0D" }}
-              onMouseEnter={e => { e.currentTarget.style.background = accent + "18"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = accent + "0D"; }}
-            >
-              Ver pipeline <ArrowRight size={12} />
-            </button>
-          </div>
-          <div className="space-y-2">
-            {hotLeads.length === 0 && (
-              <div
-                className="p-6 rounded-xl border text-center text-sm"
-                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
-              >
-                Nenhum lead quente no momento
-              </div>
-            )}
-            {hotLeads.map(lead => (
-              <LeadCard key={lead.id} lead={lead} isGroupView={isGroupView} onClick={onLeadClick} />
-            ))}
-          </div>
-        </div>
-
-        {/* Market signals */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>
-                Sinais de mercado
-              </h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
-                Alertas automáticos sobre empresas do seu pipeline · clique para ver detalhes
-              </p>
-            </div>
-            <button
-              onClick={() => onNavigate("signals")}
-              className="text-xs font-semibold flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all duration-150"
-              style={{ color: accent, background: accent + "0D" }}
-              onMouseEnter={e => { e.currentTarget.style.background = accent + "18"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = accent + "0D"; }}
-            >
-              Ver todos <ArrowRight size={12} />
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-1">
-            {scopedSignals.slice(0, 5).map(s => (
-              <div
-                key={s.id}
-                className="p-3.5 rounded-xl border transition-all duration-150 cursor-pointer"
-                style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
-                onClick={() => onSignalClick?.(s)}
-                onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
-                  e.currentTarget.style.borderColor = "var(--border-strong)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.04)";
-                  e.currentTarget.style.borderColor = "var(--border)";
-                }}
-              >
-                <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
-                  <Badge variant="default" size="sm">{s.source}</Badge>
-                  <div className="flex items-center gap-1.5">
-                    {isGroupView && <CompanyTag companyId={s.company} />}
-                    <UrgencyTag urgency={s.urgency} />
-                  </div>
-                </div>
-                <div className="text-[13px] font-medium leading-snug line-clamp-2" style={{ color: "var(--text)" }}>
-                  {s.title}
-                </div>
-                <div className="text-xs mt-2 flex items-center justify-between" style={{ color: "var(--text-dim)" }}>
-                  <span>{s.affectedCount} afetad{s.affectedCount === 1 ? "a" : "as"}</span>
-                  <span>{s.daysAgo === 0 ? "Hoje" : `${s.daysAgo}d atrás`}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
