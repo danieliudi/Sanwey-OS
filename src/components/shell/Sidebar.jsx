@@ -121,7 +121,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             />
           </div>
           <div style={{ lineHeight: 1.3 }}>
-            <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 14 }}>sanweyERP</div>
+            <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 14 }}>Gestão Sanwey</div>
             <div style={{ color: "var(--text-faint)", fontSize: 11 }}>Plataforma integrada</div>
           </div>
         </div>

@@ -855,7 +855,7 @@ export default function App() {
           style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
         >
           <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
-            sanweyERP
+            Gestão Sanwey
           </div>
           <div style={{ color: NEUTRAL.slate }}>
             Maio 2026

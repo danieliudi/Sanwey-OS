@@ -82,7 +82,7 @@ export function TopBar({
       {/* Mobile: brand name */}
       {!isDesktop && (
         <span style={{ fontWeight: 800, fontSize: 18, color: "var(--text)", letterSpacing: "-0.02em" }}>
-          sanweyERP
+          Gestão Sanwey
         </span>
       )}
 
