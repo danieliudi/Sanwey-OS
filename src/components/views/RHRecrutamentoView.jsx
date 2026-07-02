@@ -12,19 +12,229 @@ import {
   UserPlus,
   Link2,
   Check,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import {
   RH_DEPARTMENTS,
   RH_RECRUITMENT_STAGES,
 } from "../../constants/rh-config";
-import { isSupabaseConfigured } from "../../lib/supabase";
+import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
+import { useAI } from "../../hooks/use-ai";
 
 function whatsappShareUrl(vaga) {
   const link = `${window.location.origin}/vagas/${vaga.link_slug}`;
   const text = `Vaga aberta: ${vaga.title}! Envie seu currículo por aqui: ${link}`;
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+const TRIAGEM_SYSTEM_PROMPT = `Você é um analista de recrutamento técnico. Receberá a descrição de uma vaga e o currículo de um candidato (anexado como documento PDF). Avalie exclusivamente com base no conteúdo do currículo — não presuma informação não escrita.
+
+Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown, sem explicações fora do JSON:
+{"fit_score": <número de 0 a 100>, "justificativa": "<2-3 frases objetivas>", "pontos_fortes": ["...", "..."], "gaps": ["...", "..."]}`;
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function parseTriagemResponse(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("Resposta da IA não trouxe um JSON válido.");
+  const parsed = JSON.parse(match[0]);
+  return {
+    fitScore: Math.max(0, Math.min(100, Number(parsed.fit_score) || 0)),
+    justificativa: parsed.justificativa || "",
+    pontosFortes: Array.isArray(parsed.pontos_fortes) ? parsed.pontos_fortes : [],
+    gaps: Array.isArray(parsed.gaps) ? parsed.gaps : [],
+  };
+}
+
+// ── Triagem por IA Modal ──────────────────────────────────────────────────────
+
+function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onClose }) {
+  const { complete, isConfigured, provider } = useAI(user);
+  const [vagaId, setVagaId] = useState("");
+  const [necessidade, setNecessidade] = useState("");
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [results, setResults] = useState([]);
+  const [attachingId, setAttachingId] = useState(null);
+  const [attachedIds, setAttachedIds] = useState(new Set());
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const pdfCandidatos = useMemo(() => talentPool.filter(c => c.resume_ext === "pdf"), [talentPool]);
+  const docxSkipped    = useMemo(() => talentPool.filter(c => c.resume_ext && c.resume_ext !== "pdf").length, [talentPool]);
+
+  const handleVagaChange = (id) => {
+    setVagaId(id);
+    const v = vagas.find(vg => vg.id === id);
+    if (v && !necessidade.trim()) {
+      setNecessidade([v.title, v.requirements, v.description].filter(Boolean).join(" — "));
+    }
+  };
+
+  const alreadyLinked = (candidateId) => aplicacoesRaw.some(a => a.candidate_id === candidateId && a.vaga_id === vagaId);
+
+  const runTriagem = async () => {
+    if (!necessidade.trim()) { setErrorMsg("Descreva o que você procura."); return; }
+    setErrorMsg(null);
+    setRunning(true);
+    setResults([]);
+    setProgress({ done: 0, total: pdfCandidatos.length });
+    const out = [];
+    for (const cand of pdfCandidatos) {
+      try {
+        const { data: blob, error: dlErr } = await supabase.storage
+          .from("rh-curriculos")
+          .download(`${cand.id}/curriculo.pdf`);
+        if (dlErr || !blob) throw new Error("Currículo indisponível");
+        const base64 = await blobToBase64(blob);
+        const text = await complete([
+          { role: "system", content: TRIAGEM_SYSTEM_PROMPT },
+          { role: "user", content: [
+            { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+            { type: "text", text: `Vaga: ${necessidade}` },
+          ] },
+        ], { maxTokens: 500 });
+        const triagem = parseTriagemResponse(text);
+        out.push({ candidateId: cand.id, name: cand.name, ...triagem });
+      } catch (err) {
+        out.push({ candidateId: cand.id, name: cand.name, error: err.message || "Falha na análise" });
+      }
+      setProgress(p => ({ ...p, done: p.done + 1 }));
+    }
+    out.sort((a, b) => (b.fitScore ?? -1) - (a.fitScore ?? -1));
+    setResults(out);
+    setRunning(false);
+  };
+
+  const handleAttach = async (result) => {
+    setAttachingId(result.candidateId);
+    try {
+      await onAttach(result.candidateId, vagaId, result);
+      setAttachedIds(prev => new Set(prev).add(result.candidateId));
+    } catch (err) {
+      setErrorMsg(err.message || "Erro ao vincular candidato à vaga.");
+    } finally {
+      setAttachingId(null);
+    }
+  };
+
+  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+      <div style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Sparkles size={16} style={{ color: "#7C3AED" }} />
+            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>Triagem por IA</div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px 24px" }}>
+          {!isConfigured ? (
+            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "#92400E", lineHeight: 1.6 }}>
+              Configure uma LLM em <strong>Configurações → Integrações de IA</strong> para usar a triagem por currículo.
+            </div>
+          ) : provider !== "anthropic" ? (
+            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "#92400E", lineHeight: 1.6 }}>
+              A triagem por currículo requer o provedor <strong>Anthropic (Claude)</strong> configurado — ele lê o PDF diretamente. Troque o provedor em Configurações → Integrações de IA.
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-3 mb-4">
+                <div>
+                  <label style={labelSt}>Vaga (para vincular os resultados) *</label>
+                  <select value={vagaId} onChange={(e) => handleVagaChange(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                    <option value="">Selecionar vaga</option>
+                    {vagas.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelSt}>O que você procura?</label>
+                  <textarea
+                    value={necessidade}
+                    onChange={(e) => setNecessidade(e.target.value)}
+                    placeholder="Ex: vendedor B2B industrial, experiência em compliance ambiental…"
+                    rows={3}
+                    className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
+                    style={inputSt}
+                  />
+                </div>
+              </div>
+
+              <div style={{ fontSize: 11, color: NEUTRAL.slate, marginBottom: 12 }}>
+                {pdfCandidatos.length} candidato{pdfCandidatos.length !== 1 ? "s" : ""} com currículo PDF no talent pool
+                {docxSkipped > 0 && ` · ${docxSkipped} em DOCX ignorado${docxSkipped !== 1 ? "s" : ""} nesta versão`}
+              </div>
+
+              {errorMsg && (
+                <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>
+              )}
+
+              <button
+                onClick={runTriagem}
+                disabled={running || !vagaId || pdfCandidatos.length === 0}
+                style={{ width: "100%", background: "#7C3AED", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", opacity: (running || !vagaId || pdfCandidatos.length === 0) ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+              >
+                {running && <Loader2 size={14} className="animate-spin" />}
+                {running ? `Analisando ${progress.done}/${progress.total}…` : "Triar com IA"}
+              </button>
+
+              {results.length > 0 && (
+                <div className="flex flex-col gap-2 mt-4">
+                  {results.map((r) => (
+                    <div key={r.candidateId} style={{ border: "1px solid #E5E7EB", borderRadius: 10, padding: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: NEUTRAL.graphite }}>{r.name}</span>
+                        {typeof r.fitScore === "number" && (
+                          <span style={{ fontWeight: 800, fontSize: 14, color: r.fitScore >= 70 ? "#16A34A" : r.fitScore >= 40 ? "#D97706" : "#DC2626" }}>{r.fitScore}</span>
+                        )}
+                      </div>
+                      {r.error ? (
+                        <div style={{ fontSize: 12, color: "#DC2626" }}>{r.error}</div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 12, color: NEUTRAL.slate, lineHeight: 1.5, marginBottom: 8 }}>{r.justificativa}</div>
+                          <button
+                            onClick={() => handleAttach(r)}
+                            disabled={attachingId === r.candidateId || attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)}
+                            style={{ display: "flex", alignItems: "center", gap: 6, background: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "#F3F4F6" : "#EFF6FF", color: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? NEUTRAL.slate : "#1E4D8C", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "default" : "pointer" }}
+                          >
+                            {attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)
+                              ? <><Check size={12} /> Adicionado à vaga</>
+                              : attachingId === r.candidateId ? "Adicionando…" : "Adicionar à vaga"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -788,14 +998,15 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
 
 export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
   const {
-    vagas, candidatos, loading,
-    createVaga, createCandidato, changeStage, addNote, changeRating,
+    vagas, candidatos, talentPool, aplicacoesRaw, loading,
+    createVaga, createCandidato, changeStage, addNote, changeRating, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const [selectedVaga, setSelectedVaga]     = useState("todas");
   const [selectedCandidatoId, setSelectedCandidatoId] = useState(null);
   const [quickAddVaga, setQuickAddVaga]     = useState(false);
   const [addCandidatoStage, setAddCandidatoStage] = useState(null);
   const [copiedSlug, setCopiedSlug]         = useState(null);
+  const [triagemOpen, setTriagemOpen]       = useState(false);
 
   const selectedCandidato = useMemo(
     () => candidatos.find((c) => c.id === selectedCandidatoId) || null,
@@ -852,24 +1063,44 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
           </p>
         </div>
         {canWrite && (
-          <button
-            onClick={() => setQuickAddVaga(true)}
-            style={{
-              background: "#1E4D8C",
-              color: "#FFF",
-              borderRadius: 10,
-              padding: "8px 16px",
-              fontSize: 13,
-              fontWeight: 700,
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <Plus size={14} /> Nova vaga
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setTriagemOpen(true)}
+              style={{
+                background: "#7C3AED",
+                color: "#FFF",
+                borderRadius: 10,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Sparkles size={14} /> Triar com IA
+            </button>
+            <button
+              onClick={() => setQuickAddVaga(true)}
+              style={{
+                background: "#1E4D8C",
+                color: "#FFF",
+                borderRadius: 10,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Plus size={14} /> Nova vaga
+            </button>
+          </div>
         )}
       </div>
 
@@ -998,6 +1229,17 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
           onRatingChange={handleRatingChange}
           onClose={() => setSelectedCandidatoId(null)}
           onConvertToEmployee={onConvertToEmployee}
+        />
+      )}
+
+      {triagemOpen && (
+        <TriagemIAModal
+          vagas={vagas}
+          talentPool={talentPool}
+          aplicacoesRaw={aplicacoesRaw}
+          user={user}
+          onAttach={attachTriagemToVaga}
+          onClose={() => setTriagemOpen(false)}
         />
       )}
     </div>

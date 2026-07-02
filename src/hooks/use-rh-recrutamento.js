@@ -153,15 +153,43 @@ export function useRHRecrutamento({ userId } = {}) {
     setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, rating } : a));
   }, []);
 
+  // Vincula um candidato do talent pool a uma vaga já com o resultado da
+  // triagem por IA preenchido (fit_score/justificativa/pontos_fortes/gaps).
+  // Upsert: se o candidato já tinha uma aplicação para essa vaga, atualiza o
+  // resultado em vez de duplicar.
+  const attachTriagemToVaga = useCallback(async (candidateId, vagaId, triagem) => {
+    const { data: aplic, error } = await supabase
+      .from("rh_aplicacoes")
+      .upsert(
+        {
+          candidate_id: candidateId,
+          vaga_id: vagaId,
+          fit_score: triagem.fitScore,
+          justificativa: triagem.justificativa,
+          pontos_fortes: triagem.pontosFortes || [],
+          gaps: triagem.gaps || [],
+        },
+        { onConflict: "candidate_id,vaga_id" }
+      )
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    await fetchAll();
+    return aplic;
+  }, [fetchAll]);
+
   return useMemo(() => ({
     vagas,
     candidatos,
+    talentPool: candidatosPool,
+    aplicacoesRaw: aplicacoes,
     loading,
     createVaga,
     createCandidato,
     changeStage,
     addNote,
     changeRating,
+    attachTriagemToVaga,
     refetch: fetchAll,
-  }), [vagas, candidatos, loading, createVaga, createCandidato, changeStage, addNote, changeRating, fetchAll]);
+  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, createCandidato, changeStage, addNote, changeRating, attachTriagemToVaga, fetchAll]);
 }
