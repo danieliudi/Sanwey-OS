@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
-  ClipboardCheck, GraduationCap,
+  ClipboardCheck, GraduationCap, MessageSquareText,
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -54,6 +54,7 @@ import { RHFuncionariosView } from "./components/views/RHFuncionariosView";
 import { RHRecrutamentoView } from "./components/views/RHRecrutamentoView";
 import { RHOnboardingView } from "./components/views/RHOnboardingView";
 import { RHTreinamentosView } from "./components/views/RHTreinamentosView";
+import { RHFeedbackView } from "./components/views/RHFeedbackView";
 import { RHFeriasView } from "./components/views/RHFeriasView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
@@ -410,17 +411,20 @@ export default function App() {
           { id: "rh-recrutamento", label: "Recrutamento",      icon: BriefcaseBusiness },
           { id: "rh-onboarding",   label: "Onboarding",        icon: ClipboardCheck },
           { id: "rh-treinamentos", label: "Treinamentos",      icon: GraduationCap },
+          { id: "rh-feedback",     label: "Feedback",          icon: MessageSquareText },
           { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
         ],
       });
     } else {
       // Todo colaborador (não só RH) precisa ver seu próprio checklist de
-      // onboarding e treinamentos atribuídos — não é uma tela de gestão de RH.
+      // onboarding, treinamentos atribuídos e feedbacks — não é uma tela de
+      // gestão de RH.
       groups.push({
         label: "Meu Desenvolvimento",
         items: [
           { id: "rh-onboarding",   label: "Onboarding",   icon: ClipboardCheck },
           { id: "rh-treinamentos", label: "Treinamentos", icon: GraduationCap },
+          { id: "rh-feedback",     label: "Feedback",     icon: MessageSquareText },
         ],
       });
     }
@@ -858,6 +862,9 @@ export default function App() {
           } />
           <Route path={ROUTES["rh-treinamentos"]} element={
             <RHTreinamentosView currentUser={currentUser} users={users} canWrite={isRHManager} isRHUser={isRHUser} />
+          } />
+          <Route path={ROUTES["rh-feedback"]} element={
+            <RHFeedbackView currentUser={currentUser} users={users} canWrite={isRHManager} isRHUser={isRHUser} />
           } />
           <Route path={ROUTES["rh-ferias"]} element={
             isRHUser
