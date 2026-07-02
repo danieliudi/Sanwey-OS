@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   ChevronDown,
@@ -10,13 +10,22 @@ import {
   MessageSquare,
   ArrowRight,
   UserPlus,
+  Link2,
+  Check,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import {
   RH_DEPARTMENTS,
   RH_RECRUITMENT_STAGES,
 } from "../../constants/rh-config";
-import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { isSupabaseConfigured } from "../../lib/supabase";
+import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
+
+function whatsappShareUrl(vaga) {
+  const link = `${window.location.origin}/vagas/${vaga.link_slug}`;
+  const text = `Vaga aberta: ${vaga.title}! Envie seu currículo por aqui: ${link}`;
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -225,6 +234,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) { setError("Nome obrigatório."); return; }
+    if (!vagaId) { setError("Selecione a vaga."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -232,12 +242,9 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
         name: name.trim(),
         email: email.trim() || null,
         phone: phone.trim() || null,
-        vaga_id: vagaId || null,
+        vaga_id: vagaId,
         source: source.trim() || null,
         stage,
-        stage_changed_at: new Date().toISOString(),
-        rating: 0,
-        notes: [],
       });
       onClose();
     } catch (err) {
@@ -293,7 +300,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
               <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-0000" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
             </div>
             <div>
-              <label style={labelSt}>Vaga</label>
+              <label style={labelSt}>Vaga *</label>
               <select value={vagaId} onChange={(e) => setVagaId(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
                 <option value="">Selecionar vaga</option>
                 {vagas.map((v) => (
@@ -333,6 +340,26 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
+  const [reprovando, setReprovando] = useState(false);
+  const [motivoReprovacao, setMotivoReprovacao] = useState("");
+  const [savingStage, setSavingStage] = useState(false);
+
+  const requestStageChange = (stageId) => {
+    if (stageId === "reprovado") { setReprovando(true); return; }
+    onStageChange(candidato.id, stageId);
+  };
+
+  const confirmReprovacao = async () => {
+    if (!motivoReprovacao.trim()) return;
+    setSavingStage(true);
+    try {
+      await onStageChange(candidato.id, "reprovado", motivoReprovacao.trim());
+      setReprovando(false);
+      setMotivoReprovacao("");
+    } finally {
+      setSavingStage(false);
+    }
+  };
 
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -430,6 +457,27 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
             </div>
           </div>
 
+          {/* Fit score / justificativa da triagem por IA */}
+          {typeof candidato.fit_score === "number" && (
+            <div style={{ marginBottom: 20, background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 16, color: "#6D28D9" }}>{Math.round(candidato.fit_score)}</span>
+                <span style={{ fontSize: 11, color: "#6D28D9", fontWeight: 600 }}>fit score (IA)</span>
+              </div>
+              {candidato.justificativa && (
+                <div style={{ fontSize: 12, color: "#5B21B6", lineHeight: 1.5 }}>{candidato.justificativa}</div>
+              )}
+            </div>
+          )}
+
+          {/* Motivo de reprovação já registrado */}
+          {candidato.stage === "reprovado" && candidato.motivo_reprovacao && (
+            <div style={{ marginBottom: 20, background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 12, padding: "12px 14px" }}>
+              <div style={labelSt}>Motivo da reprovação</div>
+              <div style={{ fontSize: 12, color: NEUTRAL.graphite, lineHeight: 1.5 }}>{candidato.motivo_reprovacao}</div>
+            </div>
+          )}
+
           {/* Stage progression */}
           {canWrite && (
             <div style={{ marginBottom: 20 }}>
@@ -438,7 +486,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                 {RH_RECRUITMENT_STAGES.filter((s) => s.id !== candidato.stage).map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => onStageChange(candidato.id, s.id)}
+                    onClick={() => requestStageChange(s.id)}
                     style={{
                       background: `${s.color}18`,
                       color: s.color,
@@ -457,6 +505,36 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                   </button>
                 ))}
               </div>
+
+              {reprovando && (
+                <div style={{ marginTop: 10, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12 }}>
+                  <div style={{ ...labelSt, color: "#B91C1C" }}>Motivo da reprovação *</div>
+                  <textarea
+                    value={motivoReprovacao}
+                    onChange={(e) => setMotivoReprovacao(e.target.value)}
+                    placeholder="Por que este candidato foi reprovado?"
+                    rows={2}
+                    autoFocus
+                    className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
+                    style={{ borderColor: "#FCA5A5", color: NEUTRAL.graphite, background: "#FFF", fontSize: 13 }}
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={confirmReprovacao}
+                      disabled={savingStage || !motivoReprovacao.trim()}
+                      style={{ background: "#DC2626", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
+                    >
+                      {savingStage ? "Salvando…" : "Confirmar reprovação"}
+                    </button>
+                    <button
+                      onClick={() => { setReprovando(false); setMotivoReprovacao(""); }}
+                      style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -672,7 +750,22 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <StarRating value={c.rating || 0} />
-                    <span style={{ fontSize: 10, color: NEUTRAL.slate }}>{days}d</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {typeof c.fit_score === "number" && (
+                        <span
+                          title="Fit score (triagem por IA)"
+                          style={{
+                            fontSize: 10, fontWeight: 700,
+                            color: c.fit_score >= 70 ? "#16A34A" : c.fit_score >= 40 ? "#D97706" : "#DC2626",
+                            background: c.fit_score >= 70 ? "#DCFCE7" : c.fit_score >= 40 ? "#FEF3C7" : "#FEE2E2",
+                            borderRadius: 99, padding: "1px 7px",
+                          }}
+                        >
+                          {Math.round(c.fit_score)}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 10, color: NEUTRAL.slate }}>{days}d</span>
+                    </div>
                   </div>
                   {c.source && (
                     <div style={{ marginTop: 5 }}>
@@ -694,84 +787,40 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
 // ── Main View ─────────────────────────────────────────────────────────────────
 
 export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
-  const [vagas, setVagas]                   = useState([]);
-  const [candidatos, setCandidatos]         = useState([]);
-  const [loading, setLoading]               = useState(true);
+  const {
+    vagas, candidatos, loading,
+    createVaga, createCandidato, changeStage, addNote, changeRating,
+  } = useRHRecrutamento({ userId: user?.id });
   const [selectedVaga, setSelectedVaga]     = useState("todas");
-  const [selectedCandidato, setSelectedCandidato] = useState(null);
+  const [selectedCandidatoId, setSelectedCandidatoId] = useState(null);
   const [quickAddVaga, setQuickAddVaga]     = useState(false);
   const [addCandidatoStage, setAddCandidatoStage] = useState(null);
+  const [copiedSlug, setCopiedSlug]         = useState(null);
 
-  // ── Load data ──────────────────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
-    setLoading(true);
-    try {
-      const [{ data: vagasData }, { data: candData }] = await Promise.all([
-        supabase.from("rh_vagas").select("*").order("created_at", { ascending: false }),
-        supabase.from("rh_candidatos").select("*").order("created_at", { ascending: false }),
-      ]);
-      setVagas(vagasData || []);
-      setCandidatos(candData || []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
+  const selectedCandidato = useMemo(
+    () => candidatos.find((c) => c.id === selectedCandidatoId) || null,
+    [candidatos, selectedCandidatoId]
+  );
 
   // ── Actions ────────────────────────────────────────────────────────────────
-  const handleCreateVaga = async (data) => {
-    const { data: newVaga, error } = await supabase
-      .from("rh_vagas")
-      .insert({ ...data, created_by: user?.id })
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    setVagas((prev) => [newVaga, ...prev]);
+  const handleCreateVaga = async (data) => { await createVaga(data); };
+  const handleCreateCandidato = async (data) => { await createCandidato(data); };
+  const handleStageChange = async (id, newStage, motivo) => { await changeStage(id, newStage, motivo); };
+  const handleAddNote = async (id, note) => { await addNote(id, note); };
+  const handleRatingChange = async (id, rating) => { await changeRating(id, rating); };
+
+  const handleCopyLink = async (vaga) => {
+    const link = `${window.location.origin}/vagas/${vaga.link_slug}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedSlug(vaga.id);
+      setTimeout(() => setCopiedSlug((s) => (s === vaga.id ? null : s)), 2000);
+    } catch {
+      window.prompt("Copie o link da vaga:", link);
+    }
   };
 
-  const handleCreateCandidato = async (data) => {
-    const { data: novo, error } = await supabase
-      .from("rh_candidatos")
-      .insert(data)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    setCandidatos((prev) => [novo, ...prev]);
-  };
-
-  const handleStageChange = async (id, newStage) => {
-    const { error } = await supabase
-      .from("rh_candidatos")
-      .update({ stage: newStage, stage_changed_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) return;
-    setCandidatos((prev) => prev.map((c) => c.id === id ? { ...c, stage: newStage, stage_changed_at: new Date().toISOString() } : c));
-    setSelectedCandidato((prev) => prev?.id === id ? { ...prev, stage: newStage, stage_changed_at: new Date().toISOString() } : prev);
-  };
-
-  const handleAddNote = async (id, note) => {
-    const cand = candidatos.find((c) => c.id === id);
-    const updatedNotes = [...(cand?.notes || []), note];
-    const { error } = await supabase
-      .from("rh_candidatos")
-      .update({ notes: updatedNotes })
-      .eq("id", id);
-    if (error) return;
-    setCandidatos((prev) => prev.map((c) => c.id === id ? { ...c, notes: updatedNotes } : c));
-    setSelectedCandidato((prev) => prev?.id === id ? { ...prev, notes: updatedNotes } : prev);
-  };
-
-  const handleRatingChange = async (id, rating) => {
-    const { error } = await supabase
-      .from("rh_candidatos")
-      .update({ rating })
-      .eq("id", id);
-    if (error) return;
-    setCandidatos((prev) => prev.map((c) => c.id === id ? { ...c, rating } : c));
-    setSelectedCandidato((prev) => prev?.id === id ? { ...prev, rating } : prev);
-  };
+  const activeVaga = vagas.find((v) => v.id === selectedVaga) || null;
 
   // ── Filtered candidatos ────────────────────────────────────────────────────
   const filteredCandidatos = useMemo(() => {
@@ -849,6 +898,27 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
         </div>
       )}
 
+      {/* Link público / WhatsApp da vaga selecionada */}
+      {activeVaga?.link_slug && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          <button
+            onClick={() => handleCopyLink(activeVaga)}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite, cursor: "pointer" }}
+          >
+            {copiedSlug === activeVaga.id ? <Check size={12} color="#16A34A" /> : <Link2 size={12} />}
+            {copiedSlug === activeVaga.id ? "Link copiado!" : "Copiar link da vaga"}
+          </button>
+          <a
+            href={whatsappShareUrl(activeVaga)}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "#15803D", textDecoration: "none" }}
+          >
+            <MessageSquare size={12} /> Compartilhar no WhatsApp
+          </a>
+        </div>
+      )}
+
       {/* Kanban board */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: NEUTRAL.slate, fontSize: 13 }}>
@@ -879,7 +949,7 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
                 candidatos={candByStage[stage.id] || []}
                 vagas={vagas}
                 canWrite={canWrite}
-                onCardClick={setSelectedCandidato}
+                onCardClick={(c) => setSelectedCandidatoId(c.id)}
                 onAddCandidato={() => setAddCandidatoStage(stage.id)}
               />
             ))}
@@ -893,7 +963,7 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
                 candidatos={candByStage[stage.id] || []}
                 vagas={vagas}
                 canWrite={canWrite}
-                onCardClick={setSelectedCandidato}
+                onCardClick={(c) => setSelectedCandidatoId(c.id)}
                 onAddCandidato={() => setAddCandidatoStage(stage.id)}
               />
             ))}
@@ -926,7 +996,7 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
           onStageChange={handleStageChange}
           onAddNote={handleAddNote}
           onRatingChange={handleRatingChange}
-          onClose={() => setSelectedCandidato(null)}
+          onClose={() => setSelectedCandidatoId(null)}
           onConvertToEmployee={onConvertToEmployee}
         />
       )}
