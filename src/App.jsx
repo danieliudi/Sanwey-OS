@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
+  ClipboardCheck, GraduationCap,
 } from "lucide-react";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -51,6 +52,8 @@ import { MarketingDashboardView } from "./components/views/MarketingDashboardVie
 import { RHOverviewView } from "./components/views/RHOverviewView";
 import { RHFuncionariosView } from "./components/views/RHFuncionariosView";
 import { RHRecrutamentoView } from "./components/views/RHRecrutamentoView";
+import { RHOnboardingView } from "./components/views/RHOnboardingView";
+import { RHTreinamentosView } from "./components/views/RHTreinamentosView";
 import { RHFeriasView } from "./components/views/RHFeriasView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
@@ -405,7 +408,19 @@ export default function App() {
           { id: "rh-overview",     label: "Visão Geral",      icon: LayoutDashboard },
           { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
           { id: "rh-recrutamento", label: "Recrutamento",      icon: BriefcaseBusiness },
+          { id: "rh-onboarding",   label: "Onboarding",        icon: ClipboardCheck },
+          { id: "rh-treinamentos", label: "Treinamentos",      icon: GraduationCap },
           { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
+        ],
+      });
+    } else {
+      // Todo colaborador (não só RH) precisa ver seu próprio checklist de
+      // onboarding e treinamentos atribuídos — não é uma tela de gestão de RH.
+      groups.push({
+        label: "Meu Desenvolvimento",
+        items: [
+          { id: "rh-onboarding",   label: "Onboarding",   icon: ClipboardCheck },
+          { id: "rh-treinamentos", label: "Treinamentos", icon: GraduationCap },
         ],
       });
     }
@@ -466,6 +481,8 @@ export default function App() {
       setSection("dashboard");
     }
     // RH sections only for rh/gerente_rh/admin
+    // Onboarding/Treinamentos ficam de fora do guard — todo colaborador acessa
+    // o próprio checklist, não só o time de RH (RLS já restringe os dados).
     const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias"];
     if (!isRHUser && rhSections.includes(section)) {
       setSection("dashboard");
@@ -835,6 +852,12 @@ export default function App() {
                   }}
                 />
               : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["rh-onboarding"]} element={
+            <RHOnboardingView currentUser={currentUser} users={users} canWrite={isRHManager} isRHUser={isRHUser} />
+          } />
+          <Route path={ROUTES["rh-treinamentos"]} element={
+            <RHTreinamentosView currentUser={currentUser} users={users} canWrite={isRHManager} isRHUser={isRHUser} />
           } />
           <Route path={ROUTES["rh-ferias"]} element={
             isRHUser
