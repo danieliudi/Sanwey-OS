@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import {
-  Bot, ChevronDown, ChevronUp, Loader2, AlertCircle, RotateCcw, Copy, Check,
+  Bot, ChevronDown, ChevronUp, Loader2, AlertCircle, RotateCcw, Copy, Check, Target,
+  CalendarClock, History,
 } from "lucide-react";
 import { useAI } from "../../hooks/use-ai";
 import {
-  briefingPrompt, emailDraftPrompt, nextStepPrompt, objectionPrompt,
+  briefingPrompt, emailDraftPrompt, nextStepPrompt, objectionPrompt, scorePrompt,
 } from "../../constants/ai-prompts";
 import { NEUTRAL } from "../../constants/companies";
 
@@ -14,11 +15,20 @@ const BORDER = "#E5E7EB";
 const BG = "#F1EDE8";
 
 const FEATURES = [
+  { id: "score",      label: "Calcular Fit Score" },
   { id: "briefing",   label: "Briefing de reunião" },
   { id: "email",      label: "Rascunho de e-mail IA" },
   { id: "nextstep",   label: "Próximo passo" },
   { id: "objection",  label: "Análise de objeção" },
 ];
+
+function parseScoreResponse(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("Resposta da IA não trouxe um JSON válido.");
+  const parsed = JSON.parse(match[0]);
+  const score = Math.max(0, Math.min(100, Math.round(Number(parsed.score) || 0)));
+  return { score, justificativa: parsed.justificativa || "" };
+}
 
 const TONES = [
   { value: "profissional", label: "Profissional" },
@@ -26,13 +36,16 @@ const TONES = [
   { value: "direto",       label: "Direto" },
 ];
 
-export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
+export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpdate, onAddActivity }) {
   const { complete, isConfigured } = useAI(currentUser);
 
   const [open, setOpen] = useState(false);
-  const [activeFeature, setActiveFeature] = useState("briefing");
+  const [activeFeature, setActiveFeature] = useState("score");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [scoreResult, setScoreResult] = useState(null);
+  const [scheduled, setScheduled] = useState(false);
+  const [savedToHistory, setSavedToHistory] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
 
@@ -43,12 +56,17 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
   const handleFeatureSelect = (id) => {
     setActiveFeature(id);
     setResult(null);
+    setScoreResult(null);
     setError(null);
     setCopied(false);
+    setScheduled(false);
+    setSavedToHistory(false);
   };
 
   const buildMessages = () => {
     switch (activeFeature) {
+      case "score":
+        return scorePrompt(lead, activities);
       case "briefing":
         return briefingPrompt(lead, activities, linkedEmails);
       case "email":
@@ -70,12 +88,21 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
     }
     setLoading(true);
     setResult(null);
+    setScoreResult(null);
     setError(null);
     setCopied(false);
+    setScheduled(false);
+    setSavedToHistory(false);
     try {
       const messages = buildMessages();
       const text = await complete(messages);
-      setResult(text);
+      if (activeFeature === "score") {
+        const parsed = parseScoreResponse(text);
+        setScoreResult(parsed);
+        onUpdate?.(lead.id, { fitScore: parsed.score });
+      } else {
+        setResult(text);
+      }
     } catch (err) {
       setError(err.message || "Erro ao gerar resposta.");
     } finally {
@@ -93,6 +120,32 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
 
   const handleRegenerate = () => {
     handleGenerate();
+  };
+
+  // Fase 7: transforma a sugestão de "Próximo passo" num follow-up agendado
+  // de verdade, reaproveitando o mesmo campo que já dispara lembrete
+  // (use-notifications.js) — fecha o ciclo entre a IA sugerir e o sistema
+  // cobrar depois.
+  const handleScheduleFollowUp = () => {
+    if (!onUpdate) return;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    onUpdate(lead.id, { nextFollowUp: tomorrow.toISOString().slice(0, 10) });
+    setScheduled(true);
+  };
+
+  // Fase 10: salva o texto gerado como uma atividade do lead, em vez de só
+  // deixar na tela até o painel fechar.
+  const handleSaveToHistory = async () => {
+    if (!result || !onAddActivity) return;
+    const featureLabel = FEATURES.find(f => f.id === activeFeature)?.label || "IA";
+    await onAddActivity(lead.id, {
+      type: "note",
+      userId: currentUser?.id || null,
+      userName: currentUser?.name || null,
+      body: `[${featureLabel}] ${result}`,
+    });
+    setSavedToHistory(true);
   };
 
   return (
@@ -247,6 +300,45 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
             </div>
           )}
 
+          {/* Score result */}
+          {scoreResult && (
+            <div className="space-y-2">
+              <div
+                className="flex items-start gap-3 p-3 rounded-lg border"
+                style={{ background: CREAM, borderColor: BORDER }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full font-bold flex-shrink-0"
+                  style={{
+                    width: 44, height: 44, fontSize: 16,
+                    color: scoreResult.score >= 70 ? "#16A34A" : scoreResult.score >= 40 ? "#D97706" : "#DC2626",
+                    background: scoreResult.score >= 70 ? "#DCFCE7" : scoreResult.score >= 40 ? "#FEF3C7" : "#FEE2E2",
+                  }}
+                >
+                  {scoreResult.score}
+                </div>
+                <div className="text-sm leading-relaxed" style={{ color: NEUTRAL.graphite }}>
+                  {scoreResult.justificativa}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRegenerate}
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
+                  style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: BORDER, cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = NEUTRAL.slate; }}
+                >
+                  <RotateCcw size={11} />
+                  Recalcular
+                </button>
+                <span className="flex items-center gap-1 text-xs" style={{ color: "#16A34A" }}>
+                  <Target size={11} /> Score salvo no lead
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Result */}
           {result && (
             <div className="space-y-2">
@@ -286,6 +378,38 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
                   {copied ? <Check size={11} /> : <Copy size={11} />}
                   {copied ? "Copiado!" : "Copiar"}
                 </button>
+                {activeFeature === "nextstep" && onUpdate && (
+                  <button
+                    onClick={handleScheduleFollowUp}
+                    disabled={scheduled}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
+                    style={{
+                      background: scheduled ? "#F0FDF4" : "#FFFFFF",
+                      color: scheduled ? "#16A34A" : NEUTRAL.slate,
+                      borderColor: scheduled ? "#BBF7D0" : BORDER,
+                      cursor: scheduled ? "default" : "pointer",
+                    }}
+                  >
+                    {scheduled ? <Check size={11} /> : <CalendarClock size={11} />}
+                    {scheduled ? "Follow-up agendado" : "Agendar follow-up p/ amanhã"}
+                  </button>
+                )}
+                {onAddActivity && (
+                  <button
+                    onClick={handleSaveToHistory}
+                    disabled={savedToHistory}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
+                    style={{
+                      background: savedToHistory ? "#F0FDF4" : "#FFFFFF",
+                      color: savedToHistory ? "#16A34A" : NEUTRAL.slate,
+                      borderColor: savedToHistory ? "#BBF7D0" : BORDER,
+                      cursor: savedToHistory ? "default" : "pointer",
+                    }}
+                  >
+                    {savedToHistory ? <Check size={11} /> : <History size={11} />}
+                    {savedToHistory ? "Salvo no histórico" : "Salvar no histórico"}
+                  </button>
+                )}
               </div>
             </div>
           )}

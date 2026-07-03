@@ -22,16 +22,22 @@ import { STORAGE_KEYS } from "../constants/storage-keys";
  *     stageId?: string,      // time_in_stage: which stage
  *   },
  *   action: {
- *     type: "move_stage" | "set_field" | "add_badge" | "notify",
- *     targetStage?: string,  // move_stage
- *     field?: string,        // set_field
- *     fieldValue?: string,   // set_field
- *     badge?: string,        // add_badge: label text
- *     badgeColor?: string,   // add_badge: hex color
- *     message?: string,      // notify: alert message
+ *     type: "move_stage" | "set_field" | "add_badge" | "notify" | "create_deliverable" | "enrich_cnpj",
+ *     targetStage?: string,       // move_stage
+ *     field?: string,             // set_field
+ *     fieldValue?: string,        // set_field
+ *     badge?: string,             // add_badge: label text
+ *     badgeColor?: string,        // add_badge: hex color
+ *     message?: string,           // notify: alert message
+ *     deliverableTitle?: string,  // create_deliverable: título do card criado em Marketing → Entregas
+ *     deliverablePriority?: string, // create_deliverable: "baixa" | "media" | "alta"
  *   },
  *   createdAt: string,
  * }
+ *
+ * create_deliverable e enrich_cnpj não retornam um patch síncrono — geram um
+ * item em `sideEffects`, que quem chama evaluateAutomations (App.jsx) executa
+ * de fato (insert cross-módulo / chamada à Edge Function de CNPJ).
  */
 
 export function useAutomations() {
@@ -73,6 +79,7 @@ export function useAutomations() {
   const evaluateAutomations = useCallback((lead, prev, eventType, module = "crm") => {
     const patches = [];
     const notifications = [];
+    const sideEffects = [];
 
     for (const rule of automations) {
       if (!rule.enabled) continue;
@@ -158,9 +165,32 @@ export function useAutomations() {
           ruleName: rule.name,
         });
       }
+
+      if (action.type === "create_deliverable") {
+        sideEffects.push({
+          type: "create_deliverable",
+          leadId: lead.id,
+          title: (action.deliverableTitle || "Onboarding: {empresa}").replace("{empresa}", lead.company || "cliente"),
+          companyIds: [lead.companyId],
+          description: `Gerado automaticamente pela automação "${rule.name}" a partir do negócio "${lead.company}".`,
+          priority: action.deliverablePriority || "media",
+          ruleId: rule.id,
+          ruleName: rule.name,
+        });
+      }
+
+      if (action.type === "enrich_cnpj") {
+        sideEffects.push({
+          type: "enrich_cnpj",
+          leadId: lead.id,
+          cnpj: lead.cnpj,
+          ruleId: rule.id,
+          ruleName: rule.name,
+        });
+      }
     }
 
-    return { patches, notifications };
+    return { patches, notifications, sideEffects };
   }, [automations]);
 
   // Summaries for the UI

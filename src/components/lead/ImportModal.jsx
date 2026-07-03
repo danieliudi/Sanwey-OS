@@ -90,6 +90,30 @@ function parseValue(raw) {
   return isNaN(n) ? 0 : n;
 }
 
+// Rótulo de coluna no estilo Excel (A, B, ..., Z, AA, AB, ...) — usado quando
+// a planilha não tem cabeçalho nessa coluna, já que no Excel colunas são
+// identificadas por letra, não por número.
+function excelColumnLetter(index) {
+  let n = index + 1;
+  let label = "";
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    label = String.fromCharCode(65 + rem) + label;
+    n = Math.floor((n - 1) / 26);
+  }
+  return label;
+}
+
+// Primeiro valor não vazio de uma coluna, olhando várias linhas — a linha 0
+// sozinha pode estar vazia justo naquela coluna mesmo com dado mais abaixo.
+function firstSample(rows, colIdx, limit = 15) {
+  for (let r = 0; r < Math.min(rows.length, limit); r++) {
+    const v = rows[r]?.[colIdx];
+    if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Styles helpers
 // ---------------------------------------------------------------------------
@@ -219,8 +243,26 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
           return;
         }
 
-        const hdrs = (data[0] || []).map(h => String(h).trim());
-        const dataRows = data.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
+        const hdrsRaw = (data[0] || []).map(h => String(h).trim());
+        const dataRowsRaw = data.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
+
+        // O Excel às vezes exporta dezenas de colunas "fantasma" vazias por
+        // causa de formatação residual (!ref inflado). Cortamos tudo depois
+        // da última coluna que realmente tem cabeçalho ou algum valor, senão
+        // o mapeamento vira uma lista de "Coluna N" sem fim.
+        let lastUsedCol = -1;
+        hdrsRaw.forEach((h, i) => { if (h !== "") lastUsedCol = Math.max(lastUsedCol, i); });
+        dataRowsRaw.forEach(row => {
+          row.forEach((c, i) => { if (String(c).trim() !== "") lastUsedCol = Math.max(lastUsedCol, i); });
+        });
+
+        if (lastUsedCol < 0) {
+          setParseError("Não foi possível identificar colunas com dados nessa planilha.");
+          return;
+        }
+
+        const hdrs = hdrsRaw.slice(0, lastUsedCol + 1);
+        const dataRows = dataRowsRaw.map(r => r.slice(0, lastUsedCol + 1));
 
         // Auto-detect mapping
         const autoMap = {};
@@ -535,13 +577,15 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                       </tr>
                     </thead>
                     <tbody>
-                      {headers.map((h, i) => (
+                      {headers.map((h, i) => {
+                        const sample = firstSample(rows, i);
+                        return (
                         <tr key={i} style={{ borderTop: `1px solid #EEEEEE` }}>
                           <td style={{ padding: "8px 14px", color: NEUTRAL.graphite, verticalAlign: "middle" }}>
-                            <div style={{ fontWeight: 500 }}>{h || `Coluna ${i + 1}`}</div>
-                            {rows[0]?.[i] !== undefined && (
+                            <div style={{ fontWeight: 500 }}>{h || `Coluna ${excelColumnLetter(i)}`}</div>
+                            {sample !== null && (
                               <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 2 }}>
-                                ex.: {String(rows[0][i]).slice(0, 40)}
+                                ex.: {sample.slice(0, 40)}
                               </div>
                             )}
                           </td>
@@ -557,7 +601,8 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                             </select>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

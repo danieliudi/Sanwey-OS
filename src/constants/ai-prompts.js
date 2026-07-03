@@ -107,18 +107,128 @@ Cada resposta: máx 3 frases. Seja direto, sem jargões.`,
   ];
 }
 
-export function pipelineChatPrompt(question, leads, users) {
-  const summary = summarizeLeads(leads, users);
+export function scorePrompt(lead, activities) {
+  const recentActivities = (activities || [])
+    .slice(-5)
+    .map(a => `- ${a.body}`)
+    .join('\n') || '- Nenhuma atividade registrada';
+
+  const daysInStage = lead.stageChangedAt
+    ? Math.floor((Date.now() - new Date(lead.stageChangedAt)) / 86400000)
+    : 0;
+
+  return [
+    {
+      role: 'system',
+      content: `Você é um analista de qualificação de leads B2B. Avalie exclusivamente com base nos dados fornecidos — não presuma informação não escrita.
+
+Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown, sem explicações fora do JSON:
+{"score": <número de 0 a 100>, "justificativa": "<2-3 frases objetivas>"}`,
+    },
+    {
+      role: 'user',
+      content: `Avalie o potencial de conversão deste lead:
+
+**Empresa:** ${lead.company} (${lead.sector || '—'}, porte ${lead.size || '—'})
+**Capital social:** R$ ${lead.capitalSocial?.toLocaleString('pt-BR') || '—'}
+**Etapa atual:** ${lead.stage} | **Dias nesta etapa:** ${daysInStage}d
+**Valor estimado do negócio:** R$ ${lead.value?.toLocaleString('pt-BR') || '—'}
+**Decisor identificado:** ${lead.decisionMaker?.name ? `${lead.decisionMaker.name} (${lead.decisionMaker.role || '—'})` : 'Não identificado'}
+**Gatilho comercial:** ${lead.triggerLabel || '—'}: ${lead.evidence || '—'}
+**Classificação atual:** ${lead.clientClassification || '—'}
+
+**Atividades recentes:**
+${recentActivities}
+
+Considere: presença de decisor identificado, força do gatilho comercial, engajamento (atividades recentes), tempo parado na etapa e porte/capital da empresa.`,
+    },
+  ];
+}
+
+// Extrai dados de um documento de identificação (CNH/RG) anexado como
+// imagem ou PDF em base64 (ver src/components/views/NovoColaboradorModal.jsx).
+// Usado pra preencher o cadastro automaticamente — importante pra
+// colaboradores que não sabem ler/escrever e não conseguem digitar os
+// próprios dados.
+export function documentExtractionPrompt(fileContentBlock) {
+  return [
+    {
+      role: 'system',
+      content: `Você é um assistente de RH que extrai dados de documentos de identificação brasileiros (CNH ou RG). Leia o documento anexado com atenção. Se um campo não estiver legível ou não existir no documento, retorne null para ele — nunca invente informação.
+
+Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown:
+{"fullName": "<nome completo ou null>", "cpf": "<apenas números ou null>", "rg": "<apenas números ou null>", "birthDate": "<AAAA-MM-DD ou null>"}`,
+    },
+    {
+      role: 'user',
+      content: [fileContentBlock, { type: 'text', text: 'Extraia os dados deste documento.' }],
+    },
+  ];
+}
+
+// orderHistory: outros negócios já ganhos do mesmo cliente (mesmo clientId),
+// usado pra sugerir upsell/cross-sell com base no que ele já comprou.
+export function proposalPrompt(lead, orderHistory = []) {
+  const hasHistory = orderHistory.length > 0;
+  const historyLines = orderHistory
+    .map(l => `- ${l.skuName || l.sector || 'negócio anterior'}: R$ ${l.value?.toLocaleString('pt-BR') || '—'}`)
+    .join('\n');
+
+  return [
+    {
+      role: 'system',
+      content: `Você é um redator comercial B2B. Escreva o corpo de uma proposta comercial formal em português brasileiro, pronta para ser lida pelo cliente. Não inclua saudação nem despedida com nome de remetente (isso é adicionado depois). Não invente preços — deixe um campo "[a definir]" onde condições comerciais específicas seriam necessárias.`,
+    },
+    {
+      role: 'user',
+      content: `Escreva uma proposta comercial para:
+
+**Empresa cliente:** ${lead.company} (${lead.sector || '—'}, porte ${lead.size || '—'})
+**Decisor:** ${lead.decisionMaker?.name || 'responsável pela decisão'} (${lead.decisionMaker?.role || '—'})
+**Necessidade identificada:** ${lead.evidence || lead.triggerLabel || 'a definir com o cliente'}
+**Produto/serviço de interesse:** ${lead.skuName || '—'}
+**Valor estimado do negócio:** R$ ${lead.value?.toLocaleString('pt-BR') || '[a definir]'}
+**Classificação do cliente:** ${lead.clientClassification || '—'}
+${hasHistory ? `\n**Negócios anteriores já fechados com este cliente:**\n${historyLines}` : ''}
+
+Estrutura:
+1. **Contexto** — 1 parágrafo curto retomando a necessidade identificada.
+2. **Proposta de solução** — 1-2 parágrafos descrevendo como o produto/serviço atende essa necessidade.
+3. **Condições comerciais** — placeholder "[a definir]" para preço, prazo e forma de pagamento.
+${hasHistory ? '4. **Oportunidade de upsell/cross-sell** — 1 parágrafo curto sugerindo produtos/serviços complementares com base no histórico de compras acima, só se fizer sentido comercial real.\n5. **Próximos passos**' : '4. **Próximos passos**'} — 1 parágrafo curto com uma chamada para ação clara.`,
+    },
+  ];
+}
+
+// Recebe o objeto já calculado por aggregatePipeline() (src/utils/pipeline-metrics.js)
+// — a LLM só interpreta/explica números já certos, nunca faz a conta sozinha.
+export function pipelineChatPrompt(question, aggregate) {
+  const stageLines = aggregate.byStage
+    .map(s => `- ${s.stage}: ${s.count} leads, R$ ${(s.value / 1000).toFixed(0)}k`)
+    .join('\n') || '- Nenhum lead no pipeline';
+
+  const ownerLines = aggregate.byOwner
+    .slice(0, 15)
+    .map(o => `- ${o.name}: ${o.count} leads | ganho R$ ${(o.valueWon / 1000).toFixed(0)}k | em aberto R$ ${(o.valueOpen / 1000).toFixed(0)}k`)
+    .join('\n') || '- Nenhum responsável com leads atribuídos';
+
   return [
     {
       role: 'system',
       content: `${SYSTEM_BASE}
 
-Você tem acesso aos dados do pipeline de vendas abaixo. Responda perguntas sobre eles com precisão.
-Ao citar números, use os dados reais fornecidos. Se não souber, diga que não tem essa informação.
+Os números abaixo já foram calculados com precisão — use-os exatamente como estão, nunca recalcule ou estime por conta própria. Se a pergunta pedir algo que não está nos dados, diga que não tem essa informação, não invente.
 
-**Dados do pipeline:**
-${summary}`,
+**Total de leads:** ${aggregate.totalLeads}
+**Ganhos:** ${aggregate.wonCount} (R$ ${(aggregate.wonValue / 1000).toFixed(0)}k) | **Perdidos:** ${aggregate.lostCount}
+**Taxa de conversão (ganho / (ganho + perdido)):** ${aggregate.conversionRate}%
+**Valor total em aberto (pipeline ativo):** R$ ${(aggregate.openValue / 1000).toFixed(0)}k
+
+**Por etapa:**
+${stageLines}
+
+**Por responsável (top 15 por valor ganho):**
+${ownerLines}`,
     },
     { role: 'user', content: question },
   ];
@@ -273,13 +383,4 @@ Responda com:
 3. **Próximo passo** (ação concreta antes de mover — 1 frase)`,
     },
   ];
-}
-
-function summarizeLeads(leads, users) {
-  const lines = leads.slice(0, 50).map(l => {
-    const owner = users?.find(u => u.id === l.owner);
-    const days = l.stageChangedAt ? Math.floor((Date.now() - new Date(l.stageChangedAt)) / 86400000) : 0;
-    return `${l.company} | ${l.sector || '—'} | ${l.stage} | R$${Math.round((l.value || 0) / 1000)}k | ${days}d | ${owner?.name || 'sem responsável'}`;
-  });
-  return `Total: ${leads.length} leads\nColunas: Empresa | Setor | Etapa | Valor | Dias na etapa | Responsável\n` + lines.join('\n');
 }

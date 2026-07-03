@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   ChevronDown,
@@ -10,6 +10,10 @@ import {
   MessageSquare,
   ArrowRight,
   UserPlus,
+  Link2,
+  Check,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import {
@@ -17,6 +21,221 @@ import {
   RH_RECRUITMENT_STAGES,
 } from "../../constants/rh-config";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
+import { useAI } from "../../hooks/use-ai";
+
+function whatsappShareUrl(vaga) {
+  const link = `${window.location.origin}/vagas/${vaga.link_slug}`;
+  const text = `Vaga aberta: ${vaga.title}! Envie seu currículo por aqui: ${link}`;
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+const TRIAGEM_SYSTEM_PROMPT = `Você é um analista de recrutamento técnico. Receberá a descrição de uma vaga e o currículo de um candidato (anexado como documento PDF). Avalie exclusivamente com base no conteúdo do currículo — não presuma informação não escrita.
+
+Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown, sem explicações fora do JSON:
+{"fit_score": <número de 0 a 100>, "justificativa": "<2-3 frases objetivas>", "pontos_fortes": ["...", "..."], "gaps": ["...", "..."]}`;
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function parseTriagemResponse(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("Resposta da IA não trouxe um JSON válido.");
+  const parsed = JSON.parse(match[0]);
+  return {
+    fitScore: Math.max(0, Math.min(100, Number(parsed.fit_score) || 0)),
+    justificativa: parsed.justificativa || "",
+    pontosFortes: Array.isArray(parsed.pontos_fortes) ? parsed.pontos_fortes : [],
+    gaps: Array.isArray(parsed.gaps) ? parsed.gaps : [],
+  };
+}
+
+// ── Triagem por IA Modal ──────────────────────────────────────────────────────
+
+function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onClose }) {
+  const { complete, isConfigured, provider } = useAI(user);
+  const [vagaId, setVagaId] = useState("");
+  const [necessidade, setNecessidade] = useState("");
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [results, setResults] = useState([]);
+  const [attachingId, setAttachingId] = useState(null);
+  const [attachedIds, setAttachedIds] = useState(new Set());
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const pdfCandidatos = useMemo(() => talentPool.filter(c => c.resume_ext === "pdf"), [talentPool]);
+  const docxSkipped    = useMemo(() => talentPool.filter(c => c.resume_ext && c.resume_ext !== "pdf").length, [talentPool]);
+
+  const handleVagaChange = (id) => {
+    setVagaId(id);
+    const v = vagas.find(vg => vg.id === id);
+    if (v && !necessidade.trim()) {
+      setNecessidade([v.title, v.requirements, v.description].filter(Boolean).join(" — "));
+    }
+  };
+
+  const alreadyLinked = (candidateId) => aplicacoesRaw.some(a => a.candidate_id === candidateId && a.vaga_id === vagaId);
+
+  const runTriagem = async () => {
+    if (!necessidade.trim()) { setErrorMsg("Descreva o que você procura."); return; }
+    setErrorMsg(null);
+    setRunning(true);
+    setResults([]);
+    setProgress({ done: 0, total: pdfCandidatos.length });
+    const out = [];
+    for (const cand of pdfCandidatos) {
+      try {
+        const { data: blob, error: dlErr } = await supabase.storage
+          .from("rh-curriculos")
+          .download(`${cand.id}/curriculo.pdf`);
+        if (dlErr || !blob) throw new Error("Currículo indisponível");
+        const base64 = await blobToBase64(blob);
+        const text = await complete([
+          { role: "system", content: TRIAGEM_SYSTEM_PROMPT },
+          { role: "user", content: [
+            { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+            { type: "text", text: `Vaga: ${necessidade}` },
+          ] },
+        ], { maxTokens: 500 });
+        const triagem = parseTriagemResponse(text);
+        out.push({ candidateId: cand.id, name: cand.name, ...triagem });
+      } catch (err) {
+        out.push({ candidateId: cand.id, name: cand.name, error: err.message || "Falha na análise" });
+      }
+      setProgress(p => ({ ...p, done: p.done + 1 }));
+    }
+    out.sort((a, b) => (b.fitScore ?? -1) - (a.fitScore ?? -1));
+    setResults(out);
+    setRunning(false);
+  };
+
+  const handleAttach = async (result) => {
+    setAttachingId(result.candidateId);
+    try {
+      await onAttach(result.candidateId, vagaId, result);
+      setAttachedIds(prev => new Set(prev).add(result.candidateId));
+    } catch (err) {
+      setErrorMsg(err.message || "Erro ao vincular candidato à vaga.");
+    } finally {
+      setAttachingId(null);
+    }
+  };
+
+  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+      <div style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Sparkles size={16} style={{ color: "#7C3AED" }} />
+            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>Triagem por IA</div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px 24px" }}>
+          {!isConfigured ? (
+            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "#92400E", lineHeight: 1.6 }}>
+              Configure uma LLM em <strong>Configurações → Integrações de IA</strong> para usar a triagem por currículo.
+            </div>
+          ) : provider !== "anthropic" ? (
+            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "#92400E", lineHeight: 1.6 }}>
+              A triagem por currículo requer o provedor <strong>Anthropic (Claude)</strong> configurado — ele lê o PDF diretamente. Troque o provedor em Configurações → Integrações de IA.
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-3 mb-4">
+                <div>
+                  <label style={labelSt}>Vaga (para vincular os resultados) *</label>
+                  <select value={vagaId} onChange={(e) => handleVagaChange(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                    <option value="">Selecionar vaga</option>
+                    {vagas.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelSt}>O que você procura?</label>
+                  <textarea
+                    value={necessidade}
+                    onChange={(e) => setNecessidade(e.target.value)}
+                    placeholder="Ex: vendedor B2B industrial, experiência em compliance ambiental…"
+                    rows={3}
+                    className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
+                    style={inputSt}
+                  />
+                </div>
+              </div>
+
+              <div style={{ fontSize: 11, color: NEUTRAL.slate, marginBottom: 12 }}>
+                {pdfCandidatos.length} candidato{pdfCandidatos.length !== 1 ? "s" : ""} com currículo PDF no talent pool
+                {docxSkipped > 0 && ` · ${docxSkipped} em DOCX ignorado${docxSkipped !== 1 ? "s" : ""} nesta versão`}
+              </div>
+
+              {errorMsg && (
+                <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>
+              )}
+
+              <button
+                onClick={runTriagem}
+                disabled={running || !vagaId || pdfCandidatos.length === 0}
+                style={{ width: "100%", background: "#7C3AED", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", opacity: (running || !vagaId || pdfCandidatos.length === 0) ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+              >
+                {running && <Loader2 size={14} className="animate-spin" />}
+                {running ? `Analisando ${progress.done}/${progress.total}…` : "Triar com IA"}
+              </button>
+
+              {results.length > 0 && (
+                <div className="flex flex-col gap-2 mt-4">
+                  {results.map((r) => (
+                    <div key={r.candidateId} style={{ border: "1px solid #E5E7EB", borderRadius: 10, padding: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: NEUTRAL.graphite }}>{r.name}</span>
+                        {typeof r.fitScore === "number" && (
+                          <span style={{ fontWeight: 800, fontSize: 14, color: r.fitScore >= 70 ? "#16A34A" : r.fitScore >= 40 ? "#D97706" : "#DC2626" }}>{r.fitScore}</span>
+                        )}
+                      </div>
+                      {r.error ? (
+                        <div style={{ fontSize: 12, color: "#DC2626" }}>{r.error}</div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 12, color: NEUTRAL.slate, lineHeight: 1.5, marginBottom: 8 }}>{r.justificativa}</div>
+                          <button
+                            onClick={() => handleAttach(r)}
+                            disabled={attachingId === r.candidateId || attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)}
+                            style={{ display: "flex", alignItems: "center", gap: 6, background: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "#F3F4F6" : "#EFF6FF", color: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? NEUTRAL.slate : "#1E4D8C", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "default" : "pointer" }}
+                          >
+                            {attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)
+                              ? <><Check size={12} /> Adicionado à vaga</>
+                              : attachingId === r.candidateId ? "Adicionando…" : "Adicionar à vaga"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -225,6 +444,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) { setError("Nome obrigatório."); return; }
+    if (!vagaId) { setError("Selecione a vaga."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -232,12 +452,9 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
         name: name.trim(),
         email: email.trim() || null,
         phone: phone.trim() || null,
-        vaga_id: vagaId || null,
+        vaga_id: vagaId,
         source: source.trim() || null,
         stage,
-        stage_changed_at: new Date().toISOString(),
-        rating: 0,
-        notes: [],
       });
       onClose();
     } catch (err) {
@@ -293,7 +510,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
               <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-0000" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
             </div>
             <div>
-              <label style={labelSt}>Vaga</label>
+              <label style={labelSt}>Vaga *</label>
               <select value={vagaId} onChange={(e) => setVagaId(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
                 <option value="">Selecionar vaga</option>
                 {vagas.map((v) => (
@@ -333,6 +550,26 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
+  const [reprovando, setReprovando] = useState(false);
+  const [motivoReprovacao, setMotivoReprovacao] = useState("");
+  const [savingStage, setSavingStage] = useState(false);
+
+  const requestStageChange = (stageId) => {
+    if (stageId === "reprovado") { setReprovando(true); return; }
+    onStageChange(candidato.id, stageId);
+  };
+
+  const confirmReprovacao = async () => {
+    if (!motivoReprovacao.trim()) return;
+    setSavingStage(true);
+    try {
+      await onStageChange(candidato.id, "reprovado", motivoReprovacao.trim());
+      setReprovando(false);
+      setMotivoReprovacao("");
+    } finally {
+      setSavingStage(false);
+    }
+  };
 
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -430,6 +667,27 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
             </div>
           </div>
 
+          {/* Fit score / justificativa da triagem por IA */}
+          {typeof candidato.fit_score === "number" && (
+            <div style={{ marginBottom: 20, background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 16, color: "#6D28D9" }}>{Math.round(candidato.fit_score)}</span>
+                <span style={{ fontSize: 11, color: "#6D28D9", fontWeight: 600 }}>fit score (IA)</span>
+              </div>
+              {candidato.justificativa && (
+                <div style={{ fontSize: 12, color: "#5B21B6", lineHeight: 1.5 }}>{candidato.justificativa}</div>
+              )}
+            </div>
+          )}
+
+          {/* Motivo de reprovação já registrado */}
+          {candidato.stage === "reprovado" && candidato.motivo_reprovacao && (
+            <div style={{ marginBottom: 20, background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 12, padding: "12px 14px" }}>
+              <div style={labelSt}>Motivo da reprovação</div>
+              <div style={{ fontSize: 12, color: NEUTRAL.graphite, lineHeight: 1.5 }}>{candidato.motivo_reprovacao}</div>
+            </div>
+          )}
+
           {/* Stage progression */}
           {canWrite && (
             <div style={{ marginBottom: 20 }}>
@@ -438,7 +696,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                 {RH_RECRUITMENT_STAGES.filter((s) => s.id !== candidato.stage).map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => onStageChange(candidato.id, s.id)}
+                    onClick={() => requestStageChange(s.id)}
                     style={{
                       background: `${s.color}18`,
                       color: s.color,
@@ -457,6 +715,36 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                   </button>
                 ))}
               </div>
+
+              {reprovando && (
+                <div style={{ marginTop: 10, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12 }}>
+                  <div style={{ ...labelSt, color: "#B91C1C" }}>Motivo da reprovação *</div>
+                  <textarea
+                    value={motivoReprovacao}
+                    onChange={(e) => setMotivoReprovacao(e.target.value)}
+                    placeholder="Por que este candidato foi reprovado?"
+                    rows={2}
+                    autoFocus
+                    className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
+                    style={{ borderColor: "#FCA5A5", color: NEUTRAL.graphite, background: "#FFF", fontSize: 13 }}
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={confirmReprovacao}
+                      disabled={savingStage || !motivoReprovacao.trim()}
+                      style={{ background: "#DC2626", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
+                    >
+                      {savingStage ? "Salvando…" : "Confirmar reprovação"}
+                    </button>
+                    <button
+                      onClick={() => { setReprovando(false); setMotivoReprovacao(""); }}
+                      style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -672,7 +960,22 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <StarRating value={c.rating || 0} />
-                    <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{days}d</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {typeof c.fit_score === "number" && (
+                        <span
+                          title="Fit score (triagem por IA)"
+                          style={{
+                            fontSize: 10, fontWeight: 700,
+                            color: c.fit_score >= 70 ? "#16A34A" : c.fit_score >= 40 ? "#D97706" : "#DC2626",
+                            background: c.fit_score >= 70 ? "#DCFCE7" : c.fit_score >= 40 ? "#FEF3C7" : "#FEE2E2",
+                            borderRadius: 99, padding: "1px 7px",
+                          }}
+                        >
+                          {Math.round(c.fit_score)}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{days}d</span>
+                    </div>
                   </div>
                   {c.source && (
                     <div style={{ marginTop: 5 }}>
@@ -694,84 +997,41 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
 // ── Main View ─────────────────────────────────────────────────────────────────
 
 export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
-  const [vagas, setVagas]                   = useState([]);
-  const [candidatos, setCandidatos]         = useState([]);
-  const [loading, setLoading]               = useState(true);
+  const {
+    vagas, candidatos, talentPool, aplicacoesRaw, loading,
+    createVaga, createCandidato, changeStage, addNote, changeRating, attachTriagemToVaga,
+  } = useRHRecrutamento({ userId: user?.id });
   const [selectedVaga, setSelectedVaga]     = useState("todas");
-  const [selectedCandidato, setSelectedCandidato] = useState(null);
+  const [selectedCandidatoId, setSelectedCandidatoId] = useState(null);
   const [quickAddVaga, setQuickAddVaga]     = useState(false);
   const [addCandidatoStage, setAddCandidatoStage] = useState(null);
+  const [copiedSlug, setCopiedSlug]         = useState(null);
+  const [triagemOpen, setTriagemOpen]       = useState(false);
 
-  // ── Load data ──────────────────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
-    setLoading(true);
-    try {
-      const [{ data: vagasData }, { data: candData }] = await Promise.all([
-        supabase.from("rh_vagas").select("*").order("created_at", { ascending: false }),
-        supabase.from("rh_candidatos").select("*").order("created_at", { ascending: false }),
-      ]);
-      setVagas(vagasData || []);
-      setCandidatos(candData || []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
+  const selectedCandidato = useMemo(
+    () => candidatos.find((c) => c.id === selectedCandidatoId) || null,
+    [candidatos, selectedCandidatoId]
+  );
 
   // ── Actions ────────────────────────────────────────────────────────────────
-  const handleCreateVaga = async (data) => {
-    const { data: newVaga, error } = await supabase
-      .from("rh_vagas")
-      .insert({ ...data, created_by: user?.id })
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    setVagas((prev) => [newVaga, ...prev]);
+  const handleCreateVaga = async (data) => { await createVaga(data); };
+  const handleCreateCandidato = async (data) => { await createCandidato(data); };
+  const handleStageChange = async (id, newStage, motivo) => { await changeStage(id, newStage, motivo); };
+  const handleAddNote = async (id, note) => { await addNote(id, note); };
+  const handleRatingChange = async (id, rating) => { await changeRating(id, rating); };
+
+  const handleCopyLink = async (vaga) => {
+    const link = `${window.location.origin}/vagas/${vaga.link_slug}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedSlug(vaga.id);
+      setTimeout(() => setCopiedSlug((s) => (s === vaga.id ? null : s)), 2000);
+    } catch {
+      window.prompt("Copie o link da vaga:", link);
+    }
   };
 
-  const handleCreateCandidato = async (data) => {
-    const { data: novo, error } = await supabase
-      .from("rh_candidatos")
-      .insert(data)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    setCandidatos((prev) => [novo, ...prev]);
-  };
-
-  const handleStageChange = async (id, newStage) => {
-    const { error } = await supabase
-      .from("rh_candidatos")
-      .update({ stage: newStage, stage_changed_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) return;
-    setCandidatos((prev) => prev.map((c) => c.id === id ? { ...c, stage: newStage, stage_changed_at: new Date().toISOString() } : c));
-    setSelectedCandidato((prev) => prev?.id === id ? { ...prev, stage: newStage, stage_changed_at: new Date().toISOString() } : prev);
-  };
-
-  const handleAddNote = async (id, note) => {
-    const cand = candidatos.find((c) => c.id === id);
-    const updatedNotes = [...(cand?.notes || []), note];
-    const { error } = await supabase
-      .from("rh_candidatos")
-      .update({ notes: updatedNotes })
-      .eq("id", id);
-    if (error) return;
-    setCandidatos((prev) => prev.map((c) => c.id === id ? { ...c, notes: updatedNotes } : c));
-    setSelectedCandidato((prev) => prev?.id === id ? { ...prev, notes: updatedNotes } : prev);
-  };
-
-  const handleRatingChange = async (id, rating) => {
-    const { error } = await supabase
-      .from("rh_candidatos")
-      .update({ rating })
-      .eq("id", id);
-    if (error) return;
-    setCandidatos((prev) => prev.map((c) => c.id === id ? { ...c, rating } : c));
-    setSelectedCandidato((prev) => prev?.id === id ? { ...prev, rating } : prev);
-  };
+  const activeVaga = vagas.find((v) => v.id === selectedVaga) || null;
 
   // ── Filtered candidatos ────────────────────────────────────────────────────
   const filteredCandidatos = useMemo(() => {
@@ -803,24 +1063,44 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
           </p>
         </div>
         {canWrite && (
-          <button
-            onClick={() => setQuickAddVaga(true)}
-            style={{
-              background: "var(--accent)",
-              color: "#FFF",
-              borderRadius: 10,
-              padding: "8px 16px",
-              fontSize: 13,
-              fontWeight: 700,
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <Plus size={14} /> Nova vaga
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setTriagemOpen(true)}
+              style={{
+                background: "#7C3AED",
+                color: "#FFF",
+                borderRadius: 10,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Sparkles size={14} /> Triar com IA
+            </button>
+            <button
+              onClick={() => setQuickAddVaga(true)}
+              style={{
+                background: "var(--accent)",
+                color: "#FFF",
+                borderRadius: 10,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Plus size={14} /> Nova vaga
+            </button>
+          </div>
         )}
       </div>
 
@@ -846,6 +1126,27 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
               {v.title}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Link público / WhatsApp da vaga selecionada */}
+      {activeVaga?.link_slug && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          <button
+            onClick={() => handleCopyLink(activeVaga)}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite, cursor: "pointer" }}
+          >
+            {copiedSlug === activeVaga.id ? <Check size={12} color="#16A34A" /> : <Link2 size={12} />}
+            {copiedSlug === activeVaga.id ? "Link copiado!" : "Copiar link da vaga"}
+          </button>
+          <a
+            href={whatsappShareUrl(activeVaga)}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "#15803D", textDecoration: "none" }}
+          >
+            <MessageSquare size={12} /> Compartilhar no WhatsApp
+          </a>
         </div>
       )}
 
@@ -879,7 +1180,7 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
                 candidatos={candByStage[stage.id] || []}
                 vagas={vagas}
                 canWrite={canWrite}
-                onCardClick={setSelectedCandidato}
+                onCardClick={(c) => setSelectedCandidatoId(c.id)}
                 onAddCandidato={() => setAddCandidatoStage(stage.id)}
               />
             ))}
@@ -893,7 +1194,7 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
                 candidatos={candByStage[stage.id] || []}
                 vagas={vagas}
                 canWrite={canWrite}
-                onCardClick={setSelectedCandidato}
+                onCardClick={(c) => setSelectedCandidatoId(c.id)}
                 onAddCandidato={() => setAddCandidatoStage(stage.id)}
               />
             ))}
@@ -926,8 +1227,19 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
           onStageChange={handleStageChange}
           onAddNote={handleAddNote}
           onRatingChange={handleRatingChange}
-          onClose={() => setSelectedCandidato(null)}
+          onClose={() => setSelectedCandidatoId(null)}
           onConvertToEmployee={onConvertToEmployee}
+        />
+      )}
+
+      {triagemOpen && (
+        <TriagemIAModal
+          vagas={vagas}
+          talentPool={talentPool}
+          aplicacoesRaw={aplicacoesRaw}
+          user={user}
+          onAttach={attachTriagemToVaga}
+          onClose={() => setTriagemOpen(false)}
         />
       )}
     </div>

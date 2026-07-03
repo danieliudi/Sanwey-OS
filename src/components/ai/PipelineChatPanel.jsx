@@ -1,10 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, X, Send, Loader2, AlertCircle } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useAI } from "../../hooks/use-ai";
 import { pipelineChatPrompt } from "../../constants/ai-prompts";
+import { aggregatePipeline } from "../../utils/pipeline-metrics";
+import { formatK } from "../../utils/currency";
 import { NEUTRAL } from "../../constants/companies";
 
 const RED = "var(--accent)";
+
+// Detecta se a pergunta pede algo "por vendedor/responsável" ou "por etapa"
+// — nesses casos, um gráfico com os dados já calculados (não os números que
+// a IA responde em texto) é anexado embaixo da resposta.
+function detectChartIntent(question) {
+  const q = question.toLowerCase();
+  if (/vendedor|responsáve|responsave/.test(q)) return "byOwner";
+  if (/etapa|funil|estágio|estagio/.test(q)) return "byStage";
+  return null;
+}
 
 export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }) {
   const { complete, isConfigured } = useAI(currentUser);
@@ -24,9 +37,11 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  const aggregate = useMemo(() => aggregatePipeline(leads, users), [leads, users]);
+
   const systemPrompt = useMemo(() => {
-    return pipelineChatPrompt("", leads, users)[0];
-  }, [leads, users]);
+    return pipelineChatPrompt("", aggregate)[0];
+  }, [aggregate]);
 
   const handleSend = async () => {
     const question = input.trim();
@@ -36,6 +51,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+    const chart = detectChartIntent(question);
 
     try {
       // For multi-turn: inject prior assistant/user messages after the system prompt
@@ -44,7 +60,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
       const finalMessages = [systemMsg, ...priorTurns, { role: "user", content: question }];
 
       const text = await complete(finalMessages);
-      setMessages(prev => [...prev, { role: "assistant", content: text }]);
+      setMessages(prev => [...prev, { role: "assistant", content: text, chart }]);
     } catch (err) {
       setMessages(prev => [...prev, {
         role: "assistant",
@@ -156,7 +172,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
             }
 
             return (
-              <div key={i} className="flex justify-start">
+              <div key={i} className="flex flex-col items-start gap-2">
                 <div
                   className="text-sm px-3 py-2 rounded-2xl rounded-tl-sm max-w-[90%] whitespace-pre-line leading-relaxed"
                   style={
@@ -168,6 +184,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                   {isError && <AlertCircle size={12} style={{ display: "inline", marginRight: 4 }} />}
                   {content}
                 </div>
+                {!isError && msg.chart && <PipelineMiniChart type={msg.chart} aggregate={aggregate} />}
               </div>
             );
           })}
@@ -242,4 +259,49 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
       </div>
     </>
   );
+}
+
+// Gráfico com os mesmos números já calculados em aggregatePipeline — nunca
+// com valores vindos da resposta da IA, pra não repetir o problema de
+// números "chutados".
+function PipelineMiniChart({ type, aggregate }) {
+  if (type === "byOwner") {
+    const data = aggregate.byOwner.slice(0, 8).map(o => ({ name: o.name.split(" ")[0], valor: o.valueWon }));
+    if (data.length === 0) return null;
+    return (
+      <div className="w-full rounded-xl border p-2" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+        <ResponsiveContainer width="100%" height={Math.max(120, data.length * 28 + 20)}>
+          <BarChart data={data} layout="vertical" margin={{ top: 4, right: 40, left: 8, bottom: 0 }}>
+            <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+            <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={formatK} />
+            <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={64} />
+            <Tooltip formatter={(v) => formatK(v)} />
+            <Bar dataKey="valor" radius={[0, 5, 5, 0]} fill={RED} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  if (type === "byStage") {
+    const data = aggregate.byStage.map(s => ({ name: s.stage, count: s.count }));
+    if (data.length === 0) return null;
+    return (
+      <div className="w-full rounded-xl border p-2" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+            <CartesianGrid stroke="#F3F4F6" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+            <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="count" radius={[5, 5, 0, 0]}>
+              {data.map((_, i) => <Cell key={i} fill={RED} fillOpacity={1 - i * 0.08} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  return null;
 }

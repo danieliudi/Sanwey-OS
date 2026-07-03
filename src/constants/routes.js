@@ -25,6 +25,9 @@ export const ROUTES = {
   "rh-overview":          "/rh",
   "rh-funcionarios":      "/rh/funcionarios",
   "rh-recrutamento":      "/rh/recrutamento",
+  "rh-onboarding":        "/rh/onboarding",
+  "rh-treinamentos":      "/rh/treinamentos",
+  "rh-feedback":          "/rh/feedback",
   "rh-ferias":            "/rh/ferias",
   profile:                "/perfil",
 };

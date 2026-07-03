@@ -8,6 +8,8 @@ import {
   ChevronRight,
   Briefcase,
   BarChart2,
+  Plus,
+  UserCog,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import {
@@ -16,6 +18,8 @@ import {
   RH_EMPLOYEE_STATUSES,
 } from "../../constants/rh-config";
 import { supabase } from "../../lib/supabase";
+import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { NovoColaboradorModal } from "./NovoColaboradorModal";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -485,6 +489,7 @@ export function RHFuncionariosView({
   onClearPendingConversion,
   onCreateInvitation,
 }) {
+  const { colaboradores, createColaborador, updateColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const [search, setSearch]         = useState("");
   const [filterDept, setFilterDept] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -492,13 +497,32 @@ export function RHFuncionariosView({
   const [selected, setSelected]     = useState(null);
   const [sendingInvite, setSendingInvite] = useState(false);
   const [inviteSent, setInviteSent]       = useState(false);
+  const [novoColaboradorOpen, setNovoColaboradorOpen] = useState(false);
+  const [editingColaborador, setEditingColaborador]   = useState(null);
 
-  const stats = useMemo(() => ({
-    total:      users.length,
-    ativos:     users.filter((u) => (u.employee_status || "ativo") === "ativo").length,
-    ferias:     users.filter((u) => u.employee_status === "ferias").length,
-    desligados: users.filter((u) => u.employee_status === "desligado").length,
-  }), [users]);
+  const stats = useMemo(() => {
+    const statusOf = (e) => e.employeeStatus || e.employee_status || "ativo";
+    const all = [...users, ...colaboradores];
+    return {
+      total:      all.length,
+      ativos:     all.filter((e) => statusOf(e) === "ativo").length,
+      ferias:     all.filter((e) => statusOf(e) === "ferias").length,
+      desligados: all.filter((e) => statusOf(e) === "desligado").length,
+    };
+  }, [users, colaboradores]);
+
+  const filteredColaboradores = useMemo(() => {
+    return colaboradores.filter((c) => {
+      if (search) {
+        const q = search.toLowerCase();
+        if (!(c.fullName || "").toLowerCase().includes(q) && !(c.email || "").toLowerCase().includes(q)) return false;
+      }
+      if (filterDept !== "all" && c.department !== filterDept) return false;
+      if (filterStatus !== "all" && (c.employeeStatus || "ativo") !== filterStatus) return false;
+      if (filterContract !== "all" && c.contractType !== filterContract) return false;
+      return true;
+    });
+  }, [colaboradores, search, filterDept, filterStatus, filterContract]);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -613,6 +637,18 @@ export function RHFuncionariosView({
             Registro de colaboradores · {stats.total} no total
           </p>
         </div>
+        {canWrite && (
+          <button
+            onClick={() => setNovoColaboradorOpen(true)}
+            style={{
+              background: "#1E4D8C", color: "#FFF", borderRadius: 10,
+              padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+            }}
+          >
+            <Plus size={14} /> Novo Funcionário
+          </button>
+        )}
       </div>
 
       {/* Stat cards */}
@@ -858,6 +894,46 @@ export function RHFuncionariosView({
         </>
       )}
 
+      {/* Colaboradores sem acesso ao sistema */}
+      {filteredColaboradores.length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <div className="flex items-center gap-2 mb-3">
+            <UserCog size={16} style={{ color: NEUTRAL.slate }} />
+            <div style={{ fontWeight: 700, fontSize: 13, color: NEUTRAL.graphite }}>
+              Colaboradores sem acesso ao sistema
+            </div>
+            <span style={{ fontSize: 11, color: NEUTRAL.slate, background: "#F3F4F6", borderRadius: 99, padding: "1px 8px" }}>
+              {filteredColaboradores.length}
+            </span>
+          </div>
+          <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+            {filteredColaboradores.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => setEditingColaborador(c)}
+                style={{
+                  background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 12,
+                  padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#FFFFFF"; }}
+              >
+                <Avatar user={{ name: c.fullName }} size={34} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {c.fullName}
+                  </div>
+                  <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 1 }}>
+                    {c.jobTitle || c.department || "—"}
+                  </div>
+                </div>
+                <StatusBadge statusId={c.employeeStatus || "ativo"} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Detail Modal */}
       {selected && (
         <EmployeeDetailModal
@@ -869,6 +945,23 @@ export function RHFuncionariosView({
             setSelected((prev) => prev ? { ...prev, ...patch } : null);
           }}
           onClose={() => setSelected(null)}
+        />
+      )}
+
+      {novoColaboradorOpen && (
+        <NovoColaboradorModal
+          currentUser={currentUser}
+          onSave={createColaborador}
+          onClose={() => setNovoColaboradorOpen(false)}
+        />
+      )}
+
+      {editingColaborador && (
+        <NovoColaboradorModal
+          currentUser={currentUser}
+          initialData={editingColaborador}
+          onSave={(patch) => updateColaborador(editingColaborador.id, patch)}
+          onClose={() => setEditingColaborador(null)}
         />
       )}
     </div>
