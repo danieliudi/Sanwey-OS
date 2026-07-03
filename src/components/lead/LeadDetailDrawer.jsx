@@ -21,6 +21,7 @@ import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
 import { useLeadChecklists } from "../../hooks/use-lead-checklists";
 import { LeadAIPanel } from "../ai/LeadAIPanel";
+import { ProposalPanel } from "./ProposalPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
 
@@ -757,11 +758,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
             {/* ── Tab: PDF ── */}
             {sideTab === "pdf" && (
-              <PlaceholderPanel
-                icon={FileDown}
-                title="Exportar PDF"
-                hint="Em breve — gere um PDF deste card para compartilhar fora da plataforma."
-              />
+              <ProposalPanel lead={lead} currentUser={currentUser} />
             )}
           </aside>
 

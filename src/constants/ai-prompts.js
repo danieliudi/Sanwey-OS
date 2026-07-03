@@ -145,6 +145,31 @@ Considere: presença de decisor identificado, força do gatilho comercial, engaj
   ];
 }
 
+export function proposalPrompt(lead) {
+  return [
+    {
+      role: 'system',
+      content: `Você é um redator comercial B2B. Escreva o corpo de uma proposta comercial formal em português brasileiro, pronta para ser lida pelo cliente. Não inclua saudação nem despedida com nome de remetente (isso é adicionado depois). Não invente preços — deixe um campo "[a definir]" onde condições comerciais específicas seriam necessárias.`,
+    },
+    {
+      role: 'user',
+      content: `Escreva uma proposta comercial para:
+
+**Empresa cliente:** ${lead.company} (${lead.sector || '—'}, porte ${lead.size || '—'})
+**Decisor:** ${lead.decisionMaker?.name || 'responsável pela decisão'} (${lead.decisionMaker?.role || '—'})
+**Necessidade identificada:** ${lead.evidence || lead.triggerLabel || 'a definir com o cliente'}
+**Produto/serviço de interesse:** ${lead.skuName || '—'}
+**Valor estimado do negócio:** R$ ${lead.value?.toLocaleString('pt-BR') || '[a definir]'}
+
+Estrutura:
+1. **Contexto** — 1 parágrafo curto retomando a necessidade identificada.
+2. **Proposta de solução** — 1-2 parágrafos descrevendo como o produto/serviço atende essa necessidade.
+3. **Condições comerciais** — placeholder "[a definir]" para preço, prazo e forma de pagamento.
+4. **Próximos passos** — 1 parágrafo curto com uma chamada para ação clara.`,
+    },
+  ];
+}
+
 export function pipelineChatPrompt(question, leads, users) {
   const summary = summarizeLeads(leads, users);
   return [

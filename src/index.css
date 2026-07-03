@@ -105,3 +105,21 @@ body {
   body { background: #FFFFFF !important; }
   @page { size: A4 landscape; margin: 1cm; }
 }
+
+/* Impressão de documento avulso (ex.: proposta comercial) — imprime só o
+   elemento .doc-print-only, mesmo estando dentro de um drawer/modal com
+   várias outras seções ao redor. A orientação de página (retrato, diferente
+   da paisagem do dashboard acima) é injetada dinamicamente via <style> só
+   durante a impressão — ver ProposalPanel.jsx — porque @page não pode ser
+   condicionado por seletor de classe. */
+.doc-print-only { display: none; }
+@media print {
+  body.printing-doc * { visibility: hidden !important; }
+  body.printing-doc .doc-print-only,
+  body.printing-doc .doc-print-only * { visibility: visible !important; }
+  body.printing-doc .doc-print-only {
+    display: block !important;
+    position: absolute; top: 0; left: 0; width: 100%;
+  }
+  body.printing-doc { background: #FFFFFF !important; }
+}
