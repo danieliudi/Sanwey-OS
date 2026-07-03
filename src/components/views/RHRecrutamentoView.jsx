@@ -1429,8 +1429,8 @@ export function RHRecrutamentoView({ user, canWrite }) {
   // ── Contratação: candidato aprovado → funcionário → onboarding ─────────────
   const handleSaveHired = async (form) => {
     const { _closeVaga, ...colaboradorData } = form;
-    const novo = await createColaborador(colaboradorData);
     const vaga = vagaDoCandidatoContratando;
+    const novo = await createColaborador({ ...colaboradorData, vagaId: vaga?.id || null });
     if (vaga?.job_title && novo?.id) {
       const template = onboardingTemplates.find(
         (t) => t.cargo && t.cargo.toLowerCase() === vaga.job_title.toLowerCase()

@@ -28,6 +28,9 @@ function rowToColaborador(r) {
     documentType: r.document_type,
     documentPath: r.document_path,
     notes: r.notes,
+    vagaId: r.vaga_id,
+    onboardingStage: r.onboarding_stage,
+    onboardingStageChangedAt: r.onboarding_stage_changed_at,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -58,6 +61,7 @@ function colaboradorToRow(c, extras = {}) {
     document_type: c.documentType || null,
     document_path: c.documentPath || null,
     notes: c.notes || null,
+    vaga_id: c.vagaId || null,
     ...extras,
   };
 }
@@ -115,5 +119,12 @@ export function useRHColaboradores({ userId } = {}) {
     setColaboradores(prev => prev.filter(c => c.id !== id));
   }, []);
 
-  return { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador, refetch: fetchAll };
+  const changeOnboardingStage = useCallback(async (id, stage) => {
+    const patch = { onboarding_stage: stage, onboarding_stage_changed_at: new Date().toISOString() };
+    const { error } = await supabase.from("rh_colaboradores").update(patch).eq("id", id);
+    if (error) throw new Error(error.message);
+    setColaboradores(prev => prev.map(c => c.id === id ? { ...c, onboardingStage: stage, onboardingStageChangedAt: patch.onboarding_stage_changed_at } : c));
+  }, []);
+
+  return { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador, changeOnboardingStage, refetch: fetchAll };
 }

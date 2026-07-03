@@ -893,7 +893,7 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-onboarding"]} element={
-            <RHOnboardingView currentUser={currentUser} users={users} canWrite={isRHManager} isRHUser={isRHUser} />
+            <RHOnboardingView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} />
           } />
           <Route path={ROUTES["rh-treinamentos"]} element={
             <RHTreinamentosView currentUser={currentUser} users={users} canWrite={isRHManager} isRHUser={isRHUser} />
