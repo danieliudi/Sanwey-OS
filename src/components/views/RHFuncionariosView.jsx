@@ -485,9 +485,6 @@ export function RHFuncionariosView({
   currentUser,
   onUpdateUser,
   canWrite,
-  pendingConversion,
-  onClearPendingConversion,
-  onCreateInvitation,
 }) {
   const { colaboradores, createColaborador, updateColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const [search, setSearch]         = useState("");
@@ -495,8 +492,6 @@ export function RHFuncionariosView({
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterContract, setFilterContract] = useState("all");
   const [selected, setSelected]     = useState(null);
-  const [sendingInvite, setSendingInvite] = useState(false);
-  const [inviteSent, setInviteSent]       = useState(false);
   const [novoColaboradorOpen, setNovoColaboradorOpen] = useState(false);
   const [editingColaborador, setEditingColaborador]   = useState(null);
 
@@ -548,73 +543,8 @@ export function RHFuncionariosView({
     fontSize: 12,
   };
 
-  const handleSendConversionInvite = async () => {
-    if (!pendingConversion || !onCreateInvitation) return;
-    setSendingInvite(true);
-    try {
-      await onCreateInvitation({
-        email: pendingConversion.email,
-        name:  pendingConversion.name,
-        role:  "rh",
-      });
-      setInviteSent(true);
-      setTimeout(() => { onClearPendingConversion?.(); setInviteSent(false); }, 3000);
-    } catch {} finally {
-      setSendingInvite(false);
-    }
-  };
-
   return (
     <div>
-      {/* Pending conversion banner */}
-      {pendingConversion && (
-        <div style={{
-          background: "#F0FDF4",
-          border: "1px solid #BBF7D0",
-          borderRadius: 12,
-          padding: "14px 16px",
-          marginBottom: 16,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#16A34A", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFF", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-            {pendingConversion.name?.[0]?.toUpperCase() || "?"}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "#15803D" }}>
-              Candidato aprovado: {pendingConversion.name}
-            </div>
-            <div style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
-              {pendingConversion.email ? `E-mail: ${pendingConversion.email}` : "Envie o convite para liberar acesso ao sistema."}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            {!inviteSent ? (
-              <button
-                onClick={handleSendConversionInvite}
-                disabled={sendingInvite || !pendingConversion.email || !onCreateInvitation}
-                style={{
-                  background: "#16A34A", color: "#FFF", border: "none", borderRadius: 8,
-                  padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                  opacity: sendingInvite ? 0.7 : 1,
-                }}
-              >
-                {sendingInvite ? "Enviando…" : "Enviar convite"}
-              </button>
-            ) : (
-              <span style={{ fontSize: 12, color: "#16A34A", fontWeight: 600 }}>✓ Convite enviado!</span>
-            )}
-            <button
-              onClick={onClearPendingConversion}
-              style={{ background: "transparent", border: "1px solid #BBF7D0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "#6B7280", cursor: "pointer" }}
-            >
-              Dispensar
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">

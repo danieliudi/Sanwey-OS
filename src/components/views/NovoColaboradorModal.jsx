@@ -33,13 +33,14 @@ function parseExtraction(text) {
   return JSON.parse(match[0]);
 }
 
-export function NovoColaboradorModal({ currentUser, initialData, onSave, onClose }) {
+export function NovoColaboradorModal({ currentUser, initialData, hireContext, onSave, onClose }) {
   const { complete, isConfigured, provider } = useAI(currentUser);
   const [form, setForm] = useState(() => initialData ? { ...EMPTY_FORM, ...initialData } : EMPTY_FORM);
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState(null);
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState(false);
+  const [closeVaga, setCloseVaga] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const fileInputRef = useRef();
@@ -92,7 +93,8 @@ export function NovoColaboradorModal({ currentUser, initialData, onSave, onClose
     setSaving(true);
     setError(null);
     try {
-      const novo = await onSave(form);
+      const payload = hireContext ? { ...form, _closeVaga: closeVaga } : form;
+      const novo = await onSave(payload);
       const targetId = novo?.id || initialData?.id;
       if (file && targetId) {
         const ext = file.type === "application/pdf" ? "pdf" : (file.type.split("/")[1] || "jpg");
@@ -134,6 +136,20 @@ export function NovoColaboradorModal({ currentUser, initialData, onSave, onClose
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          {hireContext && (
+            <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#15803D", marginBottom: 6 }}>
+                Convertendo candidato aprovado{hireContext.vagaTitle ? ` — vaga "${hireContext.vagaTitle}"` : ""}
+              </div>
+              {hireContext.vagaId && (
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#166534", cursor: "pointer" }}>
+                  <input type="checkbox" checked={closeVaga} onChange={(e) => setCloseVaga(e.target.checked)} />
+                  Encerrar esta vaga como preenchida
+                </label>
+              )}
+            </div>
+          )}
+
           {/* Upload de documento + preenchimento automático */}
           <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: 14, marginBottom: 20 }}>
             <div className="flex items-center gap-2 mb-2">

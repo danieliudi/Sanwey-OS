@@ -939,7 +939,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
 
 // ── Candidato Drawer ──────────────────────────────────────────────────────────
 
-function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote, onRatingChange, onClose, onConvertToEmployee }) {
+function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote, onRatingChange, onClose, onHire }) {
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
@@ -1142,7 +1142,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
           )}
 
           {/* Convert to employee — only when aprovado */}
-          {canWrite && candidato.stage === "aprovado" && onConvertToEmployee && (
+          {canWrite && candidato.stage === "aprovado" && onHire && (
             <div style={{
               background: "#F0FDF4",
               border: "1px solid #BBF7D0",
@@ -1161,7 +1161,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                 </div>
               </div>
               <button
-                onClick={() => { onConvertToEmployee(candidato); onClose(); }}
+                onClick={() => { onHire(candidato); onClose(); }}
                 style={{
                   background: "#16A34A",
                   color: "#FFF",
@@ -1389,12 +1389,20 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
 
 // ── Main View ─────────────────────────────────────────────────────────────────
 
-export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
+function addDays(base, days) {
+  const d = new Date(base);
+  d.setDate(d.getDate() + Number(days || 0));
+  return d.toISOString().slice(0, 10);
+}
+
+export function RHRecrutamentoView({ user, canWrite }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
     createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, addNote, changeRating, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const { cargos, createCargo, deleteCargo } = useRHCargoTemplates({ userId: user?.id });
+  const { createColaborador } = useRHColaboradores({ userId: user?.id });
+  const { templates: onboardingTemplates, applyChecklist } = useRHOnboarding({ userId: user?.id });
 
   const [viewMode, setViewMode]             = useState("vagas"); // "vagas" | "candidatos"
   const [selectedVaga, setSelectedVaga]     = useState("todas");
@@ -1406,12 +1414,41 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
   const [addCandidatoStage, setAddCandidatoStage] = useState(null);
   const [copiedSlug, setCopiedSlug]         = useState(null);
   const [triagemOpen, setTriagemOpen]       = useState(false);
+  const [hiringCandidato, setHiringCandidato] = useState(null);
 
   const selectedCandidato = useMemo(
     () => candidatos.find((c) => c.id === selectedCandidatoId) || null,
     [candidatos, selectedCandidatoId]
   );
   const vagaEmDrawer = useMemo(() => vagas.find((v) => v.id === vagaDrawerId) || null, [vagas, vagaDrawerId]);
+  const vagaDoCandidatoContratando = useMemo(
+    () => (hiringCandidato ? vagas.find((v) => v.id === hiringCandidato.vaga_id) : null),
+    [hiringCandidato, vagas]
+  );
+
+  // ── Contratação: candidato aprovado → funcionário → onboarding ─────────────
+  const handleSaveHired = async (form) => {
+    const { _closeVaga, ...colaboradorData } = form;
+    const novo = await createColaborador(colaboradorData);
+    const vaga = vagaDoCandidatoContratando;
+    if (vaga?.job_title && novo?.id) {
+      const template = onboardingTemplates.find(
+        (t) => t.cargo && t.cargo.toLowerCase() === vaga.job_title.toLowerCase()
+      );
+      if (template && Array.isArray(template.checklist_padrao) && template.checklist_padrao.length > 0) {
+        const today = new Date().toISOString().slice(0, 10);
+        await applyChecklist(
+          novo.id,
+          template.checklist_padrao.map((i) => ({ titulo: i.titulo, dataLimite: addDays(today, i.dias_prazo) })),
+          template.id
+        );
+      }
+    }
+    if (_closeVaga && vaga?.id) {
+      await changeVagaStage(vaga.id, "encerrada");
+    }
+    return novo;
+  };
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleCreateVaga = async (data) => { await createVaga(data); };
@@ -1704,7 +1741,25 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
           onAddNote={handleAddNote}
           onRatingChange={handleRatingChange}
           onClose={() => setSelectedCandidatoId(null)}
-          onConvertToEmployee={onConvertToEmployee}
+          onHire={(c) => setHiringCandidato(c)}
+        />
+      )}
+
+      {hiringCandidato && (
+        <NovoColaboradorModal
+          currentUser={user}
+          hireContext={{ vagaId: vagaDoCandidatoContratando?.id, vagaTitle: vagaDoCandidatoContratando?.title }}
+          initialData={{
+            fullName: hiringCandidato.name || "",
+            email: hiringCandidato.email || "",
+            phone: hiringCandidato.phone || "",
+            jobTitle: vagaDoCandidatoContratando?.job_title || "",
+            department: vagaDoCandidatoContratando?.department || "",
+            contractType: vagaDoCandidatoContratando?.contract_type || "",
+            salary: vagaDoCandidatoContratando?.salary_min != null ? String(vagaDoCandidatoContratando.salary_min) : "",
+          }}
+          onSave={handleSaveHired}
+          onClose={() => setHiringCandidato(null)}
         />
       )}
 
