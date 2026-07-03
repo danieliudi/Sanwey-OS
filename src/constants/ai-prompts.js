@@ -166,7 +166,14 @@ Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown:
   ];
 }
 
-export function proposalPrompt(lead) {
+// orderHistory: outros negócios já ganhos do mesmo cliente (mesmo clientId),
+// usado pra sugerir upsell/cross-sell com base no que ele já comprou.
+export function proposalPrompt(lead, orderHistory = []) {
+  const hasHistory = orderHistory.length > 0;
+  const historyLines = orderHistory
+    .map(l => `- ${l.skuName || l.sector || 'negócio anterior'}: R$ ${l.value?.toLocaleString('pt-BR') || '—'}`)
+    .join('\n');
+
   return [
     {
       role: 'system',
@@ -181,12 +188,14 @@ export function proposalPrompt(lead) {
 **Necessidade identificada:** ${lead.evidence || lead.triggerLabel || 'a definir com o cliente'}
 **Produto/serviço de interesse:** ${lead.skuName || '—'}
 **Valor estimado do negócio:** R$ ${lead.value?.toLocaleString('pt-BR') || '[a definir]'}
+**Classificação do cliente:** ${lead.clientClassification || '—'}
+${hasHistory ? `\n**Negócios anteriores já fechados com este cliente:**\n${historyLines}` : ''}
 
 Estrutura:
 1. **Contexto** — 1 parágrafo curto retomando a necessidade identificada.
 2. **Proposta de solução** — 1-2 parágrafos descrevendo como o produto/serviço atende essa necessidade.
 3. **Condições comerciais** — placeholder "[a definir]" para preço, prazo e forma de pagamento.
-4. **Próximos passos** — 1 parágrafo curto com uma chamada para ação clara.`,
+${hasHistory ? '4. **Oportunidade de upsell/cross-sell** — 1 parágrafo curto sugerindo produtos/serviços complementares com base no histórico de compras acima, só se fizer sentido comercial real.\n5. **Próximos passos**' : '4. **Próximos passos**'} — 1 parágrafo curto com uma chamada para ação clara.`,
     },
   ];
 }

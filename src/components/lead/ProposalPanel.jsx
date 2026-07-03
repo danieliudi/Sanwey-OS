@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, Loader2, AlertCircle, Download, RotateCcw } from "lucide-react";
 import { useAI } from "../../hooks/use-ai";
 import { proposalPrompt } from "../../constants/ai-prompts";
@@ -29,18 +29,25 @@ function printDocument() {
   setTimeout(cleanup, 3000);
 }
 
-export function ProposalPanel({ lead, currentUser }) {
+export function ProposalPanel({ lead, currentUser, allLeads }) {
   const { complete, isConfigured } = useAI(currentUser);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const generatedOnce = useRef(false);
 
+  // Outros negócios já ganhos do mesmo cliente — vira base pra sugestão de
+  // upsell/cross-sell no corpo da proposta.
+  const orderHistory = useMemo(() => {
+    if (!lead.clientId || !Array.isArray(allLeads)) return [];
+    return allLeads.filter(l => l.clientId === lead.clientId && l.stage === "ganho" && l.id !== lead.id);
+  }, [lead.clientId, lead.id, allLeads]);
+
   const handleGenerate = async () => {
     setLoading(true);
     setError(null);
     try {
-      const text = await complete(proposalPrompt(lead));
+      const text = await complete(proposalPrompt(lead, orderHistory));
       setDraft(text);
       generatedOnce.current = true;
     } catch (err) {

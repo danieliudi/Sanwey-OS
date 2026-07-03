@@ -698,6 +698,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                   activities={lead.activities || []}
                   linkedEmails={lead.linkedEmails || []}
                   onUpdate={onUpdate}
+                  onAddActivity={onAddActivity}
                 />
 
                 {/* Rascunho de abordagem */}
@@ -758,7 +759,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
             {/* ── Tab: PDF ── */}
             {sideTab === "pdf" && (
-              <ProposalPanel lead={lead} currentUser={currentUser} />
+              <ProposalPanel lead={lead} currentUser={currentUser} allLeads={allLeads} />
             )}
           </aside>
 
