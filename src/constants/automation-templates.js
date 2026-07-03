@@ -101,6 +101,30 @@ export const AUTOMATION_TEMPLATES = [
       action:  { type: "add_badge", badge: { label: "Novo", color: "#10B981" } },
     },
   },
+  {
+    id: "onboarding-on-won",
+    icon: "🤝",
+    title: "Onboarding de cliente ao ganhar negócio",
+    summary: "Ao marcar um negócio como Ganho, cria automaticamente uma entrega de onboarding em Marketing.",
+    rule: {
+      name: "Onboarding automático · negócio ganho",
+      companyId: "all",
+      trigger: { type: "stage_change", fromStage: "", toStage: "ganho" },
+      action:  { type: "create_deliverable", deliverableTitle: "Onboarding: {empresa}", deliverablePriority: "alta" },
+    },
+  },
+  {
+    id: "enrich-new-lead",
+    icon: "🏢",
+    title: "Enriquecer lead novo com CNPJ",
+    summary: "Ao criar um lead, busca automaticamente setor, cidade, estado e situação pelo CNPJ.",
+    rule: {
+      name: "Enriquecimento automático · CNPJ",
+      companyId: "all",
+      trigger: { type: "lead_created" },
+      action:  { type: "enrich_cnpj" },
+    },
+  },
 ];
 
 export default AUTOMATION_TEMPLATES;

@@ -6,6 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText,
 } from "lucide-react";
+import { supabase } from "./lib/supabase";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { usePipelines } from "./hooks/use-pipelines";
@@ -293,15 +294,54 @@ export default function App() {
     }
   }, [updateLeadRemote, currentUser, leads, pushNotification]);
 
+  // Executa os efeitos colaterais de automação que precisam de uma chamada
+  // real (não são um simples patch síncrono no lead): criar uma entrega em
+  // outro módulo (Marketing) ou enriquecer o lead via busca de CNPJ. Falha
+  // de um efeito não deve travar o fluxo principal do CRM.
+  const processAutomationSideEffects = useCallback(async (sideEffects) => {
+    for (const effect of (sideEffects || [])) {
+      try {
+        if (effect.type === "create_deliverable") {
+          await supabase.rpc("crm_create_cross_module_deliverable", {
+            p_title: effect.title,
+            p_company_ids: effect.companyIds,
+            p_description: effect.description,
+            p_priority: effect.priority,
+          });
+        }
+        if (effect.type === "enrich_cnpj" && effect.cnpj) {
+          const { data: res, error } = await supabase.functions.invoke("cnpj-lookup", { body: { cnpj: effect.cnpj } });
+          if (!error && res && !res.error) {
+            const current = leads.find(l => l.id === effect.leadId);
+            const patch = {};
+            if (current) {
+              if (!current.sector && res.sector) patch.sector = res.sector;
+              if (!current.city && res.city) patch.city = res.city;
+              if (!current.state && res.state) patch.state = res.state;
+              if (!current.cnae && res.cnae) patch.cnae = res.cnae;
+              if (!current.situacao && res.situacao) patch.situacao = res.situacao;
+            }
+            if (Object.keys(patch).length > 0) {
+              await updateLeadRemote(effect.leadId, patch).catch(() => {});
+            }
+          }
+        }
+      } catch {
+        // Ignora — automação não deve travar o fluxo do CRM.
+      }
+    }
+  }, [leads, updateLeadRemote]);
+
   const handleStageChange = useCallback(async (id, stage) => {
     const prev = leads.find(l => l.id === id);
     await changeStage(id, stage);
     if (prev && prev.stage !== stage) {
       const updated = { ...prev, stage, stageChangedAt: new Date().toISOString() };
-      const { patches, notifications: autoNotifs } = evaluateAutomations(updated, prev, "stage_change");
+      const { patches, notifications: autoNotifs, sideEffects } = evaluateAutomations(updated, prev, "stage_change");
       for (const p of patches) {
         await updateLeadRemote(p.leadId, p.patch).catch(() => {});
       }
+      if (sideEffects?.length) await processAutomationSideEffects(sideEffects);
       // Notify on terminal stage changes
       if (stage === "ganho") {
         pushNotification({ type: "lead_won", title: "Negócio fechado!", body: `${prev.company} foi marcado como ganho.`, leadId: id, companyId: prev.companyId });
@@ -313,19 +353,20 @@ export default function App() {
         pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: id, companyId: prev.companyId });
       }
     }
-  }, [changeStage, leads, evaluateAutomations, updateLeadRemote, pushNotification]);
+  }, [changeStage, leads, evaluateAutomations, updateLeadRemote, pushNotification, processAutomationSideEffects]);
 
   // Wrapped addLead that fires lead_created automations after creation
   const handleAddLead = useCallback(async (lead) => {
     await addLead(lead);
-    const { patches, notifications: autoNotifs } = evaluateAutomations(lead, null, "lead_created");
+    const { patches, notifications: autoNotifs, sideEffects } = evaluateAutomations(lead, null, "lead_created");
     for (const p of patches) {
       await updateLeadRemote(p.leadId, p.patch).catch(() => {});
     }
+    if (sideEffects?.length) await processAutomationSideEffects(sideEffects);
     for (const n of (autoNotifs || [])) {
       pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: lead.id, companyId: lead.companyId });
     }
-  }, [addLead, evaluateAutomations, updateLeadRemote, pushNotification]);
+  }, [addLead, evaluateAutomations, updateLeadRemote, pushNotification, processAutomationSideEffects]);
 
   const closeDrawer = useCallback(() => setSelectedLead(null), []);
 

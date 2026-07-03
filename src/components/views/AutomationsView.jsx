@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Zap, Plus, Trash2, ToggleLeft, ToggleRight, ArrowRight,
   AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X, Info,
+  Share2, Building2,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
@@ -23,6 +24,8 @@ const ACTION_TYPES = [
   { id: "set_field",   label: "Alterar campo",     icon: Settings2,   desc: "Atualiza o valor de um campo" },
   { id: "add_badge",   label: "Adicionar badge",   icon: Tag,         desc: "Adiciona uma etiqueta visual ao card" },
   { id: "notify",      label: "Notificação/alerta",icon: AlertCircle, desc: "Exibe alerta no painel" },
+  { id: "create_deliverable", label: "Criar entrega em Marketing", icon: Share2,     desc: "Aciona outra área — cria um card em Entregas" },
+  { id: "enrich_cnpj",        label: "Enriquecer com CNPJ",        icon: Building2,  desc: "Busca setor/cidade/estado automaticamente" },
 ];
 
 const LEAD_FIELDS = [
@@ -278,6 +281,8 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
     if (a.type === "set_field")  return `${a.field} = "${a.fieldValue}"`;
     if (a.type === "add_badge")  return `Badge: ${a.badge}`;
     if (a.type === "notify")     return `Alerta: ${a.message}`;
+    if (a.type === "create_deliverable") return `Entrega: "${a.deliverableTitle || "Onboarding: {empresa}"}"`;
+    if (a.type === "enrich_cnpj") return "Busca CNPJ automática";
     return actionType?.desc || "—";
   }, [rule.action, allStages, actionType]);
 
@@ -963,6 +968,47 @@ function StepAction({ rule, allStages, setAction }) {
           />
         </div>
       )}
+
+      {a.type === "create_deliverable" && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Título da entrega</label>
+            <input
+              type="text"
+              value={a.deliverableTitle || ""}
+              onChange={e => setAction({ deliverableTitle: e.target.value })}
+              placeholder="Onboarding: {empresa}"
+              className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
+              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+              onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
+              onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
+            />
+            <p className="text-[10px] mt-1" style={{ color: NEUTRAL.slate }}>Use {"{empresa}"} para inserir o nome do negócio automaticamente.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Prioridade</label>
+            <select
+              value={a.deliverablePriority || "media"}
+              onChange={e => setAction({ deliverablePriority: e.target.value })}
+              className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
+              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            >
+              <option value="baixa">Baixa</option>
+              <option value="media">Média</option>
+              <option value="alta">Alta</option>
+            </select>
+          </div>
+          <p className="text-[11px]" style={{ color: NEUTRAL.slate }}>
+            Cria um card em <strong>Marketing → Entregas</strong> assim que a regra disparar — a forma do CRM acionar outra área sem trocar de aba.
+          </p>
+        </div>
+      )}
+
+      {a.type === "enrich_cnpj" && (
+        <p className="text-[11px]" style={{ color: NEUTRAL.slate }}>
+          Ao disparar, busca o CNPJ do lead automaticamente e preenche setor, cidade, estado e situação — só nos campos que ainda estiverem vazios. Reaproveita a mesma busca de CNPJ já usada manualmente no Explorador.
+        </p>
+      )}
     </div>
   );
 }
@@ -983,9 +1029,9 @@ function HowItWorks() {
       </button>
       {open && (
         <div className="px-4 py-3 text-xs space-y-2" style={{ color: NEUTRAL.slate, borderTop: "1px solid #F3F4F6" }}>
-          <p>As automações são <strong>regras locais</strong>, avaliadas no browser sempre que um card é atualizado. Sem chamadas de API, sem IA — custo zero.</p>
+          <p>As automações são <strong>regras locais</strong>, avaliadas no browser sempre que um card é atualizado — sem IA e sem custo por execução. Duas ações (criar entrega e enriquecer com CNPJ) chamam uma API real quando disparam; as demais são só lógica local.</p>
           <p><strong>Gatilhos disponíveis:</strong> mudança de etapa, valor de campo, tempo parado em etapa, criação de card.</p>
-          <p><strong>Ações disponíveis:</strong> mover o card para outra etapa, alterar um campo, adicionar badge visual, ou exibir alerta.</p>
+          <p><strong>Ações disponíveis:</strong> mover o card para outra etapa, alterar um campo, adicionar badge visual, exibir alerta, criar entrega em Marketing, ou enriquecer com dados de CNPJ.</p>
           <p>As regras são avaliadas em sequência. Se múltiplas regras dispararem no mesmo evento, todas serão executadas na ordem de criação.</p>
           <p className="font-medium" style={{ color: "#1E40AF" }}>Para automações que dependem de tempo (ex: 7 dias sem mover), o avaliador roda ao abrir o CRM ou ao interagir com um card.</p>
         </div>
@@ -1005,10 +1051,12 @@ function validateTrigger(t) {
 
 function validateAction(a) {
   if (!a?.type) return false;
-  if (a.type === "move_stage") return Boolean(a.targetStage);
-  if (a.type === "set_field")  return Boolean(a.field);
-  if (a.type === "add_badge")  return Boolean(a.badge);
-  if (a.type === "notify")     return Boolean(a.message?.trim());
+  if (a.type === "move_stage")         return Boolean(a.targetStage);
+  if (a.type === "set_field")          return Boolean(a.field);
+  if (a.type === "add_badge")          return Boolean(a.badge);
+  if (a.type === "notify")             return Boolean(a.message?.trim());
+  if (a.type === "create_deliverable") return true; // título tem valor padrão
+  if (a.type === "enrich_cnpj")        return true; // sem configuração obrigatória
   return false;
 }
 
