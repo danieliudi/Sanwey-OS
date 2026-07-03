@@ -145,6 +145,27 @@ Considere: presença de decisor identificado, força do gatilho comercial, engaj
   ];
 }
 
+// Extrai dados de um documento de identificação (CNH/RG) anexado como
+// imagem ou PDF em base64 (ver src/components/views/NovoColaboradorModal.jsx).
+// Usado pra preencher o cadastro automaticamente — importante pra
+// colaboradores que não sabem ler/escrever e não conseguem digitar os
+// próprios dados.
+export function documentExtractionPrompt(fileContentBlock) {
+  return [
+    {
+      role: 'system',
+      content: `Você é um assistente de RH que extrai dados de documentos de identificação brasileiros (CNH ou RG). Leia o documento anexado com atenção. Se um campo não estiver legível ou não existir no documento, retorne null para ele — nunca invente informação.
+
+Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown:
+{"fullName": "<nome completo ou null>", "cpf": "<apenas números ou null>", "rg": "<apenas números ou null>", "birthDate": "<AAAA-MM-DD ou null>"}`,
+    },
+    {
+      role: 'user',
+      content: [fileContentBlock, { type: 'text', text: 'Extraia os dados deste documento.' }],
+    },
+  ];
+}
+
 export function proposalPrompt(lead) {
   return [
     {
