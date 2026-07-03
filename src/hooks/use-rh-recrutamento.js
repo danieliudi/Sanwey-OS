@@ -95,7 +95,6 @@ export function useRHRecrutamento({ userId } = {}) {
     const row = {
       ...data,
       link_slug: slugify(data.title),
-      status: "aberta",
       created_by: userId,
     };
     const { data: novaVaga, error } = await supabase.from("rh_vagas").insert(row).select().single();
@@ -103,6 +102,16 @@ export function useRHRecrutamento({ userId } = {}) {
     setVagas(prev => [novaVaga, ...prev]);
     return novaVaga;
   }, [userId]);
+
+  const updateVaga = useCallback(async (id, patch) => {
+    const { error } = await supabase.from("rh_vagas").update(patch).eq("id", id);
+    if (error) throw new Error(error.message);
+    setVagas(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
+  }, []);
+
+  const changeVagaStage = useCallback(async (id, newStage) => {
+    await updateVaga(id, { stage: newStage });
+  }, [updateVaga]);
 
   // Cria/atualiza o candidato no talent pool (dedup por e-mail) e cria a
   // aplicação para a vaga selecionada. Requer vaga — toda aplicação pertence
@@ -185,11 +194,13 @@ export function useRHRecrutamento({ userId } = {}) {
     aplicacoesRaw: aplicacoes,
     loading,
     createVaga,
+    updateVaga,
+    changeVagaStage,
     createCandidato,
     changeStage,
     addNote,
     changeRating,
     attachTriagemToVaga,
     refetch: fetchAll,
-  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, createCandidato, changeStage, addNote, changeRating, attachTriagemToVaga, fetchAll]);
+  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, addNote, changeRating, attachTriagemToVaga, fetchAll]);
 }
