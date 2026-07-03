@@ -51,7 +51,7 @@ function Avatar({ user, size = 36 }) {
       .slice(0, 2)
       .join("")
       .toUpperCase();
-  const bg = user.avatarBg || "var(--color-industria)";
+  const bg = user.avatarBg || NEUTRAL.red;
   return (
     <div
       style={{
@@ -172,20 +172,20 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
   const labelSt = {
     fontSize: 10,
     fontWeight: 700,
-    color: "var(--text-dim)",
+    color: NEUTRAL.slate,
     textTransform: "uppercase",
     letterSpacing: "0.06em",
     marginBottom: 4,
     display: "block",
   };
   const inputSt = {
-    borderColor: "var(--border-strong)",
-    color: "var(--text)",
-    background: "var(--surface)",
+    borderColor: "#D1D5DB",
+    color: NEUTRAL.graphite,
+    background: "#FAFAFA",
     fontSize: 13,
   };
-  const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
-  const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
+  const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
+  const blurGray  = (e) => { e.target.style.borderColor = "#D1D5DB"; };
 
   return (
     <div
@@ -203,7 +203,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
     >
       <div
         style={{
-          background: "var(--surface)",
+          background: "#FFFFFF",
           borderRadius: 16,
           width: "100%",
           maxWidth: 560,
@@ -217,7 +217,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
         <div
           style={{
             padding: "20px 24px 16px",
-            borderBottom: "1px solid var(--border)",
+            borderBottom: "1px solid #F3F4F6",
             display: "flex",
             alignItems: "center",
             gap: 14,
@@ -225,10 +225,10 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
         >
           <Avatar user={user} size={48} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
               {user.name || user.email}
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 2 }}>
               {user.email}
             </div>
             <div style={{ marginTop: 6 }}>
@@ -240,9 +240,9 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
               <button
                 onClick={() => setEditing(true)}
                 style={{
-                  background: "var(--surface-alt)",
+                  background: "#EFF6FF",
                   border: "none",
-                  color: "var(--accent)",
+                  color: "#1E4D8C",
                   borderRadius: 8,
                   padding: "6px 12px",
                   fontSize: 12,
@@ -252,8 +252,8 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                   alignItems: "center",
                   gap: 5,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#DBEAFE"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#EFF6FF"; }}
               >
                 <Pencil size={13} /> Editar
               </button>
@@ -264,13 +264,13 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                 background: "transparent",
                 border: "none",
                 cursor: "pointer",
-                color: "var(--text-dim)",
+                color: NEUTRAL.slate,
                 padding: 6,
                 borderRadius: 8,
                 display: "flex",
                 alignItems: "center",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
             >
               <X size={18} />
@@ -282,7 +282,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
         <div style={{ padding: "20px 24px 24px" }}>
           {/* HR Fields */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 12, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
               Dados do Funcionário
             </div>
 
@@ -382,7 +382,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                 ].map((f) => (
                   <div key={f.label}>
                     <div style={labelSt}>{f.label}</div>
-                    <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+                    <div style={{ fontSize: 13, color: NEUTRAL.graphite, fontWeight: 500 }}>{f.value}</div>
                   </div>
                 ))}
               </div>
@@ -394,29 +394,29 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
             <div
               style={{
                 borderRadius: 12,
-                border: "1px solid var(--border)",
+                border: "1px solid #E5E7EB",
                 padding: "14px 16px",
-                background: "var(--surface-alt)",
+                background: "#F9FAFB",
                 marginBottom: 20,
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                 <BarChart2 size={13} /> Métricas CRM
               </div>
               <div style={{ display: "flex", gap: 24 }}>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
+                  <div style={{ fontSize: 10, color: NEUTRAL.slate, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
                     Leads atribuídos
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
                     {userLeads.length}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
+                  <div style={{ fontSize: 10, color: NEUTRAL.slate, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
                     Em andamento
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: NEUTRAL.graphite, letterSpacing: "-0.02em" }}>
                     {userLeads.filter((l) => !["perdido", "ganho"].includes(l.stage)).length}
                   </div>
                 </div>
@@ -425,7 +425,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
+            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
               {error}
             </div>
           )}
@@ -437,7 +437,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                 disabled={saving}
                 style={{
                   flex: 1,
-                  background: "var(--accent)",
+                  background: "#1E4D8C",
                   color: "#FFF",
                   borderRadius: 10,
                   padding: "8px 16px",
@@ -462,8 +462,8 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                   borderRadius: 10,
                   fontSize: 13,
                   border: "1px solid #E5E7EB",
-                  background: "var(--surface)",
-                  color: "var(--text-dim)",
+                  background: "#FFF",
+                  color: NEUTRAL.slate,
                   cursor: "pointer",
                 }}
               >
@@ -485,9 +485,6 @@ export function RHFuncionariosView({
   currentUser,
   onUpdateUser,
   canWrite,
-  pendingConversion,
-  onClearPendingConversion,
-  onCreateInvitation,
 }) {
   const { colaboradores, createColaborador, updateColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const [search, setSearch]         = useState("");
@@ -495,8 +492,6 @@ export function RHFuncionariosView({
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterContract, setFilterContract] = useState("all");
   const [selected, setSelected]     = useState(null);
-  const [sendingInvite, setSendingInvite] = useState(false);
-  const [inviteSent, setInviteSent]       = useState(false);
   const [novoColaboradorOpen, setNovoColaboradorOpen] = useState(false);
   const [editingColaborador, setEditingColaborador]   = useState(null);
 
@@ -542,90 +537,25 @@ export function RHFuncionariosView({
   }, [users, search, filterDept, filterStatus, filterContract]);
 
   const selectSt = {
-    borderColor: "var(--border)",
-    color: "var(--text)",
-    background: "var(--surface)",
+    borderColor: "#E5E7EB",
+    color: NEUTRAL.graphite,
+    background: "#FFF",
     fontSize: 12,
-  };
-
-  const handleSendConversionInvite = async () => {
-    if (!pendingConversion || !onCreateInvitation) return;
-    setSendingInvite(true);
-    try {
-      await onCreateInvitation({
-        email: pendingConversion.email,
-        name:  pendingConversion.name,
-        role:  "rh",
-      });
-      setInviteSent(true);
-      setTimeout(() => { onClearPendingConversion?.(); setInviteSent(false); }, 3000);
-    } catch {} finally {
-      setSendingInvite(false);
-    }
   };
 
   return (
     <div>
-      {/* Pending conversion banner */}
-      {pendingConversion && (
-        <div style={{
-          background: "#F0FDF4",
-          border: "1px solid #BBF7D0",
-          borderRadius: 12,
-          padding: "14px 16px",
-          marginBottom: 16,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--success)", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFF", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-            {pendingConversion.name?.[0]?.toUpperCase() || "?"}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>
-              Candidato aprovado: {pendingConversion.name}
-            </div>
-            <div style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
-              {pendingConversion.email ? `E-mail: ${pendingConversion.email}` : "Envie o convite para liberar acesso ao sistema."}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            {!inviteSent ? (
-              <button
-                onClick={handleSendConversionInvite}
-                disabled={sendingInvite || !pendingConversion.email || !onCreateInvitation}
-                style={{
-                  background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8,
-                  padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                  opacity: sendingInvite ? 0.7 : 1,
-                }}
-              >
-                {sendingInvite ? "Enviando…" : "Enviar convite"}
-              </button>
-            ) : (
-              <span style={{ fontSize: 12, color: "var(--success)", fontWeight: 600 }}>✓ Convite enviado!</span>
-            )}
-            <button
-              onClick={onClearPendingConversion}
-              style={{ background: "transparent", border: "1px solid #BBF7D0", borderRadius: 8, padding: "6px 10px", fontSize: 12, color: "var(--text-dim)", cursor: "pointer" }}
-            >
-              Dispensar
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Users size={22} style={{ color: "var(--text)" }} />
+            <Users size={22} style={{ color: NEUTRAL.graphite }} />
             <h1
               style={{
                 fontWeight: 700,
                 fontSize: 26,
-                color: "var(--text)",
+                color: NEUTRAL.graphite,
                 letterSpacing: "-0.02em",
                 margin: 0,
               }}
@@ -633,7 +563,7 @@ export function RHFuncionariosView({
               Funcionários
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
+          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
             Registro de colaboradores · {stats.total} no total
           </p>
         </div>
@@ -657,17 +587,17 @@ export function RHFuncionariosView({
         style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))" }}
       >
         {[
-          { label: "Total",       value: stats.total,      color: "var(--text)" },
-          { label: "Ativos",      value: stats.ativos,     color: "var(--success)" },
-          { label: "Férias",      value: stats.ferias,     color: "var(--accent)" },
-          { label: "Desligados",  value: stats.desligados, color: "var(--text-dim)" },
+          { label: "Total",       value: stats.total,      color: NEUTRAL.graphite },
+          { label: "Ativos",      value: stats.ativos,     color: "#16A34A" },
+          { label: "Férias",      value: stats.ferias,     color: "#1E4D8C" },
+          { label: "Desligados",  value: stats.desligados, color: NEUTRAL.slate },
         ].map((s) => (
           <div
             key={s.label}
             className="rounded-xl border"
             style={{
-              background: "var(--surface)",
-              borderColor: "var(--border)",
+              background: "#FFFFFF",
+              borderColor: "#E5E7EB",
               padding: "12px 16px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
             }}
@@ -676,7 +606,7 @@ export function RHFuncionariosView({
               style={{
                 fontSize: 10,
                 fontWeight: 600,
-                color: "var(--text-dim)",
+                color: NEUTRAL.slate,
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
                 marginBottom: 4,
@@ -706,15 +636,15 @@ export function RHFuncionariosView({
             display: "flex",
             alignItems: "center",
             gap: 8,
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
+            background: "#FFF",
+            border: "1px solid #E5E7EB",
             borderRadius: 10,
             padding: "6px 12px",
             flex: "1 1 180px",
             maxWidth: 280,
           }}
         >
-          <Search size={13} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
+          <Search size={13} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Buscar por nome ou e-mail…"
@@ -724,7 +654,7 @@ export function RHFuncionariosView({
               border: "none",
               outline: "none",
               fontSize: 12,
-              color: "var(--text)",
+              color: NEUTRAL.graphite,
               background: "transparent",
               width: "100%",
             }}
@@ -732,7 +662,7 @@ export function RHFuncionariosView({
           {search && (
             <button
               onClick={() => setSearch("")}
-              style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", padding: 0, display: "flex" }}
+              style={{ background: "none", border: "none", color: NEUTRAL.slate, cursor: "pointer", padding: 0, display: "flex" }}
             >
               <X size={13} />
             </button>
@@ -779,26 +709,26 @@ export function RHFuncionariosView({
       {/* Desktop Table */}
       {filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <Users size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>
+          <Users size={48} style={{ color: NEUTRAL.slate, opacity: 0.3, margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, color: NEUTRAL.slate, fontWeight: 500 }}>
             Nenhum funcionário encontrado
           </div>
-          <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: NEUTRAL.slate, opacity: 0.6, marginTop: 4 }}>
             Tente ajustar os filtros
           </div>
         </div>
       ) : (
         <>
           {/* Desktop */}
-          <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+          <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
             <table className="w-full border-collapse">
               <thead>
-                <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+                <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
                   {["Funcionário", "Cargo", "Departamento", "Contrato", "Status", "Admissão", ""].map((h) => (
                     <th
                       key={h}
                       className="text-left px-4 py-2.5"
-                      style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
+                      style={{ fontSize: 10, fontWeight: 600, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em" }}
                     >
                       {h}
                     </th>
@@ -809,41 +739,41 @@ export function RHFuncionariosView({
                 {filtered.map((u) => (
                   <tr
                     key={u.id}
-                    style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                    style={{ borderBottom: "1px solid #E5E7EB", cursor: "pointer" }}
                     onClick={() => setSelected(u)}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
                     <td className="px-4 py-3">
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <Avatar user={u} size={34} />
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.graphite }}>
                             {u.name || "Sem nome"}
                           </div>
-                          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>
+                          <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 1 }}>
                             {u.email}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text)" }}>
+                    <td className="px-4 py-3" style={{ fontSize: 12, color: NEUTRAL.graphite }}>
                       {u.job_title || "—"}
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    <td className="px-4 py-3" style={{ fontSize: 12, color: NEUTRAL.slate }}>
                       {u.department || "—"}
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    <td className="px-4 py-3" style={{ fontSize: 12, color: NEUTRAL.slate }}>
                       {contractLabel(u.contract_type)}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge statusId={u.employee_status || "ativo"} />
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    <td className="px-4 py-3" style={{ fontSize: 12, color: NEUTRAL.slate }}>
                       {fmt(u.admission_date)}
                     </td>
                     <td className="px-4 py-3">
-                      <ChevronRight size={14} style={{ color: "var(--text-dim)", opacity: 0.5 }} />
+                      <ChevronRight size={14} style={{ color: NEUTRAL.slate, opacity: 0.5 }} />
                     </td>
                   </tr>
                 ))}
@@ -858,8 +788,8 @@ export function RHFuncionariosView({
                 key={u.id}
                 onClick={() => setSelected(u)}
                 style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
+                  background: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
                   borderRadius: 12,
                   padding: "14px 16px",
                   cursor: "pointer",
@@ -867,27 +797,27 @@ export function RHFuncionariosView({
                   alignItems: "center",
                   gap: 12,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#FFFFFF"; }}
               >
                 <Avatar user={u} size={40} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: NEUTRAL.graphite }}>
                     {u.name || "Sem nome"}
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>
+                  <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 1 }}>
                     {u.job_title || u.email}
                   </div>
                   <div style={{ marginTop: 6, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                     <StatusBadge statusId={u.employee_status || "ativo"} />
                     {u.department && (
-                      <span style={{ fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 99, padding: "2px 8px" }}>
+                      <span style={{ fontSize: 10, color: NEUTRAL.slate, background: "#F3F4F6", borderRadius: 99, padding: "2px 8px" }}>
                         {u.department}
                       </span>
                     )}
                   </div>
                 </div>
-                <ChevronRight size={14} style={{ color: "var(--text-dim)", opacity: 0.5, flexShrink: 0 }} />
+                <ChevronRight size={14} style={{ color: NEUTRAL.slate, opacity: 0.5, flexShrink: 0 }} />
               </div>
             ))}
           </div>

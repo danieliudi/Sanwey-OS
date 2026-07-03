@@ -172,7 +172,6 @@ export default function App() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [crmAutoCreate, setCrmAutoCreate] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [convertPendingCandidate, setConvertPendingCandidate] = useState(null);
   const [clientImportOpen, setClientImportOpen] = useState(false);
 
   const closeSignalDrawer = useCallback(() => setSelectedSignal(null), []);
@@ -882,9 +881,6 @@ export default function App() {
                   currentUser={currentUser}
                   onUpdateUser={updateUser}
                   canWrite={isRHManager}
-                  pendingConversion={convertPendingCandidate}
-                  onClearPendingConversion={() => setConvertPendingCandidate(null)}
-                  onCreateInvitation={createInvitation}
                 />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
@@ -893,10 +889,6 @@ export default function App() {
               ? <RHRecrutamentoView
                   user={currentUser}
                   canWrite={isRHManager}
-                  onConvertToEmployee={(candidato) => {
-                    setConvertPendingCandidate(candidato);
-                    navigate(ROUTES["rh-funcionarios"]);
-                  }}
                 />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
