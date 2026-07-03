@@ -50,3 +50,48 @@ export function weightedValue(lead, companyStages) {
   if (p > 1) p = p / 100;
   return lead.value * p;
 }
+
+// Agregados determinísticos do pipeline — usado tanto pelo Chat de IA (pra
+// não deixar a LLM "chutar" conta) quanto por qualquer outra tela que
+// precise dos mesmos números. Cálculo em JS puro, sem IA envolvida.
+export function aggregatePipeline(leads, users) {
+  const byStageMap = new Map();
+  const byOwnerMap = new Map();
+  let wonCount = 0, lostCount = 0, openValue = 0, wonValue = 0;
+
+  for (const l of (leads || [])) {
+    const stage = l.stage || "—";
+    if (!byStageMap.has(stage)) byStageMap.set(stage, { stage, count: 0, value: 0 });
+    const stageRow = byStageMap.get(stage);
+    stageRow.count++;
+    stageRow.value += l.value || 0;
+
+    if (l.stage === "ganho") { wonCount++; wonValue += l.value || 0; }
+    else if (l.stage === "perdido") { lostCount++; }
+    else { openValue += l.value || 0; }
+
+    if (l.owner) {
+      const owner = users?.find(u => u.id === l.owner);
+      const name = owner?.name || owner?.email || "Sem responsável";
+      if (!byOwnerMap.has(l.owner)) byOwnerMap.set(l.owner, { name, count: 0, valueWon: 0, valueOpen: 0 });
+      const ownerRow = byOwnerMap.get(l.owner);
+      ownerRow.count++;
+      if (l.stage === "ganho") ownerRow.valueWon += l.value || 0;
+      else if (l.stage !== "perdido") ownerRow.valueOpen += l.value || 0;
+    }
+  }
+
+  const totalDecided = wonCount + lostCount;
+  const conversionRate = totalDecided > 0 ? Math.round((wonCount / totalDecided) * 1000) / 10 : 0;
+
+  return {
+    totalLeads: (leads || []).length,
+    wonCount,
+    lostCount,
+    openValue,
+    wonValue,
+    conversionRate, // % — ganho / (ganho + perdido)
+    byStage: Array.from(byStageMap.values()),
+    byOwner: Array.from(byOwnerMap.values()).sort((a, b) => b.valueWon - a.valueWon),
+  };
+}

@@ -170,18 +170,35 @@ Estrutura:
   ];
 }
 
-export function pipelineChatPrompt(question, leads, users) {
-  const summary = summarizeLeads(leads, users);
+// Recebe o objeto já calculado por aggregatePipeline() (src/utils/pipeline-metrics.js)
+// — a LLM só interpreta/explica números já certos, nunca faz a conta sozinha.
+export function pipelineChatPrompt(question, aggregate) {
+  const stageLines = aggregate.byStage
+    .map(s => `- ${s.stage}: ${s.count} leads, R$ ${(s.value / 1000).toFixed(0)}k`)
+    .join('\n') || '- Nenhum lead no pipeline';
+
+  const ownerLines = aggregate.byOwner
+    .slice(0, 15)
+    .map(o => `- ${o.name}: ${o.count} leads | ganho R$ ${(o.valueWon / 1000).toFixed(0)}k | em aberto R$ ${(o.valueOpen / 1000).toFixed(0)}k`)
+    .join('\n') || '- Nenhum responsável com leads atribuídos';
+
   return [
     {
       role: 'system',
       content: `${SYSTEM_BASE}
 
-Você tem acesso aos dados do pipeline de vendas abaixo. Responda perguntas sobre eles com precisão.
-Ao citar números, use os dados reais fornecidos. Se não souber, diga que não tem essa informação.
+Os números abaixo já foram calculados com precisão — use-os exatamente como estão, nunca recalcule ou estime por conta própria. Se a pergunta pedir algo que não está nos dados, diga que não tem essa informação, não invente.
 
-**Dados do pipeline:**
-${summary}`,
+**Total de leads:** ${aggregate.totalLeads}
+**Ganhos:** ${aggregate.wonCount} (R$ ${(aggregate.wonValue / 1000).toFixed(0)}k) | **Perdidos:** ${aggregate.lostCount}
+**Taxa de conversão (ganho / (ganho + perdido)):** ${aggregate.conversionRate}%
+**Valor total em aberto (pipeline ativo):** R$ ${(aggregate.openValue / 1000).toFixed(0)}k
+
+**Por etapa:**
+${stageLines}
+
+**Por responsável (top 15 por valor ganho):**
+${ownerLines}`,
     },
     { role: 'user', content: question },
   ];
@@ -336,13 +353,4 @@ Responda com:
 3. **Próximo passo** (ação concreta antes de mover — 1 frase)`,
     },
   ];
-}
-
-function summarizeLeads(leads, users) {
-  const lines = leads.slice(0, 50).map(l => {
-    const owner = users?.find(u => u.id === l.owner);
-    const days = l.stageChangedAt ? Math.floor((Date.now() - new Date(l.stageChangedAt)) / 86400000) : 0;
-    return `${l.company} | ${l.sector || '—'} | ${l.stage} | R$${Math.round((l.value || 0) / 1000)}k | ${days}d | ${owner?.name || 'sem responsável'}`;
-  });
-  return `Total: ${leads.length} leads\nColunas: Empresa | Setor | Etapa | Valor | Dias na etapa | Responsável\n` + lines.join('\n');
 }
