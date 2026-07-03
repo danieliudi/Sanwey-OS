@@ -1014,7 +1014,13 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
   );
 
   // ── Actions ────────────────────────────────────────────────────────────────
-  const handleCreateVaga = async (data) => { await createVaga(data); };
+  // Depois de criar, seleciona a vaga automaticamente — sem isso, a tela
+  // continuava em "Todas as vagas" e a vaga nova só aparecia como mais um
+  // pill lá em cima, dando a impressão de que nada tinha acontecido.
+  const handleCreateVaga = async (data) => {
+    const nova = await createVaga(data);
+    if (nova?.id) setSelectedVaga(nova.id);
+  };
   const handleCreateCandidato = async (data) => { await createCandidato(data); };
   const handleStageChange = async (id, newStage, motivo) => { await changeStage(id, newStage, motivo); };
   const handleAddNote = async (id, note) => { await addNote(id, note); };
@@ -1147,6 +1153,12 @@ export function RHRecrutamentoView({ user, canWrite, onConvertToEmployee }) {
           >
             <MessageSquare size={12} /> Compartilhar no WhatsApp
           </a>
+        </div>
+      )}
+
+      {activeVaga && filteredCandidatos.length === 0 && (
+        <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: "8px 14px", marginBottom: 16, fontSize: 12, color: "#1E40AF" }}>
+          Vaga criada. O Kanban abaixo mostra os <strong>candidatos</strong>, não a vaga em si — ele fica vazio até alguém se candidatar pelo link acima.
         </div>
       )}
 
