@@ -696,6 +696,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                   currentUser={currentUser}
                   activities={lead.activities || []}
                   linkedEmails={lead.linkedEmails || []}
+                  onUpdate={onUpdate}
                 />
 
                 {/* Rascunho de abordagem */}

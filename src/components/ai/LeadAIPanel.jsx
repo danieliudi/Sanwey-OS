@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import {
-  Bot, ChevronDown, ChevronUp, Loader2, AlertCircle, RotateCcw, Copy, Check,
+  Bot, ChevronDown, ChevronUp, Loader2, AlertCircle, RotateCcw, Copy, Check, Target,
 } from "lucide-react";
 import { useAI } from "../../hooks/use-ai";
 import {
-  briefingPrompt, emailDraftPrompt, nextStepPrompt, objectionPrompt,
+  briefingPrompt, emailDraftPrompt, nextStepPrompt, objectionPrompt, scorePrompt,
 } from "../../constants/ai-prompts";
 import { NEUTRAL } from "../../constants/companies";
 
@@ -14,11 +14,20 @@ const BORDER = "#E5E7EB";
 const BG = "#F1EDE8";
 
 const FEATURES = [
+  { id: "score",      label: "Calcular Fit Score" },
   { id: "briefing",   label: "Briefing de reunião" },
   { id: "email",      label: "Rascunho de e-mail IA" },
   { id: "nextstep",   label: "Próximo passo" },
   { id: "objection",  label: "Análise de objeção" },
 ];
+
+function parseScoreResponse(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("Resposta da IA não trouxe um JSON válido.");
+  const parsed = JSON.parse(match[0]);
+  const score = Math.max(0, Math.min(100, Math.round(Number(parsed.score) || 0)));
+  return { score, justificativa: parsed.justificativa || "" };
+}
 
 const TONES = [
   { value: "profissional", label: "Profissional" },
@@ -26,13 +35,14 @@ const TONES = [
   { value: "direto",       label: "Direto" },
 ];
 
-export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
+export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpdate }) {
   const { complete, isConfigured } = useAI(currentUser);
 
   const [open, setOpen] = useState(false);
-  const [activeFeature, setActiveFeature] = useState("briefing");
+  const [activeFeature, setActiveFeature] = useState("score");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [scoreResult, setScoreResult] = useState(null);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
 
@@ -43,12 +53,15 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
   const handleFeatureSelect = (id) => {
     setActiveFeature(id);
     setResult(null);
+    setScoreResult(null);
     setError(null);
     setCopied(false);
   };
 
   const buildMessages = () => {
     switch (activeFeature) {
+      case "score":
+        return scorePrompt(lead, activities);
       case "briefing":
         return briefingPrompt(lead, activities, linkedEmails);
       case "email":
@@ -70,12 +83,19 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
     }
     setLoading(true);
     setResult(null);
+    setScoreResult(null);
     setError(null);
     setCopied(false);
     try {
       const messages = buildMessages();
       const text = await complete(messages);
-      setResult(text);
+      if (activeFeature === "score") {
+        const parsed = parseScoreResponse(text);
+        setScoreResult(parsed);
+        onUpdate?.(lead.id, { fitScore: parsed.score });
+      } else {
+        setResult(text);
+      }
     } catch (err) {
       setError(err.message || "Erro ao gerar resposta.");
     } finally {
@@ -244,6 +264,45 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails }) {
             >
               <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
               <span>{error}</span>
+            </div>
+          )}
+
+          {/* Score result */}
+          {scoreResult && (
+            <div className="space-y-2">
+              <div
+                className="flex items-start gap-3 p-3 rounded-lg border"
+                style={{ background: CREAM, borderColor: BORDER }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full font-bold flex-shrink-0"
+                  style={{
+                    width: 44, height: 44, fontSize: 16,
+                    color: scoreResult.score >= 70 ? "#16A34A" : scoreResult.score >= 40 ? "#D97706" : "#DC2626",
+                    background: scoreResult.score >= 70 ? "#DCFCE7" : scoreResult.score >= 40 ? "#FEF3C7" : "#FEE2E2",
+                  }}
+                >
+                  {scoreResult.score}
+                </div>
+                <div className="text-sm leading-relaxed" style={{ color: NEUTRAL.graphite }}>
+                  {scoreResult.justificativa}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRegenerate}
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
+                  style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: BORDER, cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = NEUTRAL.slate; }}
+                >
+                  <RotateCcw size={11} />
+                  Recalcular
+                </button>
+                <span className="flex items-center gap-1 text-xs" style={{ color: "#16A34A" }}>
+                  <Target size={11} /> Score salvo no lead
+                </span>
+              </div>
             </div>
           )}
 

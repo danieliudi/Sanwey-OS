@@ -107,6 +107,44 @@ Cada resposta: máx 3 frases. Seja direto, sem jargões.`,
   ];
 }
 
+export function scorePrompt(lead, activities) {
+  const recentActivities = (activities || [])
+    .slice(-5)
+    .map(a => `- ${a.body}`)
+    .join('\n') || '- Nenhuma atividade registrada';
+
+  const daysInStage = lead.stageChangedAt
+    ? Math.floor((Date.now() - new Date(lead.stageChangedAt)) / 86400000)
+    : 0;
+
+  return [
+    {
+      role: 'system',
+      content: `Você é um analista de qualificação de leads B2B. Avalie exclusivamente com base nos dados fornecidos — não presuma informação não escrita.
+
+Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown, sem explicações fora do JSON:
+{"score": <número de 0 a 100>, "justificativa": "<2-3 frases objetivas>"}`,
+    },
+    {
+      role: 'user',
+      content: `Avalie o potencial de conversão deste lead:
+
+**Empresa:** ${lead.company} (${lead.sector || '—'}, porte ${lead.size || '—'})
+**Capital social:** R$ ${lead.capitalSocial?.toLocaleString('pt-BR') || '—'}
+**Etapa atual:** ${lead.stage} | **Dias nesta etapa:** ${daysInStage}d
+**Valor estimado do negócio:** R$ ${lead.value?.toLocaleString('pt-BR') || '—'}
+**Decisor identificado:** ${lead.decisionMaker?.name ? `${lead.decisionMaker.name} (${lead.decisionMaker.role || '—'})` : 'Não identificado'}
+**Gatilho comercial:** ${lead.triggerLabel || '—'}: ${lead.evidence || '—'}
+**Classificação atual:** ${lead.clientClassification || '—'}
+
+**Atividades recentes:**
+${recentActivities}
+
+Considere: presença de decisor identificado, força do gatilho comercial, engajamento (atividades recentes), tempo parado na etapa e porte/capital da empresa.`,
+    },
+  ];
+}
+
 export function pipelineChatPrompt(question, leads, users) {
   const summary = summarizeLeads(leads, users);
   return [
