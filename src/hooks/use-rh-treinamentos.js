@@ -64,13 +64,20 @@ export function useRHTreinamentos({ userId } = {}) {
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, ...patch } : a));
   }, []);
 
+  const updateTreinamento = useCallback(async (id, patch) => {
+    const { error } = await supabase.from("rh_treinamentos").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
+    if (error) throw new Error(error.message);
+    setTreinamentos(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
+  }, []);
+
   return useMemo(() => ({
     treinamentos,
     atribuicoes,
     loading,
     createTreinamento,
+    updateTreinamento,
     assignToUsers,
     updateAtribuicaoStatus,
     refetch: fetchAll,
-  }), [treinamentos, atribuicoes, loading, createTreinamento, assignToUsers, updateAtribuicaoStatus, fetchAll]);
+  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, fetchAll]);
 }
