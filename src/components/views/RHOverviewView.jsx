@@ -18,6 +18,7 @@ import {
   RH_RECRUITMENT_STAGES,
 } from "../../constants/rh-config";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -155,7 +156,8 @@ function EmptyState({ text }) {
   );
 }
 
-export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
+export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
+  const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const [vagas, setVagas] = useState([]);
   const [ferias, setFerias] = useState([]);
   const [loadingVagas, setLoadingVagas] = useState(true);
@@ -170,7 +172,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
     supabase
       .from("rh_vagas")
       .select("*")
-      .neq("stage", "reprovado")
+      .eq("stage", "publicada")
       .then(({ data }) => {
         setVagas(data || []);
         setLoadingVagas(false);
@@ -188,27 +190,30 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
       .catch(() => setLoadingFerias(false));
   }, []);
 
-  const totalFuncionarios = users.length;
-  const totalAtivos = users.filter(
-    (u) => !u.employee_status || u.employee_status === "ativo"
+  // Fonte única de verdade pra "funcionário" é rh_colaboradores — inclui
+  // quem tem login (sincronizado automaticamente via trigger) e quem não
+  // tem (cadastrado direto em Funcionários).
+  const totalFuncionarios = colaboradores.length;
+  const totalAtivos = colaboradores.filter(
+    (c) => !c.employeeStatus || c.employeeStatus === "ativo"
   ).length;
-  const totalFerias = users.filter((u) => u.employee_status === "ferias").length;
-  const totalAfastados = users.filter(
-    (u) => u.employee_status === "afastado"
+  const totalFerias = colaboradores.filter((c) => c.employeeStatus === "ferias").length;
+  const totalAfastados = colaboradores.filter(
+    (c) => c.employeeStatus === "afastado"
   ).length;
 
-  const recentAdmissions = [...users]
-    .filter((u) => u.admission_date)
+  const recentAdmissions = [...colaboradores]
+    .filter((c) => c.admissionDate)
     .sort(
       (a, b) =>
-        new Date(b.admission_date).getTime() -
-        new Date(a.admission_date).getTime()
+        new Date(b.admissionDate).getTime() -
+        new Date(a.admissionDate).getTime()
     )
     .slice(0, 5);
 
   const deptMap = {};
-  users.forEach((u) => {
-    const dept = u.department || "Não definido";
+  colaboradores.forEach((c) => {
+    const dept = c.department || "Não definido";
     deptMap[dept] = (deptMap[dept] || 0) + 1;
   });
   const deptList = Object.entries(deptMap)
@@ -442,16 +447,18 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
 
           <div style={{ ...card, padding: 20 }}>
             <SectionHeader title="Admissões Recentes" />
-            {recentAdmissions.length === 0 ? (
+            {loadingColaboradores ? (
+              <div style={{ color: NEUTRAL.slate, fontSize: 13 }}>Carregando...</div>
+            ) : recentAdmissions.length === 0 ? (
               <EmptyState text="Nenhuma admissão registrada" />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {recentAdmissions.map((u) => (
+                {recentAdmissions.map((c) => (
                   <div
-                    key={u.id}
+                    key={c.id}
                     style={{ display: "flex", alignItems: "center", gap: 10 }}
                   >
-                    <Avatar name={u.name} bg={u.avatarBg} size={34} />
+                    <Avatar name={c.fullName} size={34} />
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div
                         style={{
@@ -463,7 +470,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                           textOverflow: "ellipsis",
                         }}
                       >
-                        {u.name || "—"}
+                        {c.fullName || "—"}
                       </div>
                       <div
                         style={{
@@ -474,7 +481,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                           textOverflow: "ellipsis",
                         }}
                       >
-                        {u.job_title || u.department || "—"}
+                        {c.jobTitle || c.department || "—"}
                       </div>
                     </div>
                     <div
@@ -484,7 +491,7 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
                         flexShrink: 0,
                       }}
                     >
-                      {fmt(u.admission_date)}
+                      {fmt(c.admissionDate)}
                     </div>
                   </div>
                 ))}
@@ -563,7 +570,9 @@ export function RHOverviewView({ currentUser, users, canWrite, onNavigate }) {
 
         <div style={{ ...card, padding: 20 }}>
           <SectionHeader title="Distribuição por Departamento" />
-          {deptList.length === 0 ? (
+          {loadingColaboradores ? (
+            <div style={{ color: NEUTRAL.slate, fontSize: 13 }}>Carregando...</div>
+          ) : deptList.length === 0 ? (
             <EmptyState text="Sem dados de departamento" />
           ) : (
             <div
