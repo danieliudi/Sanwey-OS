@@ -1,7 +1,12 @@
 import React, { useMemo, useState } from "react";
-import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw } from "lucide-react";
-import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { useNavigate } from "react-router-dom";
+import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight } from "lucide-react";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
+import { ROUTES } from "../../constants/routes";
 import { useAI } from "../../hooks/use-ai";
+import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
+import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
+import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
@@ -166,14 +171,31 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
         </div>
       </div>
 
-      {/* KPI strip — sempre visível */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Pipeline aberto"     sublabel="Em aberto" accent={"var(--text)"} />
-        <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
-        <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
-        <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
-        <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
-        <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
+      {/* Outras áreas do Grupo — o painel executivo não é só CRM. Só admin
+          tem RLS pra ler Marketing/RH; gerente comercial não, então
+          mostrar isso pra ele seria só uma parede de zeros enganosa. */}
+      {currentUser?.role === "admin" && (
+        <div className="print:hidden">
+          <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
+            Outras áreas
+          </div>
+          <DepartmentsOverview />
+        </div>
+      )}
+
+      {/* KPI strip — Comercial, sempre visível */}
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
+          Comercial
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Pipeline aberto"     sublabel="Em aberto" accent={"var(--text)"} />
+          <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
+          <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
+          <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
+          <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
+          <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -221,6 +243,80 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
       {tab === "historico" && (
         <FunnelHistoryView user={currentUser} activeCompany={activeCompany} leads={leads} users={users} />
       )}
+    </div>
+  );
+}
+
+// ── Outras áreas do Grupo (Marketing / RH) ───────────────────────────────────
+
+function DepartmentCard({ icon: Icon, iconColor, title, stats, ctaLabel, onNavigate }) {
+  return (
+    <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: iconColor + "18" }}>
+            <Icon size={16} style={{ color: iconColor }} />
+          </div>
+          <h3 className="font-semibold" style={{ fontSize: 14, color: "var(--text)" }}>{title}</h3>
+        </div>
+        <button
+          onClick={onNavigate}
+          className="flex items-center gap-1 text-xs font-semibold cursor-pointer"
+          style={{ color: iconColor, background: "none", border: "none" }}
+        >
+          {ctaLabel} <ArrowRight size={11} />
+        </button>
+      </div>
+      <div className="flex items-start gap-8 flex-wrap">
+        {stats.map(s => (
+          <div key={s.label}>
+            <div className="font-bold" style={{ fontSize: 22, color: "var(--text)", lineHeight: 1 }}>{s.value}</div>
+            <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DepartmentsOverview() {
+  const navigate = useNavigate();
+  const { campaigns, loading: loadingCampaigns } = useMarketingCampaigns({});
+  const { vagas, candidatos, loading: loadingRecrutamento } = useRHRecrutamento({});
+  const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({});
+
+  const dash = "—";
+  const campanhasAtivas = loadingCampaigns ? dash : campaigns.filter(c => c.stage !== "encerrado").length;
+  const totalCampanhas = loadingCampaigns ? dash : campaigns.length;
+  const vagasPublicadas = loadingRecrutamento ? dash : vagas.filter(v => v.stage === "publicada").length;
+  const candidatosEmProcesso = loadingRecrutamento ? dash : candidatos.filter(c => !["aprovado", "reprovado"].includes(c.stage)).length;
+  const onboardingEmAndamento = loadingColaboradores ? dash : colaboradores.filter(c => c.onboardingStage && c.onboardingStage !== "concluido").length;
+
+  return (
+    <div className="grid md:grid-cols-2 gap-4">
+      <DepartmentCard
+        icon={Megaphone}
+        iconColor="#7C3AED"
+        title="Marketing"
+        stats={[
+          { label: "Campanhas ativas", value: campanhasAtivas },
+          { label: "Total de campanhas", value: totalCampanhas },
+        ]}
+        ctaLabel="Ver Marketing"
+        onNavigate={() => navigate(ROUTES.marketing)}
+      />
+      <DepartmentCard
+        icon={Briefcase}
+        iconColor="#0EA5E9"
+        title="RH"
+        stats={[
+          { label: "Vagas publicadas", value: vagasPublicadas },
+          { label: "Candidatos em processo", value: candidatosEmProcesso },
+          { label: "Onboarding em andamento", value: onboardingEmAndamento },
+        ]}
+        ctaLabel="Ver RH"
+        onNavigate={() => navigate(ROUTES["rh-overview"])}
+      />
     </div>
   );
 }

@@ -91,6 +91,7 @@ export default function App() {
   }, [currentUser?.id, setOnboardingDoneMap]);
 
   const isManagerRole      = currentUser?.role === "gerente" || currentUser?.role === "admin";
+  const isAdminRole        = currentUser?.role === "admin";
   // isMarketingUser: can access marketing routes (includes admin for RLS/access)
   const isMarketingUser    = ["marketing", "gerente_marketing", "admin"].includes(currentUser?.role);
   // isPureMarketing: only the marketing dept roles — drives sidebar and dashboard rendering
@@ -674,6 +675,8 @@ export default function App() {
               <Navigate to={ROUTES["rh-overview"]} replace />
             ) : isPureMarketing ? (
               <MarketingDashboardView user={currentUser} />
+            ) : isAdminRole ? (
+              <Navigate to={ROUTES.executive} replace />
             ) : (
               <DashboardView
                 user={currentUser}
