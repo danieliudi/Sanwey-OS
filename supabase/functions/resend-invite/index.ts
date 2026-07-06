@@ -64,9 +64,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Nome/e-mail de quem convidou — pra personalizar o corpo do e-mail
+    // (o remetente técnico do Supabase Auth é fixo por projeto, não dá pra
+    // trocar por convite; isso aqui é o que dá pra personalizar de verdade).
+    let invitedByName = null;
+    let invitedByEmail = null;
+    if (inv.invited_by) {
+      const { data: inviter } = await supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("id", inv.invited_by)
+        .single();
+      invitedByName = inviter?.name || null;
+      invitedByEmail = inviter?.email || null;
+    }
+
     // Envia convite via Supabase Auth (magic-link de cadastro)
     const { error: authErr } = await supabase.auth.admin.inviteUserByEmail(inv.email, {
-      data: { role: inv.role, companies: inv.companies },
+      data: {
+        role: inv.role,
+        companies: inv.companies,
+        invited_by_name: invitedByName,
+        invited_by_email: invitedByEmail,
+      },
     });
 
     // Se o usuário já existe no Auth, trata como reenvio sem errar
