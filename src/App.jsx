@@ -871,7 +871,7 @@ export default function App() {
           } />
           <Route path={ROUTES["rh-overview"]} element={
             isRHUser
-              ? <RHOverviewView currentUser={currentUser} users={users} canWrite={isRHManager} onNavigate={setSection} />
+              ? <RHOverviewView currentUser={currentUser} canWrite={isRHManager} onNavigate={setSection} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-funcionarios"]} element={
