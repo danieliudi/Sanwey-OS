@@ -9,6 +9,7 @@ import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
+import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
@@ -443,8 +444,37 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
   const { templates, tarefas, loading: loadingTarefas, createTemplate, applyChecklist, updateTarefaStatus, deleteTarefa } = useRHOnboarding({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores, changeOnboardingStage } = useRHColaboradores({ userId: currentUser?.id });
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
+  const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
   const [novaTemplateOpen, setNovaTemplateOpen] = useState(false);
   const [drawerColaboradorId, setDrawerColaboradorId] = useState(null);
+
+  // Ao entrar em "Integração", atribui sozinho os treinamentos obrigatórios
+  // cujo cargo ou departamento alvo bata com o do colaborador — mesma lógica
+  // de match case-insensitive já usada pro template de onboarding por cargo.
+  const autoAssignTreinamentos = async (colaborador) => {
+    if (!colaborador) return;
+    const jobTitle = (colaborador.jobTitle || "").toLowerCase().trim();
+    const department = colaborador.department || "";
+    const jaAtribuidoIds = new Set(
+      treinamentoAtribuicoes.filter((a) => a.colaborador_id === colaborador.id).map((a) => a.treinamento_id)
+    );
+    const matches = treinamentos.filter((t) => {
+      if (t.tipo !== "obrigatorio" || jaAtribuidoIds.has(t.id)) return false;
+      const cargoMatch = t.cargo_alvo && jobTitle && t.cargo_alvo.toLowerCase().trim() === jobTitle;
+      const deptoMatch = t.departamento_alvo && department && t.departamento_alvo === department;
+      return cargoMatch || deptoMatch;
+    });
+    for (const t of matches) {
+      await assignTreinamento(t.id, [colaborador.id]);
+    }
+  };
+
+  const handleStageChange = async (id, stage) => {
+    await changeOnboardingStage(id, stage);
+    if (stage === "integracao") {
+      await autoAssignTreinamentos(colaboradores.find((c) => c.id === id));
+    }
+  };
 
   const loading = loadingTarefas || loadingColaboradores;
 
@@ -573,7 +603,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
           templates={templates}
           vagaTitle={vagasById.get(drawerColaborador.vagaId)?.title}
           canWrite={canWrite}
-          onStageChange={async (id, stage) => { await changeOnboardingStage(id, stage); }}
+          onStageChange={handleStageChange}
           onStatusChange={updateTarefaStatus}
           onDeleteTarefa={deleteTarefa}
           onApplyTemplate={applyChecklist}
