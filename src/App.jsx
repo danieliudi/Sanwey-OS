@@ -897,7 +897,7 @@ export default function App() {
             <RHTreinamentosView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} />
           } />
           <Route path={ROUTES["rh-feedback"]} element={
-            <RHFeedbackView currentUser={currentUser} users={users} canWrite={isRHManager} isRHUser={isRHUser} />
+            <RHFeedbackView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} />
           } />
           <Route path={ROUTES["rh-ferias"]} element={
             isRHUser
