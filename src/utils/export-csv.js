@@ -42,9 +42,13 @@ export function formatBRNumber(n) {
   return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Colunas `date` do Postgres chegam como "AAAA-MM-DD" puro; `new Date(...)`
+// interpretaria isso como meia-noite UTC, o que "volta" um dia em fusos
+// negativos (Brasil). Datas com hora (timestamptz) seguem o parsing normal.
 export function formatDate(iso) {
   if (!iso) return "";
-  const d = new Date(iso);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
+  const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("pt-BR");
 }
