@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";
 import { supabase } from "../../lib/supabase";
 import { useAI } from "../../hooks/use-ai";
@@ -113,10 +112,10 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
-  const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
-  const blurGray  = (e) => { e.target.style.borderColor = "#D1D5DB"; };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
+  const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
+  const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
   const inputCls = "w-full text-sm rounded-xl border px-3 py-2 outline-none";
 
   return (
@@ -125,24 +124,24 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 620, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "92vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 620, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "92vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>{initialData ? "Editar Funcionário" : "Novo Funcionário"}</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex" }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{initialData ? "Editar Funcionário" : "Novo Funcionário"}</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
             <X size={18} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           {hireContext && (
-            <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#15803D", marginBottom: 6 }}>
+            <div style={{ background: "var(--success-bg)", border: "1px solid #BBF7D0", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--success)", marginBottom: 6 }}>
                 Convertendo candidato aprovado{hireContext.vagaTitle ? ` — vaga "${hireContext.vagaTitle}"` : ""}
               </div>
               {hireContext.vagaId && (
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#166534", cursor: "pointer" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--success)", cursor: "pointer" }}>
                   <input type="checkbox" checked={closeVaga} onChange={(e) => setCloseVaga(e.target.checked)} />
                   Encerrar esta vaga como preenchida
                 </label>
@@ -161,21 +160,21 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
             </p>
             <label style={{
               display: "flex", alignItems: "center", gap: 10,
-              border: `1px dashed ${fileError ? "#DC2626" : "#C4B5FD"}`, borderRadius: 8,
-              padding: "10px 12px", cursor: "pointer", background: "#FFFFFF",
+              border: `1px dashed ${fileError ? "var(--danger)" : "#C4B5FD"}`, borderRadius: 8,
+              padding: "10px 12px", cursor: "pointer", background: "var(--surface)",
             }}>
               <Upload size={15} style={{ color: "#7C3AED", flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: file ? NEUTRAL.graphite : NEUTRAL.slate, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 12, color: file ? "var(--text)" : "var(--text-dim)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {file ? file.name : "Selecionar foto ou PDF do documento…"}
               </span>
               {extracting && <Loader2 size={14} className="animate-spin" style={{ color: "#7C3AED", flexShrink: 0 }} />}
-              {!extracting && extracted && <Check size={14} style={{ color: "#16A34A", flexShrink: 0 }} />}
-              {!extracting && file && !extracted && <FileText size={14} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />}
+              {!extracting && extracted && <Check size={14} style={{ color: "var(--success)", flexShrink: 0 }} />}
+              {!extracting && file && !extracted && <FileText size={14} style={{ color: "var(--text-dim)", flexShrink: 0 }} />}
               <input ref={fileInputRef} type="file" accept=".pdf,image/*" onChange={(e) => handleFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
             </label>
-            {fileError && <div style={{ fontSize: 11, color: "#DC2626", marginTop: 6 }}>{fileError}</div>}
+            {fileError && <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 6 }}>{fileError}</div>}
             {!isConfigured && (
-              <div style={{ fontSize: 11, color: "#92400E", marginTop: 6 }}>
+              <div style={{ fontSize: 11, color: "var(--warning)", marginTop: 6 }}>
                 Configure uma LLM (Anthropic) em Configurações → Integrações de IA para usar o preenchimento automático. O upload do documento continua funcionando normalmente.
               </div>
             )}
@@ -212,7 +211,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
               </div>
             </div>
 
-            <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>Endereço</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>Endereço</div>
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Rua</label>
@@ -242,7 +241,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
               </div>
             </div>
 
-            <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>Dados profissionais</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>Dados profissionais</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Cargo</label>
@@ -280,17 +279,17 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
           </div>
 
           {error && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "16px 0 0" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "16px 0 0" }}>
               <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
               <span>{error}</span>
             </div>
           )}
 
           <div className="flex gap-2 mt-5">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "#1E4D8C", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Cadastrar funcionário"}
             </button>
-            <button type="button" onClick={onClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}>
+            <button type="button" onClick={onClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
               Cancelar
             </button>
           </div>

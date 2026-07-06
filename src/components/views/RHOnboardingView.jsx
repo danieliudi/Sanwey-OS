@@ -3,7 +3,6 @@ import {
   ClipboardCheck, Plus, X, Check, Trash2, ArrowRight,
   Briefcase, Clock,
 } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import { RH_CONTRACT_TYPES } from "../../constants/rh-config";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
@@ -47,7 +46,7 @@ function daysInStage(dateStr) {
 function InitialsAvatar({ name, size = 32 }) {
   const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: NEUTRAL.red, color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.36, fontWeight: 700, flexShrink: 0, letterSpacing: "0.02em" }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "var(--color-industria)", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.36, fontWeight: 700, flexShrink: 0, letterSpacing: "0.02em" }}>
       {initials}
     </div>
   );
@@ -55,23 +54,23 @@ function InitialsAvatar({ name, size = 32 }) {
 
 function statusConfig(status) {
   switch (status) {
-    case "concluida":     return { label: "Concluída",     color: "#16A34A", bg: "#DCFCE7" };
-    case "em_andamento":  return { label: "Em andamento",  color: "#1E4D8C", bg: "#DBEAFE" };
-    default:              return { label: "Pendente",      color: "#D97706", bg: "#FEF3C7" };
+    case "concluida":     return { label: "Concluída",     color: "var(--success)", bg: "#DCFCE7" };
+    case "em_andamento":  return { label: "Em andamento",  color: "var(--accent)", bg: "#DBEAFE" };
+    default:              return { label: "Pendente",      color: "var(--warning)", bg: "#FEF3C7" };
   }
 }
 
 function TaskRow({ tarefa, canWrite, canToggle, onStatusChange, onDelete }) {
   const s = statusConfig(tarefa.status);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #F3F4F6" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
       <button
         onClick={() => canToggle && onStatusChange(tarefa.id, tarefa.status === "concluida" ? "pendente" : "concluida")}
         disabled={!canToggle}
         style={{
           width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-          border: `1.5px solid ${tarefa.status === "concluida" ? "#16A34A" : "#D1D5DB"}`,
-          background: tarefa.status === "concluida" ? "#16A34A" : "#FFF",
+          border: `1.5px solid ${tarefa.status === "concluida" ? "var(--success)" : "var(--border-strong)"}`,
+          background: tarefa.status === "concluida" ? "var(--success)" : "var(--surface)",
           display: "flex", alignItems: "center", justifyContent: "center",
           cursor: canToggle ? "pointer" : "default",
         }}
@@ -79,17 +78,17 @@ function TaskRow({ tarefa, canWrite, canToggle, onStatusChange, onDelete }) {
         {tarefa.status === "concluida" && <Check size={12} color="#FFF" />}
       </button>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, color: NEUTRAL.graphite, fontWeight: 500, textDecoration: tarefa.status === "concluida" ? "line-through" : "none", opacity: tarefa.status === "concluida" ? 0.6 : 1 }}>
+        <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500, textDecoration: tarefa.status === "concluida" ? "line-through" : "none", opacity: tarefa.status === "concluida" ? 0.6 : 1 }}>
           {tarefa.titulo}
         </div>
-        <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 1 }}>Prazo: {fmt(tarefa.data_limite)}</div>
+        <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>Prazo: {fmt(tarefa.data_limite)}</div>
       </div>
       <span style={{ background: s.bg, color: s.color, borderRadius: 99, padding: "2px 9px", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>{s.label}</span>
       {canToggle && tarefa.status !== "concluida" && tarefa.status !== "em_andamento" && (
-        <button onClick={() => onStatusChange(tarefa.id, "em_andamento")} style={{ fontSize: 10, color: "#1E4D8C", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>Iniciar</button>
+        <button onClick={() => onStatusChange(tarefa.id, "em_andamento")} style={{ fontSize: 10, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>Iniciar</button>
       )}
       {canWrite && (
-        <button onClick={() => onDelete(tarefa.id)} style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 2, display: "flex", flexShrink: 0 }}>
+        <button onClick={() => onDelete(tarefa.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
           <Trash2 size={13} />
         </button>
       )}
@@ -110,24 +109,24 @@ function OnboardingCard({ colaborador, tarefas, vagaTitle, onClick }) {
     <div
       onClick={onClick}
       className="cursor-pointer transition-all duration-150"
-      style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderLeft: `3px solid ${st.color}`, borderRadius: 10, padding: "10px 12px" }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.boxShadow = "none"; }}
+      style={{ background: "var(--surface)", border: "1px solid var(--border)", borderLeft: `3px solid ${st.color}`, borderRadius: 10, padding: "10px 12px" }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.boxShadow = "none"; }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
         <InitialsAvatar name={colaborador.fullName} size={28} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {colaborador.fullName}
           </div>
-          <div style={{ fontSize: 10, color: NEUTRAL.slate, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontSize: 10, color: "var(--text-dim)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {colaborador.jobTitle || colaborador.department || "—"}
           </div>
         </div>
         {total > 0 && <FitScoreCircle score={progresso} size={28} />}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 10, color: NEUTRAL.slate }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 10, color: "var(--text-dim)" }}>
         <span>{total > 0 ? `${done}/${total} tarefas` : "Sem tarefas"}</span>
         {days > 0 && (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
@@ -137,7 +136,7 @@ function OnboardingCard({ colaborador, tarefas, vagaTitle, onClick }) {
       </div>
 
       {vagaTitle && (
-        <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: NEUTRAL.slate }}>
+        <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--text-dim)" }}>
           <Briefcase size={10} /> {vagaTitle}
         </div>
       )}
@@ -147,15 +146,15 @@ function OnboardingCard({ colaborador, tarefas, vagaTitle, onClick }) {
 
 function OnboardingKanbanColumn({ stage, colaboradoresList, tarefasByColaborador, vagasById, onCardClick }) {
   return (
-    <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0, display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)" }}>
-      <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0, display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)" }}>
+      <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
-        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: NEUTRAL.graphite }}>{stage.name}</span>
+        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: "var(--text)" }}>{stage.name}</span>
         <span style={{ background: `${stage.color}22`, color: stage.color, borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{colaboradoresList.length}</span>
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {colaboradoresList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: NEUTRAL.slate, fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
         ) : (
           colaboradoresList.map((c) => (
             <OnboardingCard
@@ -189,7 +188,7 @@ function OnboardingDrawer({
   }, [onClose]);
 
   const st = stageInfo(colaborador.onboardingStage);
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
   const total = tarefas.length;
   const done = tarefas.filter((t) => t.status === "concluida").length;
 
@@ -211,19 +210,19 @@ function OnboardingDrawer({
   return (
     <>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "#FFFFFF", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <InitialsAvatar name={colaborador.fullName} size={40} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite }}>{colaborador.fullName}</div>
-            <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 2 }}>{colaborador.jobTitle || "—"} · {colaborador.department || "—"}</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador.fullName}</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{colaborador.jobTitle || "—"} · {colaborador.department || "—"}</div>
             <div style={{ marginTop: 8 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
             <X size={18} />
           </button>
         </div>
@@ -240,7 +239,7 @@ function OnboardingDrawer({
             ].map((f) => (
               <div key={f.label}>
                 <div style={labelSt}>{f.label}</div>
-                <div style={{ fontSize: 13, color: NEUTRAL.graphite, fontWeight: 500 }}>{f.value}</div>
+                <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
               </div>
             ))}
           </div>
@@ -267,7 +266,7 @@ function OnboardingDrawer({
           </div>
 
           {tarefas.length === 0 ? (
-            <div style={{ fontSize: 12, color: NEUTRAL.slate, marginBottom: 12 }}>Nenhuma tarefa ainda.</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 12 }}>Nenhuma tarefa ainda.</div>
           ) : (
             <div style={{ marginBottom: 12 }}>
               {tarefas.map((t) => (
@@ -287,11 +286,11 @@ function OnboardingDrawer({
             <>
               {templates.length > 0 && tarefas.length === 0 && (
                 <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                  <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", flex: 1 }}>
+                  <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: 1 }}>
                     <option value="">Aplicar template…</option>
                     {templates.map((t) => <option key={t.id} value={t.id}>{t.cargo || t.frente || "Template"}</option>)}
                   </select>
-                  <button onClick={handleApplyTemplate} disabled={!templateId} style={{ background: "#1E4D8C", color: "#FFF", border: "none", borderRadius: 8, padding: "0 12px", fontSize: 11, fontWeight: 700, cursor: templateId ? "pointer" : "default", opacity: templateId ? 1 : 0.5 }}>
+                  <button onClick={handleApplyTemplate} disabled={!templateId} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "0 12px", fontSize: 11, fontWeight: 700, cursor: templateId ? "pointer" : "default", opacity: templateId ? 1 : 0.5 }}>
                     Aplicar
                   </button>
                 </div>
@@ -304,14 +303,14 @@ function OnboardingDrawer({
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTask(); } }}
                   placeholder="Nova tarefa…"
                   className="text-xs rounded-lg border px-2 py-1.5 outline-none"
-                  style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", flex: 1 }}
+                  style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: 1 }}
                 />
                 <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-                  <span style={{ fontSize: 10, color: NEUTRAL.slate }}>D+</span>
-                  <input type="number" min="0" value={novoPrazo} onChange={(e) => setNovoPrazo(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", width: 48 }} />
+                  <span style={{ fontSize: 10, color: "var(--text-dim)" }}>D+</span>
+                  <input type="number" min="0" value={novoPrazo} onChange={(e) => setNovoPrazo(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", width: 48 }} />
                 </div>
-                <button onClick={handleAddTask} disabled={!novaTarefa.trim()} style={{ background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 8, padding: "6px 8px", cursor: novaTarefa.trim() ? "pointer" : "default", display: "flex", opacity: novaTarefa.trim() ? 1 : 0.5, flexShrink: 0 }}>
-                  <Plus size={13} color={NEUTRAL.graphite} />
+                <button onClick={handleAddTask} disabled={!novaTarefa.trim()} style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 8px", cursor: novaTarefa.trim() ? "pointer" : "default", display: "flex", opacity: novaTarefa.trim() ? 1 : 0.5, flexShrink: 0 }}>
+                  <Plus size={13} color="var(--text)" />
                 </button>
               </div>
             </>
@@ -356,15 +355,15 @@ function NovaTemplateModal({ onSave, onClose }) {
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", fontSize: 13 };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite }}>Novo template de onboarding</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, display: "flex" }}><X size={18} /></button>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Novo template de onboarding</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           <div className="flex flex-col gap-3">
@@ -385,26 +384,26 @@ function NovaTemplateModal({ onSave, onClose }) {
                   <div key={idx} style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <input type="text" value={item.titulo} onChange={(e) => updateItem(idx, { titulo: e.target.value })} placeholder="Ex: Treinamento de compliance" className="text-sm rounded-lg border px-2 py-1.5 outline-none" style={{ ...inputSt, flex: 1 }} />
                     <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                      <span style={{ fontSize: 11, color: NEUTRAL.slate }}>D+</span>
+                      <span style={{ fontSize: 11, color: "var(--text-dim)" }}>D+</span>
                       <input type="number" min="0" value={item.diasPrazo} onChange={(e) => updateItem(idx, { diasPrazo: e.target.value })} className="text-sm rounded-lg border px-2 py-1.5 outline-none" style={{ ...inputSt, width: 56 }} />
                     </div>
-                    <button type="button" onClick={() => removeItem(idx)} style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, flexShrink: 0 }}><X size={14} /></button>
+                    <button type="button" onClick={() => removeItem(idx)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", flexShrink: 0 }}><X size={14} /></button>
                   </div>
                 ))}
               </div>
-              <button type="button" onClick={addItem} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "#1E4D8C", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              <button type="button" onClick={addItem} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "var(--accent)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                 <Plus size={12} /> Adicionar tarefa
               </button>
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "#1E4D8C", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Salvar template"}
             </button>
-            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}>Cancelar</button>
+            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
           </div>
         </form>
       </div>
@@ -420,16 +419,16 @@ function MeuChecklist({ colaborador, tarefas, onStatusChange }) {
   const progresso = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
-    <div style={{ border: "1px solid #E5E7EB", borderRadius: 12, overflow: "hidden" }}>
-      <div style={{ padding: "12px 16px", background: "#F9FAFB", display: "flex", alignItems: "center", gap: 12 }}>
+    <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ padding: "12px 16px", background: "var(--surface-alt)", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, color: NEUTRAL.graphite }}>{colaborador.fullName}</div>
-          <div style={{ fontSize: 11, color: NEUTRAL.slate }}>{done}/{total} tarefas concluídas</div>
+          <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>{colaborador.fullName}</div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{done}/{total} tarefas concluídas</div>
         </div>
-        <div style={{ width: 80, height: 6, borderRadius: 99, background: "#E5E7EB", overflow: "hidden", flexShrink: 0 }}>
-          <div style={{ width: `${progresso}%`, height: "100%", background: progresso === 100 ? "#16A34A" : "#1E4D8C" }} />
+        <div style={{ width: 80, height: 6, borderRadius: 99, background: "var(--border)", overflow: "hidden", flexShrink: 0 }}>
+          <div style={{ width: `${progresso}%`, height: "100%", background: progresso === 100 ? "var(--success)" : "var(--accent)" }} />
         </div>
-        <span style={{ fontSize: 11, color: NEUTRAL.slate, fontWeight: 700, flexShrink: 0 }}>{progresso}%</span>
+        <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700, flexShrink: 0 }}>{progresso}%</span>
       </div>
       <div style={{ padding: "4px 16px 8px" }}>
         {tarefas.map((t) => (
@@ -517,8 +516,8 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
   if (!isSupabaseConfigured) {
     return (
       <div style={{ textAlign: "center", padding: "60px 0" }}>
-        <ClipboardCheck size={48} style={{ color: NEUTRAL.slate, opacity: 0.3, margin: "0 auto 12px" }} />
-        <div style={{ fontSize: 14, color: NEUTRAL.slate, fontWeight: 500 }}>Supabase não configurado</div>
+        <ClipboardCheck size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Supabase não configurado</div>
       </div>
     );
   }
@@ -528,15 +527,15 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
     return (
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <ClipboardCheck size={22} style={{ color: NEUTRAL.graphite }} />
-          <h1 style={{ fontWeight: 700, fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em", margin: 0 }}>Onboarding</h1>
+          <ClipboardCheck size={22} style={{ color: "var(--text)" }} />
+          <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Onboarding</h1>
         </div>
         {loading ? (
-          <div style={{ textAlign: "center", padding: "60px 0", color: NEUTRAL.slate, fontSize: 13 }}>Carregando…</div>
+          <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
         ) : !meuColaborador ? (
           <div style={{ textAlign: "center", padding: "60px 0" }}>
-            <ClipboardCheck size={48} style={{ color: NEUTRAL.slate, opacity: 0.3, margin: "0 auto 12px" }} />
-            <div style={{ fontSize: 14, color: NEUTRAL.slate, fontWeight: 500 }}>Nenhum checklist de onboarding pra você</div>
+            <ClipboardCheck size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+            <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum checklist de onboarding pra você</div>
           </div>
         ) : (
           <MeuChecklist
@@ -555,26 +554,26 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <ClipboardCheck size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em", margin: 0 }}>Onboarding</h1>
+            <ClipboardCheck size={22} style={{ color: "var(--text)" }} />
+            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Onboarding</h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {colaboradores.length} colaborador{colaboradores.length !== 1 ? "es" : ""} no onboarding
           </p>
         </div>
         {canWrite && (
-          <button onClick={() => setNovaTemplateOpen(true)} style={{ background: "#FFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+          <button onClick={() => setNovaTemplateOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
             <Plus size={14} /> Template
           </button>
         )}
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: NEUTRAL.slate, fontSize: 13 }}>Carregando…</div>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : colaboradores.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <ClipboardCheck size={48} style={{ color: NEUTRAL.slate, opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: NEUTRAL.slate, fontWeight: 500 }}>Nenhum colaborador cadastrado</div>
+          <ClipboardCheck size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum colaborador cadastrado</div>
         </div>
       ) : (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
