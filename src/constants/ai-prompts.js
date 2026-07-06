@@ -384,3 +384,64 @@ Responda com:
     },
   ];
 }
+
+// Lê um comprovante de despesa (foto ou PDF) e extrai valor/data/fornecedor
+// — usado pra pré-preencher o formulário de despesa e, depois, pro gestor
+// comparar o que a IA leu com o que o vendedor digitou.
+export function receiptExtractionPrompt(fileContentBlock) {
+  return [
+    {
+      role: 'system',
+      content: `Você é um assistente que extrai dados de comprovantes de despesa (recibo, nota fiscal, cupom) brasileiros. Leia o documento anexado com atenção. Se um campo não estiver legível ou não existir, retorne null — nunca invente informação.
+
+Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown:
+{"valor": <número em reais ou null>, "data": "<AAAA-MM-DD ou null>", "fornecedor": "<nome do estabelecimento ou null>", "categoria_sugerida": "<uma de: Combustível, Hospedagem, Alimentação, Pedágio, Transporte, Outros>"}`,
+    },
+    {
+      role: 'user',
+      content: [fileContentBlock, { type: 'text', text: 'Extraia os dados deste comprovante.' }],
+    },
+  ];
+}
+
+// Cruza o planejamento mensal de visitas com o que foi de fato realizado e
+// com as despesas lançadas — o objetivo é substituir a conferência manual,
+// vendedor por vendedor, que o gestor faz hoje. registros/despesas já vêm
+// filtrados por vendedor+mês; a IA só aponta divergências, não recalcula nada.
+export function viagemCrossCheckPrompt(vendedorNome, mesReferencia, registros, despesas) {
+  const registrosLines = registros.map(r =>
+    `- [${r.status}] Planejado: ${r.destino_planejado} em ${r.data_planejada} — objetivo: ${r.objetivo || '—'}` +
+    (r.status !== 'planejado' ? ` | Realizado: ${r.destino_realizado || r.destino_planejado} em ${r.data_realizada || '—'} — resumo: ${r.resumo_realizado || '—'}${r.motivo_divergencia ? ` — motivo da divergência: ${r.motivo_divergencia}` : ''}` : '')
+  ).join('\n') || '(nenhuma visita planejada neste mês)';
+
+  const despesasLines = despesas.map(d => {
+    const ia = d.ia_extraido || {};
+    const iaNote = (ia.valor != null && Number(ia.valor) !== Number(d.valor))
+      ? ` ⚠ comprovante lido pela IA mostra R$ ${ia.valor}, divergente do valor lançado`
+      : '';
+    return `- ${d.categoria}: R$ ${d.valor} em ${d.data_despesa} (status: ${d.status_reembolso})${d.registro_id ? ' — vinculada a uma visita' : ' — despesa avulsa, sem visita vinculada'}${iaNote}`;
+  }).join('\n') || '(nenhuma despesa lançada neste mês)';
+
+  return [
+    {
+      role: 'system',
+      content: `Você é um analista que ajuda um gestor comercial a revisar rapidamente o que um vendedor planejou e o que de fato executou num mês, incluindo despesas de reembolso. Seja direto e objetivo — o gestor não tem tempo de ler um relatório longo. Responda em português brasileiro.`,
+    },
+    {
+      role: 'user',
+      content: `Vendedor: ${vendedorNome}
+Mês de referência: ${mesReferencia}
+
+VISITAS PLANEJADAS x REALIZADAS:
+${registrosLines}
+
+DESPESAS LANÇADAS:
+${despesasLines}
+
+Responda com:
+1. **Taxa de cumprimento** — quantas visitas planejadas foram de fato realizadas (número e %).
+2. **Pontos de atenção** — liste objetivamente: visitas planejadas e não realizadas sem justificativa clara; visitas realizadas que não estavam no plano; despesas sem visita vinculada; despesas com valor divergente do comprovante lido pela IA. Se não houver nenhum, diga "Nenhum ponto de atenção identificado".
+3. **Recomendação** — 1-2 frases sobre se esse mês do vendedor parece consistente ou precisa de conversa direta.`,
+    },
+  ];
+}
