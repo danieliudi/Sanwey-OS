@@ -127,7 +127,9 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         </div>
 
         {/* ── CTA ── */}
-        {!["agencia", "rh", "gerente_rh"].includes(currentUser?.role) && (
+        {/* Só faz sentido pra quem usa o Pipeline: vendedor/consultor/gerente
+            comercial, e admin (acesso total). */}
+        {["admin", "gerente", "vendedor", "consultor"].includes(currentUser?.role) && (
           <div style={{ padding: "16px 16px 8px" }}>
             <button
               onClick={() => { if (onNewLead) { onNewLead(); if (isMobile) onMobileClose?.(); } else handleNavClick("crm"); }}

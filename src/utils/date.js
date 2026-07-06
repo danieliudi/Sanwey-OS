@@ -1,15 +1,26 @@
 const dateBR = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+// Colunas `date` do Postgres chegam como "AAAA-MM-DD" puro; `new Date(...)`
+// interpretaria isso como meia-noite UTC, o que "volta" um dia em fusos
+// negativos (Brasil). Datas com hora (timestamptz) seguem o parsing normal.
+function parseDateInput(input) {
+  if (input instanceof Date) return input;
+  const s = String(input);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(s);
+}
+
 export function formatDateBR(input) {
   if (!input) return "—";
-  const d = typeof input === "string" ? new Date(input) : input;
+  const d = parseDateInput(input);
   if (Number.isNaN(d.getTime())) return "—";
   return dateBR.format(d);
 }
 
 export function daysSince(input) {
   if (!input) return 0;
-  const d = typeof input === "string" ? new Date(input) : input;
+  const d = parseDateInput(input);
   if (Number.isNaN(d.getTime())) return 0;
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }

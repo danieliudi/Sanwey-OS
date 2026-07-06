@@ -9,7 +9,7 @@ const STAGE_LABELS = Object.fromEntries(
   DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name])
 );
 
-function csvCell(v) {
+export function csvCell(v) {
   if (v === null || v === undefined) return "";
   const s = String(v);
   if (s.includes(";") || s.includes("\"") || s.includes("\n") || s.includes("\r")) {
@@ -18,11 +18,11 @@ function csvCell(v) {
   return s;
 }
 
-function csvRow(values) {
+export function csvRow(values) {
   return values.map(csvCell).join(";");
 }
 
-function triggerDownload(filename, content) {
+export function triggerDownload(filename, content) {
   // BOM UTF-8 garante que Excel abra em pt-BR sem corromper acentos.
   const blob = new Blob(["﻿" + content], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -35,16 +35,20 @@ function triggerDownload(filename, content) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function formatBRNumber(n) {
+export function formatBRNumber(n) {
   if (n === null || n === undefined || n === "") return "";
   const num = Number(n);
   if (!Number.isFinite(num)) return "";
   return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatDate(iso) {
+// Colunas `date` do Postgres chegam como "AAAA-MM-DD" puro; `new Date(...)`
+// interpretaria isso como meia-noite UTC, o que "volta" um dia em fusos
+// negativos (Brasil). Datas com hora (timestamptz) seguem o parsing normal.
+export function formatDate(iso) {
   if (!iso) return "";
-  const d = new Date(iso);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso));
+  const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString("pt-BR");
 }

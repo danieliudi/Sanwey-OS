@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
-  ClipboardCheck, GraduationCap, MessageSquareText,
+  ClipboardCheck, GraduationCap, MessageSquareText, Plane,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import { NEUTRAL } from "./constants/companies";
@@ -36,6 +36,7 @@ import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
 import { ExplorerView } from "./components/views/ExplorerView";
 import { CRMView } from "./components/views/CRMView";
+import { CRMViagensView } from "./components/views/CRMViagensView";
 import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
 import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { UserManagementView } from "./components/views/UserManagementView";
@@ -413,10 +414,11 @@ export default function App() {
       groups.push({
         label: "Comercial",
         items: [
-          { id: "dashboard", label: "Visão Geral", icon: LayoutDashboard },
-          { id: "crm",       label: "Pipeline",   icon: Layers },
-          { id: "signals",   label: "Sinais",     icon: Bell },
-          { id: "explorer",  label: "Explorador", icon: Globe2 },
+          { id: "dashboard",    label: "Visão Geral", icon: LayoutDashboard },
+          { id: "crm",          label: "Pipeline",   icon: Layers },
+          { id: "signals",      label: "Sinais",     icon: Bell },
+          { id: "explorer",     label: "Explorador", icon: Globe2 },
+          { id: "crm-viagens",  label: "Viagens",    icon: Plane },
         ],
       });
     } else {
@@ -525,7 +527,7 @@ export default function App() {
       setSection("dashboard");
     }
     // Pure marketing users shouldn't access CRM sections
-    const crmSections = ["crm", "signals", "explorer"];
+    const crmSections = ["crm", "signals", "explorer", "crm-viagens"];
     if (isPureMarketing && crmSections.includes(section)) {
       setSection("dashboard");
     }
@@ -541,7 +543,7 @@ export default function App() {
       setSection("rh-overview");
     }
     // Agência can access marketing routes + their own profile (settings).
-    const agenciaBlocked = ["crm", "signals", "explorer", "marketing-despesas", "dashboard", "tutorials"];
+    const agenciaBlocked = ["crm", "signals", "explorer", "crm-viagens", "marketing-despesas", "dashboard", "tutorials"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
@@ -747,6 +749,11 @@ export default function App() {
               onAutoOpenHandled={() => setCrmAutoCreate(false)}
               onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
             />
+          } />
+          <Route path={ROUTES["crm-viagens"]} element={
+            isAgencia || isPureMarketing || isPureRH
+              ? <Navigate to={ROUTES.dashboard} replace />
+              : <CRMViagensView currentUser={currentUser} leads={leads} users={users} />
           } />
           <Route path={ROUTES.agents} element={
             isManager

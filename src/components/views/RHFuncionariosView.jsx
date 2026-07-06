@@ -10,6 +10,9 @@ import {
   BarChart2,
   Plus,
   UserCog,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import {
@@ -34,6 +37,23 @@ function statusInfo(statusId) {
     RH_EMPLOYEE_STATUSES.find((s) => s.id === statusId) ||
     RH_EMPLOYEE_STATUSES[0]
   );
+}
+
+const FUNC_TABLE_COLS = [
+  { id: "name",            label: "Funcionário",   sortable: true },
+  { id: "job_title",       label: "Cargo",         sortable: true },
+  { id: "department",      label: "Departamento",  sortable: true },
+  { id: "contract_type",   label: "Contrato",      sortable: true },
+  { id: "employee_status", label: "Status",        sortable: true },
+  { id: "admission_date",  label: "Admissão",      sortable: true },
+  { id: "",                label: "",              sortable: false },
+];
+
+function SortIcon({ col, sortCol, sortDir }) {
+  if (sortCol !== col) return <ArrowUpDown size={11} style={{ color: "#D1D5DB", flexShrink: 0 }} />;
+  return sortDir === "asc"
+    ? <ArrowUp size={11} style={{ color: "#1E4D8C", flexShrink: 0 }} />
+    : <ArrowDown size={11} style={{ color: "#1E4D8C", flexShrink: 0 }} />;
 }
 
 function contractLabel(typeId) {
@@ -494,20 +514,37 @@ export function RHFuncionariosView({
   const [selected, setSelected]     = useState(null);
   const [novoColaboradorOpen, setNovoColaboradorOpen] = useState(false);
   const [editingColaborador, setEditingColaborador]   = useState(null);
+  const [sortCol, setSortCol] = useState("name");
+  const [sortDir, setSortDir] = useState("asc");
+
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortCol(col); setSortDir("asc"); }
+  };
+
+  // rh_colaboradores agora tem uma linha sincronizada pra cada profile (ver
+  // sync_profile_to_colaborador), então quem já aparece em `users` também
+  // aparece aqui com profileId preenchido — sem esse filtro, essas pessoas
+  // eram contadas duas vezes e reapareciam numa seção "sem acesso" que era
+  // exatamente o contrário do que a linha delas representa.
+  const colaboradoresSemAcesso = useMemo(
+    () => colaboradores.filter((c) => !c.profileId),
+    [colaboradores]
+  );
 
   const stats = useMemo(() => {
     const statusOf = (e) => e.employeeStatus || e.employee_status || "ativo";
-    const all = [...users, ...colaboradores];
+    const all = [...users, ...colaboradoresSemAcesso];
     return {
       total:      all.length,
       ativos:     all.filter((e) => statusOf(e) === "ativo").length,
       ferias:     all.filter((e) => statusOf(e) === "ferias").length,
       desligados: all.filter((e) => statusOf(e) === "desligado").length,
     };
-  }, [users, colaboradores]);
+  }, [users, colaboradoresSemAcesso]);
 
   const filteredColaboradores = useMemo(() => {
-    return colaboradores.filter((c) => {
+    return colaboradoresSemAcesso.filter((c) => {
       if (search) {
         const q = search.toLowerCase();
         if (!(c.fullName || "").toLowerCase().includes(q) && !(c.email || "").toLowerCase().includes(q)) return false;
@@ -517,10 +554,10 @@ export function RHFuncionariosView({
       if (filterContract !== "all" && c.contractType !== filterContract) return false;
       return true;
     });
-  }, [colaboradores, search, filterDept, filterStatus, filterContract]);
+  }, [colaboradoresSemAcesso, search, filterDept, filterStatus, filterContract]);
 
   const filtered = useMemo(() => {
-    return users.filter((u) => {
+    const arr = users.filter((u) => {
       if (search) {
         const q = search.toLowerCase();
         if (
@@ -534,7 +571,15 @@ export function RHFuncionariosView({
       if (filterContract !== "all" && u.contract_type !== filterContract) return false;
       return true;
     });
-  }, [users, search, filterDept, filterStatus, filterContract]);
+    arr.sort((a, b) => {
+      const va = (a[sortCol] ?? "").toString().toLowerCase();
+      const vb = (b[sortCol] ?? "").toString().toLowerCase();
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  }, [users, search, filterDept, filterStatus, filterContract, sortCol, sortDir]);
 
   const selectSt = {
     borderColor: "#E5E7EB",
@@ -724,13 +769,26 @@ export function RHFuncionariosView({
             <table className="w-full border-collapse">
               <thead>
                 <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
-                  {["Funcionário", "Cargo", "Departamento", "Contrato", "Status", "Admissão", ""].map((h) => (
+                  {FUNC_TABLE_COLS.map((col) => (
                     <th
-                      key={h}
+                      key={col.id || col.label}
                       className="text-left px-4 py-2.5"
-                      style={{ fontSize: 10, fontWeight: 600, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em" }}
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: NEUTRAL.slate,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        cursor: col.sortable ? "pointer" : "default",
+                        userSelect: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                      onClick={col.sortable ? () => handleSort(col.id) : undefined}
                     >
-                      {h}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {col.label}
+                        {col.sortable && <SortIcon col={col.id} sortCol={sortCol} sortDir={sortDir} />}
+                      </span>
                     </th>
                   ))}
                 </tr>
