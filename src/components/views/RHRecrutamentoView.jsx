@@ -22,7 +22,6 @@ import {
   Gift,
   Users as UsersIcon,
 } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import {
   RH_DEPARTMENTS,
   RH_CONTRACT_TYPES,
@@ -168,29 +167,29 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Sparkles size={16} style={{ color: "#7C3AED" }} />
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>Triagem por IA</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>Triagem por IA</div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex" }}>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
             <X size={18} />
           </button>
         </div>
 
         <div style={{ padding: "20px 24px 24px" }}>
           {!isConfigured ? (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "#92400E", lineHeight: 1.6 }}>
+            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
               Configure uma LLM em <strong>Configurações → Integrações de IA</strong> para usar a triagem por currículo.
             </div>
           ) : provider !== "anthropic" ? (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "#92400E", lineHeight: 1.6 }}>
+            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
               A triagem por currículo requer o provedor <strong>Anthropic (Claude)</strong> configurado — ele lê o PDF diretamente. Troque o provedor em Configurações → Integrações de IA.
             </div>
           ) : (
@@ -216,13 +215,13 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
                 </div>
               </div>
 
-              <div style={{ fontSize: 11, color: NEUTRAL.slate, marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 12 }}>
                 {pdfCandidatos.length} candidato{pdfCandidatos.length !== 1 ? "s" : ""} com currículo PDF no talent pool
                 {docxSkipped > 0 && ` · ${docxSkipped} em DOCX ignorado${docxSkipped !== 1 ? "s" : ""} nesta versão`}
               </div>
 
               {errorMsg && (
-                <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>
+                <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>
               )}
 
               <button
@@ -237,22 +236,22 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
               {results.length > 0 && (
                 <div className="flex flex-col gap-2 mt-4">
                   {results.map((r) => (
-                    <div key={r.candidateId} style={{ border: "1px solid #E5E7EB", borderRadius: 10, padding: 12 }}>
+                    <div key={r.candidateId} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 12 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontWeight: 700, fontSize: 13, color: NEUTRAL.graphite }}>{r.name}</span>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>{r.name}</span>
                         {typeof r.fitScore === "number" && (
-                          <span style={{ fontWeight: 800, fontSize: 14, color: r.fitScore >= 70 ? "#16A34A" : r.fitScore >= 40 ? "#D97706" : "#DC2626" }}>{r.fitScore}</span>
+                          <span style={{ fontWeight: 800, fontSize: 14, color: r.fitScore >= 70 ? "var(--success)" : r.fitScore >= 40 ? "var(--warning)" : "var(--danger)" }}>{r.fitScore}</span>
                         )}
                       </div>
                       {r.error ? (
-                        <div style={{ fontSize: 12, color: "#DC2626" }}>{r.error}</div>
+                        <div style={{ fontSize: 12, color: "var(--danger)" }}>{r.error}</div>
                       ) : (
                         <>
-                          <div style={{ fontSize: 12, color: NEUTRAL.slate, lineHeight: 1.5, marginBottom: 8 }}>{r.justificativa}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5, marginBottom: 8 }}>{r.justificativa}</div>
                           <button
                             onClick={() => handleAttach(r)}
                             disabled={attachingId === r.candidateId || attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)}
-                            style={{ display: "flex", alignItems: "center", gap: 6, background: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "#F3F4F6" : "#EFF6FF", color: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? NEUTRAL.slate : "#1E4D8C", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "default" : "pointer" }}
+                            style={{ display: "flex", alignItems: "center", gap: 6, background: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "var(--surface-alt)" : "var(--accent-tint)", color: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "var(--text-dim)" : "var(--accent)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "default" : "pointer" }}
                           >
                             {attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)
                               ? <><Check size={12} /> Adicionado à vaga</>
@@ -300,7 +299,7 @@ function InitialsAvatar({ name, size = 32 }) {
         width: size,
         height: size,
         borderRadius: "50%",
-        background: NEUTRAL.red,
+        background: "var(--color-industria)",
         color: "#FFF",
         display: "flex",
         alignItems: "center",
@@ -325,8 +324,8 @@ function StarRating({ value = 0, max = 5, onChange }) {
         <Star
           key={i}
           size={12}
-          fill={i < value ? "#F59E0B" : "none"}
-          stroke={i < value ? "#F59E0B" : "#D1D5DB"}
+          fill={i < value ? "var(--amber)" : "none"}
+          stroke={i < value ? "var(--amber)" : "var(--border-strong)"}
           style={{ cursor: onChange ? "pointer" : "default", flexShrink: 0 }}
           onClick={() => onChange && onChange(i + 1)}
         />
@@ -405,10 +404,10 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose })
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
-  const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
-  const blurGray  = (e) => { e.target.style.borderColor = "#D1D5DB"; };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
+  const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
+  const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
   const inputCls = "w-full text-sm rounded-xl border px-3 py-2 outline-none";
 
   return (
@@ -417,12 +416,12 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose })
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "92vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 560, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "92vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>{initialData ? "Editar Vaga" : "Nova Vaga"}</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex" }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{initialData ? "Editar Vaga" : "Nova Vaga"}</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
             <X size={18} />
           </button>
         </div>
@@ -439,7 +438,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose })
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <label style={{ ...labelSt, marginBottom: 0 }}>Cargo (preenche o resto automaticamente)</label>
-              <button type="button" onClick={onManageCargos} style={{ fontSize: 11, color: "#1E4D8C", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+              <button type="button" onClick={onManageCargos} style={{ fontSize: 11, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                 <Settings2 size={11} /> Gerenciar cargos
               </button>
             </div>
@@ -512,7 +511,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose })
           </div>
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
+            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
               {error}
             </div>
           )}
@@ -521,14 +520,14 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose })
             <button
               type="submit"
               disabled={saving}
-              style={{ flex: 1, background: "#1E4D8C", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
+              style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
             >
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Criar vaga"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+              style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
             >
               Cancelar
             </button>
@@ -553,8 +552,8 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState(null);
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
   const inputCls = "w-full text-sm rounded-lg border px-2.5 py-1.5 outline-none";
 
   const reset = () => {
@@ -586,26 +585,26 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite }}>Gerenciar cargos</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, display: "flex" }}><X size={18} /></button>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Gerenciar cargos</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
         </div>
 
         <div style={{ padding: "16px 24px", overflowY: "auto", flex: 1 }}>
           {cargos.length === 0 ? (
-            <div style={{ fontSize: 12, color: NEUTRAL.slate, marginBottom: 16 }}>Nenhum cargo cadastrado ainda.</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 16 }}>Nenhum cargo cadastrado ainda.</div>
           ) : (
             <div className="flex flex-col gap-2" style={{ marginBottom: 20 }}>
               {cargos.map((c) => (
-                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid #E5E7EB", borderRadius: 8, padding: "8px 12px" }}>
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.graphite }}>{c.name}</div>
-                    <div style={{ fontSize: 11, color: NEUTRAL.slate }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{c.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
                       {[c.department, c.contract_type].filter(Boolean).join(" · ") || "—"}
                     </div>
                   </div>
-                  <button onClick={() => onDelete(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, display: "flex" }}>
+                  <button onClick={() => onDelete(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", display: "flex" }}>
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -613,7 +612,7 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
             </div>
           )}
 
-          <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Novo cargo</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Novo cargo</div>
           <div className="flex flex-col gap-2">
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do cargo *" className={inputCls} style={inputSt} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -633,9 +632,9 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
             <input type="text" value={benefits} onChange={(e) => setBenefits(e.target.value)} placeholder="Benefícios (separados por vírgula)" className={inputCls} style={inputSt} />
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{error}</div>}
+          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{error}</div>}
 
-          <button onClick={handleAdd} disabled={saving} style={{ marginTop: 10, width: "100%", background: "#1E4D8C", color: "#FFF", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+          <button onClick={handleAdd} disabled={saving} style={{ marginTop: 10, width: "100%", background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Adicionando…" : "Adicionar cargo"}
           </button>
         </div>
@@ -651,20 +650,20 @@ function VagaCard({ vaga, candidatosCount, onClick }) {
   return (
     <div
       onClick={onClick}
-      style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderLeft: `3px solid ${pri.color}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "#FFFFFF"; }}
+      style={{ background: "var(--surface)", border: "1px solid var(--border)", borderLeft: `3px solid ${pri.color}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; }}
     >
-      <div style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite, marginBottom: 2 }}>{vaga.title}</div>
-      <div style={{ fontSize: 10, color: NEUTRAL.slate, marginBottom: 6 }}>{vaga.job_title || vaga.department || "—"}</div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>{vaga.title}</div>
+      <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 6 }}>{vaga.job_title || vaga.department || "—"}</div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontSize: 9, fontWeight: 700, color: pri.color, background: `${pri.color}18`, borderRadius: 99, padding: "1px 7px", textTransform: "uppercase" }}>
           {pri.name}
         </span>
-        <span style={{ fontSize: 10, color: NEUTRAL.slate }}>{candidatosCount} candidato{candidatosCount !== 1 ? "s" : ""}</span>
+        <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{candidatosCount} candidato{candidatosCount !== 1 ? "s" : ""}</span>
       </div>
       {vaga.hiring_deadline && (
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 10, color: NEUTRAL.slate }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 10, color: "var(--text-dim)" }}>
           <CalendarClock size={10} /> {fmt(vaga.hiring_deadline)}
         </div>
       )}
@@ -674,15 +673,15 @@ function VagaCard({ vaga, candidatosCount, onClick }) {
 
 function VagaKanbanColumn({ stage, vagasList, candidatosByVaga, onCardClick }) {
   return (
-    <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0, display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)" }}>
-      <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0, display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)" }}>
+      <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
-        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: NEUTRAL.graphite }}>{stage.name}</span>
+        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: "var(--text)" }}>{stage.name}</span>
         <span style={{ background: `${stage.color}22`, color: stage.color, borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{vagasList.length}</span>
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {vagasList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: NEUTRAL.slate, fontSize: 11, opacity: 0.5 }}>Nenhuma vaga</div>
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Nenhuma vaga</div>
         ) : (
           vagasList.map((v) => (
             <VagaCard key={v.id} vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} onClick={() => onCardClick(v)} />
@@ -704,16 +703,16 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
 
   const stageInfo = vagaStageInfo(vaga.stage);
   const pri = priorityInfo(vaga.priority);
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 
   return (
     <>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "#FFFFFF", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "flex-start", gap: 12 }}>
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite }}>{vaga.title}</div>
-            <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 2 }}>{vaga.job_title || "—"} · {vaga.department || "—"}</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{vaga.title}</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{vaga.job_title || "—"} · {vaga.department || "—"}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} /> {stageInfo.name}
@@ -723,7 +722,7 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
             <X size={18} />
           </button>
         </div>
@@ -740,7 +739,7 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
             ].map((f) => (
               <div key={f.label}>
                 <div style={labelSt}>{f.label}</div>
-                <div style={{ fontSize: 13, color: NEUTRAL.graphite, fontWeight: 500 }}>{f.value}</div>
+                <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
               </div>
             ))}
           </div>
@@ -750,7 +749,7 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
               <div style={labelSt}>Benefícios</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {vaga.benefits.map((b, i) => (
-                  <span key={i} style={{ fontSize: 11, color: NEUTRAL.graphite, background: "#F3F4F6", borderRadius: 99, padding: "3px 10px" }}>{b}</span>
+                  <span key={i} style={{ fontSize: 11, color: "var(--text)", background: "var(--surface-alt)", borderRadius: 99, padding: "3px 10px" }}>{b}</span>
                 ))}
               </div>
             </div>
@@ -759,7 +758,7 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
           {vaga.description && (
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Descrição</div>
-              <div style={{ fontSize: 13, color: NEUTRAL.graphite, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{vaga.description}</div>
+              <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{vaga.description}</div>
             </div>
           )}
 
@@ -784,16 +783,16 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
                   <button
                     onClick={() => onCopyLink(vaga)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite, cursor: "pointer" }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
                   >
-                    {copiedSlug === vaga.id ? <Check size={12} color="#16A34A" /> : <Link2 size={12} />}
+                    {copiedSlug === vaga.id ? <Check size={12} color="var(--success)" /> : <Link2 size={12} />}
                     {copiedSlug === vaga.id ? "Link copiado!" : "Copiar link"}
                   </button>
                   <a
                     href={whatsappShareUrl(vaga)}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "#15803D", textDecoration: "none" }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
                   >
                     <MessageSquare size={12} /> WhatsApp
                   </a>
@@ -801,10 +800,10 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
               )}
 
               <div className="flex gap-2">
-                <button onClick={() => onEdit(vaga)} style={{ flex: 1, background: "#1E4D8C", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
+                <button onClick={() => onEdit(vaga)} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
                   Editar vaga
                 </button>
-                <button onClick={() => onVerCandidatos(vaga.id)} style={{ flex: 1, background: "#FFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={() => onVerCandidatos(vaga.id)} style={{ flex: 1, background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                   Ver candidatos
                 </button>
               </div>
@@ -857,10 +856,10 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 };
-  const focusBlue = (e) => { e.target.style.borderColor = "#1E4D8C"; };
-  const blurGray  = (e) => { e.target.style.borderColor = "#D1D5DB"; };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
+  const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
+  const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   const stageInfo = RH_RECRUITMENT_STAGES.find((s) => s.id === stage);
 
@@ -870,20 +869,20 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "#FFFFFF", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>Novo Candidato</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>Novo Candidato</div>
             {stageInfo && (
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} />
-                <span style={{ fontSize: 11, color: NEUTRAL.slate, fontWeight: 500 }}>{stageInfo.name}</span>
+                <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 500 }}>{stageInfo.name}</span>
               </div>
             )}
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex" }}>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
             <X size={18} />
           </button>
         </div>
@@ -918,16 +917,16 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
           </div>
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
+            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
               {error}
             </div>
           )}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "#1E4D8C", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Adicionando…" : "Adicionar candidato"}
             </button>
-            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}>
+            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
               Cancelar
             </button>
           </div>
@@ -992,7 +991,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
     }
   };
 
-  const labelSt = { fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 
   return (
     <>
@@ -1009,7 +1008,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
           right: 0,
           bottom: 0,
           width: "min(480px, 100vw)",
-          background: "#FFFFFF",
+          background: "var(--surface)",
           zIndex: 1000,
           display: "flex",
           flexDirection: "column",
@@ -1019,20 +1018,20 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <InitialsAvatar name={candidato.name} size={44} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>{candidato.name}</div>
-            {candidato.email && <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 2 }}>{candidato.email}</div>}
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{candidato.name}</div>
+            {candidato.email && <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{candidato.email}</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} />
                 {stageInfo.name}
               </span>
-              <span style={{ fontSize: 11, color: NEUTRAL.slate }}>{days}d nesta etapa</span>
+              <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{days}d nesta etapa</span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
             <X size={18} />
           </button>
         </div>
@@ -1048,7 +1047,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
             ].map((f) => (
               <div key={f.label}>
                 <div style={labelSt}>{f.label}</div>
-                <div style={{ fontSize: 13, color: NEUTRAL.graphite, fontWeight: 500 }}>{f.value}</div>
+                <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
               </div>
             ))}
             <div>
@@ -1075,9 +1074,9 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
 
           {/* Motivo de reprovação já registrado */}
           {candidato.stage === "reprovado" && candidato.motivo_reprovacao && (
-            <div style={{ marginBottom: 20, background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ marginBottom: 20, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
               <div style={labelSt}>Motivo da reprovação</div>
-              <div style={{ fontSize: 12, color: NEUTRAL.graphite, lineHeight: 1.5 }}>{candidato.motivo_reprovacao}</div>
+              <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{candidato.motivo_reprovacao}</div>
             </div>
           )}
 
@@ -1111,7 +1110,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
 
               {reprovando && (
                 <div style={{ marginTop: 10, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12 }}>
-                  <div style={{ ...labelSt, color: "#B91C1C" }}>Motivo da reprovação *</div>
+                  <div style={{ ...labelSt, color: "var(--danger)" }}>Motivo da reprovação *</div>
                   <textarea
                     value={motivoReprovacao}
                     onChange={(e) => setMotivoReprovacao(e.target.value)}
@@ -1119,19 +1118,19 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                     rows={2}
                     autoFocus
                     className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
-                    style={{ borderColor: "#FCA5A5", color: NEUTRAL.graphite, background: "#FFF", fontSize: 13 }}
+                    style={{ borderColor: "#FCA5A5", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
                   />
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={confirmReprovacao}
                       disabled={savingStage || !motivoReprovacao.trim()}
-                      style={{ background: "#DC2626", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
+                      style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
                     >
                       {savingStage ? "Salvando…" : "Confirmar reprovação"}
                     </button>
                     <button
                       onClick={() => { setReprovando(false); setMotivoReprovacao(""); }}
-                      style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+                      style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
                     >
                       Cancelar
                     </button>
@@ -1153,17 +1152,17 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
               alignItems: "center",
               gap: 12,
             }}>
-              <UserPlus size={20} style={{ color: "#16A34A", flexShrink: 0 }} />
+              <UserPlus size={20} style={{ color: "var(--success)", flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#15803D" }}>Candidato aprovado!</div>
-                <div style={{ fontSize: 12, color: "#166534", marginTop: 2 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>Candidato aprovado!</div>
+                <div style={{ fontSize: 12, color: "var(--success)", marginTop: 2 }}>
                   Converta para funcionário e preencha os dados de admissão.
                 </div>
               </div>
               <button
                 onClick={() => { onHire(candidato); onClose(); }}
                 style={{
-                  background: "#16A34A",
+                  background: "var(--success)",
                   color: "#FFF",
                   border: "none",
                   borderRadius: 8,
@@ -1174,8 +1173,8 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                   flexShrink: 0,
                   whiteSpace: "nowrap",
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#15803D"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#16A34A"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--success)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "var(--success)"; }}
               >
                 Converter
               </button>
@@ -1185,13 +1184,13 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
           {/* Notes */}
           <div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontWeight: 700, fontSize: 12, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: 6 }}>
                 <MessageSquare size={12} /> Notas
               </div>
               {canWrite && !addingNote && (
                 <button
                   onClick={() => setAddingNote(true)}
-                  style={{ background: "#EFF6FF", border: "none", color: "#1E4D8C", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                  style={{ background: "var(--accent-tint)", border: "none", color: "var(--accent)", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                 >
                   <Plus size={11} /> Nota
                 </button>
@@ -1207,21 +1206,21 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                   rows={3}
                   autoFocus
                   className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-                  style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FAFAFA", fontSize: 13 }}
-                  onFocus={(e) => { e.target.style.borderColor = "#1E4D8C"; }}
-                  onBlur={(e) => { e.target.style.borderColor = "#D1D5DB"; }}
+                  style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+                  onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
+                  onBlur={(e) => { e.target.style.borderColor = "var(--border-strong)"; }}
                 />
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={handleAddNote}
                     disabled={savingNote || !noteText.trim()}
-                    style={{ background: "#1E4D8C", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
+                    style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
                   >
                     {savingNote ? "Salvando…" : "Salvar"}
                   </button>
                   <button
                     onClick={() => { setAddingNote(false); setNoteText(""); }}
-                    style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+                    style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
                   >
                     Cancelar
                   </button>
@@ -1230,7 +1229,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
             )}
 
             {(candidato.notes || []).length === 0 && !addingNote ? (
-              <div style={{ textAlign: "center", padding: "24px 0", color: NEUTRAL.slate, fontSize: 12, opacity: 0.6 }}>
+              <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-dim)", fontSize: 12, opacity: 0.6 }}>
                 Nenhuma nota registrada
               </div>
             ) : (
@@ -1238,10 +1237,10 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
                 {[...(candidato.notes || [])].reverse().map((note, i) => (
                   <div
                     key={i}
-                    style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, padding: "10px 12px" }}
+                    style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}
                   >
-                    <div style={{ fontSize: 12, color: NEUTRAL.graphite, lineHeight: 1.5 }}>{note.text}</div>
-                    <div style={{ fontSize: 10, color: NEUTRAL.slate, marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{note.text}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
                       {note.created_at ? fmt(note.created_at) : "—"}
                     </div>
                   </div>
@@ -1263,8 +1262,8 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
   return (
     <div
       style={{
-        background: "#F9FAFB",
-        border: "1px solid #E5E7EB",
+        background: "var(--surface-alt)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         minWidth: 240,
         width: 240,
@@ -1276,10 +1275,10 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
     >
       {/* Column header */}
       <div
-        style={{ padding: "10px 12px 8px", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: 8 }}
+        style={{ padding: "10px 12px 8px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}
       >
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
-        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: "var(--text)", letterSpacing: "-0.01em" }}>
           {stage.name}
         </span>
         <span
@@ -1297,7 +1296,7 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
         <button
           onClick={() => setCollapsed((c) => !c)}
           className="md:hidden"
-          style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 2, display: "flex" }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
         >
           <ChevronDown size={14} style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }} />
         </button>
@@ -1316,7 +1315,7 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
       {!collapsed && (
         <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
           {candidatos.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 8px", color: NEUTRAL.slate, fontSize: 11, opacity: 0.5 }}>
+            <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
               Nenhum candidato
             </div>
           ) : (
@@ -1328,24 +1327,24 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
                   key={c.id}
                   onClick={() => onCardClick(c)}
                   style={{
-                    background: "#FFFFFF",
-                    border: "1px solid #E5E7EB",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 10,
                     padding: "10px 12px",
                     cursor: "pointer",
                     transition: "box-shadow 0.1s",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.boxShadow = "none"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.boxShadow = "none"; }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                     <InitialsAvatar name={c.name} size={28} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {c.name}
                       </div>
                       {vagaTitle && (
-                        <div style={{ fontSize: 10, color: NEUTRAL.slate, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div style={{ fontSize: 10, color: "var(--text-dim)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                           {vagaTitle}
                         </div>
                       )}
@@ -1359,7 +1358,7 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
                           title="Fit score (triagem por IA)"
                           style={{
                             fontSize: 10, fontWeight: 700,
-                            color: c.fit_score >= 70 ? "#16A34A" : c.fit_score >= 40 ? "#D97706" : "#DC2626",
+                            color: c.fit_score >= 70 ? "var(--success)" : c.fit_score >= 40 ? "var(--warning)" : "var(--danger)",
                             background: c.fit_score >= 70 ? "#DCFCE7" : c.fit_score >= 40 ? "#FEF3C7" : "#FEE2E2",
                             borderRadius: 99, padding: "1px 7px",
                           }}
@@ -1367,12 +1366,12 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
                           {Math.round(c.fit_score)}
                         </span>
                       )}
-                      <span style={{ fontSize: 10, color: NEUTRAL.slate }}>{days}d</span>
+                      <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{days}d</span>
                     </div>
                   </div>
                   {c.source && (
                     <div style={{ marginTop: 5 }}>
-                      <span style={{ fontSize: 10, color: NEUTRAL.slate, background: "#F3F4F6", borderRadius: 99, padding: "1px 7px" }}>
+                      <span style={{ fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 99, padding: "1px 7px" }}>
                         {c.source}
                       </span>
                     </div>
@@ -1516,12 +1515,12 @@ export function RHRecrutamentoView({ user, canWrite }) {
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <Briefcase size={22} style={{ color: NEUTRAL.graphite }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: NEUTRAL.graphite, letterSpacing: "-0.02em", margin: 0 }}>
+            <Briefcase size={22} style={{ color: "var(--text)" }} />
+            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>
               Recrutamento
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: NEUTRAL.slate }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {viewMode === "vagas"
               ? `${vagas.length} vaga${vagas.length !== 1 ? "s" : ""}`
               : `${candidatos.length} candidato${candidatos.length !== 1 ? "s" : ""}`}
@@ -1529,16 +1528,16 @@ export function RHRecrutamentoView({ user, canWrite }) {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           {/* Toggle Vagas / Candidatos */}
-          <div style={{ display: "flex", gap: 4, background: "#F3F4F6", borderRadius: 10, padding: 3 }}>
+          <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
             <button
               onClick={() => setViewMode("vagas")}
-              style={{ background: viewMode === "vagas" ? "#FFF" : "transparent", color: viewMode === "vagas" ? NEUTRAL.graphite : NEUTRAL.slate, border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: viewMode === "vagas" ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}
+              style={{ background: viewMode === "vagas" ? "var(--surface)" : "transparent", color: viewMode === "vagas" ? "var(--text)" : "var(--text-dim)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: viewMode === "vagas" ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}
             >
               Vagas
             </button>
             <button
               onClick={() => setViewMode("candidatos")}
-              style={{ background: viewMode === "candidatos" ? "#FFF" : "transparent", color: viewMode === "candidatos" ? NEUTRAL.graphite : NEUTRAL.slate, border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: viewMode === "candidatos" ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}
+              style={{ background: viewMode === "candidatos" ? "var(--surface)" : "transparent", color: viewMode === "candidatos" ? "var(--text)" : "var(--text-dim)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: viewMode === "candidatos" ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}
             >
               Candidatos
             </button>
@@ -1547,7 +1546,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           {canWrite && viewMode === "vagas" && (
             <button
               onClick={() => setQuickAddVaga(true)}
-              style={{ background: "#1E4D8C", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
             >
               <Plus size={14} /> Nova vaga
             </button>
@@ -1565,19 +1564,19 @@ export function RHRecrutamentoView({ user, canWrite }) {
 
       {!isSupabaseConfigured ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <Briefcase size={48} style={{ color: NEUTRAL.slate, opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: NEUTRAL.slate, fontWeight: 500 }}>Supabase não configurado</div>
-          <div style={{ fontSize: 12, color: NEUTRAL.slate, opacity: 0.6, marginTop: 4 }}>Configure as variáveis de ambiente para usar o módulo de recrutamento</div>
+          <Briefcase size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Supabase não configurado</div>
+          <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>Configure as variáveis de ambiente para usar o módulo de recrutamento</div>
         </div>
       ) : loading ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: NEUTRAL.slate, fontSize: 13 }}>Carregando…</div>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : viewMode === "vagas" ? (
         /* ═══ Kanban de VAGAS ═══ */
         vagas.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0" }}>
-            <Briefcase size={48} style={{ color: NEUTRAL.slate, opacity: 0.3, margin: "0 auto 12px" }} />
-            <div style={{ fontSize: 14, color: NEUTRAL.slate, fontWeight: 500 }}>Nenhuma vaga cadastrada</div>
-            <div style={{ fontSize: 12, color: NEUTRAL.slate, opacity: 0.6, marginTop: 4 }}>Clique em "Nova vaga" para começar</div>
+            <Briefcase size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+            <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhuma vaga cadastrada</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>Clique em "Nova vaga" para começar</div>
           </div>
         ) : (
           <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
@@ -1604,9 +1603,9 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   key={v.id}
                   onClick={() => setSelectedVaga(v.id)}
                   style={{
-                    background: selectedVaga === v.id ? NEUTRAL.red : "#FFFFFF",
-                    color: selectedVaga === v.id ? "#FFF" : NEUTRAL.graphite,
-                    border: `1px solid ${selectedVaga === v.id ? NEUTRAL.red : "#E5E7EB"}`,
+                    background: selectedVaga === v.id ? "var(--color-industria)" : "var(--surface)",
+                    color: selectedVaga === v.id ? "#FFF" : "var(--text)",
+                    border: `1px solid ${selectedVaga === v.id ? "var(--color-industria)" : "var(--border)"}`,
                     borderRadius: 99,
                     padding: "5px 14px",
                     fontSize: 12,
@@ -1626,16 +1625,16 @@ export function RHRecrutamentoView({ user, canWrite }) {
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
               <button
                 onClick={() => handleCopyLink(activeVaga)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: NEUTRAL.graphite, cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
               >
-                {copiedSlug === activeVaga.id ? <Check size={12} color="#16A34A" /> : <Link2 size={12} />}
+                {copiedSlug === activeVaga.id ? <Check size={12} color="var(--success)" /> : <Link2 size={12} />}
                 {copiedSlug === activeVaga.id ? "Link copiado!" : "Copiar link da vaga"}
               </button>
               <a
                 href={whatsappShareUrl(activeVaga)}
                 target="_blank"
                 rel="noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "#15803D", textDecoration: "none" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
               >
                 <MessageSquare size={12} /> Compartilhar no WhatsApp
               </a>
@@ -1643,7 +1642,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           )}
 
           {activeVaga && activeVaga.stage !== "publicada" && (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 8, padding: "8px 14px", marginBottom: 16, fontSize: 12, color: "#92400E" }}>
+            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 8, padding: "8px 14px", marginBottom: 16, fontSize: 12, color: "var(--warning)" }}>
               Essa vaga está em <strong>{vagaStageInfo(activeVaga.stage).name}</strong> — mova para "Publicada" na aba Vagas pra liberar o link de candidatura.
             </div>
           )}
