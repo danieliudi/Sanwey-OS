@@ -10,6 +10,8 @@ import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
+import { useRHFeedback } from "../../hooks/use-rh-feedback";
+import { nextPendingCycle } from "../../utils/rh-feedback-cycles";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
@@ -445,6 +447,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
   const { colaboradores, loading: loadingColaboradores, changeOnboardingStage } = useRHColaboradores({ userId: currentUser?.id });
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
+  const { feedbacks, createPendingCycle } = useRHFeedback({ userId: currentUser?.id });
   const [novaTemplateOpen, setNovaTemplateOpen] = useState(false);
   const [drawerColaboradorId, setDrawerColaboradorId] = useState(null);
 
@@ -471,8 +474,14 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
 
   const handleStageChange = async (id, stage) => {
     await changeOnboardingStage(id, stage);
+    const colaborador = colaboradores.find((c) => c.id === id);
     if (stage === "integracao") {
-      await autoAssignTreinamentos(colaboradores.find((c) => c.id === id));
+      await autoAssignTreinamentos(colaborador);
+    }
+    if (stage === "acompanhamento" && colaborador) {
+      const feedbacksDoColaborador = feedbacks.filter((f) => f.user_id === id);
+      const proximo = nextPendingCycle({ ...colaborador, onboardingStage: stage }, feedbacksDoColaborador);
+      if (proximo) await createPendingCycle(id, proximo.tipo, proximo.periodStart, proximo.periodEnd);
     }
   };
 
