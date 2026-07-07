@@ -126,39 +126,6 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
           </div>
         </div>
 
-        {/* ── CTA ── */}
-        {/* Só faz sentido pra quem usa o Pipeline: vendedor/consultor/gerente
-            comercial, e admin (acesso total). */}
-        {["admin", "gerente", "vendedor", "consultor"].includes(currentUser?.role) && (
-          <div style={{ padding: "16px 16px 8px" }}>
-            <button
-              onClick={() => { if (onNewLead) { onNewLead(); if (isMobile) onMobileClose?.(); } else handleNavClick("crm"); }}
-              style={{
-                width: "100%",
-                height: 44,
-                background: "var(--accent)",
-                color: "var(--surface)",
-                border: "none",
-                borderRadius: "var(--radius-md)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                fontFamily: "inherit",
-                fontWeight: 600,
-                fontSize: 14,
-                cursor: "pointer",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
-              Novo Negócio
-            </button>
-          </div>
-        )}
-
         {/* ── Nav ── */}
         <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "4px 0 8px", scrollbarWidth: "none" }}>
           {navGroups.map((group, gi) => {
