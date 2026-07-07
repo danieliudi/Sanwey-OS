@@ -54,8 +54,11 @@ export function useProfiles({ enabled = true } = {}) {
     if (!isSupabaseConfigured) { setLoading(false); return; }
     if (!enabled) { setUsers([]); setLoading(false); return; }
     fetchAll();
+    // Nome de canal único por instância — evita colisão quando o hook é
+    // usado por múltiplos componentes ao mesmo tempo (App.jsx + telas de RH).
+    const channelName = `profiles-list-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("profiles-list")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, (payload) => {
         if (!activeRef.current) return;
         if (payload.eventType === "DELETE") {
