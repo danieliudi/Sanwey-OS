@@ -35,6 +35,10 @@ function rowToField(r) {
     orderIdx: r.order_idx ?? 0,
     placeholder: r.placeholder || "",
     helpText: r.help_text || "",
+    // Condicionais: { fieldKey, operator, value } | null — ver
+    // src/utils/field-conditions.js pro avaliador.
+    visibleIf: r.visible_if || null,
+    requiredIf: r.required_if || null,
   };
 }
 
@@ -49,6 +53,8 @@ function fieldToRow(f) {
     order_idx: f.orderIdx ?? 0,
     placeholder: f.placeholder ?? null,
     help_text: f.helpText ?? null,
+    visible_if: f.visibleIf ?? null,
+    required_if: f.requiredIf ?? null,
   };
 }
 
