@@ -451,7 +451,7 @@ export default function App() {
       groups.push({
         label: "Comercial",
         items: [
-          { id: "dashboard",    label: "Visão Geral", icon: LayoutDashboard },
+          { id: "commercial-overview", label: "Visão Geral", icon: LayoutDashboard },
           { id: "crm",          label: "Pipeline",   icon: Layers },
           { id: "signals",      label: "Sinais",     icon: Bell },
           { id: "explorer",     label: "Explorador", icon: Globe2 },
@@ -564,7 +564,7 @@ export default function App() {
       setSection("dashboard");
     }
     // Pure marketing users shouldn't access CRM sections
-    const crmSections = ["crm", "signals", "explorer", "crm-viagens"];
+    const crmSections = ["crm", "signals", "explorer", "crm-viagens", "commercial-overview"];
     if (isPureMarketing && crmSections.includes(section)) {
       setSection("dashboard");
     }
@@ -580,7 +580,7 @@ export default function App() {
       setSection("rh-overview");
     }
     // Agência can access marketing routes + their own profile (settings).
-    const agenciaBlocked = ["crm", "signals", "explorer", "crm-viagens", "marketing-despesas", "dashboard", "tutorials"];
+    const agenciaBlocked = ["crm", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "dashboard", "tutorials"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
@@ -729,6 +729,22 @@ export default function App() {
               />
             )
           } />
+          <Route path={ROUTES["commercial-overview"]} element={
+            (isAgencia || isPureMarketing || isPureRH)
+              ? <Navigate to={ROUTES.dashboard} replace />
+              : (
+                <DashboardView
+                  user={currentUser}
+                  activeCompany={activeCompany}
+                  leads={leads}
+                  users={users}
+                  pipelines={pipelines}
+                  onNavigate={setSection}
+                  onLeadClick={setSelectedLead}
+                  visibleWidgets={settings.visibleDashboardWidgets}
+                />
+              )
+          } />
           <Route path={ROUTES.signals} element={
             isAgencia ? <Navigate to={ROUTES.marketing} replace /> : (
               <SignalsView
@@ -803,7 +819,7 @@ export default function App() {
           } />
           <Route path={ROUTES.executive} element={
             isManager
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Antiga rota /presidencia foi fundida no Executivo. Redireciona

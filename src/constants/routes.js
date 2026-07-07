@@ -4,6 +4,12 @@
 
 export const ROUTES = {
   dashboard:         "/",
+  // "Visão Geral" do Comercial — distinta de `dashboard`, que é o roteador
+  // inteligente de pouso pós-login (admin cai no Executivo, RH puro cai no
+  // RH etc). Sem essa separação, o item "Visão Geral" do grupo Comercial no
+  // menu lateral acabava mostrando o Painel Executivo pra admin, quando
+  // deveria mostrar sempre a visão geral do Comercial mesmo.
+  "commercial-overview": "/comercial",
   signals:           "/sinais",
   explorer:          "/explorador",
   crm:               "/pipeline",

@@ -8,6 +8,19 @@ export const DASHBOARD_WIDGETS = [
   { id: "avg_fit", label: "Fit score médio" },
 ];
 
+// Painel Executivo é cross-departamento (Comercial + Marketing + RH), não uma
+// tela do Comercial — cada executivo com acesso escolhe o que aparece no
+// próprio painel.
+export const EXECUTIVE_WIDGETS = [
+  { id: "outras_marketing",  label: "Cartão Marketing (outras áreas)" },
+  { id: "outras_rh",         label: "Cartão RH (outras áreas)" },
+  { id: "comercial_kpis",    label: "KPIs de Comercial" },
+  { id: "tab_charts",        label: "Aba Gráficos" },
+  { id: "tab_analytics",     label: "Aba Análise" },
+  { id: "tab_ia",            label: "Aba IA" },
+  { id: "tab_historico",     label: "Aba Histórico" },
+];
+
 export const NOTIFICATION_GROUPS = [
   {
     id: "meus_leads",
@@ -63,6 +76,7 @@ export const DENSITY_OPTIONS = [
 export const DEFAULT_USER_SETTINGS = {
   enabledCompanies: [...COMPANY_IDS],
   visibleDashboardWidgets: DASHBOARD_WIDGETS.map(w => w.id),
+  visibleExecutiveWidgets: EXECUTIVE_WIDGETS.map(w => w.id),
   visibleKanbanStages: DEFAULT_PIPELINE_STAGES.map(s => s.id),
   notifications: NOTIFICATION_PREFS.reduce((acc, n) => {
     acc[n.id] = n.defaultOn;

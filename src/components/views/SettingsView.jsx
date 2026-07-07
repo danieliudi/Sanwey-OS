@@ -8,7 +8,7 @@ import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { AI_PROVIDERS, AI_PROVIDER_MAP } from "../../constants/ai-providers";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import {
-  DASHBOARD_WIDGETS, NOTIFICATION_GROUPS,
+  DASHBOARD_WIDGETS, EXECUTIVE_WIDGETS, NOTIFICATION_GROUPS,
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
 
@@ -370,6 +370,15 @@ export function SettingsView({
     });
   }, [settings.visibleDashboardWidgets, onUpdate]);
 
+  const toggleExecutiveWidget = useCallback((id) => {
+    const has = settings.visibleExecutiveWidgets.includes(id);
+    onUpdate({
+      visibleExecutiveWidgets: has
+        ? settings.visibleExecutiveWidgets.filter(w => w !== id)
+        : [...settings.visibleExecutiveWidgets, id],
+    });
+  }, [settings.visibleExecutiveWidgets, onUpdate]);
+
   const toggleStage = useCallback((id) => {
     const has = settings.visibleKanbanStages.includes(id);
     const next = has
@@ -730,6 +739,24 @@ export function SettingsView({
                     ))}
                   </div>
                 </Section>
+
+                {isManager && (
+                  <Section
+                    title="Widgets do Painel Executivo"
+                    description="O Painel Executivo não é do Comercial — é a visão de todos os departamentos que você tem acesso. Escolha o que aparece no seu."
+                  >
+                    <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                      {EXECUTIVE_WIDGETS.map(w => (
+                        <ToggleRow
+                          key={w.id}
+                          label={w.label}
+                          checked={settings.visibleExecutiveWidgets.includes(w.id)}
+                          onChange={() => toggleExecutiveWidget(w.id)}
+                        />
+                      ))}
+                    </div>
+                  </Section>
+                )}
 
                 <Section
                   title="Etapas visíveis no Kanban"
