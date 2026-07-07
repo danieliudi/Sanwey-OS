@@ -1,38 +1,33 @@
-import { useCallback, useMemo } from "react";
-import { usePersistentState } from "./use-persistent-state";
-import { STORAGE_KEYS } from "../constants/storage-keys";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 /**
- * Rule-based automation engine — no AI, zero API calls.
+ * Rule-based automation engine — no AI, zero API calls. Compartilhado pela
+ * equipe via Supabase (antes vivia em localStorage, por navegador).
  *
- * Automation shape:
+ * Automation shape (camelCase, como usado pelo resto do app):
  * {
- *   id: string,
- *   name: string,
- *   companyId: string | "all",
- *   enabled: boolean,
+ *   id, name, companyId, module, enabled,
  *   trigger: {
  *     type: "stage_change" | "field_value" | "time_in_stage" | "lead_created",
- *     fromStage?: string,    // stage_change: source (empty = any)
- *     toStage?: string,      // stage_change: destination (empty = any)
- *     field?: string,        // field_value: which field
- *     operator?: string,     // field_value: "eq" | "gt" | "lt" | "contains"
- *     value?: string,        // field_value: comparison value
- *     days?: number,         // time_in_stage: days since stageChangedAt
- *     stageId?: string,      // time_in_stage: which stage
+ *     fromStage?, toStage?,      // stage_change
+ *     field?, operator?, value?, // field_value
+ *     days?, stageId?,           // time_in_stage
  *   },
- *   action: {
- *     type: "move_stage" | "set_field" | "add_badge" | "notify" | "create_deliverable" | "enrich_cnpj",
- *     targetStage?: string,       // move_stage
- *     field?: string,             // set_field
- *     fieldValue?: string,        // set_field
- *     badge?: string,             // add_badge: label text
- *     badgeColor?: string,        // add_badge: hex color
- *     message?: string,           // notify: alert message
- *     deliverableTitle?: string,  // create_deliverable: título do card criado em Marketing → Entregas
- *     deliverablePriority?: string, // create_deliverable: "baixa" | "media" | "alta"
- *   },
- *   createdAt: string,
+ *   // Refinamento OPCIONAL do trigger — grupos combinados em OR, condições
+ *   // dentro de um grupo combinadas em AND (mesmo padrão do field_conditions
+ *   // do Pipefy). Grupo vazio = só o trigger decide (comportamento antigo).
+ *   conditionGroups: [ { logic: "AND", conditions: [{ field, operator, value }, ...] }, ... ],
+ *   thenActions: [ action, ... ],  // roda quando trigger dispara E conditionGroups passa (ou está vazio)
+ *   elseActions: [ action, ... ],  // roda quando trigger dispara mas conditionGroups não passa
+ *   createdAt, createdBy,
+ * }
+ *
+ * action shape (cada item de thenActions/elseActions):
+ * {
+ *   type: "move_stage" | "set_field" | "add_badge" | "notify" | "create_deliverable" | "enrich_cnpj",
+ *   targetStage?, field?, fieldValue?, badge?, badgeColor?, message?,
+ *   deliverableTitle?, deliverablePriority?,
  * }
  *
  * create_deliverable e enrich_cnpj não retornam um patch síncrono — geram um
@@ -40,33 +35,116 @@ import { STORAGE_KEYS } from "../constants/storage-keys";
  * de fato (insert cross-módulo / chamada à Edge Function de CNPJ).
  */
 
-export function useAutomations() {
-  const [automations, setAutomations] = usePersistentState(STORAGE_KEYS.automations, []);
+function rowToRule(r) {
+  return {
+    id: r.id,
+    name: r.name,
+    companyId: r.company_id,
+    module: r.module,
+    enabled: r.enabled,
+    trigger: r.trigger || {},
+    conditionGroups: Array.isArray(r.condition_groups) ? r.condition_groups : [],
+    thenActions: Array.isArray(r.then_actions) ? r.then_actions : [],
+    elseActions: Array.isArray(r.else_actions) ? r.else_actions : [],
+    createdBy: r.created_by,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
 
-  const addAutomation = useCallback((rule) => {
-    setAutomations(prev => [
-      ...prev,
-      {
-        ...rule,
-        module: rule.module ?? "crm",
-        id: crypto.randomUUID(),
-        enabled: true,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-  }, [setAutomations]);
+// Aceita tanto o shape novo (thenActions/elseActions/conditionGroups) quanto o
+// antigo (action singular, usado pelos templates existentes) — normaliza pra
+// sempre persistir then_actions como array.
+function ruleToRow(rule, extras = {}) {
+  const thenActions = Array.isArray(rule.thenActions) && rule.thenActions.length
+    ? rule.thenActions
+    : (rule.action ? [rule.action] : []);
+  return {
+    name: rule.name,
+    company_id: rule.companyId ?? "all",
+    module: rule.module ?? "crm",
+    enabled: rule.enabled ?? true,
+    trigger: rule.trigger || {},
+    condition_groups: Array.isArray(rule.conditionGroups) ? rule.conditionGroups : [],
+    then_actions: thenActions,
+    else_actions: Array.isArray(rule.elseActions) ? rule.elseActions : [],
+    ...extras,
+  };
+}
 
-  const updateAutomation = useCallback((id, patch) => {
+export function useAutomations({ userId } = {}) {
+  const [automations, setAutomations] = useState([]);
+  const [loading, setLoading] = useState(isSupabaseConfigured);
+  const activeRef = useRef(true);
+
+  const fetchAll = useCallback(async () => {
+    if (!isSupabaseConfigured) { setLoading(false); return; }
+    try {
+      const { data, error } = await supabase
+        .from("automations")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      if (!activeRef.current) return;
+      setAutomations((data || []).map(rowToRule));
+    } finally {
+      if (activeRef.current) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    activeRef.current = true;
+    fetchAll();
+    if (!isSupabaseConfigured) return;
+    const channel = supabase
+      .channel(`automations-${Math.random().toString(36).slice(2, 9)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "automations" }, (payload) => {
+        if (!activeRef.current) return;
+        if (payload.eventType === "DELETE") {
+          setAutomations(prev => prev.filter(a => a.id !== payload.old.id));
+        } else if (payload.eventType === "INSERT") {
+          setAutomations(prev => prev.some(a => a.id === payload.new.id)
+            ? prev
+            : [...prev, rowToRule(payload.new)]);
+        } else if (payload.eventType === "UPDATE") {
+          setAutomations(prev => prev.map(a => a.id === payload.new.id ? rowToRule(payload.new) : a));
+        }
+      })
+      .subscribe();
+    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+  }, [fetchAll]);
+
+  const addAutomation = useCallback(async (rule) => {
+    if (!isSupabaseConfigured) return;
+    const row = ruleToRow(rule, { created_by: userId || null });
+    const { data, error } = await supabase.from("automations").insert(row).select().single();
+    if (error) throw new Error(error.message);
+    const mapped = rowToRule(data);
+    setAutomations(prev => prev.some(a => a.id === mapped.id) ? prev : [...prev, mapped]);
+    return mapped;
+  }, [userId]);
+
+  const updateAutomation = useCallback(async (id, patch) => {
+    if (!isSupabaseConfigured) return;
+    const current = automations.find(a => a.id === id);
+    const row = ruleToRow({ ...current, ...patch }, { updated_at: new Date().toISOString() });
+    const { error } = await supabase.from("automations").update(row).eq("id", id);
+    if (error) throw new Error(error.message);
     setAutomations(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
-  }, [setAutomations]);
+  }, [automations]);
 
-  const deleteAutomation = useCallback((id) => {
+  const deleteAutomation = useCallback(async (id) => {
+    if (!isSupabaseConfigured) return;
+    const { error } = await supabase.from("automations").delete().eq("id", id);
+    if (error) throw new Error(error.message);
     setAutomations(prev => prev.filter(a => a.id !== id));
-  }, [setAutomations]);
+  }, []);
 
-  const toggleAutomation = useCallback((id) => {
-    setAutomations(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a));
-  }, [setAutomations]);
+  const toggleAutomation = useCallback(async (id) => {
+    const current = automations.find(a => a.id === id);
+    if (!current) return;
+    await updateAutomation(id, { enabled: !current.enabled });
+  }, [automations, updateAutomation]);
 
   /**
    * Evaluate all enabled automations against an entity change.
@@ -84,12 +162,11 @@ export function useAutomations() {
     for (const rule of automations) {
       if (!rule.enabled) continue;
       // Module filter: rule must match requested module or be universal.
-      // Rules without a module field are treated as "crm" (backwards compat).
       const ruleModule = rule.module ?? "crm";
       if (ruleModule !== "universal" && ruleModule !== module) continue;
       if (rule.companyId !== "all" && rule.companyId !== lead.companyId) continue;
 
-      const { trigger, action } = rule;
+      const { trigger } = rule;
 
       // ── Trigger matching ──────────────────────────────────────────────────
       let triggered = false;
@@ -120,73 +197,18 @@ export function useAutomations() {
 
       if (!triggered) continue;
 
-      // ── Action execution ──────────────────────────────────────────────────
-      if (action.type === "move_stage" && action.targetStage && lead.stage !== action.targetStage) {
-        patches.push({
-          leadId: lead.id,
-          patch: {
-            stage: action.targetStage,
-            stageChangedAt: new Date().toISOString(),
-            lastActivity: new Date().toISOString(),
-          },
-          ruleId: rule.id,
-          ruleName: rule.name,
-        });
-      }
+      // ── Refinamento por condições agrupadas (AND dentro do grupo, OR entre
+      //    grupos) — grupo vazio = só o trigger decide, sempre passa. ─────────
+      const groups = rule.conditionGroups || [];
+      const conditionsPass = groups.length === 0 || groups.some(group =>
+        (group.conditions || []).every(c =>
+          matchOperator(String(lead[c.field] ?? ""), c.operator, String(c.value ?? ""))
+        )
+      );
 
-      if (action.type === "set_field" && action.field) {
-        patches.push({
-          leadId: lead.id,
-          patch: { [action.field]: action.fieldValue ?? "" },
-          ruleId: rule.id,
-          ruleName: rule.name,
-        });
-      }
-
-      if (action.type === "add_badge") {
-        const existing = lead._badges || [];
-        const badge = { label: action.badge || "Auto", color: action.badgeColor || "#6366F1" };
-        const alreadyHas = existing.some(b => b.label === badge.label);
-        if (!alreadyHas) {
-          patches.push({
-            leadId: lead.id,
-            patch: { _badges: [...existing, badge] },
-            ruleId: rule.id,
-            ruleName: rule.name,
-          });
-        }
-      }
-
-      if (action.type === "notify") {
-        notifications.push({
-          leadId: lead.id,
-          message: action.message || `Automação "${rule.name}" disparada`,
-          ruleId: rule.id,
-          ruleName: rule.name,
-        });
-      }
-
-      if (action.type === "create_deliverable") {
-        sideEffects.push({
-          type: "create_deliverable",
-          leadId: lead.id,
-          title: (action.deliverableTitle || "Onboarding: {empresa}").replace("{empresa}", lead.company || "cliente"),
-          companyIds: [lead.companyId],
-          description: `Gerado automaticamente pela automação "${rule.name}" a partir do negócio "${lead.company}".`,
-          priority: action.deliverablePriority || "media",
-          ruleId: rule.id,
-          ruleName: rule.name,
-        });
-      }
-
-      if (action.type === "enrich_cnpj") {
-        sideEffects.push({
-          type: "enrich_cnpj",
-          leadId: lead.id,
-          cnpj: lead.cnpj,
-          ruleId: rule.id,
-          ruleName: rule.name,
-        });
+      const actionsToRun = conditionsPass ? (rule.thenActions || []) : (rule.elseActions || []);
+      for (const action of actionsToRun) {
+        runAction(action, rule, lead, { patches, notifications, sideEffects });
       }
     }
 
@@ -194,11 +216,12 @@ export function useAutomations() {
   }, [automations]);
 
   // Summaries for the UI
-  const stats = useMemo(() => ({
+  const stats = {
     total: automations.length,
     enabled: automations.filter(a => a.enabled).length,
     byType: automations.reduce((acc, a) => {
-      acc[a.trigger.type] = (acc[a.trigger.type] || 0) + 1;
+      const t = a.trigger?.type;
+      if (t) acc[t] = (acc[t] || 0) + 1;
       return acc;
     }, {}),
     byModule: automations.reduce((acc, a) => {
@@ -206,16 +229,18 @@ export function useAutomations() {
       acc[m] = (acc[m] || 0) + 1;
       return acc;
     }, {}),
-  }), [automations]);
+  };
 
   return {
     automations,
+    loading,
     addAutomation,
     updateAutomation,
     deleteAutomation,
     toggleAutomation,
     evaluateAutomations,
     stats,
+    refetch: fetchAll,
   };
 }
 
@@ -223,14 +248,88 @@ export function useAutomations() {
 
 function matchOperator(actual, operator, expected) {
   switch (operator) {
-    case "eq":       return actual === expected;
-    case "neq":      return actual !== expected;
-    case "contains": return actual.toLowerCase().includes(expected.toLowerCase());
-    case "gt":       return parseFloat(actual) > parseFloat(expected);
-    case "lt":       return parseFloat(actual) < parseFloat(expected);
-    case "gte":      return parseFloat(actual) >= parseFloat(expected);
-    case "lte":      return parseFloat(actual) <= parseFloat(expected);
-    default:         return actual === expected;
+    case "eq":            return actual === expected;
+    case "neq":            return actual !== expected;
+    case "contains":       return actual.toLowerCase().includes(expected.toLowerCase());
+    case "gt":             return parseFloat(actual) > parseFloat(expected);
+    case "lt":             return parseFloat(actual) < parseFloat(expected);
+    case "gte":            return parseFloat(actual) >= parseFloat(expected);
+    case "lte":            return parseFloat(actual) <= parseFloat(expected);
+    case "is_empty":       return actual.trim() === "";
+    case "is_not_empty":   return actual.trim() !== "";
+    default:               return actual === expected;
+  }
+}
+
+function runAction(action, rule, lead, { patches, notifications, sideEffects }) {
+  if (!action?.type) return;
+
+  if (action.type === "move_stage" && action.targetStage && lead.stage !== action.targetStage) {
+    patches.push({
+      leadId: lead.id,
+      patch: {
+        stage: action.targetStage,
+        stageChangedAt: new Date().toISOString(),
+        lastActivity: new Date().toISOString(),
+      },
+      ruleId: rule.id,
+      ruleName: rule.name,
+    });
+  }
+
+  if (action.type === "set_field" && action.field) {
+    patches.push({
+      leadId: lead.id,
+      patch: { [action.field]: action.fieldValue ?? "" },
+      ruleId: rule.id,
+      ruleName: rule.name,
+    });
+  }
+
+  if (action.type === "add_badge") {
+    const existing = lead._badges || [];
+    const badge = { label: action.badge || "Auto", color: action.badgeColor || "#6366F1" };
+    const alreadyHas = existing.some(b => b.label === badge.label);
+    if (!alreadyHas) {
+      patches.push({
+        leadId: lead.id,
+        patch: { _badges: [...existing, badge] },
+        ruleId: rule.id,
+        ruleName: rule.name,
+      });
+    }
+  }
+
+  if (action.type === "notify") {
+    notifications.push({
+      leadId: lead.id,
+      message: action.message || `Automação "${rule.name}" disparada`,
+      ruleId: rule.id,
+      ruleName: rule.name,
+    });
+  }
+
+  if (action.type === "create_deliverable") {
+    sideEffects.push({
+      type: "create_deliverable",
+      leadId: lead.id,
+      title: (action.deliverableTitle || "Onboarding: {empresa}").replace("{empresa}", lead.company || "cliente"),
+      companyIds: [lead.companyId],
+      description: `Gerado automaticamente pela automação "${rule.name}" a partir do negócio "${lead.company}".`,
+      priority: action.deliverablePriority || "media",
+      ruleId: rule.id,
+      ruleName: rule.name,
+    });
+  }
+
+  if (action.type === "enrich_cnpj") {
+    sideEffects.push({
+      type: "enrich_cnpj",
+      leadId: lead.id,
+      cnpj: lead.cnpj,
+      ruleId: rule.id,
+      ruleName: rule.name,
+    });
   }
 }
 

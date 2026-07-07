@@ -60,8 +60,8 @@ const COMPANY_OPTIONS = [
 
 // ── Main view ────────────────────────────────────────────────────────────────
 
-export function AutomationsView({ leads, pipelines, activeCompany }) {
-  const { automations, addAutomation, deleteAutomation, toggleAutomation, stats } = useAutomations();
+export function AutomationsView({ leads, pipelines, activeCompany, currentUser }) {
+  const { automations, addAutomation, deleteAutomation, toggleAutomation, stats } = useAutomations({ userId: currentUser?.id });
   const [showBuilder, setShowBuilder] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [moduleTab, setModuleTab] = useState("all");

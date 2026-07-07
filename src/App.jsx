@@ -794,6 +794,7 @@ export default function App() {
                 leads={leads}
                 pipelines={pipelines}
                 activeCompany={activeCompany}
+                currentUser={currentUser}
               />
             ) : <Navigate to={ROUTES.dashboard} replace />
           } />
