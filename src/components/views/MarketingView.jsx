@@ -15,13 +15,16 @@ import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
-import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { Select } from "../ui/Select";
 
 // ── Create modal ─────────────────────────────────────────────────────────────
 
 function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
   const stage = MARKETING_STAGES.find(s => s.id === stageId);
+  const stageFields = useRHStageFields("marketing");
 
   const [name, setName]             = useState("");
   const [channel, setChannel]       = useState("");
@@ -36,6 +39,9 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
   const [agencyName, setAgencyName] = useState("");
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState(null);
+  const [customValues, setCustomValues] = useState({});
+
+  const visibleFields = resolveVisibleFields(stageFields.getFields(stageId), customValues);
 
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
@@ -50,6 +56,16 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
     e.preventDefault();
     if (!name.trim()) return;
     if (companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
+    const missing = getMissingRequiredFields(visibleFields, customValues);
+    if (missing.length > 0) {
+      setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(visibleFields, customValues);
+    if (invalid.length > 0) {
+      setError(`Corrija antes: ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -70,6 +86,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
         activities:     [],
         starred:        false,
         approvalChecklist: [],
+        customFields:   customValues,
       });
       onClose();
     } catch (err) {
@@ -265,6 +282,30 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
               onBlur={blurGray}
             />
           </div>
+
+          {visibleFields.length > 0 && (
+            <div style={{ marginBottom: 20, paddingTop: 16, borderTop: "1px solid var(--surface-alt)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
+                Campos desta etapa {stage?.name ? `· ${stage.name}` : ""}
+              </div>
+              <div className="flex flex-col gap-3">
+                {visibleFields.map(f => (
+                  <div key={f.id}>
+                    <label style={labelSt}>
+                      {f.effectiveRequired && <span style={{ color: "var(--danger)" }}>* </span>}
+                      {f.label}
+                    </label>
+                    <RHStageFieldInput
+                      field={f}
+                      value={customValues[f.fieldKey]}
+                      onChange={val => setCustomValues(prev => ({ ...prev, [f.fieldKey]: val }))}
+                      users={users}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && (
             <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>

@@ -16,7 +16,9 @@ import {
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatDateBR } from "../../utils/date";
 import { useUsersById }  from "../../hooks/use-users-by-id";
-import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -45,6 +47,7 @@ function exportCSV(deliverables) {
 /* ── Create modal ────────────────────────────────────────────── */
 function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd, onClose }) {
   const stage = DELIVERABLE_STAGES.find(s => s.id === stageId);
+  const stageFields = useRHStageFields("marketing_deliverables");
 
   const [title,         setTitle]         = useState("");
   const [requesterName, setRequester]     = useState("");
@@ -58,6 +61,9 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
   const [campaignId,    setCampaignId]    = useState("");
   const [saving,        setSaving]        = useState(false);
   const [error,         setError]         = useState(null);
+  const [customValues,  setCustomValues]  = useState({});
+
+  const visibleFields = resolveVisibleFields(stageFields.getFields(stageId), customValues);
 
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
@@ -72,6 +78,16 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
     e.preventDefault();
     if (!title.trim()) return;
     if (companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
+    const missing = getMissingRequiredFields(visibleFields, customValues);
+    if (missing.length > 0) {
+      setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(visibleFields, customValues);
+    if (invalid.length > 0) {
+      setError(`Corrija antes: ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      return;
+    }
     setSaving(true); setError(null);
     try {
       await onAdd({
@@ -88,6 +104,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
         notes:          [],
         activities:     [{ type: "created", description: "Entregável criado", at: new Date().toISOString() }],
         createdBy:      currentUser?.id || null,
+        customFields:   customValues,
       });
       onClose();
     } catch (err) {
@@ -208,6 +225,30 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
                 <option value="">Nenhuma (opcional)</option>
                 {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+            </div>
+          )}
+
+          {visibleFields.length > 0 && (
+            <div style={{ marginBottom: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
+                Campos desta etapa {stage?.name ? `· ${stage.name}` : ""}
+              </div>
+              <div className="flex flex-col gap-3">
+                {visibleFields.map(f => (
+                  <div key={f.id}>
+                    <label style={labelSt}>
+                      {f.effectiveRequired && <span style={{ color: "var(--danger)" }}>* </span>}
+                      {f.label}
+                    </label>
+                    <RHStageFieldInput
+                      field={f}
+                      value={customValues[f.fieldKey]}
+                      onChange={val => setCustomValues(prev => ({ ...prev, [f.fieldKey]: val }))}
+                      users={users}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
