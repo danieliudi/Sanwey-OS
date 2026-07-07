@@ -15,6 +15,7 @@ import { PipelineCalendarView } from "./PipelineCalendarView";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { useLeadFormConfig } from "../../hooks/use-lead-form-config";
 import { useStageFields } from "../../hooks/use-stage-fields";
+import { getMissingRequiredFields } from "../../utils/field-conditions";
 import { formatK } from "../../utils/currency";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
@@ -552,6 +553,23 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     return { pipelineValue, won, lost };
   }, [scopedLeads]);
 
+  // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
+  // (estático ou condicional) vazio — vale tanto pro drag-and-drop quanto
+  // pro "Mover para" do menu do card. Antes disso "required" era só o
+  // asterisco visual, confirmado ao vivo que não travava nada (inclusive
+  // corrompendo métricas do Painel Executivo com value/probability vazios).
+  const attemptStageChange = useCallback((leadId, targetStageId) => {
+    const lead = scopedLeads.find(l => l.id === leadId) || leads.find(l => l.id === leadId);
+    if (!lead) return;
+    const fields = stageFields.getFields(lead.companyId, lead.stage);
+    const missing = getMissingRequiredFields(fields, lead.customFields || {});
+    if (missing.length > 0) {
+      alert(`Não dá pra mover "${lead.company}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    onStageChange(leadId, targetStageId);
+  }, [scopedLeads, leads, stageFields, onStageChange]);
+
   const handleDrop = useCallback((stageId, companyId) => {
     if (draggedLead && draggedLead.stage !== stageId) {
       if (pipelineTransitions) {
@@ -564,11 +582,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           return;
         }
       }
-      onStageChange(draggedLead.id, stageId);
+      attemptStageChange(draggedLead.id, stageId);
     }
     setDraggedLead(null);
     setDragOverStage(null);
-  }, [draggedLead, onStageChange, pipelineTransitions]);
+  }, [draggedLead, attemptStageChange, pipelineTransitions]);
 
   const handleDragStart  = useCallback((lead) => setDraggedLead(lead), []);
   const handleDragOver   = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
@@ -738,7 +756,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                           stages={stages}
-                          onMoveToStage={onStageChange}
+                          onMoveToStage={attemptStageChange}
                         />
                       );
                     })
@@ -888,7 +906,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                           stages={stages}
-                          onMoveToStage={onStageChange}
+                          onMoveToStage={attemptStageChange}
                         />
                       );
                     })

@@ -24,7 +24,7 @@ import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { ProposalPanel } from "./ProposalPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
-import { resolveVisibleFields } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
@@ -98,9 +98,17 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
   const moveToStage = useCallback((toStage) => {
     if (!lead || !toStage) return;
+    // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
+    // (estático ou condicional) vazio — antes disso "required" era só o
+    // asterisco visual, confirmado ao vivo que não travava nada.
+    const missing = getMissingRequiredFields(customDefs, customValuesByKey);
+    if (missing.length > 0) {
+      alert(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
     setStage(toStage);
     onUpdate(lead.id, { stage: toStage, status: toStage, stageChangedAt: new Date().toISOString() });
-  }, [lead, onUpdate]);
+  }, [lead, onUpdate, customDefs, customValuesByKey]);
 
   useEffect(() => {
     if (!lead) return;
@@ -244,6 +252,11 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
 
   const handleStageChange = (e) => {
     const newStage = e.target.value;
+    const missing = getMissingRequiredFields(customDefs, customValuesByKey);
+    if (missing.length > 0) {
+      alert(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
     setStage(newStage);
     onUpdate(lead.id, { stage: newStage, stageChangedAt: new Date().toISOString() });
   };

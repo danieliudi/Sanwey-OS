@@ -47,3 +47,24 @@ export function resolveVisibleFields(fields, valuesByKey) {
     .filter(f => isFieldVisible(f, valuesByKey))
     .map(f => ({ ...f, effectiveRequired: isFieldRequired(f, valuesByKey) }));
 }
+
+function isValueEmpty(v) {
+  if (v === null || v === undefined) return true;
+  if (typeof v === "string") return v.trim() === "";
+  if (Array.isArray(v)) return v.length === 0;
+  return false;
+}
+
+// Enforcement real de transição de fase (antes disso, `required` era só o
+// asterisco visual — confirmado ao vivo que mover um card não bloqueava com
+// campo obrigatório vazio, inclusive corrompendo métricas do Painel
+// Executivo). Valida os campos da ETAPA ATUAL (a que o card está saindo),
+// mesma semântica do blueprint Pipefy — "recusa a operação se algum campo
+// obrigatório ativo para a fase atual estiver vazio".
+//
+// Retorna a lista de campos (fields) que estão obrigatórios (estático ou
+// via requiredIf) e vazios — array vazio = pode mover.
+export function getMissingRequiredFields(fields, valuesByKey) {
+  return resolveVisibleFields(fields, valuesByKey)
+    .filter(f => f.effectiveRequired && isValueEmpty(valuesByKey?.[f.fieldKey]));
+}
