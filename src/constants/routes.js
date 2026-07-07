@@ -6,7 +6,7 @@ export const ROUTES = {
   dashboard:         "/",
   signals:           "/sinais",
   explorer:          "/explorador",
-  crm:               "/negocios",
+  crm:               "/pipeline",
   "crm-viagens":     "/viagens",
   crossref:          "/cross-sell",
   agents:            "/agentes",
