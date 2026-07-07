@@ -718,37 +718,51 @@ function VagaKanbanColumn({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
       style={{
+        width: 272, minWidth: 272,
         background: "var(--surface-alt)",
-        border: `1px solid ${isDragOver ? stage.color + "70" : "var(--border)"}`,
-        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none",
-        borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0,
-        display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)",
-        transition: "box-shadow 0.15s, border-color 0.15s",
+        borderColor: isDragOver ? stage.color + "70" : "var(--border)",
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
+        maxHeight: "calc(100vh - 260px)",
       }}
     >
-      <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid var(--border)", background: `${stage.color}14`, display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
-        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: "var(--text)" }}>{stage.name}</span>
-        <span style={{ background: `${stage.color}22`, color: stage.color, borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{vagasList.length}</span>
-        {canWrite && (
-          <button
-            onClick={() => onEditFields(stage)}
-            title="Editar campos desta etapa"
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
+      {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
+          cor + header branco em vez de bolinha + fundo tingido. */}
+      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
+      <div
+        className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
+        style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
+      >
+        <div className="min-w-0 flex-1">
+          <div
+            className="font-semibold flex items-center gap-1.5"
+            style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}
           >
-            <Settings2 size={12} />
-          </button>
-        )}
-        {canWrite && (
-          <button
-            onClick={onAddVaga}
-            style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
-            title="Adicionar vaga"
-          >
-            <Plus size={14} />
-          </button>
-        )}
+            <span>{stage.name}</span>
+            <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({vagasList.length})</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {canWrite && (
+            <button
+              onClick={onAddVaga}
+              title="Adicionar vaga"
+              style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
+            >
+              <Plus size={14} />
+            </button>
+          )}
+          {canWrite && (
+            <button
+              onClick={() => onEditFields(stage)}
+              title="Editar campos desta etapa"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
+            >
+              <Settings2 size={12} />
+            </button>
+          )}
+        </div>
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {vagasList.length === 0 ? (
@@ -1595,65 +1609,58 @@ function KanbanColumn({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
       style={{
+        width: 272, minWidth: 272,
         background: "var(--surface-alt)",
-        border: `1px solid ${isDragOver ? stage.color + "70" : "var(--border)"}`,
-        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none",
-        borderRadius: 14,
-        minWidth: 240,
-        width: 240,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
+        borderColor: isDragOver ? stage.color + "70" : "var(--border)",
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
         maxHeight: "calc(100vh - 220px)",
-        transition: "box-shadow 0.15s, border-color 0.15s",
       }}
     >
-      {/* Column header */}
+      {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
+          cor + header branco em vez de bolinha + fundo tingido. */}
+      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
       <div
-        style={{ padding: "10px 12px 8px", borderBottom: "1px solid var(--border)", background: `${stage.color}14`, display: "flex", alignItems: "center", gap: 8 }}
+        className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
+        style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
       >
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
-        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: "var(--text)", letterSpacing: "-0.01em" }}>
-          {stage.name}
-        </span>
-        <span
-          style={{
-            background: `${stage.color}22`,
-            color: stage.color,
-            borderRadius: 99,
-            padding: "1px 7px",
-            fontSize: 10,
-            fontWeight: 700,
-          }}
-        >
-          {candidatos.length}
-        </span>
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="md:hidden"
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
-        >
-          <ChevronDown size={14} style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }} />
-        </button>
-        {canWrite && (
+        <div className="min-w-0 flex-1">
+          <div
+            className="font-semibold flex items-center gap-1.5"
+            style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}
+          >
+            <span>{stage.name}</span>
+            <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({candidatos.length})</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={() => onEditFields(stage)}
+            onClick={() => setCollapsed((c) => !c)}
+            className="md:hidden"
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
-            title="Editar campos desta etapa"
           >
-            <Settings2 size={12} />
+            <ChevronDown size={14} style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }} />
           </button>
-        )}
-        {canWrite && (
-          <button
-            onClick={onAddCandidato}
-            style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
-            title="Adicionar candidato"
-          >
-            <Plus size={14} />
-          </button>
-        )}
+          {canWrite && (
+            <button
+              onClick={onAddCandidato}
+              style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
+              title="Adicionar candidato"
+            >
+              <Plus size={14} />
+            </button>
+          )}
+          {canWrite && (
+            <button
+              onClick={() => onEditFields(stage)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
+              title="Editar campos desta etapa"
+            >
+              <Settings2 size={12} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Cards */}

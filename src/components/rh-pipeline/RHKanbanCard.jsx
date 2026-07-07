@@ -80,9 +80,6 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {completeness?.total > 0 && (
-            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
-          )}
           {ageStyle && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
@@ -98,6 +95,9 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
               <Clock size={8} strokeWidth={2.5} />
               {agingDays}d
             </span>
+          )}
+          {completeness?.total > 0 && (
+            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
           )}
           {moveTargets.length > 0 && onMoveToStage && (
             <div ref={menuRef} style={{ position: "relative" }}>

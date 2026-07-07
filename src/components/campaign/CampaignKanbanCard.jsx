@@ -75,14 +75,14 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
       className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
         background: "var(--surface)",
-        border: "1px solid #E5E7EB",
+        border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
         opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;
-        e.currentTarget.style.borderColor = "#e9bcb6";
+        e.currentTarget.style.borderColor = "var(--border-strong)";
         e.currentTarget.style.transform = "translateY(-1px)";
       }}
       onMouseLeave={e => {
@@ -97,9 +97,6 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
           {campaign.name}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {completeness?.total > 0 && (
-            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
-          )}
           {isUrgent && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
@@ -120,6 +117,9 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
               {daysInStage}d
             </span>
           )}
+          {completeness?.total > 0 && (
+            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
+          )}
           {campaign.starred && (
             <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} />
           )}
@@ -139,7 +139,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                   alignItems: "center",
                   lineHeight: 1,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--color-industria)"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
               >
                 <MoreVertical size={14} />
@@ -151,7 +151,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                     top: "calc(100% + 4px)",
                     right: 0,
                     background: "var(--surface)",
-                    border: "1px solid #E5E7EB",
+                    border: "1px solid var(--border)",
                     borderRadius: 8,
                     boxShadow: "0 8px 24px rgba(32,26,26,0.12)",
                     zIndex: 50,
@@ -194,7 +194,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                         textAlign: "left",
                         transition: "background 0.1s",
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--color-industria)"; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
                     >
                       <span

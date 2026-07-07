@@ -150,38 +150,53 @@ function OnboardingKanbanColumn({
       onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
+      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
       style={{
-        background: isDragOver ? "var(--accent-tint)" : "var(--surface-alt)",
-        border: `1px solid ${isDragOver ? "var(--accent)" : "var(--border)"}`,
-        borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0,
-        display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)",
-        transition: "background 0.12s, border-color 0.12s",
+        width: 272, minWidth: 272,
+        background: "var(--surface-alt)",
+        borderColor: isDragOver ? stage.color + "70" : "var(--border)",
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
+        maxHeight: "calc(100vh - 260px)",
       }}
     >
-      <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid var(--border)", background: `${stage.color}14`, display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
-        <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: "var(--text)" }}>{stage.name}</span>
-        <span style={{ background: `${stage.color}22`, color: stage.color, borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{colaboradoresList.length}</span>
-        {canWrite && (
-          <button
-            onClick={() => onEditFields(stage)}
-            title="Editar campos desta etapa"
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
+      {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
+          cor + header branco em vez de bolinha + fundo tingido. */}
+      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
+      <div
+        className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
+        style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
+      >
+        <div className="min-w-0 flex-1">
+          <div
+            className="font-semibold flex items-center gap-1.5"
+            style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}
           >
-            <Settings2 size={13} />
-          </button>
-        )}
-        {canWrite && (
-          <button
-            onClick={onAddColaborador}
-            title="Adicionar colaborador"
-            style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex", flexShrink: 0 }}
-          >
-            <Plus size={14} />
-          </button>
-        )}
+            <span>{stage.name}</span>
+            <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({colaboradoresList.length})</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {canWrite && (
+            <button
+              onClick={onAddColaborador}
+              title="Adicionar colaborador"
+              style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex", flexShrink: 0 }}
+            >
+              <Plus size={14} />
+            </button>
+          )}
+          {canWrite && (
+            <button
+              onClick={() => onEditFields(stage)}
+              title="Editar campos desta etapa"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
+            >
+              <Settings2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {colaboradoresList.length === 0 ? (
