@@ -26,6 +26,7 @@ function rowToCampaign(r) {
     notes:            Array.isArray(r.notes) ? r.notes : [],
     activities:       Array.isArray(r.activities) ? r.activities : [],
     starred:          Boolean(r.starred),
+    customFields:     r.custom_fields && typeof r.custom_fields === "object" ? r.custom_fields : {},
     createdBy:        r.created_by ?? null,
     createdAt:        r.created_at ?? null,
     updatedAt:        r.updated_at ?? null,
@@ -53,6 +54,7 @@ function campaignToRow(c, extras = {}) {
     notes:              c.notes ?? [],
     activities:         c.activities ?? [],
     starred:            Boolean(c.starred),
+    custom_fields:      c.customFields && typeof c.customFields === "object" ? c.customFields : {},
     ...extras,
   };
 }

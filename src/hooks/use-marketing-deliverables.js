@@ -26,6 +26,7 @@ function rowToDeliverable(r) {
 
     // Stage-specific data (all stages keyed by stage id)
     stageData:      r.stage_data ?? {},
+    customFields:   r.custom_fields && typeof r.custom_fields === "object" ? r.custom_fields : {},
 
     // Padrão
     starred:        r.starred ?? false,
@@ -54,6 +55,7 @@ function deliverableToRow(d, extras = {}) {
 
     assignee:         d.assignee ?? null,
     stage_data:       d.stageData ?? {},
+    custom_fields:    d.customFields && typeof d.customFields === "object" ? d.customFields : {},
 
     starred:          d.starred ?? false,
     activities:       d.activities ?? [],

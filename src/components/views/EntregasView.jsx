@@ -6,12 +6,14 @@ import {
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingCampaigns }    from "../../hooks/use-marketing-campaigns";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
 } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatDateBR } from "../../utils/date";
 import { useUsersById }  from "../../hooks/use-users-by-id";
+import { getMissingRequiredFields } from "../../utils/field-conditions";
 import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -318,6 +320,7 @@ export function EntregasView({ user, users = [] }) {
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
 
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
+  const stageFields = useRHStageFields("marketing_deliverables");
   const usersById = useUsersById(users);
 
   const [draggedItem,    setDraggedItem]    = useState(null);
@@ -355,11 +358,30 @@ export function EntregasView({ user, users = [] }) {
   const handleDragLeave = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }, []);
   const handleDragEnd   = useCallback(() => { setDraggedItem(null); setDragOverStage(null); }, []);
 
+  // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
+  // (estático ou condicional) vazio — vale tanto pro drag-and-drop quanto
+  // pro "Mover para" do menu do card. Antes disso "required" era só o
+  // asterisco visual, confirmado ao vivo que não travava nada. Mesmo padrão
+  // do attemptStageChange do Pipeline de CRM (CRMView.jsx), mas lendo os
+  // campos via useRHStageFields("marketing_deliverables") — Entregas não usa
+  // a tabela antiga pipeline_stage_fields.
+  const attemptStageChange = useCallback(async (itemId, toStage) => {
+    const item = deliverables.find(d => d.id === itemId);
+    if (!item) return;
+    const fields = stageFields.getFields(item.stage);
+    const missing = getMissingRequiredFields(fields, item.customFields || {});
+    if (missing.length > 0) {
+      alert(`Não dá pra mover "${item.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    await changeStage(itemId, toStage);
+  }, [deliverables, stageFields, changeStage]);
+
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedItem || !canWrite) return;
-    if (draggedItem.stage !== toStage) await changeStage(draggedItem.id, toStage);
+    if (draggedItem.stage !== toStage) await attemptStageChange(draggedItem.id, toStage);
     setDraggedItem(null); setDragOverStage(null);
-  }, [draggedItem, canWrite, changeStage]);
+  }, [draggedItem, canWrite, attemptStageChange]);
 
   const handleQuickAdd = useCallback(async (item) => { await createDeliverable(item); }, [createDeliverable]);
 
@@ -510,7 +532,7 @@ export function EntregasView({ user, users = [] }) {
                           canWrite={canWrite}
                           onClick={setSelected}
                           stages={DELIVERABLE_STAGES}
-                          onMoveToStage={canWrite ? changeStage : null}
+                          onMoveToStage={canWrite ? attemptStageChange : null}
                           onToggleStar={canWrite ? toggleStar : null}
                         />
                       ))
@@ -601,7 +623,7 @@ export function EntregasView({ user, users = [] }) {
                             canWrite={canWrite}
                             onClick={setSelected}
                             stages={DELIVERABLE_STAGES}
-                            onMoveToStage={canWrite ? changeStage : null}
+                            onMoveToStage={canWrite ? attemptStageChange : null}
                             onToggleStar={canWrite ? toggleStar : null}
                           />
                         ))

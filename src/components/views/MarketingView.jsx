@@ -6,11 +6,13 @@ import {
 } from "../../constants/marketing-pipelines";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { usePersonalEvents } from "../../hooks/use-personal-events";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { CampaignKanbanCard } from "../campaign/CampaignKanbanCard";
 import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
+import { getMissingRequiredFields } from "../../utils/field-conditions";
 import { Select } from "../ui/Select";
 
 // ── Create modal ─────────────────────────────────────────────────────────────
@@ -514,6 +516,8 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     updateChecklist,
   } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
 
+  const stageFields = useRHStageFields("marketing");
+
   const fireAutomations = useCallback((campaign, prev, eventType) => {
     if (!evaluateAutomations) return;
     const { patches: _p, notifications } = evaluateAutomations(campaign, prev, eventType, "marketing");
@@ -600,14 +604,33 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     }
   }, [campaigns, changeStage, fireAutomations]);
 
+  // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
+  // (estático ou condicional) vazio — vale tanto pro drag-and-drop quanto
+  // pro "Mover para" do menu do card. Antes disso "required" era só o
+  // asterisco visual, confirmado ao vivo que não travava nada. Mesmo padrão
+  // do attemptStageChange do Pipeline de CRM (CRMView.jsx), mas lendo os
+  // campos via useRHStageFields("marketing") — Marketing não usa a tabela
+  // antiga pipeline_stage_fields.
+  const attemptStageChange = useCallback(async (campaignId, toStage) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (!campaign) return;
+    const fields = stageFields.getFields(campaign.stage);
+    const missing = getMissingRequiredFields(fields, campaign.customFields || {});
+    if (missing.length > 0) {
+      alert(`Não dá pra mover "${campaign.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    await handleStageChange(campaignId, toStage);
+  }, [campaigns, stageFields, handleStageChange]);
+
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedCampaign || !canWrite) return;
     if (draggedCampaign.stage !== toStage) {
-      await handleStageChange(draggedCampaign.id, toStage);
+      await attemptStageChange(draggedCampaign.id, toStage);
     }
     setDraggedCampaign(null);
     setDragOverStage(null);
-  }, [draggedCampaign, canWrite, handleStageChange]);
+  }, [draggedCampaign, canWrite, attemptStageChange]);
 
   const handleUpdate = useCallback(async (id, patch) => {
     if (isAgencia && Object.keys(patch).length === 1 && "approvalChecklist" in patch) {
@@ -805,7 +828,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                           stages={MARKETING_STAGES}
-                          onMoveToStage={handleStageChange}
+                          onMoveToStage={attemptStageChange}
                         />
                       ))
                     )}
@@ -912,7 +935,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
                             stages={MARKETING_STAGES}
-                            onMoveToStage={handleStageChange}
+                            onMoveToStage={attemptStageChange}
                           />
                         ))
                       )}
