@@ -103,6 +103,7 @@ const MANAGER_TABS = [
 export function SettingsView({
   settings, onUpdate, onReset, onClearLocalData, currentUser,
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
+  onLoadAllDemoData, demoDataLoading = false, demoDataCounts = null,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
   usersPanel, clientsPanel, onOpenClientImport, isManager = false,
 }) {
@@ -1163,8 +1164,9 @@ export function SettingsView({
                   </div>
                 )}
 
+                {/* ── Comercial (Leads) ── */}
                 <Section
-                  title="Dados de demonstração"
+                  title="Dados de demonstração · Comercial"
                   description={`${leadsCount} lead${leadsCount === 1 ? "" : "s"} no momento. Use para explorar a UI sem cadastrar dados reais.`}
                 >
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -1189,11 +1191,45 @@ export function SettingsView({
                       </span>
                     )}
                   </div>
-                  <p className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                  <p className="text-xs leading-relaxed mt-3" style={{ color: "var(--text-dim)" }}>
                     Gera ~68 empresas fictícias distribuídas nas 4 unidades, com setor, estado, porte e
                     funil. Preenche os dropdowns do Explorador, Kanban e Executivo para testes.
                   </p>
                 </Section>
+
+                {/* ── Marketing + RH ── */}
+                {supabaseEnabled && onLoadAllDemoData && (
+                  <Section
+                    title="Dados de demonstração · Marketing & RH"
+                    description="Popula campanhas, entregas, despesas, solicitações e funcionários fictícios para explorar todas as áreas da plataforma."
+                  >
+                    {demoDataCounts && (
+                      <div className="mb-3 p-3 rounded-lg text-xs" style={{ background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0" }}>
+                        <strong>Carregado com sucesso:</strong>{" "}
+                        {demoDataCounts.campaigns} campanhas,{" "}
+                        {demoDataCounts.deliverables} entregas,{" "}
+                        {demoDataCounts.expenses} despesas,{" "}
+                        {demoDataCounts.requests} solicitações,{" "}
+                        {demoDataCounts.colaboradores} funcionários.
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        icon={demoDataLoading ? Loader2 : Sparkles}
+                        onClick={onLoadAllDemoData}
+                        disabled={demoDataLoading}
+                      >
+                        {demoDataLoading ? "Carregando…" : "Carregar dados de demonstração"}
+                      </Button>
+                    </div>
+                    <p className="text-xs leading-relaxed mt-3" style={{ color: "var(--text-dim)" }}>
+                      Cria registros fictícios em: Campanhas de Marketing, Entregas, Despesas,
+                      Solicitações e Funcionários (RH). Os dados são marcados com <code>is_demo</code> e
+                      podem ser removidos individualmente em cada módulo.
+                    </p>
+                  </Section>
+                )}
 
                 <Section
                   title="Dados locais"
@@ -1221,6 +1257,45 @@ export function SettingsView({
                 title="Links de captura pública"
                 description="Compartilhe estes links no site, redes sociais ou anúncios. Quando um cliente preenche, o lead entra direto na etapa Prospecção da empresa correspondente."
               >
+                {/* Formulário de Solicitação de Marketing */}
+                <div className="mb-5 pb-5 border-b" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+                    <div>
+                      <div className="font-semibold text-sm mb-0.5" style={{ color: "var(--text)" }}>
+                        Formulário de Solicitação · Marketing
+                      </div>
+                      <p className="text-xs" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
+                        Outros departamentos usam este link para pedir materiais ao Marketing. As solicitações entram em <strong>Marketing → Solicitações</strong> para aprovação.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/solicitar-marketing`)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
+                        style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+                        title="Copiar link"
+                      >
+                        <Copy size={12} />
+                        Copiar
+                      </button>
+                      <a
+                        href={`${window.location.origin}/solicitar-marketing`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
+                        style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                      >
+                        <ExternalLink size={12} />
+                        Abrir
+                      </a>
+                    </div>
+                  </div>
+                  <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>
+                    {window.location.origin}/solicitar-marketing
+                  </code>
+                </div>
                 <div className="space-y-3">
                   {COMPANY_IDS.map(id => {
                     const c = COMPANIES[id];
