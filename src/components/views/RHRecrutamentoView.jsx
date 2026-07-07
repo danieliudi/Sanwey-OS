@@ -343,7 +343,11 @@ function StarRating({ value = 0, max = 5, onChange }) {
 
 // ── Nova Vaga Modal ───────────────────────────────────────────────────────────
 
-function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose }) {
+function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, stageId, users }) {
+  const targetStage = stageId || initialData?.stage;
+  const vagaStageFields = useRHStageFields("vagas");
+  const [customValues, setCustomValues] = useState(initialData?.custom_fields || {});
+  const visibleFields = resolveVisibleFields(vagaStageFields.getFields(targetStage), customValues);
   const [title, setTitle]           = useState(initialData?.title || "");
   const [cargoId, setCargoId]       = useState(initialData?.cargo_template_id || "");
   const [jobTitle, setJobTitle]     = useState(initialData?.job_title || "");
@@ -385,10 +389,14 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose })
     if (!title.trim()) { setError("Título da vaga é obrigatório."); return; }
     if (!dept) { setError("Departamento é obrigatório."); return; }
     if (!jobTitle.trim()) { setError("Cargo é obrigatório."); return; }
+    const missing = getMissingRequiredFields(visibleFields, customValues);
+    if (missing.length > 0) { setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`); return; }
+    const invalid = getInvalidFields(visibleFields, customValues);
+    if (invalid.length > 0) { setError(`Corrija antes: ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`); return; }
     setSaving(true);
     setError(null);
     try {
-      await onSave({
+      const payload = {
         title: title.trim(),
         department: dept,
         job_title: jobTitle.trim(),
@@ -402,7 +410,10 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose })
         hiring_deadline: deadline || null,
         priority,
         description: desc.trim() || null,
-      });
+        custom_fields: customValues,
+      };
+      if (stageId) payload.stage = stageId;
+      await onSave(payload);
       onClose();
     } catch (err) {
       setError(err?.message || "Erro ao criar vaga.");
@@ -516,6 +527,30 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose })
               />
             </div>
           </div>
+
+          {visibleFields.length > 0 && (
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                Campos desta etapa
+              </div>
+              <div className="flex flex-col gap-3">
+                {visibleFields.map((f) => (
+                  <div key={f.id}>
+                    <label style={labelSt}>
+                      {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>}
+                      {f.label}
+                    </label>
+                    <RHStageFieldInput
+                      field={f}
+                      value={customValues[f.fieldKey]}
+                      onChange={(val) => setCustomValues((prev) => ({ ...prev, [f.fieldKey]: val }))}
+                      users={users}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && (
             <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
@@ -676,7 +711,7 @@ function VagaCard({ vaga, candidatosCount }) {
 function VagaKanbanColumn({
   stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
   onMoveToStage, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
-  getCompleteness,
+  getCompleteness, onAddVaga,
 }) {
   return (
     <div
@@ -703,6 +738,15 @@ function VagaKanbanColumn({
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
           >
             <Settings2 size={12} />
+          </button>
+        )}
+        {canWrite && (
+          <button
+            onClick={onAddVaga}
+            style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
+            title="Adicionar vaga"
+          >
+            <Plus size={14} />
           </button>
         )}
       </div>
@@ -900,7 +944,7 @@ function VagaDrawer({
 
 // ── Novo Candidato Modal ──────────────────────────────────────────────────────
 
-function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose }) {
+function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose, users }) {
   const [name, setName]     = useState("");
   const [email, setEmail]   = useState("");
   const [phone, setPhone]   = useState("");
@@ -910,6 +954,10 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose }) {
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState(null);
 
+  const candStageFields = useRHStageFields("candidatos");
+  const [customValues, setCustomValues] = useState({});
+  const visibleFields = resolveVisibleFields(candStageFields.getFields(stage), customValues);
+
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", h);
@@ -918,6 +966,10 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const missing = getMissingRequiredFields(visibleFields, customValues);
+    if (missing.length > 0) { setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`); return; }
+    const invalid = getInvalidFields(visibleFields, customValues);
+    if (invalid.length > 0) { setError(`Corrija antes: ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`); return; }
     if (!name.trim()) { setError("Nome obrigatório."); return; }
     if (!vagaId) { setError("Selecione a vaga."); return; }
     setSaving(true);
@@ -930,6 +982,7 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose }) {
         vaga_id: vagaId,
         source: source.trim() || null,
         stage,
+        customFields: customValues,
       });
       onClose();
     } catch (err) {
@@ -998,6 +1051,30 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose }) {
               <input type="text" value={source} onChange={(e) => setSource(e.target.value)} placeholder="LinkedIn, Indicação…" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
             </div>
           </div>
+
+          {visibleFields.length > 0 && (
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                Campos desta etapa {stageInfo?.name ? `· ${stageInfo.name}` : ""}
+              </div>
+              <div className="flex flex-col gap-3">
+                {visibleFields.map((f) => (
+                  <div key={f.id}>
+                    <label style={labelSt}>
+                      {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>}
+                      {f.label}
+                    </label>
+                    <RHStageFieldInput
+                      field={f}
+                      value={customValues[f.fieldKey]}
+                      onChange={(val) => setCustomValues((prev) => ({ ...prev, [f.fieldKey]: val }))}
+                      users={users}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && (
             <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
@@ -1638,6 +1715,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
   const [selectedVaga, setSelectedVaga]     = useState("todas");
   const [selectedCandidatoId, setSelectedCandidatoId] = useState(null);
   const [quickAddVaga, setQuickAddVaga]     = useState(false);
+  const [addVagaStage, setAddVagaStage]     = useState(null);
   const [editingVaga, setEditingVaga]       = useState(null);
   const [vagaDrawerId, setVagaDrawerId]     = useState(null);
   const [cargosManagerOpen, setCargosManagerOpen] = useState(false);
@@ -1969,6 +2047,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   onDrop={() => handleVagaDrop(stage.stageKey)}
                   onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
                   getCompleteness={getVagaCompleteness}
+                  onAddVaga={() => setAddVagaStage(stage.stageKey)}
                 />
               ))}
             </div>
@@ -1991,6 +2070,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   onDrop={() => handleVagaDrop(stage.stageKey)}
                   onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
                   getCompleteness={getVagaCompleteness}
+                  onAddVaga={() => setAddVagaStage(stage.stageKey)}
                 />
               ))}
             </div>
@@ -2110,6 +2190,18 @@ export function RHRecrutamentoView({ user, canWrite }) {
           onSave={handleCreateVaga}
           onManageCargos={() => setCargosManagerOpen(true)}
           onClose={() => setQuickAddVaga(false)}
+          users={profileUsers}
+        />
+      )}
+
+      {addVagaStage && (
+        <NovaVagaModal
+          cargos={cargos}
+          stageId={addVagaStage}
+          onSave={handleCreateVaga}
+          onManageCargos={() => setCargosManagerOpen(true)}
+          onClose={() => setAddVagaStage(null)}
+          users={profileUsers}
         />
       )}
 
@@ -2120,6 +2212,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           onSave={handleUpdateVaga}
           onManageCargos={() => setCargosManagerOpen(true)}
           onClose={() => setEditingVaga(null)}
+          users={profileUsers}
         />
       )}
 
@@ -2159,6 +2252,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           stages={candStages}
           onSave={handleCreateCandidato}
           onClose={() => setAddCandidatoStage(null)}
+          users={profileUsers}
         />
       )}
 
