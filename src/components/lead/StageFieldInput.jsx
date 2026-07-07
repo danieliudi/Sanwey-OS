@@ -1,9 +1,28 @@
 import React from "react";
 import { NEUTRAL } from "../../constants/companies";
+import { validateFieldFormat } from "../../utils/field-validation";
 
 // Renderiza um input para um campo customizado de etapa (pipeline_stage_fields),
 // reutilizado pelo modal de criação e pelo drawer de detalhe.
 export function StageFieldInput({ field, value, onChange, users, companyId }) {
+  const input = renderInput({ field, value, onChange, users, companyId });
+  // Validação de formato (camada 2, além de presença/obrigatoriedade) — só
+  // mostra o erro quando há valor preenchido; campo vazio é responsabilidade
+  // do required, não desta camada.
+  const error = field.validationRule ? validateFieldFormat(field.validationRule, value) : null;
+  const hasValue = !(value === undefined || value === null || value === "");
+
+  return (
+    <div>
+      {input}
+      {hasValue && error && (
+        <div style={{ fontSize: 11, color: "#B91C1C", marginTop: 4 }}>{error}</div>
+      )}
+    </div>
+  );
+}
+
+function renderInput({ field, value, onChange, users, companyId }) {
   const baseStyle = {
     width: "100%",
     fontSize: 13,

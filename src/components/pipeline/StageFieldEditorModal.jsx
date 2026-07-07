@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { FIELD_TYPES, slugifyKey } from "../../hooks/use-stage-fields";
+import { VALIDATION_PRESETS, VALIDATION_RULE_TYPES } from "../../utils/field-validation";
 
 // Ícone por tipo de campo
 const TYPE_ICON = {
@@ -142,6 +143,93 @@ function ConditionEditor({ title, condition, onChange, otherFields, accent, disa
   );
 }
 
+// ── ValidationRuleEditor ──────────────────────────────────────────────────────
+// Editor reutilizável de regra de validação de formato { type, pattern?, min?,
+// max? } | null (camada 2, além de presença/obrigatoriedade — ver
+// src/utils/field-validation.js), usado no formulário de novo campo e na
+// edição de um campo existente. Mesmo padrão visual do ConditionEditor.
+
+function ValidationRuleEditor({ rule, onChange, fieldType, accent }) {
+  const enabled = Boolean(rule);
+
+  const toggle = (checked) => {
+    if (!checked) { onChange(null); return; }
+    const preset = VALIDATION_PRESETS[fieldType];
+    onChange(preset
+      ? { type: preset.type, ...(preset.pattern ? { pattern: preset.pattern } : {}), ...(preset.min != null ? { min: preset.min } : {}), ...(preset.max != null ? { max: preset.max } : {}) }
+      : { type: "regex", pattern: "" });
+  };
+
+  const selectStyle = { ...INPUT_BASE, fontSize: 12, padding: "6px 8px", appearance: "none",
+    backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+    backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", backgroundSize: "11px", paddingRight: 26,
+  };
+
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <label
+        style={{
+          display: "flex", alignItems: "center", gap: 6, fontSize: 12,
+          color: NEUTRAL.graphite, cursor: "pointer", userSelect: "none",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={e => toggle(e.target.checked)}
+          style={{ accentColor: accent }}
+        />
+        Validar formato do valor
+      </label>
+
+      {enabled && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8, paddingLeft: 10, borderLeft: `2px solid ${accent}30` }}>
+          <select
+            value={rule.type}
+            onChange={e => onChange({ type: e.target.value })}
+            style={selectStyle}
+            onFocus={focusStyle} onBlur={blurStyle}
+          >
+            {VALIDATION_RULE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+
+          {rule.type === "regex" && (
+            <input
+              type="text"
+              value={rule.pattern ?? ""}
+              onChange={e => onChange({ ...rule, pattern: e.target.value })}
+              placeholder="Ex.: ^[0-9]{5}$"
+              style={{ ...INPUT_BASE, fontSize: 12, padding: "6px 8px", fontFamily: "monospace" }}
+              onFocus={focusStyle} onBlur={blurStyle}
+            />
+          )}
+
+          {rule.type === "range" && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                type="number"
+                value={rule.min ?? ""}
+                onChange={e => onChange({ ...rule, min: e.target.value === "" ? undefined : Number(e.target.value) })}
+                placeholder="Mínimo"
+                style={{ ...INPUT_BASE, fontSize: 12, padding: "6px 8px" }}
+                onFocus={focusStyle} onBlur={blurStyle}
+              />
+              <input
+                type="number"
+                value={rule.max ?? ""}
+                onChange={e => onChange({ ...rule, max: e.target.value === "" ? undefined : Number(e.target.value) })}
+                placeholder="Máximo"
+                style={{ ...INPUT_BASE, fontSize: 12, padding: "6px 8px" }}
+                onFocus={focusStyle} onBlur={blurStyle}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── AddFieldForm ──────────────────────────────────────────────────────────────
 
 function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
@@ -151,6 +239,7 @@ function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
   const [options, setOptions]      = useState("");
   const [visibleIf, setVisibleIf]   = useState(null);
   const [requiredIf, setRequiredIf] = useState(null);
+  const [validationRule, setValidationRule] = useState(null);
   const [error, setError]          = useState(null);
 
   const hasOptions = ["select", "radio", "multicheck"].includes(fieldType);
@@ -165,7 +254,7 @@ function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
     const parsed = hasOptions
       ? options.split("\n").map(s => s.trim()).filter(Boolean)
       : [];
-    onAdd({ fieldType, label: label.trim(), required, options: parsed, visibleIf, requiredIf });
+    onAdd({ fieldType, label: label.trim(), required, options: parsed, visibleIf, requiredIf, validationRule });
   };
 
   return (
@@ -244,6 +333,12 @@ function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
         disabled={required}
         disabledNote="Já é obrigatório sempre — condição não se aplica."
       />
+      <ValidationRuleEditor
+        rule={validationRule}
+        onChange={setValidationRule}
+        fieldType={fieldType}
+        accent={accent}
+      />
 
       {error && (
         <div style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}>
@@ -278,6 +373,7 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
   const [editingCond, setEditingCond] = useState(false);
   const [draftVisibleIf, setDraftVisibleIf]   = useState(field.visibleIf || null);
   const [draftRequiredIf, setDraftRequiredIf] = useState(field.requiredIf || null);
+  const [draftValidationRule, setDraftValidationRule] = useState(field.validationRule || null);
   const Icon = TYPE_ICON[field.fieldType] || Settings2;
   const typeMeta = FIELD_TYPES.find(t => t.value === field.fieldType);
   const hasConditions = Boolean(field.visibleIf || field.requiredIf);
@@ -285,11 +381,12 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
   const openEdit = () => {
     setDraftVisibleIf(field.visibleIf || null);
     setDraftRequiredIf(field.requiredIf || null);
+    setDraftValidationRule(field.validationRule || null);
     setEditingCond(true);
   };
 
   const handleSave = () => {
-    onSaveConditions(field.id, { visibleIf: draftVisibleIf, requiredIf: draftRequiredIf });
+    onSaveConditions(field.id, { visibleIf: draftVisibleIf, requiredIf: draftRequiredIf, validationRule: draftValidationRule });
     setEditingCond(false);
   };
 
@@ -413,6 +510,12 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
             disabled={field.required}
             disabledNote="Já é obrigatório sempre — condição não se aplica."
           />
+          <ValidationRuleEditor
+            rule={draftValidationRule}
+            onChange={setDraftValidationRule}
+            fieldType={field.fieldType}
+            accent={accent}
+          />
           <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
             <button
               onClick={handleSave}
@@ -473,7 +576,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
     }
   };
 
-  const handleAdd = ({ fieldType, label, required, options, visibleIf, requiredIf }) =>
+  const handleAdd = ({ fieldType, label, required, options, visibleIf, requiredIf, validationRule }) =>
     run(async () => {
       await stageFields.addField({
         companyId,
@@ -488,6 +591,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
         helpText: "",
         visibleIf: visibleIf || null,
         requiredIf: requiredIf || null,
+        validationRule: validationRule || null,
       });
       setShowAdd(false);
     });
@@ -502,11 +606,11 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
       return stageFields.updateField(id, { ...f, required: newRequired });
     });
 
-  const handleSaveConditions = (id, { visibleIf, requiredIf }) =>
+  const handleSaveConditions = (id, { visibleIf, requiredIf, validationRule }) =>
     run(() => {
       const f = fields.find(f => f.id === id);
       if (!f) return Promise.resolve();
-      return stageFields.updateField(id, { ...f, visibleIf: visibleIf || null, requiredIf: requiredIf || null });
+      return stageFields.updateField(id, { ...f, visibleIf: visibleIf || null, requiredIf: requiredIf || null, validationRule: validationRule || null });
     });
 
   const handleMoveUp = (idx) => {

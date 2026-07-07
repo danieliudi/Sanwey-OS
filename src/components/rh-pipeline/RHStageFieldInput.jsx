@@ -1,5 +1,6 @@
 import React from "react";
 import { NEUTRAL } from "../../constants/companies";
+import { validateFieldFormat } from "../../utils/field-validation";
 
 // Renderiza um input para um campo customizado de etapa do pipeline de RH
 // (rh_stage_fields), reutilizado pelos Kanbans de Vagas/Candidatos/Onboarding
@@ -27,7 +28,9 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
 
   const t = field.fieldType;
   const opts = Array.isArray(field.options) ? field.options : [];
+  const error = validateFieldFormat(field.validationRule, value);
 
+  const renderInput = () => {
   if (t === "textarea") {
     return (
       <textarea value={value || ""} onChange={e => onChange(e.target.value)}
@@ -127,6 +130,16 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
   }
 
   return <input type="text" value={value || ""} onChange={e => onChange(e.target.value)} placeholder={field.placeholder} style={baseStyle} onFocus={handleFocus} onBlur={handleBlur} />;
+  };
+
+  return (
+    <div>
+      {renderInput()}
+      {error && (
+        <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>{error}</div>
+      )}
+    </div>
+  );
 }
 
 export default RHStageFieldInput;

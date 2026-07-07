@@ -3,10 +3,11 @@ import {
   X, Plus, Trash2, GripVertical, ChevronUp, ChevronDown,
   Type, AlignLeft, Hash, DollarSign, Calendar,
   Clock, Mail, Phone, Link, CheckSquare, List, RadioTower,
-  ListChecks, User, Settings2, GitBranch,
+  ListChecks, User, Settings2, GitBranch, ShieldCheck,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import { FIELD_TYPES, slugifyKey, useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { VALIDATION_PRESETS, VALIDATION_RULE_TYPES } from "../../utils/field-validation";
 
 // Editor de campos customizados por etapa do pipeline de RH
 // (Vagas / Candidatos / Onboarding). Baseado em
@@ -131,6 +132,99 @@ function ConditionBlock({ title, otherFields, condition, onChange, accent, disab
   );
 }
 
+// ── ValidationRuleBlock ────────────────────────────────────────────────────────
+// UI compartilhada pra configurar a regra de validação de formato (camada 2,
+// além de required/condicionais) — { type, pattern?, min?, max? } | null. Um
+// preset sensato (VALIDATION_PRESETS) pré-preenche a regra ao ligar o toggle
+// ou ao trocar pra "regex"/"range", com base no fieldType do campo.
+
+function ValidationRuleBlock({ fieldType, rule, onChange, accent }) {
+  const enabled = !!rule;
+  const preset = VALIDATION_PRESETS[fieldType];
+
+  const handleToggle = (checked) => {
+    if (!checked) { onChange(null); return; }
+    if (preset) {
+      onChange({
+        type: preset.type,
+        ...(preset.pattern != null ? { pattern: preset.pattern } : {}),
+        ...(preset.min != null ? { min: preset.min } : {}),
+        ...(preset.max != null ? { max: preset.max } : {}),
+      });
+    } else {
+      onChange({ type: "cnpj" });
+    }
+  };
+
+  const handleTypeChange = (newType) => {
+    if (newType === "regex") {
+      const presetPattern = preset?.type === "regex" ? preset.pattern : "";
+      onChange({ type: "regex", pattern: rule.type === "regex" && rule.pattern ? rule.pattern : presetPattern });
+    } else if (newType === "range") {
+      const presetMin = preset?.type === "range" ? preset.min : undefined;
+      const presetMax = preset?.type === "range" ? preset.max : undefined;
+      onChange({
+        type: "range",
+        min: rule.type === "range" && rule.min != null ? rule.min : presetMin,
+        max: rule.type === "range" && rule.max != null ? rule.max : presetMax,
+      });
+    } else {
+      onChange({ type: newType });
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: NEUTRAL.graphite, cursor: "pointer", userSelect: "none" }}>
+        <input type="checkbox" checked={enabled} onChange={e => handleToggle(e.target.checked)} style={{ accentColor: accent }} />
+        Validar formato do valor
+      </label>
+      {enabled && (
+        <div style={{ marginTop: 6, marginLeft: 22, display: "flex", flexDirection: "column", gap: 6 }}>
+          <select
+            value={rule.type}
+            onChange={e => handleTypeChange(e.target.value)}
+            style={SELECT_STYLE}
+            onFocus={focusStyle} onBlur={blurStyle}
+          >
+            {VALIDATION_RULE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+          {rule.type === "regex" && (
+            <input
+              type="text"
+              value={rule.pattern ?? ""}
+              onChange={e => onChange({ ...rule, pattern: e.target.value })}
+              placeholder="Expressão regular (ex.: ^[0-9]+$)"
+              style={INPUT_BASE}
+              onFocus={focusStyle} onBlur={blurStyle}
+            />
+          )}
+          {rule.type === "range" && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                type="number"
+                value={rule.min ?? ""}
+                onChange={e => onChange({ ...rule, min: e.target.value === "" ? undefined : Number(e.target.value) })}
+                placeholder="Mínimo"
+                style={{ ...INPUT_BASE, flex: 1 }}
+                onFocus={focusStyle} onBlur={blurStyle}
+              />
+              <input
+                type="number"
+                value={rule.max ?? ""}
+                onChange={e => onChange({ ...rule, max: e.target.value === "" ? undefined : Number(e.target.value) })}
+                placeholder="Máximo"
+                style={{ ...INPUT_BASE, flex: 1 }}
+                onFocus={focusStyle} onBlur={blurStyle}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── AddFieldForm ──────────────────────────────────────────────────────────────
 
 function AddFieldForm({ fields, onAdd, onCancel, accent, busy }) {
@@ -140,6 +234,7 @@ function AddFieldForm({ fields, onAdd, onCancel, accent, busy }) {
   const [options, setOptions]      = useState("");
   const [visibleIf, setVisibleIf]  = useState(null);
   const [requiredIf, setRequiredIf] = useState(null);
+  const [validationRule, setValidationRule] = useState(null);
   const [error, setError]          = useState(null);
 
   const hasOptions = ["select", "radio", "multicheck"].includes(fieldType);
@@ -158,6 +253,7 @@ function AddFieldForm({ fields, onAdd, onCancel, accent, busy }) {
       fieldType, label: label.trim(), required, options: parsed,
       visibleIf,
       requiredIf: required ? null : requiredIf,
+      validationRule,
     });
   };
 
@@ -240,6 +336,16 @@ function AddFieldForm({ fields, onAdd, onCancel, accent, busy }) {
         />
       </div>
 
+      {/* Validação de formato */}
+      <div style={{ borderTop: "1px dashed #E5E7EB", paddingTop: 10, marginBottom: 2 }}>
+        <ValidationRuleBlock
+          fieldType={fieldType}
+          rule={validationRule}
+          onChange={setValidationRule}
+          accent={accent}
+        />
+      </div>
+
       {error && (
         <div style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}>
           {error}
@@ -268,14 +374,17 @@ function AddFieldForm({ fields, onAdd, onCancel, accent, busy }) {
 
 // ── FieldRow ──────────────────────────────────────────────────────────────────
 
-function FieldRow({ field, otherFields, accent, onDelete, onMoveUp, onMoveDown, onToggleRequired, onSaveConditions, isFirst, isLast, busy }) {
+function FieldRow({ field, otherFields, accent, onDelete, onMoveUp, onMoveDown, onToggleRequired, onSaveConditions, onSaveValidation, isFirst, isLast, busy }) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [showConditions, setShowConditions] = useState(false);
   const [visibleIf, setVisibleIf]   = useState(field.visibleIf);
   const [requiredIf, setRequiredIf] = useState(field.requiredIf);
+  const [showValidation, setShowValidation] = useState(false);
+  const [validationRule, setValidationRule] = useState(field.validationRule);
   const Icon = TYPE_ICON[field.fieldType] || Settings2;
   const typeMeta = FIELD_TYPES.find(t => t.value === field.fieldType);
   const hasConditions = Boolean(field.visibleIf || field.requiredIf);
+  const hasValidation = Boolean(field.validationRule);
 
   const openConditions = () => {
     setVisibleIf(field.visibleIf);
@@ -286,6 +395,16 @@ function FieldRow({ field, otherFields, accent, onDelete, onMoveUp, onMoveDown, 
   const handleSaveConditions = () => {
     onSaveConditions(field.id, { visibleIf, requiredIf: field.required ? null : requiredIf });
     setShowConditions(false);
+  };
+
+  const openValidation = () => {
+    setValidationRule(field.validationRule);
+    setShowValidation(true);
+  };
+
+  const handleSaveValidation = () => {
+    onSaveValidation(field.id, validationRule);
+    setShowValidation(false);
   };
 
   return (
@@ -325,6 +444,21 @@ function FieldRow({ field, otherFields, accent, onDelete, onMoveUp, onMoveDown, 
           }}
         >
           <GitBranch size={12} />
+        </button>
+
+        {/* Validation toggle */}
+        <button
+          onClick={() => (showValidation ? setShowValidation(false) : openValidation())}
+          title="Validação de formato do valor"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "3px 5px", borderRadius: 4, cursor: "pointer", flexShrink: 0,
+            border: `1px solid ${hasValidation || showValidation ? accent + "60" : "#E5E7EB"}`,
+            background: hasValidation || showValidation ? accent + "12" : "transparent",
+            color: hasValidation || showValidation ? accent : NEUTRAL.slate,
+          }}
+        >
+          <ShieldCheck size={12} />
         </button>
 
         {/* Required toggle */}
@@ -426,6 +560,34 @@ function FieldRow({ field, otherFields, accent, onDelete, onMoveUp, onMoveDown, 
           </div>
         </div>
       )}
+
+      {/* Painel de validação de formato */}
+      {showValidation && (
+        <div style={{ borderTop: "1px solid #E5E7EB", padding: "10px 12px", background: "#F9FAFB" }}>
+          <ValidationRuleBlock
+            fieldType={field.fieldType}
+            rule={validationRule}
+            onChange={setValidationRule}
+            accent={accent}
+          />
+          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+            <button
+              onClick={handleSaveValidation}
+              disabled={busy}
+              style={{ flex: 1, fontSize: 12, fontWeight: 700, padding: "6px 10px", borderRadius: 6, border: "none", background: busy ? "#9CA3AF" : accent, color: "#FFF", cursor: busy ? "not-allowed" : "pointer" }}
+            >
+              Salvar validação
+            </button>
+            <button
+              onClick={() => setShowValidation(false)}
+              disabled={busy}
+              style={{ fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: busy ? "not-allowed" : "pointer" }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -467,7 +629,7 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
     }
   };
 
-  const handleAdd = ({ fieldType, label, required, options, visibleIf, requiredIf }) =>
+  const handleAdd = ({ fieldType, label, required, options, visibleIf, requiredIf, validationRule }) =>
     run(async () => {
       await stageFields.addField({
         stageKey,
@@ -481,6 +643,7 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
         helpText: "",
         visibleIf: visibleIf ?? null,
         requiredIf: requiredIf ?? null,
+        validationRule: validationRule ?? null,
       });
       setShowAdd(false);
     });
@@ -500,6 +663,13 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
       const f = fields.find(f => f.id === id);
       if (!f) return Promise.resolve();
       return stageFields.updateField(id, { ...f, visibleIf: visibleIf ?? null, requiredIf: requiredIf ?? null });
+    });
+
+  const handleSaveValidation = (id, validationRule) =>
+    run(() => {
+      const f = fields.find(f => f.id === id);
+      if (!f) return Promise.resolve();
+      return stageFields.updateField(id, { ...f, validationRule: validationRule ?? null });
     });
 
   const handleMoveUp = (idx) => {
@@ -581,6 +751,7 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
               onDelete={handleDelete}
               onToggleRequired={handleToggleRequired}
               onSaveConditions={handleSaveConditions}
+              onSaveValidation={handleSaveValidation}
               onMoveUp={() => handleMoveUp(idx)}
               onMoveDown={() => handleMoveDown(idx)}
             />

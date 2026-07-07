@@ -21,6 +21,7 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
 // As etapas vêm de rh_pipeline_stages (domain="onboarding"), editáveis pelo RH
@@ -591,6 +592,11 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
     const missing = getMissingRequiredFields(fields, colaborador.customFields || {});
     if (missing.length > 0) {
       alert(`Não dá pra mover "${colaborador.fullName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(fields, colaborador.customFields || {});
+    if (invalid.length > 0) {
+      alert(`Não dá pra mover "${colaborador.fullName}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
     await changeOnboardingStage(id, stage);

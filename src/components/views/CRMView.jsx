@@ -16,6 +16,7 @@ import { useUsersById } from "../../hooks/use-users-by-id";
 import { useLeadFormConfig } from "../../hooks/use-lead-form-config";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { getMissingRequiredFields } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
 import { formatK } from "../../utils/currency";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
@@ -565,6 +566,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     const missing = getMissingRequiredFields(fields, lead.customFields || {});
     if (missing.length > 0) {
       alert(`Não dá pra mover "${lead.company}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(fields, lead.customFields || {});
+    if (invalid.length > 0) {
+      alert(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
     onStageChange(leadId, targetStageId);

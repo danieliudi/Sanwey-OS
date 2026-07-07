@@ -43,6 +43,7 @@ import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal"
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -1042,6 +1043,11 @@ function CandidatoDrawer({
       alert(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
+    const invalid = getInvalidFields(customFields, candidato.customFields || {});
+    if (invalid.length > 0) {
+      alert(`Não dá pra mover "${candidato.name}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      return;
+    }
     const target = stages.find((s) => s.stageKey === stageKey);
     if (target?.lost) { setPendingLostStage(stageKey); setReprovando(true); return; }
     onStageChange(candidato.id, stageKey);
@@ -1710,6 +1716,11 @@ export function RHRecrutamentoView({ user, canWrite }) {
       alert(`Não dá pra mover "${vaga.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return false;
     }
+    const invalid = getInvalidFields(fields, vaga.custom_fields || {});
+    if (invalid.length > 0) {
+      alert(`Não dá pra mover "${vaga.title}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      return false;
+    }
     changeVagaStage(id, newStage);
     return true;
   };
@@ -1759,6 +1770,11 @@ export function RHRecrutamentoView({ user, canWrite }) {
     const missing = getMissingRequiredFields(fields, candidato.customFields || {});
     if (missing.length > 0) {
       alert(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(fields, candidato.customFields || {});
+    if (invalid.length > 0) {
+      alert(`Não dá pra mover "${candidato.name}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
     const targetStage = candStages.find((s) => s.stageKey === newStage);

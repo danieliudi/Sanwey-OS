@@ -25,6 +25,7 @@ import { ProposalPanel } from "./ProposalPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
@@ -104,6 +105,11 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
     const missing = getMissingRequiredFields(customDefs, customValuesByKey);
     if (missing.length > 0) {
       alert(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(customDefs, customValuesByKey);
+    if (invalid.length > 0) {
+      alert(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
     setStage(toStage);
@@ -255,6 +261,11 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
     const missing = getMissingRequiredFields(customDefs, customValuesByKey);
     if (missing.length > 0) {
       alert(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(customDefs, customValuesByKey);
+    if (invalid.length > 0) {
+      alert(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
     setStage(newStage);
