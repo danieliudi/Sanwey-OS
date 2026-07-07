@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, Calendar as CalendarIcon, Pencil, Settings2 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
@@ -7,6 +7,9 @@ import {
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { usePersonalEvents } from "../../hooks/use-personal-events";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
+import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { CampaignKanbanCard } from "../campaign/CampaignKanbanCard";
 import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { CampaignCalendar } from "../campaign/CampaignCalendar";
@@ -518,6 +521,18 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
 
   const stageFields = useRHStageFields("marketing");
 
+  // Etapas vêm de rh_pipeline_stages (domain="marketing"), editáveis via
+  // RHStageEditorModal — mesmo padrão do RHOnboardingView. Normalizamos pro
+  // shape que o resto do arquivo (colunas, badges, CampaignKanbanCard) já
+  // espera: { id, name, color, sla, terminal }.
+  const { stages: dbStages, loading: loadingStages } = useRHPipelineStages("marketing");
+  const kanbanStages = useMemo(
+    () => dbStages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, sla: s.slaDays, terminal: s.terminal })),
+    [dbStages]
+  );
+  const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [fieldEditorStage, setFieldEditorStage] = useState(null);
+
   const fireAutomations = useCallback((campaign, prev, eventType) => {
     if (!evaluateAutomations) return;
     const { patches: _p, notifications } = evaluateAutomations(campaign, prev, eventType, "marketing");
@@ -684,6 +699,19 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {canWrite && (
+            <button
+              onClick={() => setStageEditorOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+              title="Editar etapas do Kanban"
+            >
+              <Pencil size={13} />
+              <span className="hidden sm:inline">Editar etapas</span>
+            </button>
+          )}
           <button
             onClick={exportCampaignsCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
@@ -765,14 +793,14 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       </div>
 
       {/* Loading state */}
-      {loading && (
+      {(loading || loadingStages) && (
         <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>
           Carregando campanhas…
         </div>
       )}
 
       {/* Calendar view */}
-      {!loading && viewMode === "calendar" && (
+      {!loading && !loadingStages && viewMode === "calendar" && (
         <CampaignCalendar
           campaigns={filteredCampaigns}
           personalEvents={personalEvents}
@@ -788,10 +816,10 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       )}
 
       {/* Kanban board */}
-      {!loading && viewMode === "kanban" && (<>
+      {!loading && !loadingStages && viewMode === "kanban" && (<>
         {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
-          {MARKETING_STAGES.map(stage => {
+          {kanbanStages.map(stage => {
             const stageCampaigns = filteredCampaigns.filter(c => c.stage === stage.id);
             const expanded = expandedMobileStages.has(stage.id);
             const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
@@ -809,6 +837,16 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm" style={{ color: stage.color }}>{stageCampaigns.length}</span>
+                    {canWrite && (
+                      <span
+                        role="button"
+                        title="Editar campos desta etapa"
+                        onClick={e => { e.stopPropagation(); setFieldEditorStage(stage); }}
+                        style={{ color: stage.color, display: "flex", cursor: "pointer" }}
+                      >
+                        <Settings2 size={13} />
+                      </span>
+                    )}
                     <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
                       <ChevronDown size={13} />
                     </div>
@@ -827,7 +865,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           onClick={setSelected}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
-                          stages={MARKETING_STAGES}
+                          stages={kanbanStages}
                           onMoveToStage={attemptStageChange}
                         />
                       ))
@@ -848,9 +886,9 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
             <div
               className="flex gap-3"
-              style={{ minWidth: `${MARKETING_STAGES.length * 284}px` }}
+              style={{ minWidth: `${kanbanStages.length * 284}px` }}
             >
-              {MARKETING_STAGES.map(stage => {
+              {kanbanStages.map(stage => {
                 const stageCampaigns = filteredCampaigns.filter(c => c.stage === stage.id);
                 const count       = stageCampaigns.length;
                 const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
@@ -899,6 +937,18 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           {stage.sla && <span style={{ fontWeight: 400, marginLeft: 6 }}>· SLA {stage.sla}d</span>}
                         </div>
                       </div>
+                      {canWrite && (
+                        <button
+                          onClick={() => setFieldEditorStage(stage)}
+                          title="Editar campos desta etapa"
+                          className="flex items-center justify-center rounded-md transition-colors"
+                          style={{ width: 26, height: 26, color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer", flexShrink: 0 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                        >
+                          <Settings2 size={13} />
+                        </button>
+                      )}
                     </div>
 
                     {/* Cards */}
@@ -934,7 +984,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                             onClick={setSelected}
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
-                            stages={MARKETING_STAGES}
+                            stages={kanbanStages}
                             onMoveToStage={attemptStageChange}
                           />
                         ))
@@ -949,11 +999,11 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       </>)}
 
       {/* Analytics panel */}
-      {!loading && viewMode === "kanban" && filteredCampaigns.length > 0 && (
+      {!loading && !loadingStages && viewMode === "kanban" && filteredCampaigns.length > 0 && (
         <AnalyticsPanel campaigns={filteredCampaigns} />
       )}
 
-      {!loading && viewMode === "kanban" && (
+      {!loading && !loadingStages && viewMode === "kanban" && (
         <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
           Arraste para mover · Use "+" no cabeçalho ou o botão flutuante para criar · Clique no card para ver detalhes
         </p>
@@ -969,6 +1019,29 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           users={Array.from(usersById.values())}
           canWrite={canWrite}
           currentUser={user}
+        />
+      )}
+
+      {/* Editor de etapas do Kanban (rh_pipeline_stages, domain="marketing") */}
+      {canWrite && (
+        <RHStageEditorModal
+          open={stageEditorOpen}
+          onClose={() => setStageEditorOpen(false)}
+          domain="marketing"
+          domainLabel="Marketing"
+          records={campaigns}
+          stageField="stage"
+        />
+      )}
+
+      {/* Editor de campos customizados por etapa (rh_pipeline_stage_fields) */}
+      {canWrite && (
+        <RHStageFieldEditorModal
+          open={!!fieldEditorStage}
+          onClose={() => setFieldEditorStage(null)}
+          domain="marketing"
+          stageKey={fieldEditorStage?.id}
+          stageName={fieldEditorStage?.name}
         />
       )}
     </div>

@@ -14,6 +14,9 @@ import {
 import { formatDateBR } from "../../utils/date";
 import { useDeliverableAttachments }  from "../../hooks/use-deliverable-attachments";
 import { useDeliverableChecklists }   from "../../hooks/use-deliverable-checklists";
+import { useRHStageFields }           from "../../hooks/use-rh-stage-fields";
+import { RHStageFieldInput }          from "../rh-pipeline/RHStageFieldInput";
+import { resolveVisibleFields }       from "../../utils/field-conditions";
 import { useAI }                      from "../../hooks/use-ai";
 import { deliverableStageSuggestionPrompt } from "../../constants/ai-prompts";
 
@@ -255,6 +258,15 @@ function ReadValue({ value, empty = "—" }) {
       {value || empty}
     </div>
   );
+}
+
+// Formata valor de campo customizado (rh_pipeline_stage_fields) pra exibição
+// somente-leitura, quando o usuário não pode escrever.
+function formatCustomFieldValue(v) {
+  if (v === null || v === undefined || v === "") return null;
+  if (Array.isArray(v)) return v.length ? v.join(", ") : null;
+  if (typeof v === "boolean") return v ? "Sim" : "Não";
+  return String(v);
 }
 
 /* ── Dynamic field renderer ─────────────────────────────────── */
@@ -655,6 +667,37 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
   const [confirmDel,   setConfirmDel]  = useState(false);
   const [deleting,     setDeleting]    = useState(false);
 
+  // Campos customizados configurados pelo admin via "Editar campos desta
+  // etapa" (rh_pipeline_stage_fields, domain="marketing_deliverables") —
+  // persistidos em item.custom_fields, separado do stageData/fieldValues
+  // acima (que é o formulário fixo por etapa). Mesmo padrão de draft +
+  // debounce do OnboardingDrawer (RHOnboardingView.jsx).
+  const stageFieldsHook = useRHStageFields("marketing_deliverables");
+  const customDefs = stageFieldsHook.getFields(item.stage);
+  const [customDraft, setCustomDraft] = useState({});
+  const customDebounceRef = useRef(null);
+
+  useEffect(() => {
+    setCustomDraft({});
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    return () => { if (customDebounceRef.current) clearTimeout(customDebounceRef.current); };
+  }, [item.id]);
+
+  const getCustomValue = (fieldKey) =>
+    fieldKey in customDraft ? customDraft[fieldKey] : (item.customFields?.[fieldKey] ?? "");
+
+  const handleCustomChange = (fieldKey, value) => {
+    setCustomDraft(prev => ({ ...prev, [fieldKey]: value }));
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    customDebounceRef.current = setTimeout(() => {
+      const merged = { ...(item.customFields || {}), [fieldKey]: value };
+      onUpdate(item.id, { customFields: merged });
+    }, 600);
+  };
+
+  const customValuesByKey = { ...(item.customFields || {}), ...customDraft };
+  const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
+
   const fieldValuesRef = useRef(fieldValues);
   const itemRef        = useRef(item);
   const saveTimerRef   = useRef(null);
@@ -1000,6 +1043,29 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                   </FieldRow>
                 ))
               }
+
+              {/* Campos adicionais configurados via "Editar campos desta
+                  etapa" (rh_pipeline_stage_fields) — além do formulário fixo
+                  acima, que continua intacto. */}
+              {visibleCustomDefs.length > 0 && (
+                <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #E5E7EB" }}>
+                  <SectionLabel>Campos adicionais da etapa</SectionLabel>
+                  {visibleCustomDefs.map(f => (
+                    <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
+                      {canWrite ? (
+                        <RHStageFieldInput
+                          field={f}
+                          value={getCustomValue(f.fieldKey)}
+                          onChange={val => handleCustomChange(f.fieldKey, val)}
+                          users={users}
+                        />
+                      ) : (
+                        <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
+                      )}
+                    </FieldRow>
+                  ))}
+                </div>
+              )}
             </div>
           </main>
 

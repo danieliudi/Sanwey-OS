@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
-  Filter, CalendarDays, LayoutGrid,
+  Filter, CalendarDays, LayoutGrid, Pencil, Settings2,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingCampaigns }    from "../../hooks/use-marketing-campaigns";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
+import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
 } from "../../constants/marketing-pipelines";
@@ -321,6 +324,19 @@ export function EntregasView({ user, users = [] }) {
 
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
   const stageFields = useRHStageFields("marketing_deliverables");
+
+  // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables"),
+  // editáveis via RHStageEditorModal — mesmo padrão do RHOnboardingView.
+  // Normalizamos pro shape que o resto do arquivo (colunas, badges,
+  // DeliverableKanbanCard) já espera: { id, name, color, sla, terminal }.
+  const { stages: dbStages, loading: loadingStages } = useRHPipelineStages("marketing_deliverables");
+  const kanbanStages = useMemo(
+    () => dbStages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, sla: s.slaDays, terminal: s.terminal })),
+    [dbStages]
+  );
+  const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [fieldEditorStage, setFieldEditorStage] = useState(null);
+
   const usersById = useUsersById(users);
 
   const [draggedItem,    setDraggedItem]    = useState(null);
@@ -424,6 +440,19 @@ export function EntregasView({ user, users = [] }) {
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     />
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
           </div>
+          {/* Editar etapas */}
+          {canWrite && (
+            <button
+              onClick={() => setStageEditorOpen(true)}
+              title="Editar etapas do Kanban"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+            >
+              <Pencil size={14} />
+              Editar etapas
+            </button>
+          )}
           {/* Export CSV */}
           <button
             onClick={() => exportCSV(filtered)}
@@ -490,12 +519,12 @@ export function EntregasView({ user, users = [] }) {
         )}
       </div>
 
-      {loading && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando entregas…</div>}
+      {(loading || loadingStages) && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando entregas…</div>}
 
-      {!loading && viewMode === "kanban" && (<>
+      {!loading && !loadingStages && viewMode === "kanban" && (<>
         {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
-          {DELIVERABLE_STAGES.map(stage => {
+          {kanbanStages.map(stage => {
             const stageItems = filtered.filter(d => d.stage === stage.id);
             const expanded = expandedMobileStages.has(stage.id);
             return (
@@ -512,6 +541,16 @@ export function EntregasView({ user, users = [] }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
+                    {canWrite && (
+                      <span
+                        role="button"
+                        title="Editar campos desta etapa"
+                        onClick={e => { e.stopPropagation(); setFieldEditorStage(stage); }}
+                        style={{ color: stage.color, display: "flex", cursor: "pointer" }}
+                      >
+                        <Settings2 size={13} />
+                      </span>
+                    )}
                     <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
                       <ChevronDown size={13} />
                     </div>
@@ -531,7 +570,7 @@ export function EntregasView({ user, users = [] }) {
                           onDragEnd={handleDragEnd}
                           canWrite={canWrite}
                           onClick={setSelected}
-                          stages={DELIVERABLE_STAGES}
+                          stages={kanbanStages}
                           onMoveToStage={canWrite ? attemptStageChange : null}
                           onToggleStar={canWrite ? toggleStar : null}
                         />
@@ -559,8 +598,8 @@ export function EntregasView({ user, users = [] }) {
           <div className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
             style={{ background: "linear-gradient(to left, var(--bg) 0%, transparent 100%)" }} />
           <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
-            <div className="flex gap-3" style={{ minWidth: `${DELIVERABLE_STAGES.length * 284}px` }}>
-              {DELIVERABLE_STAGES.map(stage => {
+            <div className="flex gap-3" style={{ minWidth: `${kanbanStages.length * 284}px` }}>
+              {kanbanStages.map(stage => {
                 const stageItems = filtered.filter(d => d.stage === stage.id);
                 const isOver     = dragOverStage === stage.id;
 
@@ -582,6 +621,16 @@ export function EntregasView({ user, users = [] }) {
                         </div>
                         {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
                       </div>
+                      {canWrite && (
+                        <button onClick={() => setFieldEditorStage(stage)}
+                          className="flex items-center justify-center rounded-md transition-colors"
+                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                          title="Editar campos desta etapa">
+                          <Settings2 size={13} />
+                        </button>
+                      )}
                       {canWrite && !stage.terminal && (
                         <button onClick={() => setQuickAddStage(stage.id)}
                           className="flex items-center justify-center rounded-md transition-colors"
@@ -622,7 +671,7 @@ export function EntregasView({ user, users = [] }) {
                             onDragEnd={handleDragEnd}
                             canWrite={canWrite}
                             onClick={setSelected}
-                            stages={DELIVERABLE_STAGES}
+                            stages={kanbanStages}
                             onMoveToStage={canWrite ? attemptStageChange : null}
                             onToggleStar={canWrite ? toggleStar : null}
                           />
@@ -637,7 +686,7 @@ export function EntregasView({ user, users = [] }) {
         </div>
       </>)}
 
-      {!loading && viewMode === "calendar" && (
+      {!loading && !loadingStages && viewMode === "calendar" && (
         <div className="text-center py-16" style={{ color: "var(--text-dim)" }}>
           <CalendarDays size={40} style={{ opacity: 0.3, margin: "0 auto 12px" }} />
           <div className="font-semibold" style={{ fontSize: 15, marginBottom: 6, color: "var(--text)" }}>Vista de calendário em breve</div>
@@ -645,9 +694,9 @@ export function EntregasView({ user, users = [] }) {
         </div>
       )}
 
-      {!loading && viewMode === "kanban" && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} />}
+      {!loading && !loadingStages && viewMode === "kanban" && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} />}
 
-      {!loading && viewMode === "kanban" && (
+      {!loading && !loadingStages && viewMode === "kanban" && (
         <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
           Arraste para mover · "+" para criar · Clique para ver detalhes
         </p>
@@ -675,6 +724,29 @@ export function EntregasView({ user, users = [] }) {
         canWrite={canWrite}
         userId={user?.id}
         currentUser={user}
+      />
+    )}
+
+    {/* Editor de etapas do Kanban (rh_pipeline_stages, domain="marketing_deliverables") */}
+    {canWrite && (
+      <RHStageEditorModal
+        open={stageEditorOpen}
+        onClose={() => setStageEditorOpen(false)}
+        domain="marketing_deliverables"
+        domainLabel="Entregas de Marketing"
+        records={deliverables}
+        stageField="stage"
+      />
+    )}
+
+    {/* Editor de campos customizados por etapa (rh_pipeline_stage_fields) */}
+    {canWrite && (
+      <RHStageFieldEditorModal
+        open={!!fieldEditorStage}
+        onClose={() => setFieldEditorStage(null)}
+        domain="marketing_deliverables"
+        stageKey={fieldEditorStage?.id}
+        stageName={fieldEditorStage?.name}
       />
     )}
 

@@ -9,6 +9,9 @@ import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { useMarketingCampaignAttachments } from "../../hooks/use-marketing-campaign-attachments";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { resolveVisibleFields } from "../../utils/field-conditions";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
 import { formatK } from "../../utils/currency";
@@ -461,6 +464,16 @@ function Field({ label, children }) {
 
 function ReadValue({ value, empty = "—" }) {
   return <div className="text-sm" style={{ color: value ? "var(--text)" : "var(--text-faint)" }}>{value || empty}</div>;
+}
+
+// Formata valor de campo customizado (rh_pipeline_stage_fields) pra exibição
+// somente-leitura (visitante/agência) — mesma ideia do getCf/setCf abaixo,
+// mas sem editor.
+function formatCustomFieldValue(v) {
+  if (v === null || v === undefined || v === "") return null;
+  if (Array.isArray(v)) return v.length ? v.join(", ") : null;
+  if (typeof v === "boolean") return v ? "Sim" : "Não";
+  return String(v);
 }
 
 function EditInput({ value, onChange, type = "text", placeholder = "" }) {
@@ -1241,6 +1254,14 @@ export function CampaignDetailDrawer({
   const getCf = (key) => (get("customFields") || {})[key];
   const setCf = (key, val) => set("customFields", { ...(get("customFields") || {}), [key]: val });
 
+  // Campos customizados configurados pelo admin via "Editar campos desta
+  // etapa" (rh_pipeline_stage_fields, domain="marketing") — coexistem no
+  // mesmo customFields jsonb usado pelos campos fixos acima (getCf/setCf),
+  // só que com fieldKey escolhido pelo admin em vez de hardcoded.
+  const stageFieldsHook = useRHStageFields("marketing");
+  const customDefs = stageFieldsHook.getFields(get("stage"));
+  const visibleCustomDefs = resolveVisibleFields(customDefs, get("customFields") || {});
+
   if (!campaign) return null;
 
   // ── Render left tab content ─────────────────────────────────────────────────
@@ -1633,6 +1654,38 @@ export function CampaignDetailDrawer({
                   users={users}
                   disabled={!canWrite || isAgencia}
                 />
+              )}
+
+              {/* Campos adicionais configurados via "Editar campos desta
+                  etapa" (rh_pipeline_stage_fields) — além dos campos fixos
+                  acima, que continuam intactos. */}
+              {visibleCustomDefs.length > 0 && (
+                <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
+                  <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                    Campos adicionais da etapa
+                  </div>
+                  {visibleCustomDefs.map(f => (
+                    <div key={f.id}>
+                      <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+                        {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
+                        {f.label}
+                      </div>
+                      {f.helpText && (
+                        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>{f.helpText}</div>
+                      )}
+                      {(!canWrite || isAgencia) ? (
+                        <ReadValue value={formatCustomFieldValue(getCf(f.fieldKey))} />
+                      ) : (
+                        <RHStageFieldInput
+                          field={f}
+                          value={getCf(f.fieldKey)}
+                          onChange={val => setCf(f.fieldKey, val)}
+                          users={users}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </main>
