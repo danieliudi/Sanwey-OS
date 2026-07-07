@@ -20,7 +20,7 @@ import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal"
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
-import { resolveVisibleFields } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
 // As etapas vêm de rh_pipeline_stages (domain="onboarding"), editáveis pelo RH
@@ -548,6 +548,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
   const { feedbacks, createPendingCycle } = useRHFeedback({ userId: currentUser?.id });
   const { stages, loading: loadingStages } = useRHPipelineStages("onboarding");
+  const onboardingStageFields = useRHStageFields("onboarding");
   const { users } = useProfiles();
   const [novaTemplateOpen, setNovaTemplateOpen] = useState(false);
   const [drawerColaboradorId, setDrawerColaboradorId] = useState(null);
@@ -577,9 +578,22 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
     }
   };
 
+  // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
+  // (estático ou condicional) vazio — antes disso "required" era só o
+  // asterisco visual, confirmado ao vivo que não travava nada. Único checo
+  // adicionado no topo da função — os side-effects abaixo (auto-atribuir
+  // treinamento, criar ciclo de feedback) continuam intactos e só disparam
+  // quando a validação passa.
   const handleStageChange = async (id, stage) => {
-    await changeOnboardingStage(id, stage);
     const colaborador = colaboradores.find((c) => c.id === id);
+    if (!colaborador) return;
+    const fields = onboardingStageFields.getFields(colaborador.onboardingStage);
+    const missing = getMissingRequiredFields(fields, colaborador.customFields || {});
+    if (missing.length > 0) {
+      alert(`Não dá pra mover "${colaborador.fullName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    await changeOnboardingStage(id, stage);
     if (stage === "integracao") {
       await autoAssignTreinamentos(colaborador);
     }

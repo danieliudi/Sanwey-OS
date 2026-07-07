@@ -42,7 +42,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
-import { resolveVisibleFields } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -1030,10 +1030,18 @@ function CandidatoDrawer({
   const [motivoReprovacao, setMotivoReprovacao] = useState("");
   const [savingStage, setSavingStage] = useState(false);
 
-  // Reprovação (ou qualquer etapa marcada como "lost") exige motivo — regra
-  // de negócio preservada tanto no fluxo por botão quanto no drag-and-drop
-  // (ver handleCandDrop na view principal).
+  // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
+  // (estático ou condicional) vazio — checa ANTES do fluxo de reprovação,
+  // que só deve abrir depois que os campos obrigatórios da etapa atual
+  // estiverem preenchidos. Reprovação (ou qualquer etapa marcada como
+  // "lost") exige motivo — regra de negócio preservada tanto no fluxo por
+  // botão quanto no drag-and-drop (ver handleCandDrop na view principal).
   const requestStageChange = (stageKey) => {
+    const missing = getMissingRequiredFields(customFields, candidato.customFields || {});
+    if (missing.length > 0) {
+      alert(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
     const target = stages.find((s) => s.stageKey === stageKey);
     if (target?.lost) { setPendingLostStage(stageKey); setReprovando(true); return; }
     onStageChange(candidato.id, stageKey);
@@ -1686,9 +1694,27 @@ export function RHRecrutamentoView({ user, canWrite }) {
   const handleStageChange = async (id, newStage, motivo) => { await changeStage(id, newStage, motivo); };
   const handleAddNote = async (id, note) => { await addNote(id, note); };
   const handleRatingChange = async (id, rating) => { await changeRating(id, rating); };
-  const handleVagaStageChange = async (id, newStage) => {
-    await changeVagaStage(id, newStage);
-    setVagaDrawerId(null);
+  // Enforcement real: bloqueia mover vaga com campo obrigatório (estático ou
+  // condicional) da etapa atual vazio — antes disso "required" era só o
+  // asterisco visual, confirmado ao vivo que não travava nada. Único ponto
+  // compartilhado por drag-and-drop, "Mover para" do menu do card (ver
+  // onMoveToStage abaixo) e do drawer (handleVagaStageChange), reusando
+  // getMissingRequiredFields — mesmo mecanismo do CRM (CRMView) e do
+  // onboarding (RHOnboardingView).
+  const attemptVagaStageChange = (id, newStage) => {
+    const vaga = vagas.find((v) => v.id === id);
+    if (!vaga || vaga.stage === newStage) return false;
+    const fields = vagaStageFields.getFields(vaga.stage);
+    const missing = getMissingRequiredFields(fields, vaga.custom_fields || {});
+    if (missing.length > 0) {
+      alert(`Não dá pra mover "${vaga.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return false;
+    }
+    changeVagaStage(id, newStage);
+    return true;
+  };
+  const handleVagaStageChange = (id, newStage) => {
+    if (attemptVagaStageChange(id, newStage)) setVagaDrawerId(null);
   };
   const handleVerCandidatos = (vagaId) => {
     setSelectedVaga(vagaId);
@@ -1706,8 +1732,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
     setDraggedVagaId(null);
     setDragOverVagaStage(null);
     if (!id) return;
-    const vaga = vagas.find((v) => v.id === id);
-    if (vaga && vaga.stage !== stageKey) changeVagaStage(id, stageKey);
+    attemptVagaStageChange(id, stageKey);
   };
 
   // ── Drag-and-drop: Candidatos ──────────────────────────────────────────────
@@ -1718,19 +1743,37 @@ export function RHRecrutamentoView({ user, canWrite }) {
   const handleCandDragEnd   = () => { setDraggedAplicacaoId(null); setDragOverCandStage(null); };
   const handleCandDragOver  = (e, stageKey) => { e.preventDefault(); setDragOverCandStage(stageKey); };
   const handleCandDragLeave = (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverCandStage(null); };
+  // Enforcement real: bloqueia mover candidato com campo obrigatório
+  // (estático ou condicional) da etapa atual vazio — mesmo mecanismo
+  // compartilhado (getMissingRequiredFields) do vaga/onboarding/CRM. Roda
+  // ANTES do fluxo de reprovação: só abre o modal de motivo (etapa "lost")
+  // depois que os campos obrigatórios já estiverem preenchidos. Único ponto
+  // usado por drag-and-drop e pelo "Mover para" do menu do card (ver
+  // onMoveToStage abaixo) — o drawer tem seu próprio check equivalente em
+  // requestStageChange (CandidatoDrawer), no mesmo espírito do
+  // LeadDetailDrawer.
+  const attemptCandStageChange = (id, newStage) => {
+    const candidato = candidatos.find((c) => c.id === id);
+    if (!candidato || candidato.stage === newStage) return;
+    const fields = candStageFields.getFields(candidato.stage);
+    const missing = getMissingRequiredFields(fields, candidato.customFields || {});
+    if (missing.length > 0) {
+      alert(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const targetStage = candStages.find((s) => s.stageKey === newStage);
+    if (targetStage?.lost) {
+      setPendingReprovacaoDrop({ aplicacaoId: id, stageKey: newStage, stageName: targetStage.name });
+      return;
+    }
+    changeStage(id, newStage);
+  };
   const handleCandDrop = (stageKey) => {
     const id = draggedAplicacaoId;
     setDraggedAplicacaoId(null);
     setDragOverCandStage(null);
     if (!id) return;
-    const candidato = candidatos.find((c) => c.id === id);
-    if (!candidato || candidato.stage === stageKey) return;
-    const targetStage = candStages.find((s) => s.stageKey === stageKey);
-    if (targetStage?.lost) {
-      setPendingReprovacaoDrop({ aplicacaoId: id, stageKey, stageName: targetStage.name });
-      return;
-    }
-    changeStage(id, stageKey);
+    attemptCandStageChange(id, stageKey);
   };
   const confirmReprovacaoDrop = async (motivo) => {
     if (!pendingReprovacaoDrop) return;
@@ -1891,7 +1934,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   candidatosByVaga={candidatosByVaga}
                   canWrite={canWrite}
                   onCardClick={(v) => setVagaDrawerId(v.id)}
-                  onMoveToStage={(id, key) => changeVagaStage(id, key)}
+                  onMoveToStage={attemptVagaStageChange}
                   onDragStart={handleVagaDragStart}
                   onDragEnd={handleVagaDragEnd}
                   isDragOver={dragOverVagaStage === stage.stageKey}
@@ -1912,7 +1955,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   candidatosByVaga={candidatosByVaga}
                   canWrite={canWrite}
                   onCardClick={(v) => setVagaDrawerId(v.id)}
-                  onMoveToStage={(id, key) => changeVagaStage(id, key)}
+                  onMoveToStage={attemptVagaStageChange}
                   onDragStart={handleVagaDragStart}
                   onDragEnd={handleVagaDragEnd}
                   isDragOver={dragOverVagaStage === stage.stageKey}
@@ -1992,7 +2035,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   canWrite={canWrite}
                   onCardClick={(c) => setSelectedCandidatoId(c.id)}
                   onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
-                  onMoveToStage={(id, key) => changeStage(id, key)}
+                  onMoveToStage={attemptCandStageChange}
                   onDragStart={handleCandDragStart}
                   onDragEnd={handleCandDragEnd}
                   isDragOver={dragOverCandStage === stage.stageKey}
@@ -2015,7 +2058,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   canWrite={canWrite}
                   onCardClick={(c) => setSelectedCandidatoId(c.id)}
                   onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
-                  onMoveToStage={(id, key) => changeStage(id, key)}
+                  onMoveToStage={attemptCandStageChange}
                   onDragStart={handleCandDragStart}
                   onDragEnd={handleCandDragEnd}
                   isDragOver={dragOverCandStage === stage.stageKey}
