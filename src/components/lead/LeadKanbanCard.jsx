@@ -65,7 +65,7 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
       onDragStart={() => onDragStart?.(lead)}
       onDragEnd={() => onDragEnd?.()}
       onClick={() => { if (!menuOpen) onClick?.(lead); }}
-      className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
+      className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
@@ -209,10 +209,14 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
         </div>
       </div>
 
-      {/* SKU */}
-      <div className="text-xs mb-2.5 line-clamp-1" style={{ color: "var(--text-dim)" }}>
-        {lead.skuName}
-      </div>
+      {/* SKU — só ocupa espaço quando existe; antes ficava uma linha vazia
+          (com margem) em todo card sem SKU, quebrando o ritmo vertical entre
+          cards de um mesmo board. */}
+      {lead.skuName && (
+        <div className="text-xs mb-2.5 line-clamp-1" style={{ color: "var(--text-dim)" }}>
+          {lead.skuName}
+        </div>
+      )}
 
       {/* Value + probability + close date */}
       <div className="flex items-center justify-between text-xs">

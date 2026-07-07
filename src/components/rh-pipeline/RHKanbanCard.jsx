@@ -49,7 +49,7 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
       onDragStart={() => onDragStart?.(id)}
       onDragEnd={() => onDragEnd?.()}
       onClick={() => { if (!menuOpen) onClick?.(id); }}
-      className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
+      className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",

@@ -72,7 +72,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
       onDragStart={() => onDragStart?.(campaign)}
       onDragEnd={() => onDragEnd?.()}
       onClick={() => { if (!menuOpen) onClick?.(campaign); }}
-      className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
+      className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
         background: "var(--surface)",
         border: "1px solid #E5E7EB",
@@ -224,7 +224,10 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
         </div>
       )}
 
-      {/* Channel + KPI badges */}
+      {/* Channel + KPI badges — só ocupa espaço quando existe pelo menos um;
+          antes era um div sempre presente (com margem), deixando uma sobra
+          vazia em cards sem canal/KPI e quebrando o ritmo vertical do board. */}
+      {(campaign.channel || campaign.kpi) && (
       <div className="flex flex-wrap gap-1 mb-2">
         {campaign.channel && channelStyle && (
           <span
@@ -243,6 +246,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
           </span>
         )}
       </div>
+      )}
 
       {/* Footer: budget + launch + owner */}
       <div className="flex items-center justify-between">

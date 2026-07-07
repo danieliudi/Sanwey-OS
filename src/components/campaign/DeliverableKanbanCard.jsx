@@ -60,7 +60,7 @@ function DeliverableKanbanCardImpl({
       onDragStart={() => canWrite && onDragStart?.(item)}
       onDragEnd={() => onDragEnd?.()}
       onClick={() => { if (!menuOpen) onClick?.(item); }}
-      className="p-3.5 rounded-xl cursor-pointer transition-all duration-150"
+      className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
         background: "#FFFFFF",
         border: "1px solid #E5E7EB",
@@ -104,7 +104,10 @@ function DeliverableKanbanCardImpl({
         </div>
       )}
 
-      {/* Owner pill + deadline */}
+      {/* Owner pill + deadline — só ocupa espaço quando há responsável ou
+          prazo; antes era um div sempre presente (com margem), deixando uma
+          sobra vazia em cards sem nenhum dos dois. */}
+      {(ownerName || item.deadline) && (
       <div className="flex items-center justify-between text-[11px] mb-2" style={{ color: NEUTRAL.slate }}>
         {ownerName
           ? <span className="px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-alt)", fontWeight: 500 }}>{ownerName}</span>
@@ -116,6 +119,7 @@ function DeliverableKanbanCardImpl({
           </span>
         )}
       </div>
+      )}
 
       {/* Aging badge + quick-move menu + star toggle */}
       <div className="flex items-center justify-between">
