@@ -1,0 +1,602 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Activity, Paperclip, ListChecks, MessageSquare,
+  Plus, Upload, Download, Trash2, Check, X,
+  File, FileImage, FileSpreadsheet, FileText, AlertCircle,
+} from "lucide-react";
+import { useRHAttachments } from "../../hooks/use-rh-attachments";
+import { useRHChecklists } from "../../hooks/use-rh-checklists";
+
+// ── Tab strip ─────────────────────────────────────────────────────────────────
+
+function RHSideTabs({ tabs, activeTab, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tabs.map(t => {
+        const active = activeTab === t.id;
+        const Icon = t.icon;
+        return (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
+            style={{
+              background: active ? "var(--surface)" : "transparent",
+              color: active ? "var(--accent)" : "var(--text-dim)",
+              border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+              cursor: "pointer",
+            }}
+            onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
+            onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+          >
+            <Icon size={11} />
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PlaceholderPanel({ icon: Icon, title, hint }) {
+  return (
+    <div className="p-6 rounded-xl border text-center" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="inline-flex items-center justify-center mb-3" style={{
+        width: 40, height: 40, borderRadius: "50%",
+        background: "var(--surface-alt)",
+      }}>
+        <Icon size={18} color={"var(--text-dim)"} />
+      </div>
+      <div className="text-sm font-semibold mb-1" style={{ color: "var(--text)" }}>{title}</div>
+      <div className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>{hint}</div>
+    </div>
+  );
+}
+
+function formatTimestamp(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+function authorLabel(createdBy, currentUser) {
+  if (!createdBy) return "Sistema";
+  if (currentUser && createdBy === currentUser.id) return currentUser.name || "Você";
+  return "Colaborador";
+}
+
+// ── Atividades ────────────────────────────────────────────────────────────────
+
+function RHActivitiesPanel({ activities, currentUser }) {
+  const sorted = useMemo(() => {
+    return [...(activities || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [activities]);
+
+  if (sorted.length === 0) {
+    return (
+      <PlaceholderPanel
+        icon={Activity}
+        title="Atividades"
+        hint="Movimentações de etapa e eventos aparecem aqui."
+      />
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)" }}>
+        Atividades
+      </div>
+      <ol className="space-y-3">
+        {sorted.slice(0, 20).map((a, i) => (
+          <li key={a.id ?? i} className="text-xs" style={{ color: "var(--text)" }}>
+            <div>
+              <span style={{ color: "var(--text-dim)" }}>{authorLabel(a.createdBy, currentUser)} </span>
+              {a.body}
+            </div>
+            <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+              {formatTimestamp(a.createdAt)}
+            </div>
+          </li>
+        ))}
+        {sorted.length > 20 && (
+          <li className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+            +{sorted.length - 20} eventos anteriores
+          </li>
+        )}
+      </ol>
+    </div>
+  );
+}
+
+// ── Comentários ───────────────────────────────────────────────────────────────
+
+function RHCommentsPanel({ activities, onAddActivity, currentUser }) {
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const comments = useMemo(() => {
+    return (activities || [])
+      .filter(a => a.type === "comment" || a.type === "note")
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [activities]);
+
+  const handleAdd = useCallback(async () => {
+    const body = text.trim();
+    if (!body || !onAddActivity) return;
+    setSaving(true);
+    try {
+      await onAddActivity({
+        type: "comment",
+        body,
+        createdBy: currentUser?.id || null,
+        createdAt: new Date().toISOString(),
+      });
+      setText("");
+    } finally {
+      setSaving(false);
+    }
+  }, [text, onAddActivity, currentUser]);
+
+  return (
+    <div className="p-4 rounded-xl border space-y-3" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+        Comentários
+      </div>
+      {comments.length === 0 && (
+        <div className="text-xs italic" style={{ color: "var(--text-dim)" }}>
+          Nenhum comentário ainda.
+        </div>
+      )}
+      {comments.length > 0 && (
+        <ol className="space-y-2.5">
+          {comments.slice(0, 20).map((c, i) => (
+            <li key={c.id ?? i} className="text-xs" style={{ color: "var(--text)" }}>
+              <div className="font-semibold mb-0.5" style={{ color: "var(--text)", fontSize: 11 }}>
+                {authorLabel(c.createdBy, currentUser)}
+                <span className="ml-1.5 font-normal" style={{ color: "var(--text-dim)", fontSize: 10 }}>
+                  {formatTimestamp(c.createdAt)}
+                </span>
+              </div>
+              <div className="whitespace-pre-line">{c.body}</div>
+            </li>
+          ))}
+        </ol>
+      )}
+      {onAddActivity && (
+        <div className="pt-2 border-t" style={{ borderColor: "var(--surface-alt)" }}>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Escreva um comentário..."
+            rows={2}
+            className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
+            style={{ borderColor: "var(--border)", color: "var(--text)", resize: "vertical", fontFamily: "inherit" }}
+          />
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={handleAdd}
+              disabled={!text.trim() || saving}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+              style={{
+                background: text.trim() && !saving ? "var(--accent)" : "var(--border)",
+                color: text.trim() && !saving ? "#FFFFFF" : "var(--text-dim)",
+                border: "none",
+                cursor: text.trim() && !saving ? "pointer" : "not-allowed",
+              }}
+            >
+              <Plus size={12} />
+              {saving ? "Adicionando..." : "Comentar"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Anexos ────────────────────────────────────────────────────────────────────
+
+const FILE_ICON_MAP = {
+  "application/pdf": FileText,
+  "image/jpeg": FileImage,
+  "image/png": FileImage,
+  "image/gif": FileImage,
+  "image/webp": FileImage,
+  "application/vnd.ms-excel": FileSpreadsheet,
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": FileSpreadsheet,
+};
+
+function FileIcon({ mimeType }) {
+  const Icon = FILE_ICON_MAP[mimeType] || File;
+  return <Icon size={16} />;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function RHAttachmentsPanel({ domain, recordId, currentUser }) {
+  const { attachments, loading, uploading, error, upload, remove, getSignedUrl } = useRHAttachments(domain, recordId);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const inputRef = useRef(null);
+
+  const handleFiles = useCallback((files) => {
+    Array.from(files).forEach(file => upload(file, { uploadedBy: currentUser?.id || null }));
+  }, [upload, currentUser]);
+
+  const handleView = useCallback(async (att) => {
+    setDownloadingId(att.id);
+    try {
+      const url = await getSignedUrl(att.file_path);
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
+    } finally {
+      setDownloadingId(null);
+    }
+  }, [getSignedUrl]);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <button
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+          style={{
+            background: "var(--accent)",
+            color: "#FFFFFF",
+            border: "none",
+            opacity: uploading ? 0.6 : 1,
+            cursor: uploading ? "not-allowed" : "pointer",
+          }}
+        >
+          <Upload size={12} />
+          {uploading ? "Enviando…" : "Anexar arquivo"}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={e => { if (e.target.files?.length) { handleFiles(e.target.files); e.target.value = ""; } }}
+        />
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Carregando…</div>
+      )}
+
+      {!loading && attachments.length === 0 && (
+        <div className="text-xs text-center py-2 italic" style={{ color: "var(--text-dim)" }}>
+          Nenhum arquivo anexado ainda.
+        </div>
+      )}
+
+      {attachments.length > 0 && (
+        <div className="space-y-1.5">
+          {attachments.map(att => (
+            <div
+              key={att.id}
+              className="flex items-center gap-2.5 p-2.5 rounded-lg border"
+              style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}
+              >
+                <FileIcon mimeType={att.mime_type} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
+                  {att.file_name}
+                </div>
+                <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                  {formatBytes(att.file_size)}
+                  {att.created_at && (
+                    <> · {new Date(att.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => handleView(att)}
+                disabled={downloadingId === att.id}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                title="Abrir arquivo"
+                aria-label="Abrir arquivo"
+              >
+                <Download size={13} />
+              </button>
+              <button
+                onClick={() => remove(att)}
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                title="Remover arquivo"
+                aria-label="Remover arquivo"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Checklists ────────────────────────────────────────────────────────────────
+
+function RHChecklistsPanel({ domain, recordId, currentUser }) {
+  const { checklists, loading, error, createChecklist, deleteChecklist, addItem, toggleItem, removeItem, renameChecklist } = useRHChecklists(domain, recordId);
+  const [newTitle, setNewTitle] = useState("");
+  const [creatingTitle, setCreatingTitle] = useState(false);
+  const [addingTo, setAddingTo] = useState(null);
+  const [addingText, setAddingText] = useState("");
+  const [editingTitleId, setEditingTitleId] = useState(null);
+  const [editingTitleText, setEditingTitleText] = useState("");
+
+  const handleCreate = async () => {
+    const t = newTitle.trim() || "Checklist";
+    setCreatingTitle(false);
+    setNewTitle("");
+    await createChecklist({ title: t, createdBy: currentUser?.id });
+  };
+
+  const handleAddItemEnter = async (checklistId) => {
+    const t = addingText.trim();
+    if (!t) return;
+    setAddingText("");
+    await addItem(checklistId, t);
+    // mantém o input aberto para o próximo item
+  };
+
+  const handleAddItemBlur = async (checklistId) => {
+    const t = addingText.trim();
+    setAddingText("");
+    setAddingTo(null);
+    if (t) await addItem(checklistId, t);
+  };
+
+  const handleRename = async (id) => {
+    const t = editingTitleText.trim();
+    setEditingTitleId(null);
+    setEditingTitleText("");
+    if (t) await renameChecklist(id, t);
+  };
+
+  if (loading) return <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Carregando…</div>;
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          {error}
+        </div>
+      )}
+
+      {checklists.length === 0 && !creatingTitle && (
+        <div className="text-xs text-center py-2 italic" style={{ color: "var(--text-dim)" }}>
+          Nenhum checklist criado ainda.
+        </div>
+      )}
+
+      {checklists.map(cl => {
+        const items = Array.isArray(cl.items) ? cl.items : [];
+        const doneCount = items.filter(it => it.done).length;
+        const progress = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
+
+        return (
+          <div key={cl.id} className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            {/* Header */}
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b" style={{ borderColor: "var(--surface-alt)" }}>
+              <ListChecks size={13} style={{ color: "var(--accent)", flexShrink: 0 }} />
+              {editingTitleId === cl.id ? (
+                <input
+                  autoFocus
+                  value={editingTitleText}
+                  onChange={e => setEditingTitleText(e.target.value)}
+                  onBlur={() => handleRename(cl.id)}
+                  onKeyDown={e => { if (e.key === "Enter") handleRename(cl.id); if (e.key === "Escape") { setEditingTitleId(null); } }}
+                  className="flex-1 text-xs font-semibold outline-none bg-transparent border-b"
+                  style={{ color: "var(--text)", borderColor: "var(--accent)" }}
+                />
+              ) : (
+                <button
+                  className="flex-1 text-left text-xs font-semibold"
+                  style={{ color: "var(--text)", background: "none", border: "none", cursor: "text" }}
+                  onDoubleClick={() => { setEditingTitleId(cl.id); setEditingTitleText(cl.title); }}
+                  title="Clique duplo para renomear"
+                >
+                  {cl.title}
+                </button>
+              )}
+              {items.length > 0 && (
+                <span className="text-[10px] font-semibold shrink-0" style={{ color: "var(--text-dim)" }}>
+                  {doneCount}/{items.length}
+                </span>
+              )}
+              <button
+                onClick={() => deleteChecklist(cl.id)}
+                className="p-1 rounded transition-colors shrink-0"
+                style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+                title="Remover checklist"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+
+            {/* Progress bar */}
+            {items.length > 0 && (
+              <div className="px-3 pt-2" style={{ paddingBottom: 0 }}>
+                <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--surface-alt)" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${progress}%`, background: progress === 100 ? "#16A34A" : "var(--accent)" }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Items */}
+            <div className="p-3 space-y-1.5">
+              {items.map(it => (
+                <div key={it.id} className="flex items-start gap-2 group">
+                  <button
+                    onClick={() => toggleItem(cl.id, it.id)}
+                    className="mt-0.5 shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-all"
+                    style={{
+                      background: it.done ? "var(--accent)" : "var(--surface)",
+                      borderColor: it.done ? "var(--accent)" : "var(--border-strong)",
+                      cursor: "pointer",
+                    }}
+                    aria-label={it.done ? "Desmarcar" : "Marcar como feito"}
+                  >
+                    {it.done && <Check size={10} style={{ color: "#FFFFFF" }} />}
+                  </button>
+                  <span
+                    className="flex-1 text-xs leading-5"
+                    style={{
+                      color: it.done ? "var(--text-dim)" : "var(--text)",
+                      textDecoration: it.done ? "line-through" : "none",
+                    }}
+                  >
+                    {it.text}
+                  </span>
+                  <button
+                    onClick={() => removeItem(cl.id, it.id)}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all"
+                    style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+                    title="Remover item"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add item inline */}
+              {addingTo === cl.id ? (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-4 h-4 rounded border shrink-0" style={{ borderColor: "var(--border-strong)" }} />
+                  <input
+                    autoFocus
+                    value={addingText}
+                    onChange={e => setAddingText(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") handleAddItemEnter(cl.id); if (e.key === "Escape") { setAddingTo(null); setAddingText(""); } }}
+                    onBlur={() => handleAddItemBlur(cl.id)}
+                    placeholder="Nova tarefa..."
+                    className="flex-1 text-xs outline-none border-b pb-0.5"
+                    style={{ color: "var(--text)", borderColor: "var(--accent)", background: "transparent" }}
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setAddingTo(cl.id); setAddingText(""); }}
+                  className="flex items-center gap-1.5 text-xs mt-1 transition-colors"
+                  style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "var(--accent)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+                >
+                  <Plus size={11} />
+                  Adicionar item
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* New checklist */}
+      {creatingTitle ? (
+        <div className="flex items-center gap-2">
+          <input
+            autoFocus
+            value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") { setCreatingTitle(false); setNewTitle(""); } }}
+            onBlur={handleCreate}
+            placeholder="Nome do checklist..."
+            className="flex-1 text-xs rounded-lg border px-3 py-2 outline-none"
+            style={{ borderColor: "var(--accent)", color: "var(--text)" }}
+          />
+        </div>
+      ) : (
+        <button
+          onClick={() => setCreatingTitle(true)}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed text-xs font-semibold transition-colors"
+          style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "transparent" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+        >
+          <Plus size={12} />
+          Novo checklist
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Shell ─────────────────────────────────────────────────────────────────────
+
+export function RHDetailDrawerShell({ domain, recordId, activities = [], onAddActivity, currentUser }) {
+  const showChecklists = domain === "vagas" || domain === "candidatos";
+
+  const tabs = useMemo(() => {
+    const list = [
+      { id: "atividades", label: "Atividades", icon: Activity },
+      { id: "anexos", label: "Anexos", icon: Paperclip },
+    ];
+    if (showChecklists) list.push({ id: "checklists", label: "Checklists", icon: ListChecks });
+    list.push({ id: "comentarios", label: "Comentários", icon: MessageSquare });
+    return list;
+  }, [showChecklists]);
+
+  const [tab, setTab] = useState("atividades");
+
+  useEffect(() => {
+    if (tab === "checklists" && !showChecklists) setTab("atividades");
+  }, [showChecklists, tab]);
+
+  return (
+    <div className="space-y-4">
+      <RHSideTabs tabs={tabs} activeTab={tab} onChange={setTab} />
+
+      {tab === "atividades" && (
+        <RHActivitiesPanel activities={activities} currentUser={currentUser} />
+      )}
+
+      {tab === "anexos" && (
+        <RHAttachmentsPanel domain={domain} recordId={recordId} currentUser={currentUser} />
+      )}
+
+      {tab === "checklists" && showChecklists && (
+        <RHChecklistsPanel domain={domain} recordId={recordId} currentUser={currentUser} />
+      )}
+
+      {tab === "comentarios" && (
+        <RHCommentsPanel activities={activities} onAddActivity={onAddActivity} currentUser={currentUser} />
+      )}
+    </div>
+  );
+}
+
+export default RHDetailDrawerShell;
