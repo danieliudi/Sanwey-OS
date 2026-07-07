@@ -10,13 +10,21 @@ export function StageFieldInput({ field, value, onChange, users, companyId }) {
   // mostra o erro quando há valor preenchido; campo vazio é responsabilidade
   // do required, não desta camada.
   const error = field.validationRule ? validateFieldFormat(field.validationRule, value) : null;
-  const hasValue = !(value === undefined || value === null || value === "");
+  const hasValue = !(value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0));
+  // Destaque de obrigatório vazio — antes só aparecia como alert() ao tentar
+  // mudar de etapa; aqui já sinaliza inline, sem precisar tentar mover o card.
+  const isMissingRequired = (field.effectiveRequired ?? field.required) && !hasValue;
 
   return (
-    <div>
+    <div
+      style={isMissingRequired ? { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: 6 } : undefined}
+    >
       {input}
       {hasValue && error && (
         <div style={{ fontSize: 11, color: "#B91C1C", marginTop: 4 }}>{error}</div>
+      )}
+      {isMissingRequired && (
+        <div style={{ fontSize: 11, color: "#B91C1C", marginTop: 4 }}>Campo obrigatório</div>
       )}
     </div>
   );

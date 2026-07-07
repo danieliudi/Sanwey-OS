@@ -877,6 +877,16 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                         />
                       ))
                     )}
+                    {canWrite && !stage.terminal && (
+                      <button
+                        onClick={() => setQuickAddStage(stage.id)}
+                        className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+                        style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                      >
+                        <Plus size={12} />
+                        Nova campanha
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -918,8 +928,8 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       flexShrink: 0,
                     }}
                   >
-                    {/* 4px top color band */}
-                    <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
+                    {/* Top color band — mais grosso pra dar mais peso visual */}
+                    <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
 
                     {/* Column header */}
                     <div
@@ -944,6 +954,18 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           {stage.sla && <span style={{ fontWeight: 400, marginLeft: 6 }}>· SLA {stage.sla}d</span>}
                         </div>
                       </div>
+                      {canWrite && !stage.terminal && (
+                        <button
+                          onClick={() => setQuickAddStage(stage.id)}
+                          title="Nova campanha nesta etapa"
+                          className="flex items-center justify-center rounded-md transition-colors"
+                          style={{ width: 26, height: 26, color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer", flexShrink: 0 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      )}
                       {canWrite && (
                         <button
                           onClick={() => setFieldEditorStage(stage)}

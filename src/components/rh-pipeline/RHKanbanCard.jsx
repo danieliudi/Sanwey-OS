@@ -1,12 +1,18 @@
 import React, { memo, useRef, useState, useEffect } from "react";
-import { Clock, MoreVertical, ArrowRight } from "lucide-react";
+import { Clock, MoreVertical, ArrowRight, Check, X as XIcon } from "lucide-react";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
 
-function agingStyle(days) {
-  if (days > 21) return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
-  if (days > 7)  return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  if (days > 0)  return { bg: "#DCFCE7", text: "#16A34A", border: "#BBF7D0" };
-  return null;
+// Tempo na etapa (neutro) vs. SLA estourado (vermelho) — só fica âmbar/
+// vermelho quando de fato passa do slaDays configurado pra etapa; sem SLA,
+// ou dentro do prazo, é só um badge neutro (tempo decorrido).
+function agingStyle(days, slaDays) {
+  if (days <= 0) return null;
+  if (slaDays) {
+    const ratio = days / slaDays;
+    if (ratio >= 1)   return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
+    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
+  }
+  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
 function stageKeyOf(s) {
@@ -17,7 +23,9 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  const ageStyle = agingDays != null ? agingStyle(agingDays) : null;
+  const currentStage = stages?.find(s => stageKeyOf(s) === stage);
+  const ageStyle = agingDays != null ? agingStyle(agingDays, currentStage?.slaDays) : null;
+  const isTerminal = Boolean(currentStage?.terminal);
 
   const moveTargets = stages
     ? stages.filter(s => stageKeyOf(s) !== stage && !s.terminal)
@@ -47,6 +55,7 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
         border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
+        opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;
@@ -59,8 +68,17 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
         e.currentTarget.style.transform = "translateY(0)";
       }}
     >
-      {/* Aging badge + move menu — right-aligned top row; card body lives in children below */}
-      <div className="flex items-start justify-end gap-2 mb-2">
+      {/* Selo de etapa terminal (esquerda) + aging badge/menu (direita) */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center shrink-0">
+          {isTerminal && (
+            currentStage.won
+              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A" }} />
+              : currentStage.lost
+                ? <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626" }} />
+                : null
+          )}
+        </div>
         <div className="flex items-center gap-1 shrink-0">
           {completeness?.total > 0 && (
             <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />

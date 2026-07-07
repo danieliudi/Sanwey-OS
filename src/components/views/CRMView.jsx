@@ -830,10 +830,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
                 }}
               >
-                {/* Column header — top color band like HubSpot */}
+                {/* Column header — top color band like HubSpot (mais grosso pra
+                    dar mais peso visual à identidade de cor da etapa) */}
                 <div
                   style={{
-                    height: 4,
+                    height: 8,
                     background: stage.color,
                     flexShrink: 0,
                   }}
@@ -925,6 +926,16 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         />
                       );
                     })
+                  )}
+                  {onAddLead && !stage.terminal && (
+                    <button
+                      onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: isGroupView ? firstValidCompany : activeCompany })}
+                      className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+                      style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                    >
+                      <Plus size={12} />
+                      Nova oportunidade
+                    </button>
                   )}
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import React, { memo, useRef, useState, useEffect } from "react";
-import { Clock, MoreVertical, ArrowRight } from "lucide-react";
+import { Clock, MoreVertical, ArrowRight, Check, X as XIcon } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
@@ -12,19 +12,28 @@ function daysFromDate(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function agingStyle(days) {
-  if (days > 21) return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
-  if (days > 7)  return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  if (days > 0)  return { bg: "#DCFCE7", text: "#16A34A", border: "#BBF7D0" };
-  return null;
+// Tempo na etapa (neutro, informativo) vs. SLA estourado (vermelho) — antes
+// os 3 tons (verde/âmbar/vermelho) eram só por dias corridos fixos (7/21),
+// sem nenhuma relação com o slaDays real de cada etapa. Agora só fica
+// vermelho/âmbar quando de fato passa do slaDays configurado; sem SLA
+// definido, ou dentro do prazo, é só um badge neutro (tempo decorrido).
+function agingStyle(days, slaDays) {
+  if (days <= 0) return null;
+  if (slaDays) {
+    const ratio = days / slaDays;
+    if (ratio >= 1)   return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
+    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
+  }
+  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
 function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
+  const currentStage = stages?.find(s => s.id === lead.stage);
   const daysInStage = daysFromDate(lead.stageChangedAt);
-  const ageStyle = daysInStage !== null ? agingStyle(daysInStage) : null;
+  const ageStyle = daysInStage !== null ? agingStyle(daysInStage, currentStage?.slaDays) : null;
   const probDisplay = lead.probability > 1
     ? Math.round(lead.probability)
     : Math.round(lead.probability * 100);
@@ -32,6 +41,10 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
   const moveTargets = stages
     ? stages.filter(s => s.id !== lead.stage && !s.terminal)
     : [];
+
+  // Card de etapa terminal (ganho/perdido) fica visualmente "arquivado" —
+  // menos ênfase que os cards ainda em jogo, com um selo do resultado.
+  const isTerminal = Boolean(currentStage?.terminal);
 
   const accentColor = COMPANIES[lead.companyId]?.primary || "var(--text-dim)";
   const shadowBase  = `inset 3px 0 0 ${accentColor}, 0 1px 4px rgba(0,0,0,0.04)`;
@@ -58,6 +71,7 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
         border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
+        opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;
@@ -72,8 +86,13 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
     >
       {/* Company + aging badge + score + menu */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: "var(--text)" }}>
-          {lead.company}
+        <div className="font-semibold text-[13px] leading-snug flex-1 flex items-center gap-1.5" style={{ color: "var(--text)" }}>
+          {isTerminal && (
+            currentStage.won
+              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A", flexShrink: 0 }} />
+              : <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626", flexShrink: 0 }} />
+          )}
+          <span>{lead.company}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {ageStyle && (

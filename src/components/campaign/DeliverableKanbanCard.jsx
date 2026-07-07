@@ -13,11 +13,17 @@ function daysFromDate(dateStr) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function agingStyle(days) {
-  if (days > 14) return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
-  if (days > 7)  return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  if (days > 0)  return { bg: "#DCFCE7", text: "#16A34A", border: "#BBF7D0" };
-  return null;
+// Tempo na etapa (neutro) vs. SLA estourado (vermelho) — só fica âmbar/
+// vermelho de fato passando do SLA da etapa; sem SLA, ou dentro do prazo, é
+// só um badge neutro (tempo decorrido).
+function agingStyle(days, sla) {
+  if (days <= 0) return null;
+  if (sla) {
+    const ratio = days / sla;
+    if (ratio >= 1)   return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
+    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
+  }
+  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
 function DeliverableKanbanCardImpl({
@@ -27,8 +33,10 @@ function DeliverableKanbanCardImpl({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
+  const stage       = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
   const daysInStage = daysFromDate(item.stageChangedAt);
-  const ageStyle    = daysInStage !== null ? agingStyle(daysInStage) : null;
+  const ageStyle    = daysInStage !== null ? agingStyle(daysInStage, stage?.sla) : null;
+  const isTerminal  = Boolean(stage?.terminal);
   const priColor    = PRIORITY_COLORS[item.priority] || null;
   const compColor   = item.companyIds?.[0] ? COMPANIES[item.companyIds[0]]?.primary : NEUTRAL.slate;
   const isOverdue   = item.deadline && new Date(item.deadline) < new Date();
@@ -58,6 +66,7 @@ function DeliverableKanbanCardImpl({
         border: "1px solid #E5E7EB",
         boxShadow: shadowBase,
         position: "relative",
+        opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;

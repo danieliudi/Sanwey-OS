@@ -29,6 +29,10 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
   const t = field.fieldType;
   const opts = Array.isArray(field.options) ? field.options : [];
   const error = validateFieldFormat(field.validationRule, value);
+  const hasValue = !(value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0));
+  // Destaque de obrigatório vazio — antes só aparecia como alert() ao tentar
+  // mudar de etapa; aqui já sinaliza inline, sem precisar tentar mover o card.
+  const isMissingRequired = (field.effectiveRequired ?? field.required) && !hasValue;
 
   const renderInput = () => {
   if (t === "textarea") {
@@ -133,10 +137,15 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
   };
 
   return (
-    <div>
+    <div
+      style={isMissingRequired ? { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: 6 } : undefined}
+    >
       {renderInput()}
-      {error && (
+      {hasValue && error && (
         <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>{error}</div>
+      )}
+      {isMissingRequired && (
+        <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>Campo obrigatório</div>
       )}
     </div>
   );

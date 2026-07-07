@@ -1,5 +1,5 @@
 import React, { memo, useRef, useState, useEffect } from "react";
-import { Clock, Star, AlertTriangle, TrendingUp, MoreVertical, ArrowRight } from "lucide-react";
+import { Clock, Star, AlertTriangle, TrendingUp, MoreVertical, ArrowRight, Check, X as XIcon } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { CHANNEL_COLORS, MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { formatK } from "../../utils/currency";
@@ -15,22 +15,30 @@ function daysUntilDate(dateStr) {
   return Math.floor((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
+// Tempo na etapa (neutro) vs. SLA estourado (vermelho) — só fica âmbar/
+// vermelho de fato passando do SLA da etapa; sem SLA, ou dentro do prazo, é
+// só um badge neutro (tempo decorrido).
 function slaStyle(daysInStage, sla) {
-  if (!sla) return null;
-  const ratio = daysInStage / sla;
-  if (ratio >= 1)   return { bg: "#FEE2E2", text: "var(--danger)", border: "#FECACA" };
-  if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  return null;
+  if (daysInStage <= 0) return null;
+  if (sla) {
+    const ratio = daysInStage / sla;
+    if (ratio >= 1)   return { bg: "#FEE2E2", text: "var(--danger)", border: "#FECACA" };
+    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
+  }
+  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
 function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  const stage = MARKETING_STAGES.find(s => s.id === campaign.stage);
+  // Usa as etapas vivas (DB, editáveis) quando disponíveis — MARKETING_STAGES
+  // é só o fallback estático de antes da customização por etapa existir.
+  const stage = (stages || MARKETING_STAGES).find(s => s.id === campaign.stage);
   const daysInStage = daysFromDate(campaign.stageChangedAt);
   const daysToLaunch = daysUntilDate(campaign.launchDate);
   const ageStyle = daysInStage !== null ? slaStyle(daysInStage, stage?.sla) : null;
+  const isTerminal = Boolean(stage?.terminal);
 
   const isUrgent = daysToLaunch !== null && daysToLaunch <= 7 &&
     !["ao_vivo", "encerrado", "analise"].includes(campaign.stage);
@@ -70,6 +78,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
         border: "1px solid #E5E7EB",
         boxShadow: shadowBase,
         position: "relative",
+        opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;

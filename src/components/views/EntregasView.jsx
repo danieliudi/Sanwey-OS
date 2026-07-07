@@ -617,7 +617,7 @@ export function EntregasView({ user, users = [] }) {
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
                     style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", minHeight: 480, flexShrink: 0 }}>
-                    <div style={{ height: 4, background: stage.color, flexShrink: 0 }} />
+                    <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
                     <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
                       style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
                       <div className="min-w-0 flex-1">
