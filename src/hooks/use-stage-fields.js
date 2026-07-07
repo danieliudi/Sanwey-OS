@@ -37,6 +37,7 @@ function rowToField(r) {
     // src/utils/field-conditions.js pro avaliador.
     visibleIf: r.visible_if || null,
     requiredIf: r.required_if || null,
+    validationRule: r.validation_rule || null,
   };
 }
 
@@ -54,6 +55,7 @@ function fieldToRow(f) {
     help_text: f.helpText ?? null,
     visible_if: f.visibleIf ?? null,
     required_if: f.requiredIf ?? null,
+    validation_rule: f.validationRule ?? null,
   };
 }
 
