@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Zap, Plus, Trash2, ToggleLeft, ToggleRight, ArrowRight,
   AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X, Info,
-  Share2, Building2,
+  Share2, Building2, GitBranch, CornerDownRight,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
@@ -36,12 +36,16 @@ const LEAD_FIELDS = [
 ];
 
 const OPERATORS = [
-  { id: "eq",       label: "é igual a" },
-  { id: "neq",      label: "é diferente de" },
-  { id: "gt",       label: "maior que" },
-  { id: "lt",       label: "menor que" },
-  { id: "contains", label: "contém" },
+  { id: "eq",           label: "é igual a" },
+  { id: "neq",          label: "é diferente de" },
+  { id: "gt",           label: "maior que" },
+  { id: "lt",           label: "menor que" },
+  { id: "contains",     label: "contém" },
+  { id: "is_empty",     label: "está vazio" },
+  { id: "is_not_empty", label: "não está vazio" },
 ];
+
+const NO_VALUE_OPERATORS = new Set(["is_empty", "is_not_empty"]);
 
 const BADGE_COLORS = [
   { hex: "#6366F1", label: "Índigo" },
@@ -116,7 +120,7 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser }
             </span>
           </div>
           <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
-            Regras automáticas sem IA — {stats.enabled} ativa{stats.enabled !== 1 ? "s" : ""} de {stats.total}
+            Regras automáticas sem IA, compartilhadas com a equipe — {stats.enabled} ativa{stats.enabled !== 1 ? "s" : ""} de {stats.total}
           </p>
         </div>
         <button
@@ -243,14 +247,48 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser }
   );
 }
 
+// ── Helpers de leitura (ação singular antiga ou thenActions novo) ────────────
+
+function thenActionsOf(rule) {
+  if (Array.isArray(rule.thenActions) && rule.thenActions.length) return rule.thenActions;
+  if (rule.action) return [rule.action];
+  return [];
+}
+
+function actionSummary(a, allStages) {
+  if (!a) return "—";
+  if (a.type === "move_stage") {
+    const stage = allStages.find(s => s.id === a.targetStage)?.name || a.targetStage;
+    return `Mover para ${stage}`;
+  }
+  if (a.type === "set_field")  return `${a.field} = "${a.fieldValue}"`;
+  if (a.type === "add_badge")  return `Badge: ${a.badge}`;
+  if (a.type === "notify")     return `Alerta: ${a.message}`;
+  if (a.type === "create_deliverable") return `Entrega: "${a.deliverableTitle || "Onboarding: {empresa}"}"`;
+  if (a.type === "enrich_cnpj") return "Busca CNPJ automática";
+  return ACTION_TYPES.find(t => t.id === a.type)?.desc || "—";
+}
+
+function conditionGroupsSummary(groups) {
+  if (!groups?.length) return null;
+  return groups
+    .map(g => (g.conditions || [])
+      .map(c => {
+        const op = OPERATORS.find(o => o.id === c.operator)?.label || c.operator;
+        return NO_VALUE_OPERATORS.has(c.operator) ? `${c.field} ${op}` : `${c.field} ${op} "${c.value}"`;
+      })
+      .join(" E "))
+    .join(" OU ");
+}
+
 // ── Automation row ────────────────────────────────────────────────────────────
 
 function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete }) {
   const triggerType = TRIGGER_TYPES.find(t => t.id === rule.trigger?.type);
-  const actionType  = ACTION_TYPES.find(a => a.id === rule.action?.type);
   const TriggerIcon = triggerType?.icon || Zap;
-  const ActionIcon  = actionType?.icon || Zap;
   const company     = COMPANY_OPTIONS.find(c => c.id === rule.companyId);
+  const thenActions = thenActionsOf(rule);
+  const hasConditions = (rule.conditionGroups || []).length > 0;
 
   const triggerLabel = useMemo(() => {
     const t = rule.trigger;
@@ -271,20 +309,9 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
     return triggerType?.desc || "—";
   }, [rule.trigger, allStages, triggerType]);
 
-  const actionLabel = useMemo(() => {
-    const a = rule.action;
-    if (!a) return "—";
-    if (a.type === "move_stage") {
-      const stage = allStages.find(s => s.id === a.targetStage)?.name || a.targetStage;
-      return `Mover para ${stage}`;
-    }
-    if (a.type === "set_field")  return `${a.field} = "${a.fieldValue}"`;
-    if (a.type === "add_badge")  return `Badge: ${a.badge}`;
-    if (a.type === "notify")     return `Alerta: ${a.message}`;
-    if (a.type === "create_deliverable") return `Entrega: "${a.deliverableTitle || "Onboarding: {empresa}"}"`;
-    if (a.type === "enrich_cnpj") return "Busca CNPJ automática";
-    return actionType?.desc || "—";
-  }, [rule.action, allStages, actionType]);
+  const actionLabel = thenActions.length > 1
+    ? `${thenActions.length} ações`
+    : actionSummary(thenActions[0], allStages);
 
   return (
     <div style={{ background: rule.enabled ? "var(--surface)" : "var(--surface-alt)" }}>
@@ -328,12 +355,21 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
                   {rule.module === "marketing" ? "Marketing" : "Universal"}
                 </span>
               )}
+              {hasConditions && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1"
+                  style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+                  title="Tem condições adicionais (E/OU) refinando o gatilho"
+                >
+                  <GitBranch size={9} />
+                  condições
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs flex-wrap" style={{ color: "var(--text-dim)" }}>
               <TriggerIcon size={11} />
               <span>{triggerLabel}</span>
               <ArrowRight size={10} />
-              <ActionIcon size={11} />
               <span>{actionLabel}</span>
             </div>
           </div>
@@ -372,66 +408,78 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
 
 function AutomationDetail({ rule, allStages }) {
   const t = rule.trigger;
-  const a = rule.action;
+  const thenActions = thenActionsOf(rule);
+  const elseActions = rule.elseActions || [];
+  const groups = rule.conditionGroups || [];
 
   return (
-    <div className="grid sm:grid-cols-2 gap-4 mt-2">
-      <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
-        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Gatilho</div>
-        <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>
-          {TRIGGER_TYPES.find(t2 => t2.id === t?.type)?.label || t?.type}
+    <div className="space-y-3 mt-2">
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Gatilho</div>
+          <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+            {TRIGGER_TYPES.find(t2 => t2.id === t?.type)?.label || t?.type}
+          </div>
+          {t?.type === "stage_change" && (
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>
+              De: <b>{allStages.find(s => s.id === t.fromStage)?.name || "Qualquer"}</b>
+              {" → "}
+              Para: <b>{allStages.find(s => s.id === t.toStage)?.name || "Qualquer"}</b>
+            </div>
+          )}
+          {t?.type === "field_value" && (
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>
+              Campo <b>{t.field}</b> {OPERATORS.find(o => o.id === t.operator)?.label} <b>"{t.value}"</b>
+            </div>
+          )}
+          {t?.type === "time_in_stage" && (
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>
+              <b>{t.days || 0} dias</b> na etapa <b>{allStages.find(s => s.id === t.stageId)?.name || t.stageId}</b>
+            </div>
+          )}
+          {t?.type === "lead_created" && (
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>Ao criar novo card</div>
+          )}
         </div>
-        {t?.type === "stage_change" && (
-          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
-            De: <b>{allStages.find(s => s.id === t.fromStage)?.name || "Qualquer"}</b>
-            {" → "}
-            Para: <b>{allStages.find(s => s.id === t.toStage)?.name || "Qualquer"}</b>
+
+        <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+            {groups.length > 0 ? "Então (condição atendida)" : "Ação"}
           </div>
-        )}
-        {t?.type === "field_value" && (
-          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
-            Campo <b>{t.field}</b> {OPERATORS.find(o => o.id === t.operator)?.label} <b>"{t.value}"</b>
-          </div>
-        )}
-        {t?.type === "time_in_stage" && (
-          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
-            <b>{t.days || 0} dias</b> na etapa <b>{allStages.find(s => s.id === t.stageId)?.name || t.stageId}</b>
-          </div>
-        )}
-        {t?.type === "lead_created" && (
-          <div className="text-xs" style={{ color: "var(--text-dim)" }}>Ao criar novo card</div>
-        )}
+          {thenActions.length === 0 && <div className="text-xs" style={{ color: "var(--text-dim)" }}>—</div>}
+          {thenActions.map((a, i) => (
+            <div key={i} className="text-xs" style={{ color: "var(--text-dim)" }}>
+              <b style={{ color: "var(--text)" }}>{ACTION_TYPES.find(a2 => a2.id === a?.type)?.label || a?.type}</b>
+              {": "}{actionSummary(a, allStages)}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
-        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>Ação</div>
-        <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>
-          {ACTION_TYPES.find(a2 => a2.id === a?.type)?.label || a?.type}
+      {groups.length > 0 && (
+        <div className="rounded-xl border p-3 space-y-1.5" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: "var(--text-dim)" }}>
+            <GitBranch size={11} />
+            Condições (refinam o gatilho acima)
+          </div>
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>{conditionGroupsSummary(groups)}</div>
+
+          {elseActions.length > 0 && (
+            <div className="pt-2 mt-1" style={{ borderTop: "1px dashed var(--border)" }}>
+              <div className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: "var(--text-dim)" }}>
+                <CornerDownRight size={11} />
+                Senão (condição não atendida)
+              </div>
+              {elseActions.map((a, i) => (
+                <div key={i} className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
+                  <b style={{ color: "var(--text)" }}>{ACTION_TYPES.find(a2 => a2.id === a?.type)?.label || a?.type}</b>
+                  {": "}{actionSummary(a, allStages)}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        {a?.type === "move_stage" && (
-          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
-            Mover para <b>{allStages.find(s => s.id === a.targetStage)?.name || a.targetStage}</b>
-          </div>
-        )}
-        {a?.type === "set_field" && (
-          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
-            Definir <b>{a.field}</b> = "<b>{a.fieldValue}</b>"
-          </div>
-        )}
-        {a?.type === "add_badge" && (
-          <div className="flex items-center gap-2 mt-1">
-            <span
-              className="px-2 py-0.5 rounded-full text-xs font-semibold"
-              style={{ background: (a.badgeColor || "#6366F1") + "20", color: a.badgeColor || "#6366F1" }}
-            >
-              {a.badge || "Badge"}
-            </span>
-          </div>
-        )}
-        {a?.type === "notify" && (
-          <div className="text-xs" style={{ color: "var(--text-dim)" }}>"{a.message}"</div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -444,35 +492,50 @@ const MODULE_OPTIONS = [
   { id: "universal", label: "Universal" },
 ];
 
+const EMPTY_ACTION = { type: "move_stage", targetStage: "" };
+const EMPTY_CONDITION = { field: "", operator: "eq", value: "" };
+
 const EMPTY_RULE = {
   name: "",
   companyId: "all",
   module: "crm",
   trigger: { type: "stage_change", fromStage: "", toStage: "" },
-  action:  { type: "move_stage",   targetStage: "" },
+  conditionGroups: [],
+  thenActions: [{ ...EMPTY_ACTION }],
+  elseActions: [],
 };
 
 function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
-  // initialRule vem dos templates (clique em "Usar template"). Garante
-  // shape válido mesclando com EMPTY_RULE pra evitar quebrar a validação
-  // se algum campo estiver faltando.
+  // initialRule vem dos templates (clique em "Usar template") ou de uma regra
+  // antiga com `action` singular — normaliza pro shape novo (thenActions[]).
   const [rule, setRule] = useState(() => {
     if (!initialRule) return EMPTY_RULE;
+    const thenActions = Array.isArray(initialRule.thenActions) && initialRule.thenActions.length
+      ? initialRule.thenActions
+      : (initialRule.action ? [{ ...initialRule.action }] : [{ ...EMPTY_ACTION }]);
     return {
       ...EMPTY_RULE,
       ...initialRule,
       trigger: { ...EMPTY_RULE.trigger, ...(initialRule.trigger || {}) },
-      action:  { ...EMPTY_RULE.action,  ...(initialRule.action  || {}) },
+      conditionGroups: initialRule.conditionGroups || [],
+      thenActions,
+      elseActions: initialRule.elseActions || [],
     };
   });
   // Quando o template já tem tudo preenchido, começa direto na etapa de
   // ação (revisão final). Quando não, segue do zero.
-  const [step, setStep] = useState(initialRule ? 2 : 0);
+  const [step, setStep] = useState(initialRule ? 3 : 0);
+
+  const hasConditions = rule.conditionGroups.length > 0;
+  const steps = hasConditions
+    ? ["Identificação", "Gatilho", "Condições", "Então / Senão"]
+    : ["Identificação", "Gatilho", "Condições", "Ação"];
 
   const canNext = () => {
     if (step === 0) return rule.name.trim().length > 0;
     if (step === 1) return validateTrigger(rule.trigger);
-    if (step === 2) return validateAction(rule.action);
+    if (step === 2) return true; // condições são opcionais
+    if (step === 3) return rule.thenActions.length > 0 && rule.thenActions.every(validateAction);
     return false;
   };
 
@@ -482,9 +545,6 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
   };
 
   const setTrigger = (patch) => setRule(r => ({ ...r, trigger: { ...r.trigger, ...patch } }));
-  const setAction  = (patch) => setRule(r => ({ ...r, action:  { ...r.action,  ...patch } }));
-
-  const steps = ["Identificação", "Gatilho", "Ação"];
 
   return (
     <div
@@ -493,7 +553,7 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-lg rounded-2xl shadow-2xl flex flex-col"
+        className="w-full max-w-xl rounded-2xl shadow-2xl flex flex-col"
         style={{ background: "var(--surface)", maxHeight: "90vh" }}
       >
         {/* Modal header */}
@@ -514,7 +574,7 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
         </div>
 
         {/* Step indicator */}
-        <div className="px-5 pt-4 flex items-center gap-0">
+        <div className="px-5 pt-4 flex items-center gap-0 flex-wrap">
           {steps.map((s, i) => (
             <React.Fragment key={s}>
               <button
@@ -552,7 +612,10 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
             <StepTrigger rule={rule} allStages={allStages} setTrigger={setTrigger} />
           )}
           {step === 2 && (
-            <StepAction rule={rule} allStages={allStages} setAction={setAction} />
+            <StepConditions rule={rule} setRule={setRule} />
+          )}
+          {step === 3 && (
+            <StepActions rule={rule} allStages={allStages} setRule={setRule} hasConditions={hasConditions} />
           )}
         </div>
 
@@ -567,7 +630,7 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
           >
             {step === 0 ? "Cancelar" : "Voltar"}
           </button>
-          {step < 2 ? (
+          {step < 3 ? (
             <button
               onClick={() => canNext() && setStep(s => s + 1)}
               disabled={!canNext()}
@@ -634,7 +697,7 @@ function StepIdentification({ rule, setRule }) {
               className="flex-1 py-2 text-xs font-semibold rounded-xl border transition-colors"
               style={{
                 borderColor: (rule.module ?? "crm") === m.id ? "var(--accent)" : "var(--border)",
-                background:  (rule.module ?? "crm") === m.id ? "var(--surface-alt)" : "var(--surface-alt)",
+                background:  "var(--surface-alt)",
                 color:       (rule.module ?? "crm") === m.id ? "var(--accent)" : "var(--text-dim)",
                 cursor:      "pointer",
               }}
@@ -686,7 +749,7 @@ function StepTrigger({ rule, allStages, setTrigger }) {
                 className="flex items-start gap-2.5 p-3 rounded-xl border text-left"
                 style={{
                   borderColor: active ? "var(--accent)" : "var(--border)",
-                  background: active ? "var(--surface-alt)" : "var(--surface-alt)",
+                  background: "var(--surface-alt)",
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--bg)"; }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
@@ -760,19 +823,21 @@ function StepTrigger({ rule, allStages, setTrigger }) {
                 {OPERATORS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Valor</label>
-              <input
-                type="text"
-                value={t.value || ""}
-                onChange={e => setTrigger({ value: e.target.value })}
-                placeholder="Valor..."
-                className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
-                style={{ borderColor: "var(--border)", color: "var(--text)" }}
-                onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-                onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
-              />
-            </div>
+            {!NO_VALUE_OPERATORS.has(t.operator) && (
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Valor</label>
+                <input
+                  type="text"
+                  value={t.value || ""}
+                  onChange={e => setTrigger({ value: e.target.value })}
+                  placeholder="Valor..."
+                  className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
+                  style={{ borderColor: "var(--border)", color: "var(--text)" }}
+                  onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
+                  onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -820,197 +885,401 @@ function StepTrigger({ rule, allStages, setTrigger }) {
   );
 }
 
-function StepAction({ rule, allStages, setAction }) {
-  const a = rule.action;
+// ── Step: Condições (grupos AND/OR, opcional) ────────────────────────────────
+
+function StepConditions({ rule, setRule }) {
+  const groups = rule.conditionGroups;
+
+  const addGroup = () => setRule(r => ({
+    ...r,
+    conditionGroups: [...r.conditionGroups, { logic: "AND", conditions: [{ ...EMPTY_CONDITION }] }],
+  }));
+
+  const removeGroup = (gi) => setRule(r => ({
+    ...r,
+    conditionGroups: r.conditionGroups.filter((_, i) => i !== gi),
+  }));
+
+  const addCondition = (gi) => setRule(r => ({
+    ...r,
+    conditionGroups: r.conditionGroups.map((g, i) => i === gi ? { ...g, conditions: [...g.conditions, { ...EMPTY_CONDITION }] } : g),
+  }));
+
+  const removeCondition = (gi, ci) => setRule(r => ({
+    ...r,
+    conditionGroups: r.conditionGroups.map((g, i) => i === gi ? { ...g, conditions: g.conditions.filter((_, j) => j !== ci) } : g),
+  }));
+
+  const patchCondition = (gi, ci, patch) => setRule(r => ({
+    ...r,
+    conditionGroups: r.conditionGroups.map((g, i) => i === gi
+      ? { ...g, conditions: g.conditions.map((c, j) => j === ci ? { ...c, ...patch } : c) }
+      : g),
+  }));
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-xs font-semibold mb-2" style={{ color: "var(--text)" }}>
-          Tipo de ação
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          {ACTION_TYPES.map(type => {
-            const Icon = type.icon;
-            const active = a.type === type.id;
-            return (
-              <button
-                key={type.id}
-                onClick={() => setAction({ type: type.id })}
-                className="flex items-start gap-2.5 p-3 rounded-xl border text-left"
-                style={{
-                  borderColor: active ? "var(--accent)" : "var(--border)",
-                  background: active ? "var(--surface-alt)" : "var(--surface-alt)",
-                }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--bg)"; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
-              >
-                <Icon size={14} style={{ color: active ? "var(--accent)" : "var(--text-dim)", marginTop: 1 }} />
-                <div>
-                  <div className="text-xs font-semibold" style={{ color: active ? "var(--accent)" : "var(--text)" }}>
-                    {type.label}
-                  </div>
-                  <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>{type.desc}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+      <div
+        className="rounded-xl border px-4 py-3 text-xs"
+        style={{ borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text-dim)" }}
+      >
+        Opcional — refina o gatilho acima. Condições dentro do <b>mesmo grupo</b> exigem <b>E</b> (todas precisam ser verdadeiras);
+        <b> grupos diferentes</b> são combinados por <b>OU</b> (basta um grupo passar). Sem grupos, só o gatilho decide.
       </div>
 
-      {/* Action config */}
-      {a.type === "move_stage" && (
-        <div>
-          <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
-            Mover para
-          </label>
-          <select
-            value={a.targetStage || ""}
-            onChange={e => setAction({ targetStage: e.target.value })}
-            className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-          >
-            <option value="">Selecionar etapa...</option>
-            {allStages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
+      {groups.length === 0 && (
+        <button
+          onClick={addGroup}
+          className="w-full flex items-center justify-center gap-1.5 p-3 text-xs font-semibold rounded-xl border-2 border-dashed"
+          style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface-alt)" }}
+        >
+          <GitBranch size={13} />
+          Adicionar condições
+        </button>
       )}
 
-      {a.type === "set_field" && (
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Campo</label>
-            <select
-              value={a.field || ""}
-              onChange={e => setAction({ field: e.target.value })}
-              className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+      {groups.map((group, gi) => (
+        <div key={gi} className="rounded-xl border p-3 space-y-2" style={{ borderColor: "var(--border)" }}>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+              {gi === 0 ? "Grupo 1" : `OU · Grupo ${gi + 1}`}
+            </span>
+            <button
+              onClick={() => removeGroup(gi)}
+              className="p-1 rounded"
+              style={{ color: "var(--text-faint)" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "var(--text-faint)"; }}
+              title="Remover grupo"
             >
-              <option value="">Selecionar campo...</option>
-              {LEAD_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-            </select>
+              <Trash2 size={12} />
+            </button>
           </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Novo valor</label>
-            <input
-              type="text"
-              value={a.fieldValue || ""}
-              onChange={e => setAction({ fieldValue: e.target.value })}
-              placeholder="Valor a definir..."
-              className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-              style={{ borderColor: "var(--border)", color: "var(--text)" }}
-              onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
-            />
-          </div>
-        </div>
-      )}
 
-      {a.type === "add_badge" && (
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Texto do badge</label>
-            <input
-              type="text"
-              value={a.badge || ""}
-              onChange={e => setAction({ badge: e.target.value })}
-              placeholder="Ex: Urgente, Hot lead, VIP..."
-              className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-              style={{ borderColor: "var(--border)", color: "var(--text)" }}
-              onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-2" style={{ color: "var(--text)" }}>Cor do badge</label>
-            <div className="flex gap-2 flex-wrap">
-              {BADGE_COLORS.map(c => (
-                <button
-                  key={c.hex}
-                  onClick={() => setAction({ badgeColor: c.hex })}
-                  className="w-7 h-7 rounded-full border-2 transition-transform"
-                  style={{
-                    background: c.hex,
-                    borderColor: a.badgeColor === c.hex ? "var(--text)" : "transparent",
-                    transform: a.badgeColor === c.hex ? "scale(1.2)" : "scale(1)",
-                  }}
-                  title={c.label}
-                />
-              ))}
-            </div>
-          </div>
-          {a.badge && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: "var(--text-dim)" }}>Preview:</span>
-              <span
-                className="px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                style={{ background: (a.badgeColor || "#6366F1") + "20", color: a.badgeColor || "#6366F1" }}
+          {group.conditions.map((c, ci) => (
+            <div key={ci} className="flex items-center gap-1.5">
+              {ci > 0 && (
+                <span className="text-[10px] font-bold px-1.5 shrink-0" style={{ color: "var(--text-dim)" }}>E</span>
+              )}
+              <select
+                value={c.field}
+                onChange={e => patchCondition(gi, ci, { field: e.target.value })}
+                className="flex-1 min-w-0 text-xs rounded-lg border px-2 py-1.5 outline-none"
+                style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
               >
-                {a.badge}
-              </span>
+                <option value="">Campo...</option>
+                {LEAD_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              <select
+                value={c.operator}
+                onChange={e => patchCondition(gi, ci, { operator: e.target.value })}
+                className="text-xs rounded-lg border px-2 py-1.5 outline-none shrink-0"
+                style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", width: 128 }}
+              >
+                {OPERATORS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+              {!NO_VALUE_OPERATORS.has(c.operator) && (
+                <input
+                  type="text"
+                  value={c.value}
+                  onChange={e => patchCondition(gi, ci, { value: e.target.value })}
+                  placeholder="Valor"
+                  className="w-20 text-xs rounded-lg border px-2 py-1.5 outline-none shrink-0"
+                  style={{ borderColor: "var(--border)", color: "var(--text)" }}
+                />
+              )}
+              {group.conditions.length > 1 && (
+                <button
+                  onClick={() => removeCondition(gi, ci)}
+                  className="p-1 rounded shrink-0"
+                  style={{ color: "var(--text-faint)" }}
+                  title="Remover condição"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
-          )}
-        </div>
-      )}
+          ))}
 
-      {a.type === "notify" && (
-        <div>
-          <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Mensagem do alerta</label>
-          <textarea
-            value={a.message || ""}
-            onChange={e => setAction({ message: e.target.value })}
-            placeholder="Ex: Lead sem movimento há 7 dias — revisar estratégia"
-            rows={3}
-            className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none resize-none"
-            style={{ borderColor: "var(--border)", color: "var(--text)" }}
-            onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-            onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
-          />
+          <button
+            onClick={() => addCondition(gi)}
+            className="text-[11px] font-semibold flex items-center gap-1"
+            style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
+          >
+            <Plus size={10} /> Adicionar condição (E)
+          </button>
         </div>
-      )}
+      ))}
 
-      {a.type === "create_deliverable" && (
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Título da entrega</label>
-            <input
-              type="text"
-              value={a.deliverableTitle || ""}
-              onChange={e => setAction({ deliverableTitle: e.target.value })}
-              placeholder="Onboarding: {empresa}"
-              className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
-              onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
-              onBlur={e => { e.target.style.borderColor = "#E5E7EB"; }}
-            />
-            <p className="text-[10px] mt-1" style={{ color: NEUTRAL.slate }}>Use {"{empresa}"} para inserir o nome do negócio automaticamente.</p>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: NEUTRAL.graphite }}>Prioridade</label>
-            <select
-              value={a.deliverablePriority || "media"}
-              onChange={e => setAction({ deliverablePriority: e.target.value })}
-              className="w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
-            >
-              <option value="baixa">Baixa</option>
-              <option value="media">Média</option>
-              <option value="alta">Alta</option>
-            </select>
-          </div>
-          <p className="text-[11px]" style={{ color: NEUTRAL.slate }}>
-            Cria um card em <strong>Marketing → Entregas</strong> assim que a regra disparar — a forma do CRM acionar outra área sem trocar de aba.
-          </p>
-        </div>
-      )}
-
-      {a.type === "enrich_cnpj" && (
-        <p className="text-[11px]" style={{ color: NEUTRAL.slate }}>
-          Ao disparar, busca o CNPJ do lead automaticamente e preenche setor, cidade, estado e situação — só nos campos que ainda estiverem vazios. Reaproveita a mesma busca de CNPJ já usada manualmente no Explorador.
-        </p>
+      {groups.length > 0 && (
+        <button
+          onClick={addGroup}
+          className="w-full flex items-center justify-center gap-1.5 p-2.5 text-xs font-semibold rounded-xl border-2 border-dashed"
+          style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface-alt)" }}
+        >
+          <Plus size={12} /> Adicionar grupo (OU)
+        </button>
       )}
     </div>
   );
+}
+
+// ── Step: Ações (then / else) ────────────────────────────────────────────────
+
+function StepActions({ rule, allStages, setRule, hasConditions }) {
+  const patchThen = (updater) => setRule(r => ({ ...r, thenActions: updater(r.thenActions) }));
+  const patchElse = (updater) => setRule(r => ({ ...r, elseActions: updater(r.elseActions || []) }));
+
+  return (
+    <div className="space-y-5">
+      <ActionListEditor
+        title={hasConditions ? "Então (se a condição passar)" : "Ação"}
+        actions={rule.thenActions}
+        setActions={patchThen}
+        allStages={allStages}
+        allowEmpty={false}
+      />
+
+      {hasConditions && (
+        <div className="pt-3" style={{ borderTop: "1px dashed var(--border)" }}>
+          <ActionListEditor
+            title="Senão (se a condição não passar)"
+            actions={rule.elseActions || []}
+            setActions={patchElse}
+            allStages={allStages}
+            allowEmpty
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActionListEditor({ title, actions, setActions, allStages, allowEmpty }) {
+  const addAction = () => setActions(list => [...list, { ...EMPTY_ACTION }]);
+  const removeAction = (i) => setActions(list => list.filter((_, j) => j !== i));
+  const patchAction = (i, patch) => setActions(list => list.map((a, j) => j === i ? { ...a, ...patch } : a));
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold" style={{ color: "var(--text)" }}>{title}</label>
+        <button
+          onClick={addAction}
+          className="text-[11px] font-semibold flex items-center gap-1"
+          style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
+        >
+          <Plus size={10} /> Adicionar ação
+        </button>
+      </div>
+
+      {actions.length === 0 && (
+        <p className="text-xs" style={{ color: "var(--text-faint)" }}>
+          {allowEmpty ? "Nenhuma ação — não faz nada quando cai no senão." : "Adicione ao menos uma ação."}
+        </p>
+      )}
+
+      {actions.map((action, i) => (
+        <div key={i} className="rounded-xl border p-3 space-y-3" style={{ borderColor: "var(--border)" }}>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+              Ação {i + 1}
+            </span>
+            {actions.length > (allowEmpty ? 0 : 1) && (
+              <button
+                onClick={() => removeAction(i)}
+                className="p-1 rounded"
+                style={{ color: "var(--text-faint)" }}
+                onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-faint)"; }}
+              >
+                <Trash2 size={12} />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            {ACTION_TYPES.map(type => {
+              const Icon = type.icon;
+              const active = action.type === type.id;
+              return (
+                <button
+                  key={type.id}
+                  onClick={() => patchAction(i, { type: type.id })}
+                  className="flex items-center gap-1.5 p-2 rounded-lg border text-left"
+                  style={{
+                    borderColor: active ? "var(--accent)" : "var(--border)",
+                    background: "var(--surface-alt)",
+                  }}
+                >
+                  <Icon size={12} style={{ color: active ? "var(--accent)" : "var(--text-dim)" }} />
+                  <span className="text-[11px] font-semibold" style={{ color: active ? "var(--accent)" : "var(--text)" }}>
+                    {type.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <ActionConfig action={action} allStages={allStages} setAction={(patch) => patchAction(i, patch)} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActionConfig({ action: a, allStages, setAction }) {
+  if (a.type === "move_stage") {
+    return (
+      <div>
+        <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text)" }}>Mover para</label>
+        <select
+          value={a.targetStage || ""}
+          onChange={e => setAction({ targetStage: e.target.value })}
+          className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+        >
+          <option value="">Selecionar etapa...</option>
+          {allStages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
+    );
+  }
+
+  if (a.type === "set_field") {
+    return (
+      <div className="space-y-2">
+        <div>
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text)" }}>Campo</label>
+          <select
+            value={a.field || ""}
+            onChange={e => setAction({ field: e.target.value })}
+            className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+          >
+            <option value="">Selecionar campo...</option>
+            {LEAD_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text)" }}>Novo valor</label>
+          <input
+            type="text"
+            value={a.fieldValue || ""}
+            onChange={e => setAction({ fieldValue: e.target.value })}
+            placeholder="Valor a definir..."
+            className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (a.type === "add_badge") {
+    return (
+      <div className="space-y-2">
+        <div>
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text)" }}>Texto do badge</label>
+          <input
+            type="text"
+            value={a.badge || ""}
+            onChange={e => setAction({ badge: e.target.value })}
+            placeholder="Ex: Urgente, Hot lead, VIP..."
+            className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] font-semibold mb-1.5" style={{ color: "var(--text)" }}>Cor do badge</label>
+          <div className="flex gap-1.5 flex-wrap">
+            {BADGE_COLORS.map(c => (
+              <button
+                key={c.hex}
+                onClick={() => setAction({ badgeColor: c.hex })}
+                className="w-6 h-6 rounded-full border-2 transition-transform"
+                style={{
+                  background: c.hex,
+                  borderColor: a.badgeColor === c.hex ? "var(--text)" : "transparent",
+                  transform: a.badgeColor === c.hex ? "scale(1.2)" : "scale(1)",
+                }}
+                title={c.label}
+              />
+            ))}
+          </div>
+        </div>
+        {a.badge && (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>Preview:</span>
+            <span
+              className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+              style={{ background: (a.badgeColor || "#6366F1") + "20", color: a.badgeColor || "#6366F1" }}
+            >
+              {a.badge}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (a.type === "notify") {
+    return (
+      <div>
+        <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text)" }}>Mensagem do alerta</label>
+        <textarea
+          value={a.message || ""}
+          onChange={e => setAction({ message: e.target.value })}
+          placeholder="Ex: Lead sem movimento há 7 dias — revisar estratégia"
+          rows={2}
+          className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none resize-none"
+          style={{ borderColor: "var(--border)", color: "var(--text)" }}
+        />
+      </div>
+    );
+  }
+
+  if (a.type === "create_deliverable") {
+    return (
+      <div className="space-y-2">
+        <div>
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.graphite }}>Título da entrega</label>
+          <input
+            type="text"
+            value={a.deliverableTitle || ""}
+            onChange={e => setAction({ deliverableTitle: e.target.value })}
+            placeholder="Onboarding: {empresa}"
+            className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
+            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+          />
+          <p className="text-[10px] mt-1" style={{ color: NEUTRAL.slate }}>Use {"{empresa}"} para inserir o nome do negócio automaticamente.</p>
+        </div>
+        <div>
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.graphite }}>Prioridade</label>
+          <select
+            value={a.deliverablePriority || "media"}
+            onChange={e => setAction({ deliverablePriority: e.target.value })}
+            className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
+            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+          >
+            <option value="baixa">Baixa</option>
+            <option value="media">Média</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  if (a.type === "enrich_cnpj") {
+    return (
+      <p className="text-[11px]" style={{ color: NEUTRAL.slate }}>
+        Ao disparar, busca o CNPJ do lead automaticamente e preenche setor, cidade, estado e situação — só nos campos que ainda estiverem vazios.
+      </p>
+    );
+  }
+
+  return null;
 }
 
 // ── How it works ──────────────────────────────────────────────────────────────
@@ -1029,10 +1298,11 @@ function HowItWorks() {
       </button>
       {open && (
         <div className="px-4 py-3 text-xs space-y-2" style={{ color: "var(--text-dim)", borderTop: "1px solid var(--surface-alt)" }}>
-          <p>As automações são <strong>regras locais</strong>, avaliadas no browser sempre que um card é atualizado — sem IA e sem custo por execução. Duas ações (criar entrega e enriquecer com CNPJ) chamam uma API real quando disparam; as demais são só lógica local.</p>
+          <p>As automações são <strong>regras compartilhadas com a equipe</strong> (salvas no banco, não só no seu navegador), avaliadas sempre que um card é atualizado — sem IA e sem custo por execução. Duas ações (criar entrega e enriquecer com CNPJ) chamam uma API real quando disparam; as demais são só lógica local.</p>
           <p><strong>Gatilhos disponíveis:</strong> mudança de etapa, valor de campo, tempo parado em etapa, criação de card.</p>
-          <p><strong>Ações disponíveis:</strong> mover o card para outra etapa, alterar um campo, adicionar badge visual, exibir alerta, criar entrega em Marketing, ou enriquecer com dados de CNPJ.</p>
-          <p>As regras são avaliadas em sequência. Se múltiplas regras dispararem no mesmo evento, todas serão executadas na ordem de criação.</p>
+          <p><strong>Condições (opcional):</strong> refine o gatilho com grupos de condições — condições no mesmo grupo exigem E, grupos diferentes são combinados por OU. Com condições, você pode definir ações para "então" (passou) e "senão" (não passou).</p>
+          <p><strong>Ações disponíveis:</strong> mover o card para outra etapa, alterar um campo, adicionar badge visual, exibir alerta, criar entrega em Marketing, ou enriquecer com dados de CNPJ — cada regra pode disparar mais de uma.</p>
+          <p>As regras são avaliadas em sequência, na ordem de criação. Se múltiplas regras dispararem no mesmo evento, todas serão executadas.</p>
           <p className="font-medium" style={{ color: "#1E40AF" }}>Para automações que dependem de tempo (ex: 7 dias sem mover), o avaliador roda ao abrir o CRM ou ao interagir com um card.</p>
         </div>
       )}
@@ -1044,7 +1314,10 @@ function HowItWorks() {
 
 function validateTrigger(t) {
   if (!t?.type) return false;
-  if (t.type === "field_value") return Boolean(t.field && t.operator);
+  if (t.type === "field_value") {
+    if (!t.field || !t.operator) return false;
+    return NO_VALUE_OPERATORS.has(t.operator) || Boolean(t.value);
+  }
   if (t.type === "time_in_stage") return (t.days || 0) > 0;
   return true;
 }
