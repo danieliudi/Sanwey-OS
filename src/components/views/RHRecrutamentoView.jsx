@@ -42,6 +42,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { resolveVisibleFields } from "../../utils/field-conditions";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -746,6 +747,11 @@ function VagaDrawer({
   const pri = priorityInfo(vaga.priority);
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 
+  // Campos condicionais: reavalia visibilidade/obrigatoriedade a cada
+  // keystroke a partir do valor atual de vaga.custom_fields (mesmo objeto
+  // que alimenta o `value` do RHStageFieldInput abaixo).
+  const visibleCustomFields = resolveVisibleFields(customFields, vaga.custom_fields || {});
+
   return (
     <>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
@@ -804,14 +810,14 @@ function VagaDrawer({
           )}
 
           {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
-          {customFields?.length > 0 && (
+          {visibleCustomFields.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Campos desta etapa</div>
               <div className="flex flex-col gap-3">
-                {customFields.map((field) => (
+                {visibleCustomFields.map((field) => (
                   <div key={field.id}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                      {field.label}{field.required && <span style={{ color: "var(--danger)" }}> *</span>}
+                      {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
                     </div>
                     <RHStageFieldInput
                       field={field}
@@ -1060,6 +1066,11 @@ function CandidatoDrawer({
   const stageInfo = findStage(stages, candidato.stage);
   const days = daysInStage(candidato.stage_changed_at);
 
+  // Campos condicionais: reavalia visibilidade/obrigatoriedade a cada
+  // keystroke a partir do valor atual de candidato.customFields (mesmo
+  // objeto que alimenta o `value` do RHStageFieldInput abaixo).
+  const visibleCustomFields = resolveVisibleFields(customFields, candidato.customFields || {});
+
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
     setSavingNote(true);
@@ -1155,14 +1166,14 @@ function CandidatoDrawer({
           )}
 
           {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
-          {customFields?.length > 0 && (
+          {visibleCustomFields.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Campos desta etapa</div>
               <div className="flex flex-col gap-3">
-                {customFields.map((field) => (
+                {visibleCustomFields.map((field) => (
                   <div key={field.id}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                      {field.label}{field.required && <span style={{ color: "var(--danger)" }}> *</span>}
+                      {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
                     </div>
                     <RHStageFieldInput
                       field={field}

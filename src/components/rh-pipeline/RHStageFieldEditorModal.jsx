@@ -3,7 +3,7 @@ import {
   X, Plus, Trash2, GripVertical, ChevronUp, ChevronDown,
   Type, AlignLeft, Hash, DollarSign, Calendar,
   Clock, Mail, Phone, Link, CheckSquare, List, RadioTower,
-  ListChecks, User, Settings2,
+  ListChecks, User, Settings2, GitBranch,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import { FIELD_TYPES, slugifyKey, useRHStageFields } from "../../hooks/use-rh-stage-fields";
@@ -48,16 +48,104 @@ const INPUT_BASE = {
 function focusStyle(e) { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 2px color-mix(in srgb, var(--accent) 12%, transparent)"; }
 function blurStyle(e)  { e.target.style.borderColor = "#D1D5DB"; e.target.style.boxShadow = "none"; }
 
+const SELECT_STYLE = {
+  ...INPUT_BASE, appearance: "none",
+  backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+  backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", backgroundSize: "12px", paddingRight: 28,
+};
+
+// Conjunto de operadores suportado por src/utils/field-conditions.js.
+const OPERATORS = [
+  { value: "eq",           label: "é igual a" },
+  { value: "neq",          label: "é diferente de" },
+  { value: "contains",     label: "contém" },
+  { value: "gt",           label: "maior que" },
+  { value: "lt",           label: "menor que" },
+  { value: "gte",          label: "maior ou igual a" },
+  { value: "lte",          label: "menor ou igual a" },
+  { value: "is_empty",     label: "está vazio" },
+  { value: "is_not_empty", label: "não está vazio" },
+];
+
+// ── ConditionBlock ────────────────────────────────────────────────────────────
+// UI compartilhada pra configurar uma condição { fieldKey, operator, value }
+// (ou null) — usada tanto pro "Mostrar somente se" quanto pro "Exigir
+// somente se", no formulário de novo campo e na edição de campos existentes.
+
+function ConditionBlock({ title, otherFields, condition, onChange, accent, disabled, disabledNote }) {
+  const enabled = !!condition;
+  const hideValue = condition && (condition.operator === "is_empty" || condition.operator === "is_not_empty");
+  const canEnable = !disabled && otherFields.length > 0;
+
+  const handleToggle = (checked) => {
+    if (checked) {
+      onChange({ fieldKey: otherFields[0]?.fieldKey || "", operator: "eq", value: "" });
+    } else {
+      onChange(null);
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: NEUTRAL.graphite, cursor: canEnable ? "pointer" : "not-allowed", userSelect: "none", opacity: canEnable ? 1 : 0.5 }}>
+        <input type="checkbox" checked={enabled} disabled={!canEnable} onChange={e => handleToggle(e.target.checked)} style={{ accentColor: accent }} />
+        {title}
+      </label>
+      {disabled && disabledNote && (
+        <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 2, marginLeft: 22 }}>{disabledNote}</div>
+      )}
+      {!disabled && otherFields.length === 0 && (
+        <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 2, marginLeft: 22 }}>Nenhum outro campo nesta etapa.</div>
+      )}
+      {enabled && canEnable && (
+        <div style={{ marginTop: 6, marginLeft: 22, display: "flex", flexDirection: "column", gap: 6 }}>
+          <select
+            value={condition.fieldKey}
+            onChange={e => onChange({ ...condition, fieldKey: e.target.value })}
+            style={SELECT_STYLE}
+            onFocus={focusStyle} onBlur={blurStyle}
+          >
+            {otherFields.map(f => <option key={f.fieldKey} value={f.fieldKey}>{f.label}</option>)}
+          </select>
+          <select
+            value={condition.operator}
+            onChange={e => onChange({ ...condition, operator: e.target.value })}
+            style={SELECT_STYLE}
+            onFocus={focusStyle} onBlur={blurStyle}
+          >
+            {OPERATORS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          {!hideValue && (
+            <input
+              type="text"
+              value={condition.value ?? ""}
+              onChange={e => onChange({ ...condition, value: e.target.value })}
+              placeholder="Valor"
+              style={INPUT_BASE}
+              onFocus={focusStyle} onBlur={blurStyle}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── AddFieldForm ──────────────────────────────────────────────────────────────
 
-function AddFieldForm({ onAdd, onCancel, accent, busy }) {
+function AddFieldForm({ fields, onAdd, onCancel, accent, busy }) {
   const [fieldType, setFieldType] = useState("text");
   const [label, setLabel]         = useState("");
   const [required, setRequired]   = useState(false);
   const [options, setOptions]      = useState("");
+  const [visibleIf, setVisibleIf]  = useState(null);
+  const [requiredIf, setRequiredIf] = useState(null);
   const [error, setError]          = useState(null);
 
   const hasOptions = ["select", "radio", "multicheck"].includes(fieldType);
+  // Campo ainda não existe, então "outros campos" = todos os já criados
+  // nesta etapa.
+  const otherFields = fields || [];
 
   const handleAdd = () => {
     if (!label.trim()) { setError("Informe um nome para o campo."); return; }
@@ -66,7 +154,11 @@ function AddFieldForm({ onAdd, onCancel, accent, busy }) {
     const parsed = hasOptions
       ? options.split("\n").map(s => s.trim()).filter(Boolean)
       : [];
-    onAdd({ fieldType, label: label.trim(), required, options: parsed });
+    onAdd({
+      fieldType, label: label.trim(), required, options: parsed,
+      visibleIf,
+      requiredIf: required ? null : requiredIf,
+    });
   };
 
   return (
@@ -128,6 +220,26 @@ function AddFieldForm({ onAdd, onCancel, accent, busy }) {
         Campo obrigatório
       </label>
 
+      {/* Condicionais */}
+      <div style={{ borderTop: "1px dashed #E5E7EB", paddingTop: 10, marginBottom: 2 }}>
+        <ConditionBlock
+          title="Mostrar somente se"
+          otherFields={otherFields}
+          condition={visibleIf}
+          onChange={setVisibleIf}
+          accent={accent}
+        />
+        <ConditionBlock
+          title="Exigir somente se"
+          otherFields={otherFields}
+          condition={requiredIf}
+          onChange={setRequiredIf}
+          accent={accent}
+          disabled={required}
+          disabledNote="Já é obrigatório sempre."
+        />
+      </div>
+
       {error && (
         <div style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}>
           {error}
@@ -156,94 +268,163 @@ function AddFieldForm({ onAdd, onCancel, accent, busy }) {
 
 // ── FieldRow ──────────────────────────────────────────────────────────────────
 
-function FieldRow({ field, accent, onDelete, onMoveUp, onMoveDown, onToggleRequired, isFirst, isLast, busy }) {
+function FieldRow({ field, otherFields, accent, onDelete, onMoveUp, onMoveDown, onToggleRequired, onSaveConditions, isFirst, isLast, busy }) {
   const [confirmDel, setConfirmDel] = useState(false);
+  const [showConditions, setShowConditions] = useState(false);
+  const [visibleIf, setVisibleIf]   = useState(field.visibleIf);
+  const [requiredIf, setRequiredIf] = useState(field.requiredIf);
   const Icon = TYPE_ICON[field.fieldType] || Settings2;
   const typeMeta = FIELD_TYPES.find(t => t.value === field.fieldType);
+  const hasConditions = Boolean(field.visibleIf || field.requiredIf);
+
+  const openConditions = () => {
+    setVisibleIf(field.visibleIf);
+    setRequiredIf(field.requiredIf);
+    setShowConditions(true);
+  };
+
+  const handleSaveConditions = () => {
+    onSaveConditions(field.id, { visibleIf, requiredIf: field.required ? null : requiredIf });
+    setShowConditions(false);
+  };
 
   return (
     <div
       style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "10px 12px", borderRadius: 8,
+        borderRadius: 8,
         background: "#FFFFFF", border: "1px solid #E5E7EB",
         marginBottom: 6,
       }}
     >
-      {/* Drag handle (visual only) */}
-      <GripVertical size={14} style={{ color: "#CBD5E1", flexShrink: 0, cursor: "grab" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
+        {/* Drag handle (visual only) */}
+        <GripVertical size={14} style={{ color: "#CBD5E1", flexShrink: 0, cursor: "grab" }} />
 
-      {/* Type icon */}
-      <Icon size={14} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
+        {/* Type icon */}
+        <Icon size={14} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
 
-      {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {field.required && <span style={{ color: accent, marginRight: 2 }}>*</span>}
-          {field.label}
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {field.required && <span style={{ color: accent, marginRight: 2 }}>*</span>}
+            {field.label}
+          </div>
+          <div style={{ fontSize: 11, color: NEUTRAL.slate }}>{typeMeta?.label || field.fieldType}</div>
         </div>
-        <div style={{ fontSize: 11, color: NEUTRAL.slate }}>{typeMeta?.label || field.fieldType}</div>
-      </div>
 
-      {/* Required toggle */}
-      <button
-        onClick={() => !busy && onToggleRequired(field.id, !field.required)}
-        title={field.required ? "Remover obrigatoriedade" : "Tornar obrigatório"}
-        style={{
-          fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, cursor: busy ? "wait" : "pointer", flexShrink: 0,
-          border: `1px solid ${field.required ? accent + "60" : "#E5E7EB"}`,
-          background: field.required ? accent + "12" : "transparent",
-          color: field.required ? accent : NEUTRAL.slate,
-          opacity: busy ? 0.6 : 1,
-        }}
-      >
-        {field.required ? "Obrig." : "Opcional"}
-      </button>
-
-      {/* Reorder */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 1, flexShrink: 0 }}>
+        {/* Conditions toggle */}
         <button
-          onClick={onMoveUp}
-          disabled={isFirst}
-          style={{ background: "none", border: "none", cursor: isFirst ? "default" : "pointer", color: isFirst ? "#E5E7EB" : NEUTRAL.slate, padding: 1, lineHeight: 0 }}
+          onClick={() => (showConditions ? setShowConditions(false) : openConditions())}
+          title="Condições (mostrar/exigir somente se…)"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "3px 5px", borderRadius: 4, cursor: "pointer", flexShrink: 0,
+            border: `1px solid ${hasConditions || showConditions ? accent + "60" : "#E5E7EB"}`,
+            background: hasConditions || showConditions ? accent + "12" : "transparent",
+            color: hasConditions || showConditions ? accent : NEUTRAL.slate,
+          }}
         >
-          <ChevronUp size={12} />
+          <GitBranch size={12} />
         </button>
-        <button
-          onClick={onMoveDown}
-          disabled={isLast}
-          style={{ background: "none", border: "none", cursor: isLast ? "default" : "pointer", color: isLast ? "#E5E7EB" : NEUTRAL.slate, padding: 1, lineHeight: 0 }}
-        >
-          <ChevronDown size={12} />
-        </button>
-      </div>
 
-      {/* Delete */}
-      {confirmDel ? (
-        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+        {/* Required toggle */}
+        <button
+          onClick={() => !busy && onToggleRequired(field.id, !field.required)}
+          title={field.required ? "Remover obrigatoriedade" : "Tornar obrigatório"}
+          style={{
+            fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, cursor: busy ? "wait" : "pointer", flexShrink: 0,
+            border: `1px solid ${field.required ? accent + "60" : "#E5E7EB"}`,
+            background: field.required ? accent + "12" : "transparent",
+            color: field.required ? accent : NEUTRAL.slate,
+            opacity: busy ? 0.6 : 1,
+          }}
+        >
+          {field.required ? "Obrig." : "Opcional"}
+        </button>
+
+        {/* Reorder */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, flexShrink: 0 }}>
           <button
-            onClick={() => onDelete(field.id)}
-            style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, border: "none", background: "#B91C1C", color: "#FFF", cursor: "pointer" }}
+            onClick={onMoveUp}
+            disabled={isFirst}
+            style={{ background: "none", border: "none", cursor: isFirst ? "default" : "pointer", color: isFirst ? "#E5E7EB" : NEUTRAL.slate, padding: 1, lineHeight: 0 }}
           >
-            Remover
+            <ChevronUp size={12} />
           </button>
           <button
-            onClick={() => setConfirmDel(false)}
-            style={{ fontSize: 11, padding: "3px 6px", borderRadius: 5, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+            onClick={onMoveDown}
+            disabled={isLast}
+            style={{ background: "none", border: "none", cursor: isLast ? "default" : "pointer", color: isLast ? "#E5E7EB" : NEUTRAL.slate, padding: 1, lineHeight: 0 }}
           >
-            ✕
+            <ChevronDown size={12} />
           </button>
         </div>
-      ) : (
-        <button
-          onClick={() => setConfirmDel(true)}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#E5E7EB", padding: 2, lineHeight: 0, flexShrink: 0 }}
-          onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
-          onMouseLeave={e => { e.currentTarget.style.color = "#E5E7EB"; }}
-          title="Remover campo"
-        >
-          <Trash2 size={13} />
-        </button>
+
+        {/* Delete */}
+        {confirmDel ? (
+          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+            <button
+              onClick={() => onDelete(field.id)}
+              style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, border: "none", background: "#B91C1C", color: "#FFF", cursor: "pointer" }}
+            >
+              Remover
+            </button>
+            <button
+              onClick={() => setConfirmDel(false)}
+              style={{ fontSize: 11, padding: "3px 6px", borderRadius: 5, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDel(true)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#E5E7EB", padding: 2, lineHeight: 0, flexShrink: 0 }}
+            onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "#E5E7EB"; }}
+            title="Remover campo"
+          >
+            <Trash2 size={13} />
+          </button>
+        )}
+      </div>
+
+      {/* Painel de condicionais (mostrar/exigir somente se…) */}
+      {showConditions && (
+        <div style={{ borderTop: "1px solid #E5E7EB", padding: "10px 12px", background: "#F9FAFB" }}>
+          <ConditionBlock
+            title="Mostrar somente se"
+            otherFields={otherFields}
+            condition={visibleIf}
+            onChange={setVisibleIf}
+            accent={accent}
+          />
+          <ConditionBlock
+            title="Exigir somente se"
+            otherFields={otherFields}
+            condition={requiredIf}
+            onChange={setRequiredIf}
+            accent={accent}
+            disabled={field.required}
+            disabledNote="Já é obrigatório sempre."
+          />
+          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+            <button
+              onClick={handleSaveConditions}
+              disabled={busy}
+              style={{ flex: 1, fontSize: 12, fontWeight: 700, padding: "6px 10px", borderRadius: 6, border: "none", background: busy ? "#9CA3AF" : accent, color: "#FFF", cursor: busy ? "not-allowed" : "pointer" }}
+            >
+              Salvar condições
+            </button>
+            <button
+              onClick={() => setShowConditions(false)}
+              disabled={busy}
+              style={{ fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: busy ? "not-allowed" : "pointer" }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -286,7 +467,7 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
     }
   };
 
-  const handleAdd = ({ fieldType, label, required, options }) =>
+  const handleAdd = ({ fieldType, label, required, options, visibleIf, requiredIf }) =>
     run(async () => {
       await stageFields.addField({
         stageKey,
@@ -298,6 +479,8 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
         orderIdx: fields.length,
         placeholder: "",
         helpText: "",
+        visibleIf: visibleIf ?? null,
+        requiredIf: requiredIf ?? null,
       });
       setShowAdd(false);
     });
@@ -310,6 +493,13 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
       const f = fields.find(f => f.id === id);
       if (!f) return Promise.resolve();
       return stageFields.updateField(id, { ...f, required: newRequired });
+    });
+
+  const handleSaveConditions = (id, { visibleIf, requiredIf }) =>
+    run(() => {
+      const f = fields.find(f => f.id === id);
+      if (!f) return Promise.resolve();
+      return stageFields.updateField(id, { ...f, visibleIf: visibleIf ?? null, requiredIf: requiredIf ?? null });
     });
 
   const handleMoveUp = (idx) => {
@@ -383,12 +573,14 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
             <FieldRow
               key={f.id}
               field={f}
+              otherFields={fields.filter(other => other.id !== f.id)}
               accent={accent}
               isFirst={idx === 0}
               isLast={idx === fields.length - 1}
               busy={busy}
               onDelete={handleDelete}
               onToggleRequired={handleToggleRequired}
+              onSaveConditions={handleSaveConditions}
               onMoveUp={() => handleMoveUp(idx)}
               onMoveDown={() => handleMoveDown(idx)}
             />
@@ -396,7 +588,7 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
 
           {/* Add form or button */}
           {showAdd ? (
-            <AddFieldForm accent={accent} onAdd={handleAdd} onCancel={() => setShowAdd(false)} busy={busy} />
+            <AddFieldForm fields={fields} accent={accent} onAdd={handleAdd} onCancel={() => setShowAdd(false)} busy={busy} />
           ) : (
             <button
               onClick={() => setShowAdd(true)}

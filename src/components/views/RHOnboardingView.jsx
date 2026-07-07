@@ -20,6 +20,7 @@ import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal"
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { resolveVisibleFields } from "../../utils/field-conditions";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
 // As etapas vêm de rh_pipeline_stages (domain="onboarding"), editáveis pelo RH
@@ -243,6 +244,12 @@ function OnboardingDrawer({
   const getCustomValue = (fieldKey) =>
     fieldKey in customDraft ? customDraft[fieldKey] : (colaborador.customFields?.[fieldKey] ?? "");
 
+  // Campos condicionais: reavalia visibilidade/obrigatoriedade a cada
+  // keystroke — mescla o rascunho local (customDraft, ainda não persistido
+  // pelo debounce) com os valores já salvos, pra não ficar "atrasado".
+  const customValuesByKey = { ...(colaborador.customFields || {}), ...customDraft };
+  const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
+
   const st = findStage(stages, colaborador.onboardingStage);
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
   const total = tarefas.length;
@@ -317,14 +324,14 @@ function OnboardingDrawer({
             </div>
           )}
 
-          {customDefs.length > 0 && (
+          {visibleCustomDefs.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Campos desta etapa</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {customDefs.map((f) => (
+                {visibleCustomDefs.map((f) => (
                   <div key={f.id}>
                     <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                      {f.required && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
                       {f.label}
                     </label>
                     {f.helpText && (

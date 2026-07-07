@@ -24,6 +24,7 @@ import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { ProposalPanel } from "./ProposalPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
+import { resolveVisibleFields } from "../../utils/field-conditions";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
@@ -73,6 +74,14 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   const getCustomValue = useCallback((fieldKey) => {
     return fieldKey in customDraft ? customDraft[fieldKey] : (customValues[fieldKey] ?? "");
   }, [customDraft, customValues]);
+
+  // Mapa fieldKey -> valor atual (draft tem prioridade) pra avaliar campos
+  // condicionais (visibleIf/requiredIf) em tempo real, a cada tecla. Não
+  // memoiza — a lista de campos é pequena e precisa refletir customDraft
+  // sempre, sem risco de dependência esquecida deixar isso desatualizado.
+  const customValuesByKey = {};
+  for (const f of customDefs) customValuesByKey[f.fieldKey] = getCustomValue(f.fieldKey);
+  const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
 
   // Resolve prev/next non-terminal stages based on the default pipeline order.
   const stageNav = useMemo(() => {
@@ -803,7 +812,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           )}
 
           {/* Campos customizados da etapa — editáveis inline (save debounced) */}
-          {customDefs.length > 0 && (
+          {visibleCustomDefs.length > 0 && (
             <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
@@ -811,10 +820,10 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                 </div>
               </div>
               <div className="space-y-4">
-                {customDefs.map(f => (
+                {visibleCustomDefs.map(f => (
                   <div key={f.id}>
                     <label className="block" style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>
-                      {f.required && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
                       {f.label}
                     </label>
                     {f.helpText && (
