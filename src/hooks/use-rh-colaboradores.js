@@ -66,6 +66,10 @@ function colaboradorToRow(c, extras = {}) {
     vaga_id: c.vagaId || null,
     custom_fields: c.customFields && typeof c.customFields === "object" ? c.customFields : {},
     activities: Array.isArray(c.activities) ? c.activities : [],
+    // Opcionais — omitidos quando ausentes pra não sobrescrever o default da
+    // coluna (primeira etapa) no fluxo de contratação, que nunca informa isso.
+    ...(c.onboardingStage ? { onboarding_stage: c.onboardingStage } : {}),
+    ...(c.onboardingStageChangedAt ? { onboarding_stage_changed_at: c.onboardingStageChangedAt } : {}),
     ...extras,
   };
 }

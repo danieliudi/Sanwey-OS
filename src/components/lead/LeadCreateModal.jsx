@@ -5,6 +5,9 @@ import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { CANONICAL_STATES } from "../../constants/taxonomy";
 import { FIELD_DEFS } from "../../constants/lead-form-fields";
 import { LeadFormBuilder } from "./LeadFormBuilder";
+import { useStageFields } from "../../hooks/use-stage-fields";
+import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { StageFieldInput } from "./StageFieldInput";
 
 // ── Customer search helpers ───────────────────────────────────────────────────
 
@@ -243,16 +246,27 @@ export function LeadCreateModal({
     sector: currentUser?.sectors?.[0] || "",
     contactEmail: "",
   }));
+  // Valores dos campos customizados da ETAPA de destino (pipeline_stage_fields)
+  // — mesmo mecanismo do drawer/enforcement, mas coletado já na criação, pra
+  // não precisar abrir o card de novo só pra preencher o que a fase pede.
+  const [customValues, setCustomValues] = useState({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [duplicates, setDuplicates] = useState([]);
   const firstRef = useRef(null);
 
+  const stageFields = useStageFields();
+  const visibleStageFields = resolveVisibleFields(
+    stageFields.getFields(companyId, stageId),
+    customValues
+  );
+
   // Focus first input when modal opens
   React.useEffect(() => {
     if (open) {
       setValues({ owner: currentUser?.id || "", sector: currentUser?.sectors?.[0] || "", contactEmail: "" });
+      setCustomValues({});
       setError(null);
       setSaving(false);
       setDuplicates([]);
@@ -298,6 +312,13 @@ export function LeadCreateModal({
         return;
       }
     }
+    // Campos obrigatórios da etapa de destino — mesmo enforcement que já
+    // bloqueia mover um card com campo vazio, só que antes mesmo dele existir.
+    const missing = getMissingRequiredFields(visibleStageFields, customValues);
+    if (missing.length > 0) {
+      setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -335,7 +356,7 @@ export function LeadCreateModal({
         lastActivity: now.toISOString(),
         stageChangedAt: now.toISOString(),
         decisionMaker: { name: "—", role: "—" },
-        customFields: {},
+        customFields: customValues,
       };
       // Auto-link or create client record
       const cnpjNorm = cnpjDigits(values.cnpj || "");
@@ -370,7 +391,7 @@ export function LeadCreateModal({
     } finally {
       setSaving(false);
     }
-  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose]);
+  }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === "Escape") onClose();
@@ -558,6 +579,34 @@ export function LeadCreateModal({
               </React.Fragment>
             );
           })}
+
+          {/* Campos da etapa de destino (pipeline_stage_fields) — o que a
+              fase pede além do formulário básico acima, igual ao Pipefy: já
+              coletado na criação, não só depois no drawer. */}
+          {visibleStageFields.length > 0 && (
+            <div style={{ marginBottom: 16, paddingTop: 12, borderTop: "1px dashed #E5E7EB" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
+                Campos desta etapa {stage?.name ? `· ${stage.name}` : ""}
+              </div>
+              <div className="flex flex-col gap-3">
+                {visibleStageFields.map(f => (
+                  <div key={f.id}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
+                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 2 }}>*</span>}
+                      {f.label}
+                    </label>
+                    <StageFieldInput
+                      field={f}
+                      value={customValues[f.fieldKey]}
+                      onChange={val => setCustomValues(prev => ({ ...prev, [f.fieldKey]: val }))}
+                      users={users}
+                      companyId={companyId}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && (
             <div
