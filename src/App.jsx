@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
-  ClipboardCheck, GraduationCap, MessageSquareText, Plane,
+  ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox,
 } from "lucide-react";
 import { supabase } from "./lib/supabase";
 import { NEUTRAL } from "./constants/companies";
@@ -26,6 +26,7 @@ import { useAutomations } from "./hooks/use-automations";
 import { useStageFields } from "./hooks/use-stage-fields";
 import { getMissingRequiredFields } from "./utils/field-conditions";
 import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
+import { useDemoData } from "./hooks/use-demo-data";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
 import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScreen";
 import { Sidebar } from "./components/shell/Sidebar";
@@ -53,6 +54,7 @@ import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
 import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
+import { MarketingRequestsView } from "./components/views/MarketingRequestsView";
 import { RHOverviewView } from "./components/views/RHOverviewView";
 import { RHFuncionariosView } from "./components/views/RHFuncionariosView";
 import { RHRecrutamentoView } from "./components/views/RHRecrutamentoView";
@@ -159,6 +161,12 @@ export default function App() {
     companies: currentUser?.companies,
     enabled: Boolean(currentUser) && (isMarketingUser || isAgencia),
   });
+
+  const {
+    loadAllDemo: loadAllDemoData,
+    loading: demoDataLoading,
+    counts: demoDataCounts,
+  } = useDemoData();
 
   const {
     notifications,
@@ -475,9 +483,10 @@ export default function App() {
         mktItems.push({ id: "marketing-home", label: "Visão Geral", icon: LayoutDashboard });
       }
       mktItems.push(
-        { id: "marketing",          label: "Campanhas", icon: Megaphone },
-        { id: "marketing-entregas", label: "Entregas",  icon: Package },
-        { id: "marketing-despesas", label: "Despesas",  icon: DollarSign }
+        { id: "marketing",                label: "Campanhas",    icon: Megaphone },
+        { id: "marketing-solicitacoes",   label: "Solicitações", icon: Inbox },
+        { id: "marketing-entregas",       label: "Entregas",     icon: Package },
+        { id: "marketing-despesas",       label: "Despesas",     icon: DollarSign }
       );
       groups.push({ label: "Marketing", items: mktItems });
     }
@@ -540,8 +549,9 @@ export default function App() {
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
-    if (section === "settings" && !isManager) return "Meu perfil";
-    if (section === "marketing-home")         return "Visão Geral · Marketing";
+    if (section === "settings" && !isManager)          return "Meu perfil";
+    if (section === "marketing-home")                  return "Visão Geral · Marketing";
+    if (section === "marketing-solicitacoes")          return "Solicitações · Marketing";
     for (const g of navGroups) {
       const hit = g.items.find(i => i.id === section);
       if (hit) return hit.label;
@@ -559,9 +569,13 @@ export default function App() {
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
-    const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas"];
+    const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas", "marketing-solicitacoes"];
     if (!isMarketingUser && !isAgencia && marketingOnly.includes(section)) {
       setSection("dashboard");
+    }
+    // Agência não acessa Solicitações (área interna de marketing)
+    if (isAgencia && section === "marketing-solicitacoes") {
+      setSection("marketing");
     }
     // Pure marketing users shouldn't access CRM sections
     const crmSections = ["crm", "signals", "explorer", "crm-viagens", "commercial-overview"];
@@ -874,6 +888,9 @@ export default function App() {
               leadsCount={leads.length}
               onLoadDemoLeads={loadDemoLeads}
               onClearAllLeads={clearAllLeads}
+              onLoadAllDemoData={isManager ? loadAllDemoData : undefined}
+              demoDataLoading={demoDataLoading}
+              demoDataCounts={demoDataCounts}
               onUpdateUser={updateUser}
               onUpdateAuthUser={supabaseEnabled ? updateAuthUser : null}
               onUpdateMockUser={supabaseEnabled ? null : setMockUser}
@@ -930,6 +947,11 @@ export default function App() {
           <Route path={ROUTES["marketing-despesas"]} element={
             (isMarketingUser && !isAgencia)
               ? <DespesasView user={currentUser} users={users} campaigns={campaigns} />
+              : <Navigate to={ROUTES.marketing} replace />
+          } />
+          <Route path={ROUTES["marketing-solicitacoes"]} element={
+            (isMarketingUser && !isAgencia)
+              ? <MarketingRequestsView user={currentUser} users={users} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["rh-overview"]} element={

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import App from "./App";
 import LeadCaptureForm from "./components/public/LeadCaptureForm";
 import JobApplicationForm from "./components/public/JobApplicationForm";
+import MarketingRequestForm from "./components/public/MarketingRequestForm";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -12,6 +13,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <Routes>
         <Route path="/captura/:slug" element={<LeadCaptureForm />} />
         <Route path="/vagas/:slug" element={<JobApplicationForm />} />
+        <Route path="/solicitar-marketing" element={<MarketingRequestForm />} />
         <Route path="/*" element={<App />} />
       </Routes>
     </BrowserRouter>
