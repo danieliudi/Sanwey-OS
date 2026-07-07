@@ -3,6 +3,7 @@ import { Clock, Star, AlertTriangle, TrendingUp, MoreVertical, ArrowRight } from
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { CHANNEL_COLORS, MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { formatK } from "../../utils/currency";
+import { CompletenessBadge } from "../ui/CompletenessBadge";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -22,7 +23,7 @@ function slaStyle(daysInStage, sla) {
   return null;
 }
 
-function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onDragEnd, stages, onMoveToStage }) {
+function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -87,6 +88,9 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
           {campaign.name}
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {completeness?.total > 0 && (
+            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
+          )}
           {isUrgent && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"

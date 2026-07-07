@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Zap, Plus, Trash2, ToggleLeft, ToggleRight, ArrowRight,
   AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X, Info,
-  Share2, Building2, GitBranch, CornerDownRight,
+  Share2, Building2, GitBranch, CornerDownRight, ClipboardList,
 } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
@@ -16,6 +16,7 @@ const TRIGGER_TYPES = [
   { id: "stage_change",  label: "Mudança de etapa",     icon: MoveRight,    desc: "Quando um card muda de etapa" },
   { id: "field_value",   label: "Valor de campo",       icon: Settings2,    desc: "Quando um campo atinge um valor" },
   { id: "time_in_stage", label: "Tempo na etapa",       icon: AlertCircle,  desc: "Quando um card fica X dias sem avançar" },
+  { id: "pending_required_field", label: "Campo obrigatório pendente", icon: ClipboardList, desc: "Quando um card fica X dias na etapa com campo obrigatório vazio" },
   { id: "lead_created",  label: "Card criado",          icon: Plus,         desc: "Quando um novo card é criado" },
 ];
 
@@ -306,6 +307,10 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
       const stage = allStages.find(s => s.id === t.stageId)?.name || "etapa";
       return `${t.days || 0} dias em ${stage}`;
     }
+    if (t.type === "pending_required_field") {
+      const stage = allStages.find(s => s.id === t.stageId)?.name || "qualquer etapa";
+      return `${t.days || 0} dias com campo pendente em ${stage}`;
+    }
     return triggerType?.desc || "—";
   }, [rule.trigger, allStages, triggerType]);
 
@@ -435,6 +440,11 @@ function AutomationDetail({ rule, allStages }) {
           {t?.type === "time_in_stage" && (
             <div className="text-xs" style={{ color: "var(--text-dim)" }}>
               <b>{t.days || 0} dias</b> na etapa <b>{allStages.find(s => s.id === t.stageId)?.name || t.stageId}</b>
+            </div>
+          )}
+          {t?.type === "pending_required_field" && (
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>
+              <b>{t.days || 0} dias</b> com campo obrigatório vazio em <b>{allStages.find(s => s.id === t.stageId)?.name || "qualquer etapa"}</b>
             </div>
           )}
           {t?.type === "lead_created" && (
@@ -873,6 +883,37 @@ function StepTrigger({ rule, allStages, setTrigger }) {
         </div>
       )}
 
+      {t.type === "pending_required_field" && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Etapa</label>
+            <select
+              value={t.stageId || ""}
+              onChange={e => setTrigger({ stageId: e.target.value })}
+              className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+            >
+              <option value="">Qualquer etapa</option>
+              {allStages.filter(s => !s.terminal).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Dias com campo pendente</label>
+            <input
+              type="number"
+              min="1"
+              value={t.days || ""}
+              onChange={e => setTrigger({ days: parseInt(e.target.value) || 0 })}
+              placeholder="Ex: 3"
+              className="w-full text-xs rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)" }}
+              onFocus={e => { e.target.style.borderColor = "#6366F1"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+            />
+          </div>
+        </div>
+      )}
+
       {t.type === "lead_created" && (
         <div
           className="rounded-xl border px-4 py-3 text-xs"
@@ -1299,7 +1340,7 @@ function HowItWorks() {
       {open && (
         <div className="px-4 py-3 text-xs space-y-2" style={{ color: "var(--text-dim)", borderTop: "1px solid var(--surface-alt)" }}>
           <p>As automações são <strong>regras compartilhadas com a equipe</strong> (salvas no banco, não só no seu navegador), avaliadas sempre que um card é atualizado — sem IA e sem custo por execução. Duas ações (criar entrega e enriquecer com CNPJ) chamam uma API real quando disparam; as demais são só lógica local.</p>
-          <p><strong>Gatilhos disponíveis:</strong> mudança de etapa, valor de campo, tempo parado em etapa, criação de card.</p>
+          <p><strong>Gatilhos disponíveis:</strong> mudança de etapa, valor de campo, tempo parado em etapa, campo obrigatório pendente há X dias, criação de card.</p>
           <p><strong>Condições (opcional):</strong> refine o gatilho com grupos de condições — condições no mesmo grupo exigem E, grupos diferentes são combinados por OU. Com condições, você pode definir ações para "então" (passou) e "senão" (não passou).</p>
           <p><strong>Ações disponíveis:</strong> mover o card para outra etapa, alterar um campo, adicionar badge visual, exibir alerta, criar entrega em Marketing, ou enriquecer com dados de CNPJ — cada regra pode disparar mais de uma.</p>
           <p>As regras são avaliadas em sequência, na ordem de criação. Se múltiplas regras dispararem no mesmo evento, todas serão executadas.</p>
@@ -1319,6 +1360,7 @@ function validateTrigger(t) {
     return NO_VALUE_OPERATORS.has(t.operator) || Boolean(t.value);
   }
   if (t.type === "time_in_stage") return (t.days || 0) > 0;
+  if (t.type === "pending_required_field") return (t.days || 0) > 0;
   return true;
 }
 

@@ -16,7 +16,7 @@ import {
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatDateBR } from "../../utils/date";
 import { useUsersById }  from "../../hooks/use-users-by-id";
-import { getMissingRequiredFields } from "../../utils/field-conditions";
+import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -393,6 +393,12 @@ export function EntregasView({ user, users = [] }) {
     await changeStage(itemId, toStage);
   }, [deliverables, stageFields, changeStage]);
 
+  // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
+  const getItemCompleteness = useCallback((item) => {
+    const fields = stageFields.getFields(item.stage);
+    return getFieldCompleteness(fields, item.customFields || {});
+  }, [stageFields]);
+
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedItem || !canWrite) return;
     if (draggedItem.stage !== toStage) await attemptStageChange(draggedItem.id, toStage);
@@ -573,6 +579,7 @@ export function EntregasView({ user, users = [] }) {
                           stages={kanbanStages}
                           onMoveToStage={canWrite ? attemptStageChange : null}
                           onToggleStar={canWrite ? toggleStar : null}
+                          completeness={getItemCompleteness(item)}
                         />
                       ))
                     )}
@@ -674,6 +681,7 @@ export function EntregasView({ user, users = [] }) {
                             stages={kanbanStages}
                             onMoveToStage={canWrite ? attemptStageChange : null}
                             onToggleStar={canWrite ? toggleStar : null}
+                            completeness={getItemCompleteness(item)}
                           />
                         ))
                       )}

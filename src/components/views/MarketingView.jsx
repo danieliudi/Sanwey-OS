@@ -15,7 +15,7 @@ import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
-import { getMissingRequiredFields } from "../../utils/field-conditions";
+import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { Select } from "../ui/Select";
 
 // ── Create modal ─────────────────────────────────────────────────────────────
@@ -638,6 +638,12 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     await handleStageChange(campaignId, toStage);
   }, [campaigns, stageFields, handleStageChange]);
 
+  // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
+  const getCampaignCompleteness = useCallback((campaign) => {
+    const fields = stageFields.getFields(campaign.stage);
+    return getFieldCompleteness(fields, campaign.customFields || {});
+  }, [stageFields]);
+
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedCampaign || !canWrite) return;
     if (draggedCampaign.stage !== toStage) {
@@ -867,6 +873,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           onDragEnd={handleDragEnd}
                           stages={kanbanStages}
                           onMoveToStage={attemptStageChange}
+                          completeness={getCampaignCompleteness(c)}
                         />
                       ))
                     )}
@@ -986,6 +993,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                             onDragEnd={handleDragEnd}
                             stages={kanbanStages}
                             onMoveToStage={attemptStageChange}
+                            completeness={getCampaignCompleteness(c)}
                           />
                         ))
                       )}

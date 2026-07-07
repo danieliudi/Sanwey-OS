@@ -42,7 +42,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
-import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
@@ -676,6 +676,7 @@ function VagaCard({ vaga, candidatosCount }) {
 function VagaKanbanColumn({
   stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
   onMoveToStage, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
+  getCompleteness,
 }) {
   return (
     <div
@@ -722,6 +723,7 @@ function VagaKanbanColumn({
               onDragEnd={onDragEnd}
               onMoveToStage={onMoveToStage}
               agingDays={daysInStage(v.stage_changed_at)}
+              completeness={getCompleteness?.(v)}
             >
               <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} />
             </RHKanbanCard>
@@ -1507,6 +1509,7 @@ function CandidatoCardBody({ candidato: c, vagas }) {
 function KanbanColumn({
   stage, stages, candidatos, vagas, canWrite, onCardClick, onAddCandidato,
   onMoveToStage, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
+  getCompleteness,
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -1595,6 +1598,7 @@ function KanbanColumn({
                 onDragEnd={onDragEnd}
                 onMoveToStage={onMoveToStage}
                 agingDays={daysInStage(c.stage_changed_at)}
+                completeness={getCompleteness?.(c)}
               >
                 <CandidatoCardBody candidato={c} vagas={vagas} />
               </RHKanbanCard>
@@ -1727,6 +1731,9 @@ export function RHRecrutamentoView({ user, canWrite }) {
   const handleVagaStageChange = (id, newStage) => {
     if (attemptVagaStageChange(id, newStage)) setVagaDrawerId(null);
   };
+  // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
+  const getVagaCompleteness = (vaga) =>
+    getFieldCompleteness(vagaStageFields.getFields(vaga.stage), vaga.custom_fields || {});
   const handleVerCandidatos = (vagaId) => {
     setSelectedVaga(vagaId);
     setViewMode("candidatos");
@@ -1784,6 +1791,9 @@ export function RHRecrutamentoView({ user, canWrite }) {
     }
     changeStage(id, newStage);
   };
+  // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
+  const getCandCompleteness = (candidato) =>
+    getFieldCompleteness(candStageFields.getFields(candidato.stage), candidato.customFields || {});
   const handleCandDrop = (stageKey) => {
     const id = draggedAplicacaoId;
     setDraggedAplicacaoId(null);
@@ -1958,6 +1968,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   onDragLeave={handleVagaDragLeave}
                   onDrop={() => handleVagaDrop(stage.stageKey)}
                   onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
+                  getCompleteness={getVagaCompleteness}
                 />
               ))}
             </div>
@@ -1979,6 +1990,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   onDragLeave={handleVagaDragLeave}
                   onDrop={() => handleVagaDrop(stage.stageKey)}
                   onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
+                  getCompleteness={getVagaCompleteness}
                 />
               ))}
             </div>
@@ -2059,6 +2071,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   onDragLeave={handleCandDragLeave}
                   onDrop={() => handleCandDrop(stage.stageKey)}
                   onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
+                  getCompleteness={getCandCompleteness}
                 />
               ))}
             </div>
@@ -2082,6 +2095,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
                   onDragLeave={handleCandDragLeave}
                   onDrop={() => handleCandDrop(stage.stageKey)}
                   onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
+                  getCompleteness={getCandCompleteness}
                 />
               ))}
             </div>

@@ -9,10 +9,10 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
  * {
  *   id, name, companyId, module, enabled,
  *   trigger: {
- *     type: "stage_change" | "field_value" | "time_in_stage" | "lead_created",
+ *     type: "stage_change" | "field_value" | "time_in_stage" | "pending_required_field" | "lead_created",
  *     fromStage?, toStage?,      // stage_change
  *     field?, operator?, value?, // field_value
- *     days?, stageId?,           // time_in_stage
+ *     days?, stageId?,           // time_in_stage, pending_required_field (stageId opcional nesse último)
  *   },
  *   // Refinamento OPCIONAL do trigger — grupos combinados em OR, condições
  *   // dentro de um grupo combinadas em AND (mesmo padrão do field_conditions
@@ -190,6 +190,21 @@ export function useAutomations({ userId } = {}) {
         const inStageOk = !trigger.stageId || lead.stage === trigger.stageId;
         const days = trigger.days || 0;
         if (inStageOk && lead.stageChangedAt) {
+          const elapsed = (Date.now() - new Date(lead.stageChangedAt).getTime()) / (1000 * 60 * 60 * 24);
+          triggered = elapsed >= days;
+        }
+      }
+
+      // Nudge de campo obrigatório pendente — mesma mecânica do time_in_stage
+      // (tempo desde stageChangedAt), só que também exige que a etapa atual
+      // ainda tenha campo obrigatório vazio. `lead._missingRequiredFields` é
+      // computado por quem chama evaluateAutomations (precisa dos defs de
+      // campo por etapa, que este hook não conhece).
+      if (trigger.type === "pending_required_field" && eventType === "pending_required_field") {
+        const inStageOk = !trigger.stageId || lead.stage === trigger.stageId;
+        const days = trigger.days || 0;
+        const hasMissing = Array.isArray(lead._missingRequiredFields) && lead._missingRequiredFields.length > 0;
+        if (inStageOk && hasMissing && lead.stageChangedAt) {
           const elapsed = (Date.now() - new Date(lead.stageChangedAt).getTime()) / (1000 * 60 * 60 * 24);
           triggered = elapsed >= days;
         }

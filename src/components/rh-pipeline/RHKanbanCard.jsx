@@ -1,5 +1,6 @@
 import React, { memo, useRef, useState, useEffect } from "react";
 import { Clock, MoreVertical, ArrowRight } from "lucide-react";
+import { CompletenessBadge } from "../ui/CompletenessBadge";
 
 function agingStyle(days) {
   if (days > 21) return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
@@ -12,7 +13,7 @@ function stageKeyOf(s) {
   return s?.stageKey ?? s?.id;
 }
 
-function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, agingDays, children }) {
+function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, agingDays, completeness, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -61,6 +62,9 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
       {/* Aging badge + move menu — right-aligned top row; card body lives in children below */}
       <div className="flex items-start justify-end gap-2 mb-2">
         <div className="flex items-center gap-1 shrink-0">
+          {completeness?.total > 0 && (
+            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
+          )}
           {ageStyle && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"

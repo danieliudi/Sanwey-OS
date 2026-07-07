@@ -3,6 +3,7 @@ import { Clock, Star, MoreVertical, ArrowRight } from "lucide-react";
 import { COMPANIES, NEUTRAL } from "../../constants/companies";
 import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
+import { CompletenessBadge } from "../ui/CompletenessBadge";
 
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
 const PRIORITY_LABELS = { baixa: "Baixa",   media: "Média",   alta: "Alta"  };
@@ -21,7 +22,7 @@ function agingStyle(days) {
 
 function DeliverableKanbanCardImpl({
   item, ownerName, onClick, onDragStart, onDragEnd,
-  stages, onMoveToStage, canWrite, onToggleStar,
+  stages, onMoveToStage, canWrite, onToggleStar, completeness,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -109,7 +110,10 @@ function DeliverableKanbanCardImpl({
 
       {/* Aging badge + quick-move menu + star toggle */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-1">
+          {completeness?.total > 0 && (
+            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={22} />
+          )}
           {ageStyle && daysInStage !== null && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"

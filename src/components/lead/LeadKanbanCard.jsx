@@ -2,6 +2,7 @@ import React, { memo, useRef, useState, useEffect } from "react";
 import { Clock, MoreVertical, ArrowRight } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
+import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { CompanyTag } from "../ui/CompanyTag";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
@@ -18,7 +19,7 @@ function agingStyle(days) {
   return null;
 }
 
-function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage }) {
+function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -90,6 +91,9 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
               <Clock size={8} strokeWidth={2.5} />
               {daysInStage}d
             </span>
+          )}
+          {completeness?.total > 0 && (
+            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={30} />
           )}
           <FitScoreCircle score={lead.fitScore} size={30} />
           {moveTargets.length > 0 && onMoveToStage && (

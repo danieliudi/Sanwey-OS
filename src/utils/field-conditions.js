@@ -68,3 +68,14 @@ export function getMissingRequiredFields(fields, valuesByKey) {
   return resolveVisibleFields(fields, valuesByKey)
     .filter(f => f.effectiveRequired && isValueEmpty(valuesByKey?.[f.fieldKey]));
 }
+
+// Completude da etapa atual pro badge do card (seção 10.3 da auditoria):
+// "5/8" laranja se faltam campos obrigatórios, verde quando completo. total=0
+// (etapa sem nenhum campo obrigatório) não deve renderizar badge nenhum —
+// quem chama decide isso olhando `total`.
+export function getFieldCompleteness(fields, valuesByKey) {
+  const required = resolveVisibleFields(fields, valuesByKey).filter(f => f.effectiveRequired);
+  const total = required.length;
+  const filled = required.filter(f => !isValueEmpty(valuesByKey?.[f.fieldKey])).length;
+  return { total, filled, complete: filled === total };
+}

@@ -15,7 +15,7 @@ import { PipelineCalendarView } from "./PipelineCalendarView";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { useLeadFormConfig } from "../../hooks/use-lead-form-config";
 import { useStageFields } from "../../hooks/use-stage-fields";
-import { getMissingRequiredFields } from "../../utils/field-conditions";
+import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { formatK } from "../../utils/currency";
 
@@ -576,6 +576,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     onStageChange(leadId, targetStageId);
   }, [scopedLeads, leads, stageFields, onStageChange]);
 
+  // Badge "X/Y campos obrigatórios" no card (auditoria 10.3) — mesma fonte
+  // de campos/valores do enforcement acima, só que sem bloquear nada.
+  const getLeadCompleteness = useCallback((lead) => {
+    const fields = stageFields.getFields(lead.companyId, lead.stage);
+    return getFieldCompleteness(fields, lead.customFields || {});
+  }, [stageFields]);
+
   const handleDrop = useCallback((stageId, companyId) => {
     if (draggedLead && draggedLead.stage !== stageId) {
       if (pipelineTransitions) {
@@ -763,6 +770,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                           onDragEnd={handleDragEnd}
                           stages={stages}
                           onMoveToStage={attemptStageChange}
+                          completeness={getLeadCompleteness(lead)}
                         />
                       );
                     })
@@ -913,6 +921,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                           onDragEnd={handleDragEnd}
                           stages={stages}
                           onMoveToStage={attemptStageChange}
+                          completeness={getLeadCompleteness(lead)}
                         />
                       );
                     })

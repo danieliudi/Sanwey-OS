@@ -20,7 +20,7 @@ import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal"
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
-import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ function OnboardingKanbanColumn({
   stage, stages, colaboradoresList, tarefasByColaborador, vagasById,
   onCardClick, onDragStart, onDragEnd, onMoveToStage,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields,
+  canWrite, onEditFields, getCompleteness,
 }) {
   return (
     <div
@@ -189,6 +189,7 @@ function OnboardingKanbanColumn({
               onDragEnd={onDragEnd}
               onMoveToStage={onMoveToStage}
               agingDays={daysInStage(c.onboardingStageChangedAt)}
+              completeness={getCompleteness?.(c)}
             >
               <OnboardingCardBody
                 colaborador={c}
@@ -610,6 +611,10 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
     }
   };
 
+  // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
+  const getColaboradorCompleteness = (colaborador) =>
+    getFieldCompleteness(onboardingStageFields.getFields(colaborador.onboardingStage), colaborador.customFields || {});
+
   // Drag-and-drop nativo entre colunas — reusa o mesmo handleStageChange
   // (com os side-effects de treinamento/feedback) usado pelos botões
   // "Mover para", tanto no card (menu do RHKanbanCard) quanto no drawer.
@@ -755,6 +760,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
                 onColumnDrop={handleColumnDrop}
                 canWrite={canWrite}
                 onEditFields={setFieldEditorStage}
+                getCompleteness={getColaboradorCompleteness}
               />
             ))}
           </div>
@@ -777,6 +783,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
                 onColumnDrop={handleColumnDrop}
                 canWrite={canWrite}
                 onEditFields={setFieldEditorStage}
+                getCompleteness={getColaboradorCompleteness}
               />
             ))}
           </div>

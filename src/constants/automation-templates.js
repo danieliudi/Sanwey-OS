@@ -114,6 +114,18 @@ export const AUTOMATION_TEMPLATES = [
     },
   },
   {
+    id: "pending-required-field",
+    icon: "📋",
+    title: "Campo obrigatório pendente",
+    summary: "Notifica quando um card fica 3 dias na mesma etapa com campo obrigatório vazio.",
+    rule: {
+      name: "Alerta · campo obrigatório pendente há 3 dias",
+      companyId: "all",
+      trigger: { type: "pending_required_field", days: 3 },
+      action:  { type: "notify", message: "Card com campo obrigatório pendente há dias — completar antes de seguir." },
+    },
+  },
+  {
     id: "enrich-new-lead",
     icon: "🏢",
     title: "Enriquecer lead novo com CNPJ",

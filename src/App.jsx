@@ -23,6 +23,8 @@ import { useProfiles } from "./hooks/use-profiles";
 import { useInvitations } from "./hooks/use-invitations";
 import { usePipelineTransitions } from "./hooks/use-pipeline-transitions";
 import { useAutomations } from "./hooks/use-automations";
+import { useStageFields } from "./hooks/use-stage-fields";
+import { getMissingRequiredFields } from "./utils/field-conditions";
 import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
 import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScreen";
@@ -149,6 +151,7 @@ export default function App() {
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
   const pipelineTransitions = usePipelineTransitions();
   const { evaluateAutomations } = useAutomations();
+  const stageFieldsForNudge = useStageFields();
 
   const { campaigns } = useMarketingCampaigns({
     userId: currentUser?.id,
@@ -368,6 +371,40 @@ export default function App() {
       pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: lead.id, companyId: lead.companyId });
     }
   }, [addLead, evaluateAutomations, updateLeadRemote, pushNotification, processAutomationSideEffects]);
+
+  // Nudges por tempo: os gatilhos "time_in_stage" e "pending_required_field"
+  // não disparam em nenhum evento do CRM (não são mudança de etapa nem
+  // criação) — precisam de uma varredura periódica. A própria tela de
+  // Automações já dizia "o avaliador roda ao abrir o CRM", mas isso nunca
+  // tinha sido implementado; time_in_stage ficava morto. Dedup por
+  // localStorage (chave regra+lead+stageChangedAt) pra não repetir a mesma
+  // notificação a cada scan.
+  const [notifiedNudges, setNotifiedNudges] = usePersistentState("gs_v4_nudges_notified", {});
+  useEffect(() => {
+    if (!leads.length) return;
+    const scan = () => {
+      const newlyNotified = {};
+      for (const lead of leads) {
+        const fields = stageFieldsForNudge.getFields(lead.companyId, lead.stage);
+        const missing = getMissingRequiredFields(fields, lead.customFields || {});
+        const enriched = { ...lead, _missingRequiredFields: missing };
+        const { notifications: staleNotifs } = evaluateAutomations(lead, lead, "time_in_stage");
+        const { notifications: pendingNotifs } = evaluateAutomations(enriched, enriched, "pending_required_field");
+        for (const n of [...staleNotifs, ...pendingNotifs]) {
+          const key = `${n.ruleId}:${lead.id}:${lead.stageChangedAt}`;
+          if (notifiedNudges[key]) continue;
+          newlyNotified[key] = true;
+          pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: lead.id, companyId: lead.companyId });
+        }
+      }
+      if (Object.keys(newlyNotified).length > 0) {
+        setNotifiedNudges(prev => ({ ...prev, ...newlyNotified }));
+      }
+    };
+    scan();
+    const interval = setInterval(scan, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [leads, stageFieldsForNudge, evaluateAutomations, notifiedNudges, pushNotification, setNotifiedNudges]);
 
   const closeDrawer = useCallback(() => setSelectedLead(null), []);
 
