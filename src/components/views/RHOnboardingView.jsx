@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ClipboardCheck, Plus, X, Check, Trash2, ArrowRight,
-  Briefcase, Clock,
+  Briefcase, Pencil, Settings2,
 } from "lucide-react";
 import { RH_CONTRACT_TYPES } from "../../constants/rh-config";
 import { isSupabaseConfigured } from "../../lib/supabase";
@@ -10,21 +10,25 @@ import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { useProfiles } from "../../hooks/use-profiles";
 import { nextPendingCycle } from "../../utils/rh-feedback-cycles";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
+import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
+import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
+// As etapas vêm de rh_pipeline_stages (domain="onboarding"), editáveis pelo RH
+// via RHStageEditorModal — ver useRHPipelineStages("onboarding") mais abaixo.
+// Os stageKeys (documentacao/integracao/acompanhamento/avaliacao/concluido) já
+// batem com os valores existentes em rh_colaboradores.onboarding_stage.
 
-const ONBOARDING_STAGES = [
-  { id: "documentacao",    name: "Documentação",     color: "#8A8680" },
-  { id: "integracao",      name: "Integração",       color: "#0EA5E9" },
-  { id: "acompanhamento",  name: "Acompanhamento",   color: "#7C3AED" },
-  { id: "avaliacao",       name: "Avaliação",        color: "#D97706" },
-  { id: "concluido",       name: "Concluído",        color: "#16A34A", terminal: true },
-];
-
-function stageInfo(id) {
-  return ONBOARDING_STAGES.find((s) => s.id === id) || ONBOARDING_STAGES[0];
+function findStage(stages, stageKey) {
+  return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
 }
 
 function fmt(dateStr) {
@@ -97,22 +101,16 @@ function TaskRow({ tarefa, canWrite, canToggle, onStatusChange, onDelete }) {
 }
 
 // ── Card do Kanban ────────────────────────────────────────────────────────────
+// O "chrome" do card (borda, sombra, badge de aging, menu "Mover para", drag)
+// vem de RHKanbanCard — aqui só o conteúdo interno (children).
 
-function OnboardingCard({ colaborador, tarefas, vagaTitle, onClick }) {
+function OnboardingCardBody({ colaborador, tarefas, vagaTitle }) {
   const total = tarefas.length;
   const done = tarefas.filter((t) => t.status === "concluida").length;
   const progresso = total > 0 ? Math.round((done / total) * 100) : 0;
-  const days = daysInStage(colaborador.onboardingStageChangedAt);
-  const st = stageInfo(colaborador.onboardingStage);
 
   return (
-    <div
-      onClick={onClick}
-      className="cursor-pointer transition-all duration-150"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)", borderLeft: `3px solid ${st.color}`, borderRadius: 10, padding: "10px 12px" }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.boxShadow = "none"; }}
-    >
+    <>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
         <InitialsAvatar name={colaborador.fullName} size={28} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -128,11 +126,6 @@ function OnboardingCard({ colaborador, tarefas, vagaTitle, onClick }) {
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 10, color: "var(--text-dim)" }}>
         <span>{total > 0 ? `${done}/${total} tarefas` : "Sem tarefas"}</span>
-        {days > 0 && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-            <Clock size={9} /> {days}d na etapa
-          </span>
-        )}
       </div>
 
       {vagaTitle && (
@@ -140,30 +133,67 @@ function OnboardingCard({ colaborador, tarefas, vagaTitle, onClick }) {
           <Briefcase size={10} /> {vagaTitle}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
-function OnboardingKanbanColumn({ stage, colaboradoresList, tarefasByColaborador, vagasById, onCardClick }) {
+function OnboardingKanbanColumn({
+  stage, stages, colaboradoresList, tarefasByColaborador, vagasById,
+  onCardClick, onDragStart, onDragEnd, onMoveToStage,
+  isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
+  canWrite, onEditFields,
+}) {
   return (
-    <div style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0, display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)" }}>
+    <div
+      onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
+      onDragLeave={onColumnDragLeave}
+      onDrop={() => onColumnDrop(stage.stageKey)}
+      style={{
+        background: isDragOver ? "var(--accent-tint)" : "var(--surface-alt)",
+        border: `1px solid ${isDragOver ? "var(--accent)" : "var(--border)"}`,
+        borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0,
+        display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)",
+        transition: "background 0.12s, border-color 0.12s",
+      }}
+    >
       <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
         <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: "var(--text)" }}>{stage.name}</span>
         <span style={{ background: `${stage.color}22`, color: stage.color, borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{colaboradoresList.length}</span>
+        {canWrite && (
+          <button
+            onClick={() => onEditFields(stage)}
+            title="Editar campos desta etapa"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
+          >
+            <Settings2 size={13} />
+          </button>
+        )}
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {colaboradoresList.length === 0 ? (
           <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
         ) : (
           colaboradoresList.map((c) => (
-            <OnboardingCard
+            <RHKanbanCard
               key={c.id}
-              colaborador={c}
-              tarefas={tarefasByColaborador[c.id] || []}
-              vagaTitle={vagasById.get(c.vagaId)?.title}
+              id={c.id}
+              stage={c.onboardingStage}
+              stages={stages}
               onClick={() => onCardClick(c)}
-            />
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onMoveToStage={onMoveToStage}
+              agingDays={daysInStage(c.onboardingStageChangedAt)}
+            >
+              <OnboardingCardBody
+                colaborador={c}
+                tarefas={tarefasByColaborador[c.id] || []}
+                vagaTitle={vagasById.get(c.vagaId)?.title}
+              />
+            </RHKanbanCard>
           ))
         )}
       </div>
@@ -174,8 +204,9 @@ function OnboardingKanbanColumn({ stage, colaboradoresList, tarefasByColaborador
 // ── Drawer do colaborador ─────────────────────────────────────────────────────
 
 function OnboardingDrawer({
-  colaborador, tarefas, templates, vagaTitle, canWrite,
+  colaborador, tarefas, templates, vagaTitle, canWrite, stages, users, currentUser,
   onStageChange, onStatusChange, onDeleteTarefa, onApplyTemplate, onAddTask, onClose,
+  onUpdateCustomFields, onAddActivity,
 }) {
   const [templateId, setTemplateId] = useState("");
   const [novaTarefa, setNovaTarefa] = useState("");
@@ -187,7 +218,32 @@ function OnboardingDrawer({
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const st = stageInfo(colaborador.onboardingStage);
+  // Campos customizados da etapa atual — editáveis inline (save debounced),
+  // mesmo padrão de src/components/lead/LeadDetailDrawer.jsx.
+  const stageFieldsHook = useRHStageFields("onboarding");
+  const customDefs = stageFieldsHook.getFields(colaborador.onboardingStage);
+  const [customDraft, setCustomDraft] = useState({});
+  const customDebounceRef = useRef(null);
+
+  useEffect(() => {
+    setCustomDraft({});
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    return () => { if (customDebounceRef.current) clearTimeout(customDebounceRef.current); };
+  }, [colaborador.id]);
+
+  const handleCustomChange = (fieldKey, value) => {
+    setCustomDraft((prev) => ({ ...prev, [fieldKey]: value }));
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    customDebounceRef.current = setTimeout(() => {
+      const merged = { ...(colaborador.customFields || {}), [fieldKey]: value };
+      onUpdateCustomFields(merged);
+    }, 600);
+  };
+
+  const getCustomValue = (fieldKey) =>
+    fieldKey in customDraft ? customDraft[fieldKey] : (colaborador.customFields?.[fieldKey] ?? "");
+
+  const st = findStage(stages, colaborador.onboardingStage);
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
   const total = tarefas.length;
   const done = tarefas.filter((t) => t.status === "concluida").length;
@@ -248,14 +304,39 @@ function OnboardingDrawer({
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Mover para</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {ONBOARDING_STAGES.filter((s) => s.id !== colaborador.onboardingStage).map((s) => (
+                {stages.filter((s) => s.stageKey !== colaborador.onboardingStage).map((s) => (
                   <button
-                    key={s.id}
-                    onClick={() => onStageChange(colaborador.id, s.id)}
+                    key={s.stageKey}
+                    onClick={() => onStageChange(colaborador.id, s.stageKey)}
                     style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                   >
                     <ArrowRight size={10} /> {s.name}
                   </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {customDefs.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Campos desta etapa</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {customDefs.map((f) => (
+                  <div key={f.id}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                      {f.required && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                      {f.label}
+                    </label>
+                    {f.helpText && (
+                      <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>
+                    )}
+                    <RHStageFieldInput
+                      field={f}
+                      value={getCustomValue(f.fieldKey)}
+                      onChange={(val) => handleCustomChange(f.fieldKey, val)}
+                      users={users}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -315,6 +396,18 @@ function OnboardingDrawer({
               </div>
             </>
           )}
+
+          {/* Atividades / Anexos / Comentários — adicional ao checklist de
+              integração acima (rh_onboarding_tarefas), que continua intacto. */}
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+            <RHDetailDrawerShell
+              domain="onboarding"
+              recordId={colaborador.id}
+              activities={colaborador.activities || []}
+              onAddActivity={onAddActivity}
+              currentUser={currentUser}
+            />
+          </div>
         </div>
       </div>
     </>
@@ -443,12 +536,18 @@ function MeuChecklist({ colaborador, tarefas, onStatusChange }) {
 
 export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
   const { templates, tarefas, loading: loadingTarefas, createTemplate, applyChecklist, updateTarefaStatus, deleteTarefa } = useRHOnboarding({ userId: currentUser?.id });
-  const { colaboradores, loading: loadingColaboradores, changeOnboardingStage } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
   const { feedbacks, createPendingCycle } = useRHFeedback({ userId: currentUser?.id });
+  const { stages, loading: loadingStages } = useRHPipelineStages("onboarding");
+  const { users } = useProfiles();
   const [novaTemplateOpen, setNovaTemplateOpen] = useState(false);
   const [drawerColaboradorId, setDrawerColaboradorId] = useState(null);
+  const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [fieldEditorStage, setFieldEditorStage] = useState(null);
+  const [draggedColaboradorId, setDraggedColaboradorId] = useState(null);
+  const [dragOverStageKey, setDragOverStageKey] = useState(null);
 
   // Ao entrar em "Integração", atribui sozinho os treinamentos obrigatórios
   // cujo cargo ou departamento alvo bata com o do colaborador — mesma lógica
@@ -484,7 +583,34 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
     }
   };
 
-  const loading = loadingTarefas || loadingColaboradores;
+  // Drag-and-drop nativo entre colunas — reusa o mesmo handleStageChange
+  // (com os side-effects de treinamento/feedback) usado pelos botões
+  // "Mover para", tanto no card (menu do RHKanbanCard) quanto no drawer.
+  const handleCardDragStart = useCallback((id) => setDraggedColaboradorId(id), []);
+  const handleCardDragEnd = useCallback(() => { setDraggedColaboradorId(null); setDragOverStageKey(null); }, []);
+  const handleColumnDragOver = useCallback((e, stageKey) => { e.preventDefault(); setDragOverStageKey(stageKey); }, []);
+  const handleColumnDragLeave = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }, []);
+  const handleColumnDrop = useCallback((stageKey) => {
+    if (draggedColaboradorId) {
+      const colaborador = colaboradores.find((c) => c.id === draggedColaboradorId);
+      if (colaborador && colaborador.onboardingStage !== stageKey) {
+        handleStageChange(draggedColaboradorId, stageKey);
+      }
+    }
+    setDraggedColaboradorId(null);
+    setDragOverStageKey(null);
+  }, [draggedColaboradorId, colaboradores, handleStageChange]);
+
+  // Atividades do drawer (aba "Atividades"/"Comentários" do RHDetailDrawerShell)
+  // — persiste em rh_colaboradores.activities (jsonb) via updateColaborador.
+  const handleAddActivity = useCallback(async (colaboradorId, entry) => {
+    const colaborador = colaboradores.find((c) => c.id === colaboradorId);
+    if (!colaborador) return;
+    const nextActivities = [...(colaborador.activities || []), entry];
+    await updateColaborador(colaboradorId, { activities: nextActivities });
+  }, [colaboradores, updateColaborador]);
+
+  const loading = loadingTarefas || loadingColaboradores || loadingStages;
 
   const vagasById = useMemo(() => new Map(vagas.map((v) => [v.id, v])), [vagas]);
 
@@ -499,9 +625,10 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
 
   const colaboradoresByStage = useMemo(() => {
     const map = {};
-    ONBOARDING_STAGES.forEach((s) => { map[s.id] = colaboradores.filter((c) => (c.onboardingStage || "documentacao") === s.id); });
+    const defaultStageKey = stages[0]?.stageKey || "documentacao";
+    stages.forEach((s) => { map[s.stageKey] = colaboradores.filter((c) => (c.onboardingStage || defaultStageKey) === s.stageKey); });
     return map;
-  }, [colaboradores]);
+  }, [colaboradores, stages]);
 
   const meuColaborador = useMemo(
     () => colaboradores.find((c) => c.profileId === currentUser?.id) || null,
@@ -562,9 +689,14 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
           </p>
         </div>
         {canWrite && (
-          <button onClick={() => setNovaTemplateOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            <Plus size={14} /> Template
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={() => setStageEditorOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <Pencil size={13} /> Editar etapas
+            </button>
+            <button onClick={() => setNovaTemplateOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <Plus size={14} /> Template
+            </button>
+          </div>
         )}
       </div>
 
@@ -578,26 +710,46 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
       ) : (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
           <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
-            {ONBOARDING_STAGES.map((stage) => (
+            {stages.map((stage) => (
               <OnboardingKanbanColumn
                 key={stage.id}
                 stage={stage}
-                colaboradoresList={colaboradoresByStage[stage.id] || []}
+                stages={stages}
+                colaboradoresList={colaboradoresByStage[stage.stageKey] || []}
                 tarefasByColaborador={tarefasByColaborador}
                 vagasById={vagasById}
                 onCardClick={(c) => setDrawerColaboradorId(c.id)}
+                onDragStart={handleCardDragStart}
+                onDragEnd={handleCardDragEnd}
+                onMoveToStage={handleStageChange}
+                isDragOver={dragOverStageKey === stage.stageKey}
+                onColumnDragOver={handleColumnDragOver}
+                onColumnDragLeave={handleColumnDragLeave}
+                onColumnDrop={handleColumnDrop}
+                canWrite={canWrite}
+                onEditFields={setFieldEditorStage}
               />
             ))}
           </div>
           <div className="md:hidden flex flex-col gap-3">
-            {ONBOARDING_STAGES.map((stage) => (
+            {stages.map((stage) => (
               <OnboardingKanbanColumn
                 key={stage.id}
                 stage={stage}
-                colaboradoresList={colaboradoresByStage[stage.id] || []}
+                stages={stages}
+                colaboradoresList={colaboradoresByStage[stage.stageKey] || []}
                 tarefasByColaborador={tarefasByColaborador}
                 vagasById={vagasById}
                 onCardClick={(c) => setDrawerColaboradorId(c.id)}
+                onDragStart={handleCardDragStart}
+                onDragEnd={handleCardDragEnd}
+                onMoveToStage={handleStageChange}
+                isDragOver={dragOverStageKey === stage.stageKey}
+                onColumnDragOver={handleColumnDragOver}
+                onColumnDragLeave={handleColumnDragLeave}
+                onColumnDrop={handleColumnDrop}
+                canWrite={canWrite}
+                onEditFields={setFieldEditorStage}
               />
             ))}
           </div>
@@ -611,17 +763,43 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
           templates={templates}
           vagaTitle={vagasById.get(drawerColaborador.vagaId)?.title}
           canWrite={canWrite}
+          stages={stages}
+          users={users}
+          currentUser={currentUser}
           onStageChange={handleStageChange}
           onStatusChange={updateTarefaStatus}
           onDeleteTarefa={deleteTarefa}
           onApplyTemplate={applyChecklist}
           onAddTask={applyChecklist}
           onClose={() => setDrawerColaboradorId(null)}
+          onUpdateCustomFields={(merged) => updateColaborador(drawerColaborador.id, { customFields: merged })}
+          onAddActivity={(entry) => handleAddActivity(drawerColaborador.id, entry)}
         />
       )}
 
       {novaTemplateOpen && (
         <NovaTemplateModal onSave={createTemplate} onClose={() => setNovaTemplateOpen(false)} />
+      )}
+
+      {canWrite && (
+        <RHStageEditorModal
+          open={stageEditorOpen}
+          onClose={() => setStageEditorOpen(false)}
+          domain="onboarding"
+          domainLabel="Onboarding"
+          records={colaboradores}
+          stageField="onboardingStage"
+        />
+      )}
+
+      {canWrite && (
+        <RHStageFieldEditorModal
+          open={!!fieldEditorStage}
+          onClose={() => setFieldEditorStage(null)}
+          domain="onboarding"
+          stageKey={fieldEditorStage?.stageKey}
+          stageName={fieldEditorStage?.name}
+        />
       )}
     </div>
   );

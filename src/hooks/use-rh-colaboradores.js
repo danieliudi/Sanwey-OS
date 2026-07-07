@@ -31,6 +31,8 @@ function rowToColaborador(r) {
     vagaId: r.vaga_id,
     onboardingStage: r.onboarding_stage,
     onboardingStageChangedAt: r.onboarding_stage_changed_at,
+    customFields: r.custom_fields && typeof r.custom_fields === "object" ? r.custom_fields : {},
+    activities: Array.isArray(r.activities) ? r.activities : [],
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -62,6 +64,8 @@ function colaboradorToRow(c, extras = {}) {
     document_path: c.documentPath || null,
     notes: c.notes || null,
     vaga_id: c.vagaId || null,
+    custom_fields: c.customFields && typeof c.customFields === "object" ? c.customFields : {},
+    activities: Array.isArray(c.activities) ? c.activities : [],
     ...extras,
   };
 }

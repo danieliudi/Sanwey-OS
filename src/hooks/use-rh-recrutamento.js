@@ -39,6 +39,10 @@ function joinAplicacao(aplicacao, candidatosById) {
     notes: aplicacao.notes || [],
     rating: aplicacao.rating,
     created_at: aplicacao.created_at,
+    // Campos customizados por etapa (rh_pipeline_stage_fields) e timeline de
+    // atividades — usados pelo RHDetailDrawerShell / RHStageFieldInput.
+    customFields: aplicacao.custom_fields || {},
+    activities: aplicacao.activities || [],
   };
 }
 
@@ -110,7 +114,7 @@ export function useRHRecrutamento({ userId } = {}) {
   }, []);
 
   const changeVagaStage = useCallback(async (id, newStage) => {
-    await updateVaga(id, { stage: newStage });
+    await updateVaga(id, { stage: newStage, stage_changed_at: new Date().toISOString() });
   }, [updateVaga]);
 
   // Cria/atualiza o candidato no talent pool (dedup por e-mail) e cria a
@@ -140,9 +144,21 @@ export function useRHRecrutamento({ userId } = {}) {
     return aplic;
   }, [userId, fetchAll]);
 
+  // Patch genérico numa aplicação — usado pelo Kanban de Candidatos pra
+  // persistir custom_fields (RHStageFieldInput) e activities
+  // (RHDetailDrawerShell) sem precisar de um método dedicado por coluna,
+  // no mesmo espírito do updateVaga acima.
+  const updateAplicacao = useCallback(async (id, patch) => {
+    const { error } = await supabase.from("rh_aplicacoes").update(patch).eq("id", id);
+    if (error) throw new Error(error.message);
+    setAplicacoes(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+  }, []);
+
   const changeStage = useCallback(async (aplicacaoId, newStage, motivoReprovacao) => {
     const patch = { etapa_pipeline: newStage, stage_changed_at: new Date().toISOString() };
-    if (newStage === "reprovado") patch.motivo_reprovacao = motivoReprovacao || null;
+    // Não trava mais no id fixo "reprovado" — qualquer etapa customizada
+    // marcada como "lost" no editor de etapas passa motivo do mesmo jeito.
+    if (motivoReprovacao !== undefined) patch.motivo_reprovacao = motivoReprovacao || null;
     const { error } = await supabase.from("rh_aplicacoes").update(patch).eq("id", aplicacaoId);
     if (error) throw new Error(error.message);
     setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, ...patch } : a));
@@ -198,9 +214,10 @@ export function useRHRecrutamento({ userId } = {}) {
     changeVagaStage,
     createCandidato,
     changeStage,
+    updateAplicacao,
     addNote,
     changeRating,
     attachTriagemToVaga,
     refetch: fetchAll,
-  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, addNote, changeRating, attachTriagemToVaga, fetchAll]);
+  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, attachTriagemToVaga, fetchAll]);
 }

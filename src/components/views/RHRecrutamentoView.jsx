@@ -21,27 +21,36 @@ import {
   Wallet,
   Gift,
   Users as UsersIcon,
+  Pencil,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
   RH_CONTRACT_TYPES,
-  RH_RECRUITMENT_STAGES,
 } from "../../constants/rh-config";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { useProfiles } from "../../hooks/use-profiles";
 import { useAI } from "../../hooks/use-ai";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
+import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
+import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 
-// ── Ciclo de vida da vaga ────────────────────────────────────────────────────
-const VAGA_STAGES = [
-  { id: "rascunho",    name: "Rascunho",    color: "#8A8680" },
-  { id: "publicada",   name: "Publicada",   color: "#0EA5E9" },
-  { id: "em_triagem",  name: "Em Triagem",  color: "#8B5CF6" },
-  { id: "encerrada",   name: "Encerrada",   color: "#6B7280" },
-];
+// ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
+// As etapas (nome/cor/ordem) agora são administráveis via
+// useRHPipelineStages("vagas"|"candidatos") — ver RHStageEditorModal. Estes
+// helpers viram simples lookups sobre o array vindo do hook, com fallback
+// pra não quebrar a UI enquanto os stages ainda estão carregando.
+function findStage(stages, key) {
+  return (stages || []).find((s) => s.stageKey === key) || { stageKey: key, name: key || "—", color: "#8A8680" };
+}
 
 const PRIORITY_OPTIONS = [
   { id: "baixa",   name: "Baixa",   color: "#8A8680" },
@@ -52,10 +61,6 @@ const PRIORITY_OPTIONS = [
 
 function priorityInfo(id) {
   return PRIORITY_OPTIONS.find((p) => p.id === id) || PRIORITY_OPTIONS[1];
-}
-
-function vagaStageInfo(id) {
-  return VAGA_STAGES.find((s) => s.id === id) || VAGA_STAGES[0];
 }
 
 function whatsappShareUrl(vaga) {
@@ -645,15 +650,10 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
 
 // ── Vaga Kanban Card ──────────────────────────────────────────────────────────
 
-function VagaCard({ vaga, candidatosCount, onClick }) {
+function VagaCard({ vaga, candidatosCount }) {
   const pri = priorityInfo(vaga.priority);
   return (
-    <div
-      onClick={onClick}
-      style={{ background: "var(--surface)", border: "1px solid var(--border)", borderLeft: `3px solid ${pri.color}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; }}
-    >
+    <div>
       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>{vaga.title}</div>
       <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 6 }}>{vaga.job_title || vaga.department || "—"}</div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -671,20 +671,58 @@ function VagaCard({ vaga, candidatosCount, onClick }) {
   );
 }
 
-function VagaKanbanColumn({ stage, vagasList, candidatosByVaga, onCardClick }) {
+function VagaKanbanColumn({
+  stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
+  onMoveToStage, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
+}) {
   return (
-    <div style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0, display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)" }}>
+    <div
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      style={{
+        background: "var(--surface-alt)",
+        border: `1px solid ${isDragOver ? stage.color + "70" : "var(--border)"}`,
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none",
+        borderRadius: 14, minWidth: 240, width: 240, flexShrink: 0,
+        display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 260px)",
+        transition: "box-shadow 0.15s, border-color 0.15s",
+      }}
+    >
       <div style={{ padding: "10px 12px 8px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0, display: "inline-block" }} />
         <span style={{ flex: 1, fontWeight: 700, fontSize: 12, color: "var(--text)" }}>{stage.name}</span>
         <span style={{ background: `${stage.color}22`, color: stage.color, borderRadius: 99, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{vagasList.length}</span>
+        {canWrite && (
+          <button
+            onClick={() => onEditFields(stage)}
+            title="Editar campos desta etapa"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
+          >
+            <Settings2 size={12} />
+          </button>
+        )}
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {vagasList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Nenhuma vaga</div>
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
+            {isDragOver ? "Soltar aqui" : "Nenhuma vaga"}
+          </div>
         ) : (
           vagasList.map((v) => (
-            <VagaCard key={v.id} vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} onClick={() => onCardClick(v)} />
+            <RHKanbanCard
+              key={v.id}
+              id={v.id}
+              stage={v.stage}
+              stages={stages}
+              onClick={() => onCardClick(v)}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onMoveToStage={onMoveToStage}
+              agingDays={daysInStage(v.stage_changed_at)}
+            >
+              <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} />
+            </RHKanbanCard>
           ))
         )}
       </div>
@@ -694,14 +732,17 @@ function VagaKanbanColumn({ stage, vagasList, candidatosByVaga, onCardClick }) {
 
 // ── Vaga Drawer ───────────────────────────────────────────────────────────────
 
-function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, onCopyLink, onClose, onVerCandidatos, copiedSlug }) {
+function VagaDrawer({
+  vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onCopyLink, onClose, onVerCandidatos, copiedSlug,
+  customFields, onCustomFieldChange, onAddActivity, currentUser, users,
+}) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const stageInfo = vagaStageInfo(vaga.stage);
+  const stageInfo = findStage(stages, vaga.stage);
   const pri = priorityInfo(vaga.priority);
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 
@@ -762,15 +803,37 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
             </div>
           )}
 
+          {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
+          {customFields?.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Campos desta etapa</div>
+              <div className="flex flex-col gap-3">
+                {customFields.map((field) => (
+                  <div key={field.id}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                      {field.label}{field.required && <span style={{ color: "var(--danger)" }}> *</span>}
+                    </div>
+                    <RHStageFieldInput
+                      field={field}
+                      value={vaga.custom_fields?.[field.fieldKey]}
+                      onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
+                      users={users}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {canWrite && (
             <>
               <div style={{ marginBottom: 20 }}>
                 <div style={labelSt}>Mover para</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {VAGA_STAGES.filter((s) => s.id !== vaga.stage).map((s) => (
+                  {stages.filter((s) => s.stageKey !== vaga.stage).map((s) => (
                     <button
-                      key={s.id}
-                      onClick={() => onStageChange(vaga.id, s.id)}
+                      key={s.stageKey}
+                      onClick={() => onStageChange(vaga.id, s.stageKey)}
                       style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
                     >
                       <ArrowRight size={10} /> {s.name}
@@ -809,6 +872,17 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
               </div>
             </>
           )}
+
+          {/* Anexos / Checklists / Atividades / Comentários */}
+          <div style={{ marginTop: 20 }}>
+            <RHDetailDrawerShell
+              domain="vagas"
+              recordId={vaga.id}
+              activities={vaga.activities || []}
+              onAddActivity={onAddActivity}
+              currentUser={currentUser}
+            />
+          </div>
         </div>
       </div>
     </>
@@ -817,7 +891,7 @@ function VagaDrawer({ vaga, candidatosCount, canWrite, onStageChange, onEdit, on
 
 // ── Novo Candidato Modal ──────────────────────────────────────────────────────
 
-function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
+function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose }) {
   const [name, setName]     = useState("");
   const [email, setEmail]   = useState("");
   const [phone, setPhone]   = useState("");
@@ -861,7 +935,7 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
   const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
-  const stageInfo = RH_RECRUITMENT_STAGES.find((s) => s.id === stage);
+  const stageInfo = findStage(stages, stage);
 
   return (
     <div
@@ -938,26 +1012,35 @@ function NovoCandidatoModal({ defaultStage, vagas, onSave, onClose }) {
 
 // ── Candidato Drawer ──────────────────────────────────────────────────────────
 
-function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote, onRatingChange, onClose, onHire }) {
+function CandidatoDrawer({
+  candidato, vagas, stages, canWrite, onStageChange, onAddNote, onRatingChange, onClose, onHire,
+  customFields, onCustomFieldChange, onAddActivity, currentUser, users,
+}) {
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
   const [reprovando, setReprovando] = useState(false);
+  const [pendingLostStage, setPendingLostStage] = useState(null);
   const [motivoReprovacao, setMotivoReprovacao] = useState("");
   const [savingStage, setSavingStage] = useState(false);
 
-  const requestStageChange = (stageId) => {
-    if (stageId === "reprovado") { setReprovando(true); return; }
-    onStageChange(candidato.id, stageId);
+  // Reprovação (ou qualquer etapa marcada como "lost") exige motivo — regra
+  // de negócio preservada tanto no fluxo por botão quanto no drag-and-drop
+  // (ver handleCandDrop na view principal).
+  const requestStageChange = (stageKey) => {
+    const target = stages.find((s) => s.stageKey === stageKey);
+    if (target?.lost) { setPendingLostStage(stageKey); setReprovando(true); return; }
+    onStageChange(candidato.id, stageKey);
   };
 
   const confirmReprovacao = async () => {
-    if (!motivoReprovacao.trim()) return;
+    if (!motivoReprovacao.trim() || !pendingLostStage) return;
     setSavingStage(true);
     try {
-      await onStageChange(candidato.id, "reprovado", motivoReprovacao.trim());
+      await onStageChange(candidato.id, pendingLostStage, motivoReprovacao.trim());
       setReprovando(false);
       setMotivoReprovacao("");
+      setPendingLostStage(null);
     } finally {
       setSavingStage(false);
     }
@@ -974,8 +1057,7 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
     return vagas.find((v) => v.id === candidato.vaga_id)?.title || "—";
   }, [candidato.vaga_id, vagas]);
 
-  const currentStageIdx = RH_RECRUITMENT_STAGES.findIndex((s) => s.id === candidato.stage);
-  const stageInfo = RH_RECRUITMENT_STAGES[currentStageIdx] || RH_RECRUITMENT_STAGES[0];
+  const stageInfo = findStage(stages, candidato.stage);
   const days = daysInStage(candidato.stage_changed_at);
 
   const handleAddNote = async () => {
@@ -1072,6 +1154,28 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
             </div>
           )}
 
+          {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
+          {customFields?.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Campos desta etapa</div>
+              <div className="flex flex-col gap-3">
+                {customFields.map((field) => (
+                  <div key={field.id}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                      {field.label}{field.required && <span style={{ color: "var(--danger)" }}> *</span>}
+                    </div>
+                    <RHStageFieldInput
+                      field={field}
+                      value={candidato.customFields?.[field.fieldKey]}
+                      onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
+                      users={users}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Motivo de reprovação já registrado */}
           {candidato.stage === "reprovado" && candidato.motivo_reprovacao && (
             <div style={{ marginBottom: 20, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
@@ -1085,10 +1189,10 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Mover para</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {RH_RECRUITMENT_STAGES.filter((s) => s.id !== candidato.stage).map((s) => (
+                {stages.filter((s) => s.stageKey !== candidato.stage).map((s) => (
                   <button
-                    key={s.id}
-                    onClick={() => requestStageChange(s.id)}
+                    key={s.stageKey}
+                    onClick={() => requestStageChange(s.stageKey)}
                     style={{
                       background: `${s.color}18`,
                       color: s.color,
@@ -1248,22 +1352,148 @@ function CandidatoDrawer({ candidato, vagas, canWrite, onStageChange, onAddNote,
               </div>
             )}
           </div>
+
+          {/* Anexos / Checklists / Atividades / Comentários */}
+          <div style={{ marginTop: 20 }}>
+            <RHDetailDrawerShell
+              domain="candidatos"
+              recordId={candidato.id}
+              activities={candidato.activities || []}
+              onAddActivity={onAddActivity}
+              currentUser={currentUser}
+            />
+          </div>
         </div>
       </div>
     </>
   );
 }
 
+// ── Modal de motivo de reprovação (drag-and-drop pra etapa "lost") ───────────
+// Mesma regra de negócio do fluxo por botão (requestStageChange no
+// CandidatoDrawer): mover pra uma etapa marcada como "lost" sempre exige
+// motivo — aqui cobre o caminho de soltar o card direto na coluna.
+function ReprovacaoDropModal({ info, onConfirm, onClose }) {
+  const [motivo, setMotivo] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+
+  const handleConfirm = async () => {
+    if (!motivo.trim()) return;
+    setSaving(true);
+    try {
+      await onConfirm(motivo.trim());
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "0 24px 80px rgba(0,0,0,0.22)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>Mover para "{info.stageName}"</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <div style={{ padding: "20px 24px 24px" }}>
+          <div style={{ ...labelSt, color: "var(--danger)" }}>Motivo da reprovação *</div>
+          <textarea
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Por que este candidato foi reprovado?"
+            rows={3}
+            autoFocus
+            className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
+            style={{ borderColor: "#FCA5A5", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+          />
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={handleConfirm}
+              disabled={saving || !motivo.trim()}
+              style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !motivo.trim() ? 0.6 : 1 }}
+            >
+              {saving ? "Salvando…" : "Confirmar"}
+            </button>
+            <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Kanban Column ─────────────────────────────────────────────────────────────
 
-function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCandidato }) {
+function CandidatoCardBody({ candidato: c, vagas }) {
+  const vagaTitle = vagas.find((v) => v.id === c.vaga_id)?.title;
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <InitialsAvatar name={c.name} size={28} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {c.name}
+          </div>
+          {vagaTitle && (
+            <div style={{ fontSize: 10, color: "var(--text-dim)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {vagaTitle}
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <StarRating value={c.rating || 0} />
+        {typeof c.fit_score === "number" && (
+          <span
+            title="Fit score (triagem por IA)"
+            style={{
+              fontSize: 10, fontWeight: 700,
+              color: c.fit_score >= 70 ? "var(--success)" : c.fit_score >= 40 ? "var(--warning)" : "var(--danger)",
+              background: c.fit_score >= 70 ? "#DCFCE7" : c.fit_score >= 40 ? "#FEF3C7" : "#FEE2E2",
+              borderRadius: 99, padding: "1px 7px",
+            }}
+          >
+            {Math.round(c.fit_score)}
+          </span>
+        )}
+      </div>
+      {c.source && (
+        <div style={{ marginTop: 5 }}>
+          <span style={{ fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 99, padding: "1px 7px" }}>
+            {c.source}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KanbanColumn({
+  stage, stages, candidatos, vagas, canWrite, onCardClick, onAddCandidato,
+  onMoveToStage, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
+}) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
       style={{
         background: "var(--surface-alt)",
-        border: "1px solid var(--border)",
+        border: `1px solid ${isDragOver ? stage.color + "70" : "var(--border)"}`,
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none",
         borderRadius: 14,
         minWidth: 240,
         width: 240,
@@ -1271,6 +1501,7 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
         display: "flex",
         flexDirection: "column",
         maxHeight: "calc(100vh - 220px)",
+        transition: "box-shadow 0.15s, border-color 0.15s",
       }}
     >
       {/* Column header */}
@@ -1302,6 +1533,15 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
         </button>
         {canWrite && (
           <button
+            onClick={() => onEditFields(stage)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
+            title="Editar campos desta etapa"
+          >
+            <Settings2 size={12} />
+          </button>
+        )}
+        {canWrite && (
+          <button
             onClick={onAddCandidato}
             style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
             title="Adicionar candidato"
@@ -1316,69 +1556,24 @@ function KanbanColumn({ stage, candidatos, vagas, canWrite, onCardClick, onAddCa
         <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
           {candidatos.length === 0 ? (
             <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
-              Nenhum candidato
+              {isDragOver ? "Soltar aqui" : "Nenhum candidato"}
             </div>
           ) : (
-            candidatos.map((c) => {
-              const vagaTitle = vagas.find((v) => v.id === c.vaga_id)?.title;
-              const days = daysInStage(c.stage_changed_at);
-              return (
-                <div
-                  key={c.id}
-                  onClick={() => onCardClick(c)}
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 10,
-                    padding: "10px 12px",
-                    cursor: "pointer",
-                    transition: "box-shadow 0.1s",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.07)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.boxShadow = "none"; }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <InitialsAvatar name={c.name} size={28} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {c.name}
-                      </div>
-                      {vagaTitle && (
-                        <div style={{ fontSize: 10, color: "var(--text-dim)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {vagaTitle}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <StarRating value={c.rating || 0} />
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      {typeof c.fit_score === "number" && (
-                        <span
-                          title="Fit score (triagem por IA)"
-                          style={{
-                            fontSize: 10, fontWeight: 700,
-                            color: c.fit_score >= 70 ? "var(--success)" : c.fit_score >= 40 ? "var(--warning)" : "var(--danger)",
-                            background: c.fit_score >= 70 ? "#DCFCE7" : c.fit_score >= 40 ? "#FEF3C7" : "#FEE2E2",
-                            borderRadius: 99, padding: "1px 7px",
-                          }}
-                        >
-                          {Math.round(c.fit_score)}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{days}d</span>
-                    </div>
-                  </div>
-                  {c.source && (
-                    <div style={{ marginTop: 5 }}>
-                      <span style={{ fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 99, padding: "1px 7px" }}>
-                        {c.source}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })
+            candidatos.map((c) => (
+              <RHKanbanCard
+                key={c.id}
+                id={c.id}
+                stage={c.stage}
+                stages={stages}
+                onClick={() => onCardClick(c)}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                onMoveToStage={onMoveToStage}
+                agingDays={daysInStage(c.stage_changed_at)}
+              >
+                <CandidatoCardBody candidato={c} vagas={vagas} />
+              </RHKanbanCard>
+            ))
           )}
         </div>
       )}
@@ -1397,11 +1592,18 @@ function addDays(base, days) {
 export function RHRecrutamentoView({ user, canWrite }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
-    createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, addNote, changeRating, attachTriagemToVaga,
+    createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const { cargos, createCargo, deleteCargo } = useRHCargoTemplates({ userId: user?.id });
   const { createColaborador } = useRHColaboradores({ userId: user?.id });
   const { templates: onboardingTemplates, applyChecklist } = useRHOnboarding({ userId: user?.id });
+
+  // ── Etapas administráveis (Pipefy-style) + campos customizados por etapa ──
+  const { stages: vagaStages, loading: vagaStagesLoading } = useRHPipelineStages("vagas");
+  const { stages: candStages, loading: candStagesLoading } = useRHPipelineStages("candidatos");
+  const vagaStageFields = useRHStageFields("vagas");
+  const candStageFields = useRHStageFields("candidatos");
+  const { users: profileUsers } = useProfiles();
 
   const [viewMode, setViewMode]             = useState("vagas"); // "vagas" | "candidatos"
   const [selectedVaga, setSelectedVaga]     = useState("todas");
@@ -1414,6 +1616,19 @@ export function RHRecrutamentoView({ user, canWrite }) {
   const [copiedSlug, setCopiedSlug]         = useState(null);
   const [triagemOpen, setTriagemOpen]       = useState(false);
   const [hiringCandidato, setHiringCandidato] = useState(null);
+
+  // ── Drag-and-drop (Vagas) ──────────────────────────────────────────────────
+  const [draggedVagaId, setDraggedVagaId]   = useState(null);
+  const [dragOverVagaStage, setDragOverVagaStage] = useState(null);
+
+  // ── Drag-and-drop (Candidatos) ─────────────────────────────────────────────
+  const [draggedAplicacaoId, setDraggedAplicacaoId] = useState(null);
+  const [dragOverCandStage, setDragOverCandStage]   = useState(null);
+  const [pendingReprovacaoDrop, setPendingReprovacaoDrop] = useState(null); // { aplicacaoId, stageKey, stageName }
+
+  // ── Etapas / campos customizados (admin) ──────────────────────────────────
+  const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [fieldEditorStage, setFieldEditorStage] = useState(null); // { domain, stageKey, stageName }
 
   const selectedCandidato = useMemo(
     () => candidatos.find((c) => c.id === selectedCandidatoId) || null,
@@ -1470,6 +1685,70 @@ export function RHRecrutamentoView({ user, canWrite }) {
     setVagaDrawerId(null);
   };
 
+  // ── Drag-and-drop: Vagas ───────────────────────────────────────────────────
+  const handleVagaDragStart = (id) => setDraggedVagaId(id);
+  const handleVagaDragEnd   = () => { setDraggedVagaId(null); setDragOverVagaStage(null); };
+  const handleVagaDragOver  = (e, stageKey) => { e.preventDefault(); setDragOverVagaStage(stageKey); };
+  const handleVagaDragLeave = (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverVagaStage(null); };
+  const handleVagaDrop = (stageKey) => {
+    const id = draggedVagaId;
+    setDraggedVagaId(null);
+    setDragOverVagaStage(null);
+    if (!id) return;
+    const vaga = vagas.find((v) => v.id === id);
+    if (vaga && vaga.stage !== stageKey) changeVagaStage(id, stageKey);
+  };
+
+  // ── Drag-and-drop: Candidatos ──────────────────────────────────────────────
+  // Preserva a regra de negócio do fluxo por botão (requestStageChange no
+  // CandidatoDrawer): soltar num stage "lost" (ex.: Reprovado) exige motivo,
+  // não pode ser uma troca silenciosa.
+  const handleCandDragStart = (id) => setDraggedAplicacaoId(id);
+  const handleCandDragEnd   = () => { setDraggedAplicacaoId(null); setDragOverCandStage(null); };
+  const handleCandDragOver  = (e, stageKey) => { e.preventDefault(); setDragOverCandStage(stageKey); };
+  const handleCandDragLeave = (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverCandStage(null); };
+  const handleCandDrop = (stageKey) => {
+    const id = draggedAplicacaoId;
+    setDraggedAplicacaoId(null);
+    setDragOverCandStage(null);
+    if (!id) return;
+    const candidato = candidatos.find((c) => c.id === id);
+    if (!candidato || candidato.stage === stageKey) return;
+    const targetStage = candStages.find((s) => s.stageKey === stageKey);
+    if (targetStage?.lost) {
+      setPendingReprovacaoDrop({ aplicacaoId: id, stageKey, stageName: targetStage.name });
+      return;
+    }
+    changeStage(id, stageKey);
+  };
+  const confirmReprovacaoDrop = async (motivo) => {
+    if (!pendingReprovacaoDrop) return;
+    await changeStage(pendingReprovacaoDrop.aplicacaoId, pendingReprovacaoDrop.stageKey, motivo);
+    setPendingReprovacaoDrop(null);
+  };
+
+  // ── Campos customizados por etapa + timeline de atividades ─────────────────
+  const handleVagaCustomFieldChange = async (vagaId, fieldKey, value) => {
+    const vaga = vagas.find((v) => v.id === vagaId);
+    const custom_fields = { ...(vaga?.custom_fields || {}), [fieldKey]: value };
+    await updateVaga(vagaId, { custom_fields });
+  };
+  const handleVagaAddActivity = async (vagaId, entry) => {
+    const vaga = vagas.find((v) => v.id === vagaId);
+    const activities = [...(vaga?.activities || []), { id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...entry }];
+    await updateVaga(vagaId, { activities });
+  };
+  const handleAplicacaoCustomFieldChange = async (aplicacaoId, fieldKey, value) => {
+    const candidato = candidatos.find((c) => c.id === aplicacaoId);
+    const custom_fields = { ...(candidato?.customFields || {}), [fieldKey]: value };
+    await updateAplicacao(aplicacaoId, { custom_fields });
+  };
+  const handleAplicacaoAddActivity = async (aplicacaoId, entry) => {
+    const candidato = candidatos.find((c) => c.id === aplicacaoId);
+    const activities = [...(candidato?.activities || []), { id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...entry }];
+    await updateAplicacao(aplicacaoId, { activities });
+  };
+
   const handleCopyLink = async (vaga) => {
     const link = `${window.location.origin}/vagas/${vaga.link_slug}`;
     try {
@@ -1491,11 +1770,11 @@ export function RHRecrutamentoView({ user, canWrite }) {
 
   const candByStage = useMemo(() => {
     const map = {};
-    RH_RECRUITMENT_STAGES.forEach((s) => {
-      map[s.id] = filteredCandidatos.filter((c) => c.stage === s.id);
+    candStages.forEach((s) => {
+      map[s.stageKey] = filteredCandidatos.filter((c) => c.stage === s.stageKey);
     });
     return map;
-  }, [filteredCandidatos]);
+  }, [filteredCandidatos, candStages]);
 
   const candidatosByVaga = useMemo(() => {
     const map = {};
@@ -1505,9 +1784,9 @@ export function RHRecrutamentoView({ user, canWrite }) {
 
   const vagasByStage = useMemo(() => {
     const map = {};
-    VAGA_STAGES.forEach((s) => { map[s.id] = vagas.filter((v) => (v.stage || "rascunho") === s.id); });
+    vagaStages.forEach((s) => { map[s.stageKey] = vagas.filter((v) => (v.stage || "rascunho") === s.stageKey); });
     return map;
-  }, [vagas]);
+  }, [vagas, vagaStages]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -1543,6 +1822,17 @@ export function RHRecrutamentoView({ user, canWrite }) {
             </button>
           </div>
 
+          {canWrite && (
+            <button
+              onClick={() => setStageEditorOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; }}
+            >
+              <Pencil size={11} /> Editar etapas
+            </button>
+          )}
           {canWrite && viewMode === "vagas" && (
             <button
               onClick={() => setQuickAddVaga(true)}
@@ -1568,7 +1858,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Supabase não configurado</div>
           <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>Configure as variáveis de ambiente para usar o módulo de recrutamento</div>
         </div>
-      ) : loading ? (
+      ) : loading || (viewMode === "vagas" ? vagaStagesLoading : candStagesLoading) ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : viewMode === "vagas" ? (
         /* ═══ Kanban de VAGAS ═══ */
@@ -1581,13 +1871,45 @@ export function RHRecrutamentoView({ user, canWrite }) {
         ) : (
           <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
             <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
-              {VAGA_STAGES.map((stage) => (
-                <VagaKanbanColumn key={stage.id} stage={stage} vagasList={vagasByStage[stage.id] || []} candidatosByVaga={candidatosByVaga} onCardClick={(v) => setVagaDrawerId(v.id)} />
+              {vagaStages.map((stage) => (
+                <VagaKanbanColumn
+                  key={stage.stageKey}
+                  stage={stage}
+                  stages={vagaStages}
+                  vagasList={vagasByStage[stage.stageKey] || []}
+                  candidatosByVaga={candidatosByVaga}
+                  canWrite={canWrite}
+                  onCardClick={(v) => setVagaDrawerId(v.id)}
+                  onMoveToStage={(id, key) => changeVagaStage(id, key)}
+                  onDragStart={handleVagaDragStart}
+                  onDragEnd={handleVagaDragEnd}
+                  isDragOver={dragOverVagaStage === stage.stageKey}
+                  onDragOver={(e) => handleVagaDragOver(e, stage.stageKey)}
+                  onDragLeave={handleVagaDragLeave}
+                  onDrop={() => handleVagaDrop(stage.stageKey)}
+                  onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
+                />
               ))}
             </div>
             <div className="md:hidden flex flex-col gap-3">
-              {VAGA_STAGES.map((stage) => (
-                <VagaKanbanColumn key={stage.id} stage={stage} vagasList={vagasByStage[stage.id] || []} candidatosByVaga={candidatosByVaga} onCardClick={(v) => setVagaDrawerId(v.id)} />
+              {vagaStages.map((stage) => (
+                <VagaKanbanColumn
+                  key={stage.stageKey}
+                  stage={stage}
+                  stages={vagaStages}
+                  vagasList={vagasByStage[stage.stageKey] || []}
+                  candidatosByVaga={candidatosByVaga}
+                  canWrite={canWrite}
+                  onCardClick={(v) => setVagaDrawerId(v.id)}
+                  onMoveToStage={(id, key) => changeVagaStage(id, key)}
+                  onDragStart={handleVagaDragStart}
+                  onDragEnd={handleVagaDragEnd}
+                  isDragOver={dragOverVagaStage === stage.stageKey}
+                  onDragOver={(e) => handleVagaDragOver(e, stage.stageKey)}
+                  onDragLeave={handleVagaDragLeave}
+                  onDrop={() => handleVagaDrop(stage.stageKey)}
+                  onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
+                />
               ))}
             </div>
           </div>
@@ -1643,35 +1965,53 @@ export function RHRecrutamentoView({ user, canWrite }) {
 
           {activeVaga && activeVaga.stage !== "publicada" && (
             <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 8, padding: "8px 14px", marginBottom: 16, fontSize: 12, color: "var(--warning)" }}>
-              Essa vaga está em <strong>{vagaStageInfo(activeVaga.stage).name}</strong> — mova para "Publicada" na aba Vagas pra liberar o link de candidatura.
+              Essa vaga está em <strong>{findStage(vagaStages, activeVaga.stage).name}</strong> — mova para "Publicada" na aba Vagas pra liberar o link de candidatura.
             </div>
           )}
 
           <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
             <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
-              {RH_RECRUITMENT_STAGES.map((stage) => (
+              {candStages.map((stage) => (
                 <KanbanColumn
-                  key={stage.id}
+                  key={stage.stageKey}
                   stage={stage}
-                  candidatos={candByStage[stage.id] || []}
+                  stages={candStages}
+                  candidatos={candByStage[stage.stageKey] || []}
                   vagas={vagas}
                   canWrite={canWrite}
                   onCardClick={(c) => setSelectedCandidatoId(c.id)}
-                  onAddCandidato={() => setAddCandidatoStage(stage.id)}
+                  onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
+                  onMoveToStage={(id, key) => changeStage(id, key)}
+                  onDragStart={handleCandDragStart}
+                  onDragEnd={handleCandDragEnd}
+                  isDragOver={dragOverCandStage === stage.stageKey}
+                  onDragOver={(e) => handleCandDragOver(e, stage.stageKey)}
+                  onDragLeave={handleCandDragLeave}
+                  onDrop={() => handleCandDrop(stage.stageKey)}
+                  onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
                 />
               ))}
             </div>
             {/* Mobile: vertical */}
             <div className="md:hidden flex flex-col gap-3">
-              {RH_RECRUITMENT_STAGES.map((stage) => (
+              {candStages.map((stage) => (
                 <KanbanColumn
-                  key={stage.id}
+                  key={stage.stageKey}
                   stage={stage}
-                  candidatos={candByStage[stage.id] || []}
+                  stages={candStages}
+                  candidatos={candByStage[stage.stageKey] || []}
                   vagas={vagas}
                   canWrite={canWrite}
                   onCardClick={(c) => setSelectedCandidatoId(c.id)}
-                  onAddCandidato={() => setAddCandidatoStage(stage.id)}
+                  onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
+                  onMoveToStage={(id, key) => changeStage(id, key)}
+                  onDragStart={handleCandDragStart}
+                  onDragEnd={handleCandDragEnd}
+                  isDragOver={dragOverCandStage === stage.stageKey}
+                  onDragOver={(e) => handleCandDragOver(e, stage.stageKey)}
+                  onDragLeave={handleCandDragLeave}
+                  onDrop={() => handleCandDrop(stage.stageKey)}
+                  onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
                 />
               ))}
             </div>
@@ -1713,12 +2053,18 @@ export function RHRecrutamentoView({ user, canWrite }) {
           vaga={vagaEmDrawer}
           candidatosCount={candidatosByVaga[vagaEmDrawer.id] || 0}
           canWrite={canWrite}
+          stages={vagaStages}
           copiedSlug={copiedSlug}
           onStageChange={handleVagaStageChange}
           onEdit={(v) => { setEditingVaga(v); setVagaDrawerId(null); }}
           onCopyLink={handleCopyLink}
           onVerCandidatos={handleVerCandidatos}
           onClose={() => setVagaDrawerId(null)}
+          customFields={vagaStageFields.getFields(vagaEmDrawer.stage)}
+          onCustomFieldChange={(fieldKey, value) => handleVagaCustomFieldChange(vagaEmDrawer.id, fieldKey, value)}
+          onAddActivity={(entry) => handleVagaAddActivity(vagaEmDrawer.id, entry)}
+          currentUser={user}
+          users={profileUsers}
         />
       )}
 
@@ -1726,6 +2072,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
         <NovoCandidatoModal
           defaultStage={addCandidatoStage}
           vagas={vagas}
+          stages={candStages}
           onSave={handleCreateCandidato}
           onClose={() => setAddCandidatoStage(null)}
         />
@@ -1735,12 +2082,47 @@ export function RHRecrutamentoView({ user, canWrite }) {
         <CandidatoDrawer
           candidato={selectedCandidato}
           vagas={vagas}
+          stages={candStages}
           canWrite={canWrite}
           onStageChange={handleStageChange}
           onAddNote={handleAddNote}
           onRatingChange={handleRatingChange}
           onClose={() => setSelectedCandidatoId(null)}
           onHire={(c) => setHiringCandidato(c)}
+          customFields={candStageFields.getFields(selectedCandidato.stage)}
+          onCustomFieldChange={(fieldKey, value) => handleAplicacaoCustomFieldChange(selectedCandidato.id, fieldKey, value)}
+          onAddActivity={(entry) => handleAplicacaoAddActivity(selectedCandidato.id, entry)}
+          currentUser={user}
+          users={profileUsers}
+        />
+      )}
+
+      {stageEditorOpen && (
+        <RHStageEditorModal
+          open={stageEditorOpen}
+          onClose={() => setStageEditorOpen(false)}
+          domain={viewMode}
+          domainLabel={viewMode === "vagas" ? "Vagas" : "Candidatos"}
+          records={viewMode === "vagas" ? vagas : candidatos}
+          stageField="stage"
+        />
+      )}
+
+      {fieldEditorStage && (
+        <RHStageFieldEditorModal
+          open={Boolean(fieldEditorStage)}
+          onClose={() => setFieldEditorStage(null)}
+          domain={fieldEditorStage.domain}
+          stageKey={fieldEditorStage.stageKey}
+          stageName={fieldEditorStage.stageName}
+        />
+      )}
+
+      {pendingReprovacaoDrop && (
+        <ReprovacaoDropModal
+          info={pendingReprovacaoDrop}
+          onConfirm={confirmReprovacaoDrop}
+          onClose={() => setPendingReprovacaoDrop(null)}
         />
       )}
 
