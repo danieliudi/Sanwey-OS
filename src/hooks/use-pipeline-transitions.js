@@ -1,96 +1,148 @@
-import { useCallback } from "react";
-import { usePersistentState } from "./use-persistent-state";
-import { STORAGE_KEYS } from "../constants/storage-keys";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 /**
- * Manages allowed stage transition rules per company.
+ * Manages allowed stage transition rules per company. Migrado de
+ * localStorage pra Supabase (tabela pipeline_stage_transitions,
+ * domain='comercial') — compartilhado entre usuários, não mais por
+ * navegador. API externa preservada.
  *
- * Shape stored in localStorage:
+ * `rules` shape (reconstruído a partir das linhas do banco, mesma forma de
+ * antes — usado por PipelineBuilderView/SellerPreviewModal só pra um
+ * Boolean(rules[companyId]) "esta empresa já foi configurada?"):
  *   { [companyId]: { [fromStageId]: string[] } }
  *
- * When a companyId is absent → all transitions are allowed (open mode).
- * When fromStageId maps to an array → only listed stages are allowed destinations.
- * Empty array means the stage is locked (no manual moves out of it).
- *
- * isTransitionAllowed(companyId, fromStageId, toStageId):
- *   Returns true if the move is allowed (or if no rules are configured).
+ * Ausência de linhas pra um (company, fromStage) = aberto (todas as
+ * transições permitidas). Uma vez configurado, toggleTransition/
+ * setRowAllowed gravam a matriz inteira (todas as combinações from→to),
+ * então a leitura fica: existe linha? usa allowed. Não existe? aberto.
  */
-export function usePipelineTransitions() {
-  const [rules, setRules] = usePersistentState(STORAGE_KEYS.pipelineTransitions, {});
 
-  /** Returns true when the transition is permitted. */
+const DOMAIN = "comercial";
+
+export function usePipelineTransitions() {
+  const [rows, setRows] = useState([]); // linhas cruas do banco, [{company_id, from_stage_key, to_stage_key, allowed}]
+  const activeRef = useRef(true);
+
+  const fetchAll = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const { data, error } = await supabase
+      .from("pipeline_stage_transitions")
+      .select("*")
+      .eq("domain", DOMAIN);
+    if (error || !activeRef.current) return;
+    setRows(data || []);
+  }, []);
+
+  useEffect(() => {
+    activeRef.current = true;
+    if (!isSupabaseConfigured) return;
+    fetchAll();
+    const channel = supabase
+      .channel(`pipeline-transitions-comercial-${Math.random().toString(36).slice(2, 9)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "pipeline_stage_transitions" }, (payload) => {
+        if (!activeRef.current) return;
+        const domain = payload.new?.domain ?? payload.old?.domain;
+        if (domain !== DOMAIN) return;
+        fetchAll();
+      })
+      .subscribe();
+    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+  }, [fetchAll]);
+
+  // Reconstrói o shape { [companyId]: { [fromStageId]: string[] } } a partir
+  // das linhas — só as linhas allowed=true entram no array de destinos.
+  const rules = {};
+  for (const r of rows) {
+    const company = (rules[r.company_id] ||= {});
+    (company[r.from_stage_key] ||= []);
+    if (r.allowed) company[r.from_stage_key].push(r.to_stage_key);
+    else if (!(r.from_stage_key in company)) company[r.from_stage_key] = []; // garante a chave existir mesmo só com bloqueios
+  }
+
   const isTransitionAllowed = useCallback((companyId, fromStageId, toStageId) => {
     if (!companyId || fromStageId === toStageId) return false;
     const companyRules = rules[companyId];
-    if (!companyRules) return true;          // no rules → all allowed
+    if (!companyRules) return true;
     const allowed = companyRules[fromStageId];
-    if (!Array.isArray(allowed)) return true; // stage not configured → allowed
+    if (!Array.isArray(allowed)) return true;
     return allowed.includes(toStageId);
-  }, [rules]);
+  }, [rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /**
-   * Toggles a single transition on/off.
-   * If the company has no rules yet, we first build a fully-open ruleset
-   * (all→all), then flip the requested transition.
-   */
-  const toggleTransition = useCallback((companyId, stages, fromStageId, toStageId) => {
-    setRules(prev => {
-      const companyRules = prev[companyId] ?? buildOpenRules(stages);
-      const current = companyRules[fromStageId] ?? stages.map(s => s.id).filter(id => id !== fromStageId);
-      const next = current.includes(toStageId)
-        ? current.filter(id => id !== toStageId)
-        : [...current, toStageId];
-      return {
-        ...prev,
-        [companyId]: { ...companyRules, [fromStageId]: next },
-      };
+  // Grava a matriz inteira from->to (todas as combinações, allowed true/false)
+  // pra uma empresa — usado antes do primeiro toggle/set num from_stage ainda
+  // não configurado, e no reset. Faz upsert linha a linha.
+  const writeFullMatrix = useCallback(async (companyId, stages, overrides = {}) => {
+    const ids = stages.map(s => s.id);
+    const payload = [];
+    for (const from of ids) {
+      const allowedList = overrides[from] ?? ids.filter(id => id !== from);
+      for (const to of ids) {
+        if (to === from) continue;
+        payload.push({
+          domain: DOMAIN, company_id: companyId,
+          from_stage_key: from, to_stage_key: to,
+          allowed: allowedList.includes(to),
+        });
+      }
+    }
+    if (!payload.length) return;
+    await supabase.from("pipeline_stage_transitions")
+      .upsert(payload, { onConflict: "domain,company_id,from_stage_key,to_stage_key" });
+  }, []);
+
+  const toggleTransition = useCallback(async (companyId, stages, fromStageId, toStageId) => {
+    const companyRules = rules[companyId];
+    const current = companyRules?.[fromStageId] ?? stages.map(s => s.id).filter(id => id !== fromStageId);
+    const next = current.includes(toStageId)
+      ? current.filter(id => id !== toStageId)
+      : [...current, toStageId];
+
+    // Estado otimista local imediato.
+    setRows(prev => {
+      const withoutThis = prev.filter(r => !(r.company_id === companyId && r.from_stage_key === fromStageId));
+      const ids = stages.map(s => s.id);
+      const rebuilt = ids.filter(id => id !== fromStageId).map(to => ({
+        domain: DOMAIN, company_id: companyId, from_stage_key: fromStageId, to_stage_key: to, allowed: next.includes(to),
+      }));
+      return [...withoutThis, ...rebuilt];
     });
-  }, [setRules]);
 
-  /** Resets all transition rules for a company (back to fully open). */
-  const resetCompany = useCallback((companyId) => {
-    setRules(prev => {
-      const next = { ...prev };
-      delete next[companyId];
-      return next;
+    if (!isSupabaseConfigured) return;
+    if (!companyRules) await writeFullMatrix(companyId, stages);
+    await writeFullMatrix(companyId, stages, { [fromStageId]: next });
+  }, [rows, writeFullMatrix]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const resetCompany = useCallback(async (companyId) => {
+    setRows(prev => prev.filter(r => r.company_id !== companyId));
+    if (!isSupabaseConfigured) return;
+    await supabase.from("pipeline_stage_transitions").delete().eq("domain", DOMAIN).eq("company_id", companyId);
+  }, []);
+
+  const setRowAllowed = useCallback(async (companyId, stages, fromStageId, allowedIds) => {
+    setRows(prev => {
+      const withoutThis = prev.filter(r => !(r.company_id === companyId && r.from_stage_key === fromStageId));
+      const ids = stages.map(s => s.id);
+      const rebuilt = ids.filter(id => id !== fromStageId).map(to => ({
+        domain: DOMAIN, company_id: companyId, from_stage_key: fromStageId, to_stage_key: to, allowed: allowedIds.includes(to),
+      }));
+      return [...withoutThis, ...rebuilt];
     });
-  }, [setRules]);
+    if (!isSupabaseConfigured) return;
+    const companyRules = rules[companyId];
+    if (!companyRules) await writeFullMatrix(companyId, stages);
+    await writeFullMatrix(companyId, stages, { [fromStageId]: allowedIds });
+  }, [rows, writeFullMatrix]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /**
-   * Define em bloco quais destinos são permitidos a partir de uma etapa.
-   * Usado pelos bulk actions ("Só avançar", "Bloquear todos", "Permitir
-   * todos"). Aceita lista vazia (bloqueia tudo) sem regredir pro modo
-   * aberto — preserva a intenção explícita do usuário.
-   */
-  const setRowAllowed = useCallback((companyId, stages, fromStageId, allowedIds) => {
-    setRules(prev => {
-      const companyRules = prev[companyId] ?? buildOpenRules(stages);
-      return {
-        ...prev,
-        [companyId]: { ...companyRules, [fromStageId]: [...allowedIds] },
-      };
-    });
-  }, [setRules]);
-
-  /** Returns the allowed destinations for a given stage (or all if unconfigured). */
   const getAllowedDestinations = useCallback((companyId, fromStageId, allStageIds) => {
     const companyRules = rules[companyId];
     if (!companyRules) return allStageIds;
     const allowed = companyRules[fromStageId];
     if (!Array.isArray(allowed)) return allStageIds;
     return allowed;
-  }, [rules]);
+  }, [rows]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { rules, isTransitionAllowed, toggleTransition, resetCompany, setRowAllowed, getAllowedDestinations };
-}
-
-/** Builds a rule object where every stage can go to every other stage. */
-function buildOpenRules(stages) {
-  const result = {};
-  for (const stage of stages) {
-    result[stage.id] = stages.map(s => s.id).filter(id => id !== stage.id);
-  }
-  return result;
 }
 
 export default usePipelineTransitions;

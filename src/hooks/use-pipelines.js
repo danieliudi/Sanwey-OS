@@ -1,51 +1,156 @@
-import { useCallback } from "react";
-import { usePersistentState } from "./use-persistent-state";
-import { STORAGE_KEYS } from "../constants/storage-keys";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { defaultPipelines, DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
 
-// Gerencia o pipeline de cada empresa (etapas, ordem, cor, probabilidade).
-// Hoje persistido em localStorage — pode migrar pra Supabase depois sem
-// alterar a API exposta.
+// Gerencia o pipeline de cada empresa (etapas, ordem, cor, probabilidade,
+// código, SLA). Migrado de localStorage pra Supabase (tabela
+// rh_pipeline_stages, domain='comercial', escopada por company_id) — troca
+// de armazenamento sem alterar a API exposta, como já estava previsto no
+// comentário original deste hook. Compartilhado entre usuários agora,
+// diferente de antes (por navegador).
+
+const DOMAIN = "comercial";
+
+function rowToStage(r) {
+  return {
+    id: r.stage_key,
+    dbId: r.id,
+    name: r.name,
+    code: r.code || "",
+    color: r.color,
+    probability: r.probability,
+    slaDays: r.sla_days,
+    terminal: r.terminal,
+    won: r.won,
+    lost: r.lost,
+  };
+}
+
+function stageToRow(companyId, s, orderIdx) {
+  return {
+    domain: DOMAIN,
+    company_id: companyId,
+    stage_key: s.id,
+    name: s.name,
+    code: s.code || null,
+    color: s.color,
+    order_idx: orderIdx,
+    probability: s.probability ?? null,
+    sla_days: s.slaDays ?? null,
+    terminal: !!s.terminal,
+    won: !!s.won,
+    lost: !!s.lost,
+  };
+}
 
 export function usePipelines() {
-  const [pipelines, setPipelines] = usePersistentState(STORAGE_KEYS.pipelines, defaultPipelines());
+  const [pipelines, setPipelines] = useState(() => defaultPipelines());
+  const activeRef = useRef(true);
+
+  const fetchAll = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const { data, error } = await supabase
+      .from("rh_pipeline_stages")
+      .select("*")
+      .eq("domain", DOMAIN)
+      .order("order_idx", { ascending: true });
+    if (error || !activeRef.current) return;
+    const grouped = {};
+    for (const row of data || []) {
+      (grouped[row.company_id] ||= []).push(rowToStage(row));
+    }
+    // Empresa sem nenhuma linha ainda (nunca deveria acontecer pós-seed,
+    // mas defensivo) cai no default local, igual ao comportamento antigo.
+    setPipelines(prev => ({ ...prev, ...grouped }));
+  }, []);
+
+  useEffect(() => {
+    activeRef.current = true;
+    if (!isSupabaseConfigured) return;
+    fetchAll();
+    const channel = supabase
+      .channel(`pipeline-stages-comercial-${Math.random().toString(36).slice(2, 9)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_pipeline_stages" }, (payload) => {
+        if (!activeRef.current) return;
+        const row = payload.new?.domain === DOMAIN ? payload.new : (payload.old?.domain === DOMAIN ? payload.old : null);
+        if (!row) return;
+        fetchAll(); // mudança de company/reorder é mais simples de refetch que reconciliar linha a linha
+      })
+      .subscribe();
+    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+  }, [fetchAll]);
 
   // Patch numa etapa específica (não muda ordem, só campos).
-  const updateStage = useCallback((companyId, stageId, patch) => {
+  const updateStage = useCallback(async (companyId, stageId, patch) => {
     setPipelines(prev => {
       const list = prev[companyId] || DEFAULT_PIPELINE_STAGES.map(s => ({ ...s }));
       const next = list.map(s => s.id === stageId ? { ...s, ...patch } : s);
       return { ...prev, [companyId]: next };
     });
-  }, [setPipelines]);
+    if (!isSupabaseConfigured) return;
+    const current = (pipelines[companyId] || []).find(s => s.id === stageId);
+    if (!current?.dbId) return;
+    const row = stageToRow(companyId, { ...current, ...patch }, undefined);
+    delete row.order_idx; // não mexe em ordem aqui
+    await supabase.from("rh_pipeline_stages").update(row).eq("id", current.dbId);
+  }, [pipelines]);
 
   // Reordena. orderedIds deve conter todos os IDs da empresa (não remove,
   // só rearranja). Terminais permanecem no fim por convenção da UI.
-  const reorderStages = useCallback((companyId, orderedIds) => {
+  const reorderStages = useCallback(async (companyId, orderedIds) => {
     setPipelines(prev => {
       const list = prev[companyId] || DEFAULT_PIPELINE_STAGES.map(s => ({ ...s }));
       const byId = Object.fromEntries(list.map(s => [s.id, s]));
       const next = orderedIds.map(id => byId[id]).filter(Boolean);
-      // Garante que toda etapa original sobreviva à reordenação.
       for (const s of list) if (!next.some(n => n.id === s.id)) next.push(s);
       return { ...prev, [companyId]: next };
     });
-  }, [setPipelines]);
-
-  const resetCompanyPipeline = useCallback((companyId) => {
-    setPipelines(prev => ({
-      ...prev,
-      [companyId]: DEFAULT_PIPELINE_STAGES.map(s => ({ ...s })),
+    if (!isSupabaseConfigured) return;
+    const list = pipelines[companyId] || [];
+    await Promise.all(orderedIds.map((stageId, idx) => {
+      const s = list.find(x => x.id === stageId);
+      if (!s?.dbId) return null;
+      return supabase.from("rh_pipeline_stages").update({ order_idx: idx }).eq("id", s.dbId);
     }));
-  }, [setPipelines]);
+  }, [pipelines]);
+
+  const resetCompanyPipeline = useCallback(async (companyId) => {
+    const fresh = DEFAULT_PIPELINE_STAGES.map(s => ({ ...s }));
+    setPipelines(prev => ({ ...prev, [companyId]: fresh }));
+    if (!isSupabaseConfigured) return;
+    await replacePipeline(companyId, fresh);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Substitui o pipeline inteiro de uma empresa. Usado pelo editor que
-  // trabalha sobre um draft e só persiste no Save — evita N chamadas
-  // separadas (updateStage + reorderStages + add + remove) que poderiam
-  // causar re-renders intermediários e estados inconsistentes.
-  const replacePipeline = useCallback((companyId, stages) => {
+  // trabalha sobre um draft e só persiste no Save. Faz diff contra o que
+  // está no banco pra add/update/delete/reorder em vez de apagar tudo e
+  // recriar (preserva referências/FKs de outras tabelas pro stage_key).
+  const replacePipeline = useCallback(async (companyId, stages) => {
     setPipelines(prev => ({ ...prev, [companyId]: stages.map(s => ({ ...s })) }));
-  }, [setPipelines]);
+    if (!isSupabaseConfigured) return;
+
+    const { data: existingRows } = await supabase
+      .from("rh_pipeline_stages").select("*").eq("domain", DOMAIN).eq("company_id", companyId);
+    const existingByKey = new Map((existingRows || []).map(r => [r.stage_key, r]));
+    const keepKeys = new Set(stages.map(s => s.id));
+
+    for (const row of existingRows || []) {
+      if (!keepKeys.has(row.stage_key)) {
+        await supabase.from("rh_pipeline_stages").delete().eq("id", row.id);
+      }
+    }
+
+    for (let i = 0; i < stages.length; i++) {
+      const s = stages[i];
+      const row = stageToRow(companyId, s, i);
+      const existing = existingByKey.get(s.id);
+      if (existing) {
+        await supabase.from("rh_pipeline_stages").update(row).eq("id", existing.id);
+      } else {
+        await supabase.from("rh_pipeline_stages").insert(row);
+      }
+    }
+  }, []);
 
   return { pipelines, updateStage, reorderStages, resetCompanyPipeline, replacePipeline };
 }
