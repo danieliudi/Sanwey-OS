@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plane,
   MapPin,
@@ -677,7 +677,7 @@ function DespesaRow({ despesa, onVerComprovante }) {
 
 // ── View principal ────────────────────────────────────────────────────────────
 
-export function CRMViagensPlanejamentoView({ currentUser, leads = [] }) {
+export function CRMViagensPlanejamentoView({ currentUser, leads = [], pushNotification }) {
   const userId = currentUser?.id;
   const { registros, loading: loadingRegistros, createRegistro, marcarRealizado, marcarNaoRealizado, deleteRegistro } = useCRMViagens({ userId });
   const { despesas, loading: loadingDespesas, createDespesa, deleteDespesa, uploadComprovante, getComprovanteUrl } = useCRMDespesas({ userId });
@@ -694,6 +694,27 @@ export function CRMViagensPlanejamentoView({ currentUser, leads = [] }) {
   // misturar visitas/despesas de outras pessoas nesta tela pessoal.
   const registrosProprios = useMemo(() => registros.filter((r) => r.vendedor_id === userId), [registros, userId]);
   const despesasProprias = useMemo(() => despesas.filter((d) => d.vendedor_id === userId), [despesas, userId]);
+
+  // Avisa o vendedor quando o gestor decide um reembolso — antes só se
+  // descobria abrindo o app de novo. Compara contra o último status visto
+  // por despesa (não contra "pendente" fixo) pra não reavisar quando o
+  // Realtime só refizer o fetch sem mudança real (ex.: outra despesa mudou).
+  const statusVistoRef = useRef(new Map());
+  useEffect(() => {
+    if (!pushNotification) return;
+    for (const d of despesasProprias) {
+      const anterior = statusVistoRef.current.get(d.id);
+      if (anterior !== undefined && anterior !== d.status_reembolso && d.status_reembolso !== "pendente") {
+        const info = STATUS_REEMBOLSO[d.status_reembolso];
+        pushNotification({
+          type: "reembolso_decidido",
+          title: `Reembolso ${info?.label?.toLowerCase() || d.status_reembolso}`,
+          body: `${d.descricao || "Despesa"} (${fmtMoney(d.valor)}) — ${info?.label || d.status_reembolso}${d.observacao_gestor ? `: ${d.observacao_gestor}` : "."}`,
+        });
+      }
+      statusVistoRef.current.set(d.id, d.status_reembolso);
+    }
+  }, [despesasProprias, pushNotification]);
 
   const registrosDoMes = useMemo(
     () => registrosProprios.filter((r) => sameMonth(r.mes_referencia, mesRef)).sort((a, b) => (a.data_planejada || "").localeCompare(b.data_planejada || "")),

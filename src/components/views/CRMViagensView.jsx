@@ -10,7 +10,7 @@ const MANAGER_ROLES = new Set(["gerente", "admin"]);
 // Orquestrador por papel: vendedor/consultor só planejam as próprias
 // viagens; gerente também planeja as próprias E gerencia o time (por isso
 // aparece nas duas abas); admin só gerencia (não tem viagens próprias).
-export function CRMViagensView({ currentUser, leads, users }) {
+export function CRMViagensView({ currentUser, leads, users, pushNotification }) {
   const podePlanejarPropria = COMERCIAL_ROLES.has(currentUser?.role);
   const isGestor = MANAGER_ROLES.has(currentUser?.role);
 
@@ -66,7 +66,7 @@ export function CRMViagensView({ currentUser, leads, users }) {
         </div>
       )}
 
-      {activeTab === "minhas" && <CRMViagensPlanejamentoView currentUser={currentUser} leads={leads} />}
+      {activeTab === "minhas" && <CRMViagensPlanejamentoView currentUser={currentUser} leads={leads} pushNotification={pushNotification} />}
       {activeTab === "gestao" && <CRMViagensGestorView currentUser={currentUser} users={users} />}
       {activeTab === "relatorios" && <CRMViagensRelatoriosView currentUser={currentUser} users={users} />}
     </div>

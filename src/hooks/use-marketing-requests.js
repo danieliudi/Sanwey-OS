@@ -49,7 +49,7 @@ function requestToRow(req, extras = {}) {
   };
 }
 
-export function useMarketingRequests({ userId, role } = {}) {
+export function useMarketingRequests({ userId, role, enabled = true } = {}) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
@@ -60,7 +60,7 @@ export function useMarketingRequests({ userId, role } = {}) {
     role === "gerente_marketing";
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !enabled) return;
     setLoading(true);
     setError(null);
     try {
@@ -75,12 +75,12 @@ export function useMarketingRequests({ userId, role } = {}) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { if (enabled) fetchAll(); }, [fetchAll, enabled]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !enabled) return;
     const channelName = `marketing_requests_rt_${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
@@ -99,7 +99,7 @@ export function useMarketingRequests({ userId, role } = {}) {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [enabled]);
 
   const createRequest = useCallback(async (req) => {
     if (!isSupabaseConfigured) return null;

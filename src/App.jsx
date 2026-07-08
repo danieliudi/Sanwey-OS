@@ -26,6 +26,7 @@ import { useAutomations } from "./hooks/use-automations";
 import { useStageFields } from "./hooks/use-stage-fields";
 import { getMissingRequiredFields } from "./utils/field-conditions";
 import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
+import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useDemoData } from "./hooks/use-demo-data";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
 import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScreen";
@@ -178,6 +179,37 @@ export default function App() {
     desktopPermission,
     requestDesktopPermission,
   } = useNotifications({ currentUser, leads });
+
+  // Avisa o time de Marketing quando chega uma solicitação nova pelo
+  // formulário público — antes só aparecia se alguém abrisse a aba
+  // "Solicitações" manualmente. Só a primeira leva (pendentes já existentes
+  // no primeiro carregamento) não dispara notificação — só as que chegam
+  // depois, via Realtime.
+  const { requests: marketingRequests } = useMarketingRequests({
+    userId: currentUser?.id,
+    role: currentUser?.role,
+    enabled: Boolean(currentUser) && isMarketingUser,
+  });
+  const requestsVistosRef = useRef(null);
+  useEffect(() => {
+    if (!isMarketingUser) return;
+    if (requestsVistosRef.current === null) {
+      requestsVistosRef.current = new Set(marketingRequests.map(r => r.id));
+      return;
+    }
+    for (const r of marketingRequests) {
+      if (r.status === "pendente" && !requestsVistosRef.current.has(r.id)) {
+        requestsVistosRef.current.add(r.id);
+        pushNotification({
+          type: "marketing_request",
+          title: "Nova solicitação de marketing",
+          body: `${r.requesterName || "Alguém"} pediu "${r.title}"${r.department ? ` (${r.department})` : ""}.`,
+        });
+      } else {
+        requestsVistosRef.current.add(r.id);
+      }
+    }
+  }, [marketingRequests, isMarketingUser, pushNotification]);
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);
@@ -820,7 +852,7 @@ export default function App() {
           <Route path={ROUTES["crm-viagens"]} element={
             isAgencia || isPureMarketing || isPureRH
               ? <Navigate to={ROUTES.dashboard} replace />
-              : <CRMViagensView currentUser={currentUser} leads={leads} users={users} />
+              : <CRMViagensView currentUser={currentUser} leads={leads} users={users} pushNotification={pushNotification} />
           } />
           <Route path={ROUTES.agents} element={
             isManager
