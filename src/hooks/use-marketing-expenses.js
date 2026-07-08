@@ -68,8 +68,9 @@ export function useMarketingExpenses({ userId, role } = {}) {
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
+    const channelName = `marketing_expenses_rt_${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("marketing_expenses_rt")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
         if (payload.eventType === "INSERT") {
           setExpenses(prev => prev.some(e => e.id === payload.new.id) ? prev : [rowToExpense(payload.new), ...prev]);

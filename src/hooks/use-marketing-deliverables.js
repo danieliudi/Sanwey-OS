@@ -95,8 +95,9 @@ export function useMarketingDeliverables({ userId, role, campaignId } = {}) {
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
+    const channelName = `marketing_deliverables_rt_${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("marketing_deliverables_rt")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
         const matchesCampaign = !campaignId || payload.new?.campaign_id === campaignId;
         if (payload.eventType === "INSERT") {

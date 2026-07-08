@@ -24,8 +24,9 @@ export function useRHFeedback({ userId } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured) return;
+    const channelName = `rh-feedback-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("rh-feedback")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_avaliacoes" }, fetchAll)
       .subscribe();
     return () => {

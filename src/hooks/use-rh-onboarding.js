@@ -27,8 +27,9 @@ export function useRHOnboarding({ userId } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured) return;
+    const channelName = `rh-onboarding-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("rh-onboarding")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_onboarding_templates" }, fetchAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_onboarding_tarefas" }, fetchAll)
       .subscribe();

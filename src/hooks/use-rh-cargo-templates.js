@@ -22,8 +22,9 @@ export function useRHCargoTemplates({ userId } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured) return;
+    const channelName = `rh-cargo-templates-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("rh-cargo-templates")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_cargo_templates" }, fetchAll)
       .subscribe();
     return () => {

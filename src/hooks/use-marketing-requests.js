@@ -81,8 +81,9 @@ export function useMarketingRequests({ userId, role } = {}) {
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
+    const channelName = `marketing_requests_rt_${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("marketing_requests_rt")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
         if (payload.eventType === "INSERT") {
           setRequests(prev =>

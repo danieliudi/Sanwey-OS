@@ -27,8 +27,9 @@ export function useRHTreinamentos({ userId } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured) return;
+    const channelName = `rh-treinamentos-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("rh-treinamentos")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_treinamentos" }, fetchAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_treinamento_atribuicoes" }, fetchAll)
       .subscribe();

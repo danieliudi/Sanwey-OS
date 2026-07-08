@@ -22,8 +22,9 @@ export function useCRMViagemCategorias({ userId } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured) return;
+    const channelName = `crm-viagem-categorias-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("crm-viagem-categorias")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_viagem_categorias" }, fetchAll)
       .subscribe();
     return () => {

@@ -51,8 +51,9 @@ export function useInvitations({ enabled = true } = {}) {
       return;
     }
     fetchAll();
+    const channelName = `invitations-list-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("invitations-list")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "invitations" }, (payload) => {
         if (!activeRef.current) return;
         if (payload.eventType === "DELETE") {

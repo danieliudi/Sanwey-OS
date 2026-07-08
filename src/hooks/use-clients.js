@@ -75,8 +75,11 @@ export function useClients({ userId } = {}) {
     activeRef.current = true;
     if (!isSupabaseConfigured) { setLoading(false); return; }
     fetchAll();
+    // Nome de canal único por instância — evita colisão quando o hook é
+    // usado por múltiplos componentes ao mesmo tempo.
+    const channelName = `clients-all-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("clients-all")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, (payload) => {
         if (!activeRef.current) return;
         if (payload.eventType === "DELETE") {

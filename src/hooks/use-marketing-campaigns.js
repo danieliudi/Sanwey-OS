@@ -92,8 +92,9 @@ export function useMarketingCampaigns({ userId, role, enabled = true } = {}) {
   // Real-time subscription
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled) return;
+    const channelName = `marketing_campaigns_rt_${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("marketing_campaigns_rt")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, (payload) => {
         if (payload.eventType === "INSERT") {
           // Dedup: optimistic insert may have already added this id

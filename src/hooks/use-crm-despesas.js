@@ -24,8 +24,14 @@ export function useCRMDespesas({ userId } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured) return;
+    // Nome de canal único por instância — o hook é chamado em 3 telas
+    // diferentes (Planejamento/Gestor/Relatórios); nome fixo colide se mais
+    // de uma estiver montada ao mesmo tempo (mesmo bug já visto em
+    // use-profiles.js: "cannot add postgres_changes callbacks... after
+    // subscribe()").
+    const channelName = `crm-viagem-despesas-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
-      .channel("crm-viagem-despesas")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_viagem_despesas" }, fetchAll)
       .subscribe();
     return () => {
