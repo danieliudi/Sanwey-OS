@@ -9,6 +9,7 @@ import {
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { MARKETING_STAGES, EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatBRL, formatK } from "../../utils/currency";
@@ -188,13 +189,13 @@ function EmptyState({ children }) {
 
 // ── Stage pipeline bar ──────────────────────────────────────────────────────────
 
-function StagePipelineBar({ campaigns }) {
+function StagePipelineBar({ campaigns, stages: allStages }) {
   const total = campaigns.length;
   const stages = useMemo(() =>
-    MARKETING_STAGES
+    (allStages || MARKETING_STAGES)
       .map(s => ({ ...s, count: campaigns.filter(c => c.stage === s.id).length }))
       .filter(s => s.count > 0),
-    [campaigns],
+    [campaigns, allStages],
   );
   if (total === 0) return <EmptyState>Sem campanhas</EmptyState>;
   return (
@@ -441,7 +442,7 @@ function AgencyMetrics({ deliverables, primaryColor }) {
 
 // ── Top 5 performance ────────────────────────────────────────────────────────────
 
-function TopPerformanceList({ campaigns, primaryColor }) {
+function TopPerformanceList({ campaigns, primaryColor, stages }) {
   const top = useMemo(() =>
     [...campaigns]
       .filter(c => (c.performanceScore || 0) > 0)
@@ -457,7 +458,7 @@ function TopPerformanceList({ campaigns, primaryColor }) {
       {top.map((c, i) => {
         const score = Math.min(100, Math.max(0, c.performanceScore || 0));
         const col = score >= 80 ? "#16A34A" : score >= 60 ? "#D97706" : "#DC2626";
-        const stage = MARKETING_STAGES.find(s => s.id === c.stage);
+        const stage = (stages || MARKETING_STAGES).find(s => s.id === c.stage);
         return (
           <div key={c.id}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -511,6 +512,18 @@ export function MarketingDashboardView({ user }) {
   const { campaigns,    loading: lC } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
   const { deliverables, loading: lD } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
   const { expenses,     loading: lE } = useMarketingExpenses({ userId: user?.id, role: user?.role });
+
+  // Etapas vivas (DB, editáveis via "Editar etapas" no Kanban) — MARKETING_STAGES
+  // é só o fallback estático de antes da customização por etapa existir. Sem
+  // isso, renomear/criar/excluir uma etapa deixava o Dashboard mostrando o
+  // conjunto antigo de etapas, com dado errado.
+  const { stages: dbCampaignStages } = useRHPipelineStages("marketing");
+  const campaignStages = useMemo(
+    () => dbCampaignStages.length > 0
+      ? dbCampaignStages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, sla: s.slaDays, terminal: s.terminal }))
+      : MARKETING_STAGES,
+    [dbCampaignStages]
+  );
 
   const isAgencia = user?.role === "agencia";
   const loading   = lC || lD || lE;
@@ -691,7 +704,7 @@ export function MarketingDashboardView({ user }) {
           title="Pipeline · distribuição por etapa"
           subtitle={`${fCampaigns.length} campanha${fCampaigns.length !== 1 ? "s" : ""} no total`}
         >
-          <StagePipelineBar campaigns={fCampaigns} />
+          <StagePipelineBar campaigns={fCampaigns} stages={campaignStages} />
         </Panel>
       </div>
 
@@ -722,7 +735,7 @@ export function MarketingDashboardView({ user }) {
       {/* ── Top 5 ──────────────────────────────────────────────────── */}
       <SectionLabel>Top 5 · performance</SectionLabel>
       <Panel>
-        <TopPerformanceList campaigns={fCampaigns} primaryColor={primaryColor} />
+        <TopPerformanceList campaigns={fCampaigns} primaryColor={primaryColor} stages={campaignStages} />
       </Panel>
 
     </div>

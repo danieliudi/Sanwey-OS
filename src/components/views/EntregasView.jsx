@@ -24,7 +24,7 @@ import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 
 /* ── CSV export ─────────────────────────────────────────────── */
-function exportCSV(deliverables) {
+function exportCSV(deliverables, stages) {
   const headers = ["Título","Solicitante","Departamento","Prioridade","Prazo","Etapa","Empresas","Criado em"];
   const rows = deliverables.map(d => [
     d.title,
@@ -32,7 +32,7 @@ function exportCSV(deliverables) {
     d.department    || "",
     PRIORITY_LABELS[d.priority] || d.priority || "",
     d.deadline ? formatDateBR(d.deadline) : "",
-    DELIVERABLE_STAGES.find(s => s.id === d.stage)?.name || d.stage,
+    (stages || DELIVERABLE_STAGES).find(s => s.id === d.stage)?.name || d.stage,
     (d.companyIds || []).map(id => COMPANIES[id]?.short || id).join(";"),
     d.createdAt ? new Date(d.createdAt).toLocaleDateString("pt-BR") : "",
   ]);
@@ -268,16 +268,20 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
 }
 
 /* ── Analytics panel ─────────────────────────────────────────── */
-function AnalyticsPanel({ deliverables }) {
+function AnalyticsPanel({ deliverables, stages }) {
   const [open, setOpen] = useState(false);
 
-  const stageStats = useMemo(() => DELIVERABLE_STAGES.map(stage => {
+  // Etapas vivas (DB, editáveis) quando disponíveis — DELIVERABLE_STAGES é só
+  // o fallback estático de antes da customização por etapa existir. Sem
+  // isso, renomear/criar/excluir uma etapa via "Editar etapas" deixava a
+  // Análise mostrando o conjunto antigo de etapas, com dado errado.
+  const stageStats = useMemo(() => (stages || DELIVERABLE_STAGES).map(stage => {
     const items   = deliverables.filter(d => d.stage === stage.id);
     const overdue = items.filter(d => d.deadline && new Date(d.deadline) < new Date()).length;
     const daysArr = items.filter(d => d.stageChangedAt).map(d => Math.floor((Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000));
     const avgDays = daysArr.length > 0 ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length) : null;
     return { stage, count: items.length, overdue, avgDays };
-  }), [deliverables]);
+  }), [deliverables, stages]);
 
   const maxCount = Math.max(...stageStats.map(s => s.count), 1);
 
@@ -502,7 +506,7 @@ export function EntregasView({ user, users = [] }) {
           )}
           {/* Export CSV */}
           <button
-            onClick={() => exportCSV(filtered)}
+            onClick={() => exportCSV(filtered, kanbanStages)}
             title="Exportar CSV"
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
@@ -743,7 +747,7 @@ export function EntregasView({ user, users = [] }) {
         </div>
       )}
 
-      {!loading && !loadingStages && viewMode === "kanban" && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} />}
+      {!loading && !loadingStages && viewMode === "kanban" && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} stages={kanbanStages} />}
 
       {!loading && !loadingStages && viewMode === "kanban" && (
         <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>

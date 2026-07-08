@@ -390,11 +390,15 @@ function KpiBar({ campaigns }) {
 
 // ── Analytics panel (collapsible) ────────────────────────────────────────────
 
-function AnalyticsPanel({ campaigns }) {
+function AnalyticsPanel({ campaigns, stages }) {
   const [open, setOpen] = useState(false);
 
   const stageStats = useMemo(() => {
-    const nonTerminal = MARKETING_STAGES.filter(s => !s.terminal);
+    // Etapas vivas (DB, editáveis) quando disponíveis — MARKETING_STAGES é só
+    // o fallback estático de antes da customização por etapa existir. Sem
+    // isso, renomear/criar/excluir uma etapa via "Editar etapas" deixava a
+    // Análise mostrando o conjunto antigo de etapas, com dado errado.
+    const nonTerminal = (stages || MARKETING_STAGES).filter(s => !s.terminal);
     return nonTerminal.map(stage => {
       const stageCampaigns = campaigns.filter(c => c.stage === stage.id);
       const count       = stageCampaigns.length;
@@ -407,7 +411,7 @@ function AnalyticsPanel({ campaigns }) {
         : null;
       return { stage, count, totalBudget, avgDays };
     });
-  }, [campaigns]);
+  }, [campaigns, stages]);
 
   const maxCount  = Math.max(...stageStats.map(s => s.count), 1);
   const maxBudget = Math.max(...stageStats.map(s => s.totalBudget), 1);
@@ -1071,7 +1075,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
 
       {/* Analytics panel */}
       {!loading && !loadingStages && viewMode === "kanban" && filteredCampaigns.length > 0 && (
-        <AnalyticsPanel campaigns={filteredCampaigns} />
+        <AnalyticsPanel campaigns={filteredCampaigns} stages={kanbanStages} />
       )}
 
       {!loading && !loadingStages && viewMode === "kanban" && (
