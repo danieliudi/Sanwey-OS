@@ -27,6 +27,8 @@ import { useStageFields } from "./hooks/use-stage-fields";
 import { getMissingRequiredFields } from "./utils/field-conditions";
 import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
 import { useMarketingRequests } from "./hooks/use-marketing-requests";
+import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
+import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
 import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScreen";
@@ -210,6 +212,34 @@ export default function App() {
       }
     }
   }, [marketingRequests, isMarketingUser, pushNotification]);
+
+  // Aprovação de Férias/Licenças é centralizada no RH (não por gestor direto,
+  // já que nem todo gestor tem acesso à plataforma) — então quem precisa ser
+  // avisado de uma nova solicitação pendente é o time de RH (gerente_rh/admin).
+  const { requests: feriasRequests } = useRHFeriasRequests({
+    enabled: Boolean(currentUser) && isRHManager,
+  });
+  const feriasVistosRef = useRef(null);
+  useEffect(() => {
+    if (!isRHManager) return;
+    if (feriasVistosRef.current === null) {
+      feriasVistosRef.current = new Set(feriasRequests.map(r => r.id));
+      return;
+    }
+    for (const r of feriasRequests) {
+      if (r.status === "pendente" && !feriasVistosRef.current.has(r.id)) {
+        feriasVistosRef.current.add(r.id);
+        const tipo = RH_LEAVE_TYPES.find(t => t.id === r.type)?.label || r.type;
+        pushNotification({
+          type: "ferias_solicitada",
+          title: "Nova solicitação de férias/licença",
+          body: `${r.profiles?.name || "Alguém"} solicitou ${tipo?.toLowerCase?.() || tipo}.`,
+        });
+      } else {
+        feriasVistosRef.current.add(r.id);
+      }
+    }
+  }, [feriasRequests, isRHManager, pushNotification]);
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);
