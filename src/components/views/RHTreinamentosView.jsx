@@ -1,18 +1,40 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   GraduationCap, Plus, X, Check, ExternalLink, ChevronDown, ChevronRight, Users, AlertTriangle, RefreshCw,
+  LayoutGrid, Pencil, Settings2,
 } from "lucide-react";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
+import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("pt-BR");
 }
 
+function daysInStage(dateStr) {
+  if (!dateStr) return 0;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+function findStage(stages, stageKey) {
+  return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
+}
+
 // ── Validade / revalidação ────────────────────────────────────────────────────
+// "Vencido" agora é um stage_key gravado de verdade (reconciliado ao abrir a
+// tela, ver use-rh-treinamentos.js), mas a data de vencimento em si continua
+// calculada aqui só pra exibição.
 
 function vencimentoDate(atribuicao, treinamento) {
   if (!treinamento?.validade_dias || !atribuicao?.data_conclusao) return null;
@@ -21,14 +43,8 @@ function vencimentoDate(atribuicao, treinamento) {
   return d;
 }
 
-function isVencido(atribuicao, treinamento) {
-  if (atribuicao?.status !== "concluido") return false;
-  const venc = vencimentoDate(atribuicao, treinamento);
-  return Boolean(venc && venc.getTime() < Date.now());
-}
-
 function atribuicaoStatusInfo(atribuicao, treinamento) {
-  if (isVencido(atribuicao, treinamento)) {
+  if (atribuicao.status === "vencido") {
     return { label: `Vencido em ${fmt(vencimentoDate(atribuicao, treinamento))}`, color: "var(--danger)", bg: "#FEE2E2" };
   }
   if (atribuicao.status === "concluido") {
@@ -233,18 +249,17 @@ function AtribuirModal({ treinamento, colaboradores, onAssign, onClose }) {
 
 // ── Painel de conformidade ────────────────────────────────────────────────────
 
-function ComplianceStats({ atribuicoes, treinamentosById }) {
+function ComplianceStats({ atribuicoes }) {
   const stats = useMemo(() => {
     let ok = 0, vencidos = 0, pendentes = 0;
     atribuicoes.forEach((a) => {
-      const t = treinamentosById.get(a.treinamento_id);
-      if (isVencido(a, t)) vencidos++;
+      if (a.status === "vencido") vencidos++;
       else if (a.status === "concluido") ok++;
       else pendentes++;
     });
     const total = atribuicoes.length;
     return { total, ok, vencidos, pendentes, pct: total > 0 ? Math.round((ok / total) * 100) : 100 };
-  }, [atribuicoes, treinamentosById]);
+  }, [atribuicoes]);
 
   if (stats.total === 0) return null;
 
@@ -267,20 +282,335 @@ function ComplianceStats({ atribuicoes, treinamentosById }) {
   );
 }
 
+// ── Board por treinamento (Kanban) ───────────────────────────────────────────
+// Um board GLOBAL (todos os treinamentos × todas as pessoas) viraria uma
+// bagunça de centenas de cards sem relação entre si — por isso o board é
+// escolhido por treinamento (abre a partir do catálogo), não um board único.
+
+function AtribuicaoCardBody({ atribuicao, colaborador }) {
+  return (
+    <>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
+      {colaborador?.jobTitle && <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{colaborador.jobTitle}</div>}
+      {atribuicao.data_conclusao && (
+        <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>Concluído em {fmt(atribuicao.data_conclusao)}</div>
+      )}
+    </>
+  );
+}
+
+function TreinamentoBoardColumn({
+  stage, stages, atribList, colaboradoresById,
+  onCardClick, onDragStart, onDragEnd, onMoveToStage,
+  isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
+  canWrite, onEditFields, getCompleteness,
+}) {
+  return (
+    <div
+      onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
+      onDragLeave={onColumnDragLeave}
+      onDrop={() => onColumnDrop(stage.stageKey)}
+      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+      style={{ width: 260, minWidth: 260, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", maxHeight: "calc(100vh - 320px)" }}
+    >
+      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
+      <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+        <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <span>{stage.name}</span>
+          <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({atribList.length})</span>
+        </div>
+        {canWrite && (
+          <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
+            <Settings2 size={13} />
+          </button>
+        )}
+      </div>
+      <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        {atribList.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
+        ) : (
+          atribList.map((a) => (
+            <RHKanbanCard
+              key={a.id}
+              id={a.id}
+              stage={a.status}
+              stages={stages}
+              onClick={() => onCardClick(a)}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onMoveToStage={onMoveToStage}
+              agingDays={daysInStage(a.status_changed_at)}
+              completeness={getCompleteness?.(a)}
+            >
+              <AtribuicaoCardBody atribuicao={a} colaborador={colaboradoresById.get(a.colaborador_id)} />
+            </RHKanbanCard>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AtribuicaoDrawer({
+  atribuicao, treinamento, colaborador, canWrite, stages, users, currentUser,
+  onStageChange, onUpdateCustomFields, onAddActivity, onClose,
+}) {
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const stageFieldsHook = useRHStageFields("treinamentos");
+  const customDefs = stageFieldsHook.getFields(atribuicao.status);
+  const [customDraft, setCustomDraft] = useState({});
+
+  useEffect(() => { setCustomDraft({}); }, [atribuicao.id]);
+
+  const handleCustomChange = (fieldKey, value) => {
+    setCustomDraft((prev) => ({ ...prev, [fieldKey]: value }));
+    const merged = { ...(atribuicao.custom_fields || {}), [fieldKey]: value };
+    onUpdateCustomFields(merged);
+  };
+
+  const getCustomValue = (fieldKey) =>
+    fieldKey in customDraft ? customDraft[fieldKey] : (atribuicao.custom_fields?.[fieldKey] ?? "");
+
+  const customValuesByKey = { ...(atribuicao.custom_fields || {}), ...customDraft };
+  const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
+
+  const st = findStage(stages, atribuicao.status);
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const moveTargets = stages.filter((s) => s.stageKey !== atribuicao.status);
+
+  return (
+    <>
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1099 }} onClick={onClose} />
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(460px, 100vw)", background: "var(--surface)", zIndex: 1100, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{treinamento.titulo}</div>
+            <div style={{ marginTop: 8 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px", flex: 1 }}>
+          {canWrite && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Mover para</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {moveTargets.map((s) => (
+                  <button key={s.stageKey} onClick={() => onStageChange(atribuicao.id, s.stageKey)} style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {visibleCustomDefs.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Campos desta etapa</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {visibleCustomDefs.map((f) => (
+                  <div key={f.id}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                      {f.label}
+                    </label>
+                    {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+                    <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+            <RHDetailDrawerShell
+              domain="treinamentos"
+              recordId={atribuicao.id}
+              activities={atribuicao.activities || []}
+              onAddActivity={onAddActivity}
+              currentUser={currentUser}
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function TreinamentoBoardModal({
+  treinamento, atribuicoes, colaboradoresById, canWrite, currentUser, users,
+  onChangeStage, onUpdateCustomFields, onAddActivity, onClose,
+}) {
+  const { stages, loading: loadingStages } = useRHPipelineStages("treinamentos");
+  const stageFields = useRHStageFields("treinamentos");
+  const [drawerId, setDrawerId] = useState(null);
+  const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [fieldEditorStage, setFieldEditorStage] = useState(null);
+  const [draggedId, setDraggedId] = useState(null);
+  const [dragOverStageKey, setDragOverStageKey] = useState(null);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape" && !drawerId) onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose, drawerId]);
+
+  const byStage = useMemo(() => {
+    const map = {};
+    const defaultKey = stages[0]?.stageKey || "pendente";
+    stages.forEach(s => { map[s.stageKey] = atribuicoes.filter(a => (a.status || defaultKey) === s.stageKey); });
+    return map;
+  }, [atribuicoes, stages]);
+
+  const getCompleteness = (a) => getFieldCompleteness(stageFields.getFields(a.status), a.custom_fields || {});
+
+  const handleMove = (id, stage) => {
+    const atrib = atribuicoes.find(a => a.id === id);
+    if (!atrib) return;
+    const fields = stageFields.getFields(atrib.status);
+    const missing = getMissingRequiredFields(fields, atrib.custom_fields || {});
+    if (missing.length > 0) {
+      alert(`Não dá pra mover: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(fields, atrib.custom_fields || {});
+    if (invalid.length > 0) {
+      alert(`Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      return;
+    }
+    onChangeStage(id, stage);
+  };
+
+  const handleDrop = (stageKey) => {
+    if (draggedId) {
+      const atrib = atribuicoes.find(a => a.id === draggedId);
+      if (atrib && atrib.status !== stageKey) handleMove(draggedId, stageKey);
+    }
+    setDraggedId(null);
+    setDragOverStageKey(null);
+  };
+
+  const drawerAtrib = drawerId ? atribuicoes.find(a => a.id === drawerId) : null;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", flexDirection: "column" }} onClick={onClose}>
+      <div style={{ background: "var(--surface)", flex: 1, display: "flex", flexDirection: "column", margin: 24, borderRadius: 16, overflow: "hidden", boxShadow: "0 24px 80px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between flex-wrap gap-3" style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)" }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 18, color: "var(--text)" }}>{treinamento.titulo}</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>Board de acompanhamento — {atribuicoes.length} pessoa{atribuicoes.length !== 1 ? "s" : ""} atribuída{atribuicoes.length !== 1 ? "s" : ""}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canWrite && (
+              <button onClick={() => setStageEditorOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <Pencil size={13} /> Editar etapas
+              </button>
+            )}
+            <button onClick={onClose} style={{ background: "transparent", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-dim)", padding: "8px 10px", borderRadius: 10, display: "flex" }}>
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div style={{ padding: 20, overflowX: "auto", flex: 1 }}>
+          {loadingStages ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
+          ) : (
+            <div style={{ display: "flex", gap: 12 }}>
+              {stages.map((stage) => (
+                <TreinamentoBoardColumn
+                  key={stage.id}
+                  stage={stage}
+                  stages={stages}
+                  atribList={byStage[stage.stageKey] || []}
+                  colaboradoresById={colaboradoresById}
+                  onCardClick={(a) => setDrawerId(a.id)}
+                  onDragStart={setDraggedId}
+                  onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
+                  onMoveToStage={handleMove}
+                  isDragOver={dragOverStageKey === stage.stageKey}
+                  onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
+                  onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
+                  onColumnDrop={handleDrop}
+                  canWrite={canWrite}
+                  onEditFields={setFieldEditorStage}
+                  getCompleteness={getCompleteness}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {drawerAtrib && (
+        <AtribuicaoDrawer
+          atribuicao={drawerAtrib}
+          treinamento={treinamento}
+          colaborador={colaboradoresById.get(drawerAtrib.colaborador_id)}
+          canWrite={canWrite}
+          stages={stages}
+          users={users}
+          currentUser={currentUser}
+          onStageChange={(id, stage) => { handleMove(id, stage); }}
+          onUpdateCustomFields={(merged) => onUpdateCustomFields(drawerAtrib.id, merged)}
+          onAddActivity={(entry) => onAddActivity(drawerAtrib.id, entry)}
+          onClose={() => setDrawerId(null)}
+        />
+      )}
+
+      {canWrite && (
+        <RHStageEditorModal
+          open={stageEditorOpen}
+          onClose={() => setStageEditorOpen(false)}
+          domain="treinamentos"
+          domainLabel="Treinamentos"
+          records={atribuicoes}
+          stageField="status"
+        />
+      )}
+
+      {canWrite && (
+        <RHStageFieldEditorModal
+          open={!!fieldEditorStage}
+          onClose={() => setFieldEditorStage(null)}
+          domain="treinamentos"
+          stageKey={fieldEditorStage?.stageKey}
+          stageName={fieldEditorStage?.name}
+        />
+      )}
+    </div>
+  );
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function RHTreinamentosView({ currentUser, canWrite, isRHUser }) {
-  const { treinamentos, atribuicoes, loading: loadingTreinamentos, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus } = useRHTreinamentos({ userId: currentUser?.id });
+export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = [] }) {
+  const {
+    treinamentos, atribuicoes, loading: loadingTreinamentos, createTreinamento, updateTreinamento,
+    assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, updateAtribuicaoCustomFields, addAtribuicaoActivity,
+  } = useRHTreinamentos({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const [novoOpen, setNovoOpen]         = useState(false);
   const [editingTreinamento, setEditingTreinamento] = useState(null);
   const [atribuindoTo, setAtribuindoTo] = useState(null);
+  const [boardTreinamento, setBoardTreinamento] = useState(null);
   const [expanded, setExpanded]         = useState(new Set());
 
   const loading = loadingTreinamentos || loadingColaboradores;
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
-  const treinamentosById  = useMemo(() => new Map(treinamentos.map(t => [t.id, t])), [treinamentos]);
 
   const atribuicoesByTreinamento = useMemo(() => {
     const map = new Map();
@@ -338,7 +668,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser }) {
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : isRHUser ? (
         <>
-          <ComplianceStats atribuicoes={atribuicoes} treinamentosById={treinamentosById} />
+          <ComplianceStats atribuicoes={atribuicoes} />
           {treinamentos.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <GraduationCap size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
@@ -348,8 +678,8 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser }) {
             <div className="flex flex-col gap-3">
               {treinamentos.map(t => {
                 const atribs = atribuicoesByTreinamento.get(t.id) || [];
-                const concluidos = atribs.filter(a => a.status === "concluido" && !isVencido(a, t)).length;
-                const vencidos = atribs.filter(a => isVencido(a, t)).length;
+                const concluidos = atribs.filter(a => a.status === "concluido").length;
+                const vencidos = atribs.filter(a => a.status === "vencido").length;
                 return (
                   <div key={t.id} style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--surface-alt)" }}>
@@ -389,6 +719,11 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser }) {
                           <button onClick={() => setAtribuindoTo(t)} style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--accent-tint)", color: "var(--accent)", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
                             <Users size={11} /> Atribuir
                           </button>
+                          {atribs.length > 0 && (
+                            <button onClick={() => setBoardTreinamento(t)} style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
+                              <LayoutGrid size={11} /> Ver quadro
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
@@ -398,14 +733,13 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser }) {
                           <div style={{ fontSize: 12, color: "var(--text-dim)", padding: "8px 0" }}>Ninguém atribuído ainda.</div>
                         ) : atribs.map(a => {
                           const info = atribuicaoStatusInfo(a, t);
-                          const vencido = isVencido(a, t);
                           return (
                             <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
                               <span style={{ flex: 1, fontSize: 12, color: "var(--text)" }}>{colaboradoresById.get(a.colaborador_id)?.fullName || "—"}</span>
                               <span style={{ fontSize: 10, fontWeight: 700, color: info.color, background: info.bg, borderRadius: 99, padding: "2px 9px" }}>
                                 {info.label}
                               </span>
-                              {canWrite && vencido && (
+                              {canWrite && a.status === "vencido" && (
                                 <button
                                   onClick={() => updateAtribuicaoStatus(a.id, "pendente")}
                                   style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 10, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}
@@ -439,7 +773,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser }) {
           {myAtribuicoes.map(a => {
             const t = treinamentos.find(tr => tr.id === a.treinamento_id);
             if (!t) return null;
-            const vencido = isVencido(a, t);
+            const vencido = a.status === "vencido";
             return (
               <div key={a.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
                 <button
@@ -473,6 +807,20 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser }) {
         />
       )}
       {atribuindoTo && <AtribuirModal treinamento={atribuindoTo} colaboradores={colaboradores} onAssign={assignToUsers} onClose={() => setAtribuindoTo(null)} />}
+      {boardTreinamento && (
+        <TreinamentoBoardModal
+          treinamento={boardTreinamento}
+          atribuicoes={atribuicoesByTreinamento.get(boardTreinamento.id) || []}
+          colaboradoresById={colaboradoresById}
+          canWrite={canWrite}
+          currentUser={currentUser}
+          users={users}
+          onChangeStage={changeAtribuicaoStage}
+          onUpdateCustomFields={updateAtribuicaoCustomFields}
+          onAddActivity={addAtribuicaoActivity}
+          onClose={() => setBoardTreinamento(null)}
+        />
+      )}
     </div>
   );
 }

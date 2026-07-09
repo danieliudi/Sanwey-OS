@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
+function vencimentoDate(atribuicao, treinamento) {
+  if (!treinamento?.validade_dias || !atribuicao?.data_conclusao) return null;
+  const d = new Date(atribuicao.data_conclusao);
+  d.setDate(d.getDate() + Number(treinamento.validade_dias));
+  return d;
+}
+
 export function useRHTreinamentos({ userId } = {}) {
   const [treinamentos, setTreinamentos] = useState([]);
   const [atribuicoes, setAtribuicoes]   = useState([]);
   const [loading, setLoading]           = useState(true);
   const activeRef = useRef(true);
+  const reconciliandoRef = useRef(false);
 
   const fetchAll = useCallback(async () => {
     if (!isSupabaseConfigured) { setLoading(false); return; }
@@ -39,6 +47,30 @@ export function useRHTreinamentos({ userId } = {}) {
     };
   }, [fetchAll]);
 
+  // Reconciliação de "vencido": antes era só um cálculo no cliente
+  // (data_conclusao + validade_dias no passado); agora vira o stage_key de
+  // verdade gravado no banco, igual ao card de qualquer outro Kanban.
+  // Roda ao abrir a tela (sem cron/job agendado, que não existe aqui),
+  // mesmo padrão do nextPendingCycle do Feedback.
+  useEffect(() => {
+    if (loading || reconciliandoRef.current || treinamentos.length === 0 || atribuicoes.length === 0) return;
+    const treinamentosById = new Map(treinamentos.map(t => [t.id, t]));
+    const paraVencer = atribuicoes.filter(a => {
+      if (a.status !== "concluido") return false;
+      const venc = vencimentoDate(a, treinamentosById.get(a.treinamento_id));
+      return Boolean(venc && venc.getTime() < Date.now());
+    });
+    if (paraVencer.length === 0) return;
+    reconciliandoRef.current = true;
+    (async () => {
+      const now = new Date().toISOString();
+      for (const a of paraVencer) {
+        await supabase.from("rh_treinamento_atribuicoes").update({ status: "vencido", status_changed_at: now }).eq("id", a.id);
+      }
+      setAtribuicoes(prev => prev.map(a => paraVencer.some(p => p.id === a.id) ? { ...a, status: "vencido", status_changed_at: now } : a));
+    })();
+  }, [loading, treinamentos, atribuicoes]);
+
   const createTreinamento = useCallback(async (data) => {
     const row = { ...data, created_by: userId };
     const { data: novo, error } = await supabase.from("rh_treinamentos").insert(row).select().single();
@@ -58,12 +90,36 @@ export function useRHTreinamentos({ userId } = {}) {
     return novas;
   }, [userId, fetchAll]);
 
-  const updateAtribuicaoStatus = useCallback(async (atribuicaoId, status) => {
-    const patch = { status, data_conclusao: status === "concluido" ? new Date().toISOString() : null };
+  // Mover card entre pendente/concluído/vencido no board por treinamento —
+  // generaliza updateAtribuicaoStatus (mantida abaixo pros dois call sites
+  // já existentes: checkbox de autoatendimento e botão "Revalidar").
+  const changeAtribuicaoStage = useCallback(async (atribuicaoId, stage) => {
+    const patch = { status: stage, status_changed_at: new Date().toISOString() };
+    if (stage === "concluido") patch.data_conclusao = new Date().toISOString();
+    if (stage === "pendente") patch.data_conclusao = null;
     const { error } = await supabase.from("rh_treinamento_atribuicoes").update(patch).eq("id", atribuicaoId);
     if (error) throw new Error(error.message);
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, ...patch } : a));
   }, []);
+
+  const updateAtribuicaoStatus = useCallback(async (atribuicaoId, status) => {
+    await changeAtribuicaoStage(atribuicaoId, status);
+  }, [changeAtribuicaoStage]);
+
+  const updateAtribuicaoCustomFields = useCallback(async (atribuicaoId, customFields) => {
+    const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ custom_fields: customFields }).eq("id", atribuicaoId);
+    if (error) throw new Error(error.message);
+    setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, custom_fields: customFields } : a));
+  }, []);
+
+  const addAtribuicaoActivity = useCallback(async (atribuicaoId, entry) => {
+    const current = atribuicoes.find(a => a.id === atribuicaoId);
+    if (!current) return;
+    const nextActivities = [...(Array.isArray(current.activities) ? current.activities : []), entry];
+    const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ activities: nextActivities }).eq("id", atribuicaoId);
+    if (error) throw new Error(error.message);
+    setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, activities: nextActivities } : a));
+  }, [atribuicoes]);
 
   const updateTreinamento = useCallback(async (id, patch) => {
     const { error } = await supabase.from("rh_treinamentos").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
@@ -79,6 +135,9 @@ export function useRHTreinamentos({ userId } = {}) {
     updateTreinamento,
     assignToUsers,
     updateAtribuicaoStatus,
+    changeAtribuicaoStage,
+    updateAtribuicaoCustomFields,
+    addAtribuicaoActivity,
     refetch: fetchAll,
-  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, fetchAll]);
+  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, updateAtribuicaoCustomFields, addAtribuicaoActivity, fetchAll]);
 }
