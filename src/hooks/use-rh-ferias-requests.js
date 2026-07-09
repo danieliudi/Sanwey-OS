@@ -2,20 +2,24 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const TABLE = "rh_ferias";
+const SELECT = "*, profiles:user_id(id, name, initials, email), approver:approved_by(name)";
 
 export function useRHFeriasRequests({ enabled = true } = {}) {
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading]   = useState(true);
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured || !enabled) return;
+    if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
+    setLoading(true);
     const { data, error } = await supabase
       .from(TABLE)
-      .select("*, profiles:user_id(id, name)")
+      .select(SELECT)
       .order("created_at", { ascending: false });
     if (!error) setRequests(data || []);
+    setLoading(false);
   }, [enabled]);
 
-  useEffect(() => { if (enabled) fetchAll(); }, [fetchAll, enabled]);
+  useEffect(() => { if (enabled) fetchAll(); else setLoading(false); }, [fetchAll, enabled]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled) return;
@@ -27,5 +31,40 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
     return () => { supabase.removeChannel(channel); };
   }, [enabled, fetchAll]);
 
-  return { requests, refetch: fetchAll };
+  const createRequest = useCallback(async (data) => {
+    const { data: novo, error } = await supabase
+      .from(TABLE)
+      .insert(data)
+      .select(SELECT)
+      .single();
+    if (error) throw new Error(error.message);
+    setRequests(prev => [novo, ...prev]);
+    return novo;
+  }, []);
+
+  // Mover card entre etapas do Kanban (pendente/aprovado/recusado).
+  // approvedBy/approvedAt são preenchidos só ao entrar em aprovado/recusado.
+  const changeStatus = useCallback(async (id, status, extra = {}) => {
+    const patch = { status, status_changed_at: new Date().toISOString(), ...extra };
+    const { error } = await supabase.from(TABLE).update(patch).eq("id", id);
+    if (error) throw new Error(error.message);
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+  }, []);
+
+  const updateCustomFields = useCallback(async (id, customFields) => {
+    const { error } = await supabase.from(TABLE).update({ custom_fields: customFields }).eq("id", id);
+    if (error) throw new Error(error.message);
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, custom_fields: customFields } : r));
+  }, []);
+
+  const addActivity = useCallback(async (id, entry) => {
+    const current = requests.find(r => r.id === id);
+    if (!current) return;
+    const nextActivities = [...(Array.isArray(current.activities) ? current.activities : []), entry];
+    const { error } = await supabase.from(TABLE).update({ activities: nextActivities }).eq("id", id);
+    if (error) throw new Error(error.message);
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, activities: nextActivities } : r));
+  }, [requests]);
+
+  return { requests, loading, createRequest, changeStatus, updateCustomFields, addActivity, refetch: fetchAll };
 }

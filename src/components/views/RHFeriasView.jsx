@@ -1,17 +1,37 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Calendar,
-  Check,
-  ChevronDown,
-  Plus,
-  X,
-  Clock,
-  CalendarCheck,
-  Users,
+  Calendar, Check, Plus, X, Clock, CalendarCheck, AlertTriangle, Pencil, Settings2,
 } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import { RH_LEAVE_TYPES } from "../../constants/rh-config";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
+import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
+
+// ── Documento obrigatório por tipo de licença ────────────────────────────────
+// Pesquisa de mercado (Convenia/Gusto/Personio) + prática CLT: alguns tipos
+// de afastamento exigem comprovante. Como não existe campo de anexo no
+// sistema genérico de campos por etapa, a exigência é checada contra
+// rh_attachments (domain="ferias") no momento de aprovar — não bloqueia a
+// solicitação em si, só a aprovação.
+const DOCUMENTO_OBRIGATORIO_POR_TIPO = {
+  licenca_medica:      "Atestado médico",
+  luto:                "Certidão de óbito ou comprovante de parentesco",
+  licenca_maternidade: "Certidão de nascimento ou declaração médica",
+  licenca_paternidade: "Certidão de nascimento ou declaração médica",
+};
+
+// CLT Art. 135: férias devem ser comunicadas com pelo menos 30 dias de
+// antecedência. Aviso não-bloqueante — só sinaliza, não impede o envio nem
+// a aprovação, já que exceções acontecem.
+const AVISO_MINIMO_DIAS_FERIAS = 30;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -30,12 +50,10 @@ function leaveTypeLabel(typeId) {
   return RH_LEAVE_TYPES.find((t) => t.id === typeId)?.label || typeId || "—";
 }
 
-function statusConfig(status) {
-  switch (status) {
-    case "aprovado":  return { label: "Aprovado",  color: "var(--success)", bg: "#DCFCE7" };
-    case "recusado":  return { label: "Recusado",  color: "var(--danger)", bg: "#FEE2E2" };
-    default:          return { label: "Pendente",  color: "var(--warning)", bg: "#FEF3C7" };
-  }
+function avisoAntecedenciaCurto(req) {
+  if (req.type !== "ferias" || !req.created_at || !req.start_date) return false;
+  const diasAntecedencia = Math.floor((new Date(req.start_date).getTime() - new Date(req.created_at).getTime()) / 86400000);
+  return diasAntecedencia < AVISO_MINIMO_DIAS_FERIAS;
 }
 
 function isActiveNow(req) {
@@ -53,59 +71,65 @@ function isThisMonth(dateStr) {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
 
+function daysInStage(dateStr) {
+  if (!dateStr) return 0;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+function findStage(stages, stageKey) {
+  return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
+}
+
+async function contarAnexos(recordId) {
+  if (!isSupabaseConfigured) return 0;
+  const { count } = await supabase
+    .from("rh_attachments")
+    .select("id", { count: "exact", head: true })
+    .eq("domain", "ferias")
+    .eq("record_id", recordId);
+  return count || 0;
+}
+
+// ── Email helper ──────────────────────────────────────────────────────────────
+
+async function sendRhEmail(type, req, extraVars = {}) {
+  try {
+    let toEmail = req.profiles?.email || null;
+    if (!toEmail && req.user_id) {
+      const { data: profile } = await supabase.from("profiles").select("email").eq("id", req.user_id).single();
+      toEmail = profile?.email || null;
+    }
+    if (!toEmail) return;
+    await supabase.functions.invoke("rh-send-email", {
+      body: {
+        type,
+        to: toEmail,
+        variables: {
+          EMPLOYEE_NAME: req.profiles?.name || "",
+          LEAVE_TYPE:    leaveTypeLabel(req.type),
+          START_DATE:    fmt(req.start_date),
+          END_DATE:      fmt(req.end_date),
+          DAYS_COUNT:    String(calcDias(req.start_date, req.end_date)),
+          APP_URL:       window.location.origin,
+          ...extraVars,
+        },
+      },
+    });
+  } catch (err) {
+    console.warn("[RHFeriasView] sendRhEmail error:", err);
+  }
+}
+
 // ── Avatar circle ─────────────────────────────────────────────────────────────
 
 function UserAvatar({ user, size = 30 }) {
   const initials =
     (user?.initials) ||
-    (user?.name || "?")
-      .split(" ")
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
+    (user?.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: "var(--color-industria)",
-        color: "#FFF",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: size * 0.38,
-        fontWeight: 700,
-        flexShrink: 0,
-        letterSpacing: "0.02em",
-      }}
-    >
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "var(--color-industria)", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.38, fontWeight: 700, flexShrink: 0, letterSpacing: "0.02em" }}>
       {initials}
     </div>
-  );
-}
-
-// ── Status badge ──────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }) {
-  const s = statusConfig(status);
-  return (
-    <span
-      style={{
-        background: s.bg,
-        color: s.color,
-        border: `1px solid ${s.color}33`,
-        borderRadius: 99,
-        padding: "2px 10px",
-        fontSize: 11,
-        fontWeight: 600,
-        display: "inline-block",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {s.label}
-    </span>
   );
 }
 
@@ -126,6 +150,7 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
   }, [onClose]);
 
   const dias = calcDias(startDate, endDate);
+  const docExigido = DOCUMENTO_OBRIGATORIO_POR_TIPO[type];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -158,28 +183,14 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
   const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>
-              Solicitar Afastamento
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
-              {currentUser?.name || currentUser?.email}
-            </div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>Solicitar Afastamento</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{currentUser?.name || currentUser?.email}</div>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}
-          >
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
             <X size={18} />
           </button>
         </div>
@@ -188,104 +199,56 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label style={labelSt}>Tipo *</label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-                style={inputSt}
-                autoFocus
-              >
+              <select value={type} onChange={(e) => setType(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt} autoFocus>
                 <option value="">Selecionar tipo</option>
-                {RH_LEAVE_TYPES.map((t) => (
-                  <option key={t.id} value={t.id}>{t.label}</option>
-                ))}
+                {RH_LEAVE_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
+              {docExigido && (
+                <div style={{ marginTop: 6, fontSize: 11, color: "var(--warning)", display: "flex", alignItems: "center", gap: 4 }}>
+                  <AlertTriangle size={11} /> Vai precisar anexar: {docExigido} (depois do envio).
+                </div>
+              )}
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={labelSt}>Início *</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-                  style={inputSt}
-                  onFocus={focusBlue}
-                  onBlur={blurGray}
-                />
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
                 <label style={labelSt}>Término *</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate}
-                  className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-                  style={inputSt}
-                  onFocus={focusBlue}
-                  onBlur={blurGray}
-                />
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
             </div>
 
+            {type === "ferias" && startDate && (() => {
+              const diasAntecedencia = Math.floor((new Date(startDate).getTime() - Date.now()) / 86400000);
+              return diasAntecedencia < AVISO_MINIMO_DIAS_FERIAS ? (
+                <div style={{ background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 14px", fontSize: 11, color: "var(--warning)", display: "flex", alignItems: "center", gap: 6 }}>
+                  <AlertTriangle size={12} /> Menos de {AVISO_MINIMO_DIAS_FERIAS} dias de antecedência (CLT recomenda aviso prévio de 30 dias).
+                </div>
+              ) : null;
+            })()}
+
             {dias > 0 && (
-              <div
-                style={{
-                  background: "var(--surface-alt)",
-                  border: "1px solid #BFDBFE",
-                  borderRadius: 10,
-                  padding: "8px 14px",
-                  fontSize: 12,
-                  color: "var(--accent)",
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <Calendar size={13} />
-                {dias} dia{dias !== 1 ? "s" : ""} de afastamento
+              <div style={{ background: "var(--surface-alt)", border: "1px solid #BFDBFE", borderRadius: 10, padding: "8px 14px", fontSize: 12, color: "var(--accent)", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                <Calendar size={13} /> {dias} dia{dias !== 1 ? "s" : ""} de afastamento
               </div>
             )}
 
             <div>
               <label style={labelSt}>Observações</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Informações adicionais, motivo, CID (se licença médica)…"
-                rows={3}
-                className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-                style={inputSt}
-                onFocus={focusBlue}
-                onBlur={blurGray}
-              />
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Informações adicionais, motivo, CID (se licença médica)…" rows={3} className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
             </div>
           </div>
 
-          {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0 0" }}>
-              {error}
-            </div>
-          )}
+          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button
-              type="submit"
-              disabled={saving}
-              style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
-            >
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Enviando…" : "Enviar solicitação"}
             </button>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
-            >
-              Cancelar
-            </button>
+            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
           </div>
         </form>
       </div>
@@ -293,146 +256,295 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
   );
 }
 
+// ── Card do Kanban ────────────────────────────────────────────────────────────
+
+function FeriasCardBody({ req, canWrite, onAprovar, onRecusar, busy }) {
+  const dias = calcDias(req.start_date, req.end_date);
+  const docExigido = DOCUMENTO_OBRIGATORIO_POR_TIPO[req.type];
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+        <UserAvatar user={req.profiles} size={28} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {req.profiles?.name || "Desconhecido"}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{leaveTypeLabel(req.type)} · {dias}d</div>
+        </div>
+      </div>
+      <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{fmt(req.start_date)} – {fmt(req.end_date)}</div>
+      {avisoAntecedenciaCurto(req) && (
+        <div style={{ marginTop: 4, fontSize: 10, color: "var(--warning)", display: "flex", alignItems: "center", gap: 3 }}>
+          <AlertTriangle size={10} /> Aviso curto (&lt;30d)
+        </div>
+      )}
+      {docExigido && (
+        <div style={{ marginTop: 4, fontSize: 10, color: "var(--text-dim)", display: "flex", alignItems: "center", gap: 3 }}>
+          Exige anexo: {docExigido}
+        </div>
+      )}
+      {canWrite && req.status === "pendente" && (
+        <div style={{ display: "flex", gap: 6, marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => onAprovar(req)} disabled={busy} style={{ flex: 1, background: "#DCFCE7", color: "var(--success)", border: "1px solid #BBF7D0", borderRadius: 7, padding: "4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+            <Check size={11} style={{ verticalAlign: -1 }} /> Aprovar
+          </button>
+          <button onClick={() => onRecusar(req)} disabled={busy} style={{ flex: 1, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA", borderRadius: 7, padding: "4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+            <X size={11} style={{ verticalAlign: -1 }} /> Recusar
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function FeriasKanbanColumn({
+  stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage,
+  isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
+  canWrite, onEditFields, getCompleteness, onAprovar, onRecusar, busyId,
+}) {
+  return (
+    <div
+      onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
+      onDragLeave={onColumnDragLeave}
+      onDrop={() => onColumnDrop(stage.stageKey)}
+      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+      style={{ width: 272, minWidth: 272, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", maxHeight: "calc(100vh - 260px)" }}
+    >
+      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
+      <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            <span>{stage.name}</span>
+            <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({reqList.length})</span>
+          </div>
+        </div>
+        {canWrite && (
+          <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
+            <Settings2 size={13} />
+          </button>
+        )}
+      </div>
+      <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        {reqList.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Nada aqui</div>
+        ) : (
+          reqList.map((req) => (
+            <RHKanbanCard
+              key={req.id}
+              id={req.id}
+              stage={req.status}
+              stages={stages}
+              onClick={() => onCardClick(req)}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onMoveToStage={onMoveToStage}
+              agingDays={daysInStage(req.status_changed_at)}
+              completeness={getCompleteness?.(req)}
+            >
+              <FeriasCardBody req={req} canWrite={canWrite} onAprovar={onAprovar} onRecusar={onRecusar} busy={busyId === req.id} />
+            </RHKanbanCard>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Drawer de detalhe ──────────────────────────────────────────────────────────
+
+function FeriasDrawer({
+  req, canWrite, stages, users, currentUser,
+  onAprovar, onRecusar, onUpdateCustomFields, onAddActivity, onClose, busy,
+}) {
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const stageFieldsHook = useRHStageFields("ferias");
+  const customDefs = stageFieldsHook.getFields(req.status);
+  const [customDraft, setCustomDraft] = useState({});
+
+  useEffect(() => { setCustomDraft({}); }, [req.id]);
+
+  const handleCustomChange = (fieldKey, value) => {
+    setCustomDraft((prev) => ({ ...prev, [fieldKey]: value }));
+    const merged = { ...(req.custom_fields || {}), [fieldKey]: value };
+    onUpdateCustomFields(merged);
+  };
+
+  const getCustomValue = (fieldKey) =>
+    fieldKey in customDraft ? customDraft[fieldKey] : (req.custom_fields?.[fieldKey] ?? "");
+
+  const customValuesByKey = { ...(req.custom_fields || {}), ...customDraft };
+  const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
+
+  const st = findStage(stages, req.status);
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const dias = calcDias(req.start_date, req.end_date);
+  const docExigido = DOCUMENTO_OBRIGATORIO_POR_TIPO[req.type];
+
+  return (
+    <>
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <UserAvatar user={req.profiles} size={40} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{req.profiles?.name || "Desconhecido"}</div>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{leaveTypeLabel(req.type)} · {fmt(req.start_date)} – {fmt(req.end_date)} · {dias}d</div>
+            <div style={{ marginTop: 8 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px", flex: 1 }}>
+          {req.notes && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Observações do colaborador</div>
+              <div style={{ fontSize: 13, color: "var(--text)" }}>{req.notes}</div>
+            </div>
+          )}
+
+          {avisoAntecedenciaCurto(req) && (
+            <div style={{ marginBottom: 16, background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--warning)", display: "flex", alignItems: "center", gap: 6 }}>
+              <AlertTriangle size={12} /> Solicitado com menos de {AVISO_MINIMO_DIAS_FERIAS} dias de antecedência (CLT Art. 135).
+            </div>
+          )}
+
+          {docExigido && (
+            <div style={{ marginBottom: 16, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--text-dim)" }}>
+              Documento exigido pra aprovar: <b style={{ color: "var(--text)" }}>{docExigido}</b> (anexar na aba Anexos abaixo).
+            </div>
+          )}
+
+          {canWrite && req.status === "pendente" && (
+            <div style={{ marginBottom: 20, display: "flex", gap: 8 }}>
+              <button onClick={() => onAprovar(req)} disabled={busy} style={{ flex: 1, background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+                Aprovar
+              </button>
+              <button onClick={() => onRecusar(req)} disabled={busy} style={{ flex: 1, background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+                Recusar
+              </button>
+            </div>
+          )}
+
+          {visibleCustomDefs.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Campos desta etapa</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {visibleCustomDefs.map((f) => (
+                  <div key={f.id}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                      {f.label}
+                    </label>
+                    {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+                    <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+            <RHDetailDrawerShell
+              domain="ferias"
+              recordId={req.id}
+              activities={req.activities || []}
+              onAddActivity={onAddActivity}
+              currentUser={currentUser}
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Main View ─────────────────────────────────────────────────────────────────
 
 export function RHFeriasView({ currentUser, users = [], canWrite }) {
-  const [requests, setRequests]       = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [filterStatus, setFilterStatus] = useState("todas");
-  const [onlyMine, setOnlyMine]       = useState(false);
+  const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, addActivity } = useRHFeriasRequests({});
+  const { stages, loading: loadingStages } = useRHPipelineStages("ferias");
+  const feriasStageFields = useRHStageFields("ferias");
+
+  const [filterStatus, setFilterStatus]   = useState("todas");
+  const [onlyMine, setOnlyMine]           = useState(false);
   const [showSolicitar, setShowSolicitar] = useState(false);
-  const [actionLoading, setActionLoading] = useState(null);
+  const [busyId, setBusyId]               = useState(null);
+  const [drawerReqId, setDrawerReqId]     = useState(null);
+  const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [fieldEditorStage, setFieldEditorStage] = useState(null);
+  const [draggedId, setDraggedId]         = useState(null);
+  const [dragOverStageKey, setDragOverStageKey] = useState(null);
 
-  // ── Load ───────────────────────────────────────────────────────────────────
-  const loadRequests = useCallback(async () => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
-    setLoading(true);
+  const loading = loadingRequests || loadingStages;
+
+  const handleAprovar = useCallback(async (req) => {
+    const docExigido = DOCUMENTO_OBRIGATORIO_POR_TIPO[req.type];
+    setBusyId(req.id);
     try {
-      const { data, error } = await supabase
-        .from("rh_ferias")
-        .select("*, profiles:user_id(id, name, initials), approver:approved_by(name)")
-        .order("created_at", { ascending: false });
-      if (!error) setRequests(data || []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadRequests(); }, [loadRequests]);
-
-  // ── Email helper ────────────────────────────────────────────────────────────
-  const sendRhEmail = useCallback(async (type, req, extraVars = {}) => {
-    try {
-      // Fetch employee email from profiles if not already present
-      let toEmail = req.profiles?.email || null;
-      if (!toEmail && req.user_id) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("email")
-          .eq("id", req.user_id)
-          .single();
-        toEmail = profile?.email || null;
-      }
-      if (!toEmail) return; // skip silently — no email available
-
-      await supabase.functions.invoke("rh-send-email", {
-        body: {
-          type,
-          to: toEmail,
-          variables: {
-            EMPLOYEE_NAME: req.profiles?.name || "",
-            LEAVE_TYPE:    leaveTypeLabel(req.type),
-            START_DATE:    fmt(req.start_date),
-            END_DATE:      fmt(req.end_date),
-            DAYS_COUNT:    String(calcDias(req.start_date, req.end_date)),
-            APP_URL:       window.location.origin,
-            ...extraVars,
-          },
-        },
-      });
-    } catch (err) {
-      // Non-blocking — log but don't surface to user
-      console.warn("[RHFeriasView] sendRhEmail error:", err);
-    }
-  }, []);
-
-  // ── Actions ────────────────────────────────────────────────────────────────
-  const handleApprove = async (id) => {
-    setActionLoading(id + "_aprovar");
-    try {
-      const req = requests.find((r) => r.id === id);
-      const { error } = await supabase
-        .from("rh_ferias")
-        .update({
-          status:      "aprovado",
-          approved_by: currentUser?.id,
-          approved_at: new Date().toISOString(),
-        })
-        .eq("id", id);
-      if (!error) {
-        setRequests((prev) =>
-          prev.map((r) =>
-            r.id === id
-              ? { ...r, status: "aprovado", approved_by: currentUser?.id, approved_at: new Date().toISOString() }
-              : r
-          )
-        );
-        if (req) {
-          sendRhEmail("ferias_aprovadas", req, {
-            APPROVED_BY: currentUser?.name || currentUser?.email || "",
-          });
+      if (docExigido) {
+        const totalAnexos = await contarAnexos(req.id);
+        if (totalAnexos === 0) {
+          alert(`Não dá pra aprovar "${req.profiles?.name || "essa solicitação"}": anexe o(a) ${docExigido} antes (abra o card → aba Anexos).`);
+          return;
         }
       }
+      await changeStatus(req.id, "aprovado", { approved_by: currentUser?.id, approved_at: new Date().toISOString() });
+      sendRhEmail("ferias_aprovadas", req, { APPROVED_BY: currentUser?.name || currentUser?.email || "" });
     } finally {
-      setActionLoading(null);
+      setBusyId(null);
     }
-  };
+  }, [changeStatus, currentUser]);
 
-  const handleReject = async (id) => {
-    setActionLoading(id + "_recusar");
+  const handleRecusar = useCallback(async (req) => {
+    setBusyId(req.id);
     try {
-      const req = requests.find((r) => r.id === id);
-      const { error } = await supabase
-        .from("rh_ferias")
-        .update({ status: "recusado" })
-        .eq("id", id);
-      if (!error) {
-        setRequests((prev) =>
-          prev.map((r) => (r.id === id ? { ...r, status: "recusado" } : r))
-        );
-        if (req) {
-          sendRhEmail("ferias_rejeitadas", req, {
-            REASON:       req.notes || "Não informado",
-            MANAGER_NAME: currentUser?.name || currentUser?.email || "",
-          });
-        }
-      }
+      await changeStatus(req.id, "recusado");
+      sendRhEmail("ferias_rejeitadas", req, { REASON: req.notes || "Não informado", MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
     } finally {
-      setActionLoading(null);
+      setBusyId(null);
     }
-  };
+  }, [changeStatus, currentUser]);
 
-  const handleSolicitar = async (data) => {
-    const { data: nova, error } = await supabase
-      .from("rh_ferias")
-      .insert(data)
-      .select("*, profiles:user_id(id, name, initials), approver:approved_by(name)")
-      .single();
-    if (error) throw new Error(error.message);
-    setRequests((prev) => [nova, ...prev]);
-  };
+  const handleColumnDrop = useCallback((stageKey) => {
+    if (draggedId) {
+      const req = requests.find(r => r.id === draggedId);
+      if (req && req.status !== stageKey) {
+        if (stageKey === "aprovado") handleAprovar(req);
+        else if (stageKey === "recusado") handleRecusar(req);
+      }
+    }
+    setDraggedId(null);
+    setDragOverStageKey(null);
+  }, [draggedId, requests, handleAprovar, handleRecusar]);
+
+  const handleMoveToStage = useCallback((id, stageKey) => {
+    const req = requests.find(r => r.id === id);
+    if (!req) return;
+    if (stageKey === "aprovado") handleAprovar(req);
+    else if (stageKey === "recusado") handleRecusar(req);
+  }, [requests, handleAprovar, handleRecusar]);
+
+  const getReqCompleteness = (req) => getFieldCompleteness(feriasStageFields.getFields(req.status), req.custom_fields || {});
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const pendentes  = requests.filter((r) => r.status === "pendente").length;
     const aprovadosMes = requests.filter((r) => r.status === "aprovado" && isThisMonth(r.approved_at || r.start_date)).length;
-    const diasAtivos = requests
-      .filter((r) => isActiveNow(r))
-      .reduce((sum, r) => sum + calcDias(r.start_date, r.end_date), 0);
+    const diasAtivos = requests.filter((r) => isActiveNow(r)).reduce((sum, r) => sum + calcDias(r.start_date, r.end_date), 0);
     return { pendentes, aprovadosMes, diasAtivos };
   }, [requests]);
 
-  // ── Filtered ───────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     return requests.filter((r) => {
       if (filterStatus !== "todas" && r.status !== filterStatus) return false;
@@ -441,6 +553,13 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
     });
   }, [requests, filterStatus, onlyMine, currentUser]);
 
+  const reqByStage = useMemo(() => {
+    const map = {};
+    const defaultStageKey = stages[0]?.stageKey || "pendente";
+    stages.forEach((s) => { map[s.stageKey] = filtered.filter((r) => (r.status || defaultStageKey) === s.stageKey); });
+    return map;
+  }, [filtered, stages]);
+
   const PILL_TABS = [
     { id: "todas",    label: "Todas" },
     { id: "pendente", label: "Pendentes" },
@@ -448,363 +567,166 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
     { id: "recusado", label: "Recusadas" },
   ];
 
+  const drawerReq = drawerReqId ? requests.find(r => r.id === drawerReqId) : null;
+
   return (
     <div>
-      {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-2">
             <CalendarCheck size={22} style={{ color: "var(--text)" }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>
-              Férias & Licenças
-            </h1>
+            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Férias & Licenças</h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            Gestão de solicitações de afastamento
-          </p>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Gestão de solicitações de afastamento</p>
         </div>
-        <button
-          onClick={() => setShowSolicitar(true)}
-          style={{
-            background: "var(--accent)",
-            color: "#FFF",
-            borderRadius: 10,
-            padding: "8px 16px",
-            fontSize: 13,
-            fontWeight: 700,
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <Plus size={14} /> Solicitar
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {canWrite && (
+            <button onClick={() => setStageEditorOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <Pencil size={13} /> Editar etapas
+            </button>
+          )}
+          <button onClick={() => setShowSolicitar(true)} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            <Plus size={14} /> Solicitar
+          </button>
+        </div>
       </div>
 
-      {/* Stat cards */}
-      <div
-        className="grid gap-3 mb-4"
-        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}
-      >
+      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
         {[
-          { label: "Pendentes",           value: stats.pendentes,   color: "var(--amber)",   icon: <Clock size={14} style={{ color: "var(--amber)" }} /> },
-          { label: "Aprovadas este mês",  value: stats.aprovadosMes, color: "var(--success)",      icon: <Check size={14} style={{ color: "var(--success)" }} /> },
-          { label: "Dias em férias agora", value: stats.diasAtivos,  color: "var(--text)", icon: <Calendar size={14} style={{ color: "var(--text)" }} /> },
+          { label: "Pendentes",            value: stats.pendentes,   icon: <Clock size={14} style={{ color: "var(--amber)" }} /> },
+          { label: "Aprovadas este mês",   value: stats.aprovadosMes, icon: <Check size={14} style={{ color: "var(--success)" }} /> },
+          { label: "Dias em férias agora", value: stats.diasAtivos,  icon: <Calendar size={14} style={{ color: "var(--text)" }} /> },
         ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-xl border"
-            style={{
-              background: "var(--surface)",
-              borderColor: "var(--border)",
-              padding: "12px 16px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-            }}
-          >
+          <div key={s.label} className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)", padding: "12px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
               {s.icon}
-              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                {s.label}
-              </div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.label}</div>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: s.color, letterSpacing: "-0.02em", lineHeight: 1.1 }}>
-              {s.value}
-            </div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap mb-4">
-        {/* Pill tabs */}
         <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
           {PILL_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setFilterStatus(tab.id)}
-              style={{
-                background: filterStatus === tab.id ? "var(--surface)" : "transparent",
-                color: filterStatus === tab.id ? "var(--text)" : "var(--text-dim)",
-                border: "none",
-                borderRadius: 8,
-                padding: "4px 12px",
-                fontSize: 12,
-                fontWeight: filterStatus === tab.id ? 700 : 500,
-                cursor: "pointer",
-                boxShadow: filterStatus === tab.id ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-                transition: "all 0.1s",
-              }}
-            >
+            <button key={tab.id} onClick={() => setFilterStatus(tab.id)} style={{ background: filterStatus === tab.id ? "var(--surface)" : "transparent", color: filterStatus === tab.id ? "var(--text)" : "var(--text-dim)", border: "none", borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: filterStatus === tab.id ? 700 : 500, cursor: "pointer", boxShadow: filterStatus === tab.id ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>
               {tab.label}
             </button>
           ))}
         </div>
-
-        {/* Mine toggle (only for canWrite users) */}
         {canWrite && (
-          <button
-            onClick={() => setOnlyMine((v) => !v)}
-            style={{
-              background: onlyMine ? "var(--color-industria)" : "var(--surface)",
-              color: onlyMine ? "#FFF" : "var(--text-dim)",
-              border: `1px solid ${onlyMine ? "var(--color-industria)" : "var(--border)"}`,
-              borderRadius: 8,
-              padding: "4px 12px",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              transition: "all 0.1s",
-            }}
-          >
-            <Users size={12} />
+          <button onClick={() => setOnlyMine((v) => !v)} style={{ background: onlyMine ? "var(--color-industria)" : "var(--surface)", color: onlyMine ? "#FFF" : "var(--text-dim)", border: `1px solid ${onlyMine ? "var(--color-industria)" : "var(--border)"}`, borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
             {onlyMine ? "Minhas solicitações" : "Todos os funcionários"}
           </button>
         )}
       </div>
 
-      {/* Content */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>
-          Carregando…
-        </div>
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : !isSupabaseConfigured ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
           <Calendar size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
           <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Supabase não configurado</div>
-          <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>
-            Configure as variáveis de ambiente para usar este módulo
-          </div>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
           <CalendarCheck size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>
-            Nenhuma solicitação encontrada
-          </div>
-          <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>
-            {filterStatus !== "todas" ? "Tente mudar o filtro de status" : "As solicitações aparecerão aqui"}
-          </div>
+          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhuma solicitação encontrada</div>
         </div>
       ) : (
-        <>
-          {/* Desktop table */}
-          <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-            <table className="w-full border-collapse">
-              <thead>
-                <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
-                  {["Funcionário", "Tipo", "Período", "Dias", "Status", "Aprovado por", ""].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left px-4 py-2.5"
-                      style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((req) => {
-                  const profile = req.profiles;
-                  const dias = calcDias(req.start_date, req.end_date);
-                  const isLoadingAprovar = actionLoading === req.id + "_aprovar";
-                  const isLoadingRecusar = actionLoading === req.id + "_recusar";
-
-                  return (
-                    <tr
-                      key={req.id}
-                      style={{ borderBottom: "1px solid var(--border)" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                    >
-                      <td className="px-4 py-3">
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <UserAvatar user={profile} size={30} />
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
-                              {profile?.name || "Desconhecido"}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text)" }}>
-                        {leaveTypeLabel(req.type)}
-                      </td>
-                      <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)", whiteSpace: "nowrap" }}>
-                        {fmt(req.start_date)} – {fmt(req.end_date)}
-                      </td>
-                      <td className="px-4 py-3" style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>
-                        {dias}d
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={req.status} />
-                      </td>
-                      <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
-                        {req.approver?.name || "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {canWrite && req.status === "pendente" && (
-                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                            <button
-                              onClick={() => handleApprove(req.id)}
-                              disabled={!!actionLoading}
-                              title="Aprovar"
-                              style={{
-                                background: "#DCFCE7",
-                                color: "var(--success)",
-                                border: "1px solid #BBF7D0",
-                                borderRadius: 7,
-                                padding: "3px 10px",
-                                fontSize: 11,
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 4,
-                                opacity: isLoadingAprovar ? 0.6 : 1,
-                              }}
-                            >
-                              <Check size={11} /> {isLoadingAprovar ? "…" : "Aprovar"}
-                            </button>
-                            <button
-                              onClick={() => handleReject(req.id)}
-                              disabled={!!actionLoading}
-                              title="Recusar"
-                              style={{
-                                background: "#FEE2E2",
-                                color: "var(--danger)",
-                                border: "1px solid #FECACA",
-                                borderRadius: 7,
-                                padding: "3px 10px",
-                                fontSize: 11,
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 4,
-                                opacity: isLoadingRecusar ? 0.6 : 1,
-                              }}
-                            >
-                              <X size={11} /> {isLoadingRecusar ? "…" : "Recusar"}
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16 }} className="flex-col md:flex-row">
+          <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
+            {stages.map((stage) => (
+              <FeriasKanbanColumn
+                key={stage.id}
+                stage={stage}
+                stages={stages}
+                reqList={reqByStage[stage.stageKey] || []}
+                onCardClick={(r) => setDrawerReqId(r.id)}
+                onDragStart={setDraggedId}
+                onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
+                onMoveToStage={handleMoveToStage}
+                isDragOver={dragOverStageKey === stage.stageKey}
+                onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
+                onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
+                onColumnDrop={handleColumnDrop}
+                canWrite={canWrite}
+                onEditFields={setFieldEditorStage}
+                getCompleteness={getReqCompleteness}
+                onAprovar={handleAprovar}
+                onRecusar={handleRecusar}
+                busyId={busyId}
+              />
+            ))}
           </div>
-
-          {/* Mobile cards */}
-          <div className="md:hidden space-y-2">
-            {filtered.map((req) => {
-              const profile = req.profiles;
-              const dias = calcDias(req.start_date, req.end_date);
-              const isLoadingAprovar = actionLoading === req.id + "_aprovar";
-              const isLoadingRecusar = actionLoading === req.id + "_recusar";
-
-              return (
-                <div
-                  key={req.id}
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    padding: "14px 16px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
-                    <UserAvatar user={profile} size={36} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>
-                        {profile?.name || "Desconhecido"}
-                      </div>
-                      <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 1 }}>
-                        {leaveTypeLabel(req.type)}
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
-                        {fmt(req.start_date)} – {fmt(req.end_date)} · {dias}d
-                      </div>
-                    </div>
-                    <StatusBadge status={req.status} />
-                  </div>
-
-                  {req.notes && (
-                    <div style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 8, padding: "6px 10px", marginBottom: 10, lineHeight: 1.4 }}>
-                      {req.notes}
-                    </div>
-                  )}
-
-                  {canWrite && req.status === "pendente" && (
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button
-                        onClick={() => handleApprove(req.id)}
-                        disabled={!!actionLoading}
-                        style={{
-                          flex: 1,
-                          background: "#DCFCE7",
-                          color: "var(--success)",
-                          border: "1px solid #BBF7D0",
-                          borderRadius: 8,
-                          padding: "6px",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 4,
-                          opacity: isLoadingAprovar ? 0.6 : 1,
-                        }}
-                      >
-                        <Check size={13} /> {isLoadingAprovar ? "…" : "Aprovar"}
-                      </button>
-                      <button
-                        onClick={() => handleReject(req.id)}
-                        disabled={!!actionLoading}
-                        style={{
-                          flex: 1,
-                          background: "#FEE2E2",
-                          color: "var(--danger)",
-                          border: "1px solid #FECACA",
-                          borderRadius: 8,
-                          padding: "6px",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 4,
-                          opacity: isLoadingRecusar ? 0.6 : 1,
-                        }}
-                      >
-                        <X size={13} /> {isLoadingRecusar ? "…" : "Recusar"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="md:hidden flex flex-col gap-3">
+            {stages.map((stage) => (
+              <FeriasKanbanColumn
+                key={stage.id}
+                stage={stage}
+                stages={stages}
+                reqList={reqByStage[stage.stageKey] || []}
+                onCardClick={(r) => setDrawerReqId(r.id)}
+                onDragStart={setDraggedId}
+                onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
+                onMoveToStage={handleMoveToStage}
+                isDragOver={dragOverStageKey === stage.stageKey}
+                onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
+                onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
+                onColumnDrop={handleColumnDrop}
+                canWrite={canWrite}
+                onEditFields={setFieldEditorStage}
+                getCompleteness={getReqCompleteness}
+                onAprovar={handleAprovar}
+                onRecusar={handleRecusar}
+                busyId={busyId}
+              />
+            ))}
           </div>
-        </>
+        </div>
       )}
 
-      {/* Solicitar Modal */}
-      {showSolicitar && (
-        <SolicitarFeriasModal
+      {showSolicitar && <SolicitarFeriasModal currentUser={currentUser} onSave={createRequest} onClose={() => setShowSolicitar(false)} />}
+
+      {drawerReq && (
+        <FeriasDrawer
+          req={drawerReq}
+          canWrite={canWrite}
+          stages={stages}
+          users={users}
           currentUser={currentUser}
-          onSave={handleSolicitar}
-          onClose={() => setShowSolicitar(false)}
+          onAprovar={(r) => { handleAprovar(r); setDrawerReqId(null); }}
+          onRecusar={(r) => { handleRecusar(r); setDrawerReqId(null); }}
+          onUpdateCustomFields={(merged) => updateCustomFields(drawerReq.id, merged)}
+          onAddActivity={(entry) => addActivity(drawerReq.id, entry)}
+          onClose={() => setDrawerReqId(null)}
+          busy={busyId === drawerReq.id}
+        />
+      )}
+
+      {canWrite && (
+        <RHStageEditorModal
+          open={stageEditorOpen}
+          onClose={() => setStageEditorOpen(false)}
+          domain="ferias"
+          domainLabel="Férias"
+          records={requests}
+          stageField="status"
+        />
+      )}
+
+      {canWrite && (
+        <RHStageFieldEditorModal
+          open={!!fieldEditorStage}
+          onClose={() => setFieldEditorStage(null)}
+          domain="ferias"
+          stageKey={fieldEditorStage?.stageKey}
+          stageName={fieldEditorStage?.name}
         />
       )}
     </div>
   );
 }
+
+export default RHFeriasView;
