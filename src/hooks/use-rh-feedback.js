@@ -3,13 +3,13 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const UNIQUE_VIOLATION = "23505";
 
-export function useRHFeedback({ userId } = {}) {
+export function useRHFeedback({ userId, enabled = true } = {}) {
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading]     = useState(true);
   const activeRef = useRef(true);
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data } = await supabase.from("rh_avaliacoes").select("*").order("created_at", { ascending: false });
@@ -18,10 +18,11 @@ export function useRHFeedback({ userId } = {}) {
     } finally {
       if (activeRef.current) setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     activeRef.current = true;
+    if (!enabled) { setLoading(false); return; }
     fetchAll();
     if (!isSupabaseConfigured) return;
     const channelName = `rh-feedback-${Math.random().toString(36).slice(2, 9)}`;
@@ -33,7 +34,7 @@ export function useRHFeedback({ userId } = {}) {
       activeRef.current = false;
       supabase.removeChannel(channel);
     };
-  }, [fetchAll]);
+  }, [fetchAll, enabled]);
 
   // Fluxo manual "Novo feedback": cria e já fecha num passo só (ad-hoc).
   const createFeedback = useCallback(async (data) => {
@@ -96,6 +97,7 @@ export function useRHFeedback({ userId } = {}) {
       conteudo: { pontos_fortes: data.pontosFortes || "", pontos_desenvolvimento: data.pontosDesenvolvimento || "" },
       notes: data.notas || null,
       status: "concluido",
+      status_changed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabase.from("rh_avaliacoes").update(patch).eq("id", avaliacaoId);
@@ -111,6 +113,31 @@ export function useRHFeedback({ userId } = {}) {
     setFeedbacks(prev => prev.map(f => f.id === avaliacaoId ? { ...f, self_rating: rating } : f));
   }, []);
 
+  // Mover card entre rascunho/em_andamento no Kanban — mover pra "concluido"
+  // passa pelo fluxo dedicado (CompletarFeedbackModal via completeFeedback),
+  // não por aqui, já que fechar um ciclo exige preencher a nota do gestor.
+  const changeFeedbackStage = useCallback(async (id, stage) => {
+    const patch = { status: stage, status_changed_at: new Date().toISOString() };
+    const { error } = await supabase.from("rh_avaliacoes").update(patch).eq("id", id);
+    if (error) throw new Error(error.message);
+    setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, ...patch } : f));
+  }, []);
+
+  const updateFeedbackCustomFields = useCallback(async (id, customFields) => {
+    const { error } = await supabase.from("rh_avaliacoes").update({ custom_fields: customFields }).eq("id", id);
+    if (error) throw new Error(error.message);
+    setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, custom_fields: customFields } : f));
+  }, []);
+
+  const addFeedbackActivity = useCallback(async (id, entry) => {
+    const current = feedbacks.find(f => f.id === id);
+    if (!current) return;
+    const nextActivities = [...(Array.isArray(current.activities) ? current.activities : []), entry];
+    const { error } = await supabase.from("rh_avaliacoes").update({ activities: nextActivities }).eq("id", id);
+    if (error) throw new Error(error.message);
+    setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, activities: nextActivities } : f));
+  }, [feedbacks]);
+
   return useMemo(() => ({
     feedbacks,
     loading,
@@ -118,6 +145,9 @@ export function useRHFeedback({ userId } = {}) {
     createPendingCycle,
     completeFeedback,
     submitSelfRating,
+    changeFeedbackStage,
+    updateFeedbackCustomFields,
+    addFeedbackActivity,
     refetch: fetchAll,
-  }), [feedbacks, loading, createFeedback, createPendingCycle, completeFeedback, submitSelfRating, fetchAll]);
+  }), [feedbacks, loading, createFeedback, createPendingCycle, completeFeedback, submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, addFeedbackActivity, fetchAll]);
 }

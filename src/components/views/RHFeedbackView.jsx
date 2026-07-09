@@ -1,10 +1,20 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { MessageSquare, Plus, X, TrendingUp } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MessageSquare, Plus, X, TrendingUp, Pencil, Settings2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { useProfiles } from "../../hooks/use-profiles";
 import { nextPendingCycle } from "../../utils/rh-feedback-cycles";
+import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
+import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
 
 const TIPOS = [
   { id: "30_dias",   label: "30 dias" },
@@ -14,6 +24,28 @@ const TIPOS = [
   { id: "anual",     label: "Anual" },
   { id: "ad_hoc",    label: "Ad-hoc" },
 ];
+
+// Nota qualitativa-ancorada em vez de número solto: pesquisa de mercado
+// (Adobe/Deloitte/Microsoft e afins) mostra que escalas com rótulo reduzem o
+// viés de "todo mundo tira 8" e dão contexto real pra conversa de avaliação.
+// O valor numérico por trás (0-10) continua existindo pra cálculo da nota
+// final e pro histórico/gráfico de tendência já existentes.
+const RATING_SCALE = [
+  { value: 2,  label: "Abaixo do esperado" },
+  { value: 5,  label: "Em desenvolvimento" },
+  { value: 7,  label: "Atende as expectativas" },
+  { value: 9,  label: "Supera as expectativas" },
+  { value: 10, label: "Excepcional" },
+];
+
+function findStage(stages, stageKey) {
+  return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
+}
+
+function daysInStage(dateStr) {
+  if (!dateStr) return 0;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
 
 function tipoLabel(id) {
   return TIPOS.find(t => t.id === id)?.label || id;
@@ -29,10 +61,59 @@ function ratingColor(r) {
   return r >= 7 ? "var(--success)" : r >= 4 ? "var(--warning)" : "var(--danger)";
 }
 
+function ratingScaleLabel(r) {
+  if (r == null) return null;
+  const n = Number(r);
+  let closest = RATING_SCALE[0];
+  for (const s of RATING_SCALE) {
+    if (Math.abs(s.value - n) < Math.abs(closest.value - n)) closest = s;
+  }
+  return closest.label;
+}
+
 function autoavaliacaoLabel(feedback, colaborador) {
   if (feedback.self_rating != null) return `Autoavaliação: ${Number(feedback.self_rating).toFixed(1)}/10`;
   if (!colaborador?.profileId) return "Sem login — sem autoavaliação";
   return "Aguardando autoavaliação";
+}
+
+function InitialsAvatar({ name, size = 32 }) {
+  const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "var(--color-industria)", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.36, fontWeight: 700, flexShrink: 0, letterSpacing: "0.02em" }}>
+      {initials}
+    </div>
+  );
+}
+
+// ── Seletor de nota qualitativo ────────────────────────────────────────────────
+
+function RatingSelector({ value, onChange }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {RATING_SCALE.map((opt) => {
+        const active = Number(value) === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, textAlign: "left",
+              border: `1.5px solid ${active ? ratingColor(opt.value) : "var(--border)"}`,
+              background: active ? `${ratingColor(opt.value)}14` : "var(--surface)",
+              color: active ? ratingColor(opt.value) : "var(--text)",
+              cursor: "pointer",
+            }}
+          >
+            {opt.label}
+            <span style={{ fontSize: 10, opacity: 0.7 }}>{opt.value}/10</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 // ── Modal: novo feedback ad-hoc ────────────────────────────────────────────────
@@ -40,7 +121,7 @@ function autoavaliacaoLabel(feedback, colaborador) {
 function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
   const [colaboradorId, setColaboradorId]         = useState("");
   const [tipo, setTipo]                           = useState("ad_hoc");
-  const [notaGeral, setNotaGeral]                 = useState("");
+  const [notaGeral, setNotaGeral]                 = useState(null);
   const [pontosFortes, setPontosFortes]           = useState("");
   const [pontosDesenvolvimento, setPontosDesenvolvimento] = useState("");
   const [notas, setNotas]                         = useState("");
@@ -61,7 +142,7 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
     try {
       await onSave({
         colaboradorId, tipo,
-        notaGeral: notaGeral === "" ? null : Number(notaGeral),
+        notaGeral,
         pontosFortes: pontosFortes.trim(),
         pontosDesenvolvimento: pontosDesenvolvimento.trim(),
         notas: notas.trim() || null,
@@ -102,8 +183,8 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
               </div>
             </div>
             <div>
-              <label style={labelSt}>Nota geral (0-10)</label>
-              <input type="number" min="0" max="10" step="0.5" value={notaGeral} onChange={(e) => setNotaGeral(e.target.value)} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={{ ...inputSt, maxWidth: 120 }} />
+              <label style={labelSt}>Nota geral</label>
+              <RatingSelector value={notaGeral} onChange={setNotaGeral} />
             </div>
             <div>
               <label style={labelSt}>Pontos fortes</label>
@@ -136,7 +217,7 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
 // ── Modal: completar ciclo pendente (RH) ───────────────────────────────────────
 
 function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) {
-  const [managerRating, setManagerRating]         = useState("");
+  const [managerRating, setManagerRating]         = useState(null);
   const [pontosFortes, setPontosFortes]           = useState("");
   const [pontosDesenvolvimento, setPontosDesenvolvimento] = useState("");
   const [notas, setNotas]                         = useState("");
@@ -155,7 +236,7 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
     setError(null);
     try {
       await onComplete(feedback.id, {
-        managerRating: managerRating === "" ? null : Number(managerRating),
+        managerRating,
         pontosFortes: pontosFortes.trim(),
         pontosDesenvolvimento: pontosDesenvolvimento.trim(),
         notas: notas.trim() || null,
@@ -183,13 +264,13 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           {feedback.self_rating != null && (
             <div style={{ background: "var(--surface-alt)", border: "1px solid #BFDBFE", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "#1E40AF", marginBottom: 14 }}>
-              Autoavaliação do colaborador: <b>{Number(feedback.self_rating).toFixed(1)}/10</b>
+              Autoavaliação do colaborador: <b>{ratingScaleLabel(feedback.self_rating)} ({Number(feedback.self_rating).toFixed(1)}/10)</b>
             </div>
           )}
           <div className="flex flex-col gap-3">
             <div>
-              <label style={labelSt}>Nota do gestor (0-10)</label>
-              <input type="number" min="0" max="10" step="0.5" value={managerRating} onChange={(e) => setManagerRating(e.target.value)} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={{ ...inputSt, maxWidth: 120 }} autoFocus />
+              <label style={labelSt}>Nota do gestor</label>
+              <RatingSelector value={managerRating} onChange={setManagerRating} />
             </div>
             <div>
               <label style={labelSt}>Pontos fortes</label>
@@ -222,7 +303,7 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
 // ── Modal: autoavaliação (colaborador) ─────────────────────────────────────────
 
 function AutoavaliacaoModal({ feedback, onSubmit, onClose }) {
-  const [rating, setRating] = useState(feedback.self_rating ?? "");
+  const [rating, setRating] = useState(feedback.self_rating ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState(null);
 
@@ -234,7 +315,7 @@ function AutoavaliacaoModal({ feedback, onSubmit, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (rating === "") { setError("Informe uma nota."); return; }
+    if (rating == null) { setError("Escolha uma opção."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -248,7 +329,6 @@ function AutoavaliacaoModal({ feedback, onSubmit, onClose }) {
   };
 
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
@@ -261,10 +341,10 @@ function AutoavaliacaoModal({ feedback, onSubmit, onClose }) {
         </div>
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           <p style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 12, lineHeight: 1.5 }}>
-            Dê uma nota de 0 a 10 pra como você avalia o seu próprio desempenho neste período. Seu gestor vai preencher a avaliação dele separadamente.
+            Como você avalia o seu próprio desempenho neste período? Seu gestor vai preencher a avaliação dele separadamente.
           </p>
-          <label style={labelSt}>Sua nota (0-10)</label>
-          <input type="number" min="0" max="10" step="0.5" value={rating} onChange={(e) => setRating(e.target.value)} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={{ ...inputSt, maxWidth: 120 }} autoFocus />
+          <label style={labelSt}>Sua avaliação</label>
+          <RatingSelector value={rating} onChange={setRating} />
 
           {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
@@ -361,18 +441,279 @@ function HistoricoDrawer({ colaborador, feedbacksDoColaborador, onClose }) {
   );
 }
 
+// ── Card do Kanban ────────────────────────────────────────────────────────────
+
+function FeedbackCardBody({ feedback, colaborador }) {
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+        <InitialsAvatar name={colaborador?.fullName} size={28} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {colaborador?.fullName || "—"}
+          </div>
+          <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
+            {tipoLabel(feedback.tipo)} · até {fmt(feedback.period_end)}
+          </div>
+        </div>
+      </div>
+      <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
+        {autoavaliacaoLabel(feedback, colaborador)}
+      </div>
+      {feedback.final_rating != null && (
+        <div style={{ marginTop: 6, fontWeight: 800, fontSize: 14, color: ratingColor(feedback.final_rating) }}>
+          {Number(feedback.final_rating).toFixed(1)}<span style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 400 }}> /10</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+function FeedbackKanbanColumn({
+  stage, stages, feedbackList, colaboradoresById,
+  onCardClick, onDragStart, onDragEnd, onMoveToStage,
+  isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
+  canWrite, onEditFields, getCompleteness,
+}) {
+  return (
+    <div
+      onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
+      onDragLeave={onColumnDragLeave}
+      onDrop={() => onColumnDrop(stage.stageKey)}
+      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+      style={{
+        width: 272, minWidth: 272,
+        background: "var(--surface-alt)",
+        borderColor: isDragOver ? stage.color + "70" : "var(--border)",
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
+        maxHeight: "calc(100vh - 260px)",
+      }}
+    >
+      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
+      <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+            <span>{stage.name}</span>
+            <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({feedbackList.length})</span>
+          </div>
+        </div>
+        {canWrite && (
+          <button
+            onClick={() => onEditFields(stage)}
+            title="Editar campos desta etapa"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}
+          >
+            <Settings2 size={13} />
+          </button>
+        )}
+      </div>
+      <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        {feedbackList.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Nada aqui</div>
+        ) : (
+          feedbackList.map((f) => (
+            <RHKanbanCard
+              key={f.id}
+              id={f.id}
+              stage={f.status}
+              stages={stages}
+              onClick={() => onCardClick(f)}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onMoveToStage={onMoveToStage}
+              agingDays={daysInStage(f.status_changed_at)}
+              completeness={getCompleteness?.(f)}
+            >
+              <FeedbackCardBody feedback={f} colaborador={colaboradoresById.get(f.user_id)} />
+            </RHKanbanCard>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Drawer de detalhe do card ──────────────────────────────────────────────────
+
+function FeedbackDrawer({
+  feedback, colaborador, canWrite, stages, users, currentUser,
+  onStageChange, onComplete, onUpdateCustomFields, onAddActivity, onShowHistorico, onClose,
+}) {
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const stageFieldsHook = useRHStageFields("feedback");
+  const customDefs = stageFieldsHook.getFields(feedback.status);
+  const [customDraft, setCustomDraft] = useState({});
+  const customDebounceRef = useRef(null);
+
+  useEffect(() => {
+    setCustomDraft({});
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    return () => { if (customDebounceRef.current) clearTimeout(customDebounceRef.current); };
+  }, [feedback.id]);
+
+  const handleCustomChange = (fieldKey, value) => {
+    setCustomDraft((prev) => ({ ...prev, [fieldKey]: value }));
+    if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    customDebounceRef.current = setTimeout(() => {
+      const merged = { ...(feedback.custom_fields || {}), [fieldKey]: value };
+      onUpdateCustomFields(merged);
+    }, 600);
+  };
+
+  const getCustomValue = (fieldKey) =>
+    fieldKey in customDraft ? customDraft[fieldKey] : (feedback.custom_fields?.[fieldKey] ?? "");
+
+  const customValuesByKey = { ...(feedback.custom_fields || {}), ...customDraft };
+  const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
+
+  const st = findStage(stages, feedback.status);
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const moveTargets = stages.filter((s) => s.stageKey !== feedback.status && !s.terminal);
+
+  return (
+    <>
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <InitialsAvatar name={colaborador?.fullName} size={40} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <button
+              onClick={() => onShowHistorico(feedback.user_id)}
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", textDecoration: "underline" }}>{colaborador?.fullName || "—"}</div>
+              <TrendingUp size={12} color="var(--text-dim)" />
+            </button>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{tipoLabel(feedback.tipo)} · {fmt(feedback.period_start)} – {fmt(feedback.period_end)}</div>
+            <div style={{ marginTop: 8 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
+              </span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "20px 24px", flex: 1 }}>
+          {/* Autoavaliação vs. gestor lado a lado */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={labelSt}>Autoavaliação × Gestor</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
+                <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 4 }}>Autoavaliação</div>
+                {feedback.self_rating != null ? (
+                  <>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: ratingColor(feedback.self_rating) }}>{Number(feedback.self_rating).toFixed(1)}/10</div>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{ratingScaleLabel(feedback.self_rating)}</div>
+                  </>
+                ) : <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Ainda não preenchida</div>}
+              </div>
+              <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
+                <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 4 }}>Gestor</div>
+                {feedback.manager_rating != null ? (
+                  <>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: ratingColor(feedback.manager_rating) }}>{Number(feedback.manager_rating).toFixed(1)}/10</div>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{ratingScaleLabel(feedback.manager_rating)}</div>
+                  </>
+                ) : <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Ainda não preenchida</div>}
+              </div>
+            </div>
+          </div>
+
+          {canWrite && !st.terminal && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Mover para</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {moveTargets.map((s) => (
+                  <button
+                    key={s.stageKey}
+                    onClick={() => onStageChange(feedback.id, s.stageKey)}
+                    style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+                <button
+                  onClick={onComplete}
+                  style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+                >
+                  Concluir avaliação
+                </button>
+              </div>
+            </div>
+          )}
+
+          {visibleCustomDefs.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Campos desta etapa</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {visibleCustomDefs.map((f) => (
+                  <div key={f.id}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                      {f.label}
+                    </label>
+                    {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+                    <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {feedback.status === "concluido" && (feedback.conteudo?.pontos_fortes || feedback.conteudo?.pontos_desenvolvimento) && (
+            <div style={{ marginBottom: 20 }}>
+              {feedback.conteudo?.pontos_fortes && <div style={{ marginBottom: 6 }}><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>Pontos fortes: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_fortes}</span></div>}
+              {feedback.conteudo?.pontos_desenvolvimento && <div><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>A desenvolver: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_desenvolvimento}</span></div>}
+            </div>
+          )}
+
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+            <RHDetailDrawerShell
+              domain="feedback"
+              recordId={feedback.id}
+              activities={feedback.activities || []}
+              onAddActivity={onAddActivity}
+              currentUser={currentUser}
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
-  const { feedbacks, loading: loadingFeedbacks, createFeedback, createPendingCycle, completeFeedback, submitSelfRating } = useRHFeedback({ userId: currentUser?.id });
+  const {
+    feedbacks, loading: loadingFeedbacks, createFeedback, createPendingCycle, completeFeedback,
+    submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, addFeedbackActivity,
+  } = useRHFeedback({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
+  const { stages, loading: loadingStages } = useRHPipelineStages("feedback");
+  const feedbackStageFields = useRHStageFields("feedback");
+  const { users } = useProfiles();
+
   const [novoOpen, setNovoOpen]                   = useState(false);
   const [completandoId, setCompletandoId]         = useState(null);
   const [autoavaliandoId, setAutoavaliandoId]     = useState(null);
   const [historicoColaboradorId, setHistoricoColaboradorId] = useState(null);
+  const [drawerFeedbackId, setDrawerFeedbackId]   = useState(null);
+  const [stageEditorOpen, setStageEditorOpen]     = useState(false);
+  const [fieldEditorStage, setFieldEditorStage]   = useState(null);
+  const [draggedFeedbackId, setDraggedFeedbackId] = useState(null);
+  const [dragOverStageKey, setDragOverStageKey]   = useState(null);
   const reconciledRef = useRef(false);
 
-  const loading = loadingFeedbacks || loadingColaboradores;
+  const loading = loadingFeedbacks || loadingColaboradores || loadingStages;
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
 
@@ -397,17 +738,58 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
     [colaboradores, currentUser?.id]
   );
 
-  const visible = useMemo(() => {
-    if (isRHUser) return feedbacks;
-    return feedbacks.filter(f => f.user_id === meuColaborador?.id || f.evaluator_id === currentUser?.id);
-  }, [feedbacks, isRHUser, meuColaborador, currentUser?.id]);
+  // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
+  // vazio/inválido — mesmo padrão de Onboarding. Mover pra "concluido" abre
+  // o modal de conclusão em vez de só trocar o status.
+  const handleStageChange = useCallback((id, stage) => {
+    const feedback = feedbacks.find(f => f.id === id);
+    if (!feedback) return;
+    const targetStage = stages.find(s => s.stageKey === stage);
+    if (targetStage?.terminal) {
+      setCompletandoId(id);
+      return;
+    }
+    const fields = feedbackStageFields.getFields(feedback.status);
+    const missing = getMissingRequiredFields(fields, feedback.custom_fields || {});
+    if (missing.length > 0) {
+      alert(`Não dá pra mover: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(fields, feedback.custom_fields || {});
+    if (invalid.length > 0) {
+      alert(`Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      return;
+    }
+    changeFeedbackStage(id, stage);
+  }, [feedbacks, stages, feedbackStageFields, changeFeedbackStage]);
 
-  const pendentes  = useMemo(() => visible.filter(f => f.status !== "concluido"), [visible]);
-  const concluidos = useMemo(() => visible.filter(f => f.status === "concluido"), [visible]);
+  const getFeedbackCompleteness = (feedback) =>
+    getFieldCompleteness(feedbackStageFields.getFields(feedback.status), feedback.custom_fields || {});
+
+  const handleCardDragStart = useCallback((id) => setDraggedFeedbackId(id), []);
+  const handleCardDragEnd = useCallback(() => { setDraggedFeedbackId(null); setDragOverStageKey(null); }, []);
+  const handleColumnDragOver = useCallback((e, stageKey) => { e.preventDefault(); setDragOverStageKey(stageKey); }, []);
+  const handleColumnDragLeave = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }, []);
+  const handleColumnDrop = useCallback((stageKey) => {
+    if (draggedFeedbackId) {
+      const feedback = feedbacks.find(f => f.id === draggedFeedbackId);
+      if (feedback && feedback.status !== stageKey) handleStageChange(draggedFeedbackId, stageKey);
+    }
+    setDraggedFeedbackId(null);
+    setDragOverStageKey(null);
+  }, [draggedFeedbackId, feedbacks, handleStageChange]);
+
+  const feedbackByStage = useMemo(() => {
+    const map = {};
+    const defaultStageKey = stages[0]?.stageKey || "rascunho";
+    stages.forEach((s) => { map[s.stageKey] = feedbacks.filter((f) => (f.status || defaultStageKey) === s.stageKey); });
+    return map;
+  }, [feedbacks, stages]);
 
   const completandoFeedback = completandoId ? feedbacks.find(f => f.id === completandoId) : null;
   const autoavaliandoFeedback = autoavaliandoId ? feedbacks.find(f => f.id === autoavaliandoId) : null;
   const historicoColaborador = historicoColaboradorId ? colaboradoresById.get(historicoColaboradorId) : null;
+  const drawerFeedback = drawerFeedbackId ? feedbacks.find(f => f.id === drawerFeedbackId) : null;
 
   if (!isSupabaseConfigured) {
     return (
@@ -418,90 +800,56 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
     );
   }
 
-  return (
-    <div>
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <MessageSquare size={22} style={{ color: "var(--text)" }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Feedback</h1>
-          </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {isRHUser ? "Ciclos de avaliação e histórico" : "Seus feedbacks"}
-          </p>
+  // ── Colaborador comum (sem acesso RH): visão pessoal, sem Kanban ──────────
+  if (!isRHUser) {
+    const visible = feedbacks.filter(f => f.user_id === meuColaborador?.id || f.evaluator_id === currentUser?.id);
+    const pendentes  = visible.filter(f => f.status !== "concluido");
+    const concluidos = visible.filter(f => f.status === "concluido");
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <MessageSquare size={22} style={{ color: "var(--text)" }} />
+          <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Feedback</h1>
         </div>
-        {canWrite && (
-          <button onClick={() => setNovoOpen(true)} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            <Plus size={14} /> Novo feedback
-          </button>
-        )}
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
-      ) : (
-        <>
-          {pendentes.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-                Pendentes ({pendentes.length})
-              </div>
-              <div className="flex flex-col gap-2">
-                {pendentes.map(f => {
-                  const colaborador = colaboradoresById.get(f.user_id);
-                  const isMine = !isRHUser && meuColaborador?.id === f.user_id;
-                  return (
-                    <div key={f.id} style={{ border: "1px solid #FDE68A", background: "var(--warning-bg)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                      <div style={{ flex: 1, minWidth: 180 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          {isRHUser && <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>{colaborador?.fullName || "—"}</span>}
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
+        ) : (
+          <>
+            {pendentes.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Pendentes ({pendentes.length})</div>
+                <div className="flex flex-col gap-2">
+                  {pendentes.map(f => {
+                    const isMine = meuColaborador?.id === f.user_id;
+                    return (
+                      <div key={f.id} style={{ border: "1px solid #FDE68A", background: "var(--warning-bg)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        <div style={{ flex: 1, minWidth: 180 }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "#DBEAFE", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
+                          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>Prazo {fmt(f.period_end)} · {autoavaliacaoLabel(f, meuColaborador)}</div>
                         </div>
-                        <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>
-                          Prazo {fmt(f.period_end)} · {autoavaliacaoLabel(f, colaborador)}
-                        </div>
-                      </div>
-                      {canWrite && (
-                        <button onClick={() => setCompletandoId(f.id)} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-                          Completar
-                        </button>
-                      )}
-                      {isMine && f.self_rating == null && (
-                        <button onClick={() => setAutoavaliandoId(f.id)} style={{ background: "var(--surface)", color: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-                          Preencher autoavaliação
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
-            Histórico ({concluidos.length})
-          </div>
-          {concluidos.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <MessageSquare size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-              <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum feedback concluído ainda</div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {concluidos.map(f => {
-                const colaborador = colaboradoresById.get(f.user_id);
-                return (
-                  <div key={f.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {isRHUser && (
-                          <button onClick={() => setHistoricoColaboradorId(f.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
-                            <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text)", textDecoration: "underline" }}>{colaborador?.fullName || "—"}</span>
-                            <TrendingUp size={12} color="var(--text-dim)" />
+                        {isMine && f.self_rating == null && (
+                          <button onClick={() => setAutoavaliandoId(f.id)} style={{ background: "var(--surface)", color: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+                            Preencher autoavaliação
                           </button>
                         )}
-                        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "#DBEAFE", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
                       </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Histórico ({concluidos.length})</div>
+            {concluidos.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0" }}>
+                <MessageSquare size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+                <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum feedback concluído ainda</div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {concluidos.map(f => (
+                  <div key={f.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "#DBEAFE", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
                       <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{fmt(f.period_end)}</span>
                     </div>
                     {(f.self_rating != null || f.manager_rating != null) && (
@@ -515,25 +863,114 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
                         {f.final_rating.toFixed(1)}<span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 400 }}> /10 final</span>
                       </div>
                     )}
-                    {f.conteudo?.pontos_fortes && (
-                      <div style={{ marginBottom: 4 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>Pontos fortes: </span>
-                        <span style={{ fontSize: 12, color: "var(--text)" }}>{f.conteudo.pontos_fortes}</span>
-                      </div>
-                    )}
-                    {f.conteudo?.pontos_desenvolvimento && (
-                      <div>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>A desenvolver: </span>
-                        <span style={{ fontSize: 12, color: "var(--text)" }}>{f.conteudo.pontos_desenvolvimento}</span>
-                      </div>
-                    )}
+                    {f.conteudo?.pontos_fortes && <div style={{ marginBottom: 4 }}><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>Pontos fortes: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{f.conteudo.pontos_fortes}</span></div>}
+                    {f.conteudo?.pontos_desenvolvimento && <div><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>A desenvolver: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{f.conteudo.pontos_desenvolvimento}</span></div>}
                     {f.notes && <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 6, fontStyle: "italic" }}>{f.notes}</div>}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        {autoavaliandoFeedback && <AutoavaliacaoModal feedback={autoavaliandoFeedback} onSubmit={submitSelfRating} onClose={() => setAutoavaliandoId(null)} />}
+      </div>
+    );
+  }
+
+  // ── RH: Kanban completo ────────────────────────────────────────────────────
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <MessageSquare size={22} style={{ color: "var(--text)" }} />
+            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Feedback</h1>
+          </div>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Ciclos de avaliação e histórico</p>
+        </div>
+        {canWrite && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={() => setStageEditorOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <Pencil size={13} /> Editar etapas
+            </button>
+            <button onClick={() => setNovoOpen(true)} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <Plus size={14} /> Novo feedback
+            </button>
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
+      ) : feedbacks.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 0" }}>
+          <MessageSquare size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum ciclo de avaliação ainda</div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
+          <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
+            {stages.map((stage) => (
+              <FeedbackKanbanColumn
+                key={stage.id}
+                stage={stage}
+                stages={stages}
+                feedbackList={feedbackByStage[stage.stageKey] || []}
+                colaboradoresById={colaboradoresById}
+                onCardClick={(f) => setDrawerFeedbackId(f.id)}
+                onDragStart={handleCardDragStart}
+                onDragEnd={handleCardDragEnd}
+                onMoveToStage={handleStageChange}
+                isDragOver={dragOverStageKey === stage.stageKey}
+                onColumnDragOver={handleColumnDragOver}
+                onColumnDragLeave={handleColumnDragLeave}
+                onColumnDrop={handleColumnDrop}
+                canWrite={canWrite}
+                onEditFields={setFieldEditorStage}
+                getCompleteness={getFeedbackCompleteness}
+              />
+            ))}
+          </div>
+          <div className="md:hidden flex flex-col gap-3">
+            {stages.map((stage) => (
+              <FeedbackKanbanColumn
+                key={stage.id}
+                stage={stage}
+                stages={stages}
+                feedbackList={feedbackByStage[stage.stageKey] || []}
+                colaboradoresById={colaboradoresById}
+                onCardClick={(f) => setDrawerFeedbackId(f.id)}
+                onDragStart={handleCardDragStart}
+                onDragEnd={handleCardDragEnd}
+                onMoveToStage={handleStageChange}
+                isDragOver={dragOverStageKey === stage.stageKey}
+                onColumnDragOver={handleColumnDragOver}
+                onColumnDragLeave={handleColumnDragLeave}
+                onColumnDrop={handleColumnDrop}
+                canWrite={canWrite}
+                onEditFields={setFieldEditorStage}
+                getCompleteness={getFeedbackCompleteness}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {drawerFeedback && (
+        <FeedbackDrawer
+          feedback={drawerFeedback}
+          colaborador={colaboradoresById.get(drawerFeedback.user_id)}
+          canWrite={canWrite}
+          stages={stages}
+          users={users}
+          currentUser={currentUser}
+          onStageChange={handleStageChange}
+          onComplete={() => { setCompletandoId(drawerFeedback.id); setDrawerFeedbackId(null); }}
+          onUpdateCustomFields={(merged) => updateFeedbackCustomFields(drawerFeedback.id, merged)}
+          onAddActivity={(entry) => addFeedbackActivity(drawerFeedback.id, entry)}
+          onShowHistorico={(colaboradorId) => { setHistoricoColaboradorId(colaboradorId); setDrawerFeedbackId(null); }}
+          onClose={() => setDrawerFeedbackId(null)}
+        />
       )}
 
       {novoOpen && <NovoFeedbackModal colaboradores={colaboradores} onSave={createFeedback} onClose={() => setNovoOpen(false)} />}
@@ -545,14 +982,32 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
           onClose={() => setCompletandoId(null)}
         />
       )}
-      {autoavaliandoFeedback && (
-        <AutoavaliacaoModal feedback={autoavaliandoFeedback} onSubmit={submitSelfRating} onClose={() => setAutoavaliandoId(null)} />
-      )}
       {historicoColaborador && (
         <HistoricoDrawer
           colaborador={historicoColaborador}
           feedbacksDoColaborador={feedbacks.filter(f => f.user_id === historicoColaboradorId)}
           onClose={() => setHistoricoColaboradorId(null)}
+        />
+      )}
+
+      {canWrite && (
+        <RHStageEditorModal
+          open={stageEditorOpen}
+          onClose={() => setStageEditorOpen(false)}
+          domain="feedback"
+          domainLabel="Feedback"
+          records={feedbacks}
+          stageField="status"
+        />
+      )}
+
+      {canWrite && (
+        <RHStageFieldEditorModal
+          open={!!fieldEditorStage}
+          onClose={() => setFieldEditorStage(null)}
+          domain="feedback"
+          stageKey={fieldEditorStage?.stageKey}
+          stageName={fieldEditorStage?.name}
         />
       )}
     </div>

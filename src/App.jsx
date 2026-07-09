@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox,
 } from "lucide-react";
-import { supabase } from "./lib/supabase";
+import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { usePipelines } from "./hooks/use-pipelines";
@@ -28,6 +28,7 @@ import { getMissingRequiredFields } from "./utils/field-conditions";
 import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
 import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
+import { useRHFeedback } from "./hooks/use-rh-feedback";
 import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
@@ -240,6 +241,35 @@ export default function App() {
       }
     }
   }, [feriasRequests, isRHManager, pushNotification]);
+
+  // Lembrete de prazo de autoavaliação de Feedback: avisa o próprio
+  // colaborador quando o prazo (period_end) do ciclo pendente está a até 3
+  // dias de vencer (ou já venceu) e ele ainda não preencheu a nota dele.
+  const { feedbacks: meusCiclosFeedback } = useRHFeedback({ enabled: Boolean(currentUser) });
+  const [meuColaboradorId, setMeuColaboradorId] = useState(null);
+  useEffect(() => {
+    if (!currentUser?.id || !isSupabaseConfigured) return;
+    let active = true;
+    supabase.from("rh_colaboradores").select("id").eq("profile_id", currentUser.id).maybeSingle()
+      .then(({ data }) => { if (active) setMeuColaboradorId(data?.id || null); });
+    return () => { active = false; };
+  }, [currentUser?.id]);
+  const feedbackPrazoVistoRef = useRef(new Set());
+  useEffect(() => {
+    if (!meuColaboradorId) return;
+    const hoje = Date.now();
+    for (const f of meusCiclosFeedback) {
+      if (f.user_id !== meuColaboradorId || f.status === "concluido" || f.self_rating != null) continue;
+      const diasParaPrazo = Math.floor((new Date(f.period_end).getTime() - hoje) / 86400000);
+      if (diasParaPrazo > 3 || feedbackPrazoVistoRef.current.has(f.id)) continue;
+      feedbackPrazoVistoRef.current.add(f.id);
+      pushNotification({
+        type: "feedback_prazo",
+        title: diasParaPrazo < 0 ? "Autoavaliação atrasada" : "Autoavaliação com prazo próximo",
+        body: `Sua autoavaliação vence em ${new Date(f.period_end).toLocaleDateString("pt-BR")}. Preencha na aba Feedback.`,
+      });
+    }
+  }, [meusCiclosFeedback, meuColaboradorId, pushNotification]);
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);
