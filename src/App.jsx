@@ -29,6 +29,8 @@ import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
 import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
+import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
+import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa } from "./utils/rh-compliance-dates";
 import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
@@ -270,6 +272,65 @@ export default function App() {
       });
     }
   }, [meusCiclosFeedback, meuColaboradorId, pushNotification]);
+
+  // Lembretes de conformidade do diretório de Funcionários — período de
+  // experiência CLT (45/90 dias), vencimento de ASO, fim de contrato
+  // temporário e aniversário/tempo de casa. Tudo estimativa informativa,
+  // avisa uma vez por dia por evento enquanto a janela estiver aberta.
+  const { colaboradores: colaboradoresParaLembretes } = useRHColaboradores({
+    enabled: Boolean(currentUser) && isRHManager,
+  });
+  const complianceVistoRef = useRef(new Set());
+  useEffect(() => {
+    if (!isRHManager) return;
+    const hoje = new Date();
+    const hojeISO = hoje.toISOString().slice(0, 10);
+    const marcar = (id, tipo) => {
+      const key = `${id}:${tipo}:${hojeISO}`;
+      if (complianceVistoRef.current.has(key)) return false;
+      complianceVistoRef.current.add(key);
+      return true;
+    };
+    for (const c of colaboradoresParaLembretes) {
+      if (c.employeeStatus !== "ativo") continue;
+
+      const exp = periodoExperienciaInfo(c, hoje);
+      if (exp && (exp.diasRestantes === 7 || exp.diasRestantes === 1) && marcar(c.id, `exp${exp.marco}`)) {
+        pushNotification({
+          type: "compliance_experiencia",
+          title: `Período de experiência vencendo (${exp.marco} dias)`,
+          body: `${c.fullName}: faltam ${exp.diasRestantes} dia(s) pra decisão do marco de ${exp.marco} dias.`,
+        });
+      }
+
+      const asoDias = asoDiasParaVencer(c, hoje);
+      if (asoDias != null && asoDias <= 30 && marcar(c.id, "aso")) {
+        pushNotification({
+          type: "compliance_aso",
+          title: asoDias < 0 ? "ASO vencido" : "ASO vencendo",
+          body: `${c.fullName}: exame periódico ${asoDias < 0 ? "venceu há " + Math.abs(asoDias) + " dia(s)" : "vence em " + asoDias + " dia(s)"}.`,
+        });
+      }
+
+      const contratoDias = contratoDiasParaFim(c, hoje);
+      if (contratoDias != null && contratoDias <= 30 && marcar(c.id, "contrato_fim")) {
+        pushNotification({
+          type: "compliance_contrato",
+          title: contratoDias < 0 ? "Contrato temporário venceu" : "Fim de contrato temporário se aproximando",
+          body: `${c.fullName}: contrato ${contratoDias < 0 ? "venceu há " + Math.abs(contratoDias) + " dia(s)" : "termina em " + contratoDias + " dia(s)"}.`,
+        });
+      }
+
+      if (diasParaAniversario(c, hoje) === 0 && marcar(c.id, "aniversario")) {
+        pushNotification({ type: "aniversario", title: "Aniversário hoje 🎂", body: `Hoje é aniversário de ${c.fullName}.` });
+      }
+
+      if (diasParaBodasEmpresa(c, hoje) === 0 && marcar(c.id, "bodas_empresa")) {
+        const anos = hoje.getFullYear() - new Date(c.admissionDate).getFullYear();
+        pushNotification({ type: "bodas_empresa", title: "Aniversário de empresa", body: `${c.fullName} completa ${anos} ano(s) de casa hoje.` });
+      }
+    }
+  }, [colaboradoresParaLembretes, isRHManager, pushNotification]);
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);

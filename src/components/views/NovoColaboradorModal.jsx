@@ -4,6 +4,7 @@ import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../c
 import { supabase } from "../../lib/supabase";
 import { useAI } from "../../hooks/use-ai";
 import { documentExtractionPrompt } from "../../constants/ai-prompts";
+import { periodoExperienciaInfo } from "../../utils/rh-compliance-dates";
 
 const DOC_BUCKET = "rh-documentos-colaborador";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -14,7 +15,7 @@ const EMPTY_FORM = {
   addressStreet: "", addressNumber: "", addressComplement: "", addressNeighborhood: "",
   addressCity: "", addressState: "", addressZip: "",
   jobTitle: "", department: "", contractType: "", admissionDate: "",
-  employeeStatus: "ativo", salary: "",
+  employeeStatus: "ativo", salary: "", asoVencimento: "", contratoFim: "",
 };
 
 function fileToBase64(file) {
@@ -275,7 +276,23 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
                 <label style={labelSt}>Salário (R$)</label>
                 <input type="number" min="0" step="0.01" value={form.salary} onChange={(e) => set("salary", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
+              <div>
+                <label style={labelSt}>Vencimento do ASO</label>
+                <input type="date" value={form.asoVencimento} onChange={(e) => set("asoVencimento", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+              </div>
+              <div>
+                <label style={labelSt}>Fim do contrato (se temporário)</label>
+                <input type="date" value={form.contratoFim} onChange={(e) => set("contratoFim", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+              </div>
             </div>
+            {(() => {
+              const exp = periodoExperienciaInfo(form);
+              return exp ? (
+                <div style={{ background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
+                  Período de experiência CLT: marco de {exp.marco} dias em {exp.diasRestantes} dia(s).
+                </div>
+              ) : null;
+            })()}
           </div>
 
           {error && (

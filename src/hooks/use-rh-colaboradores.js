@@ -29,6 +29,9 @@ function rowToColaborador(r) {
     documentPath: r.document_path,
     notes: r.notes,
     vagaId: r.vaga_id,
+    asoVencimento: r.aso_vencimento,
+    contratoFim: r.contrato_fim,
+    desligamentoDate: r.desligamento_date,
     onboardingStage: r.onboarding_stage,
     onboardingStageChangedAt: r.onboarding_stage_changed_at,
     customFields: r.custom_fields && typeof r.custom_fields === "object" ? r.custom_fields : {},
@@ -64,6 +67,9 @@ function colaboradorToRow(c, extras = {}) {
     document_path: c.documentPath || null,
     notes: c.notes || null,
     vaga_id: c.vagaId || null,
+    aso_vencimento: c.asoVencimento || null,
+    contrato_fim: c.contratoFim || null,
+    desligamento_date: c.desligamentoDate || null,
     custom_fields: c.customFields && typeof c.customFields === "object" ? c.customFields : {},
     activities: Array.isArray(c.activities) ? c.activities : [],
     // Opcionais — omitidos quando ausentes pra não sobrescrever o default da
@@ -74,13 +80,13 @@ function colaboradorToRow(c, extras = {}) {
   };
 }
 
-export function useRHColaboradores({ userId } = {}) {
+export function useRHColaboradores({ userId, enabled = true } = {}) {
   const [colaboradores, setColaboradores] = useState([]);
   const [loading, setLoading] = useState(true);
   const activeRef = useRef(true);
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data } = await supabase.from("rh_colaboradores").select("*").order("full_name", { ascending: true });
@@ -89,10 +95,11 @@ export function useRHColaboradores({ userId } = {}) {
     } finally {
       if (activeRef.current) setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     activeRef.current = true;
+    if (!enabled) { setLoading(false); return; }
     fetchAll();
     if (!isSupabaseConfigured) return;
     const channelName = `rh-colaboradores-${Math.random().toString(36).slice(2, 9)}`;
@@ -104,7 +111,7 @@ export function useRHColaboradores({ userId } = {}) {
       activeRef.current = false;
       supabase.removeChannel(channel);
     };
-  }, [fetchAll]);
+  }, [fetchAll, enabled]);
 
   const createColaborador = useCallback(async (data) => {
     const row = colaboradorToRow(data, { created_by: userId });
@@ -116,10 +123,18 @@ export function useRHColaboradores({ userId } = {}) {
   }, [userId]);
 
   const updateColaborador = useCallback(async (id, patch) => {
-    const dbPatch = colaboradorToRow({ ...colaboradores.find(c => c.id === id), ...patch }, { updated_at: new Date().toISOString() });
+    const current = colaboradores.find(c => c.id === id);
+    // Marca a data de desligamento automaticamente na primeira vez que o
+    // status vira "desligado" — usada só pra estimar aviso-prévio, não
+    // sobrescreve se já tiver sido definida (ex: ajuste manual do RH).
+    const merged = { ...current, ...patch };
+    if (merged.employeeStatus === "desligado" && !merged.desligamentoDate) {
+      merged.desligamentoDate = new Date().toISOString().slice(0, 10);
+    }
+    const dbPatch = colaboradorToRow(merged, { updated_at: new Date().toISOString() });
     const { error } = await supabase.from("rh_colaboradores").update(dbPatch).eq("id", id);
     if (error) throw new Error(error.message);
-    setColaboradores(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+    setColaboradores(prev => prev.map(c => c.id === id ? merged : c));
   }, [colaboradores]);
 
   const deleteColaborador = useCallback(async (id) => {

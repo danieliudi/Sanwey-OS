@@ -22,6 +22,7 @@ import {
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
+import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ function StatusBadge({ statusId }) {
 
 // ── Employee Detail Modal ─────────────────────────────────────────────────────
 
-function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose }) {
+function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, onClose }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState(null);
@@ -126,7 +127,16 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
     admission_date:  user.admission_date  ? user.admission_date.slice(0, 10) : "",
     employee_status: user.employee_status || "ativo",
     salary:          user.salary          != null ? String(user.salary) : "",
+    aso_vencimento:  colaboradorRow?.asoVencimento || "",
+    contrato_fim:    colaboradorRow?.contratoFim || "",
   });
+
+  // Estimativas informativas — período de experiência CLT e aviso-prévio
+  // quando a pessoa está desligada. Não bloqueiam nada, é só contexto.
+  const expInfo = colaboradorRow ? periodoExperienciaInfo(colaboradorRow) : null;
+  const avisoPrevioDias = (form.employee_status === "desligado" && colaboradorRow?.desligamentoDate)
+    ? avisoPrevioEstimadoDias(colaboradorRow.admissionDate, colaboradorRow.desligamentoDate)
+    : null;
 
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -156,6 +166,12 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
         employee_status: form.employee_status || null,
         salary:          form.salary !== "" ? parseFloat(form.salary) : null,
       });
+      if (colaboradorRow && onUpdateColaborador) {
+        await onUpdateColaborador(colaboradorRow.id, {
+          asoVencimento: form.aso_vencimento || null,
+          contratoFim: form.contrato_fim || null,
+        });
+      }
       setEditing(false);
 
       // Send welcome email only when admission_date is set for the first time
@@ -388,6 +404,30 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                     onBlur={blurGray}
                   />
                 </div>
+                <div>
+                  <label style={labelSt}>Vencimento do ASO</label>
+                  <input
+                    type="date"
+                    value={form.aso_vencimento}
+                    onChange={(e) => set("aso_vencimento", e.target.value)}
+                    className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                    style={inputSt}
+                    onFocus={focusBlue}
+                    onBlur={blurGray}
+                  />
+                </div>
+                <div>
+                  <label style={labelSt}>Fim do contrato (se temporário)</label>
+                  <input
+                    type="date"
+                    value={form.contrato_fim}
+                    onChange={(e) => set("contrato_fim", e.target.value)}
+                    className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                    style={inputSt}
+                    onFocus={focusBlue}
+                    onBlur={blurGray}
+                  />
+                </div>
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -398,12 +438,25 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, onClose
                   { label: "Data de Admissão",  value: fmt(user.admission_date) },
                   { label: "Status",            value: statusInfo(user.employee_status).label },
                   { label: "Salário",           value: user.salary != null ? `R$ ${Number(user.salary).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—" },
+                  { label: "Vencimento do ASO", value: fmt(colaboradorRow?.asoVencimento) },
+                  { label: "Fim do contrato",   value: fmt(colaboradorRow?.contratoFim) },
                 ].map((f) => (
                   <div key={f.label}>
                     <div style={labelSt}>{f.label}</div>
                     <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {expInfo && (
+              <div style={{ marginTop: 14, background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
+                Período de experiência CLT: marco de {expInfo.marco} dias em {expInfo.diasRestantes} dia(s).
+              </div>
+            )}
+            {avisoPrevioDias != null && (
+              <div style={{ marginTop: 14, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--text-dim)" }}>
+                Aviso-prévio estimado: {avisoPrevioDias} dias (Lei 12.506/2011 — confirme com RH/jurídico antes de aplicar).
               </div>
             )}
           </div>
@@ -931,6 +984,8 @@ export function RHFuncionariosView({
             await onUpdateUser(id, patch);
             setSelected((prev) => prev ? { ...prev, ...patch } : null);
           }}
+          colaboradorRow={colaboradores.find((c) => c.profileId === selected.id)}
+          onUpdateColaborador={updateColaborador}
           onClose={() => setSelected(null)}
         />
       )}
