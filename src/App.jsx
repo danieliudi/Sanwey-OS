@@ -30,6 +30,7 @@ import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
 import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
+import { useCRMDespesas } from "./hooks/use-crm-despesas";
 import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa } from "./utils/rh-compliance-dates";
 import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
@@ -331,6 +332,31 @@ export default function App() {
       }
     }
   }, [colaboradoresParaLembretes, isRHManager, pushNotification]);
+
+  // Lembrete de reembolso de Viagens pendente há muito tempo — mesma ideia
+  // de "approval-queue timeout" do Concur/TravelPerk: sem isso, uma despesa
+  // fica esquecida na fila do gestor sem ninguém notar.
+  const { despesas: despesasParaLembretes } = useCRMDespesas({
+    enabled: Boolean(currentUser) && isManagerRole,
+  });
+  const despesaPendenteVistaRef = useRef(new Set());
+  useEffect(() => {
+    if (!isManagerRole) return;
+    const hojeISO = new Date().toISOString().slice(0, 10);
+    for (const d of despesasParaLembretes) {
+      if (d.status_reembolso !== "pendente" || !d.created_at) continue;
+      const diasPendente = Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000);
+      if (diasPendente < 5) continue;
+      const key = `${d.id}:${hojeISO}`;
+      if (despesaPendenteVistaRef.current.has(key)) continue;
+      despesaPendenteVistaRef.current.add(key);
+      pushNotification({
+        type: "reembolso_pendente_ha_dias",
+        title: "Reembolso pendente há dias",
+        body: `${d.categoria || "Despesa"} (${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(d.valor) || 0)}) está pendente há ${diasPendente} dias.`,
+      });
+    }
+  }, [despesasParaLembretes, isManagerRole, pushNotification]);
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedLead, setSelectedLead] = useState(null);

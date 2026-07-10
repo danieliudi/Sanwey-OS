@@ -19,6 +19,8 @@ import { Badge } from "../ui/Badge";
 import { formatDateBR } from "../../utils/date";
 import { COMERCIAL_ROLES, todayISO, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO } from "../../utils/viagens";
 
+const COMPROVANTE_OBRIGATORIO_ACIMA_DE = 100;
+
 function isAtrasado(registro, today) {
   return registro.status === "planejado" && !!registro.data_planejada && registro.data_planejada < today;
 }
@@ -137,6 +139,7 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
   const iaValor = despesa.ia_extraido?.valor;
   const divergente = iaValor != null && Number(iaValor) !== Number(despesa.valor);
   const badge = STATUS_REEMBOLSO[despesa.status_reembolso] || STATUS_REEMBOLSO.pendente;
+  const faltaComprovanteObrigatorio = Number(despesa.valor) > COMPROVANTE_OBRIGATORIO_ACIMA_DE && !despesa.comprovante_path;
 
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
@@ -147,6 +150,11 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
         {divergente && (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "#B45309", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 99, padding: "2px 8px" }}>
             <AlertTriangle size={11} /> Comprovante mostra {fmtMoney(iaValor)}
+          </span>
+        )}
+        {faltaComprovanteObrigatorio && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--danger)", background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 99, padding: "2px 8px" }}>
+            <AlertTriangle size={11} /> Sem comprovante (obrigatório acima de {fmtMoney(COMPROVANTE_OBRIGATORIO_ACIMA_DE)})
           </span>
         )}
         <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{formatDateBR(despesa.data_despesa)}</span>
@@ -283,6 +291,13 @@ export function CRMViagensGestorView({ currentUser, users }) {
   }
 
   async function handleAprovar(despesa) {
+    // Comprovante obrigatório acima de um valor — prática padrão em
+    // Concur/Expensify/Ramp (itemized receipt threshold), evita reembolso
+    // de valor alto sem nota fiscal anexada.
+    if (Number(despesa.valor) > COMPROVANTE_OBRIGATORIO_ACIMA_DE && !despesa.comprovante_path) {
+      alert(`Não dá pra aprovar: despesas acima de ${fmtMoney(COMPROVANTE_OBRIGATORIO_ACIMA_DE)} exigem comprovante anexado.`);
+      return;
+    }
     setDecidingId(despesa.id);
     setDecisaoError(null);
     try {

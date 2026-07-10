@@ -3,13 +3,13 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const BUCKET = "crm-comprovantes";
 
-export function useCRMDespesas({ userId } = {}) {
+export function useCRMDespesas({ userId, enabled = true } = {}) {
   const [despesas, setDespesas] = useState([]);
   const [loading, setLoading]   = useState(true);
   const activeRef = useRef(true);
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data } = await supabase.from("crm_viagem_despesas").select("*").order("data_despesa", { ascending: false });
@@ -18,10 +18,11 @@ export function useCRMDespesas({ userId } = {}) {
     } finally {
       if (activeRef.current) setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     activeRef.current = true;
+    if (!enabled) { setLoading(false); return; }
     fetchAll();
     if (!isSupabaseConfigured) return;
     // Nome de canal único por instância — o hook é chamado em 3 telas
@@ -38,7 +39,7 @@ export function useCRMDespesas({ userId } = {}) {
       activeRef.current = false;
       supabase.removeChannel(channel);
     };
-  }, [fetchAll]);
+  }, [fetchAll, enabled]);
 
   const createDespesa = useCallback(async (data) => {
     const row = { ...data, vendedor_id: userId, created_by: userId };
