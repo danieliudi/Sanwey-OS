@@ -832,7 +832,7 @@ export default function App() {
       style={{
         background: "var(--bg)",
         fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        color: "#201a1a",
+        color: "var(--text)",
         minHeight: "100vh",
         width: "100%",
         maxWidth: "100vw",

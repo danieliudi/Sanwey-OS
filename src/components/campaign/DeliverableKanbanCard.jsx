@@ -1,6 +1,5 @@
 import React, { memo, useEffect, useRef, useState } from "react";
 import { Clock, Star, MoreVertical, ArrowRight } from "lucide-react";
-import { COMPANIES } from "../../constants/companies";
 import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
@@ -38,12 +37,11 @@ function DeliverableKanbanCardImpl({
   const ageStyle    = daysInStage !== null ? agingStyle(daysInStage, stage?.sla) : null;
   const isTerminal  = Boolean(stage?.terminal);
   const priColor    = PRIORITY_COLORS[item.priority] || null;
-  const compColor   = item.companyIds?.[0] ? COMPANIES[item.companyIds[0]]?.primary : "var(--text-dim)";
   const isOverdue   = item.deadline && new Date(item.deadline) < new Date();
   const moveTargets = (stages || DELIVERABLE_STAGES).filter(s => s.id !== item.stage && !s.terminal);
 
-  const shadowBase  = `inset 3px 0 0 ${compColor}, var(--shadow-card)`;
-  const shadowHover = `inset 3px 0 0 ${compColor}, var(--shadow-pop)`;
+  const shadowBase  = `var(--shadow-card)`;
+  const shadowHover = `var(--shadow-pop)`;
 
   useEffect(() => {
     if (!menuOpen) return;

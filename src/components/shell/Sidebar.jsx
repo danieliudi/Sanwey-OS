@@ -24,13 +24,13 @@ function useIsMobile() {
 const SIDEBAR_W = 288;
 
 const T = {
-  bg:            "var(--surface)",
+  bg:            "var(--surface-alt)",
   border:        "var(--border)",
   text:          "var(--text-dim)",
   textActive:    "var(--accent)",
   textOnSurface: "var(--text)",
-  activeBg:      "var(--surface-alt)",
-  hoverBg:       "var(--surface-alt)",
+  activeBg:      "var(--surface)",
+  hoverBg:       "var(--border)",
   activeStrip:   "var(--accent)",
   groupLabel:    "var(--text-faint)",
 };
@@ -143,7 +143,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      padding: "2px 12px 4px 20px",
+                      padding: "10px 16px 5px 18px",
                       background: "none",
                       border: "none",
                       cursor: "pointer",
@@ -206,21 +206,22 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               alignItems: "center",
               gap: 10,
               padding: "8px 8px",
-              background: section === "settings" ? "var(--surface-alt)" : "transparent",
+              background: section === "settings" ? "var(--surface)" : "transparent",
               border: "none",
               borderRadius: "var(--radius-sm)",
               cursor: "pointer",
               transition: "background 0.12s",
               textAlign: "left",
+              boxShadow: section === "settings" ? "var(--shadow-card)" : "none",
             }}
-            onMouseEnter={e => { if (section !== "settings") e.currentTarget.style.background = "var(--surface-alt)"; }}
+            onMouseEnter={e => { if (section !== "settings") e.currentTarget.style.background = "var(--border)"; }}
             onMouseLeave={e => { if (section !== "settings") e.currentTarget.style.background = "transparent"; }}
           >
             <div
               style={{
                 width: 36, height: 36,
                 borderRadius: "50%",
-                background: currentUser?.avatarUrl ? "transparent" : (currentUser?.avatarBg || "var(--surface-alt)"),
+                background: currentUser?.avatarUrl ? "transparent" : (currentUser?.avatarBg || "var(--surface)"),
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -260,7 +261,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               flexShrink: 0,
               transition: "background 0.12s, color 0.12s",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--danger)"; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--border)"; e.currentTarget.style.color = "var(--danger)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
           >
             <LogOut size={15} strokeWidth={2} />
@@ -279,29 +280,28 @@ function NavItem({ icon: Icon, label, active, onClick }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width: "100%",
+        width: "calc(100% - 16px)",
+        margin: "0 8px",
         display: "flex",
         alignItems: "center",
-        gap: 10,
-        padding: "0 12px",
-        height: 44,
+        gap: 9,
+        padding: "7px 10px",
         position: "relative",
-        fontSize: 14,
+        fontSize: 13,
         fontFamily: "inherit",
-        fontWeight: active ? 700 : 500,
-        color: active ? "var(--accent)" : hovered ? "var(--text)" : "var(--text-dim)",
-        background: active ? "var(--surface-alt)" : hovered ? "var(--surface-alt)" : "transparent",
+        fontWeight: active ? 600 : 500,
+        color: active ? "var(--text)" : hovered ? "var(--text)" : "var(--text-dim)",
+        background: active ? "var(--surface)" : hovered ? "var(--border)" : "transparent",
         border: "none",
-        borderRight: active ? "3px solid var(--accent)" : "3px solid transparent",
+        boxShadow: active ? "var(--shadow-card)" : "none",
         cursor: "pointer",
         textAlign: "left",
         whiteSpace: "nowrap",
-        transition: "background 0.12s, color 0.12s, border-color 0.12s",
-        borderRadius: "0 var(--radius-sm) var(--radius-sm) 0",
-        marginRight: 4,
+        transition: "background 0.12s, color 0.12s, box-shadow 0.12s",
+        borderRadius: "var(--radius-sm)",
       }}
     >
-      {Icon && <Icon size={16} strokeWidth={active ? 2.5 : 2} style={{ flexShrink: 0 }} />}
+      {Icon && <Icon size={15} strokeWidth={2} style={{ flexShrink: 0, opacity: 0.85 }} />}
       <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
     </button>
   );

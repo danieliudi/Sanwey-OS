@@ -48,8 +48,8 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
     : null;
 
   const accentColor = stage?.color || "var(--text-dim)";
-  const shadowBase  = `inset 3px 0 0 ${accentColor}, var(--shadow-card)`;
-  const shadowHover = `inset 3px 0 0 ${accentColor}, var(--shadow-pop)`;
+  const shadowBase  = `var(--shadow-card)`;
+  const shadowHover = `var(--shadow-pop)`;
 
   const companyLabels = (campaign.companyIds || [])
     .map(id => COMPANIES[id]?.short || id)

@@ -1,6 +1,5 @@
 import React, { memo, useRef, useState, useEffect } from "react";
 import { Clock, MoreVertical, ArrowRight, Check, X as XIcon } from "lucide-react";
-import { COMPANIES } from "../../constants/companies";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { CompanyTag } from "../ui/CompanyTag";
@@ -46,9 +45,8 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
   // menos ênfase que os cards ainda em jogo, com um selo do resultado.
   const isTerminal = Boolean(currentStage?.terminal);
 
-  const accentColor = COMPANIES[lead.companyId]?.primary || "var(--text-dim)";
-  const shadowBase  = `inset 3px 0 0 ${accentColor}, var(--shadow-card)`;
-  const shadowHover = `inset 3px 0 0 ${accentColor}, var(--shadow-pop)`;
+  const shadowBase  = `var(--shadow-card)`;
+  const shadowHover = `var(--shadow-pop)`;
 
   useEffect(() => {
     if (!menuOpen) return;
