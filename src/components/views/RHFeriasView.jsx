@@ -14,6 +14,9 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
+import { Button } from "../ui/Button";
+import { Badge } from "../ui/Badge";
+import { EmptyState } from "../ui/EmptyState";
 
 // ── Documento obrigatório por tipo de licença ────────────────────────────────
 // Pesquisa de mercado (Convenia/Gusto/Personio) + prática CLT: alguns tipos
@@ -581,13 +584,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {canWrite && (
-            <button onClick={() => setStageEditorOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-              <Pencil size={13} /> Editar etapas
-            </button>
+            <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
           )}
-          <button onClick={() => setShowSolicitar(true)} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            <Plus size={14} /> Solicitar
-          </button>
+          <Button icon={Plus} onClick={() => setShowSolicitar(true)}>Solicitar</Button>
         </div>
       </div>
 
@@ -597,12 +596,18 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
           { label: "Aprovadas este mês",   value: stats.aprovadosMes, icon: <Check size={14} style={{ color: "var(--success)" }} /> },
           { label: "Dias em férias agora", value: stats.diasAtivos,  icon: <Calendar size={14} style={{ color: "var(--text)" }} /> },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)", padding: "12px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div
+            key={s.label}
+            className="rounded-xl border transition-shadow duration-150"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", padding: "12px 16px", boxShadow: "var(--shadow-card)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-pop)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-card)"; e.currentTarget.style.borderColor = "var(--border)"; }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
               {s.icon}
               <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{s.label}</div>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{s.value}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>{s.value}</div>
           </div>
         ))}
       </div>
@@ -625,15 +630,13 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : !isSupabaseConfigured ? (
-        <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <Calendar size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Supabase não configurado</div>
-        </div>
+        <EmptyState icon={Calendar} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar este módulo." />
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <CalendarCheck size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhuma solicitação encontrada</div>
-        </div>
+        <EmptyState
+          icon={CalendarCheck}
+          title="Nenhuma solicitação encontrada"
+          description={filterStatus !== "todas" ? "Tente mudar o filtro de status." : "As solicitações de afastamento aparecerão aqui."}
+        />
       ) : (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16 }} className="flex-col md:flex-row">
           <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">

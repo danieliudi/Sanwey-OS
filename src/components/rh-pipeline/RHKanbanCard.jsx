@@ -31,8 +31,8 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
     ? stages.filter(s => stageKeyOf(s) !== stage && !s.terminal)
     : [];
 
-  const shadowBase  = `inset 3px 0 0 var(--border-strong), 0 1px 4px rgba(0,0,0,0.04)`;
-  const shadowHover = `inset 3px 0 0 var(--border-strong), 0 4px 16px rgba(0,0,0,0.08)`;
+  const shadowBase  = `inset 3px 0 0 var(--border-strong), var(--shadow-card)`;
+  const shadowHover = `inset 3px 0 0 var(--border-strong), var(--shadow-pop)`;
 
   useEffect(() => {
     if (!menuOpen) return;

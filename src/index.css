@@ -31,6 +31,11 @@
   --radius-sm:     6px;
   --radius-md:     8px;
 
+  /* Elevation — cards ficam quase planos (1px de sombra), só "levantam" no
+     hover/foco. Nada de sombra pesada por padrão (tom Notion). */
+  --shadow-card:   0 1px 2px rgba(55,53,47,0.05);
+  --shadow-pop:    0 12px 32px rgba(55,53,47,0.14), 0 2px 8px rgba(55,53,47,0.06);
+
   /* Product tokens — identidade de empresa (não white-label) */
   --color-resibag:   #16A34A;
   --color-industria: #C7212B;
@@ -79,6 +84,10 @@
 
   /* Tinted accent for active/hover states */
   --accent-tint:   color-mix(in srgb, var(--accent) 10%, transparent);
+
+  /* Sombra mais forte no escuro — rgba(0,0,0,..) some contra fundo escuro */
+  --shadow-card:   0 1px 2px rgba(0,0,0,0.22);
+  --shadow-pop:    0 16px 40px rgba(0,0,0,0.45);
 }
 
 /* Native form controls in dark mode */
