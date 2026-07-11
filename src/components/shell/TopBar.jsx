@@ -114,18 +114,20 @@ export function TopBar({
           <span style={{ color: "var(--text-faint)", flex: 1, textAlign: "left" }}>
             Buscar lead, campanha, funcionário...
           </span>
-          <kbd
-            className="font-mono font-semibold select-none rounded-sm"
+          <span
+            className="select-none rounded-sm flex items-center justify-center"
             style={{
-              fontSize: 11,
-              padding: "1px 6px",
+              width: 22,
+              height: 20,
               background: "var(--surface-alt)",
               color: "var(--text-faint)",
               border: "1px solid var(--border-strong)",
+              flexShrink: 0,
             }}
+            title="Buscar"
           >
-            ⌘K
-          </kbd>
+            <Search size={12} strokeWidth={2.25} />
+          </span>
         </button>
       )}
 
