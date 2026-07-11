@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { LogOut, ChevronDown } from "lucide-react";
+import { COMPANIES } from "../../constants/companies";
 
 const STORAGE_KEY = "sidebar_collapsed_groups";
 
@@ -107,7 +108,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: "var(--accent)",
+              background: COMPANIES.industria.primary,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
