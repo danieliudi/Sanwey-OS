@@ -173,8 +173,8 @@ function OnboardingKanbanColumn({
             className="font-semibold flex items-center gap-1.5"
             style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}
           >
-            <span>{stage.name}</span>
-            <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({colaboradoresList.length})</span>
+            <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
+            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({colaboradoresList.length})</span>
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">

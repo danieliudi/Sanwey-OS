@@ -317,8 +317,8 @@ function FeriasKanbanColumn({
       <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
         <div className="min-w-0 flex-1">
           <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            <span>{stage.name}</span>
-            <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({reqList.length})</span>
+            <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
+            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({reqList.length})</span>
           </div>
         </div>
         {canWrite && (

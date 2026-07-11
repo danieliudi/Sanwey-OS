@@ -669,8 +669,8 @@ export function EntregasView({ user, users = [] }) {
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold flex items-center gap-1.5"
                           style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                          <span>{stage.name}</span>
-                          <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({stageItems.length})</span>
+                          <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
+                          <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({stageItems.length})</span>
                         </div>
                         {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
                       </div>

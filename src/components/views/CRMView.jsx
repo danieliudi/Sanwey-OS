@@ -853,8 +853,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         textTransform: "uppercase",
                       }}
                     >
-                      <span>{stage.name}</span>
-                      <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>
+                      <span
+                        title={stage.name}
+                        style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}
+                      >
+                        {stage.name}
+                      </span>
+                      <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>
                         ({bucket.leads.length})
                       </span>
                     </div>
@@ -871,14 +876,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   {isManager && !stage.terminal && (
                     <button
                       onClick={() => setEditingStage({ stage, companyId: colCompanyId })}
-                      className="flex items-center gap-1 px-2 py-1 rounded-md cursor-pointer transition-colors text-xs font-semibold"
-                      style={{ color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
+                      className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
+                      style={{ width: 24, height: 24, flexShrink: 0, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
                       onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                       title="Editar campos desta etapa"
                     >
-                      <Settings size={11} />
-                      Editar fase
+                      <Settings size={13} />
                     </button>
                   )}
                 </div>

@@ -317,9 +317,9 @@ function TreinamentoBoardColumn({
     >
       <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
       <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
-        <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-          <span>{stage.name}</span>
-          <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({atribList.length})</span>
+        <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", minWidth: 0 }}>
+          <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
+          <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({atribList.length})</span>
         </div>
         {canWrite && (
           <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>

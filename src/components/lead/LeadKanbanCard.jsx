@@ -84,13 +84,13 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
     >
       {/* Company + aging badge + score + menu */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="font-semibold text-[13px] leading-snug flex-1 flex items-center gap-1.5" style={{ color: "var(--text)" }}>
+        <div className="font-semibold text-[13px] leading-snug flex-1 flex items-start gap-1.5" style={{ color: "var(--text)", minHeight: 34 }}>
           {isTerminal && (
             currentStage.won
-              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A", flexShrink: 0 }} />
-              : <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626", flexShrink: 0 }} />
+              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A", flexShrink: 0, marginTop: 1 }} />
+              : <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626", flexShrink: 0, marginTop: 1 }} />
           )}
-          <span>{lead.company}</span>
+          <span className="line-clamp-2">{lead.company}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {ageStyle && (

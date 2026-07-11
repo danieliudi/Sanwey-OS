@@ -991,8 +991,8 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                             textTransform: "uppercase",
                           }}
                         >
-                          <span>{stage.name}</span>
-                          <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({count})</span>
+                          <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
+                          <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({count})</span>
                         </div>
                         <div className="text-xs mt-0.5 font-semibold" style={{ color: "var(--text-dim)" }}>
                           {totalBudget > 0 ? formatK(totalBudget) : "R$ 0"}
