@@ -4,7 +4,7 @@ import {
   Upload, AlertTriangle, Check, X, ChevronDown, ChevronUp,
   Users, Building2, Loader2, CheckCircle2, TriangleAlert, RefreshCw,
 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
 const uuidv4 = () => crypto.randomUUID();
@@ -503,9 +503,9 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
 
           {/* Import CTA */}
           <div className="flex items-center justify-between p-4 rounded-xl border sticky bottom-4"
-            style={{ background: "#FFFFFF", borderColor: "#EFEFEF", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
-            <div className="text-sm" style={{ color: NEUTRAL.slate }}>
-              <span className="font-semibold" style={{ color: NEUTRAL.graphite }}>{selectedRows.length} leads</span> serão adicionados ao pipeline em <strong>Prospecção</strong>
+            style={{ background: "#FFFFFF", borderColor: "#EFEFEF", boxShadow: "var(--shadow-pop)" }}>
+            <div className="text-sm" style={{ color: "var(--text-dim)" }}>
+              <span className="font-semibold" style={{ color: "var(--text)" }}>{selectedRows.length} leads</span> serão adicionados ao pipeline em <strong>Prospecção</strong>
             </div>
             <Button
               variant="primary"
@@ -521,8 +521,8 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
 
       {phase === "importing" && (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <Loader2 size={40} className="animate-spin" style={{ color: NEUTRAL.slate }} />
-          <div className="text-sm" style={{ color: NEUTRAL.slate }}>Importando leads…</div>
+          <Loader2 size={40} className="animate-spin" style={{ color: "var(--text-dim)" }} />
+          <div className="text-sm" style={{ color: "var(--text-dim)" }}>Importando leads…</div>
         </div>
       )}
     </div>
@@ -534,8 +534,8 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
 function Stat({ label, value, color }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: NEUTRAL.slate, letterSpacing: "0.12em" }}>{label}</span>
-      <span className="text-2xl font-bold" style={{ color: color || NEUTRAL.graphite }}>{value}</span>
+      <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: "var(--text-dim)", letterSpacing: "0.12em" }}>{label}</span>
+      <span className="text-2xl font-bold" style={{ color: color || "var(--text)" }}>{value}</span>
     </div>
   );
 }
@@ -565,23 +565,23 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
 
         {/* Company / contact */}
         <div className="min-w-0 pr-2">
-          <div className="font-semibold text-xs truncate" style={{ color: NEUTRAL.graphite }}>
+          <div className="font-semibold text-xs truncate" style={{ color: "var(--text)" }}>
             {row.company}
             {isDup && (
               <span className="ml-2 text-[9px] font-normal px-1.5 py-0.5 rounded"
-                style={{ background: "#FEF3EC", color: NEUTRAL.amber }}>
+                style={{ background: "#FEF3EC", color: "var(--amber)" }}>
                 duplicado
               </span>
             )}
           </div>
-          <div className="text-[11px] truncate" style={{ color: NEUTRAL.slate }}>
+          <div className="text-[11px] truncate" style={{ color: "var(--text-dim)" }}>
             {row.decisionMaker?.name !== "—" ? row.decisionMaker.name : row.contactEmail || "—"}
             {row.decisionMaker?.role && row.decisionMaker.role !== "—" && ` · ${row.decisionMaker.role}`}
           </div>
         </div>
 
         {/* City/state */}
-        <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+        <div className="text-xs" style={{ color: "var(--text-dim)" }}>
           {[row.city, row.state].filter(Boolean).join("/") || "—"}
         </div>
 
@@ -592,7 +592,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             onChange={e => onUpdate({ companyId: e.target.value })}
             disabled={isDup || !row._selected}
             className="text-xs rounded-xl border px-2 py-1 w-full"
-            style={{ borderColor: "#DCDCDC", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            style={{ borderColor: "#DCDCDC", color: "var(--text)", background: "#FFFFFF" }}
           >
             {companyOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -606,8 +606,8 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             disabled={isDup || !row._selected}
             className="text-xs rounded-xl border px-2 py-1 w-full"
             style={{
-              borderColor: !row.owner && row._selected ? NEUTRAL.amber : "#DCDCDC",
-              color: NEUTRAL.graphite,
+              borderColor: !row.owner && row._selected ? "var(--amber)" : "#DCDCDC",
+              color: "var(--text)",
               background: "#FFFFFF",
             }}
           >
@@ -616,10 +616,10 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
         </div>
 
         {/* Exhibitor */}
-        <div className="text-[11px] truncate" style={{ color: NEUTRAL.slate }}>
+        <div className="text-[11px] truncate" style={{ color: "var(--text-dim)" }}>
           {row._exhibitor !== "—" ? row._exhibitor : "—"}
           {row._matchedUserName && (
-            <span className="block text-[9px]" style={{ color: NEUTRAL.success }}>
+            <span className="block text-[9px]" style={{ color: "var(--color-resibag)" }}>
               ↳ {row._matchedUserName}
             </span>
           )}
@@ -627,7 +627,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
 
         {/* Expand */}
         <button onClick={onToggleExpand} className="p-1 rounded hover:bg-gray-100 transition-colors">
-          {expanded ? <ChevronUp size={14} style={{ color: NEUTRAL.slate }} /> : <ChevronDown size={14} style={{ color: NEUTRAL.slate }} />}
+          {expanded ? <ChevronUp size={14} style={{ color: "var(--text-dim)" }} /> : <ChevronDown size={14} style={{ color: "var(--text-dim)" }} />}
         </button>
       </div>
 
@@ -656,8 +656,8 @@ function DetailField({ label, value }) {
   return (
     <div>
       <div className="text-[9px] uppercase tracking-widest font-bold mb-0.5"
-        style={{ color: NEUTRAL.slate, letterSpacing: "0.12em" }}>{label}</div>
-      <div style={{ color: NEUTRAL.graphite }}>{value}</div>
+        style={{ color: "var(--text-dim)", letterSpacing: "0.12em" }}>{label}</div>
+      <div style={{ color: "var(--text)" }}>{value}</div>
     </div>
   );
 }

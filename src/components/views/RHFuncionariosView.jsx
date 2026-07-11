@@ -22,6 +22,7 @@ import {
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
+import { EmptyState } from "../ui/EmptyState";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -242,7 +243,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
           borderRadius: 16,
           width: "100%",
           maxWidth: 560,
-          boxShadow: "0 24px 80px rgba(0,0,0,0.22)",
+          boxShadow: "var(--shadow-pop)",
           maxHeight: "90vh",
           overflowY: "auto",
         }}
@@ -696,7 +697,7 @@ export function RHFuncionariosView({
               background: "var(--surface)",
               borderColor: "var(--border)",
               padding: "12px 16px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+              boxShadow: "var(--shadow-card)",
             }}
           >
             <div
@@ -805,15 +806,11 @@ export function RHFuncionariosView({
 
       {/* Desktop Table */}
       {filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <Users size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>
-            Nenhum funcionário encontrado
-          </div>
-          <div style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.6, marginTop: 4 }}>
-            Tente ajustar os filtros
-          </div>
-        </div>
+        <EmptyState
+          icon={Users}
+          title="Nenhum funcionário encontrado"
+          description="Tente ajustar os filtros"
+        />
       ) : (
         <>
           {/* Desktop */}

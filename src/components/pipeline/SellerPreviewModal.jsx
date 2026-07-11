@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { X, ArrowRight, Lock, User } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 
 // Modal "Preview vendedor" — mostra explicitamente, etapa por etapa,
 // quais transições o vendedor pode fazer no kanban.
@@ -10,7 +10,7 @@ import { COMPANIES, NEUTRAL } from "../../constants/companies";
 
 export function SellerPreviewModal({ open, onClose, companyId, stages, transitions }) {
   const company = COMPANIES[companyId];
-  const accent = company?.primary || NEUTRAL.graphite;
+  const accent = company?.primary || "var(--text)";
   const hasCustomRules = Boolean(transitions.rules[companyId]);
 
   // Pra cada etapa de origem não-terminal, calcula destinos permitidos e
@@ -64,10 +64,10 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
           <div className="flex items-center gap-2">
             <User size={18} style={{ color: accent }} />
             <div>
-              <h2 className="font-bold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
+              <h2 className="font-bold" style={{ fontSize: 16, color: "var(--text)" }}>
                 Como o vendedor vê · {company?.short || companyId}
               </h2>
-              <p className="text-xs" style={{ color: NEUTRAL.slate }}>
+              <p className="text-xs" style={{ color: "var(--text-dim)" }}>
                 {hasCustomRules ? "Regras personalizadas ativas" : "Modo aberto · todas transições permitidas"}
               </p>
             </div>
@@ -75,7 +75,7 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg cursor-pointer"
-            style={{ color: NEUTRAL.slate }}
+            style={{ color: "var(--text-dim)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             aria-label="Fechar"
@@ -100,11 +100,11 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
                 >
                   {from.code}
                 </span>
-                <span className="text-sm font-semibold" style={{ color: NEUTRAL.graphite }}>
+                <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
                   Em {from.name}
                 </span>
                 {Number.isFinite(from.slaDays) && (
-                  <span className="text-[10px]" style={{ color: NEUTRAL.slate }}>
+                  <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
                     · SLA {from.slaDays}d
                   </span>
                 )}
@@ -144,7 +144,7 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
 function PreviewRow({ label, stages, fallback }) {
   if (!stages.length) {
     return (
-      <div className="flex items-start gap-2 text-xs" style={{ color: NEUTRAL.slate }}>
+      <div className="flex items-start gap-2 text-xs" style={{ color: "var(--text-dim)" }}>
         <span className="font-semibold shrink-0" style={{ minWidth: 130 }}>{label}:</span>
         <span className="italic">{fallback}</span>
       </div>
@@ -152,7 +152,7 @@ function PreviewRow({ label, stages, fallback }) {
   }
   return (
     <div className="flex items-start gap-2 text-xs">
-      <span className="font-semibold shrink-0 mt-1" style={{ minWidth: 130, color: NEUTRAL.slate }}>{label}:</span>
+      <span className="font-semibold shrink-0 mt-1" style={{ minWidth: 130, color: "var(--text-dim)" }}>{label}:</span>
       <div className="flex flex-wrap gap-1.5">
         {stages.map(s => (
           <span

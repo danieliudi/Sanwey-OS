@@ -56,7 +56,7 @@ export function CRMViagensView({ currentUser, leads, users, pushNotification }) 
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",
-                  boxShadow: active ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+                  boxShadow: active ? "var(--shadow-card)" : "none",
                 }}
               >
                 <Icon size={13} /> {t.label}

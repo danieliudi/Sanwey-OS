@@ -278,7 +278,7 @@ function ShellCard({ children }) {
         margin: "0 auto",
         background: "#FFFFFF",
         borderRadius: 12,
-        boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
+        boxShadow: "var(--shadow-pop)",
         border: "1px solid #E5E7EB",
         padding: 32,
         position: "relative",

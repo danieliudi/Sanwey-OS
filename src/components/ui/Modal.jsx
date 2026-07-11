@@ -23,7 +23,7 @@ export function Modal({ open, onClose, title, children, width = 560 }) {
         style={{
           background: "var(--surface)",
           maxWidth: width,
-          boxShadow: "0 24px 64px rgba(0,0,0,0.14)",
+          boxShadow: "var(--shadow-pop)",
         }}
         onClick={e => e.stopPropagation()}
       >

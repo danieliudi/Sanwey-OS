@@ -1,6 +1,6 @@
 import React from "react";
 import { Shield } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 
 export function Logo({ size = "normal", company = "all" }) {
   const dim = size === "large" ? 40 : size === "small" ? 28 : 34;
@@ -19,13 +19,13 @@ export function Logo({ size = "normal", company = "all" }) {
       <div className="flex flex-col leading-tight min-w-0">
         <span
           className="font-bold tracking-tight truncate"
-          style={{ color: NEUTRAL.graphite, fontSize: size === "large" ? 20 : 16 }}
+          style={{ color: "var(--text)", fontSize: size === "large" ? 20 : 16 }}
         >
           Grupo Sanwey
         </span>
         <span
           className="uppercase truncate"
-          style={{ color: NEUTRAL.slate, fontSize: 9, letterSpacing: "0.14em" }}
+          style={{ color: "var(--text-dim)", fontSize: 9, letterSpacing: "0.14em" }}
         >
           Comercial Intelligence
         </span>

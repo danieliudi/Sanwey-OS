@@ -74,7 +74,7 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
   return (
     <div
       className="p-4 rounded-xl border flex flex-col gap-3 transition-all duration-150 overflow-hidden min-w-0"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -126,7 +126,7 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
           className="text-sm p-2.5 rounded-lg flex gap-2"
           style={{ background: "var(--surface)", color: "var(--text)", lineHeight: 1.5 }}
         >
-          <Flame size={13} className="shrink-0 mt-0.5" color={NEUTRAL.amber} />
+          <Flame size={13} className="shrink-0 mt-0.5" color="var(--amber)" />
           <span>{seed.evidence}</span>
         </div>
       )}
@@ -247,7 +247,7 @@ export function ProspectSuggestions({ filters, leads, accessibleCompanies, onAdd
   return (
     <div
       className="rounded-xl border overflow-hidden"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
     >
       <div
         className="px-4 py-3.5 border-b flex items-center justify-between gap-3 flex-wrap"

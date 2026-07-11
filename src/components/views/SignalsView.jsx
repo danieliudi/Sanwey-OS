@@ -110,7 +110,7 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
                   background: active ? "var(--text)" : "var(--surface)",
                   color: active ? "var(--surface)" : "var(--text-dim)",
                   borderColor: active ? "var(--text)" : "var(--border)",
-                  boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
+                  boxShadow: active ? "var(--shadow-pop)" : "none",
                 }}
                 onMouseEnter={e => {
                   if (!active) {
@@ -143,15 +143,15 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
               borderColor: "var(--border)",
               borderLeftWidth: 4,
               borderLeftColor: COMPANIES[s.company]?.primary || "var(--text-dim)",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+              boxShadow: "var(--shadow-card)",
             }}
             onClick={() => onSignalClick?.(s)}
             onMouseEnter={e => {
-              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+              e.currentTarget.style.boxShadow = "var(--shadow-pop)";
               e.currentTarget.style.borderColor = "var(--border-strong)";
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
+              e.currentTarget.style.boxShadow = "var(--shadow-card)";
               e.currentTarget.style.borderColor = "var(--border)";
             }}
           >

@@ -2,10 +2,10 @@ import React, { memo } from "react";
 import { NEUTRAL } from "../../constants/companies";
 
 function scoreColor(score) {
-  if (score >= 80) return NEUTRAL.success;
+  if (score >= 80) return "var(--color-resibag)";
   if (score >= 65) return NEUTRAL.gold;
-  if (score >= 50) return NEUTRAL.amber;
-  return NEUTRAL.slate;
+  if (score >= 50) return "var(--amber)";
+  return "var(--text-dim)";
 }
 
 function FitScoreCircleImpl({ score, size = 44 }) {

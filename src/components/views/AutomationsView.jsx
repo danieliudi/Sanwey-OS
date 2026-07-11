@@ -4,11 +4,12 @@ import {
   AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X, Info,
   Share2, Building2, GitBranch, CornerDownRight, ClipboardList,
 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
 import { AUTOMATION_TEMPLATES } from "../../constants/automation-templates";
 import { MARKETING_AUTOMATION_TEMPLATES } from "../../constants/marketing-pipelines";
 import { useAutomations } from "../../hooks/use-automations";
+import { EmptyState } from "../ui/EmptyState";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -159,23 +160,20 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser }
 
       {/* Empty state */}
       {automations.length === 0 && (
-        <div
-          className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-10 gap-3"
-          style={{ borderColor: "var(--border)" }}
-        >
-          <Zap size={32} style={{ color: "var(--border-strong)" }} />
-          <p className="text-sm font-semibold" style={{ color: "var(--text-dim)" }}>Nenhuma automação criada</p>
-          <p className="text-xs text-center max-w-md" style={{ color: "var(--text-faint)" }}>
-            Escolha um template abaixo para começar — ou crie do zero se preferir.
-          </p>
-          <button
-            onClick={() => openBuilder()}
-            className="mt-1 text-xs"
-            style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-          >
-            Criar automação personalizada
-          </button>
-        </div>
+        <EmptyState
+          icon={Zap}
+          title="Nenhuma automação criada"
+          description="Escolha um template abaixo para começar — ou crie do zero se preferir."
+          action={
+            <button
+              onClick={() => openBuilder()}
+              className="mt-1 text-xs"
+              style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Criar automação personalizada
+            </button>
+          }
+        />
       )}
 
       {/* Galeria de templates — mostra sempre que houver poucos automatismos
@@ -1284,24 +1282,24 @@ function ActionConfig({ action: a, allStages, setAction }) {
     return (
       <div className="space-y-2">
         <div>
-          <label className="block text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.graphite }}>Título da entrega</label>
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text)" }}>Título da entrega</label>
           <input
             type="text"
             value={a.deliverableTitle || ""}
             onChange={e => setAction({ deliverableTitle: e.target.value })}
             placeholder="Onboarding: {empresa}"
             className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+            style={{ borderColor: "#E5E7EB", color: "var(--text)" }}
           />
-          <p className="text-[10px] mt-1" style={{ color: NEUTRAL.slate }}>Use {"{empresa}"} para inserir o nome do negócio automaticamente.</p>
+          <p className="text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>Use {"{empresa}"} para inserir o nome do negócio automaticamente.</p>
         </div>
         <div>
-          <label className="block text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.graphite }}>Prioridade</label>
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text)" }}>Prioridade</label>
           <select
             value={a.deliverablePriority || "media"}
             onChange={e => setAction({ deliverablePriority: e.target.value })}
             className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+            style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
           >
             <option value="baixa">Baixa</option>
             <option value="media">Média</option>
@@ -1314,7 +1312,7 @@ function ActionConfig({ action: a, allStages, setAction }) {
 
   if (a.type === "enrich_cnpj") {
     return (
-      <p className="text-[11px]" style={{ color: NEUTRAL.slate }}>
+      <p className="text-[11px]" style={{ color: "var(--text-dim)" }}>
         Ao disparar, busca o CNPJ do lead automaticamente e preenche setor, cidade, estado e situação — só nos campos que ainda estiverem vazios.
       </p>
     );

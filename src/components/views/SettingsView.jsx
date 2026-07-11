@@ -16,7 +16,7 @@ function Section({ title, description, children }) {
   return (
     <div
       className="p-5 rounded-xl border"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
     >
       <div className="mb-4">
         <h2 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>
@@ -865,8 +865,8 @@ export function SettingsView({
                           className="py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all"
                           style={{
                             background: aiForm.provider === p.id ? NEUTRAL.red + "0F" : "var(--surface)",
-                            borderColor: aiForm.provider === p.id ? NEUTRAL.red : "var(--border)",
-                            color: aiForm.provider === p.id ? NEUTRAL.red : "var(--text)",
+                            borderColor: aiForm.provider === p.id ? "var(--color-industria)" : "var(--border)",
+                            color: aiForm.provider === p.id ? "var(--color-industria)" : "var(--text)",
                             cursor: "pointer",
                           }}
                         >
@@ -889,7 +889,7 @@ export function SettingsView({
                             className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all"
                             style={{
                               background: aiForm.model === m.id ? NEUTRAL.red + "0F" : "var(--surface)",
-                              borderColor: aiForm.model === m.id ? NEUTRAL.red : "var(--border)",
+                              borderColor: aiForm.model === m.id ? "var(--color-industria)" : "var(--border)",
                             }}
                           >
                             <input
@@ -1237,7 +1237,7 @@ export function SettingsView({
                 >
                   <div
                     className="p-3.5 rounded-lg mb-4 flex items-start gap-2.5 text-xs"
-                    style={{ background: NEUTRAL.amber + "15" || "#FFF7ED", borderLeft: `3px solid ${NEUTRAL.amber || "#F59E0B"}`, color: NEUTRAL.amber || "#B45309" }}
+                    style={{ background: NEUTRAL.amber + "15" || "#FFF7ED", borderLeft: "3px solid var(--amber)", color: "var(--amber)" }}
                   >
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                     <span className="leading-relaxed">

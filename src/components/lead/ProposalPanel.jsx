@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, Loader2, AlertCircle, Download, RotateCcw } from "lucide-react";
 import { useAI } from "../../hooks/use-ai";
 import { proposalPrompt } from "../../constants/ai-prompts";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 
 const RED = "#b5000b";
 const BORDER = "#E5E7EB";
@@ -65,7 +65,7 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
       <div className="rounded-xl border" style={{ background: BG, borderColor: BORDER, padding: 16 }}>
         <div className="flex items-center gap-2 mb-3">
           <Bot size={15} style={{ color: RED }} />
-          <span className="text-sm font-semibold" style={{ color: NEUTRAL.graphite }}>
+          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
             Proposta comercial
           </span>
         </div>
@@ -87,7 +87,7 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150"
             style={{
               background: !isConfigured ? "#E5E7EB" : RED,
-              color: !isConfigured ? NEUTRAL.slate : "#FFFFFF",
+              color: !isConfigured ? "var(--text-dim)" : "#FFFFFF",
               cursor: loading || !isConfigured ? "not-allowed" : "pointer",
               border: "none",
             }}
@@ -102,14 +102,14 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
               onChange={e => setDraft(e.target.value)}
               rows={14}
               className="w-full text-sm rounded-lg border px-3 py-2.5 outline-none resize-vertical"
-              style={{ borderColor: BORDER, background: "#FFFFFF", color: NEUTRAL.graphite, fontFamily: "inherit", lineHeight: 1.6 }}
+              style={{ borderColor: BORDER, background: "#FFFFFF", color: "var(--text)", fontFamily: "inherit", lineHeight: 1.6 }}
             />
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleGenerate}
                 disabled={loading}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
-                style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: BORDER, cursor: "pointer" }}
+                style={{ background: "#FFFFFF", color: "var(--text-dim)", borderColor: BORDER, cursor: "pointer" }}
               >
                 <RotateCcw size={11} />
                 Regenerar

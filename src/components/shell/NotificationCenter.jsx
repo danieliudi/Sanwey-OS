@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Bell, Check, GitBranch, Calendar, User, Trash2, X } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import { formatDateBR } from "../../utils/date";
 
 const TYPE_ICON = {
@@ -12,9 +11,9 @@ const TYPE_ICON = {
 
 const TYPE_COLOR = {
   followup: "#F59E0B",
-  stage_changed: NEUTRAL.slate,
+  stage_changed: "var(--text-dim)",
   lead_assigned: "var(--accent)",
-  default: NEUTRAL.slate,
+  default: "var(--text-dim)",
 };
 
 function timeAgo(iso) {
@@ -70,12 +69,12 @@ export function NotificationCenter({
         className="relative flex items-center justify-center rounded-xl transition-colors"
         style={{
           width: 36, height: 36,
-          background: open ? "#F0EDE8" : "transparent",
+          background: open ? "var(--surface-alt)" : "transparent",
           border: "none",
           cursor: "pointer",
-          color: NEUTRAL.graphite,
+          color: "var(--text)",
         }}
-        onMouseEnter={e => { e.currentTarget.style.background = "#F0EDE8"; }}
+        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
         onMouseLeave={e => { if (!open) e.currentTarget.style.background = "transparent"; }}
         title="Notificações"
       >
@@ -103,17 +102,17 @@ export function NotificationCenter({
           className="fixed top-14 left-2 right-2 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[340px] flex flex-col rounded-2xl border overflow-hidden z-50"
           style={{
             maxHeight: 480,
-            background: "#FFFFFF",
-            borderColor: "#E5E7EB",
-            boxShadow: "0 8px 32px rgba(32,26,26,0.14)",
+            background: "var(--surface)",
+            borderColor: "var(--border)",
+            boxShadow: "var(--shadow-pop)",
           }}
         >
           {/* Header */}
           <div
             className="flex items-center justify-between px-4 py-3 border-b"
-            style={{ borderColor: "#E5E7EB", background: "var(--surface-alt)" }}
+            style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
-            <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
+            <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
               Notificações {unreadCount > 0 && <span style={{ color: "var(--accent)" }}>({unreadCount})</span>}
             </span>
             <div className="flex items-center gap-1">
@@ -121,8 +120,8 @@ export function NotificationCenter({
                 <button
                   onClick={onMarkAllRead}
                   className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg transition-colors"
-                  style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#E5E7EB"; }}
+                  style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
                   title="Marcar todas como lidas"
                 >
@@ -133,8 +132,8 @@ export function NotificationCenter({
                 <button
                   onClick={onClearAll}
                   className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg transition-colors"
-                  style={{ color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "#E5E7EB"; }}
+                  style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
                   title="Limpar tudo"
                 >
@@ -144,7 +143,7 @@ export function NotificationCenter({
               <button
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-center rounded-lg transition-colors"
-                style={{ width: 24, height: 24, color: NEUTRAL.slate, background: "none", border: "none", cursor: "pointer" }}
+                style={{ width: 24, height: 24, color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#E5E7EB"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
               >
@@ -157,13 +156,13 @@ export function NotificationCenter({
           {desktopPermission === "default" && (
             <div
               className="flex items-center justify-between px-4 py-2.5 border-b text-xs"
-              style={{ borderColor: "#E5E7EB", background: "#FEF3C7" }}
+              style={{ borderColor: "var(--border)", background: "var(--amber-bg)" }}
             >
-              <span style={{ color: "#92400E" }}>Ativar notificações do navegador?</span>
+              <span style={{ color: "var(--warning)" }}>Ativar notificações do navegador?</span>
               <button
                 onClick={onRequestDesktopPermission}
                 className="font-semibold px-2.5 py-1 rounded-lg"
-                style={{ background: "#F59E0B", color: "#FFFFFF", border: "none", cursor: "pointer", fontSize: 11 }}
+                style={{ background: "var(--amber)", color: "#FFFFFF", border: "none", cursor: "pointer", fontSize: 11 }}
               >
                 Ativar
               </button>
@@ -174,11 +173,11 @@ export function NotificationCenter({
           <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2">
-                <Bell size={28} style={{ color: "#D4CFC9" }} strokeWidth={1.5} />
-                <span className="text-sm" style={{ color: NEUTRAL.slate }}>Nenhuma notificação</span>
+                <Bell size={28} style={{ color: "var(--text-faint)" }} strokeWidth={1.5} />
+                <span className="text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma notificação</span>
               </div>
             ) : (
-              <div className="divide-y" style={{ borderColor: "#F0EDE8" }}>
+              <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                 {notifications.map((notif) => {
                   const Icon = TYPE_ICON[notif.type] || TYPE_ICON.default;
                   const color = TYPE_COLOR[notif.type] || TYPE_COLOR.default;
@@ -187,9 +186,9 @@ export function NotificationCenter({
                       key={notif.id}
                       onClick={() => handleNotifClick(notif)}
                       className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors"
-                      style={{ background: notif.read ? "#FFFFFF" : "#FBF9F7" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = notif.read ? "#FFFFFF" : "#FBF9F7"; }}
+                      style={{ background: notif.read ? "var(--surface)" : "var(--surface-alt)" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--border)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = notif.read ? "var(--surface)" : "var(--surface-alt)"; }}
                     >
                       <div
                         className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
@@ -198,13 +197,13 @@ export function NotificationCenter({
                         <Icon size={13} style={{ color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold leading-snug" style={{ color: NEUTRAL.graphite }}>
+                        <div className="text-xs font-semibold leading-snug" style={{ color: "var(--text)" }}>
                           {notif.title}
                         </div>
-                        <div className="text-xs mt-0.5 leading-relaxed" style={{ color: NEUTRAL.slate }}>
+                        <div className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
                           {notif.body}
                         </div>
-                        <div className="text-[10px] mt-1" style={{ color: "#AEAAA5" }}>
+                        <div className="text-[10px] mt-1" style={{ color: "var(--text-faint)" }}>
                           {timeAgo(notif.createdAt)}
                         </div>
                       </div>

@@ -7,7 +7,6 @@ import { useAI } from "../../hooks/use-ai";
 import {
   briefingPrompt, emailDraftPrompt, nextStepPrompt, objectionPrompt, scorePrompt,
 } from "../../constants/ai-prompts";
-import { NEUTRAL } from "../../constants/companies";
 
 const RED = "var(--accent)";
 const CREAM = "var(--surface-alt)";
@@ -163,7 +162,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
       >
         <div className="flex items-center gap-2">
           <Bot size={15} style={{ color: RED }} strokeWidth={2} />
-          <span className="text-sm font-semibold" style={{ color: NEUTRAL.graphite }}>
+          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
             Assistente de IA
           </span>
           {!isConfigured && (
@@ -176,8 +175,8 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
           )}
         </div>
         {open
-          ? <ChevronUp size={15} style={{ color: NEUTRAL.slate }} />
-          : <ChevronDown size={15} style={{ color: NEUTRAL.slate }} />}
+          ? <ChevronUp size={15} style={{ color: "var(--text-dim)" }} />
+          : <ChevronDown size={15} style={{ color: "var(--text-dim)" }} />}
       </button>
 
       {/* Body */}
@@ -192,7 +191,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
                 className="text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
                 style={{
                   background: activeFeature === f.id ? RED : "#FFFFFF",
-                  color: activeFeature === f.id ? "#FFFFFF" : NEUTRAL.graphite,
+                  color: activeFeature === f.id ? "#FFFFFF" : "var(--text)",
                   borderColor: activeFeature === f.id ? RED : BORDER,
                   cursor: "pointer",
                 }}
@@ -207,7 +206,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
                   if (activeFeature !== f.id) {
                     e.currentTarget.style.background = "#FFFFFF";
                     e.currentTarget.style.borderColor = BORDER;
-                    e.currentTarget.style.color = NEUTRAL.graphite;
+                    e.currentTarget.style.color = "var(--text)";
                   }
                 }}
               >
@@ -219,20 +218,20 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
           {/* Email tone selector */}
           {activeFeature === "email" && (
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium" style={{ color: NEUTRAL.slate }}>Tom:</span>
+              <span className="text-xs font-medium" style={{ color: "var(--text-dim)" }}>Tom:</span>
               {TONES.map(t => (
                 <button
                   key={t.value}
                   onClick={() => setEmailTone(t.value)}
                   className="text-xs px-2.5 py-1 rounded-full border transition-all duration-150"
                   style={{
-                    background: emailTone === t.value ? NEUTRAL.graphite : "#FFFFFF",
-                    color: emailTone === t.value ? "#FFFFFF" : NEUTRAL.graphite,
-                    borderColor: emailTone === t.value ? NEUTRAL.graphite : BORDER,
+                    background: emailTone === t.value ? "var(--text)" : "#FFFFFF",
+                    color: emailTone === t.value ? "#FFFFFF" : "var(--text)",
+                    borderColor: emailTone === t.value ? "var(--text)" : BORDER,
                     cursor: "pointer",
                   }}
                   onMouseEnter={e => {
-                    if (emailTone !== t.value) e.currentTarget.style.borderColor = NEUTRAL.graphite;
+                    if (emailTone !== t.value) e.currentTarget.style.borderColor = "var(--text)";
                   }}
                   onMouseLeave={e => {
                     if (emailTone !== t.value) e.currentTarget.style.borderColor = BORDER;
@@ -255,7 +254,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
               style={{
                 borderColor: BORDER,
                 background: "#FFFFFF",
-                color: NEUTRAL.graphite,
+                color: "var(--text)",
                 fontFamily: "inherit",
               }}
               onFocus={e => { e.currentTarget.style.borderColor = RED; }}
@@ -270,7 +269,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150 active:scale-95"
             style={{
               background: !isConfigured ? "#E5E7EB" : RED,
-              color: !isConfigured ? NEUTRAL.slate : "#FFFFFF",
+              color: !isConfigured ? "var(--text-dim)" : "#FFFFFF",
               cursor: loading || !isConfigured ? "not-allowed" : "pointer",
               border: "none",
               opacity: loading ? 0.8 : 1,
@@ -317,7 +316,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
                 >
                   {scoreResult.score}
                 </div>
-                <div className="text-sm leading-relaxed" style={{ color: NEUTRAL.graphite }}>
+                <div className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
                   {scoreResult.justificativa}
                 </div>
               </div>
@@ -325,9 +324,9 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
                 <button
                   onClick={handleRegenerate}
                   className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
-                  style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: BORDER, cursor: "pointer" }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = NEUTRAL.slate; }}
+                  style={{ background: "#FFFFFF", color: "var(--text-dim)", borderColor: BORDER, cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "var(--text-dim)"; }}
                 >
                   <RotateCcw size={11} />
                   Recalcular
@@ -344,7 +343,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
             <div className="space-y-2">
               <div
                 className="text-sm leading-relaxed whitespace-pre-line p-3 rounded-lg border"
-                style={{ background: CREAM, borderColor: BORDER, color: NEUTRAL.graphite }}
+                style={{ background: CREAM, borderColor: BORDER, color: "var(--text)" }}
               >
                 {result}
               </div>
@@ -352,9 +351,9 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
                 <button
                   onClick={handleRegenerate}
                   className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
-                  style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: BORDER, cursor: "pointer" }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = NEUTRAL.slate; }}
+                  style={{ background: "#FFFFFF", color: "var(--text-dim)", borderColor: BORDER, cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "var(--text-dim)"; }}
                 >
                   <RotateCcw size={11} />
                   Regenerar
@@ -364,15 +363,15 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
                   className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
                   style={{
                     background: copied ? "#F0FDF4" : "#FFFFFF",
-                    color: copied ? "#16A34A" : NEUTRAL.slate,
+                    color: copied ? "#16A34A" : "var(--text-dim)",
                     borderColor: copied ? "#BBF7D0" : BORDER,
                     cursor: "pointer",
                   }}
                   onMouseEnter={e => {
-                    if (!copied) { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; }
+                    if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; }
                   }}
                   onMouseLeave={e => {
-                    if (!copied) { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = NEUTRAL.slate; }
+                    if (!copied) { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = "var(--text-dim)"; }
                   }}
                 >
                   {copied ? <Check size={11} /> : <Copy size={11} />}
@@ -385,7 +384,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
                     style={{
                       background: scheduled ? "#F0FDF4" : "#FFFFFF",
-                      color: scheduled ? "#16A34A" : NEUTRAL.slate,
+                      color: scheduled ? "#16A34A" : "var(--text-dim)",
                       borderColor: scheduled ? "#BBF7D0" : BORDER,
                       cursor: scheduled ? "default" : "pointer",
                     }}
@@ -401,7 +400,7 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
                     style={{
                       background: savedToHistory ? "#F0FDF4" : "#FFFFFF",
-                      color: savedToHistory ? "#16A34A" : NEUTRAL.slate,
+                      color: savedToHistory ? "#16A34A" : "var(--text-dim)",
                       borderColor: savedToHistory ? "#BBF7D0" : BORDER,
                       cursor: savedToHistory ? "default" : "pointer",
                     }}

@@ -1,5 +1,4 @@
 import React, { memo } from "react";
-import { NEUTRAL } from "../../constants/companies";
 
 // Indicador de completude dos campos obrigatórios da etapa atual, visível
 // direto no card do Kanban sem precisar abrir o drawer (auditoria 10.3).
@@ -8,7 +7,7 @@ import { NEUTRAL } from "../../constants/companies";
 function CompletenessBadgeImpl({ filled, total, size = 30 }) {
   if (!total) return null;
   const complete = filled >= total;
-  const color = complete ? NEUTRAL.success : NEUTRAL.amber;
+  const color = complete ? "var(--color-resibag)" : "var(--amber)";
   const radius = (size - 6) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (filled / total) * circumference;

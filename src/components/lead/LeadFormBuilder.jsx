@@ -4,7 +4,6 @@ import {
   Type, Hash, DollarSign, CalendarDays, Mail, Phone, AlignLeft,
   MapPin, Building2, Tag, User,
 } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import { FIELD_DEFS, FIELD_DEFS_ARRAY } from "../../constants/lead-form-fields";
 
 const TYPE_ICON = {
@@ -130,10 +129,10 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
           style={{ borderColor: "#E5E7EB", background: "#F8F9FA" }}
         >
           <div>
-            <div className="font-bold text-sm" style={{ color: NEUTRAL.graphite }}>
+            <div className="font-bold text-sm" style={{ color: "var(--text)" }}>
               Configurar formulário de criação
             </div>
-            <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>
+            <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
               Arraste campos da esquerda para o formulário · reordene arrastando
             </div>
           </div>
@@ -150,7 +149,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-              style={{ color: NEUTRAL.slate }}
+              style={{ color: "var(--text-dim)" }}
             >
               <X size={16} />
             </button>
@@ -171,12 +170,12 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
           >
             <div
               className="text-[10px] font-bold uppercase tracking-widest mb-3 px-1"
-              style={{ color: NEUTRAL.slate, letterSpacing: "0.14em" }}
+              style={{ color: "var(--text-dim)", letterSpacing: "0.14em" }}
             >
               Campos disponíveis
             </div>
             {Object.entries(groups).length === 0 ? (
-              <div className="text-xs px-1" style={{ color: NEUTRAL.slate }}>
+              <div className="text-xs px-1" style={{ color: "var(--text-dim)" }}>
                 Todos os campos já estão no formulário.
               </div>
             ) : (
@@ -184,7 +183,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                 <div key={group} className="mb-4">
                   <div
                     className="text-[9px] font-bold uppercase tracking-widest px-1 mb-1.5"
-                    style={{ color: NEUTRAL.slate, opacity: 0.7 }}
+                    style={{ color: "var(--text-dim)", opacity: 0.7 }}
                   >
                     {group}
                   </div>
@@ -199,15 +198,15 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                         background: "#FFFFFF",
                         border: "1px solid #E5E7EB",
                         fontSize: 12,
-                        color: NEUTRAL.graphite,
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                        color: "var(--text)",
+                        boxShadow: "var(--shadow-card)",
                       }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.background = "#FBE9EB"; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.background = "#FFFFFF"; }}
                     >
                       <FieldTypeIcon type={f.type} size={12} />
                       <span className="font-medium flex-1">{f.label}</span>
-                      <GripVertical size={11} style={{ color: NEUTRAL.slate, opacity: 0.5 }} />
+                      <GripVertical size={11} style={{ color: "var(--text-dim)", opacity: 0.5 }} />
                     </div>
                   ))}
                 </div>
@@ -236,7 +235,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                 >
                   <Star size={12} fill="white" />
                 </div>
-                <span className="font-bold text-sm" style={{ color: NEUTRAL.graphite }}>
+                <span className="font-bold text-sm" style={{ color: "var(--text)" }}>
                   Novo card
                 </span>
               </div>
@@ -272,7 +271,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                 {fields.length === 0 && (
                   <div
                     className="py-8 text-center text-xs rounded-lg border-2 border-dashed"
-                    style={{ color: NEUTRAL.slate, borderColor: "#E5E7EB" }}
+                    style={{ color: "var(--text-dim)", borderColor: "#E5E7EB" }}
                   >
                     Arraste campos aqui
                   </div>
@@ -329,9 +328,9 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
         transition: "all 0.1s",
       }}
     >
-      <GripVertical size={14} style={{ color: NEUTRAL.slate, opacity: 0.5, flexShrink: 0 }} />
+      <GripVertical size={14} style={{ color: "var(--text-dim)", opacity: 0.5, flexShrink: 0 }} />
       <FieldTypeIcon type={field.type} size={13} />
-      <span className="flex-1 text-sm font-medium" style={{ color: NEUTRAL.graphite }}>
+      <span className="flex-1 text-sm font-medium" style={{ color: "var(--text)" }}>
         {field.label}
         {field.required && (
           <span className="ml-1 text-xs font-bold" style={{ color: "var(--accent)" }}>*</span>
@@ -353,7 +352,7 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
             className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold transition-colors"
             style={{
               background: field.required ? "#FBE9EB" : "var(--surface-alt)",
-              color: field.required ? "var(--accent)" : NEUTRAL.slate,
+              color: field.required ? "var(--accent)" : "var(--text-dim)",
               border: "none",
               cursor: "pointer",
             }}
@@ -365,9 +364,9 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
             type="button"
             onClick={onRemove}
             className="p-1 rounded transition-colors"
-            style={{ color: NEUTRAL.slate, background: "transparent", border: "none", cursor: "pointer" }}
+            style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
             onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.background = "#FEE2E2"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.background = "transparent"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
           >
             <Trash2 size={13} />
           </button>

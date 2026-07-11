@@ -7,7 +7,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
       style={{
         background: accent || "var(--surface)",
         borderColor: accent ? "transparent" : "var(--border)",
-        boxShadow: accent ? "none" : "0 1px 3px rgba(0,0,0,0.04)",
+        boxShadow: accent ? "none" : "var(--shadow-card)",
       }}
     >
       <div className="flex items-center justify-between mb-4">

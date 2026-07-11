@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { X, Plus, GripVertical, Trash2, ArrowUp, ArrowDown } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import { Button } from "../ui/Button";
 import { FIELD_TYPES, slugifyKey } from "../../hooks/use-stage-fields";
 
@@ -97,22 +96,22 @@ export function StageFieldsEditor({
     >
       <div
         className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl"
-        style={{ background: "#FFFFFF", boxShadow: "0 8px 32px rgba(0,0,0,0.16)" }}
+        style={{ background: "#FFFFFF", boxShadow: "var(--shadow-pop)" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="sticky top-0 z-10 px-5 py-4 border-b flex items-center justify-between"
              style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
           <div>
-            <h2 className="font-bold text-base" style={{ color: NEUTRAL.graphite }}>
+            <h2 className="font-bold text-base" style={{ color: "var(--text)" }}>
               Campos da etapa
             </h2>
-            <div className="text-xs mt-0.5" style={{ color: NEUTRAL.slate }}>{stageName}</div>
+            <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{stageName}</div>
           </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg cursor-pointer"
-            style={{ color: NEUTRAL.slate }}
+            style={{ color: "var(--text-dim)" }}
             aria-label="Fechar"
           >
             <X size={18} />
@@ -130,30 +129,30 @@ export function StageFieldsEditor({
           {/* Lista de campos existentes */}
           <div className="space-y-2">
             {existing.length === 0 && (
-              <div className="text-xs italic py-4 text-center" style={{ color: NEUTRAL.slate }}>
+              <div className="text-xs italic py-4 text-center" style={{ color: "var(--text-dim)" }}>
                 Nenhum campo configurado ainda. Adicione abaixo.
               </div>
             )}
             {existing.map((f, idx) => (
               <div key={f.id} className="rounded-lg border p-3 flex items-center gap-2"
                    style={{ borderColor: "#E8E8E8", background: "var(--surface-alt)" }}>
-                <GripVertical size={14} color={NEUTRAL.slate} />
+                <GripVertical size={14} color="var(--text-dim)" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold flex items-center gap-2" style={{ color: NEUTRAL.graphite }}>
+                  <div className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text)" }}>
                     {f.label}
                     {f.required && <span className="text-[10px] font-normal px-1.5 py-0.5 rounded"
                                          style={{ background: "#FEE2E2", color: "#B91C1C" }}>obrigatório</span>}
                   </div>
-                  <div className="text-[11px] mt-0.5" style={{ color: NEUTRAL.slate }}>
+                  <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
                     {FIELD_TYPES.find(t => t.value === f.fieldType)?.label || f.fieldType} · chave: <code>{f.fieldKey}</code>
                   </div>
                 </div>
                 <button onClick={() => move(idx, -1)} disabled={idx === 0}
                         className="p-1.5 rounded disabled:opacity-30 cursor-pointer"
-                        style={{ color: NEUTRAL.slate }} title="Subir"><ArrowUp size={14} /></button>
+                        style={{ color: "var(--text-dim)" }} title="Subir"><ArrowUp size={14} /></button>
                 <button onClick={() => move(idx, +1)} disabled={idx === existing.length - 1}
                         className="p-1.5 rounded disabled:opacity-30 cursor-pointer"
-                        style={{ color: NEUTRAL.slate }} title="Descer"><ArrowDown size={14} /></button>
+                        style={{ color: "var(--text-dim)" }} title="Descer"><ArrowDown size={14} /></button>
                 <button onClick={() => setDraft({ ...f })}
                         className="text-xs font-semibold px-2.5 py-1 rounded-lg cursor-pointer"
                         style={{ background: "var(--surface-alt)", color: "#1E40AF" }}>Editar</button>
@@ -168,7 +167,7 @@ export function StageFieldsEditor({
           {draft && (
             <div className="rounded-lg border p-4 space-y-3"
                  style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
-              <div className="text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+              <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>
                 {draft._new ? "Novo campo" : "Editar campo"}
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -218,7 +217,7 @@ export function StageFieldsEditor({
                 </FieldInput>
               )}
               <label className="inline-flex items-center gap-2 text-sm cursor-pointer"
-                     style={{ color: NEUTRAL.graphite }}>
+                     style={{ color: "var(--text)" }}>
                 <input type="checkbox" checked={!!draft.required}
                        onChange={e => setDraft({ ...draft, required: e.target.checked })} />
                 <span>Obrigatório</span>
@@ -251,7 +250,7 @@ export function StageFieldsEditor({
 function FieldInput({ label, required, children }) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold mb-1" style={{ color: NEUTRAL.slate }}>
+      <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>
         {label}{required && <span style={{ color: "#B91C1C", marginLeft: 3 }}>*</span>}
       </label>
       {children}

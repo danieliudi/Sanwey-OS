@@ -1458,7 +1458,7 @@ export function CampaignDetailDrawer({
     >
       <div
         className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-6xl lg:rounded-2xl lg:max-h-[92vh]"
-        style={{ background: "var(--surface)", boxShadow: "0 24px 64px rgba(32,26,26,0.18)", overflow: "hidden", height: "100%" }}
+        style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)", overflow: "hidden", height: "100%" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Mobile header */}

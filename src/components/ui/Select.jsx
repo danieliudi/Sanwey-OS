@@ -1,6 +1,5 @@
 import React from "react";
 import { ChevronDown } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 
 export function Select({ value, onChange, options, placeholder, className = "" }) {
   return (
@@ -12,7 +11,7 @@ export function Select({ value, onChange, options, placeholder, className = "" }
         style={{
           borderColor: "#E5E7EB",
           background: "#FFFFFF",
-          color: value ? NEUTRAL.graphite : NEUTRAL.slate,
+          color: value ? "var(--text)" : "var(--text-dim)",
           "--tw-ring-color": "rgba(199,33,43,.15)",
         }}
         onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent)"; }}
@@ -31,7 +30,7 @@ export function Select({ value, onChange, options, placeholder, className = "" }
       <ChevronDown
         size={14}
         className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-        color={NEUTRAL.slate}
+        color="var(--text-dim)"
       />
     </div>
   );

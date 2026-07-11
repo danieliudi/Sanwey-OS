@@ -5,7 +5,6 @@ import { useAI } from "../../hooks/use-ai";
 import { pipelineChatPrompt } from "../../constants/ai-prompts";
 import { aggregatePipeline } from "../../utils/pipeline-metrics";
 import { formatK } from "../../utils/currency";
-import { NEUTRAL } from "../../constants/companies";
 
 const RED = "var(--accent)";
 
@@ -96,7 +95,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
           width: "100%",
           maxWidth: 420,
           background: "#FFFFFF",
-          boxShadow: "-4px 0 24px rgba(0,0,0,0.12)",
+          boxShadow: "var(--shadow-pop)",
           borderLeft: "1px solid #E5E7EB",
         }}
       >
@@ -107,16 +106,16 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
         >
           <div className="flex items-center gap-2">
             <Bot size={17} style={{ color: RED }} />
-            <span className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
+            <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
               Chat com Pipeline
             </span>
           </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg transition-colors"
-            style={{ color: NEUTRAL.slate, background: "transparent", border: "none", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+            style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
           >
             <X size={16} />
           </button>
@@ -144,10 +143,10 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                 <Bot size={22} style={{ color: RED }} />
               </div>
               <div>
-                <p className="font-semibold text-sm" style={{ color: NEUTRAL.graphite }}>
+                <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>
                   Pergunte sobre seu pipeline
                 </p>
-                <p className="text-xs mt-1" style={{ color: NEUTRAL.slate }}>
+                <p className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
                   Ex: "Quais leads estão parados há mais de 15 dias?" ou "Qual o valor total em negociação?"
                 </p>
               </div>
@@ -178,7 +177,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                   style={
                     isError
                       ? { background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }
-                      : { background: "var(--surface-alt)", color: NEUTRAL.graphite }
+                      : { background: "var(--surface-alt)", color: "var(--text)" }
                   }
                 >
                   {isError && <AlertCircle size={12} style={{ display: "inline", marginRight: 4 }} />}
@@ -193,7 +192,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
             <div className="flex justify-start">
               <div
                 className="flex items-center gap-2 text-sm px-3 py-2 rounded-2xl rounded-tl-sm"
-                style={{ background: "var(--surface-alt)", color: NEUTRAL.slate }}
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}
               >
                 <Loader2 size={13} className="animate-spin" />
                 Analisando pipeline...
@@ -225,7 +224,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
               style={{
                 border: "none",
                 background: "transparent",
-                color: NEUTRAL.graphite,
+                color: "var(--text)",
                 fontFamily: "inherit",
                 lineHeight: "1.5",
               }}
@@ -236,7 +235,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
               className="m-1.5 p-2 rounded-lg flex-shrink-0 transition-all active:scale-95"
               style={{
                 background: !isConfigured || !input.trim() || loading ? "var(--surface-alt)" : RED,
-                color: !isConfigured || !input.trim() || loading ? NEUTRAL.slate : "#FFFFFF",
+                color: !isConfigured || !input.trim() || loading ? "var(--text-dim)" : "#FFFFFF",
                 border: "none",
                 cursor: !isConfigured || !input.trim() || loading ? "not-allowed" : "pointer",
               }}

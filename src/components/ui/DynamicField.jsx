@@ -1,5 +1,4 @@
 import React from "react";
-import { NEUTRAL } from "../../constants/companies";
 
 // Render de um único campo customizado em formulário (CSS compacto para
 // usar tanto no QuickAddForm do kanban quanto em outros lugares).
@@ -18,7 +17,7 @@ export function DynamicField({ field, value, onChange, users = [], disabled = fa
     borderRadius: 8,
     border: "1px solid #D1D5DB",
     outline: "none",
-    color: NEUTRAL.graphite,
+    color: "var(--text)",
     background: "#FFFFFF",
     boxSizing: "border-box",
   };
@@ -85,7 +84,7 @@ export function DynamicField({ field, value, onChange, users = [], disabled = fa
       break;
     case "checkbox":
       input = (
-        <label className="inline-flex items-center gap-2 cursor-pointer" style={{ fontSize: 12, color: NEUTRAL.graphite }}>
+        <label className="inline-flex items-center gap-2 cursor-pointer" style={{ fontSize: 12, color: "var(--text)" }}>
           <input type="checkbox" checked={!!value} onChange={handleCheckbox} disabled={disabled} />
           <span>{field.placeholder || "Sim"}</span>
         </label>
@@ -120,13 +119,13 @@ export function DynamicField({ field, value, onChange, users = [], disabled = fa
 
   return (
     <div className="space-y-1">
-      <label className="block text-[11px] font-semibold" style={{ color: NEUTRAL.slate }}>
+      <label className="block text-[11px] font-semibold" style={{ color: "var(--text-dim)" }}>
         {field.label}
         {field.required && <span style={{ color: "#B91C1C", marginLeft: 3 }}>*</span>}
       </label>
       {input}
       {field.helpText && (
-        <div className="text-[10px]" style={{ color: NEUTRAL.slate }}>{field.helpText}</div>
+        <div className="text-[10px]" style={{ color: "var(--text-dim)" }}>{field.helpText}</div>
       )}
     </div>
   );

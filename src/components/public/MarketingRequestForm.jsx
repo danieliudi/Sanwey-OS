@@ -23,7 +23,7 @@ const shell = {
 const card = {
   background: "#FFFFFF",
   borderRadius: 20,
-  boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
+  boxShadow: "var(--shadow-pop)",
   padding: "36px 32px",
   width: "100%",
   maxWidth: 540,

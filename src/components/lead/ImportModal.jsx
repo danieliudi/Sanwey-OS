@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { Upload, X, ChevronRight, ChevronLeft, Download, Check } from "lucide-react";
-import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 
 // ---------------------------------------------------------------------------
@@ -118,7 +118,7 @@ function firstSample(rows, colIdx, limit = 15) {
 // Styles helpers
 // ---------------------------------------------------------------------------
 const BTN_PRIMARY = {
-  background: NEUTRAL.red,
+  background: "var(--color-industria)",
   color: "#FFFFFF",
   border: "none",
   borderRadius: 8,
@@ -133,7 +133,7 @@ const BTN_PRIMARY = {
 
 const BTN_SECONDARY = {
   background: "#FFFFFF",
-  color: NEUTRAL.graphite,
+  color: "var(--text)",
   border: `1px solid #E5E7EB`,
   borderRadius: 8,
   padding: "10px 20px",
@@ -147,7 +147,7 @@ const BTN_SECONDARY = {
 
 const BTN_GHOST = {
   background: "transparent",
-  color: NEUTRAL.slate,
+  color: "var(--text-dim)",
   border: "1px solid transparent",
   borderRadius: 8,
   padding: "10px 20px",
@@ -164,7 +164,7 @@ const LABEL_STYLE = {
   fontWeight: 700,
   textTransform: "uppercase",
   letterSpacing: "0.15em",
-  color: NEUTRAL.slate,
+  color: "var(--text-dim)",
   display: "block",
   marginBottom: 6,
 };
@@ -175,7 +175,7 @@ const SELECT_STYLE = {
   border: `1px solid #E5E7EB`,
   borderRadius: 8,
   fontSize: 13,
-  color: NEUTRAL.graphite,
+  color: "var(--text)",
   background: "#FFFFFF",
   outline: "none",
 };
@@ -402,7 +402,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
     borderRadius: 12,
     maxHeight: "90vh",
     overflowY: "auto",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+    boxShadow: "var(--shadow-pop)",
     marginTop: "auto",
     marginBottom: "auto",
   };
@@ -421,10 +421,10 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
           }}
         >
           <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.01em" }}>
               Importar planilha
             </div>
-            <div style={{ fontSize: 12, color: NEUTRAL.slate, marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
               {step === 1 && "Passo 1 de 3 — Upload do arquivo"}
               {step === 2 && "Passo 2 de 3 — Mapear colunas"}
               {step === 3 && "Passo 3 de 3 — Prévia e importação"}
@@ -432,7 +432,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
           </div>
           <button
             onClick={handleClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4 }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4 }}
           >
             <X size={20} />
           </button>
@@ -447,7 +447,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                 height: 4,
                 flex: 1,
                 borderRadius: 2,
-                background: s <= step ? NEUTRAL.red : "#E5E7EB",
+                background: s <= step ? "var(--color-industria)" : "#E5E7EB",
                 transition: "background 0.2s",
               }}
             />
@@ -460,7 +460,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
           {/* ── STEP 1: Upload ── */}
           {step === 1 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <p style={{ fontSize: 14, color: NEUTRAL.slate, margin: 0 }}>
+              <p style={{ fontSize: 14, color: "var(--text-dim)", margin: 0 }}>
                 Sobe uma planilha CSV ou Excel (.xlsx) com seus clientes, leads ou prospects.
               </p>
 
@@ -471,7 +471,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 style={{
-                  border: `2px dashed ${isDragging ? NEUTRAL.red : "#E5E7EB"}`,
+                  border: `2px dashed ${isDragging ? "var(--color-industria)" : "#E5E7EB"}`,
                   borderRadius: 10,
                   padding: "40px 24px",
                   textAlign: "center",
@@ -480,20 +480,20 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   transition: "all 0.15s",
                 }}
               >
-                <Upload size={32} color={isDragging ? NEUTRAL.red : NEUTRAL.slate} style={{ margin: "0 auto 12px" }} />
+                <Upload size={32} color={isDragging ? "var(--color-industria)" : "var(--text-dim)"} style={{ margin: "0 auto 12px" }} />
                 {file ? (
                   <div>
-                    <div style={{ fontWeight: 700, color: NEUTRAL.graphite, fontSize: 14 }}>{file.name}</div>
-                    <div style={{ color: NEUTRAL.slate, fontSize: 13, marginTop: 4 }}>
+                    <div style={{ fontWeight: 700, color: "var(--text)", fontSize: 14 }}>{file.name}</div>
+                    <div style={{ color: "var(--text-dim)", fontSize: 13, marginTop: 4 }}>
                       {rows.length} linhas encontradas
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <div style={{ fontWeight: 600, color: NEUTRAL.graphite, fontSize: 14 }}>
+                    <div style={{ fontWeight: 600, color: "var(--text)", fontSize: 14 }}>
                       Clique ou arraste o arquivo aqui
                     </div>
-                    <div style={{ color: NEUTRAL.slate, fontSize: 12, marginTop: 4 }}>
+                    <div style={{ color: "var(--text-dim)", fontSize: 12, marginTop: 4 }}>
                       Formatos suportados: CSV, XLSX, XLS
                     </div>
                   </div>
@@ -514,7 +514,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
               )}
 
               {/* Tips */}
-              <div style={{ fontSize: 12, color: NEUTRAL.slate, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.6 }}>
                 <strong>Colunas recomendadas:</strong> CNPJ, Empresa, Setor, Cidade, Estado, Telefone, Email, Valor, Responsável, Etapa, Classificação
               </div>
 
@@ -568,10 +568,10 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: "#F5F5F3" }}>
-                        <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: NEUTRAL.graphite, width: "45%" }}>
+                        <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "var(--text)", width: "45%" }}>
                           Coluna da sua planilha
                         </th>
-                        <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: NEUTRAL.graphite }}>
+                        <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "var(--text)" }}>
                           Campo do CRM
                         </th>
                       </tr>
@@ -581,10 +581,10 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                         const sample = firstSample(rows, i);
                         return (
                         <tr key={i} style={{ borderTop: `1px solid #EEEEEE` }}>
-                          <td style={{ padding: "8px 14px", color: NEUTRAL.graphite, verticalAlign: "middle" }}>
+                          <td style={{ padding: "8px 14px", color: "var(--text)", verticalAlign: "middle" }}>
                             <div style={{ fontWeight: 500 }}>{h || `Coluna ${excelColumnLetter(i)}`}</div>
                             {sample !== null && (
-                              <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 2 }}>
+                              <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
                                 ex.: {sample.slice(0, 40)}
                               </div>
                             )}
@@ -625,10 +625,10 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   >
                     <Check size={28} color="#16A34A" />
                   </div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: NEUTRAL.graphite, marginBottom: 6 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
                     Importação concluída!
                   </div>
-                  <div style={{ fontSize: 14, color: NEUTRAL.slate }}>
+                  <div style={{ fontSize: 14, color: "var(--text-dim)" }}>
                     {importedCount} leads importados com sucesso.
                     {skippedCount > 0 && ` ${skippedCount} já existiam ou foram ignorados.`}
                   </div>
@@ -636,14 +636,14 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
               ) : importing ? (
                 /* Progress state */
                 <div style={{ textAlign: "center", padding: "32px 0" }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: NEUTRAL.graphite, marginBottom: 16 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", marginBottom: 16 }}>
                     Importando {importProgress}/{importTotal}…
                   </div>
                   <div style={{ background: "#E5E7EB", borderRadius: 4, height: 8, overflow: "hidden", maxWidth: 400, margin: "0 auto" }}>
                     <div
                       style={{
                         height: "100%",
-                        background: NEUTRAL.red,
+                        background: "var(--color-industria)",
                         width: `${importTotal > 0 ? (importProgress / importTotal) * 100 : 0}%`,
                         transition: "width 0.1s",
                         borderRadius: 4,
@@ -686,7 +686,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                                 return (
                                   <th
                                     key={colIdx}
-                                    style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, color: NEUTRAL.graphite, whiteSpace: "nowrap" }}
+                                    style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap" }}
                                   >
                                     {field?.label || fId}
                                   </th>
@@ -702,7 +702,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                                 .map(([colIdx]) => (
                                   <td
                                     key={colIdx}
-                                    style={{ padding: "7px 12px", color: NEUTRAL.graphite, whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
+                                    style={{ padding: "7px 12px", color: "var(--text)", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}
                                   >
                                     {String(row[Number(colIdx)] ?? "")}
                                   </td>
@@ -728,7 +728,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
             alignItems: "center",
             justifyContent: "space-between",
             gap: 8,
-            background: NEUTRAL.warmWhite,
+            background: "var(--surface)",
           }}
         >
           <div>

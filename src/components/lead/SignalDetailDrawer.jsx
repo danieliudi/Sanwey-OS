@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { X, Loader2, Building2 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { Badge } from "../ui/Badge";
 import { CompanyTag } from "../ui/CompanyTag";
 import { UrgencyTag } from "../ui/UrgencyTag";
@@ -97,7 +97,7 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
 
   const selCount = selected.size;
   const company = COMPANIES[signal.company];
-  const accentColor = company?.primary || NEUTRAL.graphite;
+  const accentColor = company?.primary || "var(--text)";
 
   return (
     <div
@@ -109,7 +109,7 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
     >
       <div
         className="w-full max-w-2xl max-h-full flex flex-col rounded-2xl overflow-hidden"
-        style={{ background: "#FFFFFF", boxShadow: "0 24px 64px rgba(0,0,0,0.24)", maxHeight: "90vh" }}
+        style={{ background: "#FFFFFF", boxShadow: "var(--shadow-pop)", maxHeight: "90vh" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -121,12 +121,12 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
             <Badge variant="default" size="sm">{signal.source}</Badge>
             <CompanyTag companyId={signal.company} />
             <UrgencyTag urgency={signal.urgency} />
-            <span className="text-xs" style={{ color: NEUTRAL.slate }}>{signal.date}</span>
+            <span className="text-xs" style={{ color: "var(--text-dim)" }}>{signal.date}</span>
           </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer shrink-0"
-            style={{ color: NEUTRAL.slate }}
+            style={{ color: "var(--text-dim)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             aria-label="Fechar"
@@ -139,14 +139,14 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {/* Signal info */}
           <div className="border rounded-xl p-4 bg-white" style={{ borderColor: "#E5E7EB" }}>
-            <h2 className="font-bold mb-2 leading-snug" style={{ fontSize: 18, color: NEUTRAL.graphite }}>
+            <h2 className="font-bold mb-2 leading-snug" style={{ fontSize: 18, color: "var(--text)" }}>
               {signal.title}
             </h2>
-            <p className="text-sm leading-relaxed mb-3" style={{ color: NEUTRAL.slate }}>
+            <p className="text-sm leading-relaxed mb-3" style={{ color: "var(--text-dim)" }}>
               {signal.excerpt}
             </p>
             {company && (
-              <div className="flex items-center gap-1.5 text-xs" style={{ color: NEUTRAL.slate }}>
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-dim)" }}>
                 <Building2 size={11} />
                 <span>Contexto:</span>
                 <CompanyTag companyId={signal.company} />
@@ -159,11 +159,11 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
             <div className="flex items-center gap-2">
               <span
                 className="font-semibold uppercase"
-                style={{ fontSize: 11, color: NEUTRAL.slate, letterSpacing: "0.08em" }}
+                style={{ fontSize: 11, color: "var(--text-dim)", letterSpacing: "0.08em" }}
               >
                 Empresas afetadas
               </span>
-              <span className="text-xs" style={{ color: NEUTRAL.slate }}>
+              <span className="text-xs" style={{ color: "var(--text-dim)" }}>
                 · {countLabel}
               </span>
             </div>
@@ -191,7 +191,7 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
                     background: isChosen ? "#F0FDF4" : "#FFFFFF",
                     borderColor: isChosen ? "#86EFAC" : "#E5E7EB",
                     borderLeftWidth: 3,
-                    borderLeftColor: isChosen ? NEUTRAL.success : "#E5E7EB",
+                    borderLeftColor: isChosen ? "var(--color-resibag)" : "#E5E7EB",
                   }}
                 >
                   {/* Checkbox */}
@@ -200,8 +200,8 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
                     style={{
                       width: 18,
                       height: 18,
-                      background: isChosen ? NEUTRAL.success : "#F1F3F5",
-                      border: `2px solid ${isChosen ? NEUTRAL.success : "#D1D5DB"}`,
+                      background: isChosen ? "var(--color-resibag)" : "#F1F3F5",
+                      border: `2px solid ${isChosen ? "var(--color-resibag)" : "#D1D5DB"}`,
                     }}
                   >
                     {isChosen && (
@@ -220,20 +220,20 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold truncate" style={{ fontSize: 13, color: NEUTRAL.graphite }}>
+                    <div className="font-semibold truncate" style={{ fontSize: 13, color: "var(--text)" }}>
                       {c.name}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className="font-mono text-xs" style={{ color: NEUTRAL.slate }}>{c.cnpj}</span>
-                      <span className="text-xs" style={{ color: NEUTRAL.slate }}>·</span>
-                      <span className="text-xs" style={{ color: NEUTRAL.slate }}>{c.city}, {c.state}</span>
+                      <span className="font-mono text-xs" style={{ color: "var(--text-dim)" }}>{c.cnpj}</span>
+                      <span className="text-xs" style={{ color: "var(--text-dim)" }}>·</span>
+                      <span className="text-xs" style={{ color: "var(--text-dim)" }}>{c.city}, {c.state}</span>
                     </div>
                   </div>
 
                   {/* Sector badge */}
                   <span
                     className="text-xs px-2 py-0.5 rounded shrink-0"
-                    style={{ background: "#F1F3F5", color: NEUTRAL.slate, fontSize: 11 }}
+                    style={{ background: "#F1F3F5", color: "var(--text-dim)", fontSize: 11 }}
                   >
                     {c.sector}
                   </span>
@@ -258,7 +258,7 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
           className="sticky bottom-0 px-5 py-3.5 border-t flex items-center justify-between gap-3 shrink-0"
           style={{ background: "rgba(250,250,248,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
         >
-          <span className="text-sm" style={{ color: NEUTRAL.slate }}>
+          <span className="text-sm" style={{ color: "var(--text-dim)" }}>
             {selCount === 0
               ? "Nenhuma empresa selecionada"
               : `${selCount} empresa${selCount !== 1 ? "s" : ""} selecionada${selCount !== 1 ? "s" : ""}`}
@@ -268,8 +268,8 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
             disabled={selCount === 0 || saving}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all duration-150"
             style={{
-              background: selCount === 0 || saving ? "#E5E7EB" : NEUTRAL.red,
-              color: selCount === 0 || saving ? NEUTRAL.slate : "#FFFFFF",
+              background: selCount === 0 || saving ? "#E5E7EB" : "var(--color-industria)",
+              color: selCount === 0 || saving ? "var(--text-dim)" : "#FFFFFF",
               border: "none",
               cursor: selCount === 0 || saving ? "not-allowed" : "pointer",
             }}

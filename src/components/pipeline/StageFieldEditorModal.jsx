@@ -5,7 +5,7 @@ import {
   Clock, Mail, Phone, Link, CheckSquare, List, RadioTower,
   ListChecks, User, Settings2,
 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { FIELD_TYPES, slugifyKey } from "../../hooks/use-stage-fields";
 import { VALIDATION_PRESETS, VALIDATION_RULE_TYPES } from "../../utils/field-validation";
 
@@ -34,7 +34,7 @@ const INPUT_BASE = {
   borderRadius: 6,
   border: "1px solid #D1D5DB",
   padding: "7px 10px",
-  color: NEUTRAL.graphite,
+  color: "var(--text)",
   background: "#FFFFFF",
   outline: "none",
   boxSizing: "border-box",
@@ -82,7 +82,7 @@ function ConditionEditor({ title, condition, onChange, otherFields, accent, disa
       <label
         style={{
           display: "flex", alignItems: "center", gap: 6, fontSize: 12,
-          color: disabled ? NEUTRAL.slate : NEUTRAL.graphite,
+          color: disabled ? "var(--text-dim)" : "var(--text)",
           cursor: disabled ? "default" : "pointer", userSelect: "none",
           opacity: disabled ? 0.55 : 1,
         }}
@@ -98,10 +98,10 @@ function ConditionEditor({ title, condition, onChange, otherFields, accent, disa
       </label>
 
       {disabled && disabledNote && (
-        <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 3, marginLeft: 20 }}>{disabledNote}</div>
+        <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3, marginLeft: 20 }}>{disabledNote}</div>
       )}
       {!disabled && otherFields.length === 0 && (
-        <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 3, marginLeft: 20 }}>
+        <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3, marginLeft: 20 }}>
           Nenhum outro campo nesta etapa para usar como condição.
         </div>
       )}
@@ -170,7 +170,7 @@ function ValidationRuleEditor({ rule, onChange, fieldType, accent }) {
       <label
         style={{
           display: "flex", alignItems: "center", gap: 6, fontSize: 12,
-          color: NEUTRAL.graphite, cursor: "pointer", userSelect: "none",
+          color: "var(--text)", cursor: "pointer", userSelect: "none",
         }}
       >
         <input
@@ -259,13 +259,13 @@ function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
 
   return (
     <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 8, padding: 14 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
         Novo campo
       </div>
 
       {/* Tipo */}
       <div style={{ marginBottom: 10 }}>
-        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: NEUTRAL.slate, marginBottom: 4 }}>Tipo</label>
+        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-dim)", marginBottom: 4 }}>Tipo</label>
         <select
           value={fieldType}
           onChange={e => setFieldType(e.target.value)}
@@ -281,7 +281,7 @@ function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
 
       {/* Label */}
       <div style={{ marginBottom: 10 }}>
-        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: NEUTRAL.slate, marginBottom: 4 }}>Nome do campo</label>
+        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-dim)", marginBottom: 4 }}>Nome do campo</label>
         <input
           type="text"
           value={label}
@@ -296,7 +296,7 @@ function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
       {/* Opções (select/radio/multicheck) */}
       {hasOptions && (
         <div style={{ marginBottom: 10 }}>
-          <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: NEUTRAL.slate, marginBottom: 4 }}>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-dim)", marginBottom: 4 }}>
             Opções <span style={{ fontWeight: 400 }}>(uma por linha)</span>
           </label>
           <textarea
@@ -311,7 +311,7 @@ function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
       )}
 
       {/* Obrigatório */}
-      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: NEUTRAL.graphite, marginBottom: 12, cursor: "pointer", userSelect: "none" }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text)", marginBottom: 12, cursor: "pointer", userSelect: "none" }}>
         <input type="checkbox" checked={required} onChange={e => setRequired(e.target.checked)} style={{ accentColor: accent }} />
         Campo obrigatório
       </label>
@@ -357,7 +357,7 @@ function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
         <button
           onClick={onCancel}
           disabled={busy}
-          style={{ fontSize: 12, fontWeight: 600, padding: "7px 12px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: busy ? "not-allowed" : "pointer" }}
+          style={{ fontSize: 12, fontWeight: 600, padding: "7px 12px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#FFF", color: "var(--text-dim)", cursor: busy ? "not-allowed" : "pointer" }}
         >
           Cancelar
         </button>
@@ -403,15 +403,15 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
         <GripVertical size={14} style={{ color: "#CBD5E1", flexShrink: 0, cursor: "grab" }} />
 
         {/* Type icon */}
-        <Icon size={14} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
+        <Icon size={14} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
 
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {field.required && <span style={{ color: accent, marginRight: 2 }}>*</span>}
             {field.label}
           </div>
-          <div style={{ fontSize: 11, color: NEUTRAL.slate }}>
+          <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
             {typeMeta?.label || field.fieldType}
             {hasConditions && <span style={{ color: accent }}> · Condicional</span>}
           </div>
@@ -425,7 +425,7 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
             fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, cursor: busy ? "wait" : "pointer", flexShrink: 0,
             border: `1px solid ${field.required ? accent + "60" : "#E5E7EB"}`,
             background: field.required ? accent + "12" : "transparent",
-            color: field.required ? accent : NEUTRAL.slate,
+            color: field.required ? accent : "var(--text-dim)",
             opacity: busy ? 0.6 : 1,
           }}
         >
@@ -438,7 +438,7 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
           title="Configurar condições"
           style={{
             background: "none", border: "none", cursor: busy ? "wait" : "pointer", padding: 2, lineHeight: 0, flexShrink: 0,
-            color: editingCond || hasConditions ? accent : NEUTRAL.slate,
+            color: editingCond || hasConditions ? accent : "var(--text-dim)",
           }}
         >
           <Pencil size={13} />
@@ -449,14 +449,14 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
           <button
             onClick={onMoveUp}
             disabled={isFirst}
-            style={{ background: "none", border: "none", cursor: isFirst ? "default" : "pointer", color: isFirst ? "#E5E7EB" : NEUTRAL.slate, padding: 1, lineHeight: 0 }}
+            style={{ background: "none", border: "none", cursor: isFirst ? "default" : "pointer", color: isFirst ? "#E5E7EB" : "var(--text-dim)", padding: 1, lineHeight: 0 }}
           >
             <ChevronUp size={12} />
           </button>
           <button
             onClick={onMoveDown}
             disabled={isLast}
-            style={{ background: "none", border: "none", cursor: isLast ? "default" : "pointer", color: isLast ? "#E5E7EB" : NEUTRAL.slate, padding: 1, lineHeight: 0 }}
+            style={{ background: "none", border: "none", cursor: isLast ? "default" : "pointer", color: isLast ? "#E5E7EB" : "var(--text-dim)", padding: 1, lineHeight: 0 }}
           >
             <ChevronDown size={12} />
           </button>
@@ -473,7 +473,7 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
             </button>
             <button
               onClick={() => setConfirmDel(false)}
-              style={{ fontSize: 11, padding: "3px 6px", borderRadius: 5, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: "pointer" }}
+              style={{ fontSize: 11, padding: "3px 6px", borderRadius: 5, border: "1px solid #E5E7EB", background: "#FFF", color: "var(--text-dim)", cursor: "pointer" }}
             >
               ✕
             </button>
@@ -528,7 +528,7 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
             <button
               onClick={() => setEditingCond(false)}
               disabled={busy}
-              style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#FFF", color: NEUTRAL.slate, cursor: busy ? "not-allowed" : "pointer" }}
+              style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#FFF", color: "var(--text-dim)", cursor: busy ? "not-allowed" : "pointer" }}
             >
               Cancelar
             </button>
@@ -560,7 +560,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
   if (!open || !stage) return null;
 
   const company = COMPANIES[companyId];
-  const accent  = company?.primary || NEUTRAL.graphite;
+  const accent  = company?.primary || "var(--text)";
   const fields  = stageFields.getFields(companyId, stage.id);
 
   const run = async (fn) => {
@@ -635,7 +635,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
     >
       <div
         className="w-full sm:max-w-md max-h-[90vh] overflow-y-auto flex flex-col"
-        style={{ background: "#FFFFFF", borderRadius: "16px 16px 0 0", boxShadow: "0 24px 64px rgba(0,0,0,0.24)" }}
+        style={{ background: "#FFFFFF", borderRadius: "16px 16px 0 0", boxShadow: "var(--shadow-pop)" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -648,7 +648,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
               className="w-3 h-3 rounded-full shrink-0"
               style={{ background: stage.color || accent }}
             />
-            <span className="font-bold text-sm" style={{ color: NEUTRAL.graphite }}>
+            <span className="font-bold text-sm" style={{ color: "var(--text)" }}>
               Editar fase: {stage.name}
             </span>
             {company && (
@@ -662,9 +662,9 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
           </div>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, lineHeight: 0 }}
-            onMouseEnter={e => { e.currentTarget.style.color = NEUTRAL.graphite; }}
-            onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, lineHeight: 0 }}
+            onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
           >
             <X size={18} />
           </button>
@@ -672,7 +672,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
 
         {/* Body */}
         <div className="flex-1 px-5 py-4 space-y-3">
-          <div className="text-xs" style={{ color: NEUTRAL.slate }}>
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>
             Campos que aparecem no drawer quando um card está nesta etapa.
           </div>
 
@@ -686,7 +686,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
           {fields.length === 0 && !showAdd && (
             <div
               className="py-8 text-center rounded-lg border-2 border-dashed text-xs"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate }}
+              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)" }}
             >
               Nenhum campo configurado para esta etapa.
             </div>

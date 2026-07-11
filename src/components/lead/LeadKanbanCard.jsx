@@ -47,8 +47,8 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
   const isTerminal = Boolean(currentStage?.terminal);
 
   const accentColor = COMPANIES[lead.companyId]?.primary || "var(--text-dim)";
-  const shadowBase  = `inset 3px 0 0 ${accentColor}, 0 1px 4px rgba(0,0,0,0.04)`;
-  const shadowHover = `inset 3px 0 0 ${accentColor}, 0 4px 16px rgba(0,0,0,0.08)`;
+  const shadowBase  = `inset 3px 0 0 ${accentColor}, var(--shadow-card)`;
+  const shadowHover = `inset 3px 0 0 ${accentColor}, var(--shadow-pop)`;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -145,7 +145,7 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
                     background: "var(--surface)",
                     border: "1px solid var(--border)",
                     borderRadius: 8,
-                    boxShadow: "0 8px 24px rgba(32,26,26,0.12)",
+                    boxShadow: "var(--shadow-pop)",
                     zIndex: 50,
                     minWidth: 180,
                     overflow: "hidden",

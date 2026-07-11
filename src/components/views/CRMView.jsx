@@ -279,7 +279,7 @@ function KpiCard({ label, value, sub }) {
         background: "var(--surface)",
         borderColor: "var(--border)",
         padding: "12px 16px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        boxShadow: "var(--shadow-card)",
       }}
     >
       <div
@@ -827,7 +827,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   minWidth: 272,
                   background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "var(--surface-alt)" : "var(--surface-alt)",
                   borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "70" : isOver && !canAccept ? "#FECACA" : "var(--border)",
-                  boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
+                  boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
                 }}
               >
                 {/* Column header — top color band like HubSpot (mais grosso pra

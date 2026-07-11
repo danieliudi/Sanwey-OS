@@ -16,6 +16,8 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -101,7 +103,7 @@ function NovoTreinamentoModal({ initialData, onSave, onClose }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{initialData ? "Editar treinamento" : "Novo treinamento"}</div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
@@ -209,7 +211,7 @@ function AtribuirModal({ treinamento, colaboradores, onAssign, onClose }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "80vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "var(--shadow-pop)", maxHeight: "80vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Atribuir treinamento</div>
@@ -311,7 +313,7 @@ function TreinamentoBoardColumn({
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
       className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-      style={{ width: 260, minWidth: 260, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", maxHeight: "calc(100vh - 320px)" }}
+      style={{ width: 260, minWidth: 260, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", maxHeight: "calc(100vh - 320px)" }}
     >
       <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
       <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
@@ -386,7 +388,7 @@ function AtribuicaoDrawer({
   return (
     <>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1099 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(460px, 100vw)", background: "var(--surface)", zIndex: 1100, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(460px, 100vw)", background: "var(--surface)", zIndex: 1100, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
@@ -506,7 +508,7 @@ function TreinamentoBoardModal({
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", flexDirection: "column" }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", flex: 1, display: "flex", flexDirection: "column", margin: 24, borderRadius: 16, overflow: "hidden", boxShadow: "0 24px 80px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "var(--surface)", flex: 1, display: "flex", flexDirection: "column", margin: 24, borderRadius: 16, overflow: "hidden", boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between flex-wrap gap-3" style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)" }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 18, color: "var(--text)" }}>{treinamento.titulo}</div>
@@ -514,9 +516,7 @@ function TreinamentoBoardModal({
           </div>
           <div className="flex items-center gap-2">
             {canWrite && (
-              <button onClick={() => setStageEditorOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                <Pencil size={13} /> Editar etapas
-              </button>
+              <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
             )}
             <button onClick={onClose} style={{ background: "transparent", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-dim)", padding: "8px 10px", borderRadius: 10, display: "flex" }}>
               <X size={16} />
@@ -638,10 +638,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
 
   if (!isSupabaseConfigured) {
     return (
-      <div style={{ textAlign: "center", padding: "60px 0" }}>
-        <GraduationCap size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-        <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Supabase não configurado</div>
-      </div>
+      <EmptyState icon={GraduationCap} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar este módulo." />
     );
   }
 
@@ -658,9 +655,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           </p>
         </div>
         {canWrite && (
-          <button onClick={() => setNovoOpen(true)} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            <Plus size={14} /> Novo treinamento
-          </button>
+          <Button icon={Plus} onClick={() => setNovoOpen(true)}>Novo treinamento</Button>
         )}
       </div>
 
@@ -670,10 +665,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
         <>
           <ComplianceStats atribuicoes={atribuicoes} />
           {treinamentos.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0" }}>
-              <GraduationCap size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-              <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum treinamento cadastrado</div>
-            </div>
+            <EmptyState icon={GraduationCap} title="Nenhum treinamento cadastrado" description="Cadastre um treinamento para começar a montar o catálogo." />
           ) : (
             <div className="flex flex-col gap-3">
               {treinamentos.map(t => {
@@ -759,15 +751,9 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           )}
         </>
       ) : !meuColaborador ? (
-        <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <GraduationCap size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum treinamento atribuído a você</div>
-        </div>
+        <EmptyState icon={GraduationCap} title="Nenhum treinamento atribuído a você" description="Você ainda não está vinculado a um colaborador de RH." />
       ) : myAtribuicoes.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <GraduationCap size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum treinamento atribuído a você</div>
-        </div>
+        <EmptyState icon={GraduationCap} title="Nenhum treinamento atribuído a você" description="Os treinamentos atribuídos a você vão aparecer aqui." />
       ) : (
         <div className="flex flex-col gap-2">
           {myAtribuicoes.map(a => {

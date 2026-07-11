@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useRef, useState } from "react";
 import { Clock, Star, MoreVertical, ArrowRight } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
@@ -38,12 +38,12 @@ function DeliverableKanbanCardImpl({
   const ageStyle    = daysInStage !== null ? agingStyle(daysInStage, stage?.sla) : null;
   const isTerminal  = Boolean(stage?.terminal);
   const priColor    = PRIORITY_COLORS[item.priority] || null;
-  const compColor   = item.companyIds?.[0] ? COMPANIES[item.companyIds[0]]?.primary : NEUTRAL.slate;
+  const compColor   = item.companyIds?.[0] ? COMPANIES[item.companyIds[0]]?.primary : "var(--text-dim)";
   const isOverdue   = item.deadline && new Date(item.deadline) < new Date();
   const moveTargets = (stages || DELIVERABLE_STAGES).filter(s => s.id !== item.stage && !s.terminal);
 
-  const shadowBase  = `inset 3px 0 0 ${compColor}, 0 1px 4px rgba(32,26,26,0.06)`;
-  const shadowHover = `inset 3px 0 0 ${compColor}, 0 4px 16px rgba(32,26,26,0.10)`;
+  const shadowBase  = `inset 3px 0 0 ${compColor}, var(--shadow-card)`;
+  const shadowHover = `inset 3px 0 0 ${compColor}, var(--shadow-pop)`;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -83,7 +83,7 @@ function DeliverableKanbanCardImpl({
           (aging, completude, domínio, utilitários) dos outros cards do
           Kanban; antes ficava dividido entre topo e rodapé do card. */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="font-semibold text-[13px] leading-snug min-w-0 flex-1" style={{ color: NEUTRAL.graphite }}>
+        <div className="font-semibold text-[13px] leading-snug min-w-0 flex-1" style={{ color: "var(--text)" }}>
           {item.title}
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
@@ -113,7 +113,7 @@ function DeliverableKanbanCardImpl({
               onClick={e => { e.stopPropagation(); onToggleStar?.(item.id); }}
               title={item.starred ? "Remover dos favoritos" : "Favoritar"}
               className="flex items-center justify-center rounded-md p-1 transition-colors"
-              style={{ color: item.starred ? "#F59E0B" : NEUTRAL.slate, background: "transparent", border: "none" }}
+              style={{ color: item.starred ? "#F59E0B" : "var(--text-dim)", background: "transparent", border: "none" }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
@@ -142,7 +142,7 @@ function DeliverableKanbanCardImpl({
                   style={{
                     position: "absolute", top: "calc(100% + 4px)", right: 0,
                     background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
-                    boxShadow: "0 8px 24px rgba(32,26,26,0.12)", zIndex: 50, minWidth: 180, overflow: "hidden",
+                    boxShadow: "var(--shadow-pop)", zIndex: 50, minWidth: 180, overflow: "hidden",
                   }}
                   onClick={e => e.stopPropagation()}
                 >
@@ -175,7 +175,7 @@ function DeliverableKanbanCardImpl({
 
       {/* Requester · dept */}
       {item.requesterName && (
-        <div className="text-[11px] mb-1.5" style={{ color: NEUTRAL.slate }}>
+        <div className="text-[11px] mb-1.5" style={{ color: "var(--text-dim)" }}>
           {item.requesterName}{item.department ? ` · ${item.department}` : ""}
         </div>
       )}
@@ -184,13 +184,13 @@ function DeliverableKanbanCardImpl({
           prazo; antes era um div sempre presente (com margem), deixando uma
           sobra vazia em cards sem nenhum dos dois. */}
       {(ownerName || item.deadline) && (
-      <div className="flex items-center justify-between text-[11px] mb-2" style={{ color: NEUTRAL.slate }}>
+      <div className="flex items-center justify-between text-[11px] mb-2" style={{ color: "var(--text-dim)" }}>
         {ownerName
           ? <span className="px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-alt)", fontWeight: 500 }}>{ownerName}</span>
           : <span />
         }
         {item.deadline && (
-          <span style={{ color: isOverdue ? "#DC2626" : NEUTRAL.slate, fontWeight: isOverdue ? 600 : 400 }}>
+          <span style={{ color: isOverdue ? "#DC2626" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
             {formatDateBR(item.deadline)}
           </span>
         )}

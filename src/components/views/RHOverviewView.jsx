@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Building2,
 } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import {
   RH_DEPARTMENTS,
   RH_CONTRACT_TYPES,
@@ -252,7 +251,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 10,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+    boxShadow: "var(--shadow-card)",
   };
 
   return (
@@ -448,7 +447,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           <div style={{ ...card, padding: 20 }}>
             <SectionHeader title="Admissões Recentes" />
             {loadingColaboradores ? (
-              <div style={{ color: NEUTRAL.slate, fontSize: 13 }}>Carregando...</div>
+              <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
             ) : recentAdmissions.length === 0 ? (
               <EmptyState text="Nenhuma admissão registrada" />
             ) : (
@@ -571,7 +570,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
         <div style={{ ...card, padding: 20 }}>
           <SectionHeader title="Distribuição por Departamento" />
           {loadingColaboradores ? (
-            <div style={{ color: NEUTRAL.slate, fontSize: 13 }}>Carregando...</div>
+            <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
           ) : deptList.length === 0 ? (
             <EmptyState text="Sem dados de departamento" />
           ) : (

@@ -4,7 +4,7 @@ import {
   Heart, ShieldCheck, BarChart3, Globe, ChevronDown,
   Megaphone, Calendar, BookOpen, Headphones, CheckCircle2, KeyRound,
 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 
 const ACCENT_RED = "#C7212B";   // usado APENAS no painel esquerdo institucional (fundo escuro)
@@ -46,10 +46,10 @@ export function LoginScreen({
                 style={{ width: 260, height: "auto", objectFit: "contain" }}
                 className="mb-3"
               />
-              <div className="text-xs font-semibold uppercase mb-3" style={{ color: NEUTRAL.slate, letterSpacing: "0.12em" }}>
+              <div className="text-xs font-semibold uppercase mb-3" style={{ color: "var(--text-dim)", letterSpacing: "0.12em" }}>
                 Gestão Sanwey
               </div>
-              <p className="text-sm max-w-xs leading-relaxed" style={{ color: NEUTRAL.slate }}>
+              <p className="text-sm max-w-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
                 Plataforma unificada de inteligência comercial<br />para as empresas do Grupo
               </p>
               <span className="block mt-3" style={{ width: 36, height: 2, background: "var(--accent)", borderRadius: 1 }} />
@@ -176,14 +176,14 @@ function LangSelector() {
     <button
       type="button"
       className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.graphite }}
+      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: "var(--text)" }}
       onMouseEnter={e => { e.currentTarget.style.background = "#F8F4EF"; }}
       onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
       title="Idioma (em breve)"
     >
-      <Globe size={13} style={{ color: NEUTRAL.slate }} />
+      <Globe size={13} style={{ color: "var(--text-dim)" }} />
       Português (BR)
-      <ChevronDown size={12} style={{ color: NEUTRAL.slate }} />
+      <ChevronDown size={12} style={{ color: "var(--text-dim)" }} />
     </button>
   );
 }
@@ -244,7 +244,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
-        boxShadow: "0 20px 60px -20px rgba(0,0,0,0.08)",
+        boxShadow: "var(--shadow-pop)",
       }}
     >
       {/* Lock badge */}
@@ -447,7 +447,7 @@ export function PasswordResetScreen({ onReset }) {
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--bg)" }}>
       <div
         className="w-full max-w-md rounded-lg p-8"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "0 20px 60px -20px rgba(0,0,0,0.10)" }}
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-pop)" }}
       >
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ background: "var(--surface-alt)" }}>
@@ -617,7 +617,7 @@ function MockLoginCard({ users, onMockLogin }) {
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
-        boxShadow: "0 20px 60px -20px rgba(0,0,0,0.08)",
+        boxShadow: "var(--shadow-pop)",
       }}
     >
       <h2 className="font-bold text-center mb-1" style={{ fontSize: 20, color: "var(--text)" }}>

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, Download, Link2, CalendarDays } from "lucide-react";
 import { MARKETING_STAGES } from "../../constants/marketing-pipelines";
-import { NEUTRAL } from "../../constants/companies";
 import { generateICS, downloadICS } from "../../utils/ics-export";
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -94,7 +93,7 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", overflow: "hidden" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "var(--shadow-pop)", overflow: "hidden" }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -187,7 +186,7 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", overflow: "hidden" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", overflow: "hidden" }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>

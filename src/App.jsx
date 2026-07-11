@@ -7,7 +7,6 @@ import {
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
-import { NEUTRAL } from "./constants/companies";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { usePipelines } from "./hooks/use-pipelines";
 import { ROUTES, sectionFromPath } from "./constants/routes";
@@ -784,7 +783,7 @@ export default function App() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: NEUTRAL.warmWhite, color: NEUTRAL.slate }}
+        style={{ background: "var(--surface)", color: "var(--text-dim)" }}
       >
         <div className="text-xs uppercase tracking-widest" style={{ letterSpacing: "0.15em" }}>
           Carregando…
@@ -891,7 +890,7 @@ export default function App() {
                 </button>
                 <button onClick={() => window.location.reload()}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg border"
-                        style={{ borderColor: "#D1D5DB", color: NEUTRAL.graphite, background: "#FFFFFF" }}>
+                        style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "#FFFFFF" }}>
                   Recarregar
                 </button>
               </div>
@@ -1180,12 +1179,12 @@ export default function App() {
 
         <footer
           className="px-6 py-4 border-t text-xs flex items-center justify-between flex-wrap gap-2"
-          style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: NEUTRAL.slate }}
+          style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: "var(--text-dim)" }}
         >
           <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
             Gestão Sanwey
           </div>
-          <div style={{ color: NEUTRAL.slate }}>
+          <div style={{ color: "var(--text-dim)" }}>
             Maio 2026
           </div>
         </footer>

@@ -7,7 +7,7 @@ import {
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
   File, FileImage, FileSpreadsheet, AlertCircle,
 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CompanyTag } from "../ui/CompanyTag";
 import { UrgencyTag } from "../ui/UrgencyTag";
@@ -349,7 +349,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
         className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-6xl lg:rounded-2xl lg:max-h-[92vh]"
         style={{
           background: "var(--surface)",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+          boxShadow: "var(--shadow-pop)",
           overflow: "hidden",
           height: "100%",
         }}
@@ -805,7 +805,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
           {isManager && overlaps.length > 0 && (
             <div
               className="p-3.5 rounded-xl border-l-4"
-              style={{ background: "#FFFBE6", borderLeftColor: NEUTRAL.amber, borderTop: "1px solid #FFE680", borderRight: "1px solid #FFE680", borderBottom: "1px solid #FFE680" }}
+              style={{ background: "#FFFBE6", borderLeftColor: "var(--amber)", borderTop: "1px solid #FFE680", borderRight: "1px solid #FFE680", borderBottom: "1px solid #FFE680" }}
             >
               <div className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "#9A7A00" }}>
                 <Network size={12} />
@@ -1091,7 +1091,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-150 cursor-pointer"
                       style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
-                      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+                      onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow-pop)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
                       onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "var(--border)"; }}
                     >
                       <Icon size={12} strokeWidth={2} />

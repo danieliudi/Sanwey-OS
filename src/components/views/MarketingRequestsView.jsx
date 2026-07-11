@@ -5,11 +5,12 @@ import {
 } from "lucide-react";
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
-import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import {
   DELIVERABLE_PRIORITIES, DELIVERABLE_STAGES,
 } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
+import { EmptyState } from "../ui/EmptyState";
 
 const STATUS_CONFIG = {
   pendente:   { label: "Pendente",   color: "#D97706", bg: "#FEF3C7", icon: Clock },
@@ -59,7 +60,7 @@ function RejectModal({ request, onConfirm, onClose }) {
       style={{ background: "rgba(0,0,0,0.45)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "0 8px 40px rgba(0,0,0,.18)" }}>
+      <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-1" style={{ color: "var(--text)" }}>Rejeitar solicitação</h3>
         <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>"{request.title}"</p>
         <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
@@ -103,7 +104,7 @@ function ApproveModal({ request, onConfirm, onClose }) {
       style={{ background: "rgba(0,0,0,0.45)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "0 8px 40px rgba(0,0,0,.18)" }}>
+      <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-1" style={{ color: "var(--text)" }}>Aprovar solicitação</h3>
         <p className="text-xs mb-1" style={{ color: "var(--text-dim)" }}>"{request.title}"</p>
         <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "#DCFCE7", color: "#15803D" }}>
@@ -151,7 +152,7 @@ function RequestCard({ request, onApprove, onReject, canWrite }) {
       style={{
         background: "var(--surface)",
         borderColor: "var(--border)",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        boxShadow: "var(--shadow-card)",
       }}
     >
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -390,20 +391,15 @@ export function MarketingRequestsView({ user, users }) {
           Carregando solicitações…
         </div>
       ) : filtered.length === 0 ? (
-        <div
-          className="flex flex-col items-center justify-center py-16 rounded-2xl border"
-          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-        >
-          <Inbox size={40} style={{ color: "var(--text-dim)", marginBottom: 12, opacity: 0.4 }} />
-          <p className="text-sm font-medium" style={{ color: "var(--text-dim)" }}>
-            {statusFilter === "pendente"
+        <EmptyState
+          icon={Inbox}
+          title={
+            statusFilter === "pendente"
               ? "Nenhuma solicitação pendente"
-              : "Nenhuma solicitação encontrada"}
-          </p>
-          <p className="text-xs mt-1" style={{ color: "var(--text-dim)", opacity: 0.7 }}>
-            As solicitações enviadas pelo formulário aparecerão aqui
-          </p>
-        </div>
+              : "Nenhuma solicitação encontrada"
+          }
+          description="As solicitações enviadas pelo formulário aparecerão aqui"
+        />
       ) : (
         <div className="space-y-3">
           {filtered.map(req => (

@@ -13,13 +13,14 @@ import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal"
 import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
 } from "../../constants/marketing-pipelines";
-import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatDateBR } from "../../utils/date";
 import { useUsersById }  from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
+import { EmptyState } from "../ui/EmptyState";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 
@@ -125,7 +126,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -329,7 +330,7 @@ function AnalyticsPanel({ deliverables, stages }) {
 /* ── KPI card ─────────────────────────────────────────────────── */
 function KpiCard({ label, value, color }) {
   return (
-    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)", padding: "12px 16px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)", padding: "12px 16px", boxShadow: "var(--shadow-card)" }}>
       <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 700, color: color || "var(--text)", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{value}</div>
     </div>
@@ -661,7 +662,7 @@ export function EntregasView({ user, users = [] }) {
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)", minHeight: 480, flexShrink: 0 }}>
+                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", minHeight: 480, flexShrink: 0 }}>
                     <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
                     <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
                       style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
@@ -740,11 +741,11 @@ export function EntregasView({ user, users = [] }) {
       </>)}
 
       {!loading && !loadingStages && viewMode === "calendar" && (
-        <div className="text-center py-16" style={{ color: "var(--text-dim)" }}>
-          <CalendarDays size={40} style={{ opacity: 0.3, margin: "0 auto 12px" }} />
-          <div className="font-semibold" style={{ fontSize: 15, marginBottom: 6, color: "var(--text)" }}>Vista de calendário em breve</div>
-          <div className="text-sm" style={{ color: "var(--text-dim)" }}>As entregas serão exibidas por prazo nesta visão.</div>
-        </div>
+        <EmptyState
+          icon={CalendarDays}
+          title="Vista de calendário em breve"
+          description="As entregas serão exibidas por prazo nesta visão."
+        />
       )}
 
       {!loading && !loadingStages && viewMode === "kanban" && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} stages={kanbanStages} />}

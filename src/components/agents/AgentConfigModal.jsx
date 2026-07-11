@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { X, Info } from "lucide-react";
-import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 
 // Modal de configuração de agentes — grade empresa × agente com toggles.
 // Config local; explica isso no aviso pra usuário não esperar que
@@ -36,13 +36,13 @@ export function AgentConfigModal({
       >
         {/* Header */}
         <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "#E5E7EB" }}>
-          <h2 className="font-bold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
+          <h2 className="font-bold" style={{ fontSize: 16, color: "var(--text)" }}>
             Configurar agentes
           </h2>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg cursor-pointer"
-            style={{ color: NEUTRAL.slate }}
+            style={{ color: "var(--text-dim)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             aria-label="Fechar"
@@ -69,13 +69,13 @@ export function AgentConfigModal({
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: "var(--surface-alt)" }}>
-                  <th className="text-left p-3 text-[10px] font-bold uppercase" style={{ color: NEUTRAL.slate, letterSpacing: "0.06em" }}>
+                  <th className="text-left p-3 text-[10px] font-bold uppercase" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
                     Agente
                   </th>
                   {COMPANY_IDS.map(id => {
                     const c = COMPANIES[id];
                     return (
-                      <th key={id} className="text-center p-3 text-[10px] font-bold uppercase" style={{ color: c?.primary || NEUTRAL.slate, letterSpacing: "0.06em" }}>
+                      <th key={id} className="text-center p-3 text-[10px] font-bold uppercase" style={{ color: c?.primary || "var(--text-dim)", letterSpacing: "0.06em" }}>
                         <span className="inline-flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full" style={{ background: c?.primary }} />
                           {c?.short || id}
@@ -104,7 +104,7 @@ export function AgentConfigModal({
                             <div className="text-xs font-bold leading-tight" style={{ color: agent.color }}>
                               {agent.label}
                             </div>
-                            <div className="text-[10px] leading-tight" style={{ color: NEUTRAL.slate }}>
+                            <div className="text-[10px] leading-tight" style={{ color: "var(--text-dim)" }}>
                               {agent.sub}
                             </div>
                           </div>

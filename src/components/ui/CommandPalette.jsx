@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, Handshake, Megaphone, Users } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { MARKETING_STAGES } from "../../constants/marketing-pipelines";
 
 // ---------------------------------------------------------------------------
@@ -10,7 +10,7 @@ import { MARKETING_STAGES } from "../../constants/marketing-pipelines";
 function companyBadgeStyle(companyId) {
   const c = COMPANIES[companyId];
   if (c) return { background: c.primary, color: "#FFFFFF" };
-  return { background: NEUTRAL.graphite, color: "#FFFFFF" };
+  return { background: "var(--text)", color: "#FFFFFF" };
 }
 
 function companyInitial(company = "") {
@@ -49,7 +49,7 @@ function LeadResultRow({ item, users, pipelines, highlighted, onSelect }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <Handshake size={10} style={{ color: "#6B7280", flexShrink: 0 }} />
-          <div className="font-semibold truncate" style={{ fontSize: 14, color: NEUTRAL.graphite }}>{lead.company}</div>
+          <div className="font-semibold truncate" style={{ fontSize: 14, color: "var(--text)" }}>{lead.company}</div>
         </div>
         <div className="text-xs truncate mt-0.5" style={{ color: "#6B7280" }}>
           {stageName}{lead.sector ? ` · ${lead.sector}` : ""}
@@ -57,7 +57,7 @@ function LeadResultRow({ item, users, pipelines, highlighted, onSelect }) {
       </div>
       {owner && (
         <div className="shrink-0 flex items-center justify-center rounded-full text-white font-semibold select-none"
-          style={{ width: 28, height: 28, fontSize: 11, background: owner.avatarBg || NEUTRAL.graphite }}
+          style={{ width: 28, height: 28, fontSize: 11, background: owner.avatarBg || "var(--text)" }}
           title={owner.name}>
           {owner.initials || (owner.name || "?")[0].toUpperCase()}
         </div>
@@ -90,7 +90,7 @@ function CampaignResultRow({ item, highlighted, onSelect }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <Megaphone size={10} style={{ color: "#6B7280", flexShrink: 0 }} />
-          <div className="font-semibold truncate" style={{ fontSize: 14, color: NEUTRAL.graphite }}>{campaign.name}</div>
+          <div className="font-semibold truncate" style={{ fontSize: 14, color: "var(--text)" }}>{campaign.name}</div>
         </div>
         <div className="text-xs truncate mt-0.5" style={{ color: "#6B7280" }}>
           {stage ? (
@@ -117,13 +117,13 @@ function EmployeeResultRow({ item, highlighted, onSelect }) {
       onMouseLeave={e => { e.currentTarget.style.background = highlighted ? "var(--surface-alt)" : "transparent"; }}
     >
       <div className="shrink-0 flex items-center justify-center rounded-full font-bold text-white select-none"
-        style={{ width: 36, height: 36, fontSize: 15, background: user.avatarBg || NEUTRAL.graphite }}>
+        style={{ width: 36, height: 36, fontSize: 15, background: user.avatarBg || "var(--text)" }}>
         {user.initials || user.name?.[0]?.toUpperCase() || "?"}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <Users size={10} style={{ color: "#6B7280", flexShrink: 0 }} />
-          <div className="font-semibold truncate" style={{ fontSize: 14, color: NEUTRAL.graphite }}>{user.name}</div>
+          <div className="font-semibold truncate" style={{ fontSize: 14, color: "var(--text)" }}>{user.name}</div>
         </div>
         <div className="text-xs truncate mt-0.5" style={{ color: "#6B7280" }}>
           {user.department || user.role || "Funcionário"}
@@ -295,7 +295,7 @@ export function CommandPalette({
             onChange={e => { setQuery(e.target.value); setCursor(0); }}
             placeholder="Buscar lead, campanha, funcionário..."
             className="flex-1 outline-none bg-transparent"
-            style={{ fontSize: 16, color: NEUTRAL.graphite, border: "none" }}
+            style={{ fontSize: 16, color: "var(--text)", border: "none" }}
             autoComplete="off"
             spellCheck={false}
             aria-autocomplete="list"

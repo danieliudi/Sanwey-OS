@@ -22,30 +22,30 @@ function LeadRowImpl({ lead, striped, onClick, onStarToggle }) {
         >
           {lead.starred
             ? <BookmarkCheck size={16} color={NEUTRAL.gold} />
-            : <Bookmark size={16} color={NEUTRAL.slate} />}
+            : <Bookmark size={16} color="var(--text-dim)" />}
         </button>
         <div className="min-w-0">
-          <div className="font-semibold truncate" style={{ color: NEUTRAL.graphite, fontSize: 14 }}>
+          <div className="font-semibold truncate" style={{ color: "var(--text)", fontSize: 14 }}>
             {lead.company}
           </div>
-          <div className="font-mono text-xs" style={{ color: NEUTRAL.slate }}>{lead.cnpj}</div>
+          <div className="font-mono text-xs" style={{ color: "var(--text-dim)" }}>{lead.cnpj}</div>
         </div>
       </div>
       <div className="col-span-2">
         <CompanyTag companyId={lead.companyId} />
-        <div className="text-xs mt-1" style={{ color: NEUTRAL.slate }}>{lead.sector}</div>
+        <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>{lead.sector}</div>
       </div>
-      <div className="col-span-2 text-xs" style={{ color: NEUTRAL.graphite }}>
+      <div className="col-span-2 text-xs" style={{ color: "var(--text)" }}>
         <div>{lead.city}</div>
-        <div style={{ color: NEUTRAL.slate }}>{lead.size}</div>
+        <div style={{ color: "var(--text-dim)" }}>{lead.size}</div>
       </div>
-      <div className="col-span-1 text-right text-xs font-semibold" style={{ color: NEUTRAL.graphite }}>
+      <div className="col-span-1 text-right text-xs font-semibold" style={{ color: "var(--text)" }}>
         {formatK(lead.value)}
       </div>
       <div className="col-span-1 flex justify-center">
         <FitScoreCircle score={lead.fitScore} size={36} />
       </div>
-      <div className="col-span-2 text-right text-xs" style={{ color: NEUTRAL.slate }}>
+      <div className="col-span-2 text-right text-xs" style={{ color: "var(--text-dim)" }}>
         {lead.daysAgo === 0 ? "Hoje" : `${lead.daysAgo}d atrás`}
       </div>
     </div>

@@ -1,5 +1,4 @@
 import React from "react";
-import { NEUTRAL } from "../../constants/companies";
 import { validateFieldFormat } from "../../utils/field-validation";
 
 // Renderiza um input para um campo customizado de etapa do pipeline de RH
@@ -18,7 +17,7 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
     borderRadius: 6,
     border: "1px solid #D1D5DB",
     padding: "8px 12px",
-    color: NEUTRAL.graphite,
+    color: "var(--text)",
     background: "#FFFFFF",
     outline: "none",
     boxSizing: "border-box",
@@ -52,7 +51,7 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
     return (
       <div style={{ position: "relative" }}>
         <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-          fontSize: 12, color: NEUTRAL.slate, fontWeight: 600, pointerEvents: "none" }}>R$</span>
+          fontSize: 12, color: "var(--text-dim)", fontWeight: 600, pointerEvents: "none" }}>R$</span>
         <input type="number" min="0" step="0.01" value={value ?? ""}
           onChange={e => onChange(e.target.value)} placeholder="0,00"
           style={{ ...baseStyle, paddingLeft: 30 }}
@@ -71,7 +70,7 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
     return (
       <label style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
         <input type="checkbox" checked={Boolean(value)} onChange={e => onChange(e.target.checked)} style={{ accentColor: "var(--accent)" }} />
-        <span style={{ fontSize: 13, color: NEUTRAL.graphite }}>{field.placeholder || "Sim"}</span>
+        <span style={{ fontSize: 13, color: "var(--text)" }}>{field.placeholder || "Sim"}</span>
       </label>
     );
   }
@@ -93,7 +92,7 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {opts.map(o => (
-          <label key={o} style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
+          <label key={o} style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "var(--text)" }}>
             <input type="radio" name={field.fieldKey} value={o} checked={value === o} onChange={() => onChange(o)} style={{ accentColor: "var(--accent)" }} />
             {o}
           </label>
@@ -108,7 +107,7 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {opts.map(o => (
-          <label key={o} style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
+          <label key={o} style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "var(--text)" }}>
             <input type="checkbox" checked={arr.includes(o)} onChange={() => toggle(o)} style={{ accentColor: "var(--accent)" }} />
             {o}
           </label>

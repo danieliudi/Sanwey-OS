@@ -20,7 +20,7 @@ export function PendingAssignmentScreen({ currentUser, onRefresh, onLogout }) {
     >
       <div
         className="w-full max-w-md rounded-2xl border p-8"
-        style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}
+        style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "var(--shadow-pop)" }}
       >
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
@@ -29,15 +29,15 @@ export function PendingAssignmentScreen({ currentUser, onRefresh, onLogout }) {
           <Clock size={22} color={NEUTRAL.gold || "#F59E0B"} />
         </div>
 
-        <p className="text-xs font-semibold mb-2" style={{ color: NEUTRAL.slate }}>
+        <p className="text-xs font-semibold mb-2" style={{ color: "var(--text-dim)" }}>
           Acesso pendente
         </p>
 
-        <h1 className="font-bold leading-tight mb-3" style={{ fontSize: 22, color: NEUTRAL.graphite, letterSpacing: "-0.01em" }}>
+        <h1 className="font-bold leading-tight mb-3" style={{ fontSize: 22, color: "var(--text)", letterSpacing: "-0.01em" }}>
           Aguardando liberação do administrador
         </h1>
 
-        <p className="text-sm mb-5 leading-relaxed" style={{ color: NEUTRAL.slate }}>
+        <p className="text-sm mb-5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
           Sua conta foi criada com sucesso, mas ainda não foi atribuída a nenhuma
           empresa do grupo. Assim que o administrador liberar seu acesso, você
           poderá ver os leads e o pipeline da sua carteira.
@@ -45,22 +45,22 @@ export function PendingAssignmentScreen({ currentUser, onRefresh, onLogout }) {
 
         <div
           className="p-3.5 rounded-xl mb-5 text-xs space-y-2"
-          style={{ background: "#F5F5F3", color: NEUTRAL.graphite }}
+          style={{ background: "#F5F5F3", color: "var(--text)" }}
         >
           <div className="flex items-center gap-2">
-            <Mail size={12} color={NEUTRAL.slate} />
-            <span style={{ color: NEUTRAL.slate }}>Email:</span>
+            <Mail size={12} color="var(--text-dim)" />
+            <span style={{ color: "var(--text-dim)" }}>Email:</span>
             <span className="font-semibold">{currentUser?.email || "—"}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium" style={{ color: NEUTRAL.slate }}>Papel</span>
+            <span className="text-xs font-medium" style={{ color: "var(--text-dim)" }}>Papel</span>
             <span
               className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-              style={{ background: "#E8E8E8", color: NEUTRAL.graphite }}
+              style={{ background: "#E8E8E8", color: "var(--text)" }}
             >
               {currentUser?.role || "vendedor"}
             </span>
-            <span className="text-[10px]" style={{ color: NEUTRAL.slate }}>
+            <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
               · sem empresas atribuídas
             </span>
           </div>

@@ -408,7 +408,7 @@ export function UserManagementView({
                 style={{
                   background: "var(--surface)",
                   borderColor: pending ? "#FCD34D" : "var(--border)",
-                  boxShadow: "0 1px 4px rgba(32,26,26,0.06)",
+                  boxShadow: "var(--shadow-card)",
                   overflow: "hidden",
                 }}
               >
@@ -454,7 +454,7 @@ export function UserManagementView({
                           {menuOpen && (
                             <div
                               className="absolute right-0 top-9 rounded-xl border flex flex-col overflow-hidden z-20"
-                              style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 8px 24px rgba(32,26,26,0.12)", minWidth: 160 }}
+                              style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-pop)", minWidth: 160 }}
                             >
                               {canEdit(u) && (
                                 <button

@@ -106,8 +106,8 @@ function SideTabs({ activeId, onChange }) {
 function PlaceholderPanel({ label }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 0", gap: 8 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: NEUTRAL.slate }}>{label}</div>
-      <span style={{ fontSize: 11, padding: "2px 10px", borderRadius: 9999, background: "var(--surface-alt)", color: NEUTRAL.slate }}>em breve</span>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-dim)" }}>{label}</div>
+      <span style={{ fontSize: 11, padding: "2px 10px", borderRadius: 9999, background: "var(--surface-alt)", color: "var(--text-dim)" }}>em breve</span>
     </div>
   );
 }
@@ -166,7 +166,7 @@ function DeliverableAIPanel({ item, currentUser }) {
             display: "flex", alignItems: "center", gap: 6,
             padding: "6px 14px", borderRadius: 9999, fontSize: 11, fontWeight: 600,
             background: !isConfigured ? "#E5E7EB" : PURPLE,
-            color: !isConfigured ? NEUTRAL.slate : "#FFFFFF",
+            color: !isConfigured ? "var(--text-dim)" : "#FFFFFF",
             border: "none", cursor: loading || !isConfigured ? "not-allowed" : "pointer",
             opacity: loading ? 0.8 : 1, transition: "all 0.15s",
           }}
@@ -188,15 +188,15 @@ function DeliverableAIPanel({ item, currentUser }) {
 
       {result && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 11, lineHeight: 1.6, whiteSpace: "pre-line", padding: 12, borderRadius: 10, border: "1px solid #DDD6FE", background: "#FFFFFF", color: NEUTRAL.graphite }}>
+          <div style={{ fontSize: 11, lineHeight: 1.6, whiteSpace: "pre-line", padding: 12, borderRadius: 10, border: "1px solid #DDD6FE", background: "#FFFFFF", color: "var(--text)" }}>
             {result}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button
               onClick={handleGenerate}
-              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 9999, border: "1px solid #E5E7EB", background: "#FFFFFF", color: NEUTRAL.slate, cursor: "pointer" }}
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 9999, border: "1px solid #E5E7EB", background: "#FFFFFF", color: "var(--text-dim)", cursor: "pointer" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = PURPLE; e.currentTarget.style.color = PURPLE; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = "var(--text-dim)"; }}
             >
               <RotateCcw size={10} />
               Regenerar
@@ -206,10 +206,10 @@ function DeliverableAIPanel({ item, currentUser }) {
               style={{
                 display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, padding: "4px 10px",
                 borderRadius: 9999, border: `1px solid ${copied ? "#BBF7D0" : "#E5E7EB"}`,
-                background: copied ? "#F0FDF4" : "#FFFFFF", color: copied ? "#16A34A" : NEUTRAL.slate, cursor: "pointer",
+                background: copied ? "#F0FDF4" : "#FFFFFF", color: copied ? "#16A34A" : "var(--text-dim)", cursor: "pointer",
               }}
-              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; } }}
+              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
+              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = "var(--text-dim)"; } }}
             >
               {copied ? <Check size={10} /> : <Copy size={10} />}
               {copied ? "Copiado!" : "Copiar"}
@@ -225,7 +225,7 @@ function DeliverableAIPanel({ item, currentUser }) {
 const inputBase = {
   width: "100%", fontSize: 13, borderRadius: 6,
   border: "1px solid #D1D5DB", padding: "7px 10px",
-  background: "var(--surface)", color: NEUTRAL.graphite, outline: "none",
+  background: "var(--surface)", color: "var(--text)", outline: "none",
 };
 const focusBorder = e => { e.target.style.borderColor = "var(--accent)"; };
 const blurBorder  = e => { e.target.style.borderColor = "#D1D5DB"; };
@@ -233,7 +233,7 @@ const blurBorder  = e => { e.target.style.borderColor = "#D1D5DB"; };
 /* ── Small primitives ───────────────────────────────────────── */
 function SectionLabel({ children }) {
   return (
-    <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
+    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
       {children}
     </div>
   );
@@ -242,11 +242,11 @@ function SectionLabel({ children }) {
 function FieldRow({ label, required, hint, children }) {
   return (
     <div style={{ marginBottom: 18 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
         {required && <span style={{ color: "#DC2626", marginRight: 2 }}>*</span>}
         {label}
       </div>
-      {hint && <div style={{ fontSize: 11, color: NEUTRAL.slate, marginBottom: 5, lineHeight: 1.4 }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 5, lineHeight: 1.4 }}>{hint}</div>}
       {children}
     </div>
   );
@@ -254,7 +254,7 @@ function FieldRow({ label, required, hint, children }) {
 
 function ReadValue({ value, empty = "—" }) {
   return (
-    <div style={{ fontSize: 13, color: value ? NEUTRAL.graphite : NEUTRAL.slate, lineHeight: 1.5 }}>
+    <div style={{ fontSize: 13, color: value ? "var(--text)" : "var(--text-dim)", lineHeight: 1.5 }}>
       {value || empty}
     </div>
   );
@@ -296,7 +296,7 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
   if (field.type === "select") {
     return (
       <select value={value || ""} onChange={e => onChange(e.target.value)} disabled={disabled}
-        style={{ ...inputBase, color: value ? NEUTRAL.graphite : NEUTRAL.slate }}
+        style={{ ...inputBase, color: value ? "var(--text)" : "var(--text-dim)" }}
         onFocus={focusBorder} onBlur={blurBorder}>
         <option value="">Escolha uma opção</option>
         {(field.options || []).map(o => <option key={o} value={o}>{o}</option>)}
@@ -306,7 +306,7 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
   if (field.type === "user") {
     return (
       <select value={value || ""} onChange={e => onChange(e.target.value)} disabled={disabled}
-        style={{ ...inputBase, color: value ? NEUTRAL.graphite : NEUTRAL.slate }}
+        style={{ ...inputBase, color: value ? "var(--text)" : "var(--text-dim)" }}
         onFocus={focusBorder} onBlur={blurBorder}>
         <option value="">Selecione um responsável</option>
         {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -317,7 +317,7 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         {(field.options || []).map(o => (
-          <label key={o.v} style={{ display: "flex", alignItems: "center", gap: 8, cursor: disabled ? "default" : "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
+          <label key={o.v} style={{ display: "flex", alignItems: "center", gap: 8, cursor: disabled ? "default" : "pointer", fontSize: 13, color: "var(--text)" }}>
             <input type="radio" name={field.key} value={o.v} checked={value === o.v}
               onChange={() => !disabled && onChange(o.v)} disabled={disabled}
               style={{ accentColor: "var(--accent)" }} />
@@ -331,7 +331,7 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
     return (
       <div style={{ display: "flex", gap: 16 }}>
         {[{v:true,l:"Sim"},{v:false,l:"Não"}].map(o => (
-          <label key={String(o.v)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: disabled ? "default" : "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
+          <label key={String(o.v)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: disabled ? "default" : "pointer", fontSize: 13, color: "var(--text)" }}>
             <input type="radio" name={field.key} value={String(o.v)} checked={value === o.v}
               onChange={() => !disabled && onChange(o.v)} disabled={disabled}
               style={{ accentColor: "var(--accent)" }} />
@@ -346,7 +346,7 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         {(field.options || []).map(opt => (
-          <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, cursor: disabled ? "default" : "pointer", fontSize: 13, color: NEUTRAL.graphite }}>
+          <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, cursor: disabled ? "default" : "pointer", fontSize: 13, color: "var(--text)" }}>
             <input type="checkbox" checked={checked.includes(opt)}
               onChange={() => { if (!disabled) onChange(checked.includes(opt) ? checked.filter(x => x !== opt) : [...checked, opt]); }}
               disabled={disabled} style={{ accentColor: "var(--accent)", width: 14, height: 14 }} />
@@ -363,7 +363,7 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
 function AtividadesTab({ activities }) {
   const sorted = [...(activities || [])].reverse();
   if (sorted.length === 0) {
-    return <div style={{ fontSize: 12, color: NEUTRAL.slate, textAlign: "center", marginTop: 32 }}>Nenhuma atividade registrada.</div>;
+    return <div style={{ fontSize: 12, color: "var(--text-dim)", textAlign: "center", marginTop: 32 }}>Nenhuma atividade registrada.</div>;
   }
   const typeColor = { stage_change: "var(--accent)", field_save: "#16A34A", note_added: "#7C3AED", created: "#D97706" };
   return (
@@ -375,8 +375,8 @@ function AtividadesTab({ activities }) {
             {i < sorted.length - 1 && <div style={{ width: 1, flex: 1, background: "#E5E7EB", marginTop: 4 }} />}
           </div>
           <div>
-            <div style={{ fontSize: 12, color: NEUTRAL.graphite, lineHeight: 1.5 }}>{a.description}</div>
-            <div style={{ fontSize: 10, color: NEUTRAL.slate, marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{a.description}</div>
+            <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>
               {new Date(a.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
             </div>
           </div>
@@ -436,8 +436,8 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
             transition: "all 0.15s",
           }}
         >
-          <Upload size={18} style={{ color: dragOver ? "var(--accent)" : NEUTRAL.slate, margin: "0 auto 6px" }} />
-          <div style={{ fontSize: 12, color: NEUTRAL.slate, fontWeight: 500 }}>
+          <Upload size={18} style={{ color: dragOver ? "var(--accent)" : "var(--text-dim)", margin: "0 auto 6px" }} />
+          <div style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 500 }}>
             {uploading ? "Enviando…" : "Arraste ou clique para enviar"}
           </div>
           <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 3 }}>PDF, Word, imagens, vídeos — máx 50 MB</div>
@@ -454,23 +454,23 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
 
       {loading ? (
         <div style={{ textAlign: "center", padding: 16 }}>
-          <Loader2 size={16} style={{ color: NEUTRAL.slate }} className="animate-spin" />
+          <Loader2 size={16} style={{ color: "var(--text-dim)" }} className="animate-spin" />
         </div>
       ) : attachments.length === 0 ? (
-        <div style={{ fontSize: 12, color: NEUTRAL.slate, textAlign: "center", padding: "16px 0" }}>Nenhum anexo ainda.</div>
+        <div style={{ fontSize: 12, color: "var(--text-dim)", textAlign: "center", padding: "16px 0" }}>Nenhum anexo ainda.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {attachments.map(att => {
             const Icon = fileIconFn(att.mime_type);
             return (
               <div key={att.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
-                <Icon size={16} style={{ color: NEUTRAL.slate, flexShrink: 0 }} />
+                <Icon size={16} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.file_name}</div>
-                  {att.file_size && <div style={{ fontSize: 10, color: NEUTRAL.slate }}>{humanSize(att.file_size)}</div>}
+                  <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.file_name}</div>
+                  {att.file_size && <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{humanSize(att.file_size)}</div>}
                 </div>
                 <button onClick={() => handleDownload(att)} title="Baixar"
-                  style={{ background: "none", border: "none", cursor: "pointer", color: NEUTRAL.slate, padding: 4, borderRadius: 4, display: "flex" }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 4, display: "flex" }}
                   onMouseEnter={e => { e.currentTarget.style.background = "#E5E7EB"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>
                   <Download size={14} />
@@ -506,7 +506,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
     setNewTexts(prev => ({ ...prev, [cid]: "" }));
   };
 
-  if (loading) return <div style={{ fontSize: 12, color: NEUTRAL.slate, textAlign: "center", padding: 20 }}>Carregando…</div>;
+  if (loading) return <div style={{ fontSize: 12, color: "var(--text-dim)", textAlign: "center", padding: 20 }}>Carregando…</div>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -518,8 +518,8 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
           <div key={cl.id} style={{ border: "1px solid #E5E7EB", borderRadius: 10, overflow: "hidden" }}>
             <div style={{ background: "#F9FAFB", padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E5E7EB" }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 12, color: NEUTRAL.graphite }}>{cl.title}</div>
-                <div style={{ fontSize: 10, color: NEUTRAL.slate, marginTop: 2 }}>{done}/{total} concluídos</div>
+                <div style={{ fontWeight: 600, fontSize: 12, color: "var(--text)" }}>{cl.title}</div>
+                <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>{done}/{total} concluídos</div>
               </div>
               {total > 0 && (
                 <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, overflow: "hidden" }}>
@@ -548,7 +548,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
                     }}>
                     {it.done && <Check size={10} color="#FFF" strokeWidth={3} />}
                   </button>
-                  <span style={{ fontSize: 12, flex: 1, color: it.done ? NEUTRAL.slate : NEUTRAL.graphite, textDecoration: it.done ? "line-through" : "none" }}>
+                  <span style={{ fontSize: 12, flex: 1, color: it.done ? "var(--text-dim)" : "var(--text)", textDecoration: it.done ? "line-through" : "none" }}>
                     {it.text}
                   </span>
                   {canWrite && (
@@ -593,7 +593,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
         </button>
       )}
       {checklists.length === 0 && !canWrite && (
-        <div style={{ fontSize: 12, color: NEUTRAL.slate, textAlign: "center", padding: "16px 0" }}>Nenhuma checklist ainda.</div>
+        <div style={{ fontSize: 12, color: "var(--text-dim)", textAlign: "center", padding: "16px 0" }}>Nenhuma checklist ainda.</div>
       )}
     </div>
   );
@@ -626,12 +626,12 @@ function ComentariosTab({ item, onUpdate, canWrite }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ flex: 1, overflowY: "auto" }}>
         {notes.length === 0
-          ? <div style={{ fontSize: 12, color: NEUTRAL.slate, textAlign: "center", marginTop: 20 }}>Nenhum comentário ainda.</div>
+          ? <div style={{ fontSize: 12, color: "var(--text-dim)", textAlign: "center", marginTop: 20 }}>Nenhum comentário ainda.</div>
           : [...notes].reverse().map((n, i) => (
             <div key={i} style={{ marginBottom: 10, padding: "10px 12px", background: "var(--surface-alt)", borderRadius: 8 }}>
-              <div style={{ fontSize: 13, color: NEUTRAL.graphite, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{n.text}</div>
+              <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{n.text}</div>
               {n.createdAt && (
-                <div style={{ fontSize: 10, color: NEUTRAL.slate, marginTop: 4 }}>
+                <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
                   {new Date(n.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                 </div>
               )}
@@ -788,33 +788,33 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             { label: "Departamento", val: item.department },
           ].map(({ label, val }) => val ? (
             <div key={label} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
               <ReadValue value={val} />
             </div>
           ) : null)}
           {item.description && (
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Descrição</div>
-              <div style={{ fontSize: 12, color: NEUTRAL.graphite, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{item.description}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Descrição</div>
+              <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{item.description}</div>
             </div>
           )}
           <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prazo</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prazo</div>
             {item.deadline
-              ? <span style={{ fontSize: 13, fontWeight: 600, color: new Date(item.deadline) < new Date() ? "#DC2626" : NEUTRAL.graphite }}>{formatDateBR(item.deadline)}</span>
+              ? <span style={{ fontSize: 13, fontWeight: 600, color: new Date(item.deadline) < new Date() ? "#DC2626" : "var(--text)" }}>{formatDateBR(item.deadline)}</span>
               : <ReadValue value={null} />}
           </div>
 
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #E5E7EB" }}>
             <SectionLabel>Histórico de Etapas</SectionLabel>
             {(item.activities || []).filter(a => a.type === "stage_change").length === 0
-              ? <div style={{ fontSize: 11, color: NEUTRAL.slate }}>Nenhuma transição registrada.</div>
+              ? <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Nenhuma transição registrada.</div>
               : [...(item.activities || [])].filter(a => a.type === "stage_change").reverse().map((a, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 11 }}>
                   <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", marginTop: 4, flexShrink: 0 }} />
                   <div>
-                    <div style={{ color: NEUTRAL.graphite }}>{a.description}</div>
-                    <div style={{ color: NEUTRAL.slate, fontSize: 10 }}>{new Date(a.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
+                    <div style={{ color: "var(--text)" }}>{a.description}</div>
+                    <div style={{ color: "var(--text-dim)", fontSize: 10 }}>{new Date(a.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
                   </div>
                 </div>
               ))
@@ -843,17 +843,17 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
     >
       <div
         className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-6xl lg:rounded-2xl lg:max-h-[92vh]"
-        style={{ background: "#FFFFFF", boxShadow: "0 24px 64px rgba(32,26,26,0.18)", overflow: "hidden", height: "100%" }}
+        style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)", overflow: "hidden", height: "100%" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Mobile header */}
         <div className="lg:hidden sticky top-0 z-10 flex flex-col shrink-0" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
           <div className="flex items-center justify-between px-4 py-3">
-            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: NEUTRAL.slate }}>
+            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
               <X size={20} />
             </button>
             <div className="flex-1 mx-3 text-center min-w-0">
-              <div className="font-bold text-sm truncate" style={{ color: NEUTRAL.graphite }}>{item.title}</div>
+              <div className="font-bold text-sm truncate" style={{ color: "var(--text)" }}>{item.title}</div>
               {stageInfo && <div className="text-xs font-semibold" style={{ color: stageInfo.color }}>{stageInfo.name}</div>}
             </div>
             {item.priority && (
@@ -868,7 +868,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                 key={t.id}
                 onClick={() => setMobileTab(t.id)}
                 className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
-                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "var(--accent)" : "transparent"}`, color: mobileTab === t.id ? "var(--accent)" : NEUTRAL.slate }}
+                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "var(--accent)" : "transparent"}`, color: mobileTab === t.id ? "var(--accent)" : "var(--text-dim)" }}
               >
                 {t.label}
               </button>
@@ -896,7 +896,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             )}
             {companyLabels && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: "var(--surface-alt)", color: NEUTRAL.graphite, border: "1px solid #E5E7EB" }}>
+                style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid #E5E7EB" }}>
                 {companyLabels}
               </span>
             )}
@@ -907,9 +907,9 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                 onClick={() => setConfirmDel(v => !v)}
                 title="Excluir entrega"
                 className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                style={{ color: NEUTRAL.slate, background: "none", border: "none" }}
+                style={{ color: "var(--text-dim)", background: "none", border: "none" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
               >
                 <Trash2 size={16} />
               </button>
@@ -917,7 +917,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: NEUTRAL.slate, background: "none", border: "none" }}
+              style={{ color: "var(--text-dim)", background: "none", border: "none" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
@@ -941,7 +941,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             <button
               onClick={() => setConfirmDel(false)}
               className="px-3 py-1.5 text-xs rounded-xl border"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFF", cursor: "pointer" }}
+              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFF", cursor: "pointer" }}
             >
               Cancelar
             </button>
@@ -958,10 +958,10 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
           >
             {/* Item header */}
             <div>
-              <h2 className="font-bold mb-1" style={{ fontSize: 17, color: NEUTRAL.graphite, letterSpacing: "-0.01em", wordBreak: "break-word" }}>
+              <h2 className="font-bold mb-1" style={{ fontSize: 17, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
                 {item.title}
               </h2>
-              {companyLabels && <div className="text-xs" style={{ color: NEUTRAL.slate }}>{companyLabels}</div>}
+              {companyLabels && <div className="text-xs" style={{ color: "var(--text-dim)" }}>{companyLabels}</div>}
             </div>
 
             {/* Company + priority pills */}
@@ -987,21 +987,21 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             {/* Stats grid */}
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate }}>Prazo</div>
-                <div className="text-xs font-bold mt-0.5" style={{ color: item.deadline && new Date(item.deadline) < new Date() ? "#DC2626" : NEUTRAL.graphite }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Prazo</div>
+                <div className="text-xs font-bold mt-0.5" style={{ color: item.deadline && new Date(item.deadline) < new Date() ? "#DC2626" : "var(--text)" }}>
                   {item.deadline ? formatDateBR(item.deadline) : "—"}
                 </div>
               </div>
               <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate }}>Etapa</div>
-                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: stageInfo?.color || NEUTRAL.graphite }}>
+                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Etapa</div>
+                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: stageInfo?.color || "var(--text)" }}>
                   {stageInfo?.name || "—"}
                 </div>
               </div>
               {item.department && (
                 <div className="col-span-2 rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                  <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: NEUTRAL.slate }}>Departamento</div>
-                  <div className="text-xs font-bold mt-0.5 truncate" style={{ color: NEUTRAL.graphite }}>{item.department}</div>
+                  <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Departamento</div>
+                  <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>{item.department}</div>
                 </div>
               )}
             </div>
@@ -1030,13 +1030,13 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                   </span>
                 )}
                 {saveStatus && (
-                  <span style={{ fontSize: 10, color: saveStatus === "saved" ? "#16A34A" : NEUTRAL.slate, marginTop: -14, marginLeft: "auto" }}>
+                  <span style={{ fontSize: 10, color: saveStatus === "saved" ? "#16A34A" : "var(--text-dim)", marginTop: -14, marginLeft: "auto" }}>
                     {saveStatus === "saving" ? "Salvando…" : "✓ Salvo"}
                   </span>
                 )}
               </div>
               {fields.length === 0
-                ? <div style={{ fontSize: 12, color: NEUTRAL.slate }}>Nenhum campo para esta fase.</div>
+                ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
                 : fields.map(field => (
                   <FieldRow key={field.key} label={field.label} required={field.required} hint={field.hint}>
                     <StageFieldInput field={field} value={fieldValues[field.key]} onChange={val => handleFieldChange(field.key, val)} canWrite={canWrite} users={users} />
@@ -1075,7 +1075,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
             style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}
           >
             <div>
-              <div className="text-xs font-semibold mb-3" style={{ color: NEUTRAL.graphite, letterSpacing: "0.02em" }}>
+              <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
                 Mover entrega para fase
               </div>
               <div className="space-y-2">
@@ -1097,7 +1097,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
                     onClick={() => canWrite && handleMoveStage(s.id)}
                     disabled={!canWrite}
                     className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                    style={{ background: "#FFFFFF", color: NEUTRAL.graphite, border: "1px solid #E5E7EB", opacity: canWrite ? 1 : 0.5 }}
+                    style={{ background: "#FFFFFF", color: "var(--text)", border: "1px solid #E5E7EB", opacity: canWrite ? 1 : 0.5 }}
                     onMouseEnter={e => { if (canWrite) e.currentTarget.style.background = "var(--surface-alt)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
                   >
@@ -1113,9 +1113,9 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
               <button
                 onClick={() => setSideTab("ia")}
                 className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
-                style={{ background: "none", border: "none", color: NEUTRAL.slate, padding: 0, textAlign: "left" }}
+                style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0, textAlign: "left" }}
                 onMouseEnter={e => { e.currentTarget.style.color = PURPLE; }}
-                onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; }}
+                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
               >
                 <Sparkles size={12} />
                 Mover cards com IA
@@ -1136,7 +1136,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
               <ArrowRight size={16} />
             </button>
           ) : (
-            <div className="text-xs text-center py-3" style={{ color: NEUTRAL.slate }}>
+            <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
               {currentIdx >= DELIVERABLE_STAGES.length - 1 ? "Entrega concluída" : "Fase atual"}
             </div>
           )}

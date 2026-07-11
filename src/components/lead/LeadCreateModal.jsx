@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { X, Settings, Loader2 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { CANONICAL_STATES } from "../../constants/taxonomy";
 import { FIELD_DEFS } from "../../constants/lead-form-fields";
@@ -57,7 +57,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
     borderRadius: 6,
     border: "1px solid #D1D5DB",
     padding: "8px 12px",
-    color: NEUTRAL.graphite,
+    color: "var(--text)",
     background: "#FFFFFF",
     outline: "none",
     boxSizing: "border-box",
@@ -144,7 +144,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
       <div style={{ position: "relative" }}>
         <span style={{
           position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-          fontSize: 12, color: NEUTRAL.slate, fontWeight: 600, pointerEvents: "none",
+          fontSize: 12, color: "var(--text-dim)", fontWeight: 600, pointerEvents: "none",
         }}>R$</span>
         <input
           type="number"
@@ -194,7 +194,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
         <div style={{
           display: "flex", alignItems: "center", gap: 6,
           border: "1px solid #D1D5DB", borderRadius: 6, padding: "6px 10px",
-          background: "#F9FAFB", fontSize: 12, color: NEUTRAL.graphite, flexShrink: 0,
+          background: "#F9FAFB", fontSize: 12, color: "var(--text)", flexShrink: 0,
         }}>
           🇧🇷 +55
         </div>
@@ -418,7 +418,7 @@ export function LeadCreateModal({
         className="w-full max-w-xl max-h-full overflow-y-auto rounded-2xl flex flex-col"
         style={{
           background: "#FFFFFF",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.24)",
+          boxShadow: "var(--shadow-pop)",
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -437,11 +437,11 @@ export function LeadCreateModal({
               </span>
             )}
             <div className="min-w-0">
-              <p className="font-bold text-sm leading-tight" style={{ color: NEUTRAL.graphite }}>
+              <p className="font-bold text-sm leading-tight" style={{ color: "var(--text)" }}>
                 Novo card
               </p>
               {stage?.name && (
-                <p className="text-xs" style={{ color: NEUTRAL.slate }}>{stage.name}</p>
+                <p className="text-xs" style={{ color: "var(--text-dim)" }}>{stage.name}</p>
               )}
             </div>
           </div>
@@ -450,9 +450,9 @@ export function LeadCreateModal({
               <button
                 onClick={() => setShowBuilder(true)}
                 className="flex items-center gap-1 p-1.5 rounded-lg transition-colors cursor-pointer"
-                style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.color = NEUTRAL.graphite; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NEUTRAL.slate; }}
+                style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                 title="Configurar campos do formulário"
               >
                 <Settings size={15} />
@@ -461,7 +461,7 @@ export function LeadCreateModal({
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: NEUTRAL.slate, background: "transparent", border: "none" }}
+              style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               aria-label="Fechar"
@@ -487,7 +487,7 @@ export function LeadCreateModal({
                       display: "block",
                       fontSize: 11,
                       fontWeight: 700,
-                      color: NEUTRAL.slate,
+                      color: "var(--text-dim)",
                       textTransform: "uppercase",
                       letterSpacing: "0.07em",
                       marginBottom: 5,
@@ -553,16 +553,16 @@ export function LeadCreateModal({
                               gap: 10, width: "100%", textAlign: "left",
                               padding: "8px 10px", borderRadius: 6,
                               background: "#FFFFFF", border: "1px solid #DBEAFE",
-                              cursor: "pointer", color: NEUTRAL.graphite,
+                              cursor: "pointer", color: "var(--text)",
                             }}
                             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "#93C5FD"; }}
                             onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "#DBEAFE"; }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontWeight: 600, fontSize: 12, color: NEUTRAL.graphite, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              <div style={{ fontWeight: 600, fontSize: 12, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {dup.company}
                               </div>
-                              <div style={{ fontSize: 11, color: NEUTRAL.slate, marginTop: 1 }}>
+                              <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>
                                 {dup.cnpj && <span style={{ fontFamily: "monospace" }}>{dup.cnpj} · </span>}
                                 {dupCompany?.short || dup.companyId} · {dup.stage} · {ownerName}
                               </div>
@@ -585,13 +585,13 @@ export function LeadCreateModal({
               coletado na criação, não só depois no drawer. */}
           {visibleStageFields.length > 0 && (
             <div style={{ marginBottom: 16, paddingTop: 12, borderTop: "1px dashed #E5E7EB" }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>
                 Campos desta etapa {stage?.name ? `· ${stage.name}` : ""}
               </div>
               <div className="flex flex-col gap-3">
                 {visibleStageFields.map(f => (
                   <div key={f.id}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: NEUTRAL.slate, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
                       {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 2 }}>*</span>}
                       {f.label}
                     </label>

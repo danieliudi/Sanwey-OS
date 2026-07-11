@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Sparkles, Loader2, AlertCircle, RotateCcw, Copy, Check } from "lucide-react";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
-import { NEUTRAL } from "../../constants/companies";
 
 const PURPLE = "#7C3AED";
 
@@ -61,7 +60,7 @@ export function CampaignAIPanel({ campaign, currentUser }) {
           className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all active:scale-95"
           style={{
             background: !isConfigured ? "#E5E7EB" : PURPLE,
-            color: !isConfigured ? NEUTRAL.slate : "#FFFFFF",
+            color: !isConfigured ? "var(--text-dim)" : "#FFFFFF",
             border: "none",
             cursor: loading || !isConfigured ? "not-allowed" : "pointer",
             opacity: loading ? 0.8 : 1,
@@ -86,16 +85,16 @@ export function CampaignAIPanel({ campaign, currentUser }) {
       {result && (
         <div className="space-y-2">
           <div className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-xl border"
-            style={{ background: "#FFFFFF", borderColor: "#DDD6FE", color: NEUTRAL.graphite }}>
+            style={{ background: "#FFFFFF", borderColor: "#DDD6FE", color: "var(--text)" }}>
             {result}
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleGenerate}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all"
-              style={{ background: "#FFFFFF", color: NEUTRAL.slate, borderColor: "#E5E7EB", cursor: "pointer" }}
+              style={{ background: "#FFFFFF", color: "var(--text-dim)", borderColor: "#E5E7EB", cursor: "pointer" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = PURPLE; e.currentTarget.style.color = PURPLE; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = "var(--text-dim)"; }}
             >
               <RotateCcw size={11} />
               Regenerar
@@ -105,12 +104,12 @@ export function CampaignAIPanel({ campaign, currentUser }) {
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all"
               style={{
                 background: copied ? "#F0FDF4" : "#FFFFFF",
-                color: copied ? "#16A34A" : NEUTRAL.slate,
+                color: copied ? "#16A34A" : "var(--text-dim)",
                 borderColor: copied ? "#BBF7D0" : "#E5E7EB",
                 cursor: "pointer",
               }}
-              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = NEUTRAL.graphite; e.currentTarget.style.color = NEUTRAL.graphite; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = NEUTRAL.slate; } }}
+              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
+              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = "var(--text-dim)"; } }}
             >
               {copied ? <Check size={11} /> : <Copy size={11} />}
               {copied ? "Copiado!" : "Copiar"}

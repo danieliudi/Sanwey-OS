@@ -91,7 +91,7 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
         style={{
           background: "var(--surface)",
           borderRadius: 16,
-          boxShadow: "0 24px 64px rgba(32,26,26,0.18)",
+          boxShadow: "var(--shadow-pop)",
           width: "100%",
           maxWidth: 460,
           padding: 24,

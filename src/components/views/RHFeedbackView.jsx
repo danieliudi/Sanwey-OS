@@ -15,6 +15,8 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 
 const TIPOS = [
   { id: "30_dias",   label: "30 dias" },
@@ -160,7 +162,7 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 520, boxShadow: "var(--shadow-pop)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Novo feedback</div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
@@ -254,7 +256,7 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 520, boxShadow: "var(--shadow-pop)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Concluir avaliação</div>
           <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
@@ -332,7 +334,7 @@ function AutoavaliacaoModal({ feedback, onSubmit, onClose }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "0 24px 80px rgba(0,0,0,0.22)" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Sua autoavaliação</div>
           <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
@@ -384,7 +386,7 @@ function HistoricoDrawer({ colaborador, feedbacksDoColaborador, onClose }) {
   return (
     <>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
@@ -485,7 +487,7 @@ function FeedbackKanbanColumn({
         width: 272, minWidth: 272,
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
-        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
         maxHeight: "calc(100vh - 260px)",
       }}
     >
@@ -578,7 +580,7 @@ function FeedbackDrawer({
   return (
     <>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <InitialsAvatar name={colaborador?.fullName} size={40} />
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -792,12 +794,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
   const drawerFeedback = drawerFeedbackId ? feedbacks.find(f => f.id === drawerFeedbackId) : null;
 
   if (!isSupabaseConfigured) {
-    return (
-      <div style={{ textAlign: "center", padding: "60px 0" }}>
-        <MessageSquare size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-        <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Supabase não configurado</div>
-      </div>
-    );
+    return <EmptyState icon={MessageSquare} title="Supabase não configurado" />;
   }
 
   // ── Colaborador comum (sem acesso RH): visão pessoal, sem Kanban ──────────
@@ -840,10 +837,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
             )}
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Histórico ({concluidos.length})</div>
             {concluidos.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "60px 0" }}>
-                <MessageSquare size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-                <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum feedback concluído ainda</div>
-              </div>
+              <EmptyState icon={MessageSquare} title="Nenhum feedback concluído ainda" />
             ) : (
               <div className="flex flex-col gap-3">
                 {concluidos.map(f => (
@@ -890,12 +884,8 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
         </div>
         {canWrite && (
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => setStageEditorOpen(true)} style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-              <Pencil size={13} /> Editar etapas
-            </button>
-            <button onClick={() => setNovoOpen(true)} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-              <Plus size={14} /> Novo feedback
-            </button>
+            <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
+            <Button icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
           </div>
         )}
       </div>
@@ -903,10 +893,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : feedbacks.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <MessageSquare size={48} style={{ color: "var(--text-dim)", opacity: 0.3, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, color: "var(--text-dim)", fontWeight: 500 }}>Nenhum ciclo de avaliação ainda</div>
-        </div>
+        <EmptyState icon={MessageSquare} title="Nenhum ciclo de avaliação ainda" />
       ) : (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
           <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">

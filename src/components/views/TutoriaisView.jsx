@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { Play, ChevronDown, ChevronUp, BookOpen, LifeBuoy, Zap, Bot, Copy, Check, ChevronRight, ArrowRight, Search } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import { VIDEO_TUTORIALS, FAQ_ITEMS, AUTOMATION_GUIDE, AI_PROMPTS } from "../../data/tutorials";
 
 const ROLE_LABEL = {
@@ -25,7 +24,7 @@ function VideoCard({ video, onNavigate }) {
     return (
       <div
         className="flex flex-col rounded-xl border overflow-hidden"
-        style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
       >
         <div
           className="px-4 py-3 flex items-center gap-2 border-b"
@@ -67,7 +66,7 @@ function VideoCard({ video, onNavigate }) {
   return (
     <div
       className="flex flex-col rounded-xl border overflow-hidden"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
     >
       <div
         className="relative flex items-center justify-center"
@@ -92,7 +91,7 @@ function VideoCard({ video, onNavigate }) {
             </div>
             <span
               className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-              style={{ background: NEUTRAL.amber + "22", color: NEUTRAL.amber, border: `1px solid ${NEUTRAL.amber}44` }}
+              style={{ background: "color-mix(in srgb, var(--amber) 13%, transparent)", color: "var(--amber)", border: "1px solid color-mix(in srgb, var(--amber) 27%, transparent)" }}
             >
               Em breve
             </span>
@@ -158,7 +157,7 @@ function RecipeCard({ recipe }) {
   return (
     <div
       className="rounded-xl border p-4 flex flex-col gap-3"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -244,7 +243,7 @@ function PromptCategorySection({ category }) {
   return (
     <div
       className="rounded-xl border overflow-hidden"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
     >
       <button
         className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left"
@@ -382,7 +381,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
           {/* Steps */}
           <div
             className="rounded-xl border p-5"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+            style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
           >
             <h2 className="font-semibold mb-5" style={{ fontSize: 15, color: "var(--text)" }}>
               Como criar uma automação — passo a passo
@@ -481,7 +480,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
       {activeTab === "faq" && (
         <div
           className="rounded-xl border"
-          style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+          style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
         >
           <div className="px-5 pt-5 pb-3 border-b" style={{ borderColor: "var(--border)" }}>
             <div className="flex items-center gap-2 mb-0.5">

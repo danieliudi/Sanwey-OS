@@ -50,7 +50,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
       {overlaps.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Network size={16} color={NEUTRAL.amber} />
+            <Network size={16} color="var(--amber)" />
             <h2 className="font-bold" style={{ fontSize: 16, color: "var(--text)" }}>
               Overlap — mesmo cliente em múltiplas empresas
             </h2>
@@ -116,7 +116,7 @@ export function CrossReferralsView({ crossReferrals, users, onApprove, onReject 
                 </div>
                 <div
                   className="mt-3 text-xs p-2 rounded-xl"
-                  style={{ background: NEUTRAL.amber + "15", color: NEUTRAL.amber }}
+                  style={{ background: NEUTRAL.amber + "15", color: "var(--amber)" }}
                 >
                   ⚠️ Atenção: risco de canibalização. Alinhe com os vendedores antes de avançar.
                 </div>

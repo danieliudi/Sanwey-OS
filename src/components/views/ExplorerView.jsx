@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { X, Filter, Search, Download, Sparkles, Upload } from "lucide-react";
-import { NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS, CANONICAL_STATES } from "../../constants/taxonomy";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
@@ -121,7 +120,7 @@ export function ExplorerView({
         )}
 
         {/* Filter card */}
-        <div className={`p-4 rounded-xl border${!isSupabaseConfigured ? " lg:col-span-2" : ""}`} style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div className={`p-4 rounded-xl border${!isSupabaseConfigured ? " lg:col-span-2" : ""}`} style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
           <div className="flex items-center gap-2 mb-3">
             <Filter size={13} color="var(--text-dim)" />
             <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>Filtros da curadoria</span>
@@ -217,7 +216,7 @@ export function ExplorerView({
       {leads.length === 0 && onLoadDemoLeads && (
         <div
           className="p-4 rounded-xl border flex items-center justify-between gap-3 flex-wrap"
-          style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+          style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
         >
           <div className="text-sm" style={{ color: "var(--text-dim)" }}>
             CRM ainda vazio. Carregue dados de demonstração para ver o pipeline completo.

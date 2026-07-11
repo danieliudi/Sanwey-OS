@@ -269,7 +269,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
 
 function DepartmentCard({ icon: Icon, iconColor, title, stats, ctaLabel, onNavigate }) {
   return (
-    <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+    <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: iconColor + "18" }}>
@@ -359,7 +359,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
   return (
     <div
       className="rounded-xl border p-5 space-y-4"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
     >
       <div className="flex items-start gap-3">
         <div
@@ -535,7 +535,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
     <div className="space-y-5">
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Pipeline por empresa */}
-        <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
           <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
             Pipeline por empresa
           </h3>
@@ -572,7 +572,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
         </div>
 
         {/* Funil de conversão */}
-        <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
           <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
             Funil de conversão (Grupo)
           </h3>
@@ -600,7 +600,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
       </div>
 
       {/* Matriz por empresa */}
-      <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
         <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
           Desempenho por empresa · matriz
         </h3>

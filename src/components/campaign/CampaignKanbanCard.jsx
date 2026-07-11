@@ -48,8 +48,8 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
     : null;
 
   const accentColor = stage?.color || "var(--text-dim)";
-  const shadowBase  = `inset 3px 0 0 ${accentColor}, 0 1px 4px rgba(32,26,26,0.06)`;
-  const shadowHover = `inset 3px 0 0 ${accentColor}, 0 4px 16px rgba(32,26,26,0.10)`;
+  const shadowBase  = `inset 3px 0 0 ${accentColor}, var(--shadow-card)`;
+  const shadowHover = `inset 3px 0 0 ${accentColor}, var(--shadow-pop)`;
 
   const companyLabels = (campaign.companyIds || [])
     .map(id => COMPANIES[id]?.short || id)
@@ -153,7 +153,7 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
                     background: "var(--surface)",
                     border: "1px solid var(--border)",
                     borderRadius: 8,
-                    boxShadow: "0 8px 24px rgba(32,26,26,0.12)",
+                    boxShadow: "var(--shadow-pop)",
                     zIndex: 50,
                     minWidth: 180,
                     overflow: "hidden",

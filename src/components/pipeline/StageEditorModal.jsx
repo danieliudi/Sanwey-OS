@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { X, GripVertical, RotateCcw, Save, Plus, Trash2 } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 
 // Editor de etapas por empresa. Permite renomear, mudar código (letra
 // que o presidente quer no sistema), cor, probabilidade, SLA em dias,
@@ -51,7 +51,7 @@ export function StageEditorModal({
   if (!open) return null;
 
   const company = COMPANIES[companyId];
-  const accent = company?.primary || NEUTRAL.graphite;
+  const accent = company?.primary || "var(--text)";
 
   const patch = (idx, p) => setDraft(d => d.map((s, i) => i === idx ? { ...s, ...p } : s));
 
@@ -127,14 +127,14 @@ export function StageEditorModal({
         <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "#E5E7EB" }}>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: accent }} />
-            <h2 className="font-bold" style={{ fontSize: 16, color: NEUTRAL.graphite }}>
+            <h2 className="font-bold" style={{ fontSize: 16, color: "var(--text)" }}>
               Editar etapas · {company?.short || companyId}
             </h2>
           </div>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg cursor-pointer"
-            style={{ color: NEUTRAL.slate }}
+            style={{ color: "var(--text-dim)" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             aria-label="Fechar"
@@ -156,7 +156,7 @@ export function StageEditorModal({
           className="px-4 py-2 border-b grid items-center gap-2 text-[10px] font-bold uppercase"
           style={{
             borderColor: "#E5E7EB",
-            color: NEUTRAL.slate,
+            color: "var(--text-dim)",
             letterSpacing: "0.06em",
             gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
           }}
@@ -194,7 +194,7 @@ export function StageEditorModal({
                 {/* Grip */}
                 <span
                   className="shrink-0"
-                  style={{ color: isTerminal ? "#D1D5DB" : NEUTRAL.slate, cursor: isTerminal ? "not-allowed" : "grab" }}
+                  style={{ color: isTerminal ? "#D1D5DB" : "var(--text-dim)", cursor: isTerminal ? "not-allowed" : "grab" }}
                   title={isTerminal ? "Terminal não reordena" : "Arraste pra reordenar"}
                 >
                   <GripVertical size={16} />
@@ -214,7 +214,7 @@ export function StageEditorModal({
                   value={stage.name}
                   onChange={e => patch(idx, { name: e.target.value })}
                   className="w-full rounded border px-2 py-1 text-sm"
-                  style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                  style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
                 />
 
                 {/* Probabilidade */}
@@ -226,15 +226,15 @@ export function StageEditorModal({
                     value={stage.probability ?? ""}
                     onChange={e => patch(idx, { probability: e.target.value === "" ? null : Number(e.target.value) })}
                     className="w-14 rounded border px-1 py-1 text-xs text-right"
-                    style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                    style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
                   />
-                  <span className="text-xs" style={{ color: NEUTRAL.slate }}>%</span>
+                  <span className="text-xs" style={{ color: "var(--text-dim)" }}>%</span>
                 </div>
 
                 {/* SLA */}
                 <div className="flex items-center justify-end gap-1">
                   {isTerminal ? (
-                    <span className="text-xs italic" style={{ color: NEUTRAL.slate }}>—</span>
+                    <span className="text-xs italic" style={{ color: "var(--text-dim)" }}>—</span>
                   ) : (
                     <>
                       <input
@@ -243,10 +243,10 @@ export function StageEditorModal({
                         value={stage.slaDays ?? ""}
                         onChange={e => patch(idx, { slaDays: e.target.value === "" ? null : Number(e.target.value) })}
                         className="w-14 rounded border px-1 py-1 text-xs text-right"
-                        style={{ borderColor: "#E5E7EB", color: NEUTRAL.graphite, background: "#FFFFFF" }}
+                        style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
                         title="Dias máximos esperados na etapa antes de virar 'parado'"
                       />
-                      <span className="text-xs" style={{ color: NEUTRAL.slate }}>d</span>
+                      <span className="text-xs" style={{ color: "var(--text-dim)" }}>d</span>
                     </>
                   )}
                 </div>
@@ -268,7 +268,7 @@ export function StageEditorModal({
                     </span>
                   )}
                   {count > 0 && (
-                    <span className="text-[10px]" style={{ color: NEUTRAL.slate }}>
+                    <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
                       {count}
                     </span>
                   )}
@@ -281,10 +281,10 @@ export function StageEditorModal({
                   <button
                     onClick={() => handleDelete(idx)}
                     className="p-1 rounded cursor-pointer"
-                    style={{ color: count > 0 ? "#D1D5DB" : NEUTRAL.slate }}
+                    style={{ color: count > 0 ? "#D1D5DB" : "var(--text-dim)" }}
                     title={count > 0 ? `Não dá pra remover: ${count} lead${count !== 1 ? "s" : ""} aqui` : "Remover etapa"}
                     onMouseEnter={e => { if (count === 0) { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.background = "#FEF2F2"; } }}
-                    onMouseLeave={e => { e.currentTarget.style.color = count > 0 ? "#D1D5DB" : NEUTRAL.slate; e.currentTarget.style.background = "transparent"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = count > 0 ? "#D1D5DB" : "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -297,9 +297,9 @@ export function StageEditorModal({
           <button
             onClick={handleAdd}
             className="w-full flex items-center justify-center gap-1.5 p-2.5 text-xs font-semibold rounded-lg border-2 border-dashed cursor-pointer"
-            style={{ borderColor: "#D1D5DB", color: NEUTRAL.slate, background: "var(--surface)" }}
+            style={{ borderColor: "#D1D5DB", color: "var(--text-dim)", background: "var(--surface)" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; e.currentTarget.style.background = accent + "08"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.background = "var(--surface)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "var(--surface)"; }}
           >
             <Plus size={13} />
             Adicionar etapa
@@ -311,9 +311,9 @@ export function StageEditorModal({
           <button
             onClick={handleReset}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-            style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFFFFF" }}
+            style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFFFFF" }}
             onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.borderColor = "#FECACA"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = NEUTRAL.slate; e.currentTarget.style.borderColor = "#E5E7EB"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "#E5E7EB"; }}
           >
             <RotateCcw size={11} />
             Restaurar padrão
@@ -322,7 +322,7 @@ export function StageEditorModal({
             <button
               onClick={onClose}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-              style={{ borderColor: "#E5E7EB", color: NEUTRAL.slate, background: "#FFFFFF" }}
+              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFFFFF" }}
             >
               Cancelar
             </button>

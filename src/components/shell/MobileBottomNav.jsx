@@ -79,7 +79,7 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 999,
           background: "#FFFFFF",
           borderRadius: "16px 16px 0 0",
-          boxShadow: "0 -8px 40px rgba(0,0,0,0.18)",
+          boxShadow: "var(--shadow-pop)",
           maxHeight: "88vh",
           overflowY: "auto",
         }}

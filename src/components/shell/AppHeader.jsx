@@ -1,6 +1,6 @@
 import React from "react";
 import { LogOut } from "lucide-react";
-import { COMPANIES, NEUTRAL } from "../../constants/companies";
+import { COMPANIES } from "../../constants/companies";
 import { Logo } from "../ui/Logo";
 import { Button } from "../ui/Button";
 
@@ -53,7 +53,7 @@ export function AppHeader({
                   className="px-2 py-0.5 text-xs font-semibold rounded-lg transition-all duration-150 flex items-center gap-1.5 cursor-pointer select-none"
                   style={{
                     background: active ? "#FFFFFF" : "transparent",
-                    color: active ? NEUTRAL.graphite : NEUTRAL.slate,
+                    color: active ? "var(--text)" : "var(--text-dim)",
                     boxShadow: active ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
                     border: active ? "1px solid #E5E5E5" : "1px solid transparent",
                   }}
@@ -87,9 +87,9 @@ export function AppHeader({
               key={item.id}
               onClick={() => onSectionChange(item.id)}
               className="relative px-2.5 text-xs font-medium whitespace-nowrap flex items-center gap-1.5 shrink-0 transition-colors duration-150 select-none"
-              style={{ color: active ? accent : NEUTRAL.slate }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.color = NEUTRAL.graphite; }}
-              onMouseLeave={e => { e.currentTarget.style.color = active ? accent : NEUTRAL.slate; }}
+              style={{ color: active ? accent : "var(--text-dim)" }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = active ? accent : "var(--text-dim)"; }}
             >
               <Icon size={13} strokeWidth={active ? 2.5 : 2} />
               {item.label}
@@ -114,15 +114,15 @@ export function AppHeader({
       <div className="flex items-center gap-2 shrink-0">
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-white text-xs shrink-0"
-          style={{ background: currentUser?.avatarBg || NEUTRAL.slate }}
+          style={{ background: currentUser?.avatarBg || "var(--text-dim)" }}
         >
           {currentUser?.initials || "?"}
         </div>
         <div className="hidden xl:block">
-          <div className="text-xs font-semibold leading-tight" style={{ color: NEUTRAL.graphite }}>
+          <div className="text-xs font-semibold leading-tight" style={{ color: "var(--text)" }}>
             {currentUser?.name}
           </div>
-          <div className="text-[10px]" style={{ color: NEUTRAL.slate }}>
+          <div className="text-[10px]" style={{ color: "var(--text-dim)" }}>
             {roleLabel}
           </div>
         </div>

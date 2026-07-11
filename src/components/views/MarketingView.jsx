@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, Calendar as CalendarIcon, Pencil, Settings2 } from "lucide-react";
-import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
 } from "../../constants/marketing-pipelines";
@@ -107,7 +107,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.22)", maxHeight: "90vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -337,7 +337,7 @@ function KpiCard({ label, value, red }) {
         background: "var(--surface)",
         borderColor: "var(--border)",
         padding: "8px 10px",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        boxShadow: "var(--shadow-card)",
       }}
     >
       <div
@@ -968,7 +968,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       minWidth: 272,
                       background: isOver ? "var(--surface-alt)" : "var(--surface-alt)",
                       borderColor: isOver ? stage.color + "70" : "var(--border)",
-                      boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "0 1px 2px rgba(0,0,0,0.03)",
+                      boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
                       minHeight: 480,
                       flexShrink: 0,
                     }}
