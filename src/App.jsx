@@ -674,12 +674,12 @@ export default function App() {
         label: "Recursos Humanos",
         items: [
           { id: "rh-overview",     label: "Visão Geral",      icon: LayoutDashboard },
-          { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
           { id: "rh-recrutamento", label: "Recrutamento",      icon: BriefcaseBusiness },
           { id: "rh-onboarding",   label: "Onboarding",        icon: ClipboardCheck },
           { id: "rh-treinamentos", label: "Treinamentos",      icon: GraduationCap },
           { id: "rh-feedback",     label: "Feedback",          icon: MessageSquareText },
           { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
+          { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
         ],
       });
     } else {
