@@ -698,17 +698,21 @@ export function RHStageFieldEditorModal({ open, onClose, domain, stageKey, stage
       >
         {/* Header */}
         <div
-          className="sticky top-0 z-10 flex items-center justify-between px-5 py-3.5 border-b"
-          style={{ background: "rgba(250,250,248,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
+          className="sticky top-0 z-10 flex items-center justify-between gap-2 px-5 py-3.5 border-b"
+          style={{ background: "var(--surface)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}
         >
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm" style={{ color: "var(--text)" }}>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span
+              className="font-bold text-sm"
+              title={`Campos da etapa · ${stageName}`}
+              style={{ color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
+            >
               Campos da etapa · {stageName}
             </span>
           </div>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, lineHeight: 0 }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, lineHeight: 0, flexShrink: 0 }}
             onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
           >

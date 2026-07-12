@@ -640,20 +640,24 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
       >
         {/* Header */}
         <div
-          className="sticky top-0 z-10 flex items-center justify-between px-5 py-3.5 border-b"
-          style={{ background: "rgba(250,250,248,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
+          className="sticky top-0 z-10 flex items-center justify-between gap-2 px-5 py-3.5 border-b"
+          style={{ background: "var(--surface)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div
               className="w-3 h-3 rounded-full shrink-0"
               style={{ background: stage.color || accent }}
             />
-            <span className="font-bold text-sm" style={{ color: "var(--text)" }}>
+            <span
+              className="font-bold text-sm"
+              title={`Editar fase: ${stage.name}`}
+              style={{ color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
+            >
               Editar fase: {stage.name}
             </span>
             {company && (
               <span
-                className="text-xs font-semibold px-1.5 py-0.5 rounded"
+                className="text-xs font-semibold px-1.5 py-0.5 rounded shrink-0"
                 style={{ background: accent + "18", color: accent, border: `1px solid ${accent}30` }}
               >
                 {company.short}
@@ -662,7 +666,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
           </div>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, lineHeight: 0 }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, lineHeight: 0, flexShrink: 0 }}
             onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
           >

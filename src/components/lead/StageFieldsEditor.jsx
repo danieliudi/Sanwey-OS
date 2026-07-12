@@ -96,21 +96,27 @@ export function StageFieldsEditor({
     >
       <div
         className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl"
-        style={{ background: "#FFFFFF", boxShadow: "var(--shadow-pop)" }}
+        style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 px-5 py-4 border-b flex items-center justify-between"
-             style={{ background: "#FFFFFF", borderColor: "#E8E8E8" }}>
-          <div>
+        <div className="sticky top-0 z-10 px-5 py-4 border-b flex items-center justify-between gap-2"
+             style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="min-w-0 flex-1">
             <h2 className="font-bold text-base" style={{ color: "var(--text)" }}>
               Campos da etapa
             </h2>
-            <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{stageName}</div>
+            <div
+              className="text-xs mt-0.5"
+              title={stageName}
+              style={{ color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+            >
+              {stageName}
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg cursor-pointer"
+            className="p-1.5 rounded-lg cursor-pointer shrink-0"
             style={{ color: "var(--text-dim)" }}
             aria-label="Fechar"
           >
