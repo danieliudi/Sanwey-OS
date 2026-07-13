@@ -26,7 +26,7 @@ export const AUTOMATION_TEMPLATES = [
       name: "Prioridade alta ao entrar em Negociação",
       companyId: "all",
       trigger: { type: "stage_change", fromStage: "", toStage: "negociacao" },
-      action:  { type: "set_field", field: "priority", value: "alta" },
+      action:  { type: "set_field", field: "urgency", fieldValue: "alto" },
     },
   },
   {
@@ -38,7 +38,7 @@ export const AUTOMATION_TEMPLATES = [
       name: "Badge VIP · valor ≥ R$ 50k",
       companyId: "all",
       trigger: { type: "field_value", field: "value", operator: "gt", value: "50000" },
-      action:  { type: "add_badge", badge: { label: "VIP", color: "#F59E0B" } },
+      action:  { type: "add_badge", badge: "VIP", badgeColor: "#F59E0B" },
     },
   },
   {
@@ -98,7 +98,7 @@ export const AUTOMATION_TEMPLATES = [
       name: "Badge · lead novo",
       companyId: "all",
       trigger: { type: "lead_created" },
-      action:  { type: "add_badge", badge: { label: "Novo", color: "#10B981" } },
+      action:  { type: "add_badge", badge: "Novo", badgeColor: "#10B981" },
     },
   },
   {

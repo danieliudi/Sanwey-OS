@@ -34,7 +34,21 @@ const LEAD_FIELDS = [
   { id: "value",    label: "Valor (R$)" },
   { id: "fitScore", label: "FitScore" },
   { id: "owner",    label: "Responsável" },
-  { id: "priority", label: "Prioridade" },
+  { id: "urgency",  label: "Urgência" },
+];
+
+// Único enum reconhecido pelo UrgencyTag (src/components/ui/UrgencyTag.jsx) —
+// evita repetir o bug de "Prioridade" gravando um valor livre num campo que,
+// na prática, só a UI reconhece um conjunto fechado de valores.
+const URGENCY_VALUES = [
+  { id: "critico",     label: "Crítico" },
+  { id: "alto",        label: "Alto" },
+  { id: "medio",       label: "Médio" },
+  { id: "informativo", label: "Informativo" },
+  { id: "imediato",    label: "Imediato" },
+  { id: "30d",         label: "30 dias" },
+  { id: "90d",         label: "90 dias" },
+  { id: "indefinido",  label: "Indefinido" },
 ];
 
 const OPERATORS = [
@@ -1202,14 +1216,26 @@ function ActionConfig({ action: a, allStages, setAction }) {
         </div>
         <div>
           <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text)" }}>Novo valor</label>
-          <input
-            type="text"
-            value={a.fieldValue || ""}
-            onChange={e => setAction({ fieldValue: e.target.value })}
-            placeholder="Valor a definir..."
-            className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
-            style={{ borderColor: "var(--border)", color: "var(--text)" }}
-          />
+          {a.field === "urgency" ? (
+            <select
+              value={a.fieldValue || ""}
+              onChange={e => setAction({ fieldValue: e.target.value })}
+              className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+            >
+              <option value="">Selecionar urgência...</option>
+              {URGENCY_VALUES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={a.fieldValue || ""}
+              onChange={e => setAction({ fieldValue: e.target.value })}
+              placeholder="Valor a definir..."
+              className="w-full text-xs rounded-lg border px-2.5 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)" }}
+            />
+          )}
         </div>
       </div>
     );
