@@ -19,10 +19,26 @@ import { useUsersById }  from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
-import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
+import { DeliverableDetailDrawer, STAGE_FIELDS } from "../campaign/DeliverableDetailDrawer";
 import { EmptyState } from "../ui/EmptyState";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
+
+function isStaticValueEmpty(v) {
+  if (v === null || v === undefined) return true;
+  if (typeof v === "string") return v.trim() === "";
+  if (Array.isArray(v)) return v.length === 0;
+  return false;
+}
+
+// STAGE_FIELDS (DeliverableDetailDrawer.jsx) é um segundo formulário fixo
+// por etapa, além dos campos dinâmicos de useRHStageFields — a troca de
+// etapa só validava os dinâmicos, então os campos "obrigatórios" desse
+// formulário fixo nunca travavam nada (achado da auditoria completa).
+function getMissingStaticFields(stage, stageData) {
+  const fields = STAGE_FIELDS[stage] || [];
+  return fields.filter(f => f.required && isStaticValueEmpty(stageData?.[f.key]));
+}
 
 /* ── CSV export ─────────────────────────────────────────────── */
 function exportCSV(deliverables, stages) {
@@ -432,8 +448,10 @@ export function EntregasView({ user, users = [] }) {
     if (!item) return;
     const fields = stageFields.getFields(item.stage);
     const missing = getMissingRequiredFields(fields, item.customFields || {});
-    if (missing.length > 0) {
-      alert(`Não dá pra mover "${item.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+    const missingStatic = getMissingStaticFields(item.stage, item.stageData);
+    if (missing.length > 0 || missingStatic.length > 0) {
+      const labels = [...missing.map(f => f.label), ...missingStatic.map(f => f.label)];
+      alert(`Não dá pra mover "${item.title}": preencha antes — ${labels.join(", ")}.`);
       return;
     }
     await changeStage(itemId, toStage);

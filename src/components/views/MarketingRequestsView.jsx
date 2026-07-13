@@ -4,11 +4,8 @@ import {
   CalendarDays, Building2, Tag, AlertCircle, ExternalLink,
 } from "lucide-react";
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
-import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
-import {
-  DELIVERABLE_PRIORITIES, DELIVERABLE_STAGES,
-} from "../../constants/marketing-pipelines";
+import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
 
@@ -263,12 +260,8 @@ function RequestCard({ request, onApprove, onReject, canWrite }) {
 export function MarketingRequestsView({ user, users }) {
   const {
     requests, loading, error, canWrite,
-    approveRequest, rejectRequest,
+    approveAndCreateDeliverable, rejectRequest,
   } = useMarketingRequests({ userId: user?.id, role: user?.role });
-
-  const {
-    createDeliverable,
-  } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
 
   const [statusFilter, setStatusFilter]   = useState("pendente");
   const [approvingReq, setApprovingReq]   = useState(null);
@@ -290,21 +283,11 @@ export function MarketingRequestsView({ user, users }) {
     if (!approvingReq) return;
     setActionError(null);
     try {
-      // 1. Cria entrega em Entregas
-      const firstStage = DELIVERABLE_STAGES[0]?.id || "solicitacao";
-      const deliverable = await createDeliverable({
-        title:         approvingReq.title,
-        requesterName: approvingReq.requesterName,
-        department:    approvingReq.department,
-        description:   [approvingReq.description, notes].filter(Boolean).join("\n\n---\n") || null,
-        priority:      approvingReq.priority,
-        deadline:      approvingReq.deadline,
-        companyIds:    approvingReq.companyIds,
-        stage:         firstStage,
-        notes:         notes ? [{ text: notes, at: new Date().toISOString() }] : [],
-      });
-      // 2. Marca solicitação como aprovada com o id da entrega criada
-      await approveRequest(approvingReq.id, deliverable?.id ?? null);
+      // Cria a entrega em Entregas e marca a solicitação como aprovada numa
+      // única transação no banco (approve_marketing_request) — antes eram 2
+      // escritas separadas do cliente, com risco de deliverable órfão se a
+      // 2ª falhasse (achado da auditoria completa).
+      await approveAndCreateDeliverable(approvingReq.id, notes);
     } catch (e) {
       setActionError(e.message || "Erro ao aprovar solicitação.");
     } finally {

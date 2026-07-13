@@ -29,7 +29,7 @@ const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.zip";
 
 /* ── Stage-specific field configs ───────────────────────────── */
-const STAGE_FIELDS = {
+export const STAGE_FIELDS = {
   solicitacao: [
     { key: "request_type",   label: "Tipo de Solicitação",          hint: "Selecione o tipo de solicitação.",             type: "select",     options: DELIVERABLE_REQUEST_TYPES, required: true },
     { key: "request_date",   label: "Data de Solicitação",          hint: "Data em que a solicitação foi feita.",          type: "date",       required: true },

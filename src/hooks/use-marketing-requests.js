@@ -151,6 +151,26 @@ export function useMarketingRequests({ userId, role, enabled = true } = {}) {
     ));
   }, [canWrite, userId]);
 
+  // Cria a entrega e aprova a solicitação numa única transação no banco
+  // (RPC approve_marketing_request) — substitui o antigo par
+  // createDeliverable + approveRequest, que fazia 2 escritas separadas com
+  // risco de deliverable órfão se a 2ª falhasse (achado da auditoria).
+  const approveAndCreateDeliverable = useCallback(async (id, notes) => {
+    if (!isSupabaseConfigured || !canWrite) return null;
+    const { data, error: err } = await supabase.rpc("approve_marketing_request", {
+      p_request_id: id,
+      p_notes: notes || null,
+    });
+    if (err) throw err;
+    const now = new Date().toISOString();
+    setRequests(prev => prev.map(r =>
+      r.id === id
+        ? { ...r, status: "aprovado", approvedAt: now, approvedBy: userId ?? null, deliverableId: data ?? null }
+        : r
+    ));
+    return data;
+  }, [canWrite, userId]);
+
   const rejectRequest = useCallback(async (id, reason) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const patch = {
@@ -189,6 +209,7 @@ export function useMarketingRequests({ userId, role, enabled = true } = {}) {
     updateRequest,
     deleteRequest,
     approveRequest,
+    approveAndCreateDeliverable,
     rejectRequest,
     loadDemoRequests,
     clearDemoRequests,
