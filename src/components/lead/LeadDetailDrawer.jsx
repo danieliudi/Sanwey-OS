@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
+import { mergeGanhoDefaults } from "../../utils/won-stage-defaults";
 import { CompanyTag } from "../ui/CompanyTag";
 import { UrgencyTag } from "../ui/UrgencyTag";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
@@ -114,7 +115,15 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
       return;
     }
     setStage(toStage);
-    onUpdate(lead.id, { stage: toStage, status: toStage, stageChangedAt: new Date().toISOString() });
+    const nowISO = new Date().toISOString();
+    const patch = { stage: toStage, status: toStage, stageChangedAt: nowISO };
+    // Auto-preenchimento ao entrar em "ganho" (valor_final ← proposta,
+    // data_fechamento ← hoje) — mesmo helper usado no drag/menu do board.
+    if (toStage === "ganho" && lead.stage !== "ganho") {
+      const mergedCF = mergeGanhoDefaults(lead.customFields, lead, nowISO);
+      if (mergedCF) patch.customFields = mergedCF;
+    }
+    onUpdate(lead.id, patch);
   }, [lead, onUpdate, customDefs, customValuesByKey]);
 
   useEffect(() => {

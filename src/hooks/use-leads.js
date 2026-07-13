@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
 import { generateLeadsForAllCompanies } from "../data/generate-leads";
+import { mergeGanhoDefaults } from "../utils/won-stage-defaults";
 
 // Maps DB snake_case row to camelCase lead object the rest of the app expects.
 function rowToLead(r) {
@@ -260,9 +261,17 @@ export function useLeads({ userId, role, companies } = {}) {
   const changeStage = useCallback(async (id, stage) => {
     const lead = leads.find(l => l.id === id);
     const oldStage = lead?.stage;
+    const nowISO = new Date().toISOString();
     // status espelha stage no banco (mesmo CHECK, default igual). Sem este
     // patch, status fica defasado e relatórios baseados em status quebram.
-    await updateLead(id, { stage, status: stage, stageChangedAt: new Date().toISOString() });
+    const patch = { stage, status: stage, stageChangedAt: nowISO };
+    // Auto-preenchimento ao entrar em "ganho": valor_final ← valor da proposta
+    // e data_fechamento ← hoje (ver utils/won-stage-defaults.js).
+    if (stage === "ganho" && oldStage !== "ganho") {
+      const mergedCF = mergeGanhoDefaults(lead?.customFields, lead, nowISO);
+      if (mergedCF) patch.customFields = mergedCF;
+    }
+    await updateLead(id, patch);
     if (oldStage && oldStage !== stage) {
       await addLeadActivity(id, {
         type: 'stage_changed',
