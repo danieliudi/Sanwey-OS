@@ -29,7 +29,7 @@ import { getInvalidFields } from "../../utils/field-validation";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder }) {
+export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
   const [mobileTab, setMobileTab] = useState("info");
@@ -85,17 +85,18 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
 
   // Resolve prev/next non-terminal stages based on the default pipeline order.
+  // Usa as etapas REAIS da empresa (do pipeline do banco, com as cores
+  // configuradas), não a lista estática — assim o botão de mover reflete a
+  // cor/ordem de etapa que aparece no board.
+  const companyStages = (lead?.companyId && pipelines?.[lead.companyId]) || DEFAULT_PIPELINE_STAGES;
   const stageNav = useMemo(() => {
     if (!lead?.stage) return { prev: null, next: null };
-    const idx = DEFAULT_PIPELINE_STAGES.findIndex(s => s.id === lead.stage);
+    const idx = companyStages.findIndex(s => s.id === lead.stage);
     if (idx < 0) return { prev: null, next: null };
-    const prev = idx > 0 ? DEFAULT_PIPELINE_STAGES[idx - 1] : null;
-    // Next: skip terminal stages
-    const next = idx < DEFAULT_PIPELINE_STAGES.length - 1
-      ? DEFAULT_PIPELINE_STAGES[idx + 1]
-      : null;
+    const prev = idx > 0 ? companyStages[idx - 1] : null;
+    const next = idx < companyStages.length - 1 ? companyStages[idx + 1] : null;
     return { prev, next };
-  }, [lead?.stage]);
+  }, [lead?.stage, companyStages]);
 
   const moveToStage = useCallback((toStage) => {
     if (!lead || !toStage) return;
@@ -1114,30 +1115,36 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
               Mover card para fase
             </div>
             <div className="space-y-2">
-              {stageNav.next && (
-                <button
-                  onClick={() => moveToStage(stageNav.next.id)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
-                  style={{ background: company.primary + "14", color: company.primary, border: `1px solid ${company.primary}30` }}
-                  onMouseEnter={e => { e.currentTarget.style.background = company.primary + "22"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = company.primary + "14"; }}
-                >
-                  <span>{stageNav.next.name}</span>
-                  <ArrowRight size={14} />
-                </button>
-              )}
-              {stageNav.prev && (
-                <button
-                  onClick={() => moveToStage(stageNav.prev.id)}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                  style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                >
-                  <ArrowLeft size={13} />
-                  <span>{stageNav.prev.name}</span>
-                </button>
-              )}
+              {stageNav.next && (() => {
+                const nextColor = stageNav.next.color || company.primary;
+                return (
+                  <button
+                    onClick={() => moveToStage(stageNav.next.id)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                    style={{ background: nextColor + "14", color: nextColor, border: `1px solid ${nextColor}30` }}
+                    onMouseEnter={e => { e.currentTarget.style.background = nextColor + "22"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = nextColor + "14"; }}
+                  >
+                    <span>{stageNav.next.name}</span>
+                    <ArrowRight size={14} />
+                  </button>
+                );
+              })()}
+              {stageNav.prev && (() => {
+                const prevColor = stageNav.prev.color || "var(--text-dim)";
+                return (
+                  <button
+                    onClick={() => moveToStage(stageNav.prev.id)}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    style={{ background: "var(--surface)", color: prevColor, border: `1px solid ${prevColor}40` }}
+                    onMouseEnter={e => { e.currentTarget.style.background = prevColor + "10"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+                  >
+                    <ArrowLeft size={13} />
+                    <span>{stageNav.prev.name}</span>
+                  </button>
+                );
+              })()}
             </div>
 
             <div className="mt-5 pt-4 border-t space-y-2" style={{ borderColor: "var(--border)" }}>
@@ -1175,7 +1182,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             <button
               onClick={() => moveToStage(stageNav.next.id)}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm cursor-pointer"
-              style={{ background: company.primary, color: "#FFFFFF", border: "none" }}
+              style={{ background: stageNav.next.color || company.primary, color: "#FFFFFF", border: "none" }}
             >
               Avançar para {stageNav.next.name}
               <ArrowRight size={16} />

@@ -1226,6 +1226,7 @@ export default function App() {
           onCreateClient={createClient}
           isManager={isManager}
           currentUser={currentUser}
+          pipelines={pipelines}
           onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("pipeline-builder"); }}
         />
       </ErrorBoundary>
