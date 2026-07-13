@@ -376,7 +376,7 @@ function KpiBar({ campaigns }) {
   const urgent      = campaigns.filter(c => {
     if (!c.launchDate) return false;
     const d = Math.floor((new Date(c.launchDate).getTime() - Date.now()) / 86400000);
-    return d <= 7 && d >= 0 && !["ao_vivo", "encerrado", "analise"].includes(c.stage);
+    return d <= 7 && d >= 0 && !["ao_vivo", "encerrado", "revisao"].includes(c.stage);
   }).length;
 
   return (

@@ -98,7 +98,10 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
       const targetId = novo?.id || initialData?.id;
       if (file && targetId) {
         const ext = file.type === "application/pdf" ? "pdf" : (file.type.split("/")[1] || "jpg");
-        const documentType = form.rg && !form.cpf ? "rg" : "rg"; // heurística simples — RH pode corrigir depois
+        // Achado da auditoria: os dois ramos do ternário retornavam "rg",
+        // então document_type nunca refletia o CPF. Prefere CPF quando
+        // informado (RH pode corrigir depois).
+        const documentType = form.cpf ? "cpf" : "rg";
         const path = `${targetId}/documento.${ext}`;
         const { error: uploadErr } = await supabase.storage.from(DOC_BUCKET).upload(path, file, { contentType: file.type, upsert: true });
         if (!uploadErr) {

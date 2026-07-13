@@ -51,6 +51,7 @@ function PriorityBadge({ priority }) {
 /* ── Reject Modal ─────────────────────────────────────────────────── */
 function RejectModal({ request, onConfirm, onClose }) {
   const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -80,11 +81,12 @@ function RejectModal({ request, onConfirm, onClose }) {
             Cancelar
           </button>
           <button
-            onClick={() => onConfirm(reason)}
+            onClick={async () => { setSaving(true); await onConfirm(reason); }}
+            disabled={saving}
             className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "#DC2626", color: "#fff" }}
+            style={{ background: "#DC2626", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
           >
-            Confirmar rejeição
+            {saving ? "Rejeitando…" : "Confirmar rejeição"}
           </button>
         </div>
       </div>
@@ -95,6 +97,7 @@ function RejectModal({ request, onConfirm, onClose }) {
 /* ── Approve Modal ────────────────────────────────────────────────── */
 function ApproveModal({ request, onConfirm, onClose }) {
   const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -127,11 +130,12 @@ function ApproveModal({ request, onConfirm, onClose }) {
             Cancelar
           </button>
           <button
-            onClick={() => onConfirm(notes)}
+            onClick={async () => { setSaving(true); await onConfirm(notes); }}
+            disabled={saving}
             className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "#16A34A", color: "#fff" }}
+            style={{ background: "#16A34A", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
           >
-            Aprovar e criar entrega
+            {saving ? "Aprovando…" : "Aprovar e criar entrega"}
           </button>
         </div>
       </div>
