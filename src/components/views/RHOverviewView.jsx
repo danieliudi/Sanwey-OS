@@ -14,10 +14,10 @@ import {
   RH_DEPARTMENTS,
   RH_CONTRACT_TYPES,
   RH_EMPLOYEE_STATUSES,
-  RH_RECRUITMENT_STAGES,
 } from "../../constants/rh-config";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -61,13 +61,9 @@ function leaveTypeLabel(typeId) {
   return map[typeId] || typeId || "—";
 }
 
-function stageInfo(stageId) {
-  return (
-    RH_RECRUITMENT_STAGES.find((s) => s.id === stageId) || {
-      name: stageId || "—",
-      color: "var(--text-dim)",
-    }
-  );
+function stageInfo(stages, stageId) {
+  const found = stages.find((s) => s.stageKey === stageId);
+  return found || { name: stageId || "—", color: "var(--text-dim)" };
 }
 
 function Avatar({ name, bg, size = 34 }) {
@@ -157,6 +153,7 @@ function EmptyState({ text }) {
 
 export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
+  const { stages: vagaStages } = useRHPipelineStages("vagas");
   const [vagas, setVagas] = useState([]);
   const [ferias, setFerias] = useState([]);
   const [loadingVagas, setLoadingVagas] = useState(true);
@@ -387,7 +384,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {vagas.slice(0, 5).map((vaga) => {
-                    const stage = stageInfo(vaga.stage);
+                    const stage = stageInfo(vagaStages, vaga.stage);
                     return (
                       <div
                         key={vaga.id}

@@ -633,7 +633,7 @@ export default function App() {
 
     const groups = [];
 
-    if (!isPureMarketing) {
+    if (!isPureMarketing && !isPureRH) {
       groups.push({
         label: "Comercial",
         items: [
@@ -644,7 +644,7 @@ export default function App() {
           { id: "crm-viagens",  label: "Viagens",    icon: Plane },
         ],
       });
-    } else {
+    } else if (!isPureRH) {
       groups.push({
         label: null,
         items: [
@@ -938,7 +938,7 @@ export default function App() {
               )
           } />
           <Route path={ROUTES.signals} element={
-            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : (
+            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : isPureRH ? <Navigate to={ROUTES.dashboard} replace /> : (
               <SignalsView
                 activeCompany={activeCompany}
                 signals={signals}
@@ -949,7 +949,7 @@ export default function App() {
             )
           } />
           <Route path={ROUTES.explorer} element={
-            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : (
+            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : isPureRH ? <Navigate to={ROUTES.dashboard} replace /> : (
               <ExplorerView
                 user={currentUser}
                 activeCompany={activeCompany}
@@ -975,7 +975,7 @@ export default function App() {
             )
           } />
           <Route path={ROUTES.crm} element={
-            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : <CRMView
+            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : isPureRH ? <Navigate to={ROUTES.dashboard} replace /> : <CRMView
               user={currentUser}
               activeCompany={activeCompany}
               accessibleCompanies={accessibleCompanies}
