@@ -7,6 +7,30 @@ import {
 import { COMPANIES } from "../../constants/companies";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 
+// Traduz as mensagens de erro mais comuns do Supabase Auth (vêm em inglês
+// da API) — achado da auditoria: o resto da UI é 100% PT-BR, mas esses
+// erros apareciam crus. Sem correspondência, mantém a mensagem original.
+const AUTH_ERROR_TRANSLATIONS = [
+  [/invalid login credentials/i,                    "E-mail ou senha incorretos."],
+  [/user already registered/i,                       "Este e-mail já está cadastrado."],
+  [/email not confirmed/i,                           "E-mail ainda não confirmado — verifique sua caixa de entrada."],
+  [/password should be at least (\d+) characters/i,  (m) => `A senha deve ter ao menos ${m[1]} caracteres.`],
+  [/unable to validate email address/i,              "Formato de e-mail inválido."],
+  [/new password should be different from the old password/i, "A nova senha deve ser diferente da anterior."],
+  [/for security purposes, you can only request this after (\d+) seconds/i, (m) => `Aguarde ${m[1]} segundos antes de tentar de novo.`],
+  [/email rate limit exceeded/i,                     "Muitas tentativas — aguarde um pouco antes de tentar de novo."],
+  [/token has expired or is invalid/i,                "O link expirou ou é inválido — solicite um novo."],
+];
+
+function translateAuthError(message) {
+  if (!message) return message;
+  for (const [pattern, replacement] of AUTH_ERROR_TRANSLATIONS) {
+    const m = message.match(pattern);
+    if (m) return typeof replacement === "function" ? replacement(m) : replacement;
+  }
+  return message;
+}
+
 const ACCENT_RED = "#C7212B";   // usado APENAS no painel esquerdo institucional (fundo escuro)
 const DARK_BG    = "#1A1414";   // painel esquerdo
 const ACCENT     = "var(--accent)";     // painel direito — token white-label
@@ -214,7 +238,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
         if (error) throw error;
         setRecoverySent(true);
       } catch (err) {
-        setLocalError({ message: err?.message || "Não foi possível enviar o e-mail." });
+        setLocalError({ message: translateAuthError(err?.message) || "Não foi possível enviar o e-mail." });
       } finally {
         setRecoveryLoading(false);
       }
@@ -222,6 +246,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
     }
     try {
       if (mode === "signin") {
+        try { window.localStorage.setItem("sanwey-remember-me", String(remember)); } catch {}
         await onSignIn(email, password);
       } else {
         if (password.length < 6) {
@@ -357,7 +382,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
             className="text-xs px-3.5 py-2.5 rounded-lg"
             style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FCA5A5" }}
           >
-            {err.message || "Não foi possível autenticar. Tente novamente."}
+            {translateAuthError(err.message) || "Não foi possível autenticar. Tente novamente."}
           </div>
         )}
 
@@ -437,7 +462,7 @@ export function PasswordResetScreen({ onReset }) {
       await onReset(password);
       setDone(true);
     } catch (err) {
-      setError(err?.message || "Não foi possível redefinir a senha.");
+      setError(translateAuthError(err?.message) || "Não foi possível redefinir a senha.");
     } finally {
       setLoading(false);
     }
