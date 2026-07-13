@@ -1,5 +1,6 @@
 import React from "react";
 import { validateFieldFormat } from "../../utils/field-validation";
+import { CurrencyInput } from "../ui/CurrencyInput";
 
 // Renderiza um input para um campo customizado de etapa do pipeline de RH
 // (rh_stage_fields), reutilizado pelos Kanbans de Vagas/Candidatos/Onboarding
@@ -49,14 +50,14 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
   }
   if (t === "currency") {
     return (
-      <div style={{ position: "relative" }}>
-        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
-          fontSize: 12, color: "var(--text-dim)", fontWeight: 600, pointerEvents: "none" }}>R$</span>
-        <input type="number" min="0" step="0.01" value={value ?? ""}
-          onChange={e => onChange(e.target.value)} placeholder="0,00"
-          style={{ ...baseStyle, paddingLeft: 30 }}
-          onFocus={handleFocus} onBlur={handleBlur} />
-      </div>
+      <CurrencyInput
+        value={value}
+        onChange={onChange}
+        placeholder="0,00"
+        style={baseStyle}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+      />
     );
   }
   if (t === "date") return <input type="date" value={value || ""} onChange={e => onChange(e.target.value)} style={baseStyle} onFocus={handleFocus} onBlur={handleBlur} />;

@@ -23,6 +23,7 @@ import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { EmptyState } from "../ui/EmptyState";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -392,13 +393,11 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                 </div>
                 <div>
                   <label style={labelSt}>Salário (R$)</label>
-                  <input
-                    type="number"
+                  <CurrencyInput
+                    prefix={null}
                     value={form.salary}
-                    onChange={(e) => set("salary", e.target.value)}
+                    onChange={v => set("salary", v)}
                     placeholder="0,00"
-                    min="0"
-                    step="0.01"
                     className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
                     style={inputSt}
                     onFocus={focusBlue}

@@ -24,6 +24,7 @@ import { receiptExtractionPrompt } from "../../constants/ai-prompts";
 import { formatDateBR } from "../../utils/date";
 import { STATUS_VISITA, STATUS_REEMBOLSO, fmtMoney } from "../../utils/viagens";
 import { Badge } from "../ui/Badge";
+import { CurrencyInput } from "../ui/CurrencyInput";
 
 const MAX_FILE_MB = 10;
 const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
@@ -597,7 +598,7 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
               </div>
               <div>
                 <label style={LABEL_ST}>Valor (R$) *</label>
-                <input type="number" min="0.01" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" className={INPUT_CLS} style={INPUT_ST} />
+                <CurrencyInput prefix={null} value={valor} onChange={setValor} placeholder="0,00" className={INPUT_CLS} style={INPUT_ST} />
               </div>
               <div>
                 <label style={LABEL_ST}>Data da despesa *</label>

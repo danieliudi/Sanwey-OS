@@ -19,6 +19,7 @@ import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } 
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { Select } from "../ui/Select";
+import { CurrencyInput } from "../ui/CurrencyInput";
 
 // ── Create modal ─────────────────────────────────────────────────────────────
 
@@ -215,11 +216,11 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <div>
               <label style={labelSt}>Budget (R$)</label>
-              <input
-                type="number"
-                placeholder="0"
+              <CurrencyInput
+                prefix={null}
+                placeholder="0,00"
                 value={budget}
-                onChange={e => setBudget(e.target.value)}
+                onChange={setBudget}
                 className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
                 style={inputSt}
                 onFocus={focusBlue}

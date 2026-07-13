@@ -4,6 +4,7 @@ import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
 import { EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK } from "../../utils/currency";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { formatDateBR } from "../../utils/date";
 
 const EMPTY_FORM = {
@@ -158,18 +159,18 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
           </div>
 
           <div className="flex gap-2">
-            <input
-              type="number"
-              placeholder="Valor R$"
-              value={form.amount}
-              onChange={e => set("amount", e.target.value)}
-              min="0"
-              step="0.01"
-              className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
-              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
-              onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
-            />
+            <div className="flex-1">
+              <CurrencyInput
+                prefix={null}
+                placeholder="Valor R$"
+                value={form.amount}
+                onChange={v => set("amount", v)}
+                className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+                onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+                onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+              />
+            </div>
             <input
               type="date"
               value={form.dueDate}

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check } from "lucide-react";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { supabase } from "../../lib/supabase";
 import { useAI } from "../../hooks/use-ai";
 import { documentExtractionPrompt } from "../../constants/ai-prompts";
@@ -277,7 +278,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
               </div>
               <div>
                 <label style={labelSt}>Salário (R$)</label>
-                <input type="number" min="0" step="0.01" value={form.salary} onChange={(e) => set("salary", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <CurrencyInput prefix={null} value={form.salary} onChange={v => set("salary", v)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
                 <label style={labelSt}>Vencimento do ASO</label>

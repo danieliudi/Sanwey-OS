@@ -11,6 +11,7 @@ import { useMarketingCampaignAttachments } from "../../hooks/use-marketing-campa
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
@@ -1310,7 +1311,18 @@ export function CampaignDetailDrawer({
               {isAgencia ? <ReadValue value={get("kpi")} /> : <EditSelect value={get("kpi")} onChange={v => set("kpi", v)} options={MARKETING_KPIS} placeholder="Selecionar KPI" />}
             </Field>
             <Field label="Budget (R$)">
-              {isAgencia ? <ReadValue value={get("budget") > 0 ? formatK(get("budget")) : null} /> : <EditInput value={get("budget") || ""} onChange={v => set("budget", parseFloat(v) || 0)} type="number" placeholder="0" />}
+              {isAgencia ? <ReadValue value={get("budget") > 0 ? formatK(get("budget")) : null} /> : (
+                <CurrencyInput
+                  prefix={null}
+                  value={get("budget") || ""}
+                  onChange={v => set("budget", v === "" ? 0 : v)}
+                  placeholder="0,00"
+                  className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                  onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+                  onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
+                />
+              )}
             </Field>
             <Field label="Performance">
               {isAgencia ? <ReadValue value={get("performanceScore") > 0 ? String(get("performanceScore")) : null} /> : <EditInput value={get("performanceScore") || ""} onChange={v => set("performanceScore", parseInt(v) || 0)} type="number" placeholder="0–100" />}

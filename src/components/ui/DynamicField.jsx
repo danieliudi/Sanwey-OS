@@ -1,4 +1,5 @@
 import React from "react";
+import { CurrencyInput } from "./CurrencyInput";
 
 // Render de um único campo customizado em formulário (CSS compacto para
 // usar tanto no QuickAddForm do kanban quanto em outros lugares).
@@ -43,15 +44,25 @@ export function DynamicField({ field, value, onChange, users = [], disabled = fa
         />
       );
       break;
-    case "number":
     case "currency":
+      input = (
+        <CurrencyInput
+          value={value}
+          onChange={onChange}
+          placeholder={field.placeholder || "0,00"}
+          disabled={disabled}
+          style={baseInputStyle}
+        />
+      );
+      break;
+    case "number":
       input = (
         <input
           type="number"
-          step={field.fieldType === "currency" ? "0.01" : "any"}
+          step="any"
           value={value ?? ""}
           onChange={handleNumber}
-          placeholder={field.placeholder || (field.fieldType === "currency" ? "R$ 0,00" : "")}
+          placeholder={field.placeholder || ""}
           disabled={disabled}
           style={baseInputStyle}
         />
