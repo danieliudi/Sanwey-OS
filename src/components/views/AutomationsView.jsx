@@ -5,6 +5,7 @@ import {
   Share2, Building2, GitBranch, CornerDownRight, ClipboardList,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
 import { AUTOMATION_TEMPLATES } from "../../constants/automation-templates";
 import { MARKETING_AUTOMATION_TEMPLATES } from "../../constants/marketing-pipelines";
@@ -547,6 +548,7 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
   // Quando o template já tem tudo preenchido, começa direto na etapa de
   // ação (revisão final). Quando não, segue do zero.
   const [step, setStep] = useState(initialRule ? 3 : 0);
+  useEscToClose(onClose);
 
   const hasConditions = rule.conditionGroups.length > 0;
   const steps = hasConditions

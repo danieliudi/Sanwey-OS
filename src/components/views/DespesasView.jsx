@@ -5,6 +5,7 @@ import { EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK } from "../../utils/currency";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { formatDateBR } from "../../utils/date";
 
 const EMPTY_FORM = {
@@ -44,6 +45,7 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
   }));
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState(null);
+  useEscToClose(onClose);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 

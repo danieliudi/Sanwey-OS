@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { Upload, X, ChevronRight, ChevronLeft, Download, Check } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 
 // ---------------------------------------------------------------------------
 // CRM field definitions for column mapping
@@ -184,6 +185,7 @@ const SELECT_STYLE = {
 // Component
 // ---------------------------------------------------------------------------
 export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLead, companies = [] }) {
+  useEscToClose(onClose, isOpen);
   const [step, setStep] = useState(1); // 1=upload, 2=map, 3=preview
   const [file, setFile] = useState(null);
   const [headers, setHeaders] = useState([]);     // string[]

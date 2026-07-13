@@ -9,6 +9,7 @@ import { useStageFields } from "../../hooks/use-stage-fields";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { StageFieldInput } from "./StageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 
 // ── Customer search helpers ───────────────────────────────────────────────────
 
@@ -385,9 +386,9 @@ export function LeadCreateModal({
     }
   }, [values, formConfig, currentUser, users, companyId, stageId, stage, onAdd, onClose, customValues, visibleStageFields]);
 
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === "Escape") onClose();
-  }, [onClose]);
+  // ESC fecha o modal via hook global (pilha LIFO) — funciona mesmo sem foco
+  // dentro do modal, diferente do antigo onKeyDown na raiz.
+  useEscToClose(onClose, open);
 
   const company = COMPANIES[companyId];
   const requiredMissing = (formConfig || []).some(e =>
@@ -404,7 +405,6 @@ export function LeadCreateModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      onKeyDown={handleKeyDown}
     >
       <div
         className="w-full max-w-xl max-h-full overflow-y-auto rounded-2xl flex flex-col"

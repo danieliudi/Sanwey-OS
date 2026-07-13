@@ -5,6 +5,7 @@ import { useAI } from "../../hooks/use-ai";
 import { pipelineChatPrompt } from "../../constants/ai-prompts";
 import { aggregatePipeline } from "../../utils/pipeline-metrics";
 import { formatK } from "../../utils/currency";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 
 const RED = "var(--accent)";
 
@@ -25,6 +26,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
+  useEscToClose(onClose, isOpen);
 
   useEffect(() => {
     if (isOpen) {

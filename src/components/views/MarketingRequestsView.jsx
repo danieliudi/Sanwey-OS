@@ -4,6 +4,7 @@ import {
   CalendarDays, Building2, Tag, AlertCircle, ExternalLink,
 } from "lucide-react";
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
@@ -52,6 +53,7 @@ function PriorityBadge({ priority }) {
 function RejectModal({ request, onConfirm, onClose }) {
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  useEscToClose(onClose);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -98,6 +100,7 @@ function RejectModal({ request, onConfirm, onClose }) {
 function ApproveModal({ request, onConfirm, onClose }) {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  useEscToClose(onClose);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"

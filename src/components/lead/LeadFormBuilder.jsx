@@ -5,6 +5,7 @@ import {
   MapPin, Building2, Tag, User,
 } from "lucide-react";
 import { FIELD_DEFS, FIELD_DEFS_ARRAY } from "../../constants/lead-form-fields";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 
 const TYPE_ICON = {
   text:     Type,
@@ -27,6 +28,7 @@ function FieldTypeIcon({ type, size = 13 }) {
 // We store drag info in a ref so drop handlers don't need it in deps.
 
 export function LeadFormBuilder({ formConfig, onSave, onClose }) {
+  useEscToClose(onClose);
   const [fields, setFields] = useState(() =>
     formConfig.map(f => ({ ...f, ...FIELD_DEFS[f.id] }))
   );

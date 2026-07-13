@@ -25,6 +25,7 @@ import { formatDateBR } from "../../utils/date";
 import { STATUS_VISITA, STATUS_REEMBOLSO, fmtMoney } from "../../utils/viagens";
 import { Badge } from "../ui/Badge";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 
 const MAX_FILE_MB = 10;
 const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
@@ -132,6 +133,7 @@ function VisitaCard({ registro, onClick }) {
 // ── Nova visita ───────────────────────────────────────────────────────────────
 
 function NovaVisitaModal({ leads, onSave, onClose }) {
+  useEscToClose(onClose);
   const [destino, setDestino] = useState("");
   const [dataPlanejada, setDataPlanejada] = useState("");
   const [objetivo, setObjetivo] = useState("");
@@ -261,6 +263,7 @@ function NovaVisitaModal({ leads, onSave, onClose }) {
 // ── Drawer de detalhe / ações da visita ─────────────────────────────────────
 
 function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado, onExcluir, onClose }) {
+  useEscToClose(onClose);
   const [action, setAction] = useState(null); // null | "realizado" | "nao_realizado"
   const [destinoReal, setDestinoReal] = useState("");
   const [resumoReal, setResumoReal] = useState("");
@@ -444,6 +447,7 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
 // ── Nova despesa ──────────────────────────────────────────────────────────────
 
 function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
+  useEscToClose(onClose);
   const { complete, isConfigured, provider } = ai;
   const podeExtrairIA = isConfigured && provider === "anthropic";
 

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { X, Plus, GripVertical, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "../ui/Button";
 import { FIELD_TYPES, slugifyKey } from "../../hooks/use-stage-fields";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 
 // Modal de configuração de campos de uma etapa.
 //
@@ -24,6 +25,7 @@ export function StageFieldsEditor({
   const [draft, setDraft] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  useEscToClose(onClose, open);
 
   useEffect(() => {
     if (!open) { setDraft(null); setError(null); }
