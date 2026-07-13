@@ -566,9 +566,21 @@ export default function App() {
   // localStorage (chave regra+lead+stageChangedAt) pra não repetir a mesma
   // notificação a cada scan.
   const [notifiedNudges, setNotifiedNudges] = usePersistentState("gs_v4_nudges_notified", {});
+  // Este scan é um lembrete PERIÓDICO (de hora em hora) de leads parados ou
+  // com campo obrigatório pendente — NÃO deve rodar no caminho crítico de uma
+  // troca de etapa. Antes ele tinha [leads, stageFieldsForNudge, notifiedNudges,
+  // pushNotification, ...] nas deps: como o effect também dispara
+  // pushNotification/setNotifiedNudges (→ novo render → effect roda de novo) e
+  // o objeto de useStageFields mudava de identidade a cada render, mover UM
+  // card com vários leads abertos gerava uma cascata de re-render de 20-40s.
+  // Agora lê tudo via ref e roda só na montagem (deferido) + de hora em hora,
+  // fora do ciclo de render. setNotifiedNudges é setter estável de useState.
+  const nudgeRefs = useRef({});
+  nudgeRefs.current = { leads, stageFieldsForNudge, evaluateAutomations, notifiedNudges, pushNotification };
   useEffect(() => {
-    if (!leads.length) return;
     const scan = () => {
+      const { leads, stageFieldsForNudge, evaluateAutomations, notifiedNudges, pushNotification } = nudgeRefs.current;
+      if (!leads.length) return;
       const newlyNotified = {};
       for (const lead of leads) {
         const fields = stageFieldsForNudge.getFields(lead.companyId, lead.stage);
@@ -578,7 +590,7 @@ export default function App() {
         const { notifications: pendingNotifs } = evaluateAutomations(enriched, enriched, "pending_required_field");
         for (const n of [...staleNotifs, ...pendingNotifs]) {
           const key = `${n.ruleId}:${lead.id}:${lead.stageChangedAt}`;
-          if (notifiedNudges[key]) continue;
+          if (notifiedNudges[key] || newlyNotified[key]) continue;
           newlyNotified[key] = true;
           pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: lead.id, companyId: lead.companyId });
         }
@@ -587,10 +599,10 @@ export default function App() {
         setNotifiedNudges(prev => ({ ...prev, ...newlyNotified }));
       }
     };
-    scan();
+    const first = setTimeout(scan, 4000);
     const interval = setInterval(scan, 60 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [leads, stageFieldsForNudge, evaluateAutomations, notifiedNudges, pushNotification, setNotifiedNudges]);
+    return () => { clearTimeout(first); clearInterval(interval); };
+  }, [setNotifiedNudges]);
 
   const closeDrawer = useCallback(() => setSelectedLead(null), []);
 

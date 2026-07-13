@@ -171,7 +171,11 @@ export function useStageFields() {
     ));
   }, []);
 
-  return {
+  // Memoizado: antes retornava um objeto novo a cada render, e componentes
+  // que colocavam esse objeto em deps de useEffect (ex.: o scan de nudges em
+  // App.jsx) re-rodavam o effect em TODO render — combinado com um effect que
+  // dispara notificação, isso virava uma cascata de re-render. Estável agora.
+  return useMemo(() => ({
     fields,
     loading,
     error,
@@ -181,7 +185,7 @@ export function useStageFields() {
     deleteField,
     reorderFields,
     refetch: fetchAll,
-  };
+  }), [fields, loading, error, getFields, addField, updateField, deleteField, reorderFields, fetchAll]);
 }
 
 export default useStageFields;
