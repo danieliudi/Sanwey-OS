@@ -48,14 +48,36 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
   }, [leads, pipelines]);
 
   // ── Funil de conversão ───────────────────────────────────────────────────
+  // Usa as etapas reais de cada empresa (pipelines[companyId]) em vez da
+  // lista fixa de 7 etapas padrão — senão leads em etapas customizadas
+  // (criadas via Construtor de pipeline) somem do gráfico e os percentuais
+  // do funil não fecham em 100%.
   const funnelData = useMemo(() => {
-    const order = ["prospeccao", "qualificacao", "visitas", "amostras", "negociacao", "ganho"];
-    const counts = Object.fromEntries(order.map(id => [id, 0]));
+    const companyIds = [...new Set(leads.map(l => l.companyId))];
+    const sourceCompanies = companyIds.length > 0 ? companyIds : COMPANY_IDS;
+    const stageMap = new Map();
+    for (const cid of sourceCompanies) {
+      const stages = (pipelines?.[cid] || []).filter(s => !s.lost);
+      for (const s of stages) {
+        if (!stageMap.has(s.id)) stageMap.set(s.id, s);
+      }
+    }
+    if (stageMap.size === 0) {
+      for (const id of ["prospeccao", "qualificacao", "visitas", "amostras", "negociacao", "ganho"]) {
+        stageMap.set(id, { id, name: STAGE_NAMES[id], color: STAGE_COLORS[id] });
+      }
+    }
+    const counts = Object.create(null);
+    for (const s of stageMap.values()) counts[s.id] = 0;
     for (const l of leads) {
       if (counts[l.stage] != null) counts[l.stage]++;
     }
-    return order.map(id => ({ stage: STAGE_NAMES[id], count: counts[id], fill: STAGE_COLORS[id] }));
-  }, [leads]);
+    return Array.from(stageMap.values()).map(s => ({
+      stage: s.name || STAGE_NAMES[s.id] || s.id,
+      count: counts[s.id] || 0,
+      fill: s.color || STAGE_COLORS[s.id] || NEUTRAL.slate,
+    }));
+  }, [leads, pipelines]);
 
   // ── Top 10 leads em aberto ───────────────────────────────────────────────
   const topLeads = useMemo(() => {

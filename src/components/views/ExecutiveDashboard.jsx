@@ -126,19 +126,33 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
     [crossReferrals],
   );
 
+  // Usa as etapas reais de cada empresa (pipelines[companyId], já vem do
+  // banco via usePipelines) em vez da lista fixa DEFAULT_PIPELINE_STAGES —
+  // senão o funil (e os gráficos em ExecutiveCharts) somem leads e ficam
+  // com percentuais errados assim que uma empresa customiza o pipeline via
+  // Construtor de pipeline.
   const funnelStages = useMemo(() => {
     const total = filteredLeads.length || 1;
+    const companyIds = [...new Set(filteredLeads.map(l => l.companyId))];
+    const sourceCompanies = companyIds.length > 0 ? companyIds : COMPANY_IDS;
+    const stageMap = new Map();
+    for (const cid of sourceCompanies) {
+      const stages = pipelines?.[cid] || DEFAULT_PIPELINE_STAGES;
+      for (const s of stages) {
+        if (!stageMap.has(s.id)) stageMap.set(s.id, s);
+      }
+    }
     const counts = Object.create(null);
-    for (const s of DEFAULT_PIPELINE_STAGES) counts[s.id] = 0;
+    for (const s of stageMap.values()) counts[s.id] = 0;
     for (const l of filteredLeads) {
       if (counts[l.stage] != null) counts[l.stage]++;
     }
-    return DEFAULT_PIPELINE_STAGES.map(stage => {
-      const count = counts[stage.id];
+    return Array.from(stageMap.values()).map(stage => {
+      const count = counts[stage.id] || 0;
       const pct = (count / total) * 100;
       return { stage, count, pct };
     });
-  }, [filteredLeads]);
+  }, [filteredLeads, pipelines]);
 
   return (
     <div className="space-y-5">
