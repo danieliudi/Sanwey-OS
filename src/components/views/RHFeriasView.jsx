@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Calendar, Check, Plus, X, Clock, CalendarCheck, AlertTriangle, Pencil, Settings2,
+  Calendar, Check, Plus, X, Clock, CalendarCheck, AlertTriangle, AlertCircle, Pencil, Settings2,
 } from "lucide-react";
 import { RH_LEAVE_TYPES } from "../../constants/rh-config";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
@@ -14,6 +14,7 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
+import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { EmptyState } from "../ui/EmptyState";
@@ -364,7 +365,7 @@ function FeriasKanbanColumn({
 
 function FeriasDrawer({
   req, canWrite, stages, users, currentUser,
-  onAprovar, onRecusar, onUpdateCustomFields, onAddActivity, onClose, busy,
+  onAprovar, onRecusar, onMoveToStage, onUpdateCustomFields, onAddActivity, onClose, onMoved, busy,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -375,8 +376,9 @@ function FeriasDrawer({
   const stageFieldsHook = useRHStageFields("ferias");
   const customDefs = stageFieldsHook.getFields(req.status);
   const [customDraft, setCustomDraft] = useState({});
+  const [moveError, setMoveError] = useState(null);
 
-  useEffect(() => { setCustomDraft({}); }, [req.id]);
+  useEffect(() => { setCustomDraft({}); setMoveError(null); }, [req.id]);
 
   const handleCustomChange = (fieldKey, value) => {
     setCustomDraft((prev) => ({ ...prev, [fieldKey]: value }));
@@ -394,6 +396,25 @@ function FeriasDrawer({
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
   const dias = calcDias(req.start_date, req.end_date);
   const docExigido = DOCUMENTO_OBRIGATORIO_POR_TIPO[req.type];
+  const moveTargets = stages.filter((s) => s.stageKey !== req.status);
+
+  // Ambas as entradas (atalhos Aprovar/Recusar e o mover genérico) passam
+  // pelo mesmo gate de campo obrigatório da etapa atual (onBlocked seta o
+  // banner inline em vez de deixar a chamada cair no alert() padrão) — e só
+  // fecham+reabrem o drawer (reopenAfterMove) se a transição realmente
+  // aconteceu.
+  const handleAprovarClick = async () => {
+    const ok = await onAprovar(req, { onBlocked: setMoveError });
+    if (ok) { setMoveError(null); onMoved(req.id); }
+  };
+  const handleRecusarClick = async () => {
+    const ok = await onRecusar(req, { onBlocked: setMoveError });
+    if (ok) { setMoveError(null); onMoved(req.id); }
+  };
+  const handleMoveClick = async (stageKey) => {
+    const ok = await onMoveToStage(req, stageKey, { onBlocked: setMoveError });
+    if (ok) { setMoveError(null); onMoved(req.id); }
+  };
 
   return (
     <>
@@ -435,14 +456,39 @@ function FeriasDrawer({
             </div>
           )}
 
+          {canWrite && moveError && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16, background: "#FEF2F2", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
+              <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+              {moveError}
+            </div>
+          )}
+
           {canWrite && req.status === "pendente" && (
             <div style={{ marginBottom: 20, display: "flex", gap: 8 }}>
-              <button onClick={() => onAprovar(req)} disabled={busy} style={{ flex: 1, background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+              <button onClick={handleAprovarClick} disabled={busy} style={{ flex: 1, background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
                 Aprovar
               </button>
-              <button onClick={() => onRecusar(req)} disabled={busy} style={{ flex: 1, background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+              <button onClick={handleRecusarClick} disabled={busy} style={{ flex: 1, background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
                 Recusar
               </button>
+            </div>
+          )}
+
+          {canWrite && moveTargets.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={labelSt}>Mover para</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {moveTargets.map((s) => (
+                  <button
+                    key={s.stageKey}
+                    onClick={() => handleMoveClick(s.stageKey)}
+                    disabled={busy}
+                    style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -498,7 +544,30 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
 
   const loading = loadingRequests || loadingStages;
 
-  const handleAprovar = useCallback(async (req) => {
+  // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
+  // (estático ou condicional) vazio/inválido antes de qualquer transição —
+  // mesmo padrão de Onboarding/Feedback/Treinamentos. `onBlocked`, quando
+  // informado (drawer aberto), recebe a mensagem pra virar banner inline em
+  // vez de alert() nativo (achado da auditoria de 14/07: alert() trava
+  // sessões automatizadas/headless sem handler de diálogo); sem `onBlocked`
+  // (atalho no card do Kanban ou drag-and-drop, sem um slot de banner
+  // visível), cai de volta pro alert(), igual RHFeedbackView/RHTreinamentosView.
+  const getStageBlockMessage = useCallback((req) => {
+    const fields = feriasStageFields.getFields(req.status);
+    const missing = getMissingRequiredFields(fields, req.custom_fields || {});
+    if (missing.length > 0) {
+      return `Não dá pra mover: preencha antes — ${missing.map(f => f.label).join(", ")}.`;
+    }
+    const invalid = getInvalidFields(fields, req.custom_fields || {});
+    if (invalid.length > 0) {
+      return `Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`;
+    }
+    return null;
+  }, [feriasStageFields]);
+
+  const handleAprovar = useCallback(async (req, { onBlocked } = {}) => {
+    const blockMsg = getStageBlockMessage(req);
+    if (blockMsg) { (onBlocked || alert)(blockMsg); return false; }
     const docExigido = DOCUMENTO_OBRIGATORIO_POR_TIPO[req.type];
     setBusyId(req.id);
     try {
@@ -506,27 +575,46 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
         const totalAnexos = await contarAnexos(req.id);
         if (totalAnexos === 0) {
           alert(`Não dá pra aprovar "${req.profiles?.name || "essa solicitação"}": anexe o(a) ${docExigido} antes (abra o card → aba Anexos).`);
-          return;
+          return false;
         }
       }
       await changeStatus(req.id, "aprovado", { approved_by: currentUser?.id, approved_at: new Date().toISOString() });
       const sent = await sendRhEmail("ferias_aprovadas", req, { APPROVED_BY: currentUser?.name || currentUser?.email || "" });
       if (!sent) alert(`Aprovação registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
+      return true;
     } finally {
       setBusyId(null);
     }
-  }, [changeStatus, currentUser]);
+  }, [changeStatus, currentUser, getStageBlockMessage]);
 
-  const handleRecusar = useCallback(async (req) => {
+  const handleRecusar = useCallback(async (req, { onBlocked } = {}) => {
+    const blockMsg = getStageBlockMessage(req);
+    if (blockMsg) { (onBlocked || alert)(blockMsg); return false; }
     setBusyId(req.id);
     try {
       await changeStatus(req.id, "recusado");
       const sent = await sendRhEmail("ferias_rejeitadas", req, { REASON: req.notes || "Não informado", MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
       if (!sent) alert(`Recusa registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
+      return true;
     } finally {
       setBusyId(null);
     }
-  }, [changeStatus, currentUser]);
+  }, [changeStatus, currentUser, getStageBlockMessage]);
+
+  // Mover genérico pra qualquer etapa do pipeline dinâmico de férias (além
+  // dos atalhos Aprovar/Recusar) — cobre pipelines com mais de
+  // pendente/aprovado/recusado (ex.: uma etapa "em análise" intermediária).
+  const handleMoveToStageGeneric = useCallback(async (req, stageKey, { onBlocked } = {}) => {
+    const blockMsg = getStageBlockMessage(req);
+    if (blockMsg) { (onBlocked || alert)(blockMsg); return false; }
+    setBusyId(req.id);
+    try {
+      await changeStatus(req.id, stageKey);
+      return true;
+    } finally {
+      setBusyId(null);
+    }
+  }, [changeStatus, getStageBlockMessage]);
 
   const handleColumnDrop = useCallback((stageKey) => {
     if (draggedId) {
@@ -534,18 +622,20 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
       if (req && req.status !== stageKey) {
         if (stageKey === "aprovado") handleAprovar(req);
         else if (stageKey === "recusado") handleRecusar(req);
+        else handleMoveToStageGeneric(req, stageKey);
       }
     }
     setDraggedId(null);
     setDragOverStageKey(null);
-  }, [draggedId, requests, handleAprovar, handleRecusar]);
+  }, [draggedId, requests, handleAprovar, handleRecusar, handleMoveToStageGeneric]);
 
   const handleMoveToStage = useCallback((id, stageKey) => {
     const req = requests.find(r => r.id === id);
     if (!req) return;
     if (stageKey === "aprovado") handleAprovar(req);
     else if (stageKey === "recusado") handleRecusar(req);
-  }, [requests, handleAprovar, handleRecusar]);
+    else handleMoveToStageGeneric(req, stageKey);
+  }, [requests, handleAprovar, handleRecusar, handleMoveToStageGeneric]);
 
   const getReqCompleteness = (req) => getFieldCompleteness(feriasStageFields.getFields(req.status), req.custom_fields || {});
 
@@ -708,11 +798,13 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
           stages={stages}
           users={users}
           currentUser={currentUser}
-          onAprovar={(r) => { handleAprovar(r); setDrawerReqId(null); }}
-          onRecusar={(r) => { handleRecusar(r); setDrawerReqId(null); }}
+          onAprovar={handleAprovar}
+          onRecusar={handleRecusar}
+          onMoveToStage={handleMoveToStageGeneric}
           onUpdateCustomFields={(merged) => updateCustomFields(drawerReq.id, merged)}
           onAddActivity={(entry) => addActivity(drawerReq.id, entry)}
           onClose={() => setDrawerReqId(null)}
+          onMoved={(id) => { setDrawerReqId(null); reopenAfterMove(setDrawerReqId, id); }}
           busy={busyId === drawerReq.id}
         />
       )}

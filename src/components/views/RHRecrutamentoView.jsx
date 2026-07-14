@@ -22,6 +22,7 @@ import {
   Gift,
   Users as UsersIcon,
   Pencil,
+  AlertCircle,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -888,7 +889,7 @@ function VagaKanbanColumn({
 
 function VagaDrawer({
   vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onCopyLink, onClose, onVerCandidatos, copiedSlug,
-  customFields, onCustomFieldChange, onAddActivity, currentUser, users,
+  customFields, onCustomFieldChange, onAddActivity, currentUser, users, moveError,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -993,6 +994,12 @@ function VagaDrawer({
             <>
               <div style={{ marginBottom: 20 }}>
                 <div style={labelSt}>Mover para</div>
+                {moveError && (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+                    <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+                    {moveError}
+                  </div>
+                )}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {stages.filter((s) => s.stageKey !== vaga.stage).map((s) => (
                     <button
@@ -1220,6 +1227,11 @@ function CandidatoDrawer({
   const [pendingLostStage, setPendingLostStage] = useState(null);
   const [motivoReprovacao, setMotivoReprovacao] = useState("");
   const [savingStage, setSavingStage] = useState(false);
+  const [moveError, setMoveError] = useState(null);
+
+  useEffect(() => {
+    setMoveError(null);
+  }, [candidato.id]);
 
   // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
   // (estático ou condicional) vazio — checa ANTES do fluxo de reprovação,
@@ -1227,17 +1239,20 @@ function CandidatoDrawer({
   // estiverem preenchidos. Reprovação (ou qualquer etapa marcada como
   // "lost") exige motivo — regra de negócio preservada tanto no fluxo por
   // botão quanto no drag-and-drop (ver handleCandDrop na view principal).
+  // Antes usava alert() nativo — bloqueante, e trava sessões automatizadas/
+  // headless sem handler de diálogo. Banner inline não bloqueia nada.
   const requestStageChange = (stageKey) => {
     const missing = getMissingRequiredFields(customFields, candidato.customFields || {});
     if (missing.length > 0) {
-      alert(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      setMoveError(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
     const invalid = getInvalidFields(customFields, candidato.customFields || {});
     if (invalid.length > 0) {
-      alert(`Não dá pra mover "${candidato.name}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      setMoveError(`Não dá pra mover "${candidato.name}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
+    setMoveError(null);
     const target = stages.find((s) => s.stageKey === stageKey);
     if (target?.lost) { setPendingLostStage(stageKey); setReprovando(true); return; }
     onStageChange(candidato.id, stageKey);
@@ -1421,6 +1436,12 @@ function CandidatoDrawer({
           {canWrite && (
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Mover para</div>
+              {moveError && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+                  <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+                  {moveError}
+                </div>
+              )}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {stages.filter((s) => s.stageKey !== candidato.stage).map((s) => (
                   <button
@@ -1841,6 +1862,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
   const [addVagaStage, setAddVagaStage]     = useState(null);
   const [editingVaga, setEditingVaga]       = useState(null);
   const [vagaDrawerId, setVagaDrawerId]     = useState(null);
+  const [vagaMoveError, setVagaMoveError]   = useState(null);
   const [cargosManagerOpen, setCargosManagerOpen] = useState(false);
   const [addCandidatoStage, setAddCandidatoStage] = useState(null);
   const [copiedSlug, setCopiedSlug]         = useState(null);
@@ -1859,6 +1881,10 @@ export function RHRecrutamentoView({ user, canWrite }) {
   // ── Etapas / campos customizados (admin) ──────────────────────────────────
   const [stageEditorOpen, setStageEditorOpen] = useState(false);
   const [fieldEditorStage, setFieldEditorStage] = useState(null); // { domain, stageKey, stageName }
+
+  useEffect(() => {
+    setVagaMoveError(null);
+  }, [vagaDrawerId]);
 
   const selectedCandidato = useMemo(
     () => candidatos.find((c) => c.id === selectedCandidatoId) || null,
@@ -1918,14 +1944,15 @@ export function RHRecrutamentoView({ user, canWrite }) {
     const fields = vagaStageFields.getFields(vaga.stage);
     const missing = getMissingRequiredFields(fields, vaga.custom_fields || {});
     if (missing.length > 0) {
-      alert(`Não dá pra mover "${vaga.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      setVagaMoveError(`Não dá pra mover "${vaga.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return false;
     }
     const invalid = getInvalidFields(fields, vaga.custom_fields || {});
     if (invalid.length > 0) {
-      alert(`Não dá pra mover "${vaga.title}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      setVagaMoveError(`Não dá pra mover "${vaga.title}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return false;
     }
+    setVagaMoveError(null);
     changeVagaStage(id, newStage);
     return true;
   };
@@ -2374,6 +2401,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           stages={vagaStages}
           copiedSlug={copiedSlug}
           onStageChange={handleVagaStageChange}
+          moveError={vagaMoveError}
           onEdit={(v) => { setEditingVaga(v); setVagaDrawerId(null); }}
           onCopyLink={handleCopyLink}
           onVerCandidatos={handleVerCandidatos}
