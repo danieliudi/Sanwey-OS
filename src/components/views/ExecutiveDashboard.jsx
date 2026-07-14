@@ -133,8 +133,12 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
   // Construtor de pipeline.
   const funnelStages = useMemo(() => {
     const total = filteredLeads.length || 1;
-    const companyIds = [...new Set(filteredLeads.map(l => l.companyId))];
-    const sourceCompanies = companyIds.length > 0 ? companyIds : COMPANY_IDS;
+    // Itera em ordem estável (COMPANY_IDS) — antes usava a ordem de
+    // aparição nos leads, o que fazia nome/cor/posição da etapa no funil
+    // dependerem de qual lead vinha primeiro (não-determinístico).
+    const presentIds = new Set(filteredLeads.map(l => l.companyId));
+    const extraIds = [...presentIds].filter(id => !COMPANY_IDS.includes(id));
+    const sourceCompanies = presentIds.size > 0 ? [...COMPANY_IDS.filter(id => presentIds.has(id)), ...extraIds] : COMPANY_IDS;
     const stageMap = new Map();
     for (const cid of sourceCompanies) {
       const stages = (pipelines?.[cid] || DEFAULT_PIPELINE_STAGES).filter(s => !s.lost);
