@@ -10,6 +10,7 @@ import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
 import { LeadFormBuilder } from "../lead/LeadFormBuilder";
 import { StageFieldEditorModal } from "../pipeline/StageFieldEditorModal";
+import { PipelineStagesModal } from "../pipeline/PipelineStagesModal";
 import { DynamicField, validateFields } from "../ui/DynamicField";
 import { PipelineCalendarView } from "./PipelineCalendarView";
 import { useUsersById } from "../../hooks/use-users-by-id";
@@ -449,7 +450,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline }) {
   const isGroupView = activeCompany === "all";
   const isManager = user.role === "gerente" || user.role === "admin";
   const isConsultor = user.role === "consultor";
@@ -474,6 +475,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const [showAIChat, setShowAIChat] = useState(false);
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [editingStage, setEditingStage] = useState(null); // { stage, companyId }
+  const [stageManagerOpen, setStageManagerOpen] = useState(false);
 
   // user.companies may still contain legacy ids ("comercial") that the DB
   // check constraint rejects — pick the first one that's actually valid.
@@ -685,6 +687,18 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               label="Calendário"
             />
           </div>
+          {isManager && !isGroupView && (
+            <button
+              onClick={() => setStageManagerOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+            >
+              <Pencil size={11} />
+              Editar etapas
+            </button>
+          )}
           {isManager && (
             <div className="flex gap-2 w-full sm:w-auto">
               <Select
@@ -998,6 +1012,18 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         stage={editingStage?.stage}
         companyId={editingStage?.companyId}
         stageFields={stageFields}
+      />
+
+      {/* Editor de etapas + matriz de transições (ex-PipelineBuilderView) */}
+      <PipelineStagesModal
+        open={stageManagerOpen}
+        onClose={() => setStageManagerOpen(false)}
+        companyId={companyForPipeline}
+        stages={allStages}
+        transitions={pipelineTransitions}
+        leads={leads}
+        onReplacePipeline={onReplacePipeline}
+        onResetPipeline={onResetPipeline}
       />
     </div>
 

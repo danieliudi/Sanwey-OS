@@ -1288,7 +1288,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
                 >
                   <GitBranch size={12} />
-                  Configurar mover cards
+                  Editar etapas do pipeline
                 </a>
               )}
               <a

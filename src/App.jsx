@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
-  Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
+  Settings as SettingsIcon, Bot, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare,
@@ -56,7 +56,6 @@ import { ClientsManager } from "./components/client/ClientsManager";
 import { SettingsView } from "./components/views/SettingsView";
 import { AgentActionsView } from "./components/views/AgentActionsView";
 import { FairImportView } from "./components/views/FairImportView";
-import { PipelineBuilderView } from "./components/views/PipelineBuilderView";
 import { AutomationsView } from "./components/views/AutomationsView";
 import { TutoriaisView } from "./components/views/TutoriaisView";
 import { MarketingView } from "./components/views/MarketingView";
@@ -857,7 +856,6 @@ export default function App() {
       groups.push({
         label: "Configuração",
         items: [
-          { id: "pipeline-builder", label: "Construtor de pipeline", icon: Workflow },
           { id: "automations",      label: "Automações",             icon: Zap },
           { id: "settings",         label: "Configurações",          icon: SettingsIcon },
         ],
@@ -892,7 +890,7 @@ export default function App() {
     // all role flags are false, which would kick the user to "/" on refresh.
     if (!currentUser) return;
 
-    const managerOnly = ["executive", "agents", "crossref", "funnel-history", "pipeline-builder", "automations", "fair-import", "users"];
+    const managerOnly = ["executive", "agents", "crossref", "funnel-history", "automations", "fair-import", "users"];
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -1140,6 +1138,8 @@ export default function App() {
               autoOpenCreate={crmAutoCreate}
               onAutoOpenHandled={() => setCrmAutoCreate(false)}
               onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
+              onReplacePipeline={replacePipeline}
+              onResetPipeline={resetCompanyPipeline}
             />
           } />
           <Route path={ROUTES["crm-viagens"]} element={
@@ -1168,18 +1168,10 @@ export default function App() {
           <Route path={ROUTES["funnel-history"]} element={
             <Navigate to={ROUTES.executive} replace />
           } />
-          <Route path={ROUTES["pipeline-builder"]} element={
-            isManager ? (
-              <PipelineBuilderView
-                pipelines={pipelines}
-                transitions={pipelineTransitions}
-                accessibleCompanies={accessibleCompanies}
-                onReplacePipeline={replacePipeline}
-                onResetPipeline={resetCompanyPipeline}
-                leads={leads}
-              />
-            ) : <Navigate to={ROUTES.dashboard} replace />
-          } />
+          {/* Construtor de pipeline standalone foi absorvido pelo botão
+              "Editar etapas" dentro do próprio Kanban de Pipeline. Redireciona
+              quem tem o link salvo. */}
+          <Route path={ROUTES["pipeline-builder"]} element={<Navigate to={ROUTES.crm} replace />} />
           <Route path={ROUTES.automations} element={
             isManager ? (
               <AutomationsView
@@ -1375,7 +1367,7 @@ export default function App() {
           isManager={isManager}
           currentUser={currentUser}
           pipelines={pipelines}
-          onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("pipeline-builder"); }}
+          onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("crm"); }}
           notifyMentions={notifyMentions}
         />
       </ErrorBoundary>
