@@ -206,6 +206,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
   const [importDone, setImportDone] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
   const [skippedCount, setSkippedCount] = useState(0);
+  const [failedRows, setFailedRows] = useState([]);
 
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef();
@@ -225,6 +226,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
     setImportDone(false);
     setImportedCount(0);
     setSkippedCount(0);
+    setFailedRows([]);
   }, [companies, currentUser]);
 
   const handleClose = useCallback(() => {
@@ -364,25 +366,29 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
     setImportTotal(newRows.length);
     let imported = 0;
     let skipped = 0;
+    const failures = [];
 
     for (let i = 0; i < newRows.length; i++) {
       const lead = buildLead(newRows[i]);
       try {
         const result = await onAddLead(lead);
-        // If the hook returns null/false it means it was a duplicate
-        if (result === null || result === false) {
+        // addLead devolve o próprio lead (mesmo id) quando insere de fato, e
+        // devolve o lead JÁ EXISTENTE (id diferente) quando é duplicata por
+        // CNPJ — só isso conta como "já existia", nunca uma exceção real.
+        if (!result || result.id !== lead.id) {
           skipped++;
         } else {
           imported++;
         }
-      } catch {
-        skipped++;
+      } catch (err) {
+        failures.push({ row: i + 1, company: lead.company || "(sem nome)", error: err?.message || String(err) });
       }
       setImportProgress(i + 1);
     }
 
     setImportedCount(imported);
     setSkippedCount(skipped);
+    setFailedRows(failures);
     setImportDone(true);
     setImporting(false);
   }, [importing, newRows, buildLead, onAddLead]);
@@ -625,19 +631,41 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   <div
                     style={{
                       width: 56, height: 56, borderRadius: "50%",
-                      background: "#ECFDF5", display: "flex", alignItems: "center",
+                      background: failedRows.length > 0 ? "#FEF2F2" : "#ECFDF5",
+                      display: "flex", alignItems: "center",
                       justifyContent: "center", margin: "0 auto 16px",
                     }}
                   >
-                    <Check size={28} color="#16A34A" />
+                    {failedRows.length > 0
+                      ? <X size={28} color="#DC2626" />
+                      : <Check size={28} color="#16A34A" />}
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
-                    Importação concluída!
+                    {failedRows.length > 0 ? "Importação concluída com falhas" : "Importação concluída!"}
                   </div>
                   <div style={{ fontSize: 14, color: "var(--text-dim)" }}>
                     {importedCount} leads importados com sucesso.
-                    {skippedCount > 0 && ` ${skippedCount} já existiam ou foram ignorados.`}
+                    {skippedCount > 0 && ` ${skippedCount} já existiam (ignorados).`}
+                    {failedRows.length > 0 && ` ${failedRows.length} falharam ao gravar — NÃO foram importados.`}
                   </div>
+                  {failedRows.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: 16, textAlign: "left", maxWidth: 480, marginLeft: "auto", marginRight: "auto",
+                        background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12,
+                        maxHeight: 180, overflowY: "auto",
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#B91C1C", marginBottom: 6 }}>
+                        Linhas que falharam — corrija e importe novamente:
+                      </div>
+                      {failedRows.map((f, i) => (
+                        <div key={i} style={{ fontSize: 12, color: "#7F1D1D", marginBottom: 4 }}>
+                          Linha {f.row} ({f.company}): {f.error}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : importing ? (
                 /* Progress state */

@@ -571,9 +571,12 @@ export default function App() {
     }
   }, [changeStage, leads, evaluateAutomations, updateLeadRemote, pushNotification, processAutomationSideEffects]);
 
-  // Wrapped addLead that fires lead_created automations after creation
+  // Wrapped addLead that fires lead_created automations after creation.
+  // Propaga o retorno de addLead (lead salvo, ou o lead JÁ EXISTENTE em caso
+  // de duplicata por CNPJ) — o ImportModal precisa disso pra não confundir
+  // duplicata com falha real de gravação.
   const handleAddLead = useCallback(async (lead) => {
-    await addLead(lead);
+    const saved = await addLead(lead);
     const { patches, notifications: autoNotifs, sideEffects } = evaluateAutomations(lead, null, "lead_created");
     for (const p of patches) {
       await updateLeadRemote(p.leadId, p.patch).catch(() => {});
@@ -582,6 +585,7 @@ export default function App() {
     for (const n of (autoNotifs || [])) {
       pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: lead.id, companyId: lead.companyId });
     }
+    return saved;
   }, [addLead, evaluateAutomations, updateLeadRemote, pushNotification, processAutomationSideEffects]);
 
   // Nudges por tempo: os gatilhos "time_in_stage" e "pending_required_field"
