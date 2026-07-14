@@ -1,8 +1,9 @@
-import React, { memo, useRef, useState, useEffect } from "react";
+import React, { memo, useMemo, useRef, useState, useEffect } from "react";
 import { Clock, MoreVertical, ArrowRight, Check, X as XIcon } from "lucide-react";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { CompanyTag } from "../ui/CompanyTag";
+import { AvatarStack } from "../shared/AvatarStack";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 
@@ -26,9 +27,17 @@ function agingStyle(days, slaDays) {
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
-function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
+function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+
+  // FASE 5: mais de um responsável por card — resolve owner_ids (com
+  // fallback pro owner escalar em leads legados) contra a lista de
+  // usuários pra alimentar o AvatarStack do rodapé.
+  const resolvedOwners = useMemo(() => {
+    const ids = Array.isArray(lead.ownerIds) && lead.ownerIds.length ? lead.ownerIds : (lead.owner ? [lead.owner] : []);
+    return ids.map(id => (users || []).find(u => u.id === id)).filter(Boolean);
+  }, [lead.ownerIds, lead.owner, users]);
 
   const currentStage = stages?.find(s => s.id === lead.stage);
   const daysInStage = daysFromDate(lead.stageChangedAt);
@@ -227,12 +236,12 @@ function LeadKanbanCardImpl({ lead, ownerName, showOwnerFooter, isGroupView, onC
       </div>
 
       {/* Owner footer */}
-      {showOwnerFooter && lead.owner && (
+      {showOwnerFooter && resolvedOwners.length > 0 && (
         <div
           className="mt-2.5 pt-2 border-t text-[11px] flex items-center justify-between"
           style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}
         >
-          <span>{ownerName || "—"}</span>
+          <AvatarStack users={resolvedOwners} size={18} max={3} />
           {isGroupView && <CompanyTag companyId={lead.companyId} />}
         </div>
       )}

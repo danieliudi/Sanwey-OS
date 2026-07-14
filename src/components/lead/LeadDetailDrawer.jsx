@@ -29,6 +29,7 @@ import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/fiel
 import { getInvalidFields, EMAIL_PATTERN } from "../../utils/field-validation";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
@@ -224,11 +225,15 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     ));
   }, [lead, allLeads, isManager]);
 
+  // Escopo de quem pode ser responsável do card: vendedor/consultor só da
+  // mesma empresa do lead (gerente/admin não aparecem aqui — mesmo escopo
+  // que já existia pro picker de reatribuição de dono). Usado como `options`
+  // do AssigneeMultiSelect (FASE 5) — objetos de usuário crus (id/name/
+  // avatarBg/initials), não {value,label}.
   const sellerOptions = useMemo(() => {
     if (!lead) return [];
     return (users || [])
-      .filter(u => (u.role === "vendedor" || u.role === "consultor") && Array.isArray(u.companies) && u.companies.includes(lead.companyId))
-      .map(u => ({ value: u.id, label: u.name }));
+      .filter(u => (u.role === "vendedor" || u.role === "consultor") && Array.isArray(u.companies) && u.companies.includes(lead.companyId));
   }, [lead, users]);
 
   // Quem pode ser @mencionado nos comentários deste lead — mesmo escopo do
@@ -366,8 +371,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     onUpdate(lead.id, { stage: newStage, stageChangedAt: new Date().toISOString() });
   };
 
-  const handleOwnerChange = (e) => {
-    onUpdate(lead.id, { owner: e.target.value || null });
+  // FASE 5: mais de um responsável por card. `owner` (escalar) continua
+  // sendo mantido pelo trigger do banco como membro de `owner_ids` — só
+  // `ownerIds` é editado aqui.
+  const handleOwnerIdsChange = (newIds) => {
+    onUpdate(lead.id, { ownerIds: newIds });
   };
 
   const handleStartOutreach = () => {
@@ -422,7 +430,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
 
   const canDelete = onDelete && (
     isManager ||
-    (currentUser && (lead.owner === currentUser.id || lead.createdBy === currentUser.id))
+    (currentUser && (
+      (lead.ownerIds || []).includes(currentUser.id) ||
+      lead.owner === currentUser.id ||
+      lead.createdBy === currentUser.id
+    ))
   );
 
   const handleDeleteConfirmed = async () => {
@@ -589,6 +601,19 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   {lead.city && <span className="flex items-center gap-1">· <MapPin size={11} />{lead.city}</span>}
                 </div>
               )}
+            </div>
+
+            {/* Responsáveis — FASE 5: mais de um responsável por card */}
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
+                Responsáveis
+              </div>
+              <AssigneeMultiSelect
+                value={lead.ownerIds?.length ? lead.ownerIds : (lead.owner ? [lead.owner] : [])}
+                onChange={handleOwnerIdsChange}
+                options={sellerOptions}
+                placeholder="Selecionar responsáveis…"
+              />
             </div>
 
             {/* Métricas compactas — Unidades / Prob. / Fechamento */}

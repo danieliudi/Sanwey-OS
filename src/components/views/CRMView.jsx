@@ -18,8 +18,17 @@ import { useStageFields } from "../../hooks/use-stage-fields";
 import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { formatK } from "../../utils/currency";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
+import { AvatarStack } from "../shared/AvatarStack";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
+
+// FASE 5: ids de todos os responsáveis de um lead — usa owner_ids quando
+// disponível, com fallback pro owner escalar em leads legados que por
+// algum motivo não tenham sido preenchidos pelo backfill da migração.
+function getLeadOwnerIds(l) {
+  return Array.isArray(l.ownerIds) && l.ownerIds.length ? l.ownerIds : (l.owner ? [l.owner] : []);
+}
 
 // ── Quick-add form ────────────────────────────────────────────────────────────
 
@@ -39,7 +48,7 @@ const SELECT_STYLE = {
 function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById, onAdd, onCancel, customFieldsDef = [] }) {
   const [company, setCompany] = useState("");
   const [value, setValue] = useState("");
-  const [ownerId, setOwnerId] = useState(currentUser?.id || "");
+  const [ownerIds, setOwnerIds] = useState(currentUser?.id ? [currentUser.id] : []);
   const [sector, setSector] = useState(currentUser?.sectors?.[0] || "");
   const [customValues, setCustomValues] = useState({});
   const [saving, setSaving] = useState(false);
@@ -52,20 +61,14 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
 
   React.useEffect(() => { inputRef.current?.focus(); }, []);
 
+  // Opções pro AssigneeMultiSelect — objetos de usuário crus (id/name/
+  // avatarBg/initials), mesmo escopo de sempre (empresa do card + papéis
+  // que podem ser responsáveis).
   const ownerOptions = useMemo(() => {
-    const visible = (users || []).filter(u =>
+    return (users || []).filter(u =>
       u.companies?.includes(companyId) &&
       (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
     );
-    // Label curto pra caber no select estreito do form (ex.: "Daniel I.").
-    // Nome completo continua visível no dropdown aberto via title.
-    return visible.map(u => {
-      const parts = (u.name || "").trim().split(/\s+/);
-      const short = parts.length <= 1
-        ? (parts[0] || u.name || "")
-        : `${parts[0]} ${parts[parts.length - 1][0] || ""}.`;
-      return { value: u.id, label: short, fullName: u.name };
-    });
   }, [users, companyId]);
 
   // crypto.randomUUID isn't available in every browser/context (older Safari,
@@ -96,14 +99,15 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
     try {
       const now = new Date();
       const closeDate = new Date(now.getTime() + 30 * 86400000);
-      const resolvedOwner = ownerId || currentUser?.id || null;
+      const primaryOwner = ownerIds[0] || currentUser?.id || null;
       const lead = {
         id: newId(),
         company: company.trim(),
         companyId,
         stage: stageId,
         status: stageId,
-        owner: resolvedOwner,
+        owner: primaryOwner,
+        ownerIds: ownerIds.length ? ownerIds : (primaryOwner ? [primaryOwner] : []),
         sector,
         value: parseFloat(value) || 0,
         fitScore: 0,
@@ -161,32 +165,24 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
           <option key={s} value={s}>{s}</option>
         ))}
       </select>
-      <div className="flex gap-1.5">
-        <input
-          type="number"
-          placeholder="Valor (R$)"
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          className="flex-1 min-w-0 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
-          style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
-          onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
-          onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+      <input
+        type="number"
+        placeholder="Valor (R$)"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        className="w-full text-xs rounded-lg border px-2.5 py-1.5 outline-none"
+        style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+        onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+        onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+      />
+      {ownerOptions.length > 0 && (
+        <AssigneeMultiSelect
+          value={ownerIds}
+          onChange={setOwnerIds}
+          options={ownerOptions}
+          placeholder="Responsável(is)"
         />
-        {ownerOptions.length > 1 && (
-          <select
-            value={ownerId}
-            onChange={e => setOwnerId(e.target.value)}
-            title={ownerOptions.find(o => o.value === ownerId)?.fullName || "Responsável"}
-            className="flex-1 min-w-0 text-xs rounded-lg border outline-none truncate"
-            style={{ ...SELECT_STYLE, maxWidth: "100%" }}
-          >
-            <option value="">Responsável</option>
-            {ownerOptions.map(o => (
-              <option key={o.value} value={o.value} title={o.fullName}>{o.label}</option>
-            ))}
-          </select>
-        )}
-      </div>
+      )}
       {customFieldsDef.length > 0 && (
         <div className="space-y-2 pt-1 mt-1 border-t" style={{ borderColor: "var(--surface-alt)" }}>
           {customFieldsDef.map(f => (
@@ -504,11 +500,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     let s = leads;
     if (!isGroupView) s = s.filter(l => l.companyId === activeCompany);
     if (isConsultor) {
-      // Consultor sees only their own leads
-      s = s.filter(l => l.owner === user.id);
+      // Consultor sees only their own leads (FASE 5: qualquer id em ownerIds, não só o owner escalar)
+      s = s.filter(l => getLeadOwnerIds(l).includes(user.id));
     } else if (!isManager) {
       // Vendedor sees own leads + subordinates' leads
-      s = s.filter(l => l.owner === user.id || subordinateIds.has(l.owner));
+      s = s.filter(l => getLeadOwnerIds(l).some(id => id === user.id || subordinateIds.has(id)));
     }
     // Sector filter: if user has sectors, only show leads in those sectors (or without sector)
     if (user.sectors?.length && (user.role === "vendedor" || user.role === "consultor")) {
@@ -519,7 +515,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
 
   const scopedLeads = useMemo(() => {
     if (isManager && ownerFilter !== "all") {
-      return companyScopedLeads.filter(l => l.owner === ownerFilter);
+      // FASE 5: filtro "mostrar leads do fulano" bate se fulano estiver em
+      // QUALQUER posição de ownerIds, não só como owner (principal).
+      return companyScopedLeads.filter(l => getLeadOwnerIds(l).includes(ownerFilter));
     }
     return companyScopedLeads;
   }, [companyScopedLeads, ownerFilter, isManager]);
@@ -537,10 +535,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   }, [stages, scopedLeads]);
 
   const ownerOptions = useMemo(() => {
-    const ids = Array.from(new Set(companyScopedLeads.map(l => l.owner).filter(Boolean)));
+    const idSet = new Set();
+    for (const l of companyScopedLeads) {
+      for (const id of getLeadOwnerIds(l)) idSet.add(id);
+    }
     return [
       { value: "all", label: "Todos os vendedores" },
-      ...ids.map(id => ({ value: id, label: usersById.get(id)?.name || id })),
+      ...Array.from(idSet).map(id => ({ value: id, label: usersById.get(id)?.name || id })),
     ];
   }, [companyScopedLeads, usersById]);
 
@@ -756,24 +757,21 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   {bucket.leads.length === 0 ? (
                     <div className="text-center py-4 text-xs" style={{ color: "var(--text-dim)" }}>Nenhum negócio nesta etapa</div>
                   ) : (
-                    bucket.leads.map(lead => {
-                      const ownerName = lead.owner ? (usersById.get(lead.owner)?.name?.split(" ")[0] || "—") : null;
-                      return (
-                        <LeadKanbanCard
-                          key={lead.id}
-                          lead={lead}
-                          ownerName={ownerName}
-                          showOwnerFooter={isGroupView || isManager}
-                          isGroupView={isGroupView}
-                          onClick={onLeadClick}
-                          onDragStart={handleDragStart}
-                          onDragEnd={handleDragEnd}
-                          stages={stages}
-                          onMoveToStage={attemptStageChange}
-                          completeness={getLeadCompleteness(lead)}
-                        />
-                      );
-                    })
+                    bucket.leads.map(lead => (
+                      <LeadKanbanCard
+                        key={lead.id}
+                        lead={lead}
+                        users={users}
+                        showOwnerFooter={isGroupView || isManager}
+                        isGroupView={isGroupView}
+                        onClick={onLeadClick}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        stages={stages}
+                        onMoveToStage={attemptStageChange}
+                        completeness={getLeadCompleteness(lead)}
+                      />
+                    ))
                   )}
                   {onAddLead && !stage.terminal && (
                     <button
@@ -910,26 +908,21 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                       )}
                     </div>
                   ) : (
-                    bucket.leads.map(lead => {
-                      const ownerName = lead.owner
-                        ? (usersById.get(lead.owner)?.name?.split(" ")[0] || "—")
-                        : null;
-                      return (
-                        <LeadKanbanCard
-                          key={lead.id}
-                          lead={lead}
-                          ownerName={ownerName}
-                          showOwnerFooter={isGroupView || isManager}
-                          isGroupView={isGroupView}
-                          onClick={onLeadClick}
-                          onDragStart={handleDragStart}
-                          onDragEnd={handleDragEnd}
-                          stages={stages}
-                          onMoveToStage={attemptStageChange}
-                          completeness={getLeadCompleteness(lead)}
-                        />
-                      );
-                    })
+                    bucket.leads.map(lead => (
+                      <LeadKanbanCard
+                        key={lead.id}
+                        lead={lead}
+                        users={users}
+                        showOwnerFooter={isGroupView || isManager}
+                        isGroupView={isGroupView}
+                        onClick={onLeadClick}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        stages={stages}
+                        onMoveToStage={attemptStageChange}
+                        completeness={getLeadCompleteness(lead)}
+                      />
+                    ))
                   )}
                   {onAddLead && !stage.terminal && (
                     <button
@@ -1105,7 +1098,15 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
         case "value":     va = a.value || 0; vb = b.value || 0; break;
         case "fitScore":  va = a.fitScore || 0; vb = b.fitScore || 0; break;
         case "sector":    va = a.sector?.toLowerCase() || ""; vb = b.sector?.toLowerCase() || ""; break;
-        case "owner":     va = users?.[a.owner]?.name?.toLowerCase() || ""; vb = users?.[b.owner]?.name?.toLowerCase() || ""; break;
+        case "owner": {
+          // `users` é um Map (useUsersById) — ordena pelo primeiro responsável
+          // (FASE 5: owner_ids pode ter mais de um, mantém critério simples).
+          const aId = getLeadOwnerIds(a)[0];
+          const bId = getLeadOwnerIds(b)[0];
+          va = users?.get?.(aId)?.name?.toLowerCase() || "";
+          vb = users?.get?.(bId)?.name?.toLowerCase() || "";
+          break;
+        }
         case "stageChangedAt": va = a.stageChangedAt || a.createdAt || ""; vb = b.stageChangedAt || b.createdAt || ""; break;
         default:          va = ""; vb = "";
       }
@@ -1165,7 +1166,9 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
         <tbody>
           {sorted.map((lead, idx) => {
             const stage = stageMap[lead.stage];
-            const owner = users?.[lead.owner];
+            // FASE 5: resolve todos os responsáveis (owner_ids, com fallback
+            // pro owner escalar) contra o Map de usuários pro AvatarStack.
+            const resolvedOwners = getLeadOwnerIds(lead).map(id => users?.get?.(id)).filter(Boolean);
             const isHovered = hoveredRow === lead.id;
             const companyInfo = isGroupView ? COMPANIES[lead.companyId] : null;
             return (
@@ -1247,20 +1250,13 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
                     {lead.sector || "—"}
                   </span>
                 </td>
-                {/* Owner */}
+                {/* Owner(s) */}
                 <td style={{ padding: "10px 12px" }}>
-                  {owner ? (
+                  {resolvedOwners.length > 0 ? (
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <span style={{
-                        width: 24, height: 24, borderRadius: "50%",
-                        background: owner.avatarBg || "#37352F",
-                        color: "#FFF", fontSize: 10, fontWeight: 700,
-                        display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                      }}>
-                        {owner.initials || owner.name?.[0]?.toUpperCase() || "?"}
-                      </span>
+                      <AvatarStack users={resolvedOwners} size={24} max={3} />
                       <span style={{ color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }}>
-                        {owner.name}
+                        {resolvedOwners[0].name}
                       </span>
                     </span>
                   ) : <span style={{ color: "var(--text-dim)" }}>—</span>}

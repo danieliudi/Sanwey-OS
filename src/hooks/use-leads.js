@@ -39,6 +39,7 @@ function rowToLead(r) {
     stage: r.stage,
     status: r.status,
     owner: r.owner,
+    ownerIds: Array.isArray(r.owner_ids) ? r.owner_ids : (r.owner ? [r.owner] : []),
     urgency: r.urgency,
     decisionMaker: r.decision_maker || { name: "—", role: "—" },
     starred: Boolean(r.starred),
@@ -91,6 +92,7 @@ function leadToRow(l, extras = {}) {
     stage: l.stage ?? "prospeccao",
     status: l.status ?? l.stage ?? "prospeccao",
     owner: l.owner ?? null,
+    owner_ids: l.ownerIds ?? (l.owner ? [l.owner] : null),
     urgency: l.urgency ?? null,
     decision_maker: l.decisionMaker ?? {},
     starred: Boolean(l.starred),
@@ -126,6 +128,7 @@ function patchToRow(patch) {
     customFields: "custom_fields",
     nextFollowUp: "next_follow_up",
     clientId: "client_id",
+    ownerIds: "owner_ids",
   };
   const out = {};
   for (const [k, v] of Object.entries(patch)) {
