@@ -9,6 +9,8 @@ import { PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-market
 import { formatDateBR } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
+import { CommentsPanel } from "../shared/CommentsPanel";
+import { getMentionableUsers } from "../../utils/mentionable-users";
 
 const BUCKET = "marketing-attachments";
 
@@ -54,7 +56,7 @@ function ReadValue({ value, empty = "—" }) {
 export function PurchaseRequestDetailDrawer({
   purchase, onClose, onUpdate, onStageMoved,
   approvePurchase, rejectPurchase, getLastPurchasePrice,
-  suppliers = [], users = [], currentUser,
+  suppliers = [], users = [], currentUser, notifyMentions,
 }) {
   useEscToClose(onClose);
 
@@ -71,6 +73,37 @@ export function PurchaseRequestDetailDrawer({
       return r.includes("marketing") || r.includes("gerente_marketing") || r.includes("admin");
     }),
     [users]
+  );
+
+  // Comentários (FASE 4) — mesmo escopo de quem pode ser @mencionado que
+  // marketingUsers acima (marketing/gerente_marketing/admin), via helper
+  // compartilhado com os demais drawers.
+  const mentionableUsers = useMemo(
+    () => getMentionableUsers(users, { domain: "marketing" }),
+    [users]
+  );
+
+  // `purchase.notes` é jsonb no banco — normaliza pro formato do CommentsPanel,
+  // aceitando tanto o formato antigo ({text, createdAt}, sem autor) quanto o
+  // novo ({authorId, authorName, text, mentionedIds, createdAt}).
+  const comments = useMemo(
+    () => (purchase.notes || []).map((n, idx) => {
+      const author = users.find(u => u.id === n.authorId);
+      return {
+        id: n.id || `note-${idx}`,
+        authorId: n.authorId || null,
+        authorName: n.authorName || author?.name,
+        avatarBg: n.avatarBg || author?.avatarBg,
+        avatarUrl: n.avatarUrl || author?.avatarUrl,
+        initials: n.initials || author?.initials,
+        text: n.text,
+        mentionedNames: Array.isArray(n.mentionedIds)
+          ? n.mentionedIds.map(id => users.find(u => u.id === id)?.name).filter(Boolean)
+          : [],
+        createdAt: n.createdAt,
+      };
+    }),
+    [purchase.notes, users]
   );
 
   const [supplierId,    setSupplierId]    = useState(purchase.supplierId || "");
@@ -248,6 +281,26 @@ export function PurchaseRequestDetailDrawer({
       onStageMoved?.(purchase.id);
     } catch (err) {
       setActionError(err.message || "Não foi possível mover a solicitação.");
+    }
+  };
+
+  const handleAddComment = async (text, mentionedIds) => {
+    const entry = {
+      id: crypto.randomUUID(),
+      authorId: currentUser?.id || null,
+      authorName: currentUser?.name || null,
+      avatarBg: currentUser?.avatarBg || null,
+      text,
+      mentionedIds,
+      createdAt: new Date().toISOString(),
+    };
+    await onUpdate(purchase.id, { notes: [...(purchase.notes || []), entry] });
+    if (mentionedIds?.length && notifyMentions) {
+      notifyMentions(mentionedIds, {
+        title: `${currentUser?.name} te mencionou`,
+        body: `Em um comentário na compra "${purchase.itemName}" (${purchase.requestNumber})`,
+        link: { module: "purchase_requests", id: purchase.id },
+      });
     }
   };
 
@@ -556,6 +609,16 @@ export function PurchaseRequestDetailDrawer({
               </div>
             </div>
           )}
+
+          {/* Comentários — sempre visível, em qualquer etapa (inclusive rejeitado) */}
+          <div>
+            <CommentsPanel
+              comments={comments}
+              currentUser={currentUser}
+              mentionableUsers={mentionableUsers}
+              onAddComment={handleAddComment}
+            />
+          </div>
         </div>
       </div>
     </div>

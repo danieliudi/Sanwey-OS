@@ -485,7 +485,7 @@ function CalendarView({ purchases, onPillClick }) {
 }
 
 /* ── Main view ────────────────────────────────────────────────────────── */
-export function ComprasMarketingView({ user, users = [] }) {
+export function ComprasMarketingView({ user, users = [], notifyMentions }) {
   const {
     purchases, loading, error,
     createPurchase, updatePurchase,
@@ -620,6 +620,7 @@ export function ComprasMarketingView({ user, users = [] }) {
           suppliers={suppliers}
           users={users}
           currentUser={user}
+          notifyMentions={notifyMentions}
         />
       )}
     </div>

@@ -3,7 +3,7 @@ import {
   X, MapPin, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
   Check, Trash2, Mail, ChevronDown, ChevronUp,
-  Clock, MessageSquare, GitBranch, CalendarClock, ArrowLeft, ArrowRight, History,
+  Clock, GitBranch, CalendarClock, ArrowLeft, ArrowRight, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
   File, FileImage, FileSpreadsheet, AlertCircle,
 } from "lucide-react";
@@ -27,10 +27,12 @@ import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields, EMAIL_PATTERN } from "../../utils/field-validation";
+import { CommentsPanel } from "../shared/CommentsPanel";
+import { getMentionableUsers } from "../../utils/mentionable-users";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines }) {
+export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
   const [mobileTab, setMobileTab] = useState("info");
@@ -228,6 +230,76 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
       .filter(u => (u.role === "vendedor" || u.role === "consultor") && Array.isArray(u.companies) && u.companies.includes(lead.companyId))
       .map(u => ({ value: u.id, label: u.name }));
   }, [lead, users]);
+
+  // Quem pode ser @mencionado nos comentários deste lead — mesmo escopo do
+  // picker de reatribuição de dono acima (vendedor/consultor só da mesma
+  // empresa do card; gerente/admin sempre veem tudo).
+  const mentionableUsers = useMemo(() => (
+    getMentionableUsers(users, { domain: "crm", companyId: lead?.companyId })
+  ), [users, lead?.companyId]);
+
+  // Feed unificado de comentários (FASE 4) — mescla lead.notes (legado,
+  // {text, createdAt}, sem autor) com lead.activities do tipo note/comment
+  // (mais recentes, já têm userId/userName), normalizado pro formato que
+  // CommentsPanel espera. Autor é sempre resolvido via users quando possível
+  // — nunca inventamos um autor pra entradas antigas sem ele.
+  const commentsFeed = useMemo(() => {
+    if (!lead) return [];
+    const notes = Array.isArray(lead.notes) ? lead.notes : [];
+    const activityComments = (lead.activities || []).filter(a => a.type === "note" || a.type === "comment");
+    const resolveMentionNames = (ids) => (ids || [])
+      .map(id => (users || []).find(u => u.id === id)?.name)
+      .filter(Boolean);
+    const merged = [
+      ...notes.map((n, i) => {
+        const author = n.userId ? (users || []).find(u => u.id === n.userId) : null;
+        return {
+          id: n.id || `note-${i}-${n.createdAt || ""}`,
+          authorId: n.userId || null,
+          authorName: n.userName || author?.name || null,
+          avatarBg: author?.avatarBg,
+          avatarUrl: author?.avatarUrl,
+          initials: author?.initials,
+          text: n.text || n.body,
+          mentionedNames: resolveMentionNames(n.mentionedIds),
+          createdAt: n.createdAt,
+        };
+      }),
+      ...activityComments.map((c, i) => {
+        const author = c.userId ? (users || []).find(u => u.id === c.userId) : null;
+        return {
+          id: c.id || `act-${i}-${c.timestamp || c.createdAt || ""}`,
+          authorId: c.userId || null,
+          authorName: c.userName || author?.name || null,
+          avatarBg: author?.avatarBg,
+          avatarUrl: author?.avatarUrl,
+          initials: author?.initials,
+          text: c.body,
+          mentionedNames: resolveMentionNames(c.mentionedIds),
+          createdAt: c.timestamp || c.createdAt,
+        };
+      }),
+    ];
+    return merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [lead, users]);
+
+  const handleAddComment = useCallback(async (text, mentionedIds) => {
+    if (!lead || !onAddActivity) return;
+    await onAddActivity(lead.id, {
+      type: "comment",
+      userId: currentUser?.id || null,
+      userName: currentUser?.name || null,
+      body: text,
+      mentionedIds,
+    });
+    if (mentionedIds?.length > 0 && notifyMentions) {
+      notifyMentions(mentionedIds, {
+        title: `${currentUser?.name || "Alguém"} te mencionou`,
+        body: `Em um comentário no lead "${lead.company}"`,
+        link: { module: "leads", id: lead.id },
+      });
+    }
+  }, [lead, onAddActivity, currentUser, notifyMentions]);
 
   const company = lead ? COMPANIES[lead.companyId] : null;
   const decisionMakerName = lead?.decisionMaker?.name || "—";
@@ -739,16 +811,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               />
             )}
 
-            {/* ── Tab: Comentários ── */}
-            {sideTab === "comentarios" && (
-              <CommentsPanel
-                lead={lead}
-                currentUser={currentUser}
-                users={users}
-                onAddActivity={onAddActivity}
-              />
-            )}
-
             {/* ── Tab: IA ── */}
             {sideTab === "ia" && (
               <div className="space-y-4">
@@ -1179,6 +1241,17 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               })()}
             </div>
 
+            {/* Comentários — sempre visíveis na lateral direita, abaixo da
+                movimentação de card (não mais escondidos atrás de uma aba). */}
+            <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+              <CommentsPanel
+                comments={commentsFeed}
+                currentUser={currentUser}
+                mentionableUsers={mentionableUsers}
+                onAddComment={handleAddComment}
+              />
+            </div>
+
             <div className="mt-5 pt-4 border-t space-y-2" style={{ borderColor: "var(--border)" }}>
               {isManager && onNavigateToPipelineBuilder && (
                 <a
@@ -1294,7 +1367,6 @@ const SIDE_TABS = [
   { id: "ia",           label: "IA",          icon: Sparkles },
   { id: "anexos",       label: "Anexos",      icon: Paperclip },
   { id: "checklists",   label: "Checklists",  icon: ListChecks },
-  { id: "comentarios",  label: "Comentários", icon: MessageSquare },
   { id: "email",        label: "Email",       icon: Mail },
   { id: "pdf",          label: "PDF",         icon: FileDown },
 ];
@@ -1402,93 +1474,6 @@ function ActivitiesPanel({ stageHistory, activities, users }) {
           </li>
         )}
       </ol>
-    </div>
-  );
-}
-
-function CommentsPanel({ lead, currentUser, users, onAddActivity }) {
-  const [text, setText] = useState("");
-  const [saving, setSaving] = useState(false);
-  const notes = Array.isArray(lead?.notes) ? lead.notes : [];
-  const comments = (lead?.activities || []).filter(a => a.type === "note" || a.type === "comment");
-  const all = useMemo(() => {
-    const merged = [
-      ...notes.map(n => ({ body: n.text || n.body, timestamp: n.createdAt, userName: n.userName })),
-      ...comments.map(c => ({ body: c.body, timestamp: c.timestamp, userId: c.userId, userName: c.userName })),
-    ];
-    return merged.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }, [notes, comments]);
-
-  const handleAdd = async () => {
-    const t = text.trim();
-    if (!t || !onAddActivity) return;
-    setSaving(true);
-    try {
-      await onAddActivity(lead.id, {
-        type: "comment",
-        userId: currentUser?.id || null,
-        userName: currentUser?.name || null,
-        body: t,
-      });
-      setText("");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="p-4 rounded-xl border space-y-3" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-      <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>
-        Comentários
-      </div>
-      {all.length === 0 && (
-        <div className="text-xs italic" style={{ color: "var(--text-dim)" }}>
-          Nenhum comentário ainda.
-        </div>
-      )}
-      {all.length > 0 && (
-        <ol className="space-y-2.5">
-          {all.slice(0, 20).map((c, i) => (
-            <li key={i} className="text-xs" style={{ color: "var(--text)" }}>
-              <div className="font-semibold mb-0.5" style={{ color: "var(--text)", fontSize: 11 }}>
-                {c.userName || (users || []).find(u => u.id === c.userId)?.name || "—"}
-                <span className="ml-1.5 font-normal" style={{ color: "var(--text-dim)", fontSize: 10 }}>
-                  {c.timestamp ? new Date(c.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : ""}
-                </span>
-              </div>
-              <div className="whitespace-pre-line">{c.body}</div>
-            </li>
-          ))}
-        </ol>
-      )}
-      {onAddActivity && (
-        <div className="pt-2 border-t" style={{ borderColor: "var(--surface-alt)" }}>
-          <textarea
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="Escreva um comentário..."
-            rows={2}
-            className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
-            style={{ borderColor: "var(--border)", color: "var(--text)", resize: "vertical", fontFamily: "inherit" }}
-          />
-          <div className="flex justify-end mt-2">
-            <button
-              onClick={handleAdd}
-              disabled={!text.trim() || saving}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
-              style={{
-                background: text.trim() && !saving ? "var(--accent)" : "var(--border)",
-                color: text.trim() && !saving ? "#FFFFFF" : "var(--text-dim)",
-                border: "none",
-                cursor: text.trim() && !saving ? "pointer" : "not-allowed",
-              }}
-            >
-              <Plus size={12} />
-              {saving ? "Adicionando..." : "Comentar"}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
