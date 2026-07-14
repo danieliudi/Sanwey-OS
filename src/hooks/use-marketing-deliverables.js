@@ -115,7 +115,7 @@ export function useMarketingDeliverables({ userId, role, campaignId } = {}) {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [campaignId]);
 
   const createDeliverable = useCallback(async (deliverable) => {
     if (!isSupabaseConfigured || !canWrite) return null;
