@@ -10,6 +10,12 @@ function rowToUser(r) {
     name: r.name || r.email || "—",
     email: r.email || "",
     role: r.role || "vendedor",
+    // `roles` é a fonte de verdade pra permissão (multi-cargo); `role`
+    // continua sendo só o "cargo principal" (landing page/dashboard padrão)
+    // — ver 20260714_profiles_multi_role_foundation.sql. Todo profile
+    // sempre tem role ∈ roles (trigger garante), então o fallback abaixo só
+    // cobre uma leitura no meio de uma migração ainda não sincronizada.
+    roles: Array.isArray(r.roles) && r.roles.length ? r.roles : [r.role || "vendedor"],
     companies: Array.isArray(r.companies) ? r.companies : [],
     initials: r.initials || (r.name || r.email || "—").slice(0, 2).toUpperCase(),
     avatarBg: r.avatar_bg || "#1D4ED8",
@@ -87,6 +93,10 @@ export function useProfiles({ enabled = true } = {}) {
     const dbPatch = {};
     if (patch.name !== undefined) dbPatch.name = patch.name;
     if (patch.role !== undefined) dbPatch.role = patch.role;
+    // roles não precisa ser setado toda vez que role muda — o trigger
+    // profiles_sync_roles já mantém role ∈ roles sozinho. Só grava roles
+    // quando o chamador manda explicitamente (ex: editor multi-cargo).
+    if (patch.roles !== undefined) dbPatch.roles = patch.roles;
     if (patch.companies !== undefined) dbPatch.companies = patch.companies;
     if (patch.initials !== undefined) dbPatch.initials = patch.initials;
     if (patch.avatarBg !== undefined) dbPatch.avatar_bg = patch.avatarBg;

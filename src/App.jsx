@@ -103,17 +103,28 @@ export default function App() {
     if (currentUser?.id) setOnboardingDoneMap(m => ({ ...m, [currentUser.id]: true }));
   }, [currentUser?.id, setOnboardingDoneMap]);
 
-  const isManagerRole      = currentUser?.role === "gerente" || currentUser?.role === "admin";
-  const isAdminRole        = currentUser?.role === "admin";
+  // Multi-cargo (FASE 1): `roles` é a fonte de verdade — um usuário pode
+  // acumular mais de um cargo (ex: vendedor + agencia). `role` (escalar)
+  // continua existindo só como "cargo principal" pra decidir landing
+  // page/dashboard padrão quando os cargos empatam em prioridade. Todo
+  // profile sempre tem role ∈ roles (garantido pelo trigger
+  // profiles_sync_roles), então currentUserRoles nunca fica vazio pra um
+  // usuário válido.
+  const currentUserRoles  = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
+  const hasAnyRole = (roles) => roles.some(r => currentUserRoles.includes(r));
+  const rolesSubsetOf = (roles) => currentUserRoles.length > 0 && currentUserRoles.every(r => roles.includes(r));
+
+  const isManagerRole      = hasAnyRole(["gerente", "admin"]);
+  const isAdminRole        = hasAnyRole(["admin"]);
   // isMarketingUser: can access marketing routes (includes admin for RLS/access)
-  const isMarketingUser    = ["marketing", "gerente_marketing", "admin"].includes(currentUser?.role);
+  const isMarketingUser    = hasAnyRole(["marketing", "gerente_marketing", "admin"]);
   // isPureMarketing: only the marketing dept roles — drives sidebar and dashboard rendering
-  const isPureMarketing    = ["marketing", "gerente_marketing"].includes(currentUser?.role);
-  const isAgencia          = currentUser?.role === "agencia";
+  const isPureMarketing    = rolesSubsetOf(["marketing", "gerente_marketing"]);
+  const isAgencia          = hasAnyRole(["agencia"]);
   // RH roles
-  const isRHUser           = ["rh", "gerente_rh", "admin"].includes(currentUser?.role);
-  const isRHManager        = ["gerente_rh", "admin"].includes(currentUser?.role);
-  const isPureRH           = ["rh", "gerente_rh"].includes(currentUser?.role);
+  const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
+  const isRHManager        = hasAnyRole(["gerente_rh", "admin"]);
+  const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
   const {
     users,
     loading: usersLoading,

@@ -14,6 +14,10 @@ import { CompanyTag } from "../ui/CompanyTag";
 
 const EMPTY_FORM = {
   id: null, name: "", email: "", role: "vendedor",
+  // Cargos adicionais além do principal (multi-cargo, FASE 1) — o cargo
+  // principal (`role`) sempre entra em `roles` sozinho, não precisa repetir
+  // aqui (ver save() e profiles_sync_roles no banco).
+  additionalRoles: [],
   companies: [], initials: "", avatarBg: "var(--accent)",
   sectors: [], supervisorId: "",
 };
@@ -110,7 +114,8 @@ export function UserManagementView({
 
   const startEdit = useCallback((u) => {
     setEditing(u.id);
-    setForm({ ...EMPTY_FORM, ...u, sectors: Array.isArray(u.sectors) ? u.sectors : [], supervisorId: u.supervisorId || "" });
+    const additionalRoles = Array.isArray(u.roles) ? u.roles.filter(r => r !== u.role) : [];
+    setForm({ ...EMPTY_FORM, ...u, additionalRoles, sectors: Array.isArray(u.sectors) ? u.sectors : [], supervisorId: u.supervisorId || "" });
     setModalError(null);
   }, []);
 
@@ -144,7 +149,8 @@ export function UserManagementView({
     try {
       if (form.id) {
         if (onUpdateUser) {
-          await onUpdateUser(form.id, { name: form.name, role: form.role, companies: form.companies, initials, avatarBg: form.avatarBg, sectors: form.sectors || [], supervisorId: form.supervisorId || null });
+          const roles = [form.role, ...(form.additionalRoles || []).filter(r => r !== form.role)];
+          await onUpdateUser(form.id, { name: form.name, role: form.role, roles, companies: form.companies, initials, avatarBg: form.avatarBg, sectors: form.sectors || [], supervisorId: form.supervisorId || null });
         } else if (onUsersChange) {
           onUsersChange(prev => prev.map(u => u.id === form.id ? { ...u, ...form, initials } : u));
         }
@@ -229,6 +235,15 @@ export function UserManagementView({
 
   const toggleInviteCompany = useCallback((id) => {
     setInviteForm(prev => ({ ...prev, companies: prev.companies.includes(id) ? prev.companies.filter(c => c !== id) : [...prev.companies, id] }));
+  }, []);
+
+  const toggleFormRole = useCallback((role) => {
+    setForm(prev => ({
+      ...prev,
+      additionalRoles: prev.additionalRoles.includes(role)
+        ? prev.additionalRoles.filter(r => r !== role)
+        : [...prev.additionalRoles, role],
+    }));
   }, []);
 
   const toggleSector = useCallback((s) => {
@@ -487,6 +502,9 @@ export function UserManagementView({
                     {/* Badges row */}
                     <div className="flex items-center gap-1.5 flex-wrap mt-2">
                       <Badge variant={roleBadgeVariant(u.role)} size="sm">{roleLabel(u.role)}</Badge>
+                      {Array.isArray(u.roles) && u.roles.filter(r => r !== u.role).map(r => (
+                        <Badge key={r} variant={roleBadgeVariant(r)} size="sm">+ {roleLabel(r)}</Badge>
+                      ))}
                       {isSelf && (
                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--surface-alt)", color: "var(--accent)" }}>
                           Você
@@ -555,8 +573,29 @@ export function UserManagementView({
               <Input value={form.name} onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))} placeholder="Nome completo" icon={User} />
             </div>
             <div>
-              <FieldLabel>Função</FieldLabel>
-              <Select value={form.role} onChange={e => setForm(prev => ({ ...prev, role: e.target.value }))} options={roleOptions} />
+              <FieldLabel>Função principal</FieldLabel>
+              <Select value={form.role} onChange={e => setForm(prev => ({ ...prev, role: e.target.value, additionalRoles: prev.additionalRoles.filter(r => r !== e.target.value) }))} options={roleOptions} />
+            </div>
+          </div>
+          <div>
+            <FieldLabel>Cargos adicionais <span style={{ textTransform: "none", fontWeight: 400 }}>(opcional — usuário acumula acesso dos dois)</span></FieldLabel>
+            <div className="grid grid-cols-2 gap-2">
+              {roleOptions.filter(opt => opt.value !== form.role).map(opt => {
+                const selected = form.additionalRoles.includes(opt.value);
+                return (
+                  <button key={opt.value} type="button" onClick={() => toggleFormRole(opt.value)}
+                    className="p-2.5 rounded-xl border flex items-center gap-2 transition-all text-left"
+                    style={{ background: selected ? "#EEF2FF" : "var(--surface)", borderColor: selected ? "#6366F1" : "var(--border)" }}
+                  >
+                    <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all"
+                      style={{ background: selected ? "#6366F1" : "transparent", borderColor: selected ? "#6366F1" : "var(--border-strong)" }}
+                    >
+                      {selected && <Check size={11} color="#FFFFFF" />}
+                    </div>
+                    <span className="text-xs font-semibold leading-tight" style={{ color: selected ? "#3730A3" : "var(--text)" }}>{opt.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div>
