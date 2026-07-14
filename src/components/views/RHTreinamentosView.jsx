@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   GraduationCap, Plus, X, Check, ExternalLink, ChevronDown, ChevronRight, Users, AlertTriangle, RefreshCw,
-  LayoutGrid, Pencil, Settings2, AlertCircle,
+  LayoutGrid, Pencil, Settings2, AlertCircle, List, CalendarDays as CalendarIcon, ChevronLeft,
 } from "lucide-react";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -33,6 +33,42 @@ function daysInStage(dateStr) {
 
 function findStage(stages, stageKey) {
   return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
+}
+
+// ── Kanban/Tabela/Calendário — mesmo padrão de ComprasMarketingView/RHFeriasView ──
+
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function ViewToggleButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+      style={{
+        background: active ? "var(--accent)" : "var(--surface)",
+        color: active ? "#FFFFFF" : "var(--text-dim)",
+        border: "none",
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
+    >
+      <Icon size={13} />
+      {label}
+    </button>
+  );
 }
 
 // ── Validade / revalidação ────────────────────────────────────────────────────
@@ -522,12 +558,168 @@ function AtribuicaoDrawer({
   );
 }
 
+// ── Tabela ────────────────────────────────────────────────────────────────────
+// Colaborador, etapa (dinâmica), conclusão e vencimento (validade_dias do
+// treinamento aplicada sobre data_conclusao) — mesmos campos já exibidos no
+// card (AtribuicaoCardBody) e na lista de conformidade do catálogo.
+
+function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresById, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Colaborador", "Cargo", "Etapa", "Conclusão", "Vencimento"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {atribuicoes.length === 0 && (
+            <tr><td colSpan={5} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Ninguém atribuído ainda.</td></tr>
+          )}
+          {atribuicoes.map((a) => {
+            const st = findStage(stages, a.status);
+            const colaborador = colaboradoresById.get(a.colaborador_id);
+            const venc = vencimentoDate(a, treinamento);
+            return (
+              <tr key={a.id} onClick={() => onRowClick(a)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)" }}>{colaborador?.fullName || "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{colaborador?.jobTitle || "—"}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                    {st.name}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(a.data_conclusao)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: a.status === "vencido" ? "var(--danger)" : "var(--text-dim)", fontWeight: a.status === "vencido" ? 700 : 400 }}>
+                  {venc ? fmt(venc) : "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Calendário ───────────────────────────────────────────────────────────────
+// Agrupa por data de vencimento (data_conclusao + validade_dias do
+// treinamento) — mesma conta de vencimentoDate() usada pro status "vencido".
+// Atribuições sem conclusão ainda (logo, sem vencimento calculável) não têm
+// como aparecer num dia específico do calendário.
+
+function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaboradoresById, onPillClick }) {
+  const [cursor, setCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const byDay = useMemo(() => {
+    const map = new Map();
+    for (const a of atribuicoes) {
+      const venc = vencimentoDate(a, treinamento);
+      if (!venc) continue;
+      const k = dayKey(venc);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(a);
+    }
+    return map;
+  }, [atribuicoes, treinamento]);
+
+  const grid = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const offset = (first.getDay() + 6) % 7;
+    const start = new Date(first);
+    start.setDate(first.getDate() - offset);
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [cursor]);
+
+  const today = new Date();
+  const month = cursor.getMonth();
+
+  return (
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronRight size={16} />
+          </button>
+          <h2 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>
+            {MONTHS[month]} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>{cursor.getFullYear()}</span>
+          </h2>
+        </div>
+        <button onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}>
+          Hoje
+        </button>
+      </div>
+      <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
+        {WEEKDAYS.map(w => (
+          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
+        {grid.map((d, i) => {
+          const inMonth = d.getMonth() === month;
+          const isToday = sameDay(d, today);
+          const k = dayKey(d);
+          const items = byDay.get(k) || [];
+          return (
+            <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
+              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+                {d.getDate()}
+              </span>
+              <div className="flex flex-col gap-0.5">
+                {items.slice(0, 3).map((a) => {
+                  const st = findStage(stages, a.status);
+                  const colaborador = colaboradoresById.get(a.colaborador_id);
+                  return (
+                    <span key={a.id} onClick={() => onPillClick(a)}
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
+                      style={{ background: st.color + "18", color: st.color }}
+                      title={colaborador?.fullName || "—"}>
+                      {colaborador?.fullName || "—"}
+                    </span>
+                  );
+                })}
+                {items.length > 3 && (
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--text-dim)" }}>+{items.length - 3}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TreinamentoBoardModal({
   treinamento, atribuicoes, colaboradoresById, canWrite, currentUser, users,
   onChangeStage, onUpdateCustomFields, onAddActivity, onClose,
 }) {
   const { stages, loading: loadingStages } = useRHPipelineStages("treinamentos");
   const stageFields = useRHStageFields("treinamentos");
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
   const [drawerId, setDrawerId] = useState(null);
   const [stageEditorOpen, setStageEditorOpen] = useState(false);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
@@ -599,6 +791,11 @@ function TreinamentoBoardModal({
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>Board de acompanhamento — {atribuicoes.length} pessoa{atribuicoes.length !== 1 ? "s" : ""} atribuída{atribuicoes.length !== 1 ? "s" : ""}</div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+              <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
+              <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
+              <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+            </div>
             {canWrite && (
               <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
             )}
@@ -611,6 +808,22 @@ function TreinamentoBoardModal({
         <div style={{ padding: 20, overflowX: "auto", flex: 1 }}>
           {loadingStages ? (
             <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
+          ) : viewMode === "table" ? (
+            <TreinamentoTableView
+              atribuicoes={atribuicoes}
+              treinamento={treinamento}
+              stages={stages}
+              colaboradoresById={colaboradoresById}
+              onRowClick={(a) => setDrawerId(a.id)}
+            />
+          ) : viewMode === "calendar" ? (
+            <TreinamentoCalendarView
+              atribuicoes={atribuicoes}
+              treinamento={treinamento}
+              stages={stages}
+              colaboradoresById={colaboradoresById}
+              onPillClick={(a) => setDrawerId(a.id)}
+            />
           ) : (
             <div style={{ display: "flex", gap: 12 }}>
               {stages.map((stage) => (
