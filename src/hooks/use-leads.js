@@ -181,8 +181,18 @@ export function useLeads({ userId, role, companies } = {}) {
     if (!userId) { setRemoteLeads([]); setLoading(false); return; }
     fetchAll();
     // Realtime — pushes any INSERT/UPDATE/DELETE from other sessions/devices.
+    // Nome do canal precisa ser único por instância do hook (mesmo padrão de
+    // todo outro hook no app) — `leads-${userId}` sem sufixo aleatório
+    // colidia sempre que useLeads() era chamado mais de uma vez pro mesmo
+    // usuário (ex.: uma vez em App.jsx pra notificações, outra vez dentro de
+    // useMyTasks/MinhasTarefasView) e o realtime-js multiplexa canais pelo
+    // nome do tópico: a segunda instância tentava registrar postgres_changes
+    // num canal que a primeira já tinha inscrito, e o cliente lança "cannot
+    // add postgres_changes callbacks ... after subscribe()" — um throw
+    // dentro de useEffect que nenhum ErrorBoundary pega, derrubando a tela
+    // inteira pra branco.
     const channel = supabase
-      .channel(`leads-${userId}`)
+      .channel(`leads-${userId}-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, (payload) => {
         if (!activeRef.current) return;
         if (payload.eventType === "DELETE") {
