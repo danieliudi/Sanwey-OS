@@ -41,7 +41,7 @@ export const STAGE_FIELDS = {
     { key: "production_stage",      label: "Etapa Atual",                   hint: "Etapa atual do processo de produção.",        type: "select",    options: ["Planejamento","Desenvolvimento","Finalização"], required: true },
     { key: "production_start_date", label: "Data de Início da Produção",    hint: "Data em que a produção foi iniciada.",         type: "date",      required: true },
     { key: "production_resources",  label: "Recursos Alocados",             hint: "Liste os recursos alocados.",                  type: "textarea" },
-    { key: "production_progress",   label: "Progresso Atual (%)",           hint: "Progresso atual em porcentagem.",              type: "number",    required: true },
+    { key: "production_progress",   label: "Progresso Atual (%)",           hint: "Progresso atual em porcentagem.",              type: "percent_steps", steps: [0, 20, 40, 60, 80, 100], required: true },
     { key: "production_risks",      label: "Riscos Identificados",          hint: "Riscos que podem impactar a produção.",        type: "multicheck", options: ["Falta de materiais","Problemas técnicos","Atrasos na entrega","Outros"] },
   ],
   revisao: [
@@ -287,6 +287,41 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
     return <input type="number" min={0} max={100} value={value ?? ""} placeholder={field.hint}
       onChange={e => onChange(e.target.value === "" ? "" : Number(e.target.value))}
       disabled={disabled} style={inputBase} onFocus={focusBorder} onBlur={blurBorder} />;
+  }
+  if (field.type === "percent_steps") {
+    const steps = field.steps || [0, 20, 40, 60, 80, 100];
+    const current = value === "" || value === null || value === undefined ? null : Number(value);
+    return (
+      <div>
+        <div style={{ height: 8, borderRadius: 999, background: "var(--surface-alt)", overflow: "hidden", marginBottom: 10 }}>
+          <div style={{
+            width: `${current || 0}%`, height: "100%", borderRadius: 999,
+            background: current >= 100 ? "var(--success)" : "var(--accent)",
+            transition: "width 0.2s ease",
+          }} />
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {steps.map(s => {
+            const active = current === s;
+            return (
+              <button
+                key={s} type="button" disabled={disabled}
+                onClick={() => onChange(s)}
+                style={{
+                  padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+                  border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                  background: active ? "var(--accent)" : "var(--surface)",
+                  color: active ? "#fff" : "var(--text-dim)",
+                  cursor: disabled ? "default" : "pointer",
+                }}
+              >
+                {s}%
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
   if (field.type === "textarea") {
     return <textarea value={value || ""} rows={3} placeholder={field.hint}
