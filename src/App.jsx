@@ -158,7 +158,20 @@ export default function App() {
   const { crossReferrals, approve: approveCross, reject: rejectCross } = useCrossReferrals(leads);
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
   const pipelineTransitions = usePipelineTransitions();
-  const { evaluateAutomations } = useAutomations();
+  const { evaluateAutomations, automations } = useAutomations();
+
+  // Campos observados por alguma automação field_value — só vale reavaliar
+  // essas automações quando um desses campos de fato muda no patch (senão
+  // uma automação como "FitScore > 80 → mover pra Qualificação" dispararia
+  // de novo a cada edição de QUALQUER campo do lead, arrastando de volta um
+  // negócio que um humano já avançou manualmente pra etapa seguinte).
+  const fieldValueWatchedFields = useMemo(() => {
+    const set = new Set();
+    for (const rule of automations) {
+      if (rule.trigger?.type === "field_value" && rule.trigger.field) set.add(rule.trigger.field);
+    }
+    return set;
+  }, [automations]);
   const stageFieldsForNudge = useStageFields();
 
   const { campaigns } = useMarketingCampaigns({
@@ -467,23 +480,6 @@ export default function App() {
     setSelectedLead(null);
   }, [supabaseEnabled, signOut, setMockUser]);
 
-  const updateLead = useCallback(async (id, patch) => {
-    // Notify if lead gets assigned to current user
-    const lead = leads.find(l => l.id === id);
-    const shouldNotify = patch.owner && patch.owner === currentUser?.id && lead && lead.owner !== currentUser?.id;
-    setSelectedLead(prev => (prev && prev.id === id ? { ...prev, ...patch } : prev));
-    await updateLeadRemote(id, patch);
-    if (shouldNotify) {
-      pushNotification({
-        type: 'lead_assigned',
-        title: 'Lead atribuído a você',
-        body: `${lead.company} foi atribuído à sua carteira.`,
-        leadId: id,
-        companyId: lead?.companyId,
-      });
-    }
-  }, [updateLeadRemote, currentUser, leads, pushNotification]);
-
   // Executa os efeitos colaterais de automação que precisam de uma chamada
   // real (não são um simples patch síncrono no lead): criar uma entrega em
   // outro módulo (Marketing) ou enriquecer o lead via busca de CNPJ. Falha
@@ -521,6 +517,36 @@ export default function App() {
       }
     }
   }, [leads, updateLeadRemote]);
+
+  const updateLead = useCallback(async (id, patch) => {
+    // Notify if lead gets assigned to current user
+    const lead = leads.find(l => l.id === id);
+    const shouldNotify = patch.owner && patch.owner === currentUser?.id && lead && lead.owner !== currentUser?.id;
+    setSelectedLead(prev => (prev && prev.id === id ? { ...prev, ...patch } : prev));
+    await updateLeadRemote(id, patch);
+    // field_value automations (ex: "Badge VIP · valor ≥ R$50k") — só reavalia
+    // quando o patch realmente toca um campo que alguma automação observa.
+    if (lead && Object.keys(patch).some(k => fieldValueWatchedFields.has(k))) {
+      const updated = { ...lead, ...patch };
+      const { patches, notifications: autoNotifs, sideEffects } = evaluateAutomations(updated, lead, "field_value");
+      for (const p of patches) {
+        await updateLeadRemote(p.leadId, p.patch).catch(() => {});
+      }
+      if (sideEffects?.length) await processAutomationSideEffects(sideEffects);
+      for (const n of (autoNotifs || [])) {
+        pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: id, companyId: lead.companyId });
+      }
+    }
+    if (shouldNotify) {
+      pushNotification({
+        type: 'lead_assigned',
+        title: 'Lead atribuído a você',
+        body: `${lead.company} foi atribuído à sua carteira.`,
+        leadId: id,
+        companyId: lead?.companyId,
+      });
+    }
+  }, [updateLeadRemote, currentUser, leads, pushNotification, evaluateAutomations, processAutomationSideEffects, fieldValueWatchedFields]);
 
   const handleStageChange = useCallback(async (id, stage) => {
     const prev = leads.find(l => l.id === id);

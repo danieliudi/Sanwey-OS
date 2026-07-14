@@ -302,13 +302,13 @@ function runAction(action, rule, lead, { patches, notifications, sideEffects }) 
   }
 
   if (action.type === "add_badge") {
-    const existing = lead._badges || [];
+    const existing = lead.badges || [];
     const badge = { label: action.badge || "Auto", color: action.badgeColor || "#6366F1" };
     const alreadyHas = existing.some(b => b.label === badge.label);
     if (!alreadyHas) {
       patches.push({
         leadId: lead.id,
-        patch: { _badges: [...existing, badge] },
+        patch: { badges: [...existing, badge] },
         ruleId: rule.id,
         ruleName: rule.name,
       });

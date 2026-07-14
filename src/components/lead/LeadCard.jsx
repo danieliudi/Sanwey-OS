@@ -30,6 +30,15 @@ function LeadCardImpl({ lead, isGroupView, onClick }) {
               {lead.company}
             </span>
             {isGroupView && <CompanyTag companyId={lead.companyId} />}
+            {Array.isArray(lead.badges) && lead.badges.map((b, i) => (
+              <span
+                key={`${b.label}-${i}`}
+                className="px-1.5 py-0.5 rounded-full font-semibold"
+                style={{ fontSize: 10, background: `${b.color || "#6366F1"}22`, color: b.color || "#6366F1" }}
+              >
+                {b.label}
+              </span>
+            ))}
           </div>
           <div className="flex items-center gap-2.5 text-xs flex-wrap" style={{ color: "var(--text-dim)" }}>
             <span className="flex items-center gap-1"><Factory size={10} /> {lead.sector}</span>

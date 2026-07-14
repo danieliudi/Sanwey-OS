@@ -54,6 +54,7 @@ function rowToLead(r) {
     stageChangedAt: r.stage_changed_at,
     isDemo: Boolean(r.is_demo),
     createdBy: r.created_by || null,
+    badges: Array.isArray(r.badges) ? r.badges : [],
   };
 }
 
