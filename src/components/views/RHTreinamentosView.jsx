@@ -4,6 +4,7 @@ import {
   LayoutGrid, Pencil, Settings2,
 } from "lucide-react";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
+import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
@@ -62,6 +63,7 @@ function NovoTreinamentoModal({ initialData, onSave, onClose }) {
   const [titulo, setTitulo]           = useState(initialData?.titulo || "");
   const [descricao, setDescricao]     = useState(initialData?.descricao || "");
   const [tipo, setTipo]               = useState(initialData?.tipo || "opcional");
+  const [frente, setFrente]           = useState(initialData?.frente || "");
   const [link, setLink]               = useState(initialData?.link_conteudo || "");
   const [cargoAlvo, setCargoAlvo]     = useState(initialData?.cargo_alvo || "");
   const [departamentoAlvo, setDepartamentoAlvo] = useState(initialData?.departamento_alvo || "");
@@ -85,6 +87,7 @@ function NovoTreinamentoModal({ initialData, onSave, onClose }) {
         titulo: titulo.trim(),
         descricao: descricao.trim() || null,
         tipo,
+        frente: frente || null,
         link_conteudo: link.trim() || null,
         cargo_alvo: cargoAlvo.trim() || null,
         departamento_alvo: departamentoAlvo || null,
@@ -132,6 +135,14 @@ function NovoTreinamentoModal({ initialData, onSave, onClose }) {
               </div>
             </div>
             <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: -6 }}>Deixe a validade em branco se o treinamento não expira. Ex: NR anual = 365.</p>
+
+            <div>
+              <label style={labelSt}>Frente aplicável</label>
+              <select value={frente} onChange={(e) => setFrente(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                <option value="">Todas as frentes</option>
+                {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
+              </select>
+            </div>
 
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>Atribuição automática (opcional)</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -184,13 +195,15 @@ function AtribuirModal({ treinamento, colaboradores, onAssign, onClose }) {
     return next;
   });
 
-  const temAlvo = Boolean(treinamento.cargo_alvo || treinamento.departamento_alvo);
+  const temAlvo = Boolean(treinamento.cargo_alvo || treinamento.departamento_alvo || treinamento.frente);
   const selectByAlvo = () => {
     const cargoAlvo = (treinamento.cargo_alvo || "").toLowerCase().trim();
     const deptoAlvo = treinamento.departamento_alvo || "";
+    const frenteAlvo = treinamento.frente || "";
     const matches = colaboradores.filter(c =>
       (cargoAlvo && (c.jobTitle || "").toLowerCase().trim() === cargoAlvo) ||
-      (deptoAlvo && c.department === deptoAlvo)
+      (deptoAlvo && c.department === deptoAlvo) ||
+      (frenteAlvo && c.frente === frenteAlvo)
     );
     setSelected(new Set(matches.map(c => c.id)));
   };
@@ -222,7 +235,7 @@ function AtribuirModal({ treinamento, colaboradores, onAssign, onClose }) {
         {temAlvo && (
           <div style={{ padding: "10px 24px 0" }}>
             <button onClick={selectByAlvo} style={{ fontSize: 11, color: "var(--accent)", background: "var(--accent-tint)", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 600 }}>
-              Selecionar todos do cargo/departamento alvo
+              Selecionar todos do cargo/departamento/frente alvo
             </button>
           </div>
         )}
@@ -251,19 +264,45 @@ function AtribuirModal({ treinamento, colaboradores, onAssign, onClose }) {
 
 // ── Painel de conformidade ────────────────────────────────────────────────────
 
-function ComplianceStats({ atribuicoes }) {
-  const stats = useMemo(() => {
-    let ok = 0, vencidos = 0, pendentes = 0;
-    atribuicoes.forEach((a) => {
-      if (a.status === "vencido") vencidos++;
-      else if (a.status === "concluido") ok++;
-      else pendentes++;
-    });
-    const total = atribuicoes.length;
-    return { total, ok, vencidos, pendentes, pct: total > 0 ? Math.round((ok / total) * 100) : 100 };
-  }, [atribuicoes]);
+function computeCompliance(atribuicoes) {
+  let ok = 0, vencidos = 0, pendentes = 0;
+  atribuicoes.forEach((a) => {
+    if (a.status === "vencido") vencidos++;
+    else if (a.status === "concluido") ok++;
+    else pendentes++;
+  });
+  const total = atribuicoes.length;
+  return { total, ok, vencidos, pendentes, pct: total > 0 ? Math.round((ok / total) * 100) : 100 };
+}
 
-  if (stats.total === 0) return null;
+// R26: relatório de compliance cruzando TODOS os treinamentos, com filtro
+// por treinamento e por frente — antes só existia % por board individual,
+// sem nenhum jeito de ver a conformidade agregada por frente.
+function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
+  const [treinamentoFiltro, setTreinamentoFiltro] = useState("todos");
+  const [frenteFiltro, setFrenteFiltro] = useState("todas");
+
+  const filtradas = useMemo(() => {
+    return atribuicoes.filter((a) => {
+      if (treinamentoFiltro !== "todos" && a.treinamento_id !== treinamentoFiltro) return false;
+      if (frenteFiltro !== "todas" && colaboradoresById.get(a.colaborador_id)?.frente !== frenteFiltro) return false;
+      return true;
+    });
+  }, [atribuicoes, treinamentoFiltro, frenteFiltro, colaboradoresById]);
+
+  const stats = useMemo(() => computeCompliance(filtradas), [filtradas]);
+
+  const porFrente = useMemo(() => {
+    return RH_FRENTES.map((id) => {
+      const grupo = atribuicoes.filter((a) => {
+        if (treinamentoFiltro !== "todos" && a.treinamento_id !== treinamentoFiltro) return false;
+        return colaboradoresById.get(a.colaborador_id)?.frente === id;
+      });
+      return { id, ...computeCompliance(grupo) };
+    }).filter((f) => f.total > 0);
+  }, [atribuicoes, treinamentoFiltro, colaboradoresById]);
+
+  if (atribuicoes.length === 0) return null;
 
   const tiles = [
     { label: "Conformidade", value: `${stats.pct}%`, color: stats.pct >= 80 ? "var(--success)" : stats.pct >= 50 ? "var(--warning)" : "var(--danger)" },
@@ -272,14 +311,39 @@ function ComplianceStats({ atribuicoes }) {
     { label: "Vencidos",     value: stats.vencidos,   color: stats.vencidos > 0 ? "var(--danger)" : "var(--text)" },
   ];
 
+  const selectSt = { borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" };
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-      {tiles.map((t) => (
-        <div key={t.label} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "10px 14px", background: "var(--surface)" }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: t.color, lineHeight: 1 }}>{t.value}</div>
-          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>{t.label}</div>
+    <div className="mb-4">
+      <div className="flex items-center gap-2 flex-wrap mb-3">
+        <select value={treinamentoFiltro} onChange={(e) => setTreinamentoFiltro(e.target.value)} className="text-xs rounded-xl border px-3 py-1.5 outline-none" style={selectSt}>
+          <option value="todos">Todos os treinamentos</option>
+          {treinamentos.map((t) => <option key={t.id} value={t.id}>{t.titulo}</option>)}
+        </select>
+        <select value={frenteFiltro} onChange={(e) => setFrenteFiltro(e.target.value)} className="text-xs rounded-xl border px-3 py-1.5 outline-none" style={selectSt}>
+          <option value="todas">Todas as frentes</option>
+          {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+        {tiles.map((t) => (
+          <div key={t.label} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "10px 14px", background: "var(--surface)" }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: t.color, lineHeight: 1 }}>{t.value}</div>
+            <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>{t.label}</div>
+          </div>
+        ))}
+      </div>
+      {frenteFiltro === "todas" && porFrente.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {porFrente.map((f) => (
+            <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid var(--border)", borderRadius: 99, padding: "3px 10px", background: "var(--surface)" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: RH_FRENTE_COLORS[f.id], display: "inline-block" }} />
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text)" }}>{RH_FRENTE_LABELS[f.id]}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: f.pct >= 80 ? "var(--success)" : f.pct >= 50 ? "var(--warning)" : "var(--danger)" }}>{f.pct}%</span>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -663,7 +727,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : isRHUser ? (
         <>
-          <ComplianceStats atribuicoes={atribuicoes} />
+          <ComplianceStats atribuicoes={atribuicoes} treinamentos={treinamentos} colaboradoresById={colaboradoresById} />
           {treinamentos.length === 0 ? (
             <EmptyState icon={GraduationCap} title="Nenhum treinamento cadastrado" description="Cadastre um treinamento para começar a montar o catálogo." />
           ) : (
@@ -692,6 +756,11 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
                           {vencidos > 0 && (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, color: "var(--danger)", background: "#FEE2E2", borderRadius: 99, padding: "1px 8px" }}>
                               <AlertTriangle size={9} /> {vencidos} vencido{vencidos !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                          {t.frente && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: RH_FRENTE_COLORS[t.frente], background: `${RH_FRENTE_COLORS[t.frente]}18`, borderRadius: 99, padding: "1px 8px" }}>
+                              {RH_FRENTE_LABELS[t.frente]}
                             </span>
                           )}
                         </div>

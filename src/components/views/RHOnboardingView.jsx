@@ -757,7 +757,8 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
       if (t.tipo !== "obrigatorio" || jaAtribuidoIds.has(t.id)) return false;
       const cargoMatch = t.cargo_alvo && jobTitle && t.cargo_alvo.toLowerCase().trim() === jobTitle;
       const deptoMatch = t.departamento_alvo && department && t.departamento_alvo === department;
-      return cargoMatch || deptoMatch;
+      const frenteMatch = t.frente && colaborador.frente && t.frente === colaborador.frente;
+      return cargoMatch || deptoMatch || frenteMatch;
     });
     for (const t of matches) {
       await assignTreinamento(t.id, [colaborador.id]);
