@@ -700,7 +700,7 @@ export default function App() {
           { id: "crm",          label: "Pipeline",   icon: Layers },
           { id: "signals",      label: "Sinais",     icon: Bell },
           { id: "explorer",     label: "Explorador", icon: Globe2 },
-          { id: "crm-viagens",  label: "Viagens",    icon: Plane },
+          { id: "crm-viagens",  label: "Viagens & Reembolsos", icon: Plane },
         ],
       });
     } else if (!isPureRH) {
