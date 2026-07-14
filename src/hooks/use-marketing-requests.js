@@ -133,24 +133,6 @@ export function useMarketingRequests({ userId, role, enabled = true } = {}) {
     setRequests(prev => prev.filter(r => r.id !== id));
   }, [canWrite]);
 
-  const approveRequest = useCallback(async (id, deliverableId) => {
-    if (!isSupabaseConfigured || !canWrite) return;
-    const now = new Date().toISOString();
-    const patch = {
-      status:         "aprovado",
-      approved_at:    now,
-      approved_by:    userId ?? null,
-      deliverable_id: deliverableId ?? null,
-    };
-    const { error: err } = await supabase.from(TABLE).update(patch).eq("id", id);
-    if (err) throw err;
-    setRequests(prev => prev.map(r =>
-      r.id === id
-        ? { ...r, status: "aprovado", approvedAt: now, approvedBy: userId ?? null, deliverableId: deliverableId ?? null }
-        : r
-    ));
-  }, [canWrite, userId]);
-
   // Cria a entrega e aprova a solicitação numa única transação no banco
   // (RPC approve_marketing_request) — substitui o antigo par
   // createDeliverable + approveRequest, que fazia 2 escritas separadas com
@@ -208,7 +190,6 @@ export function useMarketingRequests({ userId, role, enabled = true } = {}) {
     createRequest,
     updateRequest,
     deleteRequest,
-    approveRequest,
     approveAndCreateDeliverable,
     rejectRequest,
     loadDemoRequests,
