@@ -6,12 +6,14 @@ import {
 import { Modal } from "../ui/Modal";
 import { supabase } from "../../lib/supabase";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { AI_PROVIDERS, AI_PROVIDER_MAP } from "../../constants/ai-providers";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import {
   DASHBOARD_WIDGETS, EXECUTIVE_WIDGETS, NOTIFICATION_GROUPS,
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
+import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 
 function Section({ title, description, children }) {
   return (
@@ -122,6 +124,15 @@ export function SettingsView({
     list.push(MANAGER_TABS[1], MANAGER_TABS[2]);
     return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
   }, [isManager, usersPanel, clientsPanel]);
+
+  // ── Vagas públicas (Recrutamento) ─────────────────────────────────────
+  // rh_vagas vem cru (snake_case) de useRHRecrutamento — sem mapper camelCase.
+  const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
+  const vagasPublicadas = useMemo(
+    () => vagas.filter(v => v.stage === "publicada" && v.link_slug),
+    [vagas]
+  );
+
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [clearTyped, setClearTyped] = useState("");
 
@@ -1292,139 +1303,250 @@ export function SettingsView({
             {activeTab === "captura" && (
               <Section
                 title="Links de captura pública"
-                description="Compartilhe estes links no site, redes sociais ou anúncios. Quando um cliente preenche, o lead entra direto na etapa Prospecção da empresa correspondente."
+                description="Compartilhe estes links onde fizer sentido — cada categoria abaixo alimenta um fluxo diferente da plataforma."
               >
-                {/* Formulário de Solicitação de Marketing */}
-                <div className="mb-5 pb-5 border-b" style={{ borderColor: "var(--border)" }}>
-                  <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
-                    <div>
-                      <div className="font-semibold text-sm mb-0.5" style={{ color: "var(--text)" }}>
-                        Formulário de Solicitação · Marketing
-                      </div>
-                      <p className="text-xs" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
-                        Outros departamentos usam este link para pedir materiais ao Marketing. As solicitações entram em <strong>Marketing → Solicitações</strong> para aprovação.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/solicitar-marketing`)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
-                        style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                        title="Copiar link"
-                      >
-                        <Copy size={12} />
-                        Copiar
-                      </button>
-                      <a
-                        href={`${window.location.origin}/solicitar-marketing`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
-                      >
-                        <ExternalLink size={12} />
-                        Abrir
-                      </a>
-                    </div>
-                  </div>
-                  <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>
-                    {window.location.origin}/solicitar-marketing
-                  </code>
-                </div>
-
-                {/* Formulário de Solicitação de Compras de Marketing */}
-                <div className="mb-5 pb-5 border-b" style={{ borderColor: "var(--border)" }}>
-                  <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
-                    <div>
-                      <div className="font-semibold text-sm mb-0.5" style={{ color: "var(--text)" }}>
-                        Formulário de Solicitação · Compras de Marketing
-                      </div>
-                      <p className="text-xs" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
-                        Qualquer pessoa usa este link para pedir a compra de um item pronto (brinde, uniforme, material impresso). As solicitações entram em <strong>Marketing → Compras</strong> para aprovação.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/solicitar-compra`)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
-                        style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                        title="Copiar link"
-                      >
-                        <Copy size={12} />
-                        Copiar
-                      </button>
-                      <a
-                        href={`${window.location.origin}/solicitar-compra`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
-                        style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
-                      >
-                        <ExternalLink size={12} />
-                        Abrir
-                      </a>
-                    </div>
-                  </div>
-                  <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>
-                    {window.location.origin}/solicitar-compra
-                  </code>
-                </div>
-                <div className="space-y-3">
-                  {COMPANY_IDS.map(id => {
-                    const c = COMPANIES[id];
-                    const url = `${window.location.origin}/captura/${id}`;
-                    return (
-                      <div key={id} className="p-3.5 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                        <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
-                              style={{ background: c.primary + "18", color: c.primary, border: `1px solid ${c.primary}30` }}
-                            >
-                              {c.name}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => navigator.clipboard?.writeText(url)}
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
-                              style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
-                              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                              title="Copiar link"
-                            >
-                              <Copy size={12} />
-                              Copiar
-                            </button>
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
-                              style={{ background: c.primary, color: "#FFFFFF", textDecoration: "none" }}
-                            >
-                              <ExternalLink size={12} />
-                              Abrir
-                            </a>
-                          </div>
-                        </div>
-                        <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>{url}</code>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style={{ background: "var(--surface-alt)", color: "#1E40AF", border: "1px solid #BFDBFE" }}>
-                  <Link2 size={13} className="shrink-0 mt-0.5" />
+                <div className="space-y-6">
+                  {/* ── Leads (Comercial) ── */}
                   <div>
-                    <strong>Dica:</strong> adicione <code>?src=instagram</code>, <code>?src=whatsapp</code> ou outro identificador ao final da URL para rastrear a origem da captura no card do lead.
+                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+                      <span
+                        className="font-bold tracking-wide"
+                        style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
+                      >
+                        Leads (Comercial)
+                      </span>
+                      <p className="text-xs mt-1" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
+                        Quando um cliente preenche o formulário, o lead entra direto na etapa Prospecção da empresa correspondente.
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {COMPANY_IDS.map(id => {
+                        const c = COMPANIES[id];
+                        const url = `${window.location.origin}/captura/${id}`;
+                        return (
+                          <div key={id} className="p-3.5 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                            <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
+                                  style={{ background: c.primary + "18", color: c.primary, border: `1px solid ${c.primary}30` }}
+                                >
+                                  {c.name}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => navigator.clipboard?.writeText(url)}
+                                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
+                                  style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+                                  title="Copiar link"
+                                >
+                                  <Copy size={12} />
+                                  Copiar
+                                </button>
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
+                                  style={{ background: c.primary, color: "#FFFFFF", textDecoration: "none" }}
+                                >
+                                  <ExternalLink size={12} />
+                                  Abrir
+                                </a>
+                              </div>
+                            </div>
+                            <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>{url}</code>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-4 p-3 rounded-lg text-xs flex items-start gap-2" style={{ background: "var(--surface-alt)", color: "#1E40AF", border: "1px solid #BFDBFE" }}>
+                      <Link2 size={13} className="shrink-0 mt-0.5" />
+                      <div>
+                        <strong>Dica:</strong> adicione <code>?src=instagram</code>, <code>?src=whatsapp</code> ou outro identificador ao final da URL para rastrear a origem da captura no card do lead.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Solicitações internas (Marketing) ── */}
+                  <div>
+                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+                      <span
+                        className="font-bold tracking-wide"
+                        style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
+                      >
+                        Solicitações internas (Marketing)
+                      </span>
+                      <p className="text-xs mt-1" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
+                        Links internos para outros departamentos pedirem materiais ou compras ao Marketing.
+                      </p>
+                    </div>
+
+                    {/* Formulário de Solicitação de Marketing */}
+                    <div className="mb-5 pb-5 border-b" style={{ borderColor: "var(--border)" }}>
+                      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+                        <div>
+                          <div className="font-semibold text-sm mb-0.5" style={{ color: "var(--text)" }}>
+                            Formulário de Solicitação · Marketing
+                          </div>
+                          <p className="text-xs" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
+                            Outros departamentos usam este link para pedir materiais ao Marketing. As solicitações entram em <strong>Marketing → Solicitações</strong> para aprovação.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/solicitar-marketing`)}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
+                            style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+                            title="Copiar link"
+                          >
+                            <Copy size={12} />
+                            Copiar
+                          </button>
+                          <a
+                            href={`${window.location.origin}/solicitar-marketing`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
+                            style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                          >
+                            <ExternalLink size={12} />
+                            Abrir
+                          </a>
+                        </div>
+                      </div>
+                      <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>
+                        {window.location.origin}/solicitar-marketing
+                      </code>
+                    </div>
+
+                    {/* Formulário de Solicitação de Compras de Marketing */}
+                    <div>
+                      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+                        <div>
+                          <div className="font-semibold text-sm mb-0.5" style={{ color: "var(--text)" }}>
+                            Formulário de Solicitação · Compras de Marketing
+                          </div>
+                          <p className="text-xs" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
+                            Qualquer pessoa usa este link para pedir a compra de um item pronto (brinde, uniforme, material impresso). As solicitações entram em <strong>Marketing → Compras</strong> para aprovação.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/solicitar-compra`)}
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
+                            style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+                            title="Copiar link"
+                          >
+                            <Copy size={12} />
+                            Copiar
+                          </button>
+                          <a
+                            href={`${window.location.origin}/solicitar-compra`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
+                            style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                          >
+                            <ExternalLink size={12} />
+                            Abrir
+                          </a>
+                        </div>
+                      </div>
+                      <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>
+                        {window.location.origin}/solicitar-compra
+                      </code>
+                    </div>
+                  </div>
+
+                  {/* ── Recrutamento (Vagas públicas) ── */}
+                  <div>
+                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+                      <span
+                        className="font-bold tracking-wide"
+                        style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
+                      >
+                        Recrutamento (Vagas públicas)
+                      </span>
+                      <p className="text-xs mt-1" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
+                        Um link de candidatura por vaga publicada. Compartilhe com candidatos, no site ou em redes sociais.
+                      </p>
+                    </div>
+                    {vagasPublicadas.length === 0 ? (
+                      <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+                        Nenhuma vaga publicada no momento.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {vagasPublicadas.map(vaga => {
+                          const url = `${window.location.origin}/vagas/${vaga.link_slug}`;
+                          return (
+                            <div key={vaga.id} className="p-3.5 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                              <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
+                                    {vaga.title}
+                                  </span>
+                                  {(vaga.company_ids || []).map(id => (
+                                    <span
+                                      key={id}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
+                                      style={{
+                                        background: (RH_FRENTE_COLORS[id] || "#888888") + "18",
+                                        color: RH_FRENTE_COLORS[id] || "var(--text-dim)",
+                                        border: `1px solid ${RH_FRENTE_COLORS[id] || "#888888"}30`,
+                                      }}
+                                    >
+                                      {RH_FRENTE_LABELS[id] || id}
+                                    </span>
+                                  ))}
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    onClick={() => navigator.clipboard?.writeText(url)}
+                                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
+                                    style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+                                    title="Copiar link"
+                                  >
+                                    <Copy size={12} />
+                                    Copiar
+                                  </button>
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
+                                    style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                                  >
+                                    <ExternalLink size={12} />
+                                    Abrir
+                                  </a>
+                                </div>
+                              </div>
+                              <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>{url}</code>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
+              </Section>
+            )}
 
-                {/* Importar planilha de clientes */}
+            {/* ── CLIENTES ── */}
+            {activeTab === "clientes" && (
+              <div className="space-y-4">
+                {clientsPanel}
                 {onOpenClientImport && (
                   <div className="mt-6 pt-5 border-t" style={{ borderColor: "#F0F0F0" }}>
                     <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
@@ -1443,11 +1565,8 @@ export function SettingsView({
                     </div>
                   </div>
                 )}
-              </Section>
+              </div>
             )}
-
-            {/* ── CLIENTES ── */}
-            {activeTab === "clientes" && clientsPanel}
 
             {/* ── USUÁRIOS ── */}
             {activeTab === "usuarios" && usersPanel}
