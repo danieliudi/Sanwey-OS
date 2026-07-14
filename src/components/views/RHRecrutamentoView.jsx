@@ -2217,7 +2217,7 @@ function addDays(base, days) {
   return d.toISOString().slice(0, 10);
 }
 
-export function RHRecrutamentoView({ user, canWrite, notifyMentions }) {
+export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
     createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, attachTriagemToVaga,
@@ -2499,11 +2499,30 @@ export function RHRecrutamentoView({ user, canWrite, notifyMentions }) {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <Briefcase size={22} style={{ color: "var(--text)" }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>
-              Recrutamento
-            </h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Briefcase size={22} style={{ color: "var(--text)" }} />
+              <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>
+                Recrutamento
+              </h1>
+            </div>
+            {/* Troca de modo primária (Vagas/Candidatos) — perto do título, já que é
+                o que decide o que a tela inteira mostra; Kanban/Tabela/Calendário
+                à direita são só a forma de exibir o modo já escolhido. */}
+            <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
+              <button
+                onClick={() => setViewMode("vagas")}
+                style={{ background: viewMode === "vagas" ? "var(--surface)" : "transparent", color: viewMode === "vagas" ? "var(--text)" : "var(--text-dim)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: viewMode === "vagas" ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}
+              >
+                Vagas
+              </button>
+              <button
+                onClick={() => setViewMode("candidatos")}
+                style={{ background: viewMode === "candidatos" ? "var(--surface)" : "transparent", color: viewMode === "candidatos" ? "var(--text)" : "var(--text-dim)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: viewMode === "candidatos" ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}
+              >
+                Candidatos
+              </button>
+            </div>
           </div>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {viewMode === "vagas"
@@ -2523,27 +2542,12 @@ export function RHRecrutamentoView({ user, canWrite, notifyMentions }) {
               <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>
             ))}
           </select>
-          {/* Toggle Kanban / Tabela / Calendário — ortogonal ao toggle Vagas/Candidatos abaixo */}
+          {/* Toggle Kanban / Tabela / Calendário — como exibir o modo (Vagas/
+              Candidatos) já escolhido no título, não o quê exibir. */}
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
             <ViewToggleButton active={boardMode === "kanban"}   onClick={() => setBoardMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
             <ViewToggleButton active={boardMode === "table"}    onClick={() => setBoardMode("table")}    icon={List}         label="Tabela" />
             <ViewToggleButton active={boardMode === "calendar"} onClick={() => setBoardMode("calendar")} icon={CalendarIcon} label="Calendário" />
-          </div>
-
-          {/* Toggle Vagas / Candidatos */}
-          <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
-            <button
-              onClick={() => setViewMode("vagas")}
-              style={{ background: viewMode === "vagas" ? "var(--surface)" : "transparent", color: viewMode === "vagas" ? "var(--text)" : "var(--text-dim)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: viewMode === "vagas" ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}
-            >
-              Vagas
-            </button>
-            <button
-              onClick={() => setViewMode("candidatos")}
-              style={{ background: viewMode === "candidatos" ? "var(--surface)" : "transparent", color: viewMode === "candidatos" ? "var(--text)" : "var(--text-dim)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: viewMode === "candidatos" ? "0 1px 2px rgba(0,0,0,0.08)" : "none" }}
-            >
-              Candidatos
-            </button>
           </div>
 
           {canWrite && (
@@ -2565,7 +2569,7 @@ export function RHRecrutamentoView({ user, canWrite, notifyMentions }) {
               <Plus size={14} /> Nova vaga
             </button>
           )}
-          {canWrite && viewMode === "candidatos" && (
+          {canTriage && viewMode === "candidatos" && (
             <button
               onClick={() => setTriagemOpen(true)}
               style={{ background: "#7C3AED", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}

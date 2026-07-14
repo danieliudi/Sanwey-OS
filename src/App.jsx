@@ -1310,6 +1310,7 @@ export default function App() {
               ? <RHRecrutamentoView
                   user={currentUser}
                   canWrite={isRHManager}
+                  canTriage={isRHUser}
                   notifyMentions={notifyMentions}
                 />
               : <Navigate to={ROUTES.dashboard} replace />
