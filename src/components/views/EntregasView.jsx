@@ -37,7 +37,8 @@ function isStaticValueEmpty(v) {
 // formulário fixo nunca travavam nada (achado da auditoria completa).
 function getMissingStaticFields(stage, stageData) {
   const fields = STAGE_FIELDS[stage] || [];
-  return fields.filter(f => f.required && isStaticValueEmpty(stageData?.[f.key]));
+  const dataForStage = stageData?.[stage] || {};
+  return fields.filter(f => f.required && isStaticValueEmpty(dataForStage[f.key]));
 }
 
 /* ── CSV export ─────────────────────────────────────────────── */
@@ -445,16 +446,17 @@ export function EntregasView({ user, users = [] }) {
   // a tabela antiga pipeline_stage_fields.
   const attemptStageChange = useCallback(async (itemId, toStage) => {
     const item = deliverables.find(d => d.id === itemId);
-    if (!item) return;
+    if (!item) return false;
     const fields = stageFields.getFields(item.stage);
     const missing = getMissingRequiredFields(fields, item.customFields || {});
     const missingStatic = getMissingStaticFields(item.stage, item.stageData);
     if (missing.length > 0 || missingStatic.length > 0) {
       const labels = [...missing.map(f => f.label), ...missingStatic.map(f => f.label)];
       alert(`Não dá pra mover "${item.title}": preencha antes — ${labels.join(", ")}.`);
-      return;
+      return false;
     }
     await changeStage(itemId, toStage);
+    return true;
   }, [deliverables, stageFields, changeStage]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
@@ -791,6 +793,7 @@ export function EntregasView({ user, users = [] }) {
         item={syncSelected}
         onClose={() => setSelected(null)}
         onUpdate={handleUpdate}
+        onMoveToStage={attemptStageChange}
         onDelete={handleDelete}
         users={Array.from(usersById.values())}
         canWrite={canWrite}

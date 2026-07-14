@@ -659,7 +659,7 @@ function ComentariosTab({ item, onUpdate, canWrite }) {
 }
 
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, users = [], canWrite, userId, currentUser }) {
+export function DeliverableDetailDrawer({ item, onClose, onUpdate, onMoveToStage, onDelete, users = [], canWrite, userId, currentUser }) {
   const [sideTab,      setSideTab]     = useState("form");
   const [mobileTab,    setMobileTab]   = useState("info");
   const [fieldValues,  setFieldValues] = useState(() => item.stageData?.[item.stage] ?? {});
@@ -758,6 +758,15 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onDelete, use
   }, [onUpdate]);
 
   const handleMoveStage = async (stageId) => {
+    // Passa pela mesma validação de campo obrigatório (estático + dinâmico)
+    // do drag-and-drop/"Mover para" do board — antes esse botão chamava
+    // onUpdate direto e contornava a checagem por completo.
+    if (onMoveToStage) {
+      const ok = await onMoveToStage(item.id, stageId);
+      if (ok === false) return;
+      onClose();
+      return;
+    }
     const stageName = DELIVERABLE_STAGES.find(s => s.id === stageId)?.name || stageId;
     await onUpdate(item.id, {
       stage:          stageId,
