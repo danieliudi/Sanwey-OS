@@ -73,7 +73,7 @@ function whatsappShareUrl(vaga) {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
 
-const TRIAGEM_SYSTEM_PROMPT = `Você é um analista de recrutamento técnico. Receberá a descrição de uma vaga e o currículo de um candidato (anexado como documento PDF). Avalie exclusivamente com base no conteúdo do currículo — não presuma informação não escrita.
+const TRIAGEM_SYSTEM_PROMPT = `Você é um analista de recrutamento técnico. Receberá a descrição de uma vaga e o currículo de um candidato (anexado como documento PDF, ou como texto extraído de um DOCX). Avalie exclusivamente com base no conteúdo do currículo — não presuma informação não escrita.
 
 Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown, sem explicações fora do JSON:
 {"fit_score": <número de 0 a 100>, "justificativa": "<2-3 frases objetivas>", "pontos_fortes": ["...", "..."], "gaps": ["...", "..."]}`;
@@ -85,6 +85,16 @@ function blobToBase64(blob) {
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+}
+
+// DOCX não é aceito nativamente pela Claude API (só PDF/imagem como
+// documento) — extrai o texto puro no navegador com mammoth e manda como
+// bloco de texto em vez de pular o candidato (R10 do PRD de RH).
+async function extractDocxText(blob) {
+  const mammoth = await import("mammoth/mammoth.browser");
+  const arrayBuffer = await blob.arrayBuffer();
+  const { value } = await mammoth.extractRawText({ arrayBuffer });
+  return value;
 }
 
 function parseTriagemResponse(text) {
@@ -104,6 +114,7 @@ function parseTriagemResponse(text) {
 function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onClose }) {
   const { complete, isConfigured, provider } = useAI(user);
   const [vagaId, setVagaId] = useState("");
+  const [frenteFiltro, setFrenteFiltro] = useState("todas"); // R12: talent pool filtrável por frente
   const [necessidade, setNecessidade] = useState("");
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -111,6 +122,7 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
   const [attachingId, setAttachingId] = useState(null);
   const [attachedIds, setAttachedIds] = useState(new Set());
   const [errorMsg, setErrorMsg] = useState(null);
+  const [resumeUrls, setResumeUrls] = useState({});
 
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -118,8 +130,17 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const pdfCandidatos = useMemo(() => talentPool.filter(c => c.resume_ext === "pdf"), [talentPool]);
-  const docxSkipped    = useMemo(() => talentPool.filter(c => c.resume_ext && c.resume_ext !== "pdf").length, [talentPool]);
+  const talentPoolFiltrado = useMemo(() => {
+    if (frenteFiltro === "todas") return talentPool;
+    return talentPool.filter(c => (c.frente_origem || []).includes(frenteFiltro));
+  }, [talentPool, frenteFiltro]);
+  // R9: busca livre sobre todo o talent pool (não amarrada a uma vaga) — a
+  // vaga só é necessária pra "Adicionar à vaga" depois do resultado.
+  const analisaveisCandidatos = useMemo(
+    () => talentPoolFiltrado.filter(c => c.resume_ext === "pdf" || c.resume_ext === "docx"),
+    [talentPoolFiltrado]
+  );
+  const semCurriculo = useMemo(() => talentPoolFiltrado.filter(c => !c.resume_ext).length, [talentPoolFiltrado]);
 
   const handleVagaChange = (id) => {
     setVagaId(id);
@@ -129,28 +150,43 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
     }
   };
 
-  const alreadyLinked = (candidateId) => aplicacoesRaw.some(a => a.candidate_id === candidateId && a.vaga_id === vagaId);
+  const alreadyLinked = (candidateId) => vagaId && aplicacoesRaw.some(a => a.candidate_id === candidateId && a.vaga_id === vagaId);
+
+  const verCurriculo = async (cand) => {
+    const key = cand.id;
+    if (resumeUrls[key]) { window.open(resumeUrls[key], "_blank", "noreferrer"); return; }
+    const { data, error: err } = await supabase.storage
+      .from("rh-curriculos")
+      .createSignedUrl(`${cand.id}/curriculo.${cand.resume_ext}`, 3600);
+    if (err || !data?.signedUrl) { setErrorMsg("Não foi possível abrir o currículo."); return; }
+    setResumeUrls(prev => ({ ...prev, [key]: data.signedUrl }));
+    window.open(data.signedUrl, "_blank", "noreferrer");
+  };
 
   const runTriagem = async () => {
     if (!necessidade.trim()) { setErrorMsg("Descreva o que você procura."); return; }
     setErrorMsg(null);
     setRunning(true);
     setResults([]);
-    setProgress({ done: 0, total: pdfCandidatos.length });
+    setProgress({ done: 0, total: analisaveisCandidatos.length });
     const out = [];
-    for (const cand of pdfCandidatos) {
+    for (const cand of analisaveisCandidatos) {
       try {
         const { data: blob, error: dlErr } = await supabase.storage
           .from("rh-curriculos")
-          .download(`${cand.id}/curriculo.pdf`);
+          .download(`${cand.id}/curriculo.${cand.resume_ext}`);
         if (dlErr || !blob) throw new Error("Currículo indisponível");
-        const base64 = await blobToBase64(blob);
+        const userContent = cand.resume_ext === "pdf"
+          ? [
+              { type: "document", source: { type: "base64", media_type: "application/pdf", data: await blobToBase64(blob) } },
+              { type: "text", text: `Vaga: ${necessidade}` },
+            ]
+          : [
+              { type: "text", text: `Vaga: ${necessidade}\n\nCurrículo (texto extraído de DOCX):\n${await extractDocxText(blob)}` },
+            ];
         const text = await complete([
           { role: "system", content: TRIAGEM_SYSTEM_PROMPT },
-          { role: "user", content: [
-            { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
-            { type: "text", text: `Vaga: ${necessidade}` },
-          ] },
+          { role: "user", content: userContent },
         ], { maxTokens: 500 });
         const triagem = parseTriagemResponse(text);
         out.push({ candidateId: cand.id, name: cand.name, ...triagem });
@@ -165,6 +201,7 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
   };
 
   const handleAttach = async (result) => {
+    if (!vagaId) { setErrorMsg("Selecione uma vaga para vincular o candidato."); return; }
     setAttachingId(result.candidateId);
     try {
       await onAttach(result.candidateId, vagaId, result);
@@ -205,10 +242,10 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
             <>
               <div className="flex flex-col gap-3 mb-4">
                 <div>
-                  <label style={labelSt}>Vaga (para vincular os resultados) *</label>
-                  <select value={vagaId} onChange={(e) => handleVagaChange(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
-                    <option value="">Selecionar vaga</option>
-                    {vagas.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
+                  <label style={labelSt}>Frente</label>
+                  <select value={frenteFiltro} onChange={(e) => setFrenteFiltro(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                    <option value="todas">Todas as frentes</option>
+                    {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
                   </select>
                 </div>
                 <div>
@@ -222,11 +259,18 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
                     style={inputSt}
                   />
                 </div>
+                <div>
+                  <label style={labelSt}>Vaga (opcional — só necessária pra "Adicionar à vaga" depois)</label>
+                  <select value={vagaId} onChange={(e) => handleVagaChange(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                    <option value="">Sem vincular a uma vaga</option>
+                    {vagas.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
+                  </select>
+                </div>
               </div>
 
               <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 12 }}>
-                {pdfCandidatos.length} candidato{pdfCandidatos.length !== 1 ? "s" : ""} com currículo PDF no talent pool
-                {docxSkipped > 0 && ` · ${docxSkipped} em DOCX ignorado${docxSkipped !== 1 ? "s" : ""} nesta versão`}
+                {analisaveisCandidatos.length} candidato{analisaveisCandidatos.length !== 1 ? "s" : ""} com currículo (PDF ou DOCX) no talent pool
+                {semCurriculo > 0 && ` · ${semCurriculo} sem currículo`}
               </div>
 
               {errorMsg && (
@@ -235,8 +279,8 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
 
               <button
                 onClick={runTriagem}
-                disabled={running || !vagaId || pdfCandidatos.length === 0}
-                style={{ width: "100%", background: "#7C3AED", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", opacity: (running || !vagaId || pdfCandidatos.length === 0) ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                disabled={running || analisaveisCandidatos.length === 0}
+                style={{ width: "100%", background: "#7C3AED", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", opacity: (running || analisaveisCandidatos.length === 0) ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
               >
                 {running && <Loader2 size={14} className="animate-spin" />}
                 {running ? `Analisando ${progress.done}/${progress.total}…` : "Triar com IA"}
@@ -244,7 +288,9 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
 
               {results.length > 0 && (
                 <div className="flex flex-col gap-2 mt-4">
-                  {results.map((r) => (
+                  {results.map((r) => {
+                    const cand = analisaveisCandidatos.find(c => c.id === r.candidateId);
+                    return (
                     <div key={r.candidateId} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 12 }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                         <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>{r.name}</span>
@@ -257,19 +303,30 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
                       ) : (
                         <>
                           <div style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5, marginBottom: 8 }}>{r.justificativa}</div>
-                          <button
-                            onClick={() => handleAttach(r)}
-                            disabled={attachingId === r.candidateId || attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)}
-                            style={{ display: "flex", alignItems: "center", gap: 6, background: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "var(--surface-alt)" : "var(--accent-tint)", color: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "var(--text-dim)" : "var(--accent)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "default" : "pointer" }}
-                          >
-                            {attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)
-                              ? <><Check size={12} /> Adicionado à vaga</>
-                              : attachingId === r.candidateId ? "Adicionando…" : "Adicionar à vaga"}
-                          </button>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            {cand && (
+                              <button
+                                onClick={() => verCurriculo(cand)}
+                                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                              >
+                                Ver currículo
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleAttach(r)}
+                              disabled={attachingId === r.candidateId || attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)}
+                              style={{ display: "flex", alignItems: "center", gap: 6, background: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "var(--surface-alt)" : "var(--accent-tint)", color: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "var(--text-dim)" : "var(--accent)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId) ? "default" : "pointer" }}
+                            >
+                              {attachedIds.has(r.candidateId) || alreadyLinked(r.candidateId)
+                                ? <><Check size={12} /> Adicionado à vaga</>
+                                : attachingId === r.candidateId ? "Adicionando…" : "Adicionar à vaga"}
+                            </button>
+                          </div>
                         </>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>
@@ -1297,6 +1354,20 @@ function CandidatoDrawer({
               />
             </div>
           </div>
+
+          {candidato.resume_ext && (
+            <button
+              onClick={async () => {
+                const { data, error: err } = await supabase.storage
+                  .from("rh-curriculos")
+                  .createSignedUrl(`${candidato.candidateId}/curriculo.${candidato.resume_ext}`, 3600);
+                if (!err && data?.signedUrl) window.open(data.signedUrl, "_blank", "noreferrer");
+              }}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginBottom: 20 }}
+            >
+              Ver currículo ({candidato.resume_ext.toUpperCase()})
+            </button>
+          )}
 
           {/* Fit score / justificativa da triagem por IA */}
           {typeof candidato.fit_score === "number" && (
