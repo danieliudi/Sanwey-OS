@@ -14,6 +14,8 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
+import { AvatarStack } from "../shared/AvatarStack";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
@@ -1186,7 +1188,11 @@ export function CampaignDetailDrawer({
     if (onStageMoved) { onClose?.(); onStageMoved(campaign.id); }
   }, [campaign, onUpdate, onStageMoved, onClose]);
 
-  const ownerUser = users.find(u => u.id === get("owner"));
+  // FASE 5: mais de um responsável por campanha — resolve owner_ids (com
+  // fallback pro owner escalar em campanhas legadas) contra a lista de
+  // usuários pro AssigneeMultiSelect/AvatarStack abaixo.
+  const ownerIds = get("ownerIds")?.length ? get("ownerIds") : (get("owner") ? [get("owner")] : []);
+  const resolvedOwners = ownerIds.map(id => users.find(u => u.id === id)).filter(Boolean);
 
   const getCf = (key) => (get("customFields") || {})[key];
   const setCf = (key, val) => set("customFields", { ...(get("customFields") || {}), [key]: val });
@@ -1326,12 +1332,12 @@ export function CampaignDetailDrawer({
 
           <Field label="Responsável interno">
             {isAgencia
-              ? <ReadValue value={ownerUser?.name} />
+              ? <AvatarStack users={resolvedOwners} size={20} max={3} />
               : (
-                <EditSelect
-                  value={get("owner")}
-                  onChange={v => set("owner", v || null)}
-                  options={users.filter(u => ["marketing","gerente_marketing","admin"].includes(u.role)).map(u => ({ value: u.id, label: u.name }))}
+                <AssigneeMultiSelect
+                  value={ownerIds}
+                  onChange={ids => set("ownerIds", ids)}
+                  options={users.filter(u => ["marketing","gerente_marketing","admin"].includes(u.role))}
                   placeholder="Nenhum responsável"
                 />
               )}

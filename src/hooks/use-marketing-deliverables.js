@@ -24,6 +24,7 @@ function rowToDeliverable(r) {
 
     // Top-level assignee (responsible — shown on card)
     assignee:       r.assignee ?? null,
+    assigneeIds:    Array.isArray(r.assignee_ids) ? r.assignee_ids : (r.assignee ? [r.assignee] : []),
 
     // Stage-specific data (all stages keyed by stage id)
     stageData:      r.stage_data ?? {},
@@ -55,6 +56,7 @@ function deliverableToRow(d, extras = {}) {
     stage_changed_at: d.stageChangedAt ?? new Date().toISOString(),
 
     assignee:         d.assignee ?? null,
+    assignee_ids:     d.assigneeIds ?? (d.assignee ? [d.assignee] : null),
     stage_data:       d.stageData ?? {},
     custom_fields:    d.customFields && typeof d.customFields === "object" ? d.customFields : {},
 

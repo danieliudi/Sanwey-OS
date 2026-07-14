@@ -22,9 +22,17 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { DeliverableDetailDrawer, STAGE_FIELDS } from "../campaign/DeliverableDetailDrawer";
 import { EmptyState } from "../ui/EmptyState";
+import { AvatarStack } from "../shared/AvatarStack";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
+
+// FASE 5: mais de um responsável por entrega — resolve assignee_ids (com
+// fallback pro assignee escalar em entregas legadas), mesmo padrão de
+// getLeadOwnerIds em CRMView.jsx / getCampaignOwnerIds em MarketingView.jsx.
+function getDeliverableAssigneeIds(d) {
+  return Array.isArray(d.assigneeIds) && d.assigneeIds.length ? d.assigneeIds : (d.assignee ? [d.assignee] : []);
+}
 
 function isStaticValueEmpty(v) {
   if (v === null || v === undefined) return true;
@@ -401,7 +409,7 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
             const stage    = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
             const color    = stage?.color || "var(--text-dim)";
             const priColor = PRIORITY_COLORS[item.priority] || null;
-            const owner    = usersById.get(item.assignee);
+            const resolvedOwners = getDeliverableAssigneeIds(item).map(id => usersById.get(id)).filter(Boolean);
             const campaign = item.campaignId ? campaignsById.get(item.campaignId) : null;
             const isOverdue = item.deadline && new Date(item.deadline) < new Date();
             return (
@@ -431,12 +439,10 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  {owner ? (
+                  {resolvedOwners.length > 0 ? (
                     <div className="flex items-center gap-1.5">
-                      <div className="flex items-center justify-center rounded-full font-bold shrink-0" style={{ width: 20, height: 20, fontSize: 9, background: owner.avatarBg || "#1D4ED8", color: "#FFF" }}>
-                        {owner.initials || owner.name?.[0]?.toUpperCase() || "?"}
-                      </div>
-                      <span className="text-xs truncate" style={{ color: "var(--text-dim)", maxWidth: 100 }}>{owner.name}</span>
+                      <AvatarStack users={resolvedOwners} size={20} max={3} />
+                      <span className="text-xs truncate" style={{ color: "var(--text-dim)", maxWidth: 100 }}>{resolvedOwners[0].name}</span>
                     </div>
                   ) : <span className="text-xs" style={{ color: "var(--text-dim)" }}>—</span>}
                 </td>
@@ -502,7 +508,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   /* Filtered deliverables */
   const filtered = useMemo(() => {
     let list = deliverables;
-    if (ownerFilter)             list = list.filter(d => d.assignee === ownerFilter);
+    if (ownerFilter)             list = list.filter(d => getDeliverableAssigneeIds(d).includes(ownerFilter));
     if (companyFilter.length > 0) list = list.filter(d => companyFilter.some(c => d.companyIds?.includes(c)));
     if (starredOnly)             list = list.filter(d => d.starred);
     return list;
@@ -723,7 +729,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                         <DeliverableKanbanCard
                           key={item.id}
                           item={item}
-                          ownerName={usersById.get(item.assignee)?.name || null}
+                          users={users}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
                           canWrite={canWrite}
@@ -825,7 +831,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                           <DeliverableKanbanCard
                             key={item.id}
                             item={item}
-                            ownerName={usersById.get(item.assignee)?.name || null}
+                            users={users}
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
                             canWrite={canWrite}

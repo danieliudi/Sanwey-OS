@@ -1,9 +1,10 @@
-import React, { memo, useRef, useState, useEffect } from "react";
+import React, { memo, useMemo, useRef, useState, useEffect } from "react";
 import { Clock, Star, AlertTriangle, TrendingUp, MoreVertical, ArrowRight, Check, X as XIcon } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { CHANNEL_COLORS, MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { formatK } from "../../utils/currency";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
+import { AvatarStack } from "../shared/AvatarStack";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -28,9 +29,17 @@ function slaStyle(daysInStage, sla) {
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
-function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
+function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+
+  // FASE 5: mais de um responsável por campanha — resolve owner_ids (com
+  // fallback pro owner escalar em campanhas legadas) contra a lista de
+  // usuários pra alimentar o AvatarStack do rodapé.
+  const resolvedOwners = useMemo(() => {
+    const ids = campaign.ownerIds?.length ? campaign.ownerIds : (campaign.owner ? [campaign.owner] : []);
+    return ids.map(id => (users || []).find(u => u.id === id)).filter(Boolean);
+  }, [campaign.ownerIds, campaign.owner, users]);
 
   // Usa as etapas vivas (DB, editáveis) quando disponíveis — MARKETING_STAGES
   // é só o fallback estático de antes da customização por etapa existir.
@@ -47,7 +56,6 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
     ? (CHANNEL_COLORS[campaign.channel] || { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" })
     : null;
 
-  const accentColor = stage?.color || "var(--text-dim)";
   const shadowBase  = `var(--shadow-card)`;
   const shadowHover = `var(--shadow-pop)`;
 
@@ -282,19 +290,8 @@ function CampaignKanbanCardImpl({ campaign, ownerName, onClick, onDragStart, onD
               {campaign.performanceScore}
             </span>
           )}
-          {ownerName && (
-            <span
-              className="flex items-center justify-center rounded-full text-[9px] font-bold"
-              style={{
-                width: 20, height: 20,
-                background: accentColor,
-                color: "#FFFFFF",
-                letterSpacing: "-0.01em",
-              }}
-              title={ownerName}
-            >
-              {ownerName.split(" ").map(p => p[0]).slice(0, 2).join("")}
-            </span>
+          {resolvedOwners.length > 0 && (
+            <AvatarStack users={resolvedOwners} size={20} max={3} />
           )}
         </div>
       </div>

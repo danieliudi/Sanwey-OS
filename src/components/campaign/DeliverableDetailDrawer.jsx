@@ -21,6 +21,7 @@ import { useAI }                      from "../../hooks/use-ai";
 import { deliverableStageSuggestionPrompt } from "../../constants/ai-prompts";
 import { CommentsPanel }              from "../shared/CommentsPanel";
 import { getMentionableUsers }        from "../../utils/mentionable-users";
+import { AssigneeMultiSelect }        from "../shared/AssigneeMultiSelect";
 
 /* ── Priority helpers ───────────────────────────────────────── */
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -35,7 +36,7 @@ export const STAGE_FIELDS = {
   solicitacao: [
     { key: "request_type",   label: "Tipo de Solicitação",          hint: "Selecione o tipo de solicitação.",             type: "select",     options: DELIVERABLE_REQUEST_TYPES, required: true },
     { key: "request_date",   label: "Data de Solicitação",          hint: "Data em que a solicitação foi feita.",          type: "date",       required: true },
-    { key: "assignee",       label: "Responsável pela Solicitação", hint: "Selecione o responsável.",                      type: "user",       required: true },
+    { key: "assignee",       label: "Responsável pela Solicitação", hint: "Selecione o(s) responsável(is).",               type: "user_multi", required: true },
     { key: "request_status", label: "Status da Solicitação",        hint: "Status atual da solicitação.",                  type: "radio",      options: [{v:"pendente",l:"Pendente"},{v:"em_andamento",l:"Em andamento"},{v:"concluido",l:"Concluído"}] },
     { key: "observations",   label: "Observações",                  hint: "Observações adicionais.",                       type: "textarea" },
   ],
@@ -349,6 +350,20 @@ function StageFieldInput({ field, value, onChange, canWrite, users }) {
       </select>
     );
   }
+  // FASE 5: mais de um responsável — só o campo solicitacao.assignee usa
+  // este tipo (ver STAGE_FIELDS acima); revision_assignee/delivery_assignee
+  // continuam type "user" (escalar, sem coluna própria no banco).
+  if (field.type === "user_multi") {
+    return (
+      <AssigneeMultiSelect
+        value={Array.isArray(value) ? value : (value ? [value] : [])}
+        onChange={onChange}
+        options={users}
+        placeholder="Selecione o(s) responsável(is)"
+        disabled={disabled}
+      />
+    );
+  }
   if (field.type === "radio") {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -635,11 +650,25 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
   );
 }
 
+// FASE 5: mais de um responsável na etapa "solicitacao" — o campo
+// STAGE_FIELDS.solicitacao.assignee agora guarda um array de ids em vez de
+// um id escalar. Ao inicializar/trocar de item, semeia esse campo a partir
+// de assigneeIds (com fallback pro assignee escalar em entregas legadas)
+// quando o stageData ainda não tiver um array salvo ali.
+function seedStageFieldValues(it) {
+  const base = it.stageData?.[it.stage] ?? {};
+  if (it.stage === "solicitacao" && !Array.isArray(base.assignee)) {
+    const seededAssignee = it.assigneeIds?.length ? it.assigneeIds : (it.assignee ? [it.assignee] : []);
+    return { ...base, assignee: seededAssignee };
+  }
+  return base;
+}
+
 /* ── Main component ─────────────────────────────────────────── */
 export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, users = [], canWrite, userId, currentUser, notifyMentions }) {
   const [sideTab,      setSideTab]     = useState("form");
   const [mobileTab,    setMobileTab]   = useState("info");
-  const [fieldValues,  setFieldValues] = useState(() => item.stageData?.[item.stage] ?? {});
+  const [fieldValues,  setFieldValues] = useState(() => seedStageFieldValues(item));
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | null
   const [confirmDel,   setConfirmDel]  = useState(false);
   const [deleting,     setDeleting]    = useState(false);
@@ -737,8 +766,9 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   useEffect(() => { itemRef.current = item; }, [item]);
 
   useEffect(() => {
-    setFieldValues(item.stageData?.[item.stage] ?? {});
-    fieldValuesRef.current = item.stageData?.[item.stage] ?? {};
+    const seeded = seedStageFieldValues(item);
+    setFieldValues(seeded);
+    fieldValuesRef.current = seeded;
     setSaveStatus(null);
     setSideTab("form");
     if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
@@ -778,7 +808,13 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           activities: [...(it.activities || []), activity],
         };
         if (it.stage === "solicitacao" && fieldValuesRef.current.assignee !== undefined) {
-          patch.assignee = fieldValuesRef.current.assignee || null;
+          // FASE 5: campo agora é um array (AssigneeMultiSelect) — escreve
+          // o escalar assignee (1º da lista, pro trigger/colunas legadas) E
+          // o array completo assigneeIds, ambos chegando ao onUpdate/hook.
+          const rawAssignee = fieldValuesRef.current.assignee;
+          const assigneeIds = Array.isArray(rawAssignee) ? rawAssignee : (rawAssignee ? [rawAssignee] : []);
+          patch.assignee = assigneeIds[0] || null;
+          patch.assigneeIds = assigneeIds;
         }
         await onUpdate(it.id, patch);
         setSaveStatus("saved");

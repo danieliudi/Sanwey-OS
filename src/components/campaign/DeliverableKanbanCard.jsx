@@ -1,8 +1,9 @@
-import React, { memo, useEffect, useRef, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Clock, Star, MoreVertical, ArrowRight } from "lucide-react";
 import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
+import { AvatarStack } from "../shared/AvatarStack";
 
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
 const PRIORITY_LABELS = { baixa: "Baixa",   media: "Média",   alta: "Alta"  };
@@ -26,11 +27,19 @@ function agingStyle(days, sla) {
 }
 
 function DeliverableKanbanCardImpl({
-  item, ownerName, onClick, onDragStart, onDragEnd,
+  item, users, onClick, onDragStart, onDragEnd,
   stages, onMoveToStage, canWrite, onToggleStar, completeness,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+
+  // FASE 5: mais de um responsável por entrega — resolve assignee_ids (com
+  // fallback pro assignee escalar em entregas legadas) contra a lista de
+  // usuários pro AvatarStack compacto do rodapé.
+  const resolvedAssignees = useMemo(() => {
+    const ids = item.assigneeIds?.length ? item.assigneeIds : (item.assignee ? [item.assignee] : []);
+    return ids.map(id => (users || []).find(u => u.id === id)).filter(Boolean);
+  }, [item.assigneeIds, item.assignee, users]);
 
   const stage       = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
   const daysInStage = daysFromDate(item.stageChangedAt);
@@ -178,13 +187,13 @@ function DeliverableKanbanCardImpl({
         </div>
       )}
 
-      {/* Owner pill + deadline — só ocupa espaço quando há responsável ou
+      {/* Owner avatars + deadline — só ocupa espaço quando há responsável ou
           prazo; antes era um div sempre presente (com margem), deixando uma
           sobra vazia em cards sem nenhum dos dois. */}
-      {(ownerName || item.deadline) && (
+      {(resolvedAssignees.length > 0 || item.deadline) && (
       <div className="flex items-center justify-between text-[11px] mb-2" style={{ color: "var(--text-dim)" }}>
-        {ownerName
-          ? <span className="px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-alt)", fontWeight: 500 }}>{ownerName}</span>
+        {resolvedAssignees.length > 0
+          ? <AvatarStack users={resolvedAssignees} size={18} max={2} />
           : <span />
         }
         {item.deadline && (

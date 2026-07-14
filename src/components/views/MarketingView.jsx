@@ -22,6 +22,15 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
+import { AvatarStack } from "../shared/AvatarStack";
+
+// FASE 5: mais de um responsável por campanha — resolve owner_ids (com
+// fallback pro owner escalar em campanhas legadas), mesmo padrão de
+// getLeadOwnerIds em CRMView.jsx.
+function getCampaignOwnerIds(c) {
+  return Array.isArray(c.ownerIds) && c.ownerIds.length ? c.ownerIds : (c.owner ? [c.owner] : []);
+}
 
 // ── Create modal ─────────────────────────────────────────────────────────────
 
@@ -36,7 +45,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
     currentUser?.companies?.length > 0 ? [currentUser.companies[0]] : []
   );
   const [budget, setBudget]         = useState("");
-  const [owner, setOwner]           = useState(currentUser?.id || "");
+  const [ownerIds, setOwnerIds]     = useState(currentUser?.id ? [currentUser.id] : []);
   const [launchDate, setLaunchDate] = useState("");
   const [endDate, setEndDate]       = useState("");
   const [agencyName, setAgencyName] = useState("");
@@ -72,6 +81,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
     setSaving(true);
     setError(null);
     try {
+      const primaryOwner = ownerIds[0] || null;
       await onAdd({
         name:           name.trim(),
         channel:        channel || null,
@@ -80,7 +90,8 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
         companyIds,
         stage:          stageId,
         stageChangedAt: new Date().toISOString(),
-        owner:          owner || null,
+        owner:          primaryOwner,
+        ownerIds:       ownerIds.length ? ownerIds : (primaryOwner ? [primaryOwner] : []),
         launchDate:     localDateInputToISOString(launchDate),
         endDate:        localDateInputToISOString(endDate),
         agencyName:     agencyName.trim() || null,
@@ -214,33 +225,30 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
             </div>
           </div>
 
-          {/* Budget + Responsável */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-            <div>
-              <label style={labelSt}>Budget (R$)</label>
-              <CurrencyInput
-                prefix={null}
-                placeholder="0,00"
-                value={budget}
-                onChange={setBudget}
-                className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-                style={inputSt}
-                onFocus={focusBlue}
-                onBlur={blurGray}
-              />
-            </div>
-            <div>
-              <label style={labelSt}>Responsável</label>
-              <select
-                value={owner}
-                onChange={e => setOwner(e.target.value)}
-                className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-                style={{ ...inputSt, color: owner ? "var(--text)" : "var(--text-dim)" }}
-              >
-                <option value="">Selecionar</option>
-                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-            </div>
+          {/* Budget */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelSt}>Budget (R$)</label>
+            <CurrencyInput
+              prefix={null}
+              placeholder="0,00"
+              value={budget}
+              onChange={setBudget}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={inputSt}
+              onFocus={focusBlue}
+              onBlur={blurGray}
+            />
+          </div>
+
+          {/* Responsável(is) */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelSt}>Responsável(is)</label>
+            <AssigneeMultiSelect
+              value={ownerIds}
+              onChange={setOwnerIds}
+              options={users}
+              placeholder="Selecionar responsáveis…"
+            />
           </div>
 
           {/* Lançamento + Encerramento */}
@@ -574,7 +582,9 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
           {campaigns.map(c => {
             const stage = (stages || MARKETING_STAGES).find(s => s.id === c.stage);
             const color = stage?.color || "var(--text-dim)";
-            const owner = usersById.get(c.owner);
+            // FASE 5: resolve todos os responsáveis (owner_ids, com fallback
+            // pro owner escalar) contra o Map de usuários pro AvatarStack.
+            const resolvedOwners = getCampaignOwnerIds(c).map(id => usersById.get(id)).filter(Boolean);
             return (
               <tr key={c.id} onClick={() => onRowClick(c)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
@@ -605,12 +615,10 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  {owner ? (
+                  {resolvedOwners.length > 0 ? (
                     <div className="flex items-center gap-1.5">
-                      <div className="flex items-center justify-center rounded-full font-bold shrink-0" style={{ width: 20, height: 20, fontSize: 9, background: owner.avatarBg || "#1D4ED8", color: "#FFF" }}>
-                        {owner.initials || owner.name?.[0]?.toUpperCase() || "?"}
-                      </div>
-                      <span className="text-xs truncate" style={{ color: "var(--text-dim)", maxWidth: 100 }}>{owner.name}</span>
+                      <AvatarStack users={resolvedOwners} size={20} max={3} />
+                      <span className="text-xs truncate" style={{ color: "var(--text-dim)", maxWidth: 100 }}>{resolvedOwners[0].name}</span>
                     </div>
                   ) : <span className="text-xs" style={{ color: "var(--text-dim)" }}>—</span>}
                 </td>
@@ -698,16 +706,19 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       if (filterCompany !== "all" && !(c.companyIds || []).includes(filterCompany)) return false;
       if (filterChannel !== "all" && c.channel !== filterChannel) return false;
       if (filterStarred && !c.starred) return false;
-      if (isManager && ownerFilter !== "all" && c.owner !== ownerFilter) return false;
+      if (isManager && ownerFilter !== "all" && !getCampaignOwnerIds(c).includes(ownerFilter)) return false;
       return true;
     });
   }, [campaigns, filterCompany, filterChannel, filterStarred, ownerFilter, isManager]);
 
   const ownerOptions = useMemo(() => {
-    const ids = Array.from(new Set(filteredCampaigns.map(c => c.owner).filter(Boolean)));
+    const idSet = new Set();
+    for (const c of filteredCampaigns) {
+      for (const id of getCampaignOwnerIds(c)) idSet.add(id);
+    }
     return [
       { value: "all", label: "Todos os responsáveis" },
-      ...ids.map(id => ({ value: id, label: usersById.get(id)?.name || id })),
+      ...Array.from(idSet).map(id => ({ value: id, label: usersById.get(id)?.name || id })),
     ];
   }, [filteredCampaigns, usersById]);
 
@@ -1012,7 +1023,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                         <CampaignKanbanCard
                           key={c.id}
                           campaign={c}
-                          ownerName={usersById.get(c.owner)?.name || null}
+                          users={users}
                           onClick={setSelected}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
@@ -1154,7 +1165,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           <CampaignKanbanCard
                             key={c.id}
                             campaign={c}
-                            ownerName={usersById.get(c.owner)?.name || null}
+                            users={users}
                             onClick={setSelected}
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
