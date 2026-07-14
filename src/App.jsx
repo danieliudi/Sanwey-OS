@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
-  ShoppingCart,
+  ShoppingCart, CheckSquare,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -63,6 +63,7 @@ import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
 import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
+import { MinhasTarefasView } from "./components/views/MinhasTarefasView";
 import { MarketingRequestsView } from "./components/views/MarketingRequestsView";
 import { FornecedoresView } from "./components/views/FornecedoresView";
 import { ComprasMarketingView } from "./components/views/ComprasMarketingView";
@@ -118,7 +119,6 @@ export default function App() {
   const rolesSubsetOf = (roles) => currentUserRoles.length > 0 && currentUserRoles.every(r => roles.includes(r));
 
   const isManagerRole      = hasAnyRole(["gerente", "admin"]);
-  const isAdminRole        = hasAnyRole(["admin"]);
   // isMarketingUser: can access marketing routes (includes admin for RLS/access)
   const isMarketingUser    = hasAnyRole(["marketing", "gerente_marketing", "admin"]);
   // isPureMarketing: only the marketing dept roles — drives sidebar and dashboard rendering
@@ -246,33 +246,13 @@ export default function App() {
     clearAllServerNotifications();
   }, [clearAllNotifications, clearAllServerNotifications]);
 
-  // Destino genérico de uma notificação de @menção — leva pra tela certa
-  // (e, no caso de leads, abre o card exato); os outros módulos ainda não
-  // têm um jeito central de reabrir o card específico a partir daqui, então
-  // por ora só navegam até a seção certa.
-  const NOTIFICATION_LINK_SECTIONS = {
-    campaigns: "marketing",
-    deliverables: "marketing-entregas",
-    purchase_requests: "marketing-compras",
-    marketing_requests: "marketing-solicitacoes",
-    rh_vagas: "rh-recrutamento",
-    rh_candidatos: "rh-recrutamento",
-    rh_onboarding: "rh-onboarding",
-    rh_treinamentos: "rh-treinamentos",
-    rh_feedback: "rh-feedback",
-    rh_ferias: "rh-ferias",
-  };
-  const handleNotificationNavigate = useCallback((link) => {
-    if (!link?.module) return;
-    if (link.module === "leads") {
-      const lead = leads.find(l => l.id === link.id);
-      if (lead) { setSelectedLead(lead); return; }
-      setSection("crm");
-      return;
-    }
-    const target = NOTIFICATION_LINK_SECTIONS[link.module];
-    if (target) setSection(target);
-  }, [leads, setSelectedLead, setSection]);
+  // `selectedLead` precisa existir antes de qualquer useCallback que a
+  // referencie no array de dependências (ex.: handleNotificationNavigate,
+  // movido pra depois de `setSection` mais abaixo) — arrays de dependência
+  // são avaliados na hora, não são lazy como o corpo da função, então um
+  // useState declarado depois de ser referenciado ali é TDZ real ("Cannot
+  // access before initialization" em toda renderização).
+  const [selectedLead, setSelectedLead] = useState(null);
 
   // Avisa o time de Marketing quando chega uma solicitação nova pelo
   // formulário público — antes só aparecia se alguém abrisse a aba
@@ -450,7 +430,6 @@ export default function App() {
   }, [despesasParaLembretes, isManagerRole, pushNotification]);
 
   const [activeCompany, setActiveCompany] = useState("all");
-  const [selectedLead, setSelectedLead] = useState(null);
   const [selectedSignal, setSelectedSignal] = useState(null);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [crmAutoCreate, setCrmAutoCreate] = useState(false);
@@ -487,6 +466,34 @@ export default function App() {
     const path = ROUTES[id];
     if (path) navigate(path);
   }, [navigate]);
+
+  // Destino genérico de uma notificação de @menção — leva pra tela certa
+  // (e, no caso de leads, abre o card exato); os outros módulos ainda não
+  // têm um jeito central de reabrir o card específico a partir daqui, então
+  // por ora só navegam até a seção certa.
+  const NOTIFICATION_LINK_SECTIONS = {
+    campaigns: "marketing",
+    deliverables: "marketing-entregas",
+    purchase_requests: "marketing-compras",
+    marketing_requests: "marketing-solicitacoes",
+    rh_vagas: "rh-recrutamento",
+    rh_candidatos: "rh-recrutamento",
+    rh_onboarding: "rh-onboarding",
+    rh_treinamentos: "rh-treinamentos",
+    rh_feedback: "rh-feedback",
+    rh_ferias: "rh-ferias",
+  };
+  const handleNotificationNavigate = useCallback((link) => {
+    if (!link?.module) return;
+    if (link.module === "leads") {
+      const lead = leads.find(l => l.id === link.id);
+      if (lead) { setSelectedLead(lead); return; }
+      setSection("crm");
+      return;
+    }
+    const target = NOTIFICATION_LINK_SECTIONS[link.module];
+    if (target) setSection(target);
+  }, [leads, setSelectedLead, setSection]);
 
   // Mantém o drawer em sync quando o lead aberto muda via realtime
   // (outra sessão editou) ou via update otimista local.
@@ -766,6 +773,18 @@ export default function App() {
 
     const groups = [];
 
+    // FASE 6: Minhas Tarefas é o pouso pós-login pra todo papel interno
+    // (agência já saiu por cima, no `if` acima) — item de nav universal, já
+    // que antes só quem caía na rota "dashboard" tinha um link direto pra ela
+    // (todo o resto usava "Visão Geral" pra ir pro dashboard antigo do
+    // próprio módulo).
+    groups.push({
+      label: null,
+      items: [
+        { id: "dashboard", label: "Minhas Tarefas", icon: CheckSquare },
+      ],
+    });
+
     if (!isPureMarketing && !isPureRH) {
       groups.push({
         label: "Comercial",
@@ -777,22 +796,16 @@ export default function App() {
           { id: "crm-viagens",  label: "Viagens & Reembolsos", icon: Plane },
         ],
       });
-    } else if (!isPureRH) {
-      groups.push({
-        label: null,
-        items: [
-          { id: "dashboard", label: "Início", icon: LayoutDashboard },
-        ],
-      });
     }
 
     if (isMarketingUser) {
       const mktItems = [];
-      // Admin and gerente see "Visão Geral" (Marketing Dashboard) since their
-      // "Início" points to the CRM dashboard, not the Marketing one.
-      if (isManager) {
-        mktItems.push({ id: "marketing-home", label: "Visão Geral", icon: LayoutDashboard });
-      }
+      // Todo usuário de marketing vê "Visão Geral" (Marketing Dashboard) —
+      // antes só admin/gerente viam, porque "Início" apontava direto pra cá
+      // pra quem era isPureMarketing; agora que "Início" virou Minhas
+      // Tarefas pra todo mundo, sem esse item o marketing raso (não-gerente)
+      // ficaria sem link nenhum pro dashboard do próprio módulo.
+      mktItems.push({ id: "marketing-home", label: "Visão Geral", icon: LayoutDashboard });
       mktItems.push(
         { id: "marketing",                label: "Campanhas",    icon: Megaphone },
         { id: "marketing-solicitacoes",   label: "Solicitações", icon: Inbox },
@@ -1038,23 +1051,20 @@ export default function App() {
         <Routes>
           <Route path={ROUTES.dashboard} element={
             isAgencia ? (
+              // Agência mantém o comportamento antigo — papel externo restrito,
+              // com nav própria de só 2 itens (Campanhas/Entregas); Minhas
+              // Tarefas agrega módulos (RH, CRM interno) fora do seu escopo.
               <Navigate to={ROUTES.marketing} replace />
-            ) : isPureRH ? (
-              <Navigate to={ROUTES["rh-overview"]} replace />
-            ) : isPureMarketing ? (
-              <MarketingDashboardView user={currentUser} />
-            ) : isAdminRole ? (
-              <Navigate to={ROUTES.executive} replace />
             ) : (
-              <DashboardView
-                user={currentUser}
-                activeCompany={activeCompany}
-                leads={leads}
+              // FASE 6: Minhas Tarefas é a tela de pouso pós-login pra todo
+              // papel interno. Os antigos destinos por papel (Executivo, Visão
+              // Geral do Comercial/Marketing, RH) continuam existindo e
+              // navegáveis — só deixaram de ser o pouso automático.
+              <MinhasTarefasView
+                currentUser={currentUser}
                 users={users}
-                pipelines={pipelines}
                 onNavigate={setSection}
                 onLeadClick={setSelectedLead}
-                visibleWidgets={settings.visibleDashboardWidgets}
               />
             )
           } />
