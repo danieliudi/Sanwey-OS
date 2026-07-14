@@ -4,6 +4,7 @@ import {
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
+import { supabase } from "../../lib/supabase";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { AI_PROVIDERS, AI_PROVIDER_MAP } from "../../constants/ai-providers";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -333,7 +334,16 @@ export function SettingsView({
         if (!r.ok) throw new Error(d.error?.message || 'Erro');
         text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
       } else {
-        text = 'Anthropic requer Supabase Edge Function (deploy necessário)';
+        // Anthropic passa pela edge function ai-assistant (a API key não
+        // pode ir direto do browser pro provider — precisa de CORS
+        // liberado, que só a function tem). Antes isso não chamava nada e
+        // sempre reportava sucesso, mesmo com a function fora do ar.
+        const { data, error } = await supabase.functions.invoke('ai-assistant', {
+          body: { provider: config.provider, model: config.model, apiKey: config.apiKey, messages, maxTokens: 20 },
+        });
+        if (error) throw new Error(error.message || 'Erro ao chamar ai-assistant');
+        if (data?.error) throw new Error(data.error);
+        text = data?.content || '';
       }
       setAiTestResult('ok');
       setAiTestMsg(text.trim().slice(0, 80));
