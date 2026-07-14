@@ -521,6 +521,26 @@ export default function App() {
     }
   }, [leads, updateLeadRemote]);
 
+  // Aplica os patches de automação e só notifica sucesso das regras cujo
+  // patch realmente gravou — antes a notificação disparava incondicional
+  // mesmo quando o patch falhava (catch vazio), anunciando algo que não
+  // aconteceu.
+  const applyAutomationOutcome = useCallback(async (patches, notifications, leadId, companyId) => {
+    const failedRuleIds = new Set();
+    for (const p of patches) {
+      try {
+        await updateLeadRemote(p.leadId, p.patch);
+      } catch (err) {
+        failedRuleIds.add(p.ruleId);
+        console.error(`Automação "${p.ruleName}" falhou ao gravar:`, err);
+      }
+    }
+    for (const n of (notifications || [])) {
+      if (failedRuleIds.has(n.ruleId)) continue;
+      pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId, companyId });
+    }
+  }, [updateLeadRemote, pushNotification]);
+
   const updateLead = useCallback(async (id, patch) => {
     // Notify if lead gets assigned to current user
     const lead = leads.find(l => l.id === id);
@@ -532,13 +552,8 @@ export default function App() {
     if (lead && Object.keys(patch).some(k => fieldValueWatchedFields.has(k))) {
       const updated = { ...lead, ...patch };
       const { patches, notifications: autoNotifs, sideEffects } = evaluateAutomations(updated, lead, "field_value");
-      for (const p of patches) {
-        await updateLeadRemote(p.leadId, p.patch).catch(() => {});
-      }
+      await applyAutomationOutcome(patches, autoNotifs, id, lead.companyId);
       if (sideEffects?.length) await processAutomationSideEffects(sideEffects);
-      for (const n of (autoNotifs || [])) {
-        pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: id, companyId: lead.companyId });
-      }
     }
     if (shouldNotify) {
       pushNotification({
@@ -549,7 +564,7 @@ export default function App() {
         companyId: lead?.companyId,
       });
     }
-  }, [updateLeadRemote, currentUser, leads, pushNotification, evaluateAutomations, processAutomationSideEffects, fieldValueWatchedFields]);
+  }, [updateLeadRemote, currentUser, leads, pushNotification, evaluateAutomations, processAutomationSideEffects, fieldValueWatchedFields, applyAutomationOutcome]);
 
   const handleStageChange = useCallback(async (id, stage) => {
     const prev = leads.find(l => l.id === id);
@@ -557,9 +572,7 @@ export default function App() {
     if (prev && prev.stage !== stage) {
       const updated = { ...prev, stage, stageChangedAt: new Date().toISOString() };
       const { patches, notifications: autoNotifs, sideEffects } = evaluateAutomations(updated, prev, "stage_change");
-      for (const p of patches) {
-        await updateLeadRemote(p.leadId, p.patch).catch(() => {});
-      }
+      await applyAutomationOutcome(patches, autoNotifs, id, prev.companyId);
       if (sideEffects?.length) await processAutomationSideEffects(sideEffects);
       // Notify on terminal stage changes
       if (stage === "ganho") {
@@ -567,12 +580,8 @@ export default function App() {
       } else if (stage === "perdido") {
         pushNotification({ type: "lead_lost", title: "Lead marcado como perdido", body: `${prev.company} foi movido para Perdido.`, leadId: id, companyId: prev.companyId });
       }
-      // Notify for each automation that fired
-      for (const n of (autoNotifs || [])) {
-        pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: id, companyId: prev.companyId });
-      }
     }
-  }, [changeStage, leads, evaluateAutomations, updateLeadRemote, pushNotification, processAutomationSideEffects]);
+  }, [changeStage, leads, evaluateAutomations, pushNotification, processAutomationSideEffects, applyAutomationOutcome]);
 
   // Wrapped addLead that fires lead_created automations after creation.
   // Propaga o retorno de addLead (lead salvo, ou o lead JÁ EXISTENTE em caso
@@ -581,15 +590,10 @@ export default function App() {
   const handleAddLead = useCallback(async (lead) => {
     const saved = await addLead(lead);
     const { patches, notifications: autoNotifs, sideEffects } = evaluateAutomations(lead, null, "lead_created");
-    for (const p of patches) {
-      await updateLeadRemote(p.leadId, p.patch).catch(() => {});
-    }
+    await applyAutomationOutcome(patches, autoNotifs, lead.id, lead.companyId);
     if (sideEffects?.length) await processAutomationSideEffects(sideEffects);
-    for (const n of (autoNotifs || [])) {
-      pushNotification({ type: "automation", title: `Automação: ${n.ruleName}`, body: n.message, leadId: lead.id, companyId: lead.companyId });
-    }
     return saved;
-  }, [addLead, evaluateAutomations, updateLeadRemote, pushNotification, processAutomationSideEffects]);
+  }, [addLead, evaluateAutomations, processAutomationSideEffects, applyAutomationOutcome]);
 
   // Nudges por tempo: os gatilhos "time_in_stage" e "pending_required_field"
   // não disparam em nenhum evento do CRM (não são mudança de etapa nem
