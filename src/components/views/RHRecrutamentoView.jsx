@@ -3,6 +3,7 @@ import {
   Briefcase,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Plus,
   Star,
   User,
@@ -23,6 +24,9 @@ import {
   Users as UsersIcon,
   Pencil,
   AlertCircle,
+  LayoutGrid,
+  List,
+  CalendarDays as CalendarIcon,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -350,6 +354,42 @@ function daysInStage(dateStr) {
 function fmt(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("pt-BR");
+}
+
+// ── Kanban/Tabela/Calendário — mesmo padrão de ComprasMarketingView/RHFeriasView ──
+
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function ViewToggleButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+      style={{
+        background: active ? "var(--accent)" : "var(--surface)",
+        color: active ? "#FFFFFF" : "var(--text-dim)",
+        border: "none",
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
+    >
+      <Icon size={13} />
+      {label}
+    </button>
+  );
 }
 
 // ── Avatar circle ─────────────────────────────────────────────────────────────
@@ -1057,6 +1097,158 @@ function VagaDrawer({
         </div>
       </div>
     </>
+  );
+}
+
+// ── Vaga Tabela ───────────────────────────────────────────────────────────────
+
+function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Vaga", "Cargo / Departamento", "Prioridade", "Etapa", "Candidatos", "Prazo"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {vagas.length === 0 && (
+            <tr><td colSpan={6} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma vaga encontrada.</td></tr>
+          )}
+          {vagas.map((vaga) => {
+            const st = findStage(stages, vaga.stage);
+            const pri = priorityInfo(vaga.priority);
+            return (
+              <tr key={vaga.id} onClick={() => onRowClick(vaga)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)" }}>{vaga.title}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{[vaga.job_title, vaga.department].filter(Boolean).join(" · ") || "—"}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase" style={{ background: pri.color + "18", color: pri.color }}>
+                    {pri.name}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                    {st.name}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{candidatosByVaga[vaga.id] || 0}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(vaga.hiring_deadline)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Vaga Calendário ───────────────────────────────────────────────────────────
+// Agrupa por hiring_deadline — prazo para contratação, único campo de data
+// relevante rastreado nas vagas.
+
+function VagaCalendarView({ vagas, stages, onPillClick }) {
+  const [cursor, setCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const byDay = useMemo(() => {
+    const map = new Map();
+    for (const vaga of vagas) {
+      if (!vaga.hiring_deadline) continue;
+      const d = new Date(vaga.hiring_deadline.slice ? vaga.hiring_deadline.slice(0, 10) : vaga.hiring_deadline);
+      if (Number.isNaN(d.getTime())) continue;
+      const k = dayKey(d);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(vaga);
+    }
+    return map;
+  }, [vagas]);
+
+  const grid = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const offset = (first.getDay() + 6) % 7;
+    const start = new Date(first);
+    start.setDate(first.getDate() - offset);
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [cursor]);
+
+  const today = new Date();
+  const month = cursor.getMonth();
+
+  return (
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronRight size={16} />
+          </button>
+          <h2 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>
+            {MONTHS[month]} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>{cursor.getFullYear()}</span>
+          </h2>
+        </div>
+        <button onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}>
+          Hoje
+        </button>
+      </div>
+      <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
+        {WEEKDAYS.map(w => (
+          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
+        {grid.map((d, i) => {
+          const inMonth = d.getMonth() === month;
+          const isToday = sameDay(d, today);
+          const k = dayKey(d);
+          const items = byDay.get(k) || [];
+          return (
+            <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
+              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+                {d.getDate()}
+              </span>
+              <div className="flex flex-col gap-0.5">
+                {items.slice(0, 3).map((vaga) => {
+                  const st = findStage(stages, vaga.stage);
+                  return (
+                    <span key={vaga.id} onClick={() => onPillClick(vaga)}
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
+                      style={{ background: st.color + "18", color: st.color }}
+                      title={vaga.title}>
+                      {vaga.title}
+                    </span>
+                  );
+                })}
+                {items.length > 3 && (
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--text-dim)" }}>+{items.length - 3}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -1830,6 +2022,159 @@ function KanbanColumn({
   );
 }
 
+// ── Candidato Tabela ──────────────────────────────────────────────────────────
+
+function CandidatoTableView({ candidatos, vagas, stages, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Candidato", "Vaga", "Etapa", "Origem", "Aplicado em", "Avaliação"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {candidatos.length === 0 && (
+            <tr><td colSpan={6} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhum candidato encontrado.</td></tr>
+          )}
+          {candidatos.map((c) => {
+            const st = findStage(stages, c.stage);
+            const vagaTitle = vagas.find((v) => v.id === c.vaga_id)?.title || "—";
+            return (
+              <tr key={c.id} onClick={() => onRowClick(c)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <InitialsAvatar name={c.name} size={26} />
+                    <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{c.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{vagaTitle}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                    {st.name}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.source || "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(c.created_at)}</td>
+                <td className="px-4 py-3"><StarRating value={c.rating || 0} /></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Candidato Calendário ──────────────────────────────────────────────────────
+// Agrupa por created_at — data de aplicação, campo de data mais claro por
+// candidato (não há data de entrevista rastreada no modelo).
+
+function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
+  const [cursor, setCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const byDay = useMemo(() => {
+    const map = new Map();
+    for (const c of candidatos) {
+      if (!c.created_at) continue;
+      const d = new Date(c.created_at.slice ? c.created_at.slice(0, 10) : c.created_at);
+      if (Number.isNaN(d.getTime())) continue;
+      const k = dayKey(d);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(c);
+    }
+    return map;
+  }, [candidatos]);
+
+  const grid = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const offset = (first.getDay() + 6) % 7;
+    const start = new Date(first);
+    start.setDate(first.getDate() - offset);
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [cursor]);
+
+  const today = new Date();
+  const month = cursor.getMonth();
+
+  return (
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronRight size={16} />
+          </button>
+          <h2 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>
+            {MONTHS[month]} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>{cursor.getFullYear()}</span>
+          </h2>
+        </div>
+        <button onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}>
+          Hoje
+        </button>
+      </div>
+      <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
+        {WEEKDAYS.map(w => (
+          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
+        {grid.map((d, i) => {
+          const inMonth = d.getMonth() === month;
+          const isToday = sameDay(d, today);
+          const k = dayKey(d);
+          const items = byDay.get(k) || [];
+          return (
+            <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
+              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+                {d.getDate()}
+              </span>
+              <div className="flex flex-col gap-0.5">
+                {items.slice(0, 3).map((c) => {
+                  const st = findStage(stages, c.stage);
+                  return (
+                    <span key={c.id} onClick={() => onPillClick(c)}
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
+                      style={{ background: st.color + "18", color: st.color }}
+                      title={c.name}>
+                      {c.name}
+                    </span>
+                  );
+                })}
+                {items.length > 3 && (
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--text-dim)" }}>+{items.length - 3}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main View ─────────────────────────────────────────────────────────────────
 
 function addDays(base, days) {
@@ -1855,6 +2200,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
   const { users: profileUsers } = useProfiles();
 
   const [viewMode, setViewMode]             = useState("vagas"); // "vagas" | "candidatos"
+  const [boardMode, setBoardMode]           = useState("kanban"); // "kanban" | "table" | "calendar" — ortogonal ao viewMode acima
   const [frenteFilter, setFrenteFilter]     = useState("todas"); // "todas" | RH_FRENTES[number]
   const [selectedVaga, setSelectedVaga]     = useState("todas");
   const [selectedCandidatoId, setSelectedCandidatoId] = useState(null);
@@ -2140,6 +2486,13 @@ export function RHRecrutamentoView({ user, canWrite }) {
               <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>
             ))}
           </select>
+          {/* Toggle Kanban / Tabela / Calendário — ortogonal ao toggle Vagas/Candidatos abaixo */}
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+            <ViewToggleButton active={boardMode === "kanban"}   onClick={() => setBoardMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
+            <ViewToggleButton active={boardMode === "table"}    onClick={() => setBoardMode("table")}    icon={List}         label="Tabela" />
+            <ViewToggleButton active={boardMode === "calendar"} onClick={() => setBoardMode("calendar")} icon={CalendarIcon} label="Calendário" />
+          </div>
+
           {/* Toggle Vagas / Candidatos */}
           <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
             <button
@@ -2191,9 +2544,22 @@ export function RHRecrutamentoView({ user, canWrite }) {
       ) : loading || (viewMode === "vagas" ? vagaStagesLoading : candStagesLoading) ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : viewMode === "vagas" ? (
-        /* ═══ Kanban de VAGAS ═══ */
+        /* ═══ VAGAS ═══ */
         vagas.length === 0 ? (
           <EmptyState icon={Briefcase} title="Nenhuma vaga cadastrada" description='Clique em "Nova vaga" para começar' />
+        ) : boardMode === "table" ? (
+          <VagaTableView
+            vagas={vagasFrenteFiltradas}
+            stages={vagaStages}
+            candidatosByVaga={candidatosByVaga}
+            onRowClick={(v) => setVagaDrawerId(v.id)}
+          />
+        ) : boardMode === "calendar" ? (
+          <VagaCalendarView
+            vagas={vagasFrenteFiltradas}
+            stages={vagaStages}
+            onPillClick={(v) => setVagaDrawerId(v.id)}
+          />
         ) : (
           <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
             <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
@@ -2299,55 +2665,70 @@ export function RHRecrutamentoView({ user, canWrite }) {
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
-            <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
-              {candStages.map((stage) => (
-                <KanbanColumn
-                  key={stage.stageKey}
-                  stage={stage}
-                  stages={candStages}
-                  candidatos={candByStage[stage.stageKey] || []}
-                  vagas={vagas}
-                  canWrite={canWrite}
-                  onCardClick={(c) => setSelectedCandidatoId(c.id)}
-                  onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
-                  onMoveToStage={attemptCandStageChange}
-                  onDragStart={handleCandDragStart}
-                  onDragEnd={handleCandDragEnd}
-                  isDragOver={dragOverCandStage === stage.stageKey}
-                  onDragOver={(e) => handleCandDragOver(e, stage.stageKey)}
-                  onDragLeave={handleCandDragLeave}
-                  onDrop={() => handleCandDrop(stage.stageKey)}
-                  onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
-                  getCompleteness={getCandCompleteness}
-                />
-              ))}
+          {boardMode === "table" ? (
+            <CandidatoTableView
+              candidatos={filteredCandidatos}
+              vagas={vagas}
+              stages={candStages}
+              onRowClick={(c) => setSelectedCandidatoId(c.id)}
+            />
+          ) : boardMode === "calendar" ? (
+            <CandidatoCalendarView
+              candidatos={filteredCandidatos}
+              stages={candStages}
+              onPillClick={(c) => setSelectedCandidatoId(c.id)}
+            />
+          ) : (
+            <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
+              <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
+                {candStages.map((stage) => (
+                  <KanbanColumn
+                    key={stage.stageKey}
+                    stage={stage}
+                    stages={candStages}
+                    candidatos={candByStage[stage.stageKey] || []}
+                    vagas={vagas}
+                    canWrite={canWrite}
+                    onCardClick={(c) => setSelectedCandidatoId(c.id)}
+                    onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
+                    onMoveToStage={attemptCandStageChange}
+                    onDragStart={handleCandDragStart}
+                    onDragEnd={handleCandDragEnd}
+                    isDragOver={dragOverCandStage === stage.stageKey}
+                    onDragOver={(e) => handleCandDragOver(e, stage.stageKey)}
+                    onDragLeave={handleCandDragLeave}
+                    onDrop={() => handleCandDrop(stage.stageKey)}
+                    onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
+                    getCompleteness={getCandCompleteness}
+                  />
+                ))}
+              </div>
+              {/* Mobile: vertical */}
+              <div className="md:hidden flex flex-col gap-3">
+                {candStages.map((stage) => (
+                  <KanbanColumn
+                    key={stage.stageKey}
+                    stage={stage}
+                    stages={candStages}
+                    candidatos={candByStage[stage.stageKey] || []}
+                    vagas={vagas}
+                    canWrite={canWrite}
+                    onCardClick={(c) => setSelectedCandidatoId(c.id)}
+                    onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
+                    onMoveToStage={attemptCandStageChange}
+                    onDragStart={handleCandDragStart}
+                    onDragEnd={handleCandDragEnd}
+                    isDragOver={dragOverCandStage === stage.stageKey}
+                    onDragOver={(e) => handleCandDragOver(e, stage.stageKey)}
+                    onDragLeave={handleCandDragLeave}
+                    onDrop={() => handleCandDrop(stage.stageKey)}
+                    onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
+                    getCompleteness={getCandCompleteness}
+                  />
+                ))}
+              </div>
             </div>
-            {/* Mobile: vertical */}
-            <div className="md:hidden flex flex-col gap-3">
-              {candStages.map((stage) => (
-                <KanbanColumn
-                  key={stage.stageKey}
-                  stage={stage}
-                  stages={candStages}
-                  candidatos={candByStage[stage.stageKey] || []}
-                  vagas={vagas}
-                  canWrite={canWrite}
-                  onCardClick={(c) => setSelectedCandidatoId(c.id)}
-                  onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
-                  onMoveToStage={attemptCandStageChange}
-                  onDragStart={handleCandDragStart}
-                  onDragEnd={handleCandDragEnd}
-                  isDragOver={dragOverCandStage === stage.stageKey}
-                  onDragOver={(e) => handleCandDragOver(e, stage.stageKey)}
-                  onDragLeave={handleCandDragLeave}
-                  onDrop={() => handleCandDrop(stage.stageKey)}
-                  onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
-                  getCompleteness={getCandCompleteness}
-                />
-              ))}
-            </div>
-          </div>
+          )}
         </>
       )}
 
