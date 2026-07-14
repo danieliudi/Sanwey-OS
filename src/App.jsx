@@ -5,6 +5,7 @@ import {
   Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
+  ShoppingCart,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -63,6 +64,7 @@ import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
 import { MarketingRequestsView } from "./components/views/MarketingRequestsView";
 import { FornecedoresView } from "./components/views/FornecedoresView";
+import { ComprasMarketingView } from "./components/views/ComprasMarketingView";
 import { RHOverviewView } from "./components/views/RHOverviewView";
 import { RHFuncionariosView } from "./components/views/RHFuncionariosView";
 import { RHRecrutamentoView } from "./components/views/RHRecrutamentoView";
@@ -735,6 +737,7 @@ export default function App() {
         { id: "marketing-solicitacoes",   label: "Solicitações", icon: Inbox },
         { id: "marketing-entregas",       label: "Entregas",     icon: Package },
         { id: "marketing-fornecedores",   label: "Fornecedores", icon: Truck },
+        { id: "marketing-compras",        label: "Compras",      icon: ShoppingCart },
         { id: "marketing-despesas",       label: "Despesas",     icon: DollarSign }
       );
       groups.push({ label: "Marketing", items: mktItems });
@@ -819,12 +822,12 @@ export default function App() {
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
-    const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores"];
+    const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras"];
     if (!isMarketingUser && !isAgencia && marketingOnly.includes(section)) {
       setSection("dashboard");
     }
-    // Agência não acessa Solicitações nem Fornecedores (áreas internas de marketing)
-    if (isAgencia && (section === "marketing-solicitacoes" || section === "marketing-fornecedores")) {
+    // Agência não acessa Solicitações, Fornecedores nem Compras (áreas internas de marketing)
+    if (isAgencia && (section === "marketing-solicitacoes" || section === "marketing-fornecedores" || section === "marketing-compras")) {
       setSection("marketing");
     }
     // Pure marketing users shouldn't access CRM sections
@@ -844,7 +847,7 @@ export default function App() {
       setSection("rh-overview");
     }
     // Agência can access marketing routes + their own profile (settings).
-    const agenciaBlocked = ["crm", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "dashboard", "tutorials"];
+    const agenciaBlocked = ["crm", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "dashboard", "tutorials"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
@@ -1207,6 +1210,11 @@ export default function App() {
           <Route path={ROUTES["marketing-fornecedores"]} element={
             (isMarketingUser && !isAgencia)
               ? <FornecedoresView user={currentUser} />
+              : <Navigate to={ROUTES.marketing} replace />
+          } />
+          <Route path={ROUTES["marketing-compras"]} element={
+            (isMarketingUser && !isAgencia)
+              ? <ComprasMarketingView user={currentUser} users={users} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["rh-overview"]} element={

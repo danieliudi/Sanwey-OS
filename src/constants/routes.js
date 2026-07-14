@@ -31,6 +31,7 @@ export const ROUTES = {
   "marketing-despesas":       "/marketing/despesas",
   "marketing-solicitacoes":   "/marketing/solicitacoes",
   "marketing-fornecedores":   "/marketing/fornecedores",
+  "marketing-compras":        "/marketing/compras",
   "rh-overview":          "/rh",
   "rh-funcionarios":      "/rh/funcionarios",
   "rh-recrutamento":      "/rh/recrutamento",
