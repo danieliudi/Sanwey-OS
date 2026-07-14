@@ -4,6 +4,7 @@ import {
   Briefcase, Pencil, Settings2,
 } from "lucide-react";
 import { RH_CONTRACT_TYPES, RH_DEPARTMENTS } from "../../constants/rh-config";
+import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
@@ -404,7 +405,7 @@ function OnboardingDrawer({
                 <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                   <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: 1 }}>
                     <option value="">Aplicar template…</option>
-                    {templates.map((t) => <option key={t.id} value={t.id}>{t.cargo || t.frente || "Template"}</option>)}
+                    {templates.map((t) => <option key={t.id} value={t.id}>{t.cargo || RH_FRENTE_LABELS[t.frente] || t.frente || "Template"}</option>)}
                   </select>
                   <button onClick={handleApplyTemplate} disabled={!templateId} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "0 12px", fontSize: 11, fontWeight: 700, cursor: templateId ? "pointer" : "default", opacity: templateId ? 1 : 0.5 }}>
                     Aplicar
@@ -502,7 +503,10 @@ function NovaTemplateModal({ onSave, onClose }) {
               </div>
               <div>
                 <label style={labelSt}>Frente</label>
-                <input type="text" value={frente} onChange={(e) => setFrente(e.target.value)} placeholder="Ex: Indústria" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                <select value={frente} onChange={(e) => setFrente(e.target.value)} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt}>
+                  <option value="">Sem frente específica</option>
+                  {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
+                </select>
               </div>
             </div>
             <div>
@@ -547,6 +551,7 @@ function NovaTemplateModal({ onSave, onClose }) {
 function NovoColaboradorModal({ stageId, stages, users, onSave, onClose }) {
   const [fullName, setFullName]         = useState("");
   const [jobTitle, setJobTitle]         = useState("");
+  const [frente, setFrente]             = useState("");
   const [department, setDepartment]     = useState("");
   const [contractType, setContractType] = useState("");
   const [admissionDate, setAdmissionDate] = useState("");
@@ -568,6 +573,7 @@ function NovoColaboradorModal({ stageId, stages, users, onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!fullName.trim()) { setError("Nome completo é obrigatório."); return; }
+    if (!frente) { setError("Frente é obrigatória."); return; }
     const missing = getMissingRequiredFields(visibleFields, customValues);
     if (missing.length > 0) { setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`); return; }
     const invalid = getInvalidFields(visibleFields, customValues);
@@ -578,6 +584,7 @@ function NovoColaboradorModal({ stageId, stages, users, onSave, onClose }) {
       await onSave({
         fullName: fullName.trim(),
         jobTitle: jobTitle.trim() || null,
+        frente: frente || null,
         department: department || null,
         contractType: contractType || null,
         admissionDate: admissionDate || null,
@@ -622,6 +629,13 @@ function NovoColaboradorModal({ stageId, stages, users, onSave, onClose }) {
               <div>
                 <label style={labelSt}>Cargo</label>
                 <input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="Ex: Vendedor Externo" className={inputCls} style={inputSt} />
+              </div>
+              <div>
+                <label style={labelSt}>Frente *</label>
+                <select value={frente} onChange={(e) => setFrente(e.target.value)} className={inputCls} style={inputSt}>
+                  <option value="">Selecionar</option>
+                  {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
+                </select>
               </div>
               <div>
                 <label style={labelSt}>Departamento</label>
@@ -836,6 +850,28 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
     return map;
   }, [colaboradores, stages]);
 
+  // R22: visão consolidada de % de conclusão — antes só existia por card
+  // individual, sem nenhum rollup entre colaboradores nem por frente.
+  const dashboardStats = useMemo(() => {
+    const comTarefas = colaboradores.filter((c) => (tarefasByColaborador[c.id] || []).length > 0);
+    const pct = (c) => {
+      const t = tarefasByColaborador[c.id] || [];
+      return t.length > 0 ? (t.filter((x) => x.status === "concluida").length / t.length) * 100 : null;
+    };
+    const overall = comTarefas.length > 0
+      ? Math.round(comTarefas.reduce((sum, c) => sum + pct(c), 0) / comTarefas.length)
+      : null;
+    const porFrente = RH_FRENTES.map((id) => {
+      const grupo = colaboradores.filter((c) => c.frente === id);
+      const grupoComTarefas = grupo.filter((c) => (tarefasByColaborador[c.id] || []).length > 0);
+      const media = grupoComTarefas.length > 0
+        ? Math.round(grupoComTarefas.reduce((sum, c) => sum + pct(c), 0) / grupoComTarefas.length)
+        : null;
+      return { id, total: grupo.length, media };
+    }).filter((f) => f.total > 0);
+    return { total: colaboradores.length, overall, semTarefas: colaboradores.length - comTarefas.length, porFrente };
+  }, [colaboradores, tarefasByColaborador]);
+
   const meuColaborador = useMemo(
     () => colaboradores.find((c) => c.profileId === currentUser?.id) || null,
     [colaboradores, currentUser?.id]
@@ -895,6 +931,30 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
           </div>
         )}
       </div>
+
+      {!loading && colaboradores.length > 0 && (
+        <div className="flex items-stretch gap-3 flex-wrap mb-4">
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "10px 16px", minWidth: 140 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Progresso geral</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", marginTop: 2 }}>
+              {dashboardStats.overall != null ? `${dashboardStats.overall}%` : "—"}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
+              {dashboardStats.total} colaborador{dashboardStats.total !== 1 ? "es" : ""}
+              {dashboardStats.semTarefas > 0 && ` · ${dashboardStats.semTarefas} sem checklist`}
+            </div>
+          </div>
+          {dashboardStats.porFrente.map((f) => (
+            <div key={f.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "10px 16px", minWidth: 140 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: RH_FRENTE_COLORS[f.id], textTransform: "uppercase", letterSpacing: "0.06em" }}>{RH_FRENTE_LABELS[f.id]}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", marginTop: 2 }}>
+                {f.media != null ? `${f.media}%` : "—"}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{f.total} colaborador{f.total !== 1 ? "es" : ""}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
