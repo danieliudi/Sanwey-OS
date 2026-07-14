@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MessageSquare, Plus, X, TrendingUp, Pencil, Settings2 } from "lucide-react";
+import { MessageSquare, Plus, X, TrendingUp, Pencil, Settings2, AlertCircle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
@@ -540,7 +540,7 @@ function FeedbackKanbanColumn({
 
 function FeedbackDrawer({
   feedback, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, onComplete, onUpdateCustomFields, onAddActivity, onShowHistorico, onClose,
+  onStageChange, moveError, onComplete, onUpdateCustomFields, onAddActivity, onShowHistorico, onClose,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -633,6 +633,12 @@ function FeedbackDrawer({
           {canWrite && !st.terminal && (
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Mover para</div>
+              {moveError && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+                  <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+                  {moveError}
+                </div>
+              )}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {moveTargets.map((s) => (
                   <button
@@ -714,7 +720,12 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
   const [fieldEditorStage, setFieldEditorStage]   = useState(null);
   const [draggedFeedbackId, setDraggedFeedbackId] = useState(null);
   const [dragOverStageKey, setDragOverStageKey]   = useState(null);
+  const [moveError, setMoveError]                 = useState(null);
   const reconciledRef = useRef(false);
+
+  useEffect(() => {
+    setMoveError(null);
+  }, [drawerFeedbackId]);
 
   const loading = loadingFeedbacks || loadingColaboradores || loadingStages;
 
@@ -755,14 +766,15 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
     const fields = feedbackStageFields.getFields(feedback.status);
     const missing = getMissingRequiredFields(fields, feedback.custom_fields || {});
     if (missing.length > 0) {
-      alert(`Não dá pra mover: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      setMoveError(`Não dá pra mover: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
     const invalid = getInvalidFields(fields, feedback.custom_fields || {});
     if (invalid.length > 0) {
-      alert(`Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      setMoveError(`Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
+    setMoveError(null);
     changeFeedbackStage(id, stage);
     // Se veio do drawer aberto desse feedback: fecha agora (sinal visual de
     // que moveu) e reabre já na etapa nova, em vez de só trocar o conteúdo
@@ -960,6 +972,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
           users={users}
           currentUser={currentUser}
           onStageChange={handleStageChange}
+          moveError={moveError}
           onComplete={() => { setCompletandoId(drawerFeedback.id); setDrawerFeedbackId(null); }}
           onUpdateCustomFields={(merged) => updateFeedbackCustomFields(drawerFeedback.id, merged)}
           onAddActivity={(entry) => addFeedbackActivity(drawerFeedback.id, entry)}

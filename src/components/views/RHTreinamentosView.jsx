@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   GraduationCap, Plus, X, Check, ExternalLink, ChevronDown, ChevronRight, Users, AlertTriangle, RefreshCw,
-  LayoutGrid, Pencil, Settings2,
+  LayoutGrid, Pencil, Settings2, AlertCircle,
 } from "lucide-react";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -420,7 +420,7 @@ function TreinamentoBoardColumn({
 
 function AtribuicaoDrawer({
   atribuicao, treinamento, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, onUpdateCustomFields, onAddActivity, onClose,
+  onStageChange, moveError, onUpdateCustomFields, onAddActivity, onClose,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -473,6 +473,12 @@ function AtribuicaoDrawer({
           {canWrite && (
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Mover para</div>
+              {moveError && (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+                  <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+                  {moveError}
+                </div>
+              )}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {moveTargets.map((s) => (
                   <button key={s.stageKey} onClick={() => onStageChange(atribuicao.id, s.stageKey)} style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
@@ -527,12 +533,17 @@ function TreinamentoBoardModal({
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
+  const [moveError, setMoveError] = useState(null);
 
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape" && !drawerId) onClose(); };
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, [onClose, drawerId]);
+
+  useEffect(() => {
+    setMoveError(null);
+  }, [drawerId]);
 
   const byStage = useMemo(() => {
     const map = {};
@@ -549,14 +560,15 @@ function TreinamentoBoardModal({
     const fields = stageFields.getFields(atrib.status);
     const missing = getMissingRequiredFields(fields, atrib.custom_fields || {});
     if (missing.length > 0) {
-      alert(`Não dá pra mover: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      setMoveError(`Não dá pra mover: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
     const invalid = getInvalidFields(fields, atrib.custom_fields || {});
     if (invalid.length > 0) {
-      alert(`Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      setMoveError(`Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
+    setMoveError(null);
     onChangeStage(id, stage);
     // Se veio do drawer aberto dessa atribuição: fecha agora (sinal visual
     // de que moveu) e reabre já na etapa nova, em vez de só trocar o
@@ -636,6 +648,7 @@ function TreinamentoBoardModal({
           users={users}
           currentUser={currentUser}
           onStageChange={(id, stage) => { handleMove(id, stage); }}
+          moveError={moveError}
           onUpdateCustomFields={(merged) => onUpdateCustomFields(drawerAtrib.id, merged)}
           onAddActivity={(entry) => onAddActivity(drawerAtrib.id, entry)}
           onClose={() => setDrawerId(null)}

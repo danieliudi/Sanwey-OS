@@ -701,6 +701,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | null
   const [confirmDel,   setConfirmDel]  = useState(false);
   const [deleting,     setDeleting]    = useState(false);
+  const [moveError,    setMoveError]   = useState(null);
 
   // Campos customizados configurados pelo admin via "Editar campos desta
   // etapa" (rh_pipeline_stage_fields, domain="marketing_deliverables") —
@@ -714,6 +715,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
 
   useEffect(() => {
     setCustomDraft({});
+    setMoveError(null);
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     return () => { if (customDebounceRef.current) clearTimeout(customDebounceRef.current); };
   }, [item.id]);
@@ -802,6 +804,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     if (onMoveToStage) {
       const ok = await onMoveToStage(item.id, stageId);
       if (ok === false) return;
+      setMoveError(null);
       onClose();
       onStageMoved?.(item.id);
       return;
@@ -816,10 +819,14 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           { type: "stage_change", description: `Movido para ${stageName}`, at: new Date().toISOString() },
         ],
       });
+      setMoveError(null);
       onClose();
       onStageMoved?.(item.id);
     } catch (err) {
-      alert(`Não foi possível mover "${item.title}": ${err?.message || "erro desconhecido"}.`);
+      // Antes usava alert() nativo — bloqueante, e trava sessões
+      // automatizadas/headless sem handler de diálogo. Banner inline não
+      // bloqueia nada.
+      setMoveError(`Não foi possível mover "${item.title}": ${err?.message || "erro desconhecido"}.`);
     }
   };
 
@@ -1138,6 +1145,12 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
               <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
                 Mover entrega para fase
               </div>
+              {moveError && (
+                <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+                  <AlertCircle size={12} className="shrink-0 mt-0.5" />
+                  {moveError}
+                </div>
+              )}
               <div className="space-y-2">
                 {nextStages.map(s => (
                   <button key={s.id}
