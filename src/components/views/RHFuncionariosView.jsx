@@ -19,6 +19,7 @@ import {
   RH_CONTRACT_TYPES,
   RH_EMPLOYEE_STATUSES,
 } from "../../constants/rh-config";
+import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
@@ -41,9 +42,20 @@ function statusInfo(statusId) {
   );
 }
 
+function FrenteBadge({ frente }) {
+  if (!frente) return null;
+  const color = RH_FRENTE_COLORS[frente] || "var(--text-dim)";
+  return (
+    <span style={{ fontSize: 10, fontWeight: 700, color, background: `${color}18`, borderRadius: 99, padding: "2px 8px" }}>
+      {RH_FRENTE_LABELS[frente] || frente}
+    </span>
+  );
+}
+
 const FUNC_TABLE_COLS = [
   { id: "name",            label: "Funcionário",   sortable: true },
   { id: "job_title",       label: "Cargo",         sortable: true },
+  { id: "frente",          label: "Frente",        sortable: true },
   { id: "department",      label: "Departamento",  sortable: true },
   { id: "contract_type",   label: "Contrato",      sortable: true },
   { id: "employee_status", label: "Status",        sortable: true },
@@ -124,6 +136,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
   const [error, setError]     = useState(null);
   const [form, setForm] = useState({
     job_title:       user.job_title       || "",
+    frente:          user.frente          || "",
     department:      user.department      || "",
     contract_type:   user.contract_type   || "",
     admission_date:  user.admission_date  ? user.admission_date.slice(0, 10) : "",
@@ -162,6 +175,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
     try {
       await onUpdateUser(user.id, {
         job_title:       form.job_title       || null,
+        frente:          form.frente          || null,
         department:      form.department      || null,
         contract_type:   form.contract_type   || null,
         admission_date:  form.admission_date  ? new Date(form.admission_date).toISOString() : null,
@@ -170,6 +184,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
       });
       if (colaboradorRow && onUpdateColaborador) {
         await onUpdateColaborador(colaboradorRow.id, {
+          frente: form.frente || null,
           asoVencimento: form.aso_vencimento || null,
           contratoFim: form.contrato_fim || null,
         });
@@ -268,8 +283,9 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
               {user.email}
             </div>
-            <div style={{ marginTop: 6 }}>
+            <div style={{ marginTop: 6, display: "flex", gap: 6, alignItems: "center" }}>
               <StatusBadge statusId={user.employee_status || "ativo"} />
+              <FrenteBadge frente={user.frente} />
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -337,6 +353,20 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                     onFocus={focusBlue}
                     onBlur={blurGray}
                   />
+                </div>
+                <div>
+                  <label style={labelSt}>Frente</label>
+                  <select
+                    value={form.frente}
+                    onChange={(e) => set("frente", e.target.value)}
+                    className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+                    style={inputSt}
+                  >
+                    <option value="">Selecionar</option>
+                    {RH_FRENTES.map((id) => (
+                      <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label style={labelSt}>Departamento</label>
@@ -561,6 +591,7 @@ export function RHFuncionariosView({
   const { colaboradores, createColaborador, updateColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const [search, setSearch]         = useState("");
   const [filterDept, setFilterDept] = useState("all");
+  const [filterFrente, setFilterFrente] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterContract, setFilterContract] = useState("all");
   const [selected, setSelected]     = useState(null);
@@ -602,11 +633,12 @@ export function RHFuncionariosView({
         if (!(c.fullName || "").toLowerCase().includes(q) && !(c.email || "").toLowerCase().includes(q)) return false;
       }
       if (filterDept !== "all" && c.department !== filterDept) return false;
+      if (filterFrente !== "all" && c.frente !== filterFrente) return false;
       if (filterStatus !== "all" && (c.employeeStatus || "ativo") !== filterStatus) return false;
       if (filterContract !== "all" && c.contractType !== filterContract) return false;
       return true;
     });
-  }, [colaboradoresSemAcesso, search, filterDept, filterStatus, filterContract]);
+  }, [colaboradoresSemAcesso, search, filterDept, filterFrente, filterStatus, filterContract]);
 
   const filtered = useMemo(() => {
     const arr = users.filter((u) => {
@@ -619,6 +651,7 @@ export function RHFuncionariosView({
           return false;
       }
       if (filterDept !== "all" && u.department !== filterDept) return false;
+      if (filterFrente !== "all" && u.frente !== filterFrente) return false;
       if (filterStatus !== "all" && (u.employee_status || "ativo") !== filterStatus) return false;
       if (filterContract !== "all" && u.contract_type !== filterContract) return false;
       return true;
@@ -631,7 +664,7 @@ export function RHFuncionariosView({
       return 0;
     });
     return arr;
-  }, [users, search, filterDept, filterStatus, filterContract, sortCol, sortDir]);
+  }, [users, search, filterDept, filterFrente, filterStatus, filterContract, sortCol, sortDir]);
 
   const selectSt = {
     borderColor: "var(--border)",
@@ -767,6 +800,18 @@ export function RHFuncionariosView({
         </div>
 
         <select
+          value={filterFrente}
+          onChange={(e) => setFilterFrente(e.target.value)}
+          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+          style={selectSt}
+        >
+          <option value="all">Todas as frentes</option>
+          {RH_FRENTES.map((id) => (
+            <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>
+          ))}
+        </select>
+
+        <select
           value={filterDept}
           onChange={(e) => setFilterDept(e.target.value)}
           className="text-xs rounded-xl border px-3 py-1.5 outline-none"
@@ -866,6 +911,9 @@ export function RHFuncionariosView({
                     <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text)" }}>
                       {u.job_title || "—"}
                     </td>
+                    <td className="px-4 py-3">
+                      <FrenteBadge frente={u.frente} />
+                    </td>
                     <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
                       {u.department || "—"}
                     </td>
@@ -916,6 +964,7 @@ export function RHFuncionariosView({
                   </div>
                   <div style={{ marginTop: 6, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                     <StatusBadge statusId={u.employee_status || "ativo"} />
+                    <FrenteBadge frente={u.frente} />
                     {u.department && (
                       <span style={{ fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 99, padding: "2px 8px" }}>
                         {u.department}
@@ -963,6 +1012,7 @@ export function RHFuncionariosView({
                     {c.jobTitle || c.department || "—"}
                   </div>
                 </div>
+                <FrenteBadge frente={c.frente} />
                 <StatusBadge statusId={c.employeeStatus || "ativo"} />
               </div>
             ))}

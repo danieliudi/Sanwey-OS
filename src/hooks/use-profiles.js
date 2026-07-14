@@ -94,6 +94,17 @@ export function useProfiles({ enabled = true } = {}) {
     if (patch.supervisorId !== undefined) dbPatch.supervisor_id = patch.supervisorId || null;
     if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
     if (patch.aiConfig !== undefined) dbPatch.ai_config = patch.aiConfig;
+    // Campos de RH que também vivem em profiles pra quem tem login (ver
+    // 20260706_rh_overview_colaboradores_sync.sql) — faltavam aqui, então o
+    // "Editar" de Funcionários parecia salvar (estado otimista) mas nunca
+    // persistia de fato, revertendo num refresh.
+    if (patch.job_title !== undefined) dbPatch.job_title = patch.job_title;
+    if (patch.frente !== undefined) dbPatch.frente = patch.frente;
+    if (patch.department !== undefined) dbPatch.department = patch.department;
+    if (patch.contract_type !== undefined) dbPatch.contract_type = patch.contract_type;
+    if (patch.admission_date !== undefined) dbPatch.admission_date = patch.admission_date;
+    if (patch.employee_status !== undefined) dbPatch.employee_status = patch.employee_status;
+    if (patch.salary !== undefined) dbPatch.salary = patch.salary;
 
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...patch } : u));
     const { error: err } = await supabase.from("profiles").update(dbPatch).eq("id", id);

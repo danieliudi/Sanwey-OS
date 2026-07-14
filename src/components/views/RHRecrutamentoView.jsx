@@ -27,6 +27,7 @@ import {
   RH_DEPARTMENTS,
   RH_CONTRACT_TYPES,
 } from "../../constants/rh-config";
+import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
@@ -350,6 +351,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
   const [customValues, setCustomValues] = useState(initialData?.custom_fields || {});
   const visibleFields = resolveVisibleFields(vagaStageFields.getFields(targetStage), customValues);
   const [title, setTitle]           = useState(initialData?.title || "");
+  const [companyIds, setCompanyIds] = useState(initialData?.company_ids || []);
   const [cargoId, setCargoId]       = useState(initialData?.cargo_template_id || "");
   const [jobTitle, setJobTitle]     = useState(initialData?.job_title || "");
   const [dept, setDept]             = useState(initialData?.department || "");
@@ -388,6 +390,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) { setError("Título da vaga é obrigatório."); return; }
+    if (companyIds.length === 0) { setError("Selecione ao menos uma frente."); return; }
     if (!dept) { setError("Departamento é obrigatório."); return; }
     if (!jobTitle.trim()) { setError("Cargo é obrigatório."); return; }
     const missing = getMissingRequiredFields(visibleFields, customValues);
@@ -399,6 +402,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
     try {
       const payload = {
         title: title.trim(),
+        company_ids: companyIds,
         department: dept,
         job_title: jobTitle.trim(),
         cargo_template_id: cargoId || null,
@@ -453,6 +457,26 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
                 placeholder="Ex: Analista de Marketing" className={inputCls} style={inputSt}
                 onFocus={focusBlue} onBlur={blurGray} autoFocus
               />
+            </div>
+
+            <div>
+              <label style={labelSt}>Frente(s) *</label>
+              <div className="flex gap-2 flex-wrap">
+                {RH_FRENTES.map((id) => {
+                  const selected = companyIds.includes(id);
+                  const color = RH_FRENTE_COLORS[id];
+                  return (
+                    <button
+                      key={id} type="button"
+                      onClick={() => setCompanyIds((prev) => prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id])}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                      style={selected ? { background: color, color: "#fff", borderColor: color } : { background: "var(--surface-alt)", color: "var(--text-dim)", borderColor: "var(--border)" }}
+                    >
+                      {RH_FRENTE_LABELS[id]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -694,6 +718,15 @@ function VagaCard({ vaga, candidatosCount }) {
     <div>
       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>{vaga.title}</div>
       <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 6 }}>{vaga.job_title || vaga.department || "—"}</div>
+      {(vaga.company_ids || []).length > 0 && (
+        <div className="flex gap-1 flex-wrap" style={{ marginBottom: 6 }}>
+          {vaga.company_ids.map((id) => (
+            <span key={id} style={{ fontSize: 9, fontWeight: 700, color: RH_FRENTE_COLORS[id] || "var(--text-dim)", background: `${RH_FRENTE_COLORS[id] || "#888"}18`, borderRadius: 99, padding: "1px 7px" }}>
+              {RH_FRENTE_LABELS[id] || id}
+            </span>
+          ))}
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontSize: 9, fontWeight: 700, color: pri.color, background: `${pri.color}18`, borderRadius: 99, padding: "1px 7px", textTransform: "uppercase" }}>
           {pri.name}
@@ -829,6 +862,11 @@ function VagaDrawer({
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: pri.color, fontSize: 11, fontWeight: 600 }}>
                 <Flag size={11} /> {pri.name}
               </span>
+              {(vaga.company_ids || []).map((id) => (
+                <span key={id} style={{ fontSize: 11, fontWeight: 600, color: RH_FRENTE_COLORS[id] || "var(--text-dim)", background: `${RH_FRENTE_COLORS[id] || "#888"}18`, borderRadius: 99, padding: "2px 10px" }}>
+                  {RH_FRENTE_LABELS[id] || id}
+                </span>
+              ))}
             </div>
           </div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
@@ -1720,6 +1758,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
   const { users: profileUsers } = useProfiles();
 
   const [viewMode, setViewMode]             = useState("vagas"); // "vagas" | "candidatos"
+  const [frenteFilter, setFrenteFilter]     = useState("todas"); // "todas" | RH_FRENTES[number]
   const [selectedVaga, setSelectedVaga]     = useState("todas");
   const [selectedCandidatoId, setSelectedCandidatoId] = useState(null);
   const [quickAddVaga, setQuickAddVaga]     = useState(false);
@@ -1928,11 +1967,21 @@ export function RHRecrutamentoView({ user, canWrite }) {
 
   const activeVaga = vagas.find((v) => v.id === selectedVaga) || null;
 
+  // ── Filtro de frente (R12: talent pool/vagas por padrão pode ser filtrado
+  //    por frente, com opção explícita "Todas as frentes") ──────────────────
+  const vagasFrenteFiltradas = useMemo(() => {
+    if (frenteFilter === "todas") return vagas;
+    return vagas.filter((v) => (v.company_ids || []).includes(frenteFilter));
+  }, [vagas, frenteFilter]);
+  const vagaIdsFrenteFiltradas = useMemo(() => new Set(vagasFrenteFiltradas.map((v) => v.id)), [vagasFrenteFiltradas]);
+
   // ── Filtered candidatos ────────────────────────────────────────────────────
   const filteredCandidatos = useMemo(() => {
-    if (selectedVaga === "todas") return candidatos;
-    return candidatos.filter((c) => c.vaga_id === selectedVaga);
-  }, [candidatos, selectedVaga]);
+    let list = candidatos;
+    if (frenteFilter !== "todas") list = list.filter((c) => vagaIdsFrenteFiltradas.has(c.vaga_id));
+    if (selectedVaga === "todas") return list;
+    return list.filter((c) => c.vaga_id === selectedVaga);
+  }, [candidatos, selectedVaga, frenteFilter, vagaIdsFrenteFiltradas]);
 
   const candByStage = useMemo(() => {
     const map = {};
@@ -1950,9 +1999,9 @@ export function RHRecrutamentoView({ user, canWrite }) {
 
   const vagasByStage = useMemo(() => {
     const map = {};
-    vagaStages.forEach((s) => { map[s.stageKey] = vagas.filter((v) => (v.stage || "rascunho") === s.stageKey); });
+    vagaStages.forEach((s) => { map[s.stageKey] = vagasFrenteFiltradas.filter((v) => (v.stage || "rascunho") === s.stageKey); });
     return map;
-  }, [vagas, vagaStages]);
+  }, [vagasFrenteFiltradas, vagaStages]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -1972,6 +2021,17 @@ export function RHRecrutamentoView({ user, canWrite }) {
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <select
+            value={frenteFilter}
+            onChange={(e) => setFrenteFilter(e.target.value)}
+            className="text-xs rounded-xl border px-3 py-2 outline-none"
+            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+          >
+            <option value="todas">Todas as frentes</option>
+            {RH_FRENTES.map((id) => (
+              <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>
+            ))}
+          </select>
           {/* Toggle Vagas / Candidatos */}
           <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
             <button

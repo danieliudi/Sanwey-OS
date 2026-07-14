@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check } from "lucide-react";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";
+import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { supabase } from "../../lib/supabase";
 import { useAI } from "../../hooks/use-ai";
@@ -15,7 +16,7 @@ const EMPTY_FORM = {
   fullName: "", cpf: "", rg: "", birthDate: "", phone: "", email: "",
   addressStreet: "", addressNumber: "", addressComplement: "", addressNeighborhood: "",
   addressCity: "", addressState: "", addressZip: "",
-  jobTitle: "", department: "", contractType: "", admissionDate: "",
+  jobTitle: "", department: "", frente: "", contractType: "", admissionDate: "",
   employeeStatus: "ativo", salary: "", asoVencimento: "", contratoFim: "",
 };
 
@@ -91,6 +92,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.fullName.trim()) { setError("Nome completo é obrigatório."); return; }
+    if (!form.frente) { setError("Frente é obrigatória."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -251,6 +253,13 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
               <div>
                 <label style={labelSt}>Cargo</label>
                 <input type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} placeholder="Ex: Operador de produção" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+              </div>
+              <div>
+                <label style={labelSt}>Frente *</label>
+                <select value={form.frente} onChange={(e) => set("frente", e.target.value)} className={inputCls} style={inputSt}>
+                  <option value="">Selecionar</option>
+                  {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
+                </select>
               </div>
               <div>
                 <label style={labelSt}>Departamento</label>
