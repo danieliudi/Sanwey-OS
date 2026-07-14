@@ -313,6 +313,10 @@ export function LeadCreateModal({
       setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
+    if (values.value && parseFloat(values.value) < 0) {
+      setError("O valor não pode ser negativo.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -466,6 +470,7 @@ export function LeadCreateModal({
 
         {/* Form */}
         <form
+          id="lead-create-form"
           onSubmit={handleSubmit}
           className="flex-1 overflow-y-auto px-5 pt-5 pb-0"
         >
@@ -624,8 +629,8 @@ export function LeadCreateModal({
           style={{ borderColor: "#E5E7EB", background: "rgba(250,250,248,0.97)" }}
         >
           <button
-            type="button"
-            onClick={handleSubmit}
+            type="submit"
+            form="lead-create-form"
             disabled={isSubmitDisabled}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-colors"
             style={{
