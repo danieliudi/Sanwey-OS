@@ -1308,6 +1308,46 @@ export function SettingsView({
                     {window.location.origin}/solicitar-marketing
                   </code>
                 </div>
+
+                {/* Formulário de Solicitação de Compras de Marketing */}
+                <div className="mb-5 pb-5 border-b" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+                    <div>
+                      <div className="font-semibold text-sm mb-0.5" style={{ color: "var(--text)" }}>
+                        Formulário de Solicitação · Compras de Marketing
+                      </div>
+                      <p className="text-xs" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
+                        Qualquer pessoa usa este link para pedir a compra de um item pronto (brinde, uniforme, material impresso). As solicitações entram em <strong>Marketing → Compras</strong> para aprovação.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/solicitar-compra`)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
+                        style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+                        title="Copiar link"
+                      >
+                        <Copy size={12} />
+                        Copiar
+                      </button>
+                      <a
+                        href={`${window.location.origin}/solicitar-compra`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
+                        style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                      >
+                        <ExternalLink size={12} />
+                        Abrir
+                      </a>
+                    </div>
+                  </div>
+                  <code style={{ fontSize: 12, color: "var(--text-dim)", wordBreak: "break-all" }}>
+                    {window.location.origin}/solicitar-compra
+                  </code>
+                </div>
                 <div className="space-y-3">
                   {COMPANY_IDS.map(id => {
                     const c = COMPANIES[id];

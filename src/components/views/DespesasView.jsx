@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Plus, X, DollarSign, Trash2, Pencil } from "lucide-react";
+import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, AlertCircle, ShoppingCart } from "lucide-react";
 import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
 import { EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -7,6 +7,9 @@ import { formatK } from "../../utils/currency";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
+import { supabase } from "../../lib/supabase";
+
+const RECEIPT_BUCKET = "marketing-attachments";
 
 const EMPTY_FORM = {
   description: "",
@@ -14,9 +17,11 @@ const EMPTY_FORM = {
   amount:      "",
   status:      "pendente",
   dueDate:     "",
+  invoiceDate: "",
   campaignId:  null,
   companyIds:  [],
   notes:       "",
+  receiptUrl:  null,
 };
 
 function StatusBadge({ status }) {
@@ -36,15 +41,22 @@ function StatusBadge({ status }) {
 }
 
 function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser }) {
+  // Id gerado no cliente pra despesas novas — permite subir a nota fiscal
+  // pro Storage (path `expense-invoices/${id}/...`) antes mesmo do primeiro
+  // save, casando o nome da pasta com o id real da linha criada (em vez de
+  // subir só depois do save, ou usar "new" como pasta órfã).
+  const [id] = useState(() => initial?.id || crypto.randomUUID());
   const [form, setForm] = useState(() => ({
     ...EMPTY_FORM,
     companyIds: currentUser?.companies?.length > 0 ? [currentUser.companies[0]] : [],
     ...initial,
     amount: initial?.amount != null ? String(initial.amount) : "",
     dueDate: initial?.dueDate ? initial.dueDate.slice(0, 10) : "",
+    invoiceDate: initial?.invoiceDate ? initial.invoiceDate.slice(0, 10) : "",
   }));
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState(null);
+  const [uploading, setUploading] = useState(false);
   useEscToClose(onClose);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
@@ -56,17 +68,47 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
     );
   };
 
+  const handleUploadReceipt = async (file) => {
+    setUploading(true);
+    setError(null);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `expense-invoices/${id}/${Date.now()}-${safeName}`;
+      const { error: uploadErr } = await supabase.storage.from(RECEIPT_BUCKET).upload(path, file, { contentType: file.type, upsert: true });
+      if (uploadErr) throw uploadErr;
+      set("receiptUrl", path);
+    } catch (err) {
+      setError(err?.message || "Erro ao enviar nota fiscal.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleViewReceipt = async () => {
+    if (!form.receiptUrl) return;
+    const { data, error: err } = await supabase.storage.from(RECEIPT_BUCKET).createSignedUrl(form.receiptUrl, 300);
+    if (!err && data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.description.trim()) { setError("Descrição obrigatória."); return; }
     if (form.companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
+    // Espelha o guard trigger do banco (marketing_expenses_require_receipt) —
+    // dá um erro inline em vez do usuário levar a exceção crua do Postgres.
+    if (form.status === "pago" && !form.receiptUrl) {
+      setError("Despesa paga exige nota fiscal anexada.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await onSave({
         ...form,
-        amount:  parseFloat(form.amount) || 0,
-        dueDate: localDateInputToISOString(form.dueDate),
+        id,
+        amount:      parseFloat(form.amount) || 0,
+        dueDate:     localDateInputToISOString(form.dueDate),
+        invoiceDate: form.invoiceDate || null,
       });
       onClose();
     } catch (err) {
@@ -177,11 +219,66 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
               type="date"
               value={form.dueDate}
               onChange={e => set("dueDate", e.target.value)}
+              title="Vencimento"
               className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
               style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)" }}
               onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
               onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
             />
+          </div>
+
+          <div>
+            <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+              Data da fatura
+            </div>
+            <input
+              type="date"
+              value={form.invoiceDate}
+              onChange={e => set("invoiceDate", e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border-strong)", color: form.invoiceDate ? "var(--text)" : "var(--text-dim)" }}
+              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+            />
+          </div>
+
+          <div>
+            <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+              Nota fiscal
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {form.receiptUrl && (
+                <button
+                  type="button"
+                  onClick={handleViewReceipt}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border"
+                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", cursor: "pointer" }}
+                >
+                  <FileText size={12} />
+                  Ver nota fiscal
+                  <ExternalLink size={11} />
+                </button>
+              )}
+              <label
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer"
+                style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
+              >
+                {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                {uploading ? "Enviando…" : form.receiptUrl ? "Substituir" : "Anexar nota fiscal"}
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  style={{ display: "none" }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadReceipt(f); e.target.value = ""; }}
+                />
+              </label>
+            </div>
+            {form.status === "pago" && !form.receiptUrl && (
+              <div className="flex items-center gap-1.5 text-xs mt-1.5" style={{ color: "var(--warning)" }}>
+                <AlertCircle size={11} />
+                Obrigatória para marcar como paga.
+              </div>
+            )}
           </div>
 
           <div>
@@ -287,7 +384,11 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
   }), [filtered]);
 
   const handleSave = async (form) => {
-    if (form.id) {
+    // A modal sempre traz um `form.id` (gerado no cliente pra permitir subir
+    // a nota fiscal antes do primeiro save) — quem decide entre criar/editar
+    // é a presença de `modalExpense` (a despesa que abriu o modal), não mais
+    // `form.id`.
+    if (modalExpense) {
       await updateExpense(form.id, form);
     } else {
       await createExpense(form);
@@ -435,7 +536,22 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                 >
                   <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)", maxWidth: 220 }}>
-                    <div className="truncate">{expense.description}</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="truncate">{expense.description}</div>
+                      {/* Marcada pelo trigger de auto-registro do Kanban de Compras
+                          (marketing_purchase_requests_sync_expense) — só um aviso
+                          visual, sem deep-link pra solicitação de origem. */}
+                      {expense.notes?.includes("Origem: compra ") && (
+                        <span
+                          title="Criada automaticamente a partir de uma compra aprovada"
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold shrink-0"
+                          style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+                        >
+                          <ShoppingCart size={9} />
+                          Origem: Compras
+                        </span>
+                      )}
+                    </div>
                     {expense.notes && (
                       <div className="text-[11px] truncate mt-0.5" style={{ color: "var(--text-dim)" }}>
                         {expense.notes}

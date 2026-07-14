@@ -50,19 +50,26 @@ function rowToPurchase(r) {
 
 function purchaseToRow(p) {
   const row = {};
-  if (p.itemName !== undefined)      row.item_name = p.itemName;
-  if (p.description !== undefined)   row.description = p.description || null;
-  if (p.supplierId !== undefined)    row.supplier_id = p.supplierId || null;
-  if (p.quantity !== undefined)      row.quantity = p.quantity === "" ? null : p.quantity;
-  if (p.unitPrice !== undefined)     row.unit_price = p.unitPrice === "" ? null : p.unitPrice;
-  if (p.totalValue !== undefined)    row.total_value = p.totalValue === "" ? null : p.totalValue;
-  if (p.stage !== undefined)         row.stage = p.stage;
-  if (p.responsibleId !== undefined) row.responsible_id = p.responsibleId || null;
-  if (p.dueDate !== undefined)       row.due_date = p.dueDate || null;
-  if (p.invoiceDate !== undefined)   row.invoice_date = p.invoiceDate || null;
-  if (p.invoiceUrl !== undefined)    row.invoice_url = p.invoiceUrl || null;
-  if (p.companyIds !== undefined)    row.company_ids = p.companyIds || [];
-  if (p.notes !== undefined)         row.notes = p.notes || [];
+  if (p.itemName !== undefined)       row.item_name = p.itemName;
+  if (p.description !== undefined)    row.description = p.description || null;
+  if (p.supplierId !== undefined)     row.supplier_id = p.supplierId || null;
+  if (p.quantity !== undefined)       row.quantity = p.quantity === "" ? null : p.quantity;
+  if (p.unitPrice !== undefined)      row.unit_price = p.unitPrice === "" ? null : p.unitPrice;
+  if (p.totalValue !== undefined)     row.total_value = p.totalValue === "" ? null : p.totalValue;
+  if (p.stage !== undefined)          row.stage = p.stage;
+  // Requester/solicitante — precisavam estar aqui pra "Nova solicitação"
+  // interna (ComprasMarketingView) gravar quem pediu; faltavam nesta direção
+  // (rowToPurchase acima já os lia de volta normalmente).
+  if (p.requesterName !== undefined)  row.requester_name = p.requesterName || null;
+  if (p.requesterEmail !== undefined) row.requester_email = p.requesterEmail || null;
+  if (p.requesterPhone !== undefined) row.requester_phone = p.requesterPhone || null;
+  if (p.requestedBy !== undefined)    row.requested_by = p.requestedBy || null;
+  if (p.responsibleId !== undefined)  row.responsible_id = p.responsibleId || null;
+  if (p.dueDate !== undefined)        row.due_date = p.dueDate || null;
+  if (p.invoiceDate !== undefined)    row.invoice_date = p.invoiceDate || null;
+  if (p.invoiceUrl !== undefined)     row.invoice_url = p.invoiceUrl || null;
+  if (p.companyIds !== undefined)     row.company_ids = p.companyIds || [];
+  if (p.notes !== undefined)          row.notes = p.notes || [];
   return row;
 }
 

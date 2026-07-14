@@ -130,7 +130,7 @@ SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF OLD.stage = 'solicitado' AND NEW.stage IN ('aprovado', 'rejeitado')
-     AND NOT (current_user_is_admin() OR current_user_role() = 'gerente_marketing') THEN
+     AND NOT (current_user_is_admin() OR current_user_has_role('gerente_marketing')) THEN
     NEW.stage := OLD.stage;
     NEW.approved_by := OLD.approved_by;
     NEW.approved_at := OLD.approved_at;
@@ -233,9 +233,7 @@ BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Autenticação necessária';
   END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM public.profiles WHERE id = v_uid AND role = ANY (ARRAY['admin', 'gerente_marketing'])
-  ) THEN
+  IF NOT (current_user_is_admin() OR current_user_has_role('gerente_marketing')) THEN
     RAISE EXCEPTION 'Sem permissão para aprovar solicitações de compra';
   END IF;
 
@@ -272,9 +270,7 @@ BEGIN
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'Autenticação necessária';
   END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM public.profiles WHERE id = v_uid AND role = ANY (ARRAY['admin', 'gerente_marketing'])
-  ) THEN
+  IF NOT (current_user_is_admin() OR current_user_has_role('gerente_marketing')) THEN
     RAISE EXCEPTION 'Sem permissão para rejeitar solicitações de compra';
   END IF;
 

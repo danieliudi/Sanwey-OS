@@ -13,6 +13,7 @@ function rowToExpense(r) {
     amount:      Number(r.amount || 0),
     status:      r.status,
     dueDate:     r.due_date ?? null,
+    invoiceDate: r.invoice_date ?? null,
     notes:       r.notes ?? null,
     receiptUrl:  r.receipt_url ?? null,
     createdBy:   r.created_by ?? null,
@@ -23,6 +24,10 @@ function rowToExpense(r) {
 
 function expenseToRow(e, extras = {}) {
   return {
+    // Id opcional — só presente quando o cliente já gerou o uuid antes do
+    // primeiro save (DespesasView/ExpenseModal), pra poder subir a nota
+    // fiscal no Storage com o mesmo id da linha que está prestes a criar.
+    ...(e.id ? { id: e.id } : {}),
     company_ids:  e.companyIds ?? [],
     campaign_id:  e.campaignId ?? null,
     description:  e.description,
@@ -30,6 +35,7 @@ function expenseToRow(e, extras = {}) {
     amount:       e.amount ?? 0,
     status:       e.status ?? "pendente",
     due_date:     e.dueDate ?? null,
+    invoice_date: e.invoiceDate ?? null,
     notes:        e.notes ?? null,
     receipt_url:  e.receiptUrl ?? null,
     ...extras,
