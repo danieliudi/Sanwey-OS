@@ -12,6 +12,7 @@ import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
+import { AvatarStack } from "../shared/AvatarStack";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
@@ -92,7 +93,10 @@ function CopyLinkButton() {
 }
 
 /* ── Kanban card ──────────────────────────────────────────────────────── */
-function PurchaseKanbanCard({ purchase, supplier, responsibleUser, onClick }) {
+function PurchaseKanbanCard({ purchase, supplier, users, onClick }) {
+  const responsibleIds = purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []);
+  const resolvedResponsible = responsibleIds.map(id => users?.find(u => u.id === id)).filter(Boolean);
+  const firstResponsible = resolvedResponsible[0];
   return (
     <div
       onClick={() => onClick(purchase)}
@@ -120,15 +124,10 @@ function PurchaseKanbanCard({ purchase, supplier, responsibleUser, onClick }) {
           </span>
         )}
       </div>
-      {responsibleUser && (
+      {resolvedResponsible.length > 0 && (
         <div className="flex items-center gap-1.5 mt-2">
-          <div
-            className="flex items-center justify-center rounded-full font-bold shrink-0"
-            style={{ width: 18, height: 18, fontSize: 9, background: responsibleUser.avatarBg || "#1D4ED8", color: "#FFF" }}
-          >
-            {responsibleUser.initials || "?"}
-          </div>
-          <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>{responsibleUser.name}</span>
+          <AvatarStack users={resolvedResponsible} size={18} max={2} />
+          <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>{firstResponsible?.name}</span>
         </div>
       )}
     </div>
@@ -259,7 +258,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
 }
 
 /* ── Kanban view ──────────────────────────────────────────────────────── */
-function KanbanBoard({ purchases, suppliersById, usersById, onCardClick }) {
+function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick }) {
   return (
     <div className="hidden lg:block relative">
       <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
@@ -289,7 +288,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, onCardClick }) {
                         key={p.id}
                         purchase={p}
                         supplier={suppliersById.get(p.supplierId)}
-                        responsibleUser={usersById.get(p.responsibleId)}
+                        users={users}
                         onClick={onCardClick}
                       />
                     ))
@@ -304,7 +303,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, onCardClick }) {
   );
 }
 
-function MobileKanban({ purchases, suppliersById, usersById, onCardClick }) {
+function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick }) {
   const [expanded, setExpanded] = useState(() => new Set(["solicitado"]));
   const toggle = (id) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   return (
@@ -325,7 +324,7 @@ function MobileKanban({ purchases, suppliersById, usersById, onCardClick }) {
                 {items.length === 0
                   ? <div className="text-center py-3 text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma solicitação</div>
                   : items.map(p => (
-                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} responsibleUser={usersById.get(p.responsibleId)} onClick={onCardClick} />
+                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} users={users} onClick={onCardClick} />
                   ))}
               </div>
             )}
@@ -337,7 +336,7 @@ function MobileKanban({ purchases, suppliersById, usersById, onCardClick }) {
 }
 
 /* ── Tabela ───────────────────────────────────────────────────────────── */
-function TableView({ purchases, suppliersById, usersById, onRowClick }) {
+function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
   return (
     <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
@@ -357,7 +356,8 @@ function TableView({ purchases, suppliersById, usersById, onRowClick }) {
           {purchases.map(p => {
             const color = STAGE_COLORS[p.stage] || "var(--text-dim)";
             const stageInfo = PURCHASE_STAGES.find(s => s.id === p.stage) || (p.stage === PURCHASE_REJECTED_STAGE ? { name: "Rejeitado" } : null);
-            const responsible = usersById.get(p.responsibleId);
+            const responsibleIds = p.responsibleIds?.length ? p.responsibleIds : (p.responsibleId ? [p.responsibleId] : []);
+            const resolvedResponsible = responsibleIds.map(id => usersById.get(id)).filter(Boolean);
             return (
               <tr key={p.id} onClick={() => onRowClick(p)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
@@ -374,7 +374,14 @@ function TableView({ purchases, suppliersById, usersById, onRowClick }) {
                     {stageInfo?.name || p.stage}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{responsible?.name || "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
+                  {resolvedResponsible.length > 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <AvatarStack users={resolvedResponsible} size={18} max={2} />
+                      <span>{resolvedResponsible[0].name}</span>
+                    </div>
+                  ) : "—"}
+                </td>
               </tr>
             );
           })}
@@ -595,8 +602,8 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
         <EmptyState icon={ShoppingCart} title="Nenhuma solicitação de compra" description="Solicitações enviadas pelo link público ou criadas internamente aparecerão aqui." />
       ) : viewMode === "kanban" ? (
         <>
-          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} onCardClick={setSelected} />
-          <KanbanBoard purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} onCardClick={setSelected} />
+          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} />
+          <KanbanBoard purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} />
         </>
       ) : viewMode === "table" ? (
         <TableView purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} onRowClick={setSelected} />

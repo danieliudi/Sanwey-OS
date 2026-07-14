@@ -129,6 +129,20 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, custom_fields: customFields } : f));
   }, []);
 
+  // Múltiplos avaliadores (FASE 5) — o trigger no banco só sincroniza
+  // escalar → array (sempre garante que evaluator_id está em evaluator_ids),
+  // nunca o inverso. Se mandássemos só evaluator_ids e o usuário tivesse
+  // removido o avaliador escalar da lista, o trigger reinseriria esse id de
+  // volta silenciosamente. Por isso escrevemos os dois: evaluator_id vira o
+  // primeiro da lista (mesma convenção de "principal = primeiro" usada em
+  // Leads/Campanhas/Compras).
+  const updateFeedbackEvaluators = useCallback(async (id, evaluatorIds) => {
+    const evaluatorId = evaluatorIds[0] || null;
+    const { error } = await supabase.from("rh_avaliacoes").update({ evaluator_id: evaluatorId, evaluator_ids: evaluatorIds }).eq("id", id);
+    if (error) throw new Error(error.message);
+    setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, evaluator_id: evaluatorId, evaluator_ids: evaluatorIds } : f));
+  }, []);
+
   const addFeedbackActivity = useCallback(async (id, entry) => {
     const current = feedbacks.find(f => f.id === id);
     if (!current) return;
@@ -147,7 +161,8 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     submitSelfRating,
     changeFeedbackStage,
     updateFeedbackCustomFields,
+    updateFeedbackEvaluators,
     addFeedbackActivity,
     refetch: fetchAll,
-  }), [feedbacks, loading, createFeedback, createPendingCycle, completeFeedback, submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, addFeedbackActivity, fetchAll]);
+  }), [feedbacks, loading, createFeedback, createPendingCycle, completeFeedback, submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, addFeedbackActivity, fetchAll]);
 }

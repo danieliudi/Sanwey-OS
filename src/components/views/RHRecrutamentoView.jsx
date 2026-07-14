@@ -52,6 +52,8 @@ import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { EmptyState } from "../ui/EmptyState";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
+import { AvatarStack } from "../shared/AvatarStack";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -811,8 +813,9 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
 
 // ── Vaga Kanban Card ──────────────────────────────────────────────────────────
 
-function VagaCard({ vaga, candidatosCount }) {
+function VagaCard({ vaga, candidatosCount, usersById }) {
   const pri = priorityInfo(vaga.priority);
+  const resolvedResponsibles = (vaga.responsible_ids || []).map(id => usersById?.get(id)).filter(Boolean);
   return (
     <div>
       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>{vaga.title}</div>
@@ -832,11 +835,14 @@ function VagaCard({ vaga, candidatosCount }) {
         </span>
         <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{candidatosCount} candidato{candidatosCount !== 1 ? "s" : ""}</span>
       </div>
-      {vaga.hiring_deadline && (
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 10, color: "var(--text-dim)" }}>
-          <CalendarClock size={10} /> {fmt(vaga.hiring_deadline)}
-        </div>
-      )}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+        {vaga.hiring_deadline ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--text-dim)" }}>
+            <CalendarClock size={10} /> {fmt(vaga.hiring_deadline)}
+          </div>
+        ) : <span />}
+        {resolvedResponsibles.length > 0 && <AvatarStack users={resolvedResponsibles} size={16} max={3} />}
+      </div>
     </div>
   );
 }
@@ -844,7 +850,7 @@ function VagaCard({ vaga, candidatosCount }) {
 function VagaKanbanColumn({
   stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
   onMoveToStage, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
-  getCompleteness, onAddVaga,
+  getCompleteness, onAddVaga, usersById,
 }) {
   return (
     <div
@@ -916,7 +922,7 @@ function VagaKanbanColumn({
               agingDays={daysInStage(v.stage_changed_at)}
               completeness={getCompleteness?.(v)}
             >
-              <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} />
+              <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
             </RHKanbanCard>
           ))
         )}
@@ -929,7 +935,7 @@ function VagaKanbanColumn({
 
 function VagaDrawer({
   vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onCopyLink, onClose, onVerCandidatos, copiedSlug,
-  customFields, onCustomFieldChange, onAddActivity, currentUser, users, moveError, notifyMentions,
+  customFields, onCustomFieldChange, onAddActivity, currentUser, users, moveError, notifyMentions, onUpdateResponsibles,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -945,6 +951,10 @@ function VagaDrawer({
   // keystroke a partir do valor atual de vaga.custom_fields (mesmo objeto
   // que alimenta o `value` do RHStageFieldInput abaixo).
   const visibleCustomFields = resolveVisibleFields(customFields, vaga.custom_fields || {});
+
+  // Responsáveis (FASE 5) — net-new, sem escalar anterior; default vazio.
+  const responsibleIds = vaga.responsible_ids || [];
+  const resolvedResponsibles = responsibleIds.map(id => users.find(u => u.id === id)).filter(Boolean);
 
   return (
     <>
@@ -974,6 +984,22 @@ function VagaDrawer({
         </div>
 
         <div style={{ padding: "20px 24px", flex: 1 }}>
+          <div style={{ marginBottom: 20 }}>
+            <div style={labelSt}>Responsáveis</div>
+            {canWrite ? (
+              <AssigneeMultiSelect
+                value={responsibleIds}
+                onChange={(ids) => onUpdateResponsibles(ids)}
+                options={users}
+                placeholder="Selecionar responsáveis…"
+              />
+            ) : resolvedResponsibles.length > 0 ? (
+              <AvatarStack users={resolvedResponsibles} size={22} max={4} />
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum responsável definido</div>
+            )}
+          </div>
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
             {[
               { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === vaga.contract_type)?.label || "—" },
@@ -2459,6 +2485,9 @@ export function RHRecrutamentoView({ user, canWrite, notifyMentions }) {
     return map;
   }, [candidatos]);
 
+  // Responsáveis por vaga (FASE 5) — resolução de ids pra AvatarStack/AssigneeMultiSelect.
+  const usersById = useMemo(() => new Map((profileUsers || []).map(u => [u.id, u])), [profileUsers]);
+
   const vagasByStage = useMemo(() => {
     const map = {};
     vagaStages.forEach((s) => { map[s.stageKey] = vagasFrenteFiltradas.filter((v) => (v.stage || "rascunho") === s.stageKey); });
@@ -2590,6 +2619,7 @@ export function RHRecrutamentoView({ user, canWrite, notifyMentions }) {
                   onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
                   getCompleteness={getVagaCompleteness}
                   onAddVaga={() => setAddVagaStage(stage.stageKey)}
+                  usersById={usersById}
                 />
               ))}
             </div>
@@ -2613,6 +2643,7 @@ export function RHRecrutamentoView({ user, canWrite, notifyMentions }) {
                   onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
                   getCompleteness={getVagaCompleteness}
                   onAddVaga={() => setAddVagaStage(stage.stageKey)}
+                  usersById={usersById}
                 />
               ))}
             </div>
@@ -2801,6 +2832,7 @@ export function RHRecrutamentoView({ user, canWrite, notifyMentions }) {
           currentUser={user}
           users={profileUsers}
           notifyMentions={notifyMentions}
+          onUpdateResponsibles={(ids) => updateVaga(vagaEmDrawer.id, { responsible_ids: ids })}
         />
       )}
 

@@ -33,6 +33,7 @@ function rowToPurchase(r) {
     requesterPhone:  r.requester_phone,
     requestedBy:     r.requested_by ?? null,
     responsibleId:   r.responsible_id ?? null,
+    responsibleIds:  Array.isArray(r.responsible_ids) ? r.responsible_ids : (r.responsible_id ? [r.responsible_id] : []),
     approvedBy:      r.approved_by ?? null,
     approvedAt:      r.approved_at,
     rejectedReason:  r.rejected_reason,
@@ -65,6 +66,7 @@ function purchaseToRow(p) {
   if (p.requesterPhone !== undefined) row.requester_phone = p.requesterPhone || null;
   if (p.requestedBy !== undefined)    row.requested_by = p.requestedBy || null;
   if (p.responsibleId !== undefined)  row.responsible_id = p.responsibleId || null;
+  if (p.responsibleIds !== undefined) row.responsible_ids = p.responsibleIds || [];
   if (p.dueDate !== undefined)        row.due_date = p.dueDate || null;
   if (p.invoiceDate !== undefined)    row.invoice_date = p.invoiceDate || null;
   if (p.invoiceUrl !== undefined)     row.invoice_url = p.invoiceUrl || null;

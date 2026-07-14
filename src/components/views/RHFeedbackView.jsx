@@ -21,6 +21,16 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
+import { AvatarStack } from "../shared/AvatarStack";
+
+// Avaliadores elegíveis (FASE 5) — mesmo critério admin/RH usado pela ramificação
+// de acesso amplo da RLS rh_avaliacoes_read (admin/gerente_rh/rh enxergam tudo).
+const EVALUATOR_ROLES = ["admin", "gerente_rh", "rh"];
+function isEvaluatorEligible(u) {
+  const roles = u.roles?.length ? u.roles : (u.role ? [u.role] : []);
+  return roles.some(r => EVALUATOR_ROLES.includes(r));
+}
 
 const TIPOS = [
   { id: "30_dias",   label: "30 dias" },
@@ -579,7 +589,7 @@ function FeedbackKanbanColumn({
 
 function FeedbackDrawer({
   feedback, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, moveError, onComplete, onUpdateCustomFields, onAddActivity, onShowHistorico, onClose, notifyMentions,
+  onStageChange, moveError, onComplete, onUpdateCustomFields, onUpdateEvaluators, onAddActivity, onShowHistorico, onClose, notifyMentions,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -617,6 +627,10 @@ function FeedbackDrawer({
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
   const moveTargets = stages.filter((s) => s.stageKey !== feedback.status && !s.terminal);
 
+  const eligibleEvaluators = useMemo(() => (users || []).filter(isEvaluatorEligible), [users]);
+  const evaluatorIds = feedback.evaluator_ids?.length ? feedback.evaluator_ids : (feedback.evaluator_id ? [feedback.evaluator_id] : []);
+  const resolvedEvaluators = evaluatorIds.map(id => users.find(u => u.id === id)).filter(Boolean);
+
   return (
     <>
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
@@ -644,6 +658,23 @@ function FeedbackDrawer({
         </div>
 
         <div style={{ padding: "20px 24px", flex: 1 }}>
+          {/* Avaliadores (FASE 5) — múltiplos responsáveis pela avaliação */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={labelSt}>Avaliadores</div>
+            {canWrite ? (
+              <AssigneeMultiSelect
+                value={evaluatorIds}
+                onChange={(ids) => onUpdateEvaluators(ids)}
+                options={eligibleEvaluators}
+                placeholder="Selecionar avaliadores…"
+              />
+            ) : resolvedEvaluators.length > 0 ? (
+              <AvatarStack users={resolvedEvaluators} size={22} max={4} />
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum avaliador definido</div>
+            )}
+          </div>
+
           {/* Autoavaliação vs. gestor lado a lado */}
           <div style={{ marginBottom: 20 }}>
             <div style={labelSt}>Autoavaliação × Gestor</div>
@@ -766,7 +797,8 @@ function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, on
           {feedbacks.map((f) => {
             const st = findStage(stages, f.status);
             const colaborador = colaboradoresById.get(f.user_id);
-            const evaluator = f.evaluator_id ? usersById.get(f.evaluator_id) : null;
+            const evaluatorIds = f.evaluator_ids?.length ? f.evaluator_ids : (f.evaluator_id ? [f.evaluator_id] : []);
+            const resolvedEvaluators = evaluatorIds.map(id => usersById.get(id)).filter(Boolean);
             return (
               <tr key={f.id} onClick={() => onRowClick(f)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
@@ -784,7 +816,14 @@ function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, on
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(f.period_end)}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{evaluator?.name || "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
+                  {resolvedEvaluators.length > 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <AvatarStack users={resolvedEvaluators} size={18} max={2} />
+                      <span>{resolvedEvaluators[0].name}</span>
+                    </div>
+                  ) : "—"}
+                </td>
               </tr>
             );
           })}
@@ -902,7 +941,7 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
 export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions }) {
   const {
     feedbacks, loading: loadingFeedbacks, createFeedback, createPendingCycle, completeFeedback,
-    submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, addFeedbackActivity,
+    submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, addFeedbackActivity,
   } = useRHFeedback({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { stages, loading: loadingStages } = useRHPipelineStages("feedback");
@@ -1197,6 +1236,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           moveError={moveError}
           onComplete={() => { setCompletandoId(drawerFeedback.id); setDrawerFeedbackId(null); }}
           onUpdateCustomFields={(merged) => updateFeedbackCustomFields(drawerFeedback.id, merged)}
+          onUpdateEvaluators={(ids) => updateFeedbackEvaluators(drawerFeedback.id, ids)}
           onAddActivity={(entry) => addFeedbackActivity(drawerFeedback.id, entry)}
           onShowHistorico={(colaboradorId) => { setHistoricoColaboradorId(colaboradorId); setDrawerFeedbackId(null); }}
           onClose={() => setDrawerFeedbackId(null)}

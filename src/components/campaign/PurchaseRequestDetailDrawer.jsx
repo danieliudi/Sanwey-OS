@@ -11,6 +11,7 @@ import { formatBRL } from "../../utils/currency";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 
 const BUCKET = "marketing-attachments";
 
@@ -110,7 +111,7 @@ export function PurchaseRequestDetailDrawer({
   const [quantity,      setQuantity]      = useState(purchase.quantity ?? "");
   const [unitPrice,     setUnitPrice]     = useState(purchase.unitPrice ?? "");
   const [totalValue,    setTotalValue]    = useState(purchase.totalValue ?? "");
-  const [responsibleId, setResponsibleId] = useState(purchase.responsibleId || "");
+  const [responsibleIds, setResponsibleIds] = useState(purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []));
   const [dueDate,       setDueDate]       = useState(purchase.dueDate ? purchase.dueDate.slice(0, 10) : "");
   const [invoiceDate,   setInvoiceDate]   = useState(purchase.invoiceDate ? purchase.invoiceDate.slice(0, 10) : "");
   const totalOverriddenRef = useRef(false);
@@ -138,7 +139,7 @@ export function PurchaseRequestDetailDrawer({
     setQuantity(purchase.quantity ?? "");
     setUnitPrice(purchase.unitPrice ?? "");
     setTotalValue(purchase.totalValue ?? "");
-    setResponsibleId(purchase.responsibleId || "");
+    setResponsibleIds(purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []));
     setDueDate(purchase.dueDate ? purchase.dueDate.slice(0, 10) : "");
     setInvoiceDate(purchase.invoiceDate ? purchase.invoiceDate.slice(0, 10) : "");
     setInvoiceUrl(purchase.invoiceUrl || null);
@@ -195,7 +196,8 @@ export function PurchaseRequestDetailDrawer({
         quantity:      quantity === "" ? null : Number(quantity),
         unitPrice:     unitPrice === "" ? null : Number(unitPrice),
         totalValue:    totalValue === "" ? null : Number(totalValue),
-        responsibleId: responsibleId || null,
+        responsibleId: responsibleIds[0] || null,
+        responsibleIds,
         dueDate:       dueDate || null,
         invoiceDate:   invoiceDate || null,
       });
@@ -305,7 +307,6 @@ export function PurchaseRequestDetailDrawer({
   };
 
   const supplier = suppliers.find(s => s.id === purchase.supplierId);
-  const responsibleUser = users.find(u => u.id === purchase.responsibleId);
   const stageInfo = PURCHASE_STAGES.find(s => s.id === purchase.stage);
   const stageColor = STAGE_COLORS[purchase.stage] || "var(--text-dim)";
   const movableStages = PURCHASE_STAGES.filter(s => s.id !== "solicitado" && s.id !== purchase.stage);
@@ -512,10 +513,13 @@ export function PurchaseRequestDetailDrawer({
                     </select>
                   </FieldRow>
                   <FieldRow label="Responsável">
-                    <select value={responsibleId} onChange={e => setResponsibleId(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
-                      <option value="">Selecione um responsável</option>
-                      {marketingUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                    </select>
+                    <AssigneeMultiSelect
+                      value={responsibleIds}
+                      onChange={setResponsibleIds}
+                      options={marketingUsers}
+                      placeholder="Selecione responsáveis…"
+                      disabled={!canEditFields}
+                    />
                   </FieldRow>
                   <FieldRow label="Quantidade">
                     <input type="number" min="0" value={quantity} onChange={e => handleQuantityChange(e.target.value)} style={inputBase} />
