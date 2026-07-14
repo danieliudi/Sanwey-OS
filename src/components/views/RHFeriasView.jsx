@@ -95,6 +95,10 @@ async function contarAnexos(recordId) {
 
 // ── Email helper ──────────────────────────────────────────────────────────────
 
+// Devolve true/false (em vez de engolir tudo em console.warn) — a decisão
+// (changeStatus) já está persistida quando isso roda, então uma falha aqui
+// não deve travar o fluxo, só avisar quem aprovou/recusou que o e-mail não
+// saiu.
 async function sendRhEmail(type, req, extraVars = {}) {
   try {
     let toEmail = req.profiles?.email || null;
@@ -102,8 +106,8 @@ async function sendRhEmail(type, req, extraVars = {}) {
       const { data: profile } = await supabase.from("profiles").select("email").eq("id", req.user_id).single();
       toEmail = profile?.email || null;
     }
-    if (!toEmail) return;
-    await supabase.functions.invoke("rh-send-email", {
+    if (!toEmail) return false;
+    const { error } = await supabase.functions.invoke("rh-send-email", {
       body: {
         type,
         to: toEmail,
@@ -118,8 +122,11 @@ async function sendRhEmail(type, req, extraVars = {}) {
         },
       },
     });
+    if (error) throw error;
+    return true;
   } catch (err) {
     console.warn("[RHFeriasView] sendRhEmail error:", err);
+    return false;
   }
 }
 
@@ -503,7 +510,8 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
         }
       }
       await changeStatus(req.id, "aprovado", { approved_by: currentUser?.id, approved_at: new Date().toISOString() });
-      sendRhEmail("ferias_aprovadas", req, { APPROVED_BY: currentUser?.name || currentUser?.email || "" });
+      const sent = await sendRhEmail("ferias_aprovadas", req, { APPROVED_BY: currentUser?.name || currentUser?.email || "" });
+      if (!sent) alert(`Aprovação registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
     } finally {
       setBusyId(null);
     }
@@ -513,7 +521,8 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
     setBusyId(req.id);
     try {
       await changeStatus(req.id, "recusado");
-      sendRhEmail("ferias_rejeitadas", req, { REASON: req.notes || "Não informado", MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
+      const sent = await sendRhEmail("ferias_rejeitadas", req, { REASON: req.notes || "Não informado", MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
+      if (!sent) alert(`Recusa registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
     } finally {
       setBusyId(null);
     }
