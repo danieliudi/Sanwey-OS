@@ -30,7 +30,7 @@ import { getInvalidFields, EMAIL_PATTERN } from "../../utils/field-validation";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines }) {
+export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
   const [mobileTab, setMobileTab] = useState("info");
@@ -44,6 +44,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   const [emailsOpen, setEmailsOpen] = useState(true);
   const [noteText, setNoteText] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
+  const [moveError, setMoveError] = useState(null);
 
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
@@ -59,6 +60,7 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   useEffect(() => {
     setCustomDraft({});
     setMobileTab("info");
+    setMoveError(null);
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     return () => { if (customDebounceRef.current) clearTimeout(customDebounceRef.current); };
   }, [lead?.id]);
@@ -103,17 +105,21 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
     if (!lead || !toStage) return;
     // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
     // (estático ou condicional) vazio — antes disso "required" era só o
-    // asterisco visual, confirmado ao vivo que não travava nada.
+    // asterisco visual, confirmado ao vivo que não travava nada. Antes usava
+    // alert() nativo — bloqueante, e trava sessões automatizadas/headless
+    // que não têm handler de diálogo (achado da auditoria de 14/07). Banner
+    // inline não bloqueia nada.
     const missing = getMissingRequiredFields(customDefs, customValuesByKey);
     if (missing.length > 0) {
-      alert(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      setMoveError(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
     const invalid = getInvalidFields(customDefs, customValuesByKey);
     if (invalid.length > 0) {
-      alert(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      setMoveError(`Não dá pra mover: corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
+    setMoveError(null);
     setStage(toStage);
     const nowISO = new Date().toISOString();
     const patch = { stage: toStage, status: toStage, stageChangedAt: nowISO };
@@ -124,7 +130,13 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
       if (mergedCF) patch.customFields = mergedCF;
     }
     onUpdate(lead.id, patch);
-  }, [lead, onUpdate, customDefs, customValuesByKey]);
+    // Fecha o drawer agora (sinal visual de que moveu) e reabre já na etapa
+    // nova — em vez de só trocar o conteúdo por baixo do drawer aberto.
+    if (onStageMoved) {
+      onClose();
+      onStageMoved(lead.id);
+    }
+  }, [lead, onUpdate, onStageMoved, onClose, customDefs, customValuesByKey]);
 
   useEffect(() => {
     if (!lead) return;
@@ -1128,6 +1140,12 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
             <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
               Mover card para fase
             </div>
+            {moveError && (
+              <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+                <AlertCircle size={12} className="shrink-0 mt-0.5" />
+                {moveError}
+              </div>
+            )}
             <div className="space-y-2">
               {stageNav.next && (() => {
                 const nextColor = stageNav.next.color || company.primary;

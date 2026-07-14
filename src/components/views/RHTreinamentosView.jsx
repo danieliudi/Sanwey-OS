@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
+import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
@@ -557,6 +558,13 @@ function TreinamentoBoardModal({
       return;
     }
     onChangeStage(id, stage);
+    // Se veio do drawer aberto dessa atribuição: fecha agora (sinal visual
+    // de que moveu) e reabre já na etapa nova, em vez de só trocar o
+    // conteúdo por baixo do drawer aberto.
+    if (drawerId === id) {
+      setDrawerId(null);
+      reopenAfterMove(setDrawerId, id);
+    }
   };
 
   const handleDrop = (stageKey) => {

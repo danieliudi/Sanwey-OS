@@ -28,10 +28,20 @@ export function useNotifications({ currentUser, leads = [] } = {}) {
 
   const seenLeadIds = useRef(new Set());
 
+  // Retorna o resultado pro componente poder dar feedback visível — antes o
+  // clique em "Ativar" não mostrava nada quando a API não existe (Notification
+  // undefined, ex: navegador sem suporte, contexto não-seguro) ou quando o
+  // navegador já tinha negado antes (requestPermission() resolve "denied"
+  // silenciosamente, sem reabrir o prompt nativo).
   const requestDesktopPermission = useCallback(async () => {
-    if (typeof Notification === "undefined") return;
-    const perm = await Notification.requestPermission();
-    setDesktopPermission(perm);
+    if (typeof Notification === "undefined") return "unsupported";
+    try {
+      const perm = await Notification.requestPermission();
+      setDesktopPermission(perm);
+      return perm;
+    } catch {
+      return "error";
+    }
   }, []);
 
   function sendDesktopNotification(title, body, { leadId } = {}) {

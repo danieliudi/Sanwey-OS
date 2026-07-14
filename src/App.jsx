@@ -38,6 +38,7 @@ import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScr
 import { Sidebar } from "./components/shell/Sidebar";
 import { TopBar } from "./components/shell/TopBar";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
+import { reopenAfterMove } from "./utils/reopen-after-move";
 import { SignalDetailDrawer } from "./components/lead/SignalDetailDrawer";
 import { ImportModal } from "./components/lead/ImportModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
@@ -643,6 +644,14 @@ export default function App() {
   }, [setNotifiedNudges]);
 
   const closeDrawer = useCallback(() => setSelectedLead(null), []);
+
+  // Ver src/utils/reopen-after-move.js — fecha o drawer e reabre já na
+  // etapa nova, em vez de só trocar o conteúdo por baixo do drawer aberto.
+  const leadsRef = useRef(leads);
+  useEffect(() => { leadsRef.current = leads; }, [leads]);
+  const reopenLeadAfterMove = useCallback((leadId) => {
+    reopenAfterMove(setSelectedLead, () => leadsRef.current.find(l => l.id === leadId) || null);
+  }, []);
 
   const isManager      = isManagerRole;
 
@@ -1262,6 +1271,7 @@ export default function App() {
         <LeadDetailDrawer
           lead={selectedLead}
           onClose={closeDrawer}
+          onStageMoved={reopenLeadAfterMove}
           onUpdate={updateLead}
           onDelete={deleteLead}
           onAddActivity={addLeadActivity}

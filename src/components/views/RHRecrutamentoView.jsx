@@ -28,6 +28,7 @@ import {
   RH_CONTRACT_TYPES,
 } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
+import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
@@ -1209,7 +1210,7 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose, user
 // ── Candidato Drawer ──────────────────────────────────────────────────────────
 
 function CandidatoDrawer({
-  candidato, vagas, stages, canWrite, onStageChange, onAddNote, onRatingChange, onClose, onHire,
+  candidato, vagas, stages, canWrite, onStageChange, onStageMoved, onAddNote, onRatingChange, onClose, onHire,
   customFields, onCustomFieldChange, onAddActivity, currentUser, users,
 }) {
   const [noteText, setNoteText] = useState("");
@@ -1240,6 +1241,9 @@ function CandidatoDrawer({
     const target = stages.find((s) => s.stageKey === stageKey);
     if (target?.lost) { setPendingLostStage(stageKey); setReprovando(true); return; }
     onStageChange(candidato.id, stageKey);
+    // Fecha o drawer agora (sinal visual de que moveu) e reabre já na etapa
+    // nova — em vez de só trocar o conteúdo por baixo do drawer aberto.
+    if (onStageMoved) { onClose(); onStageMoved(candidato.id); }
   };
 
   const confirmReprovacao = async () => {
@@ -1250,6 +1254,7 @@ function CandidatoDrawer({
       setReprovando(false);
       setMotivoReprovacao("");
       setPendingLostStage(null);
+      if (onStageMoved) { onClose(); onStageMoved(candidato.id); }
     } finally {
       setSavingStage(false);
     }
@@ -1925,7 +1930,12 @@ export function RHRecrutamentoView({ user, canWrite }) {
     return true;
   };
   const handleVagaStageChange = (id, newStage) => {
-    if (attemptVagaStageChange(id, newStage)) setVagaDrawerId(null);
+    // Fecha o drawer agora (sinal visual de que moveu) e reabre já na etapa
+    // nova — em vez de só trocar o conteúdo por baixo do drawer aberto.
+    if (attemptVagaStageChange(id, newStage)) {
+      setVagaDrawerId(null);
+      reopenAfterMove(setVagaDrawerId, id);
+    }
   };
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
   const getVagaCompleteness = (vaga) =>
@@ -2394,6 +2404,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           stages={candStages}
           canWrite={canWrite}
           onStageChange={handleStageChange}
+          onStageMoved={(id) => reopenAfterMove(setSelectedCandidatoId, id)}
           onAddNote={handleAddNote}
           onRatingChange={handleRatingChange}
           onClose={() => setSelectedCandidatoId(null)}

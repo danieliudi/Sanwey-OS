@@ -38,7 +38,18 @@ export function NotificationCenter({
   onSelectLead,
 }) {
   const [open, setOpen] = useState(false);
+  const [permissionFeedback, setPermissionFeedback] = useState(null);
   const panelRef = useRef(null);
+
+  const handleRequestPermission = async () => {
+    setPermissionFeedback(null);
+    const result = await onRequestDesktopPermission?.();
+    if (result === "granted") setPermissionFeedback(null); // banner some sozinho (desktopPermission muda)
+    else if (result === "denied") setPermissionFeedback("Permissão negada. Habilite manualmente nas configurações do navegador (ícone de cadeado/sino na barra de endereço).");
+    else if (result === "unsupported") setPermissionFeedback("Seu navegador não suporta notificações de desktop.");
+    else if (result === "error") setPermissionFeedback("Não foi possível pedir permissão agora. Tente de novo.");
+    else if (result === "default") setPermissionFeedback("Nenhuma resposta do navegador — verifique se um pedido de permissão apareceu na barra de endereço.");
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -154,18 +165,22 @@ export function NotificationCenter({
 
           {/* Desktop permission banner */}
           {desktopPermission === "default" && (
-            <div
-              className="flex items-center justify-between px-4 py-2.5 border-b text-xs"
-              style={{ borderColor: "var(--border)", background: "var(--amber-bg)" }}
-            >
-              <span style={{ color: "var(--warning)" }}>Ativar notificações do navegador?</span>
-              <button
-                onClick={onRequestDesktopPermission}
-                className="font-semibold px-2.5 py-1 rounded-lg"
-                style={{ background: "var(--amber)", color: "#FFFFFF", border: "none", cursor: "pointer", fontSize: 11 }}
-              >
-                Ativar
-              </button>
+            <div className="border-b" style={{ borderColor: "var(--border)", background: "var(--amber-bg)" }}>
+              <div className="flex items-center justify-between px-4 py-2.5 text-xs">
+                <span style={{ color: "var(--warning)" }}>Ativar notificações do navegador?</span>
+                <button
+                  onClick={handleRequestPermission}
+                  className="font-semibold px-2.5 py-1 rounded-lg"
+                  style={{ background: "var(--amber)", color: "#FFFFFF", border: "none", cursor: "pointer", fontSize: 11 }}
+                >
+                  Ativar
+                </button>
+              </div>
+              {permissionFeedback && (
+                <div className="px-4 pb-2.5 text-xs" style={{ color: "var(--warning)" }}>
+                  {permissionFeedback}
+                </div>
+              )}
             </div>
           )}
 

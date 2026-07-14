@@ -15,6 +15,7 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
+import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 
@@ -763,7 +764,14 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
       return;
     }
     changeFeedbackStage(id, stage);
-  }, [feedbacks, stages, feedbackStageFields, changeFeedbackStage]);
+    // Se veio do drawer aberto desse feedback: fecha agora (sinal visual de
+    // que moveu) e reabre já na etapa nova, em vez de só trocar o conteúdo
+    // por baixo do drawer aberto.
+    if (drawerFeedbackId === id) {
+      setDrawerFeedbackId(null);
+      reopenAfterMove(setDrawerFeedbackId, id);
+    }
+  }, [feedbacks, stages, feedbackStageFields, changeFeedbackStage, drawerFeedbackId]);
 
   const getFeedbackCompleteness = (feedback) =>
     getFieldCompleteness(feedbackStageFields.getFields(feedback.status), feedback.custom_fields || {});

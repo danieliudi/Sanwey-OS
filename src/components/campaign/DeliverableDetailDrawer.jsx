@@ -659,7 +659,7 @@ function ComentariosTab({ item, onUpdate, canWrite }) {
 }
 
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onUpdate, onMoveToStage, onDelete, users = [], canWrite, userId, currentUser }) {
+export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, users = [], canWrite, userId, currentUser }) {
   const [sideTab,      setSideTab]     = useState("form");
   const [mobileTab,    setMobileTab]   = useState("info");
   const [fieldValues,  setFieldValues] = useState(() => item.stageData?.[item.stage] ?? {});
@@ -768,6 +768,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onMoveToStage
       const ok = await onMoveToStage(item.id, stageId);
       if (ok === false) return;
       onClose();
+      onStageMoved?.(item.id);
       return;
     }
     const stageName = DELIVERABLE_STAGES.find(s => s.id === stageId)?.name || stageId;
@@ -781,6 +782,7 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onMoveToStage
         ],
       });
       onClose();
+      onStageMoved?.(item.id);
     } catch (err) {
       alert(`Não foi possível mover "${item.title}": ${err?.message || "erro desconhecido"}.`);
     }

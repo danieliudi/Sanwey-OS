@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { RH_CONTRACT_TYPES, RH_DEPARTMENTS } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
+import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
@@ -793,6 +794,13 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
       const feedbacksDoColaborador = feedbacks.filter((f) => f.user_id === id);
       const proximo = nextPendingCycle({ ...colaborador, onboardingStage: stage }, feedbacksDoColaborador);
       if (proximo) await createPendingCycle(id, proximo.tipo, proximo.periodStart, proximo.periodEnd);
+    }
+    // Se veio do drawer aberto desse colaborador: fecha agora (sinal visual
+    // de que moveu) e reabre já na etapa nova, em vez de só trocar o
+    // conteúdo por baixo do drawer aberto.
+    if (drawerColaboradorId === id) {
+      setDrawerColaboradorId(null);
+      reopenAfterMove(setDrawerColaboradorId, id);
     }
   };
 

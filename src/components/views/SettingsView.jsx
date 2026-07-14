@@ -627,6 +627,7 @@ export function SettingsView({
                       </label>
                       <input
                         type="password"
+                        autoComplete="new-password"
                         value={passwordForm.newPassword}
                         onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
                         placeholder="Mínimo 6 caracteres"
@@ -642,6 +643,7 @@ export function SettingsView({
                       </label>
                       <input
                         type="password"
+                        autoComplete="new-password"
                         value={passwordForm.confirmPassword}
                         onChange={e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value }))}
                         placeholder="Repita a nova senha"

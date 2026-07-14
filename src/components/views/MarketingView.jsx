@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, Calendar as CalendarIcon, Pencil, Settings2 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
 } from "../../constants/marketing-pipelines";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
+import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { usePersonalEvents } from "../../hooks/use-personal-events";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
@@ -735,6 +736,14 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     return campaigns.find(c => c.id === selected.id) || selected;
   }, [campaigns, selected]);
 
+  // Ver src/utils/reopen-after-move.js — fecha o drawer e reabre já na
+  // etapa nova, em vez de só trocar o conteúdo por baixo do drawer aberto.
+  const campaignsRef = useRef(campaigns);
+  useEffect(() => { campaignsRef.current = campaigns; }, [campaigns]);
+  const reopenCampaignAfterMove = useCallback((campaignId) => {
+    reopenAfterMove(setSelected, () => campaignsRef.current.find(c => c.id === campaignId) || null);
+  }, []);
+
   return (
     <>
     <div>
@@ -1091,6 +1100,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         <CampaignDetailDrawer
           campaign={syncSelected}
           onClose={() => setSelected(null)}
+          onStageMoved={reopenCampaignAfterMove}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
           users={Array.from(usersById.values())}

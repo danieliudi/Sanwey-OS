@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
   Filter, CalendarDays, LayoutGrid, Pencil, Settings2,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
+import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { useMarketingCampaigns }    from "../../hooks/use-marketing-campaigns";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
@@ -485,6 +486,15 @@ export function EntregasView({ user, users = [] }) {
     return deliverables.find(d => d.id === selected.id) || selected;
   }, [deliverables, selected]);
 
+  // Ver src/utils/reopen-after-move.js — o drawer já se fecha sozinho ao
+  // mover de etapa (handleMoveStage); isso só agenda a reabertura já na
+  // etapa nova, em vez de deixar fechado.
+  const deliverablesRef = useRef(deliverables);
+  useEffect(() => { deliverablesRef.current = deliverables; }, [deliverables]);
+  const reopenDeliverableAfterMove = useCallback((id) => {
+    reopenAfterMove(setSelected, () => deliverablesRef.current.find(d => d.id === id) || null);
+  }, []);
+
   const kpis = useMemo(() => ({
     total:       deliverables.length,
     solicitacao: deliverables.filter(d => d.stage === "solicitacao").length,
@@ -792,6 +802,7 @@ export function EntregasView({ user, users = [] }) {
       <DeliverableDetailDrawer
         item={syncSelected}
         onClose={() => setSelected(null)}
+        onStageMoved={reopenDeliverableAfterMove}
         onUpdate={handleUpdate}
         onMoveToStage={attemptStageChange}
         onDelete={handleDelete}

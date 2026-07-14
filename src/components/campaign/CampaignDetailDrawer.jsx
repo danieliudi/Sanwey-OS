@@ -1174,6 +1174,7 @@ function RevisaoFields({ getCf, setCf, users, disabled }) {
 export function CampaignDetailDrawer({
   campaign,
   onClose,
+  onStageMoved,
   onUpdate,
   onDelete,
   users = [],
@@ -1248,7 +1249,10 @@ export function CampaignDetailDrawer({
   const moveToStage = useCallback((toStageId) => {
     if (!campaign || !toStageId) return;
     onUpdate?.(campaign.id, { stage: toStageId, stageChangedAt: new Date().toISOString() });
-  }, [campaign, onUpdate]);
+    // Fecha o drawer agora (sinal visual de que moveu) e reabre já na etapa
+    // nova — em vez de só trocar o conteúdo por baixo do drawer aberto.
+    if (onStageMoved) { onClose?.(); onStageMoved(campaign.id); }
+  }, [campaign, onUpdate, onStageMoved, onClose]);
 
   const ownerUser = users.find(u => u.id === get("owner"));
 
