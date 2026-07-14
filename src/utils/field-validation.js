@@ -13,7 +13,7 @@
 // complexidade desproporcional a essa camada "nice to have" de qualidade de
 // dado, e inconsistente com o padrão já estabelecido).
 
-const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
+export const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
 const PHONE_PATTERN = "^\\+?[0-9]{10,13}$";
 
 // Presets sugeridos por field_type, usados pelo editor de campo pra pré-

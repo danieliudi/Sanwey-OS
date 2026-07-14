@@ -26,7 +26,7 @@ import { ProposalPanel } from "./ProposalPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
-import { getInvalidFields } from "../../utils/field-validation";
+import { getInvalidFields, EMAIL_PATTERN } from "../../utils/field-validation";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
@@ -322,7 +322,12 @@ export function LeadDetailDrawer({ lead, onClose, onUpdate, onDelete, onAddActiv
   };
 
   const handleSaveContactEmail = () => {
-    onUpdate(lead.id, { contactEmail: contactEmailDraft.trim() || null });
+    const trimmed = contactEmailDraft.trim();
+    if (trimmed && !new RegExp(EMAIL_PATTERN).test(trimmed)) {
+      alert("E-mail inválido.");
+      return;
+    }
+    onUpdate(lead.id, { contactEmail: trimmed || null });
     setEditingContactEmail(false);
   };
 

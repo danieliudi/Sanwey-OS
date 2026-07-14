@@ -7,6 +7,7 @@ import { FIELD_DEFS } from "../../constants/lead-form-fields";
 import { LeadFormBuilder } from "./LeadFormBuilder";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { isValidCnpj, EMAIL_PATTERN } from "../../utils/field-validation";
 import { StageFieldInput } from "./StageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -315,6 +316,14 @@ export function LeadCreateModal({
     }
     if (values.value && parseFloat(values.value) < 0) {
       setError("O valor não pode ser negativo.");
+      return;
+    }
+    if (values.cnpj && !isValidCnpj(values.cnpj)) {
+      setError("CNPJ inválido.");
+      return;
+    }
+    if (values.contactEmail && !new RegExp(EMAIL_PATTERN).test(values.contactEmail.trim())) {
+      setError("E-mail inválido.");
       return;
     }
     setSaving(true);
