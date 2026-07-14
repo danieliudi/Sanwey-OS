@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, Calendar as CalendarIcon, Pencil, Settings2 } from "lucide-react";
+import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, List, Calendar as CalendarIcon, Pencil, Settings2 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
@@ -16,7 +16,7 @@ import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
-import { localDateInputToISOString } from "../../utils/date";
+import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -552,6 +552,79 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
   );
 }
 
+// ── Table view ────────────────────────────────────────────────────────────────
+
+function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Campanha", "Empresa(s)", "Canal", "Etapa", "Responsável", "Budget", "Lançamento"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {campaigns.length === 0 && (
+            <tr><td colSpan={7} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma campanha encontrada.</td></tr>
+          )}
+          {campaigns.map(c => {
+            const stage = (stages || MARKETING_STAGES).find(s => s.id === c.stage);
+            const color = stage?.color || "var(--text-dim)";
+            const owner = usersById.get(c.owner);
+            return (
+              <tr key={c.id} onClick={() => onRowClick(c)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)", maxWidth: 220 }}>
+                  <div className="flex items-center gap-1.5">
+                    <div className="truncate">{c.name}</div>
+                    {c.starred && <Star size={12} style={{ color: "#F59E0B", fill: "#F59E0B", flexShrink: 0 }} />}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {(c.companyIds || []).map(id => {
+                      const co = COMPANIES[id];
+                      if (!co) return null;
+                      return (
+                        <span key={id} className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: co.primary + "22", color: co.primary }}>
+                          {co.short}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.channel || "—"}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                    {stage?.name || c.stage}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  {owner ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center justify-center rounded-full font-bold shrink-0" style={{ width: 20, height: 20, fontSize: 9, background: owner.avatarBg || "#1D4ED8", color: "#FFF" }}>
+                        {owner.initials || owner.name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                      <span className="text-xs truncate" style={{ color: "var(--text-dim)", maxWidth: 100 }}>{owner.name}</span>
+                    </div>
+                  ) : <span className="text-xs" style={{ color: "var(--text-dim)" }}>—</span>}
+                </td>
+                <td className="px-4 py-3 text-sm font-semibold" style={{ color: "var(--text)" }}>{c.budget > 0 ? formatK(c.budget) : "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.launchDate ? formatDateBR(c.launchDate) : "—"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function MarketingView({ user, users = [], evaluateAutomations, pushNotification }) {
@@ -616,7 +689,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const [filterChannel, setFilterChannel]     = useState("all");
   const [filterStarred, setFilterStarred]     = useState(false);
   const [ownerFilter, setOwnerFilter]         = useState("all");
-  const [viewMode, setViewMode]               = useState("kanban");
+  const [viewMode, setViewMode]               = useState("kanban"); // "kanban" | "table" | "calendar"
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["briefing"]));
   const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -797,6 +870,12 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               label="Kanban"
             />
             <ViewToggleButton
+              active={viewMode === "table"}
+              onClick={() => setViewMode("table")}
+              icon={List}
+              label="Tabela"
+            />
+            <ViewToggleButton
               active={viewMode === "calendar"}
               onClick={() => setViewMode("calendar")}
               icon={CalendarIcon}
@@ -874,6 +953,16 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           canWrite={canWrite || user?.role !== "agencia"}
           calendarToken={user?.calendarToken ?? null}
           supabaseUrl={import.meta.env.VITE_SUPABASE_URL ?? null}
+        />
+      )}
+
+      {/* Table view */}
+      {!loading && !loadingStages && viewMode === "table" && (
+        <CampaignTableView
+          campaigns={filteredCampaigns}
+          stages={kanbanStages}
+          usersById={usersById}
+          onRowClick={setSelected}
         />
       )}
 

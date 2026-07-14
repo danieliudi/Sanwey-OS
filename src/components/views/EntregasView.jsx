@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
-  Filter, CalendarDays, LayoutGrid, Pencil, Settings2,
+  Filter, CalendarDays, LayoutGrid, List, Pencil, Settings2,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
@@ -24,6 +24,7 @@ import { DeliverableDetailDrawer, STAGE_FIELDS } from "../campaign/DeliverableDe
 import { EmptyState } from "../ui/EmptyState";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
+const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
 
 function isStaticValueEmpty(v) {
   if (v === null || v === undefined) return true;
@@ -378,6 +379,79 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
   );
 }
 
+/* ── Tabela ───────────────────────────────────────────────────── */
+function DeliverableTableView({ deliverables, stages, usersById, campaignsById, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Protocolo", "Título", "Campanha", "Prioridade", "Etapa", "Responsável", "Prazo"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {deliverables.length === 0 && (
+            <tr><td colSpan={7} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma entrega encontrada.</td></tr>
+          )}
+          {deliverables.map(item => {
+            const stage    = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
+            const color    = stage?.color || "var(--text-dim)";
+            const priColor = PRIORITY_COLORS[item.priority] || null;
+            const owner    = usersById.get(item.assignee);
+            const campaign = item.campaignId ? campaignsById.get(item.campaignId) : null;
+            const isOverdue = item.deadline && new Date(item.deadline) < new Date();
+            return (
+              <tr key={item.id} onClick={() => onRowClick(item)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3 text-xs font-mono font-bold" style={{ color: "var(--accent)" }}>{item.requestNumber || "—"}</td>
+                <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)", maxWidth: 220 }}>
+                  <div className="flex items-center gap-1.5">
+                    <div className="truncate">{item.title}</div>
+                    {item.starred && <Star size={12} style={{ color: "#F59E0B", fill: "#F59E0B", flexShrink: 0 }} />}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)", maxWidth: 140 }}>
+                  {campaign ? <span className="truncate block" title={campaign.name}>{campaign.name}</span> : "—"}
+                </td>
+                <td className="px-4 py-3">
+                  {priColor ? (
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: priColor + "18", color: priColor, border: `1px solid ${priColor}40` }}>
+                      {PRIORITY_LABELS[item.priority] || item.priority}
+                    </span>
+                  ) : "—"}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                    {stage?.name || item.stage}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  {owner ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center justify-center rounded-full font-bold shrink-0" style={{ width: 20, height: 20, fontSize: 9, background: owner.avatarBg || "#1D4ED8", color: "#FFF" }}>
+                        {owner.initials || owner.name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                      <span className="text-xs truncate" style={{ color: "var(--text-dim)", maxWidth: 100 }}>{owner.name}</span>
+                    </div>
+                  ) : <span className="text-xs" style={{ color: "var(--text-dim)" }}>—</span>}
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: isOverdue ? "var(--danger)" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
+                  {item.deadline ? formatDateBR(item.deadline) : "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /* ── Main view ───────────────────────────────────────────────── */
 export function EntregasView({ user, users = [] }) {
   const {
@@ -387,6 +461,7 @@ export function EntregasView({ user, users = [] }) {
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
 
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
+  const campaignsById = useMemo(() => new Map(campaigns.map(c => [c.id, c])), [campaigns]);
   const stageFields = useRHStageFields("marketing_deliverables");
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables"),
@@ -407,7 +482,7 @@ export function EntregasView({ user, users = [] }) {
   const [dragOverStage,  setDragOverStage]  = useState(null);
   const [quickAddStage,  setQuickAddStage]  = useState(null);
   const [selected,       setSelected]       = useState(null);
-  const [viewMode,       setViewMode]       = useState("kanban");
+  const [viewMode,       setViewMode]       = useState("kanban"); // "kanban" | "table" | "calendar"
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["solicitacao"]));
   const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -520,6 +595,7 @@ export function EntregasView({ user, users = [] }) {
           {/* View toggle */}
           <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     />
+            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela"     />
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
           </div>
           {/* Editar etapas */}
@@ -769,6 +845,16 @@ export function EntregasView({ user, users = [] }) {
           </div>
         </div>
       </>)}
+
+      {!loading && !loadingStages && viewMode === "table" && (
+        <DeliverableTableView
+          deliverables={filtered}
+          stages={kanbanStages}
+          usersById={usersById}
+          campaignsById={campaignsById}
+          onRowClick={setSelected}
+        />
+      )}
 
       {!loading && !loadingStages && viewMode === "calendar" && (
         <EmptyState
