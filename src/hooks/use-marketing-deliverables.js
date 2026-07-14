@@ -11,6 +11,7 @@ function rowToDeliverable(r) {
 
     // Formulário Inicial
     title:          r.title,
+    requestNumber:  r.request_number ?? null,
     requesterName:  r.requester_name ?? null,
     department:     r.department ?? null,
     description:    r.description ?? null,

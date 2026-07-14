@@ -6,6 +6,7 @@ const TABLE = "marketing_requests";
 function rowToRequest(r) {
   return {
     id:              r.id,
+    requestNumber:   r.request_number ?? null,
     title:           r.title,
     description:     r.description ?? null,
     department:      r.department ?? null,

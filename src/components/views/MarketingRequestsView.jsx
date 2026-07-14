@@ -175,6 +175,11 @@ function RequestCard({ request, onApprove, onReject, canWrite }) {
             )}
           </div>
           <h3 className="font-semibold text-sm leading-snug mb-1" style={{ color: "var(--text)" }}>
+            {request.requestNumber && (
+              <span className="font-mono font-bold mr-1.5" style={{ color: "var(--accent)" }}>
+                {request.requestNumber}
+              </span>
+            )}
             {request.title}
           </h3>
           <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: "var(--text-dim)" }}>

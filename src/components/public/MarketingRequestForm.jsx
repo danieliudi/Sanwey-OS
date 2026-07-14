@@ -88,6 +88,7 @@ export default function MarketingRequestForm() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [done,       setDone]       = useState(false);
+  const [requestNumber, setRequestNumber] = useState(null);
   const [error,      setError]      = useState(null);
 
   useEffect(() => {
@@ -131,7 +132,12 @@ export default function MarketingRequestForm() {
     setSubmitting(true);
     setError(null);
     try {
+      // Gera o id no cliente pra poder buscar o número do protocolo depois —
+      // um .select() após o insert falharia (RLS de leitura exige papel de
+      // marketing, o formulário aqui é anônimo); ver get_marketing_request_number.
+      const id = crypto.randomUUID();
       const { error: err } = await supabase.from("marketing_requests").insert({
+        id,
         title:           form.title.trim(),
         requester_name:  form.requesterName.trim(),
         requester_email: form.requesterEmail.trim() || null,
@@ -144,6 +150,8 @@ export default function MarketingRequestForm() {
         status:          "pendente",
       });
       if (err) throw err;
+      const { data: numberData } = await supabase.rpc("get_marketing_request_number", { p_id: id });
+      setRequestNumber(numberData || null);
       setDone(true);
     } catch (err) {
       setError(err.message || "Não foi possível enviar. Tente novamente.");
@@ -169,8 +177,18 @@ export default function MarketingRequestForm() {
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#201a1a", margin: 0 }}>
               Solicitação enviada!
             </h1>
+            {requestNumber && (
+              <div
+                style={{
+                  fontFamily: "monospace", fontSize: 18, fontWeight: 800, color: ACCENT,
+                  background: ACCENT + "14", borderRadius: 10, padding: "8px 18px", letterSpacing: "0.02em",
+                }}
+              >
+                {requestNumber}
+              </div>
+            )}
             <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 360, margin: 0, lineHeight: 1.6 }}>
-              Recebemos seu pedido. A equipe de Marketing irá analisá-lo e você receberá um retorno em breve.
+              Recebemos seu pedido{requestNumber ? ` (protocolo ${requestNumber})` : ""}. A equipe de Marketing irá analisá-lo e você receberá um retorno em breve.
             </p>
           </div>
         </div>

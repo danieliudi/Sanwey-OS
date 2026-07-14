@@ -836,6 +836,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <SectionLabel>Formulário Inicial</SectionLabel>
           {[
+            { label: "Nº da Solicitação", val: item.requestNumber },
             { label: "Título",       val: item.title },
             { label: "Solicitante",  val: item.requesterName },
             { label: "Departamento", val: item.department },
