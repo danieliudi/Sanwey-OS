@@ -138,7 +138,7 @@ export function useProfiles({ enabled = true } = {}) {
       return;
     }
     setUsers(prev => prev.filter(u => u.id !== id));
-    const { error: err } = await supabase.from("profiles").delete().eq("id", id);
+    const { error: err } = await supabase.functions.invoke("delete-user", { body: { user_id: id } });
     if (err) {
       setError(err);
       fetchAll();

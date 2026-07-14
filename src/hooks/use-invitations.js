@@ -98,9 +98,9 @@ export function useInvitations({ enabled = true } = {}) {
     if (err) throw err;
     setInvitations(prev => prev.some(i => i.id === data.id) ? prev : [rowToInvitation(data), ...prev]);
     // Envia e-mail de convite via Edge Function
-    const { error: emailErr } = await supabase.functions.invoke("resend-invite", { body: { invitation_id: data.id } });
+    const { data: emailData, error: emailErr } = await supabase.functions.invoke("resend-invite", { body: { invitation_id: data.id } });
     if (emailErr) console.warn("Falha ao enviar e-mail de convite:", emailErr);
-    return rowToInvitation(data);
+    return { ...rowToInvitation(data), alreadyRegistered: Boolean(emailData?.already_registered) };
   }, []);
 
   const revokeInvitation = useCallback(async (id) => {
@@ -116,12 +116,14 @@ export function useInvitations({ enabled = true } = {}) {
 
   const resendInvitation = useCallback(async (id) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado.");
-    const { error: err } = await supabase.functions.invoke("resend-invite", {
+    const { data, error: err } = await supabase.functions.invoke("resend-invite", {
       body: { invitation_id: id },
     });
     if (err) throw err;
+    if (data?.already_registered) return { alreadyRegistered: true };
     const now = new Date().toISOString();
     setInvitations(prev => prev.map(i => i.id === id ? { ...i, lastSentAt: now } : i));
+    return { alreadyRegistered: false };
   }, []);
 
   return useMemo(() => ({

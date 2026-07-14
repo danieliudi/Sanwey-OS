@@ -182,9 +182,13 @@ export function UserManagementView({
     setInviting(true);
     setInviteError(null);
     try {
-      await onCreateInvitation({ email, role: inviteForm.role, companies: inviteForm.companies, sectors: inviteForm.sectors || [], supervisorId: inviteForm.supervisorId || null, invitedBy: currentUser?.id });
-      setInviteJustSent(email);
-      setInviteForm(EMPTY_INVITE);
+      const result = await onCreateInvitation({ email, role: inviteForm.role, companies: inviteForm.companies, sectors: inviteForm.sectors || [], supervisorId: inviteForm.supervisorId || null, invitedBy: currentUser?.id });
+      if (result?.alreadyRegistered) {
+        setInviteError(`${email} já possui uma conta ativa no Supabase Auth. Peça para a pessoa entrar normalmente ou usar "Esqueci minha senha" — nenhum e-mail de convite é enviado nesse caso.`);
+      } else {
+        setInviteJustSent(email);
+        setInviteForm(EMPTY_INVITE);
+      }
     } catch (e) {
       setInviteError(e?.message || String(e));
     } finally {
@@ -226,7 +230,12 @@ export function UserManagementView({
   const resend = useCallback(async (inv) => {
     if (!onResendInvitation) return;
     setResendingId(inv.id);
-    try { await onResendInvitation(inv.id); } catch (e) { window.alert(`Erro: ${e?.message || e}`); } finally { setResendingId(null); }
+    try {
+      const result = await onResendInvitation(inv.id);
+      if (result?.alreadyRegistered) {
+        window.alert(`${inv.email} já possui uma conta ativa no Supabase Auth. Peça para a pessoa entrar normalmente ou usar "Esqueci minha senha" — nenhum e-mail de convite é enviado nesse caso.`);
+      }
+    } catch (e) { window.alert(`Erro: ${e?.message || e}`); } finally { setResendingId(null); }
   }, [onResendInvitation]);
 
   const toggleCompany = useCallback((id) => {
