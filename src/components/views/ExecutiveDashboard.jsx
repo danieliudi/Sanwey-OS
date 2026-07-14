@@ -137,7 +137,7 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
     const sourceCompanies = companyIds.length > 0 ? companyIds : COMPANY_IDS;
     const stageMap = new Map();
     for (const cid of sourceCompanies) {
-      const stages = pipelines?.[cid] || DEFAULT_PIPELINE_STAGES;
+      const stages = (pipelines?.[cid] || DEFAULT_PIPELINE_STAGES).filter(s => !s.lost);
       for (const s of stages) {
         if (!stageMap.has(s.id)) stageMap.set(s.id, s);
       }
