@@ -92,8 +92,9 @@ export function usePipelines() {
     if (!current?.dbId) return;
     const row = stageToRow(companyId, { ...current, ...patch }, undefined);
     delete row.order_idx; // não mexe em ordem aqui
-    await supabase.from("rh_pipeline_stages").update(row).eq("id", current.dbId);
-  }, [pipelines]);
+    const { error } = await supabase.from("rh_pipeline_stages").update(row).eq("id", current.dbId);
+    if (error) await fetchAll(); // reverte o otimista pro estado real do banco
+  }, [pipelines, fetchAll]);
 
   // Reordena. orderedIds deve conter todos os IDs da empresa (não remove,
   // só rearranja). Terminais permanecem no fim por convenção da UI.
@@ -107,12 +108,13 @@ export function usePipelines() {
     });
     if (!isSupabaseConfigured) return;
     const list = pipelines[companyId] || [];
-    await Promise.all(orderedIds.map((stageId, idx) => {
+    const results = await Promise.all(orderedIds.map((stageId, idx) => {
       const s = list.find(x => x.id === stageId);
       if (!s?.dbId) return null;
       return supabase.from("rh_pipeline_stages").update({ order_idx: idx }).eq("id", s.dbId);
     }));
-  }, [pipelines]);
+    if (results.some(r => r?.error)) await fetchAll(); // reverte o otimista pro estado real do banco
+  }, [pipelines, fetchAll]);
 
   const resetCompanyPipeline = useCallback(async (companyId) => {
     const fresh = DEFAULT_PIPELINE_STAGES.map(s => ({ ...s }));
@@ -133,10 +135,12 @@ export function usePipelines() {
       .from("rh_pipeline_stages").select("*").eq("domain", DOMAIN).eq("company_id", companyId);
     const existingByKey = new Map((existingRows || []).map(r => [r.stage_key, r]));
     const keepKeys = new Set(stages.map(s => s.id));
+    let hadError = false;
 
     for (const row of existingRows || []) {
       if (!keepKeys.has(row.stage_key)) {
-        await supabase.from("rh_pipeline_stages").delete().eq("id", row.id);
+        const { error } = await supabase.from("rh_pipeline_stages").delete().eq("id", row.id);
+        if (error) hadError = true;
       }
     }
 
@@ -144,13 +148,17 @@ export function usePipelines() {
       const s = stages[i];
       const row = stageToRow(companyId, s, i);
       const existing = existingByKey.get(s.id);
-      if (existing) {
-        await supabase.from("rh_pipeline_stages").update(row).eq("id", existing.id);
-      } else {
-        await supabase.from("rh_pipeline_stages").insert(row);
-      }
+      const { error } = existing
+        ? await supabase.from("rh_pipeline_stages").update(row).eq("id", existing.id)
+        : await supabase.from("rh_pipeline_stages").insert(row);
+      if (error) hadError = true;
     }
-  }, []);
+
+    // replacePipeline não é atômico (várias escritas sequenciais) — se
+    // alguma falhar no meio, reverte o otimista pro estado real do banco
+    // em vez de deixar a UI mostrar um pipeline que só existe no client.
+    if (hadError) await fetchAll();
+  }, [fetchAll]);
 
   return { pipelines, updateStage, reorderStages, resetCompanyPipeline, replacePipeline };
 }

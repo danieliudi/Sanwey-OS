@@ -86,9 +86,10 @@ export function usePipelineTransitions() {
         });
       }
     }
-    if (!payload.length) return;
-    await supabase.from("pipeline_stage_transitions")
+    if (!payload.length) return true;
+    const { error } = await supabase.from("pipeline_stage_transitions")
       .upsert(payload, { onConflict: "domain,company_id,from_stage_key,to_stage_key" });
+    return !error;
   }, []);
 
   const toggleTransition = useCallback(async (companyId, stages, fromStageId, toStageId) => {
@@ -110,14 +111,16 @@ export function usePipelineTransitions() {
 
     if (!isSupabaseConfigured) return;
     if (!companyRules) await writeFullMatrix(companyId, stages);
-    await writeFullMatrix(companyId, stages, { [fromStageId]: next });
-  }, [rows, writeFullMatrix]); // eslint-disable-line react-hooks/exhaustive-deps
+    const ok = await writeFullMatrix(companyId, stages, { [fromStageId]: next });
+    if (!ok) await fetchAll(); // reverte o otimista pro estado real do banco
+  }, [rows, writeFullMatrix, fetchAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetCompany = useCallback(async (companyId) => {
     setRows(prev => prev.filter(r => r.company_id !== companyId));
     if (!isSupabaseConfigured) return;
-    await supabase.from("pipeline_stage_transitions").delete().eq("domain", DOMAIN).eq("company_id", companyId);
-  }, []);
+    const { error } = await supabase.from("pipeline_stage_transitions").delete().eq("domain", DOMAIN).eq("company_id", companyId);
+    if (error) await fetchAll();
+  }, [fetchAll]);
 
   const setRowAllowed = useCallback(async (companyId, stages, fromStageId, allowedIds) => {
     setRows(prev => {
@@ -131,8 +134,9 @@ export function usePipelineTransitions() {
     if (!isSupabaseConfigured) return;
     const companyRules = rules[companyId];
     if (!companyRules) await writeFullMatrix(companyId, stages);
-    await writeFullMatrix(companyId, stages, { [fromStageId]: allowedIds });
-  }, [rows, writeFullMatrix]); // eslint-disable-line react-hooks/exhaustive-deps
+    const ok = await writeFullMatrix(companyId, stages, { [fromStageId]: allowedIds });
+    if (!ok) await fetchAll(); // reverte o otimista pro estado real do banco
+  }, [rows, writeFullMatrix, fetchAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getAllowedDestinations = useCallback((companyId, fromStageId, allStageIds) => {
     const companyRules = rules[companyId];

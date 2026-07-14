@@ -67,7 +67,11 @@ export function useLeadChecklists(leadId) {
 
   const deleteChecklist = useCallback(async (id) => {
     if (isSupabaseConfigured) {
-      await supabase.from(TABLE).delete().eq("id", id);
+      // Sob RLS um DELETE negado retorna 0 linhas sem "error" — checar
+      // count evita remover da UI um checklist que na verdade não foi
+      // apagado no banco (voltava sozinho só no próximo fetch).
+      const { error: err, count } = await supabase.from(TABLE).delete({ count: "exact" }).eq("id", id);
+      if (err || !count) { setError(err?.message || "Não foi possível excluir o checklist."); return; }
     }
     setChecklists(prev => prev.filter(c => c.id !== id));
   }, []);
