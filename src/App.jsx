@@ -297,7 +297,10 @@ export default function App() {
   useEffect(() => {
     if (!isRHManager) return;
     const hoje = new Date();
-    const hojeISO = hoje.toISOString().slice(0, 10);
+    // Dia LOCAL, não UTC — toISOString() já vira o dia seguinte entre ~21h e
+    // 24h BRT, furando o guard "uma vez por dia" (a chave mudava dentro do
+    // mesmo dia local e o mesmo lembrete disparava de novo).
+    const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
     const marcar = (id, tipo) => {
       const key = `${id}:${tipo}:${hojeISO}`;
       if (complianceVistoRef.current.has(key)) return false;

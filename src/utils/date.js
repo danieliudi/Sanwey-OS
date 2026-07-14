@@ -3,7 +3,7 @@ const dateBR = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digi
 // Colunas `date` do Postgres chegam como "AAAA-MM-DD" puro; `new Date(...)`
 // interpretaria isso como meia-noite UTC, o que "volta" um dia em fusos
 // negativos (Brasil). Datas com hora (timestamptz) seguem o parsing normal.
-function parseDateInput(input) {
+export function parseDateInput(input) {
   if (input instanceof Date) return input;
   const s = String(input);
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
