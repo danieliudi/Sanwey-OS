@@ -15,6 +15,7 @@ import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
+import { localDateInputToISOString } from "../../utils/date";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -79,8 +80,8 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
         stage:          stageId,
         stageChangedAt: new Date().toISOString(),
         owner:          owner || null,
-        launchDate:     launchDate ? new Date(launchDate).toISOString() : null,
-        endDate:        endDate ? new Date(endDate).toISOString() : null,
+        launchDate:     localDateInputToISOString(launchDate),
+        endDate:        localDateInputToISOString(endDate),
         agencyName:     agencyName.trim() || null,
         createdBy:      currentUser?.id || null,
         notes:          [],

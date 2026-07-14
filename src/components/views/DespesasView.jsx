@@ -6,7 +6,7 @@ import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK } from "../../utils/currency";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 
 const EMPTY_FORM = {
   description: "",
@@ -66,7 +66,7 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
       await onSave({
         ...form,
         amount:  parseFloat(form.amount) || 0,
-        dueDate: form.dueDate ? new Date(form.dueDate).toISOString() : null,
+        dueDate: localDateInputToISOString(form.dueDate),
       });
       onClose();
     } catch (err) {

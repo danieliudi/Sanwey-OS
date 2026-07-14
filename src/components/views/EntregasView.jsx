@@ -14,7 +14,7 @@ import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
 } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { useUsersById }  from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -114,7 +114,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
         department:     department || null,
         description:    description.trim() || null,
         priority,
-        deadline:       deadline ? new Date(deadline).toISOString() : null,
+        deadline:       localDateInputToISOString(deadline),
         stage:          stageId,
         stageChangedAt: new Date().toISOString(),
         companyIds,

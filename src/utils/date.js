@@ -24,3 +24,14 @@ export function daysSince(input) {
   if (Number.isNaN(d.getTime())) return 0;
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
+
+// Grava um "AAAA-MM-DD" de <input type=date> numa coluna timestamptz sem
+// "voltar" um dia quando reexibido em fuso negativo (BRT). new Date(str)
+// interpretaria a string pura como meia-noite UTC — constrói meia-noite
+// LOCAL a partir dos componentes antes de converter pra ISO.
+export function localDateInputToISOString(dateStr) {
+  if (!dateStr) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr));
+  if (!m) return new Date(dateStr).toISOString();
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toISOString();
+}

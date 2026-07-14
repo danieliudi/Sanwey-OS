@@ -10,6 +10,7 @@ import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/fiel
 import { StageFieldInput } from "./StageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
+import { localDateInputToISOString } from "../../utils/date";
 
 // ── Customer search helpers ───────────────────────────────────────────────────
 
@@ -317,7 +318,7 @@ export function LeadCreateModal({
     try {
       const now = new Date();
       const closeDate = values.closeDate
-        ? new Date(values.closeDate).toISOString()
+        ? localDateInputToISOString(values.closeDate)
         : new Date(now.getTime() + 30 * 86400000).toISOString();
 
       const resolvedOwner = values.owner || currentUser?.id || null;

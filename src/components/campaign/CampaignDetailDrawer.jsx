@@ -16,7 +16,7 @@ import { resolveVisibleFields } from "../../utils/field-conditions";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
 import { formatK } from "../../utils/currency";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ACCEPTED_TYPES = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.zip";
@@ -1328,10 +1328,10 @@ export function CampaignDetailDrawer({
               {isAgencia ? <ReadValue value={get("performanceScore") > 0 ? String(get("performanceScore")) : null} /> : <EditInput value={get("performanceScore") || ""} onChange={v => set("performanceScore", parseInt(v) || 0)} type="number" placeholder="0–100" />}
             </Field>
             <Field label="Lançamento">
-              {isAgencia ? <ReadValue value={get("launchDate") ? formatDateBR(get("launchDate")) : null} /> : <EditInput value={get("launchDate") ? String(get("launchDate")).slice(0, 10) : ""} onChange={v => set("launchDate", v ? new Date(v).toISOString() : null)} type="date" />}
+              {isAgencia ? <ReadValue value={get("launchDate") ? formatDateBR(get("launchDate")) : null} /> : <EditInput value={get("launchDate") ? String(get("launchDate")).slice(0, 10) : ""} onChange={v => set("launchDate", localDateInputToISOString(v))} type="date" />}
             </Field>
             <Field label="Encerramento">
-              {isAgencia ? <ReadValue value={get("endDate") ? formatDateBR(get("endDate")) : null} /> : <EditInput value={get("endDate") ? String(get("endDate")).slice(0, 10) : ""} onChange={v => set("endDate", v ? new Date(v).toISOString() : null)} type="date" />}
+              {isAgencia ? <ReadValue value={get("endDate") ? formatDateBR(get("endDate")) : null} /> : <EditInput value={get("endDate") ? String(get("endDate")).slice(0, 10) : ""} onChange={v => set("endDate", localDateInputToISOString(v))} type="date" />}
             </Field>
           </div>
 
