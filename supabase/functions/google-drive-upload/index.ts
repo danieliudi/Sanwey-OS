@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -84,7 +85,14 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST")   return jsonResponse({ error: "Method not allowed" }, 405);
 
-  // Verify caller is authenticated
+  // verify_jwt=true no projeto já garante um JWT válido antes de chegar
+  // aqui, mas isso não checa role nem se o folderId pertence a uma
+  // campanha que o chamador enxerga (confused-deputy: o service account
+  // grava em qualquer pasta já compartilhada com ele, então uma role sem
+  // acesso a Marketing conseguia usar essa function como proxy de escrita
+  // pra pasta de outra campanha/empresa). Valida contra marketing_campaigns
+  // com um client escopado ao JWT do chamador — a própria RLS de mc_read
+  // (marketing/agencia) decide se a pasta é dele.
   const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return jsonResponse({ error: "Missing authorization" }, 401);
@@ -102,6 +110,21 @@ Deno.serve(async (req: Request) => {
 
   if (!fileBase64 || !fileName || !folderId) {
     return jsonResponse({ error: "fileBase64, fileName and folderId are required" }, 400);
+  }
+
+  const userClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } }, auth: { persistSession: false } },
+  );
+  const { data: ownsFolder } = await userClient
+    .from("marketing_campaigns")
+    .select("id")
+    .eq("drive_folder_id", folderId)
+    .limit(1)
+    .maybeSingle();
+  if (!ownsFolder) {
+    return jsonResponse({ error: "Pasta não encontrada ou sem permissão para esta campanha" }, 403);
   }
 
   const saJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
