@@ -130,6 +130,7 @@ export function useSupabaseAuth() {
         name: profile.name || session.user.email,
         email: session.user.email,
         role: profile.role || "vendedor",
+        roles: Array.isArray(profile.roles) && profile.roles.length ? profile.roles : (profile.role ? [profile.role] : ["vendedor"]),
         companies: profile.companies || [],
         initials: profile.initials || (profile.name || session.user.email).slice(0, 2).toUpperCase(),
         avatarBg: profile.avatar_bg || "#1D4ED8",
