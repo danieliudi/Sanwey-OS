@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   X, ArrowRight, ArrowLeft, Trash2, Star,
-  FileText, Activity, Paperclip, CheckSquare, MessageSquare,
+  FileText, Activity, Paperclip, CheckSquare,
   Mail, FileDown, Sparkles,
   Upload, File, FileImage, Download, Plus,
-  Check, Send, Loader2, AlertCircle, RotateCcw, Copy,
+  Check, Loader2, AlertCircle, RotateCcw, Copy,
 } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import {
@@ -19,6 +19,8 @@ import { RHStageFieldInput }          from "../rh-pipeline/RHStageFieldInput";
 import { resolveVisibleFields }       from "../../utils/field-conditions";
 import { useAI }                      from "../../hooks/use-ai";
 import { deliverableStageSuggestionPrompt } from "../../constants/ai-prompts";
+import { CommentsPanel }              from "../shared/CommentsPanel";
+import { getMentionableUsers }        from "../../utils/mentionable-users";
 
 /* ── Priority helpers ───────────────────────────────────────── */
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -66,7 +68,6 @@ const SIDE_TABS = [
   { id: "ia",          label: "IA",          icon: Sparkles },
   { id: "anexos",      label: "Anexos",      icon: Paperclip },
   { id: "checklists",  label: "Checklists",  icon: CheckSquare },
-  { id: "comentarios", label: "Comentários", icon: MessageSquare },
   { id: "email",       label: "Email",       icon: Mail },
   { id: "pdf",         label: "PDF",         icon: FileDown },
 ];
@@ -634,67 +635,8 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
   );
 }
 
-/* ── Comentários tab ────────────────────────────────────────── */
-function ComentariosTab({ item, onUpdate, canWrite }) {
-  const [text,    setText]   = useState("");
-  const [sending, setSending] = useState(false);
-  const notes = Array.isArray(item.notes) ? item.notes : [];
-
-  const handleSend = async () => {
-    const trimmed = text.trim();
-    if (!trimmed || !canWrite) return;
-    setSending(true);
-    try {
-      const note     = { text: trimmed, createdAt: new Date().toISOString() };
-      const activity = { type: "note_added", description: "Comentário adicionado", at: new Date().toISOString() };
-      await onUpdate(item.id, {
-        notes:      [...notes, note],
-        activities: [...(item.activities || []), activity],
-      });
-      setText("");
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {notes.length === 0
-          ? <div style={{ fontSize: 12, color: "var(--text-dim)", textAlign: "center", marginTop: 20 }}>Nenhum comentário ainda.</div>
-          : [...notes].reverse().map((n, i) => (
-            <div key={i} style={{ marginBottom: 10, padding: "10px 12px", background: "var(--surface-alt)", borderRadius: 8 }}>
-              <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{n.text}</div>
-              {n.createdAt && (
-                <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
-                  {new Date(n.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                </div>
-              )}
-            </div>
-          ))
-        }
-      </div>
-      {canWrite && (
-        <div style={{ display: "flex", gap: 8, borderTop: "1px solid #E5E7EB", paddingTop: 12 }}>
-          <textarea
-            value={text} onChange={e => setText(e.target.value)}
-            placeholder="Escreva um comentário…" rows={2}
-            style={{ ...inputBase, flex: 1, resize: "none" }}
-            onFocus={focusBorder} onBlur={blurBorder}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-          />
-          <button onClick={handleSend} disabled={sending || !text.trim()}
-            style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 6, padding: "0 14px", cursor: (sending || !text.trim()) ? "default" : "pointer", opacity: (sending || !text.trim()) ? 0.5 : 1, display: "flex", alignItems: "center" }}>
-            <Send size={14} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, users = [], canWrite, userId, currentUser }) {
+export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, users = [], canWrite, userId, currentUser, notifyMentions }) {
   const [sideTab,      setSideTab]     = useState("form");
   const [mobileTab,    setMobileTab]   = useState("info");
   const [fieldValues,  setFieldValues] = useState(() => item.stageData?.[item.stage] ?? {});
@@ -734,6 +676,59 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
 
   const customValuesByKey = { ...(item.customFields || {}), ...customDraft };
   const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
+
+  // Quem pode ser @mencionado nos comentários desta entrega — mesmo escopo
+  // usado no CampaignDetailDrawer (domain "marketing", incluindo agência,
+  // que já tem acesso de leitura a entregas).
+  const mentionableUsers = useMemo(() => (
+    getMentionableUsers(users, { domain: "marketing", includeAgencia: true })
+  ), [users]);
+
+  // Normaliza item.notes ({text, createdAt}, sem autor nas entradas antigas)
+  // pro formato que CommentsPanel espera — nunca inventamos um autor pras
+  // entradas antigas que não tinham authorId.
+  const comments = useMemo(() => {
+    const notes = Array.isArray(item?.notes) ? item.notes : [];
+    const resolveMentionNames = (ids) => (ids || [])
+      .map(id => (users || []).find(u => u.id === id)?.name)
+      .filter(Boolean);
+    return [...notes].reverse().map((n, i) => {
+      const author = n.authorId ? (users || []).find(u => u.id === n.authorId) : null;
+      return {
+        id: n.id || `note-${i}-${n.createdAt || ""}`,
+        authorId: n.authorId || null,
+        authorName: n.authorName || author?.name || null,
+        avatarBg: author?.avatarBg,
+        avatarUrl: author?.avatarUrl,
+        initials: author?.initials,
+        text: n.text,
+        mentionedNames: resolveMentionNames(n.mentionedIds),
+        createdAt: n.createdAt,
+      };
+    });
+  }, [item?.notes, users]);
+
+  const onAddComment = useCallback(async (text, mentionedIds) => {
+    if (!item) return;
+    const newNote = {
+      id: crypto.randomUUID(),
+      authorId: currentUser?.id || null,
+      authorName: currentUser?.name || null,
+      avatarBg: currentUser?.avatarBg,
+      text,
+      mentionedIds,
+      createdAt: new Date().toISOString(),
+    };
+    const updatedNotes = [...(item.notes || []), newNote];
+    await onUpdate(item.id, { notes: updatedNotes });
+    if (mentionedIds?.length > 0 && notifyMentions) {
+      notifyMentions(mentionedIds, {
+        title: `${currentUser?.name || "Alguém"} te mencionou`,
+        body: `Em um comentário na entrega "${item.title}"`,
+        link: { module: "deliverables", id: item.id },
+      });
+    }
+  }, [item, onUpdate, currentUser, notifyMentions]);
 
   const fieldValuesRef = useRef(fieldValues);
   const itemRef        = useRef(item);
@@ -888,7 +883,6 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     if (sideTab === "ia")          return <DeliverableAIPanel item={item} currentUser={currentUser} />;
     if (sideTab === "anexos")      return <AnexosTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
     if (sideTab === "checklists")  return <ChecklistsTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
-    if (sideTab === "comentarios") return <ComentariosTab item={item} onUpdate={onUpdate} canWrite={canWrite} />;
     if (sideTab === "email") return <PlaceholderPanel label="Integração de e-mail" />;
     if (sideTab === "pdf")   return <PlaceholderPanel label="Exportar PDF" />;
     return null;
@@ -1179,6 +1173,17 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Comentários — sempre visíveis na lateral direita, abaixo da
+                movimentação de card (não mais escondidos atrás de uma aba). */}
+            <div className="pt-4 border-t" style={{ borderColor: "#E5E7EB" }}>
+              <CommentsPanel
+                comments={comments}
+                currentUser={currentUser}
+                mentionableUsers={mentionableUsers}
+                onAddComment={onAddComment}
+              />
             </div>
 
             {/* AI move link */}

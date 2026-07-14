@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
-  MessageSquare, ArrowLeft, ArrowRight, Sparkles, Mail, FileDown,
+  ArrowLeft, ArrowRight, Sparkles, Mail, FileDown,
   RotateCcw, Copy, Loader2, AlertCircle, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -12,6 +12,8 @@ import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { CommentsPanel } from "../shared/CommentsPanel";
+import { getMentionableUsers } from "../../utils/mentionable-users";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
@@ -45,7 +47,6 @@ const SIDE_TABS = [
   { id: "arquivos",    label: "Arquivos",    icon: Paperclip },
   { id: "criativo",    label: "Checklist",   icon: ListChecks },
   { id: "entregas",    label: "Entregas",    icon: Package },
-  { id: "comentarios", label: "Comentários", icon: MessageSquare },
   { id: "email",       label: "Email",       icon: Mail },
   { id: "pdf",         label: "PDF",         icon: FileDown },
 ];
@@ -507,76 +508,6 @@ function EditSelect({ value, onChange, options, placeholder = "Selecionar…" })
         <option key={o.value ?? o} value={o.value ?? o}>{o.label ?? o}</option>
       ))}
     </select>
-  );
-}
-
-// ── Comments tab ──────────────────────────────────────────────────────────────
-
-function ComentariosTab({ campaign, canWrite, isAgencia, onUpdate }) {
-  const [notes, setNotes]     = useState(campaign.notes || []);
-  const [newNote, setNewNote] = useState("");
-  const [saving, setSaving]   = useState(false);
-
-  useEffect(() => { setNotes(campaign.notes || []); }, [campaign.id, campaign.notes]);
-
-  const handleAdd = async () => {
-    const text = newNote.trim();
-    if (!text || !canWrite || isAgencia) return;
-    setSaving(true);
-    const now = new Date().toISOString();
-    const updatedNotes      = [...notes, { text, createdAt: now }];
-    const updatedActivities = [...(campaign.activities || []), { text: "Comentário adicionado", at: now }];
-    try {
-      await onUpdate?.(campaign.id, { notes: updatedNotes, activities: updatedActivities });
-      setNotes(updatedNotes);
-      setNewNote("");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {canWrite && !isAgencia && (
-        <div className="space-y-2">
-          <textarea
-            value={newNote}
-            onChange={e => setNewNote(e.target.value)}
-            placeholder="Escreva um comentário…"
-            rows={3}
-            className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-            onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
-            onBlur={e => { e.target.style.borderColor = "var(--border)"; }}
-            onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAdd(); } }}
-          />
-          <div className="flex justify-end">
-            <button
-              onClick={handleAdd}
-              disabled={!newNote.trim() || saving}
-              className="px-3 py-1.5 text-xs font-semibold rounded-xl"
-              style={{ background: newNote.trim() ? "var(--accent)" : "var(--surface-alt)", color: newNote.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newNote.trim() ? "pointer" : "default" }}
-            >
-              {saving ? "Salvando…" : "Comentar"}
-            </button>
-          </div>
-        </div>
-      )}
-      {notes.length === 0 ? (
-        <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Nenhum comentário ainda.</div>
-      ) : (
-        <div className="space-y-2">
-          {[...notes].reverse().map((note, i) => (
-            <div key={i} className="p-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
-              <div className="text-xs whitespace-pre-wrap" style={{ color: "var(--text)" }}>{note.text}</div>
-              {note.createdAt && (
-                <div className="text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>{formatDateBR(note.createdAt)}</div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -1180,6 +1111,7 @@ export function CampaignDetailDrawer({
   users = [],
   canWrite,
   currentUser,
+  notifyMentions,
 }) {
   const [sideTab, setSideTab]           = useState("form");
   const [draft, setDraft]               = useState({});
@@ -1266,6 +1198,59 @@ export function CampaignDetailDrawer({
   const stageFieldsHook = useRHStageFields("marketing");
   const customDefs = stageFieldsHook.getFields(get("stage"));
   const visibleCustomDefs = resolveVisibleFields(customDefs, get("customFields") || {});
+
+  // Quem pode ser @mencionado nos comentários desta campanha — mesmo padrão
+  // usado no LeadDetailDrawer, mas com escopo "marketing" e incluindo a
+  // agência (que já tem acesso de leitura a campanhas/entregas).
+  const mentionableUsers = useMemo(() => (
+    getMentionableUsers(users, { domain: "marketing", includeAgencia: true })
+  ), [users]);
+
+  // Normaliza campaign.notes ({text, createdAt}, sem autor nas entradas
+  // antigas) pro formato que CommentsPanel espera — nunca inventamos um
+  // autor pras entradas antigas que não tinham authorId.
+  const comments = useMemo(() => {
+    const notes = Array.isArray(campaign?.notes) ? campaign.notes : [];
+    const resolveMentionNames = (ids) => (ids || [])
+      .map(id => (users || []).find(u => u.id === id)?.name)
+      .filter(Boolean);
+    return [...notes].reverse().map((n, i) => {
+      const author = n.authorId ? (users || []).find(u => u.id === n.authorId) : null;
+      return {
+        id: n.id || `note-${i}-${n.createdAt || ""}`,
+        authorId: n.authorId || null,
+        authorName: n.authorName || author?.name || null,
+        avatarBg: author?.avatarBg,
+        avatarUrl: author?.avatarUrl,
+        initials: author?.initials,
+        text: n.text,
+        mentionedNames: resolveMentionNames(n.mentionedIds),
+        createdAt: n.createdAt,
+      };
+    });
+  }, [campaign?.notes, users]);
+
+  const onAddComment = useCallback(async (text, mentionedIds) => {
+    if (!campaign) return;
+    const newNote = {
+      id: crypto.randomUUID(),
+      authorId: currentUser?.id || null,
+      authorName: currentUser?.name || null,
+      avatarBg: currentUser?.avatarBg,
+      text,
+      mentionedIds,
+      createdAt: new Date().toISOString(),
+    };
+    const updatedNotes = [...(campaign.notes || []), newNote];
+    await onUpdate?.(campaign.id, { notes: updatedNotes });
+    if (mentionedIds?.length > 0 && notifyMentions) {
+      notifyMentions(mentionedIds, {
+        title: `${currentUser?.name || "Alguém"} te mencionou`,
+        body: `Em um comentário na campanha "${campaign.name}"`,
+        link: { module: "campaigns", id: campaign.id },
+      });
+    }
+  }, [campaign, onUpdate, currentUser, notifyMentions]);
 
   if (!campaign) return null;
 
@@ -1443,16 +1428,6 @@ export function CampaignDetailDrawer({
           campaign={campaign}
           onUpdate={(id, checklist) => onUpdate?.(id, { approvalChecklist: checklist })}
           readOnly={isAgencia || !canWrite}
-        />
-      );
-    }
-    if (sideTab === "comentarios") {
-      return (
-        <ComentariosTab
-          campaign={campaign}
-          canWrite={canWrite}
-          isAgencia={isAgencia}
-          onUpdate={onUpdate}
         />
       );
     }
@@ -1741,6 +1716,17 @@ export function CampaignDetailDrawer({
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Comentários — sempre visíveis na lateral direita, abaixo da
+                movimentação de card (não mais escondidos atrás de uma aba). */}
+            <div className="mt-1 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+              <CommentsPanel
+                comments={comments}
+                currentUser={currentUser}
+                mentionableUsers={mentionableUsers}
+                onAddComment={onAddComment}
+              />
             </div>
 
             {/* AI move link */}

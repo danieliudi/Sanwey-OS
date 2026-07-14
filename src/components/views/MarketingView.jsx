@@ -627,7 +627,7 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function MarketingView({ user, users = [], evaluateAutomations, pushNotification }) {
+export function MarketingView({ user, users = [], evaluateAutomations, pushNotification, notifyMentions }) {
   const {
     campaigns,
     loading,
@@ -1195,6 +1195,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           users={Array.from(usersById.values())}
           canWrite={canWrite}
           currentUser={user}
+          notifyMentions={notifyMentions}
         />
       )}
 

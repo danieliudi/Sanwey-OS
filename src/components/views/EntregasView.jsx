@@ -453,7 +453,7 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
 }
 
 /* ── Main view ───────────────────────────────────────────────── */
-export function EntregasView({ user, users = [] }) {
+export function EntregasView({ user, users = [], notifyMentions }) {
   const {
     deliverables, loading, canWrite,
     createDeliverable, updateDeliverable, deleteDeliverable,
@@ -896,6 +896,7 @@ export function EntregasView({ user, users = [] }) {
         canWrite={canWrite}
         userId={user?.id}
         currentUser={user}
+        notifyMentions={notifyMentions}
       />
     )}
 
