@@ -752,7 +752,10 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onMoveToStage
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus(null), 2500);
       } catch {
-        setSaveStatus(null);
+        // Falha real de gravação (RLS/rede/constraint) — sem isso o usuário
+        // via "Salvando…" sumir sem virar "✓ Salvo" e achava que tinha
+        // salvo; os campos ficavam só no estado local, perdidos ao reabrir.
+        setSaveStatus("error");
       }
     }, 600);
   }, [onUpdate]);
@@ -768,15 +771,19 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onMoveToStage
       return;
     }
     const stageName = DELIVERABLE_STAGES.find(s => s.id === stageId)?.name || stageId;
-    await onUpdate(item.id, {
-      stage:          stageId,
-      stageChangedAt: new Date().toISOString(),
-      activities: [
-        ...(item.activities || []),
-        { type: "stage_change", description: `Movido para ${stageName}`, at: new Date().toISOString() },
-      ],
-    });
-    onClose();
+    try {
+      await onUpdate(item.id, {
+        stage:          stageId,
+        stageChangedAt: new Date().toISOString(),
+        activities: [
+          ...(item.activities || []),
+          { type: "stage_change", description: `Movido para ${stageName}`, at: new Date().toISOString() },
+        ],
+      });
+      onClose();
+    } catch (err) {
+      alert(`Não foi possível mover "${item.title}": ${err?.message || "erro desconhecido"}.`);
+    }
   };
 
   const handleDelete = async () => {
@@ -1039,8 +1046,14 @@ export function DeliverableDetailDrawer({ item, onClose, onUpdate, onMoveToStage
                   </span>
                 )}
                 {saveStatus && (
-                  <span style={{ fontSize: 10, color: saveStatus === "saved" ? "#16A34A" : "var(--text-dim)", marginTop: -14, marginLeft: "auto" }}>
-                    {saveStatus === "saving" ? "Salvando…" : "✓ Salvo"}
+                  <span
+                    style={{
+                      fontSize: 10, marginTop: -14, marginLeft: "auto",
+                      color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
+                      fontWeight: saveStatus === "error" ? 700 : 400,
+                    }}
+                  >
+                    {saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "✗ Falha ao salvar — tente de novo" : "✓ Salvo"}
                   </span>
                 )}
               </div>
