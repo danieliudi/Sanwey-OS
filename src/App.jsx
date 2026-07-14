@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Bell, Globe2, Layers, BarChart3, Shuffle, UserCog,
   Settings as SettingsIcon, Bot, Workflow, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
-  ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox,
+  ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -61,6 +61,7 @@ import { EntregasView } from "./components/views/EntregasView";
 import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
 import { MarketingRequestsView } from "./components/views/MarketingRequestsView";
+import { FornecedoresView } from "./components/views/FornecedoresView";
 import { RHOverviewView } from "./components/views/RHOverviewView";
 import { RHFuncionariosView } from "./components/views/RHFuncionariosView";
 import { RHRecrutamentoView } from "./components/views/RHRecrutamentoView";
@@ -713,6 +714,7 @@ export default function App() {
         { id: "marketing",                label: "Campanhas",    icon: Megaphone },
         { id: "marketing-solicitacoes",   label: "Solicitações", icon: Inbox },
         { id: "marketing-entregas",       label: "Entregas",     icon: Package },
+        { id: "marketing-fornecedores",   label: "Fornecedores", icon: Truck },
         { id: "marketing-despesas",       label: "Despesas",     icon: DollarSign }
       );
       groups.push({ label: "Marketing", items: mktItems });
@@ -779,6 +781,7 @@ export default function App() {
     if (section === "settings" && !isManager)          return "Meu perfil";
     if (section === "marketing-home")                  return "Visão Geral · Marketing";
     if (section === "marketing-solicitacoes")          return "Solicitações · Marketing";
+    if (section === "marketing-fornecedores")          return "Fornecedores · Marketing";
     for (const g of navGroups) {
       const hit = g.items.find(i => i.id === section);
       if (hit) return hit.label;
@@ -796,12 +799,12 @@ export default function App() {
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
-    const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas", "marketing-solicitacoes"];
+    const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores"];
     if (!isMarketingUser && !isAgencia && marketingOnly.includes(section)) {
       setSection("dashboard");
     }
-    // Agência não acessa Solicitações (área interna de marketing)
-    if (isAgencia && section === "marketing-solicitacoes") {
+    // Agência não acessa Solicitações nem Fornecedores (áreas internas de marketing)
+    if (isAgencia && (section === "marketing-solicitacoes" || section === "marketing-fornecedores")) {
       setSection("marketing");
     }
     // Pure marketing users shouldn't access CRM sections
@@ -1179,6 +1182,11 @@ export default function App() {
           <Route path={ROUTES["marketing-solicitacoes"]} element={
             (isMarketingUser && !isAgencia)
               ? <MarketingRequestsView user={currentUser} users={users} />
+              : <Navigate to={ROUTES.marketing} replace />
+          } />
+          <Route path={ROUTES["marketing-fornecedores"]} element={
+            (isMarketingUser && !isAgencia)
+              ? <FornecedoresView user={currentUser} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["rh-overview"]} element={
