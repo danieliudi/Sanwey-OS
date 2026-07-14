@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Bell, Check, GitBranch, Calendar, User, Trash2, X } from "lucide-react";
+import { Bell, Check, GitBranch, Calendar, User, Trash2, X, AtSign } from "lucide-react";
 import { formatDateBR } from "../../utils/date";
 
 const TYPE_ICON = {
   followup: Calendar,
   stage_changed: GitBranch,
   lead_assigned: User,
+  mention: AtSign,
   default: Bell,
 };
 
@@ -13,6 +14,7 @@ const TYPE_COLOR = {
   followup: "#F59E0B",
   stage_changed: "var(--text-dim)",
   lead_assigned: "var(--accent)",
+  mention: "var(--accent)",
   default: "var(--text-dim)",
 };
 
@@ -36,6 +38,7 @@ export function NotificationCenter({
   desktopPermission,
   onRequestDesktopPermission,
   onSelectLead,
+  onNavigate,
 }) {
   const [open, setOpen] = useState(false);
   const [permissionFeedback, setPermissionFeedback] = useState(null);
@@ -66,7 +69,15 @@ export function NotificationCenter({
 
   const handleNotifClick = (notif) => {
     onMarkRead(notif.id);
-    if (notif.leadId && onSelectLead) {
+    // Notificações de servidor (@menção, ver use-server-notifications.js)
+    // trazem um link genérico { module, id } — não sabemos abrir o card
+    // exato de qualquer módulo a partir daqui, então onNavigate pelo menos
+    // leva pra tela certa; notificações locais de lead continuam abrindo o
+    // lead direto via onSelectLead.
+    if (notif.link && onNavigate) {
+      onNavigate(notif.link);
+      setOpen(false);
+    } else if (notif.leadId && onSelectLead) {
       onSelectLead(notif.leadId);
       setOpen(false);
     }

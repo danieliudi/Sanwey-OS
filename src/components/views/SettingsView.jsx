@@ -796,6 +796,31 @@ export function SettingsView({
                 description="Alertas visuais dentro do app, filtrados pelo seu papel."
               >
                 <div className="space-y-4">
+                  <div>
+                    <div
+                      className="pb-2 mb-1 border-b"
+                      style={{ borderColor: "#F0F0F0" }}
+                    >
+                      <span
+                        className="font-bold tracking-wide"
+                        style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
+                      >
+                        Menções
+                      </span>
+                    </div>
+                    <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                      <ToggleRow
+                        label="Notificar quando alguém me mencionar (@)"
+                        sublabel="Ativado por padrão. Desative se não quiser receber notificação de @menção em comentários."
+                        checked={currentUser?.mentionNotificationsEnabled !== false}
+                        onChange={() => {
+                          if (onUpdateUser && currentUser?.id) {
+                            onUpdateUser(currentUser.id, { mentionNotificationsEnabled: !(currentUser?.mentionNotificationsEnabled !== false) });
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
                   {NOTIFICATION_GROUPS
                     .filter(group => !currentUser?.role || group.roles.includes(currentUser.role))
                     .map(group => (

@@ -23,6 +23,12 @@ function rowToUser(r) {
     sectors: Array.isArray(r.sectors) ? r.sectors : [],
     supervisorId: r.supervisor_id || null,
     aiConfig: r.ai_config || null,
+    // Opt-out de notificação de @menção (FASE 4) — precisa viver no banco
+    // (não em localStorage como o resto das preferências de notificação),
+    // porque quem decide se cria a notificação é a RPC
+    // create_mention_notifications, rodando na sessão de quem MENCIONOU,
+    // não na de quem seria notificado.
+    mentionNotificationsEnabled: r.mention_notifications_enabled !== false,
   };
 }
 
@@ -97,6 +103,7 @@ export function useProfiles({ enabled = true } = {}) {
     // profiles_sync_roles já mantém role ∈ roles sozinho. Só grava roles
     // quando o chamador manda explicitamente (ex: editor multi-cargo).
     if (patch.roles !== undefined) dbPatch.roles = patch.roles;
+    if (patch.mentionNotificationsEnabled !== undefined) dbPatch.mention_notifications_enabled = patch.mentionNotificationsEnabled;
     if (patch.companies !== undefined) dbPatch.companies = patch.companies;
     if (patch.initials !== undefined) dbPatch.initials = patch.initials;
     if (patch.avatarBg !== undefined) dbPatch.avatar_bg = patch.avatarBg;

@@ -19,6 +19,7 @@ import { useSupabaseAuth } from "./hooks/use-supabase-auth";
 import { useLeads } from "./hooks/use-leads";
 import { useClients } from "./hooks/use-clients";
 import { useNotifications } from "./hooks/use-notifications";
+import { useServerNotifications } from "./hooks/use-server-notifications";
 import { useProfiles } from "./hooks/use-profiles";
 import { useInvitations } from "./hooks/use-invitations";
 import { usePipelineTransitions } from "./hooks/use-pipeline-transitions";
@@ -212,6 +213,66 @@ export default function App() {
     desktopPermission,
     requestDesktopPermission,
   } = useNotifications({ currentUser, leads });
+
+  // Notificações de @menção (FASE 4) — ao contrário das acima (só
+  // localStorage do próprio navegador), estas são persistidas no banco e
+  // chegam via Realtime pra sessão do usuário mencionado de verdade. Mescla
+  // na mesma lista pro sino do TopBar mostrar tudo junto.
+  const {
+    notifications: serverNotifications,
+    markRead: markServerNotificationRead,
+    markAllRead: markAllServerNotificationsRead,
+    clearAll: clearAllServerNotifications,
+    notifyMentions,
+  } = useServerNotifications({ currentUser });
+
+  const mergedNotifications = useMemo(() => (
+    [...notifications, ...serverNotifications].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  ), [notifications, serverNotifications]);
+  const mergedUnreadCount = unreadCount + serverNotifications.filter(n => !n.read).length;
+
+  const handleMarkAllNotificationsRead = useCallback(() => {
+    markAllNotificationsRead();
+    markAllServerNotificationsRead();
+  }, [markAllNotificationsRead, markAllServerNotificationsRead]);
+
+  const handleMarkNotificationRead = useCallback((id) => {
+    markNotificationRead(id);
+    markServerNotificationRead(id);
+  }, [markNotificationRead, markServerNotificationRead]);
+
+  const handleClearAllNotifications = useCallback(() => {
+    clearAllNotifications();
+    clearAllServerNotifications();
+  }, [clearAllNotifications, clearAllServerNotifications]);
+
+  // Destino genérico de uma notificação de @menção — leva pra tela certa
+  // (e, no caso de leads, abre o card exato); os outros módulos ainda não
+  // têm um jeito central de reabrir o card específico a partir daqui, então
+  // por ora só navegam até a seção certa.
+  const NOTIFICATION_LINK_SECTIONS = {
+    campaigns: "marketing",
+    deliverables: "marketing-entregas",
+    purchase_requests: "marketing-compras",
+    marketing_requests: "marketing-solicitacoes",
+    rh_vagas: "rh-recrutamento",
+    rh_candidatos: "rh-recrutamento",
+    rh_onboarding: "rh-onboarding",
+    rh_treinamentos: "rh-treinamentos",
+    rh_feedback: "rh-feedback",
+    rh_ferias: "rh-ferias",
+  };
+  const handleNotificationNavigate = useCallback((link) => {
+    if (!link?.module) return;
+    if (link.module === "leads") {
+      const lead = leads.find(l => l.id === link.id);
+      if (lead) { setSelectedLead(lead); return; }
+      setSection("crm");
+      return;
+    }
+    const target = NOTIFICATION_LINK_SECTIONS[link.module];
+    if (target) setSection(target);
+  }, [leads, setSelectedLead, setSection]);
 
   // Avisa o time de Marketing quando chega uma solicitação nova pelo
   // formulário público — antes só aparecia se alguém abrisse a aba
@@ -930,17 +991,18 @@ export default function App() {
           title={sectionTitle}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}
           onSearchOpen={() => setCmdOpen(true)}
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onMarkAllRead={markAllNotificationsRead}
-          onMarkRead={markNotificationRead}
-          onClearAll={clearAllNotifications}
+          notifications={mergedNotifications}
+          unreadCount={mergedUnreadCount}
+          onMarkAllRead={handleMarkAllNotificationsRead}
+          onMarkRead={handleMarkNotificationRead}
+          onClearAll={handleClearAllNotifications}
           desktopPermission={desktopPermission}
           onRequestDesktopPermission={requestDesktopPermission}
           onSelectLead={(leadId) => {
             const lead = leads.find(l => l.id === leadId);
             if (lead) setSelectedLead(lead);
           }}
+          onNavigate={handleNotificationNavigate}
           onHelpClick={() => setSection("tutorials")}
         />
 
@@ -1189,12 +1251,12 @@ export default function App() {
           } />
           <Route path={ROUTES.marketing} element={
             (isMarketingUser || isAgencia)
-              ? <MarketingView user={currentUser} users={users} evaluateAutomations={evaluateAutomations} pushNotification={pushNotification} />
+              ? <MarketingView user={currentUser} users={users} evaluateAutomations={evaluateAutomations} pushNotification={pushNotification} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["marketing-entregas"]} element={
             (isMarketingUser || isAgencia)
-              ? <EntregasView user={currentUser} users={users} />
+              ? <EntregasView user={currentUser} users={users} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["marketing-despesas"]} element={
@@ -1214,7 +1276,7 @@ export default function App() {
           } />
           <Route path={ROUTES["marketing-compras"]} element={
             (isMarketingUser && !isAgencia)
-              ? <ComprasMarketingView user={currentUser} users={users} />
+              ? <ComprasMarketingView user={currentUser} users={users} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["rh-overview"]} element={
@@ -1238,21 +1300,22 @@ export default function App() {
               ? <RHRecrutamentoView
                   user={currentUser}
                   canWrite={isRHManager}
+                  notifyMentions={notifyMentions}
                 />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-onboarding"]} element={
-            <RHOnboardingView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} />
+            <RHOnboardingView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} notifyMentions={notifyMentions} />
           } />
           <Route path={ROUTES["rh-treinamentos"]} element={
-            <RHTreinamentosView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} users={users} />
+            <RHTreinamentosView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} users={users} notifyMentions={notifyMentions} />
           } />
           <Route path={ROUTES["rh-feedback"]} element={
-            <RHFeedbackView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} />
+            <RHFeedbackView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} notifyMentions={notifyMentions} />
           } />
           <Route path={ROUTES["rh-ferias"]} element={
             isRHUser
-              ? <RHFeriasView currentUser={currentUser} users={users} canWrite={isRHManager} />
+              ? <RHFeriasView currentUser={currentUser} users={users} canWrite={isRHManager} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
@@ -1302,6 +1365,7 @@ export default function App() {
           currentUser={currentUser}
           pipelines={pipelines}
           onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("pipeline-builder"); }}
+          notifyMentions={notifyMentions}
         />
       </ErrorBoundary>
 

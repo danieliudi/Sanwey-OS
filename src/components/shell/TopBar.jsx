@@ -54,6 +54,7 @@ export function TopBar({
   desktopPermission,
   onRequestDesktopPermission,
   onSelectLead,
+  onNavigate,
   onHelpClick,
 }) {
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
@@ -174,6 +175,7 @@ export function TopBar({
           desktopPermission={desktopPermission}
           onRequestDesktopPermission={onRequestDesktopPermission}
           onSelectLead={onSelectLead}
+          onNavigate={onNavigate}
         />
       </div>
     </header>
