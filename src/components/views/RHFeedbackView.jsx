@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MessageSquare, Plus, X, TrendingUp, Pencil, Settings2, AlertCircle } from "lucide-react";
+import {
+  MessageSquare, Plus, X, TrendingUp, Pencil, Settings2, AlertCircle,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
+} from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
@@ -48,6 +51,42 @@ function findStage(stages, stageKey) {
 function daysInStage(dateStr) {
   if (!dateStr) return 0;
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+// ── Kanban/Tabela/Calendário — mesmo padrão de ComprasMarketingView/CRMView ──
+
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function ViewToggleButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+      style={{
+        background: active ? "var(--accent)" : "var(--surface)",
+        color: active ? "#FFFFFF" : "var(--text-dim)",
+        border: "none",
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
+    >
+      <Icon size={13} />
+      {label}
+    </button>
+  );
 }
 
 function tipoLabel(id) {
@@ -699,6 +738,161 @@ function FeedbackDrawer({
   );
 }
 
+// ── Tabela ────────────────────────────────────────────────────────────────────
+// Data agendada/prevista: period_end (mesmo "até {data}" já mostrado no card
+// e no drawer). Responsável: evaluator_id (gestor responsável pelo ciclo).
+
+function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Colaborador", "Tipo", "Etapa", "Prazo", "Responsável"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {feedbacks.length === 0 && (
+            <tr><td colSpan={5} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhum ciclo encontrado.</td></tr>
+          )}
+          {feedbacks.map((f) => {
+            const st = findStage(stages, f.status);
+            const colaborador = colaboradoresById.get(f.user_id);
+            const evaluator = f.evaluator_id ? usersById.get(f.evaluator_id) : null;
+            return (
+              <tr key={f.id} onClick={() => onRowClick(f)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <InitialsAvatar name={colaborador?.fullName} size={26} />
+                    <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{colaborador?.fullName || "—"}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{tipoLabel(f.tipo)}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                    {st.name}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(f.period_end)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{evaluator?.name || "—"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Calendário ───────────────────────────────────────────────────────────────
+// Agrupa por period_end — mesmo campo usado na tabela e no card ("até {data}").
+
+function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClick }) {
+  const [cursor, setCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const byDay = useMemo(() => {
+    const map = new Map();
+    for (const f of feedbacks) {
+      if (!f.period_end) continue;
+      const d = new Date(f.period_end.slice ? f.period_end.slice(0, 10) : f.period_end);
+      if (Number.isNaN(d.getTime())) continue;
+      const k = dayKey(d);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(f);
+    }
+    return map;
+  }, [feedbacks]);
+
+  const grid = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const offset = (first.getDay() + 6) % 7;
+    const start = new Date(first);
+    start.setDate(first.getDate() - offset);
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [cursor]);
+
+  const today = new Date();
+  const month = cursor.getMonth();
+
+  return (
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronRight size={16} />
+          </button>
+          <h2 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>
+            {MONTHS[month]} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>{cursor.getFullYear()}</span>
+          </h2>
+        </div>
+        <button onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}>
+          Hoje
+        </button>
+      </div>
+      <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
+        {WEEKDAYS.map(w => (
+          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
+        {grid.map((d, i) => {
+          const inMonth = d.getMonth() === month;
+          const isToday = sameDay(d, today);
+          const k = dayKey(d);
+          const items = byDay.get(k) || [];
+          return (
+            <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
+              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+                {d.getDate()}
+              </span>
+              <div className="flex flex-col gap-0.5">
+                {items.slice(0, 3).map((f) => {
+                  const st = findStage(stages, f.status);
+                  const colaborador = colaboradoresById.get(f.user_id);
+                  return (
+                    <span key={f.id} onClick={() => onPillClick(f)}
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
+                      style={{ background: st.color + "18", color: st.color }}
+                      title={`${colaborador?.fullName || "—"} · ${tipoLabel(f.tipo)}`}>
+                      {colaborador?.fullName || tipoLabel(f.tipo)}
+                    </span>
+                  );
+                })}
+                {items.length > 3 && (
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--text-dim)" }}>+{items.length - 3}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
@@ -711,6 +905,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
   const feedbackStageFields = useRHStageFields("feedback");
   const { users } = useProfiles();
 
+  const [viewMode, setViewMode]                   = useState("kanban"); // "kanban" | "table" | "calendar"
   const [novoOpen, setNovoOpen]                   = useState(false);
   const [completandoId, setCompletandoId]         = useState(null);
   const [autoavaliandoId, setAutoavaliandoId]     = useState(null);
@@ -730,6 +925,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
   const loading = loadingFeedbacks || loadingColaboradores || loadingStages;
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
+  const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
 
   // Reconciliação automática: ao abrir a tela, gera o próximo ciclo pendente
   // (check-in de onboarding ou semestral recorrente) pra quem já está sem
@@ -902,18 +1098,40 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
           </div>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Ciclos de avaliação e histórico</p>
         </div>
-        {canWrite && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
-            <Button icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
+            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
+            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
           </div>
-        )}
+          {canWrite && (
+            <>
+              <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
+              <Button icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
+            </>
+          )}
+        </div>
       </div>
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : feedbacks.length === 0 ? (
         <EmptyState icon={MessageSquare} title="Nenhum ciclo de avaliação ainda" />
+      ) : viewMode === "table" ? (
+        <FeedbackTableView
+          feedbacks={feedbacks}
+          stages={stages}
+          colaboradoresById={colaboradoresById}
+          usersById={usersById}
+          onRowClick={(f) => setDrawerFeedbackId(f.id)}
+        />
+      ) : viewMode === "calendar" ? (
+        <FeedbackCalendarView
+          feedbacks={feedbacks}
+          stages={stages}
+          colaboradoresById={colaboradoresById}
+          onPillClick={(f) => setDrawerFeedbackId(f.id)}
+        />
       ) : (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
           <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">

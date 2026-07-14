@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Calendar, Check, Plus, X, Clock, CalendarCheck, AlertTriangle, AlertCircle, Pencil, Settings2,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { RH_LEAVE_TYPES } from "../../constants/rh-config";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
@@ -82,6 +83,42 @@ function daysInStage(dateStr) {
 
 function findStage(stages, stageKey) {
   return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
+}
+
+// ── Kanban/Tabela/Calendário — mesmo padrão de ComprasMarketingView/CRMView ──
+
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function ViewToggleButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+      style={{
+        background: active ? "var(--accent)" : "var(--surface)",
+        color: active ? "#FFFFFF" : "var(--text-dim)",
+        border: "none",
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
+    >
+      <Icon size={13} />
+      {label}
+    </button>
+  );
 }
 
 async function contarAnexos(recordId) {
@@ -525,6 +562,160 @@ function FeriasDrawer({
   );
 }
 
+// ── Tabela ────────────────────────────────────────────────────────────────────
+// Início/fim + dias (calcDias já existente acima) — os campos mais claros
+// deste domínio.
+
+function FeriasTableView({ requests, stages, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Colaborador", "Tipo", "Início", "Fim", "Dias", "Etapa"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {requests.length === 0 && (
+            <tr><td colSpan={6} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma solicitação encontrada.</td></tr>
+          )}
+          {requests.map((req) => {
+            const st = findStage(stages, req.status);
+            const dias = calcDias(req.start_date, req.end_date);
+            return (
+              <tr key={req.id} onClick={() => onRowClick(req)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <UserAvatar user={req.profiles} size={26} />
+                    <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{req.profiles?.name || "Desconhecido"}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{leaveTypeLabel(req.type)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(req.start_date)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(req.end_date)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{dias}d</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                    {st.name}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Calendário ───────────────────────────────────────────────────────────────
+// Agrupa por start_date — data de início do afastamento.
+
+function FeriasCalendarView({ requests, stages, onPillClick }) {
+  const [cursor, setCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const byDay = useMemo(() => {
+    const map = new Map();
+    for (const req of requests) {
+      if (!req.start_date) continue;
+      const d = new Date(req.start_date.slice ? req.start_date.slice(0, 10) : req.start_date);
+      if (Number.isNaN(d.getTime())) continue;
+      const k = dayKey(d);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(req);
+    }
+    return map;
+  }, [requests]);
+
+  const grid = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const offset = (first.getDay() + 6) % 7;
+    const start = new Date(first);
+    start.setDate(first.getDate() - offset);
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [cursor]);
+
+  const today = new Date();
+  const month = cursor.getMonth();
+
+  return (
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronRight size={16} />
+          </button>
+          <h2 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>
+            {MONTHS[month]} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>{cursor.getFullYear()}</span>
+          </h2>
+        </div>
+        <button onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}>
+          Hoje
+        </button>
+      </div>
+      <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
+        {WEEKDAYS.map(w => (
+          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
+        {grid.map((d, i) => {
+          const inMonth = d.getMonth() === month;
+          const isToday = sameDay(d, today);
+          const k = dayKey(d);
+          const items = byDay.get(k) || [];
+          return (
+            <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
+              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+                {d.getDate()}
+              </span>
+              <div className="flex flex-col gap-0.5">
+                {items.slice(0, 3).map((req) => {
+                  const st = findStage(stages, req.status);
+                  return (
+                    <span key={req.id} onClick={() => onPillClick(req)}
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
+                      style={{ background: st.color + "18", color: st.color }}
+                      title={`${req.profiles?.name || "Desconhecido"} · ${leaveTypeLabel(req.type)}`}>
+                      {req.profiles?.name || leaveTypeLabel(req.type)}
+                    </span>
+                  );
+                })}
+                {items.length > 3 && (
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--text-dim)" }}>+{items.length - 3}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main View ─────────────────────────────────────────────────────────────────
 
 export function RHFeriasView({ currentUser, users = [], canWrite }) {
@@ -532,6 +723,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
   const { stages, loading: loadingStages } = useRHPipelineStages("ferias");
   const feriasStageFields = useRHStageFields("ferias");
 
+  const [viewMode, setViewMode]           = useState("kanban"); // "kanban" | "table" | "calendar"
   const [filterStatus, setFilterStatus]   = useState("todas");
   const [onlyMine, setOnlyMine]           = useState(false);
   const [showSolicitar, setShowSolicitar] = useState(false);
@@ -682,6 +874,11 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Gestão de solicitações de afastamento</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
+            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
+            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+          </div>
           {canWrite && (
             <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
           )}
@@ -736,6 +933,10 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
           title="Nenhuma solicitação encontrada"
           description={filterStatus !== "todas" ? "Tente mudar o filtro de status." : "As solicitações de afastamento aparecerão aqui."}
         />
+      ) : viewMode === "table" ? (
+        <FeriasTableView requests={filtered} stages={stages} onRowClick={(r) => setDrawerReqId(r.id)} />
+      ) : viewMode === "calendar" ? (
+        <FeriasCalendarView requests={filtered} stages={stages} onPillClick={(r) => setDrawerReqId(r.id)} />
       ) : (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16 }} className="flex-col md:flex-row">
           <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">

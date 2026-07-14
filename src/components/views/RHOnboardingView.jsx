@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ClipboardCheck, Plus, X, Check, Trash2, ArrowRight,
   Briefcase, Pencil, Settings2, AlertCircle,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { RH_CONTRACT_TYPES, RH_DEPARTMENTS } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -51,6 +52,42 @@ function addDays(base, days) {
 function daysInStage(dateStr) {
   if (!dateStr) return 0;
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+
+// ── Kanban/Tabela/Calendário — mesmo padrão de ComprasMarketingView/CRMView ──
+
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function ViewToggleButton({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+      style={{
+        background: active ? "var(--accent)" : "var(--surface)",
+        color: active ? "#FFFFFF" : "var(--text-dim)",
+        border: "none",
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
+    >
+      <Icon size={13} />
+      {label}
+    </button>
+  );
 }
 
 function InitialsAvatar({ name, size = 32 }) {
@@ -731,6 +768,162 @@ function MeuChecklist({ colaborador, tarefas, onStatusChange }) {
   );
 }
 
+// ── Tabela ────────────────────────────────────────────────────────────────────
+// Data prevista/relevante: data de admissão — é o campo de data central do
+// onboarding (aparece no drawer, não existe outro prazo genérico por
+// colaborador). Checklist reaproveita o mesmo done/total do card.
+
+function OnboardingTableView({ colaboradores, stages, tarefasByColaborador, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Colaborador", "Cargo", "Departamento", "Etapa", "Admissão", "Checklist"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {colaboradores.length === 0 && (
+            <tr><td colSpan={6} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhum colaborador encontrado.</td></tr>
+          )}
+          {colaboradores.map((c) => {
+            const st = findStage(stages, c.onboardingStage);
+            const tarefas = tarefasByColaborador[c.id] || [];
+            const done = tarefas.filter((t) => t.status === "concluida").length;
+            return (
+              <tr key={c.id} onClick={() => onRowClick(c)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <InitialsAvatar name={c.fullName} size={26} />
+                    <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{c.fullName}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.jobTitle || "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.department || "—"}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                    {st.name}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(c.admissionDate)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{tarefas.length > 0 ? `${done}/${tarefas.length}` : "—"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Calendário ────────────────────────────────────────────────────────────────
+// Agrupa por data de admissão — mesmo campo usado na tabela acima.
+
+function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
+  const [cursor, setCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const byDay = useMemo(() => {
+    const map = new Map();
+    for (const c of colaboradores) {
+      if (!c.admissionDate) continue;
+      const d = new Date(c.admissionDate.slice ? c.admissionDate.slice(0, 10) : c.admissionDate);
+      if (Number.isNaN(d.getTime())) continue;
+      const k = dayKey(d);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(c);
+    }
+    return map;
+  }, [colaboradores]);
+
+  const grid = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const offset = (first.getDay() + 6) % 7;
+    const start = new Date(first);
+    start.setDate(first.getDate() - offset);
+    const days = [];
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [cursor]);
+
+  const today = new Date();
+  const month = cursor.getMonth();
+
+  return (
+    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="px-4 py-3 flex items-center justify-between border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            className="p-1.5 rounded-lg cursor-pointer" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
+            <ChevronRight size={16} />
+          </button>
+          <h2 className="font-semibold" style={{ fontSize: 16, color: "var(--text)" }}>
+            {MONTHS[month]} <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>{cursor.getFullYear()}</span>
+          </h2>
+        </div>
+        <button onClick={() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}>
+          Hoje
+        </button>
+      </div>
+      <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
+        {WEEKDAYS.map(w => (
+          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
+        {grid.map((d, i) => {
+          const inMonth = d.getMonth() === month;
+          const isToday = sameDay(d, today);
+          const k = dayKey(d);
+          const items = byDay.get(k) || [];
+          return (
+            <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
+              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+                {d.getDate()}
+              </span>
+              <div className="flex flex-col gap-0.5">
+                {items.slice(0, 3).map((c) => {
+                  const st = findStage(stages, c.onboardingStage);
+                  return (
+                    <span key={c.id} onClick={() => onPillClick(c)}
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
+                      style={{ background: st.color + "18", color: st.color }}
+                      title={`${c.fullName} · ${st.name}`}>
+                      {c.fullName}
+                    </span>
+                  );
+                })}
+                {items.length > 3 && (
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--text-dim)" }}>+{items.length - 3}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
@@ -742,6 +935,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
   const { stages, loading: loadingStages } = useRHPipelineStages("onboarding");
   const onboardingStageFields = useRHStageFields("onboarding");
   const { users } = useProfiles();
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
   const [novaTemplateOpen, setNovaTemplateOpen] = useState(false);
   const [addColaboradorStage, setAddColaboradorStage] = useState(null);
   const [drawerColaboradorId, setDrawerColaboradorId] = useState(null);
@@ -947,12 +1141,19 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
             {colaboradores.length} colaborador{colaboradores.length !== 1 ? "es" : ""} no onboarding
           </p>
         </div>
-        {canWrite && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
-            <Button variant="secondary" icon={Plus} onClick={() => setNovaTemplateOpen(true)}>Template</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
+            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
+            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
           </div>
-        )}
+          {canWrite && (
+            <>
+              <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
+              <Button variant="secondary" icon={Plus} onClick={() => setNovaTemplateOpen(true)}>Template</Button>
+            </>
+          )}
+        </div>
       </div>
 
       {!loading && colaboradores.length > 0 && (
@@ -983,6 +1184,19 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : colaboradores.length === 0 ? (
         <EmptyState icon={ClipboardCheck} title="Nenhum colaborador cadastrado" description="Os colaboradores em onboarding aparecerão aqui." />
+      ) : viewMode === "table" ? (
+        <OnboardingTableView
+          colaboradores={colaboradores}
+          stages={stages}
+          tarefasByColaborador={tarefasByColaborador}
+          onRowClick={(c) => setDrawerColaboradorId(c.id)}
+        />
+      ) : viewMode === "calendar" ? (
+        <OnboardingCalendarView
+          colaboradores={colaboradores}
+          stages={stages}
+          onPillClick={(c) => setDrawerColaboradorId(c.id)}
+        />
       ) : (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
           <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
