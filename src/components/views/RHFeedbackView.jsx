@@ -579,7 +579,7 @@ function FeedbackKanbanColumn({
 
 function FeedbackDrawer({
   feedback, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, moveError, onComplete, onUpdateCustomFields, onAddActivity, onShowHistorico, onClose,
+  onStageChange, moveError, onComplete, onUpdateCustomFields, onAddActivity, onShowHistorico, onClose, notifyMentions,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -730,6 +730,10 @@ function FeedbackDrawer({
               activities={feedback.activities || []}
               onAddActivity={onAddActivity}
               currentUser={currentUser}
+              users={users}
+              notifyMentions={notifyMentions}
+              mentionLink={{ module: "rh_feedback", id: feedback.id }}
+              mentionContextLabel={colaborador?.fullName}
             />
           </div>
         </div>
@@ -895,7 +899,7 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
+export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions }) {
   const {
     feedbacks, loading: loadingFeedbacks, createFeedback, createPendingCycle, completeFeedback,
     submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, addFeedbackActivity,
@@ -1196,6 +1200,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser }) {
           onAddActivity={(entry) => addFeedbackActivity(drawerFeedback.id, entry)}
           onShowHistorico={(colaboradorId) => { setHistoricoColaboradorId(colaboradorId); setDrawerFeedbackId(null); }}
           onClose={() => setDrawerFeedbackId(null)}
+          notifyMentions={notifyMentions}
         />
       )}
 

@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, Paperclip, ListChecks, MessageSquare,
+  Activity, Paperclip, ListChecks,
   Plus, Upload, Download, Trash2, Check, X,
   File, FileImage, FileSpreadsheet, FileText, AlertCircle,
 } from "lucide-react";
 import { useRHAttachments } from "../../hooks/use-rh-attachments";
 import { useRHChecklists } from "../../hooks/use-rh-checklists";
+import { CommentsPanel } from "../shared/CommentsPanel";
+import { getMentionableUsers } from "../../utils/mentionable-users";
 
 // ── Tab strip ─────────────────────────────────────────────────────────────────
 
@@ -60,15 +62,21 @@ function formatTimestamp(ts) {
   return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
-function authorLabel(createdBy, currentUser) {
+// Resolve o nome real de quem criou uma atividade/comentário a partir de
+// `users` (agora disponível neste shell) — antes disso, qualquer autor que
+// não fosse o currentUser virava o placeholder genérico "Colaborador" (bug
+// de FASE 4). Fallback pra "Colaborador" só sobrevive quando o autor existe
+// mas não foi encontrado em `users` (ex: usuário removido).
+function authorLabel(createdBy, currentUser, users = []) {
   if (!createdBy) return "Sistema";
   if (currentUser && createdBy === currentUser.id) return currentUser.name || "Você";
-  return "Colaborador";
+  const found = users.find(u => u.id === createdBy);
+  return found?.name || "Colaborador";
 }
 
 // ── Atividades ────────────────────────────────────────────────────────────────
 
-function RHActivitiesPanel({ activities, currentUser }) {
+function RHActivitiesPanel({ activities, currentUser, users }) {
   const sorted = useMemo(() => {
     return [...(activities || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [activities]);
@@ -92,7 +100,7 @@ function RHActivitiesPanel({ activities, currentUser }) {
         {sorted.slice(0, 20).map((a, i) => (
           <li key={a.id ?? i} className="text-xs" style={{ color: "var(--text)" }}>
             <div>
-              <span style={{ color: "var(--text-dim)" }}>{authorLabel(a.createdBy, currentUser)} </span>
+              <span style={{ color: "var(--text-dim)" }}>{authorLabel(a.createdBy, currentUser, users)} </span>
               {a.body}
             </div>
             <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
@@ -106,92 +114,6 @@ function RHActivitiesPanel({ activities, currentUser }) {
           </li>
         )}
       </ol>
-    </div>
-  );
-}
-
-// ── Comentários ───────────────────────────────────────────────────────────────
-
-function RHCommentsPanel({ activities, onAddActivity, currentUser }) {
-  const [text, setText] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const comments = useMemo(() => {
-    return (activities || [])
-      .filter(a => a.type === "comment" || a.type === "note")
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [activities]);
-
-  const handleAdd = useCallback(async () => {
-    const body = text.trim();
-    if (!body || !onAddActivity) return;
-    setSaving(true);
-    try {
-      await onAddActivity({
-        type: "comment",
-        body,
-        createdBy: currentUser?.id || null,
-        createdAt: new Date().toISOString(),
-      });
-      setText("");
-    } finally {
-      setSaving(false);
-    }
-  }, [text, onAddActivity, currentUser]);
-
-  return (
-    <div className="p-4 rounded-xl border space-y-3" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-      <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>
-        Comentários
-      </div>
-      {comments.length === 0 && (
-        <div className="text-xs italic" style={{ color: "var(--text-dim)" }}>
-          Nenhum comentário ainda.
-        </div>
-      )}
-      {comments.length > 0 && (
-        <ol className="space-y-2.5">
-          {comments.slice(0, 20).map((c, i) => (
-            <li key={c.id ?? i} className="text-xs" style={{ color: "var(--text)" }}>
-              <div className="font-semibold mb-0.5" style={{ color: "var(--text)", fontSize: 11 }}>
-                {authorLabel(c.createdBy, currentUser)}
-                <span className="ml-1.5 font-normal" style={{ color: "var(--text-dim)", fontSize: 10 }}>
-                  {formatTimestamp(c.createdAt)}
-                </span>
-              </div>
-              <div className="whitespace-pre-line">{c.body}</div>
-            </li>
-          ))}
-        </ol>
-      )}
-      {onAddActivity && (
-        <div className="pt-2 border-t" style={{ borderColor: "var(--surface-alt)" }}>
-          <textarea
-            value={text}
-            onChange={e => setText(e.target.value)}
-            placeholder="Escreva um comentário..."
-            rows={2}
-            className="w-full text-xs rounded-lg border px-3 py-2 outline-none"
-            style={{ borderColor: "var(--border)", color: "var(--text)", resize: "vertical", fontFamily: "inherit" }}
-          />
-          <div className="flex justify-end mt-2">
-            <button
-              onClick={handleAdd}
-              disabled={!text.trim() || saving}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
-              style={{
-                background: text.trim() && !saving ? "var(--accent)" : "var(--border)",
-                color: text.trim() && !saving ? "#FFFFFF" : "var(--text-dim)",
-                border: "none",
-                cursor: text.trim() && !saving ? "pointer" : "not-allowed",
-              }}
-            >
-              <Plus size={12} />
-              {saving ? "Adicionando..." : "Comentar"}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -557,7 +479,10 @@ function RHChecklistsPanel({ domain, recordId, currentUser }) {
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
 
-export function RHDetailDrawerShell({ domain, recordId, activities = [], onAddActivity, currentUser }) {
+export function RHDetailDrawerShell({
+  domain, recordId, activities = [], onAddActivity, currentUser,
+  users = [], mentionableUsers, notifyMentions, mentionLink, mentionContextLabel,
+}) {
   const showChecklists = domain === "vagas" || domain === "candidatos";
 
   const tabs = useMemo(() => {
@@ -566,7 +491,6 @@ export function RHDetailDrawerShell({ domain, recordId, activities = [], onAddAc
       { id: "anexos", label: "Anexos", icon: Paperclip },
     ];
     if (showChecklists) list.push({ id: "checklists", label: "Checklists", icon: ListChecks });
-    list.push({ id: "comentarios", label: "Comentários", icon: MessageSquare });
     return list;
   }, [showChecklists]);
 
@@ -576,12 +500,64 @@ export function RHDetailDrawerShell({ domain, recordId, activities = [], onAddAc
     if (tab === "checklists" && !showChecklists) setTab("atividades");
   }, [showChecklists, tab]);
 
+  const effectiveMentionableUsers = useMemo(
+    () => mentionableUsers || getMentionableUsers(users, { domain: "rh" }),
+    [mentionableUsers, users]
+  );
+
+  // Normaliza o array genérico `activities` (jsonb, compartilhado com a aba
+  // Atividades) pro formato que o CommentsPanel compartilhado espera —
+  // resolvendo autor/avatar reais via `users` em vez do antigo placeholder
+  // "Colaborador". `mentionedIds` só existe em comentários criados depois
+  // da FASE 4; entradas antigas caem no default [] (sem menção pra realçar).
+  const comments = useMemo(() => {
+    return (activities || [])
+      .filter(a => a.type === "comment" || a.type === "note")
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map(a => {
+        const isCurrentUser = currentUser && a.createdBy === currentUser.id;
+        const author = isCurrentUser ? currentUser : users.find(u => u.id === a.createdBy);
+        const mentionedNames = (a.mentionedIds || [])
+          .map(id => users.find(u => u.id === id)?.name)
+          .filter(Boolean);
+        return {
+          id: a.id,
+          authorId: a.createdBy || null,
+          authorName: author?.name || null,
+          avatarBg: author?.avatarBg,
+          avatarUrl: author?.avatarUrl,
+          initials: author?.initials,
+          text: a.body,
+          mentionedNames,
+          createdAt: a.createdAt,
+        };
+      });
+  }, [activities, currentUser, users]);
+
+  const handleAddComment = useCallback(async (text, mentionedIds) => {
+    if (!onAddActivity) return;
+    await onAddActivity({
+      type: "comment",
+      body: text,
+      createdBy: currentUser?.id || null,
+      mentionedIds,
+      createdAt: new Date().toISOString(),
+    });
+    if (mentionedIds?.length > 0 && notifyMentions) {
+      await notifyMentions(mentionedIds, {
+        title: `${currentUser?.name || "Alguém"} te mencionou`,
+        body: mentionContextLabel ? `Em um comentário: ${mentionContextLabel}` : "Em um comentário",
+        link: mentionLink,
+      });
+    }
+  }, [onAddActivity, currentUser, notifyMentions, mentionLink, mentionContextLabel]);
+
   return (
     <div className="space-y-4">
       <RHSideTabs tabs={tabs} activeTab={tab} onChange={setTab} />
 
       {tab === "atividades" && (
-        <RHActivitiesPanel activities={activities} currentUser={currentUser} />
+        <RHActivitiesPanel activities={activities} currentUser={currentUser} users={users} />
       )}
 
       {tab === "anexos" && (
@@ -592,9 +568,13 @@ export function RHDetailDrawerShell({ domain, recordId, activities = [], onAddAc
         <RHChecklistsPanel domain={domain} recordId={recordId} currentUser={currentUser} />
       )}
 
-      {tab === "comentarios" && (
-        <RHCommentsPanel activities={activities} onAddActivity={onAddActivity} currentUser={currentUser} />
-      )}
+      <CommentsPanel
+        comments={comments}
+        currentUser={currentUser}
+        mentionableUsers={effectiveMentionableUsers}
+        onAddComment={handleAddComment}
+        disabled={!onAddActivity}
+      />
     </div>
   );
 }

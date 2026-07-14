@@ -402,7 +402,7 @@ function FeriasKanbanColumn({
 
 function FeriasDrawer({
   req, canWrite, stages, users, currentUser,
-  onAprovar, onRecusar, onMoveToStage, onUpdateCustomFields, onAddActivity, onClose, onMoved, busy,
+  onAprovar, onRecusar, onMoveToStage, onUpdateCustomFields, onAddActivity, onClose, onMoved, busy, notifyMentions,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -554,6 +554,10 @@ function FeriasDrawer({
               activities={req.activities || []}
               onAddActivity={onAddActivity}
               currentUser={currentUser}
+              users={users}
+              notifyMentions={notifyMentions}
+              mentionLink={{ module: "rh_ferias", id: req.id }}
+              mentionContextLabel={req.profiles?.name}
             />
           </div>
         </div>
@@ -718,7 +722,7 @@ function FeriasCalendarView({ requests, stages, onPillClick }) {
 
 // ── Main View ─────────────────────────────────────────────────────────────────
 
-export function RHFeriasView({ currentUser, users = [], canWrite }) {
+export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions }) {
   const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, addActivity } = useRHFeriasRequests({});
   const { stages, loading: loadingStages } = useRHPipelineStages("ferias");
   const feriasStageFields = useRHStageFields("ferias");
@@ -1007,6 +1011,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite }) {
           onClose={() => setDrawerReqId(null)}
           onMoved={(id) => { setDrawerReqId(null); reopenAfterMove(setDrawerReqId, id); }}
           busy={busyId === drawerReq.id}
+          notifyMentions={notifyMentions}
         />
       )}
 

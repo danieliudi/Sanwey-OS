@@ -456,7 +456,7 @@ function TreinamentoBoardColumn({
 
 function AtribuicaoDrawer({
   atribuicao, treinamento, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, moveError, onUpdateCustomFields, onAddActivity, onClose,
+  onStageChange, moveError, onUpdateCustomFields, onAddActivity, onClose, notifyMentions,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -550,6 +550,10 @@ function AtribuicaoDrawer({
               activities={atribuicao.activities || []}
               onAddActivity={onAddActivity}
               currentUser={currentUser}
+              users={users}
+              notifyMentions={notifyMentions}
+              mentionLink={{ module: "rh_treinamentos", id: atribuicao.id }}
+              mentionContextLabel={[colaborador?.fullName, treinamento?.titulo].filter(Boolean).join(" · ")}
             />
           </div>
         </div>
@@ -715,7 +719,7 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
 
 function TreinamentoBoardModal({
   treinamento, atribuicoes, colaboradoresById, canWrite, currentUser, users,
-  onChangeStage, onUpdateCustomFields, onAddActivity, onClose,
+  onChangeStage, onUpdateCustomFields, onAddActivity, onClose, notifyMentions,
 }) {
   const { stages, loading: loadingStages } = useRHPipelineStages("treinamentos");
   const stageFields = useRHStageFields("treinamentos");
@@ -865,6 +869,7 @@ function TreinamentoBoardModal({
           onUpdateCustomFields={(merged) => onUpdateCustomFields(drawerAtrib.id, merged)}
           onAddActivity={(entry) => onAddActivity(drawerAtrib.id, entry)}
           onClose={() => setDrawerId(null)}
+          notifyMentions={notifyMentions}
         />
       )}
 
@@ -894,7 +899,7 @@ function TreinamentoBoardModal({
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = [] }) {
+export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = [], notifyMentions }) {
   const {
     treinamentos, atribuicoes, loading: loadingTreinamentos, createTreinamento, updateTreinamento,
     assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, updateAtribuicaoCustomFields, addAtribuicaoActivity,
@@ -1108,6 +1113,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           onUpdateCustomFields={updateAtribuicaoCustomFields}
           onAddActivity={addAtribuicaoActivity}
           onClose={() => setBoardTreinamento(null)}
+          notifyMentions={notifyMentions}
         />
       )}
     </div>

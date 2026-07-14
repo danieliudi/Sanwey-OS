@@ -929,7 +929,7 @@ function VagaKanbanColumn({
 
 function VagaDrawer({
   vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onCopyLink, onClose, onVerCandidatos, copiedSlug,
-  customFields, onCustomFieldChange, onAddActivity, currentUser, users, moveError,
+  customFields, onCustomFieldChange, onAddActivity, currentUser, users, moveError, notifyMentions,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -1092,6 +1092,10 @@ function VagaDrawer({
               activities={vaga.activities || []}
               onAddActivity={onAddActivity}
               currentUser={currentUser}
+              users={users}
+              notifyMentions={notifyMentions}
+              mentionLink={{ module: "rh_vagas", id: vaga.id }}
+              mentionContextLabel={vaga.title}
             />
           </div>
         </div>
@@ -1410,7 +1414,7 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose, user
 
 function CandidatoDrawer({
   candidato, vagas, stages, canWrite, onStageChange, onStageMoved, onAddNote, onRatingChange, onClose, onHire,
-  customFields, onCustomFieldChange, onAddActivity, currentUser, users,
+  customFields, onCustomFieldChange, onAddActivity, currentUser, users, notifyMentions,
 }) {
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
@@ -1807,6 +1811,10 @@ function CandidatoDrawer({
               activities={candidato.activities || []}
               onAddActivity={onAddActivity}
               currentUser={currentUser}
+              users={users}
+              notifyMentions={notifyMentions}
+              mentionLink={{ module: "rh_candidatos", id: candidato.id }}
+              mentionContextLabel={candidato.name}
             />
           </div>
         </div>
@@ -2183,7 +2191,7 @@ function addDays(base, days) {
   return d.toISOString().slice(0, 10);
 }
 
-export function RHRecrutamentoView({ user, canWrite }) {
+export function RHRecrutamentoView({ user, canWrite, notifyMentions }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
     createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, attachTriagemToVaga,
@@ -2792,6 +2800,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           onAddActivity={(entry) => handleVagaAddActivity(vagaEmDrawer.id, entry)}
           currentUser={user}
           users={profileUsers}
+          notifyMentions={notifyMentions}
         />
       )}
 
@@ -2823,6 +2832,7 @@ export function RHRecrutamentoView({ user, canWrite }) {
           onAddActivity={(entry) => handleAplicacaoAddActivity(selectedCandidato.id, entry)}
           currentUser={user}
           users={profileUsers}
+          notifyMentions={notifyMentions}
         />
       )}
 

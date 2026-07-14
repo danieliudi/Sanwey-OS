@@ -274,7 +274,7 @@ function OnboardingKanbanColumn({
 function OnboardingDrawer({
   colaborador, tarefas, templates, vagaTitle, canWrite, stages, users, currentUser,
   onStageChange, moveError, onStatusChange, onDeleteTarefa, onApplyTemplate, onAddTask, onClose,
-  onUpdateCustomFields, onAddActivity,
+  onUpdateCustomFields, onAddActivity, notifyMentions,
 }) {
   const [templateId, setTemplateId] = useState("");
   const [novaTarefa, setNovaTarefa] = useState("");
@@ -486,6 +486,10 @@ function OnboardingDrawer({
               activities={colaborador.activities || []}
               onAddActivity={onAddActivity}
               currentUser={currentUser}
+              users={users}
+              notifyMentions={notifyMentions}
+              mentionLink={{ module: "rh_onboarding", id: colaborador.id }}
+              mentionContextLabel={colaborador.fullName}
             />
           </div>
         </div>
@@ -926,7 +930,7 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
+export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentions }) {
   const { templates, tarefas, loading: loadingTarefas, createTemplate, applyChecklist, updateTarefaStatus, deleteTarefa } = useRHOnboarding({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador, createColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
@@ -1266,6 +1270,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser }) {
           onDeleteTarefa={deleteTarefa}
           onApplyTemplate={applyChecklist}
           onAddTask={applyChecklist}
+          notifyMentions={notifyMentions}
           onClose={() => setDrawerColaboradorId(null)}
           onUpdateCustomFields={(merged) => updateColaborador(drawerColaborador.id, { customFields: merged })}
           onAddActivity={(entry) => handleAddActivity(drawerColaborador.id, entry)}
