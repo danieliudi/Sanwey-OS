@@ -4,6 +4,7 @@ import { Upload, X, ChevronRight, ChevronLeft, Download, Check } from "lucide-re
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
+import { maskCurrencyBR } from "../../utils/currency";
 
 // ---------------------------------------------------------------------------
 // CRM field definitions for column mapping
@@ -84,11 +85,14 @@ function normalizeCNPJ(raw) {
   return String(raw).replace(/\D/g, "").replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 }
 
+// Fonte textual (CSV) é sempre pt-BR — "." é separador de milhar, "," é
+// decimal (mesmo parser da máscara de moeda dos formulários, pra não
+// interpretar "1.234,56" como 1.234 dividindo por mil o valor real).
 function parseValue(raw) {
   if (!raw) return 0;
-  const s = String(raw).replace(/[^\d,.-]/g, "").replace(",", ".");
-  const n = parseFloat(s);
-  return isNaN(n) ? 0 : n;
+  if (typeof raw === "number") return raw;
+  const { value } = maskCurrencyBR(raw);
+  return value ?? 0;
 }
 
 // Rótulo de coluna no estilo Excel (A, B, ..., Z, AA, AB, ...) — usado quando
