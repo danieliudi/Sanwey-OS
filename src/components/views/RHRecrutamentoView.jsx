@@ -40,6 +40,7 @@ import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHManagerLinks } from "../../hooks/use-rh-manager-links";
 import { StageNavigator } from "../shared/StageNavigator";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
@@ -965,236 +966,240 @@ function VagaDrawer({
   const responsibleIds = vaga.responsible_ids || [];
   const resolvedResponsibles = responsibleIds.map(id => users.find(u => u.id === id)).filter(Boolean);
 
-  return (
+  const header = (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{vaga.title}</div>
+      <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{vaga.job_title || "—"} · {vaga.department || "—"}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} /> {stageInfo.name}
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: pri.color, fontSize: 11, fontWeight: 600 }}>
+          <Flag size={11} /> {pri.name}
+        </span>
+        {(vaga.company_ids || []).map((id) => (
+          <span key={id} style={{ fontSize: 11, fontWeight: 600, color: RH_FRENTE_COLORS[id] || "var(--text-dim)", background: `${RH_FRENTE_COLORS[id] || "#888"}18`, borderRadius: 99, padding: "2px 10px" }}>
+            {RH_FRENTE_LABELS[id] || id}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+
+  const left = (
     <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{vaga.title}</div>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{vaga.job_title || "—"} · {vaga.department || "—"}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} /> {stageInfo.name}
-              </span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: pri.color, fontSize: 11, fontWeight: 600 }}>
-                <Flag size={11} /> {pri.name}
-              </span>
-              {(vaga.company_ids || []).map((id) => (
-                <span key={id} style={{ fontSize: 11, fontWeight: 600, color: RH_FRENTE_COLORS[id] || "var(--text-dim)", background: `${RH_FRENTE_COLORS[id] || "#888"}18`, borderRadius: 99, padding: "2px 10px" }}>
-                  {RH_FRENTE_LABELS[id] || id}
-                </span>
-              ))}
-            </div>
+      <div>
+        <div style={labelSt}>Responsáveis</div>
+        {canWrite ? (
+          <AssigneeMultiSelect
+            value={responsibleIds}
+            onChange={(ids) => onUpdateResponsibles(ids)}
+            options={users}
+            placeholder="Selecionar responsáveis…"
+          />
+        ) : resolvedResponsibles.length > 0 ? (
+          <AvatarStack users={resolvedResponsibles} size={22} max={4} />
+        ) : (
+          <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum responsável definido</div>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {[
+          { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === vaga.contract_type)?.label || "—" },
+          { label: "Jornada", value: vaga.schedule || "—" },
+          { label: "Escala", value: vaga.shift || "—" },
+          { label: "Prazo para contratação", value: fmt(vaga.hiring_deadline) },
+          { label: "Faixa salarial", value: (vaga.salary_min || vaga.salary_max) ? `R$ ${vaga.salary_min || "0"} – R$ ${vaga.salary_max || "—"}` : "—" },
+          { label: "Candidatos", value: String(candidatosCount) },
+        ].map((f) => (
+          <div key={f.label}>
+            <div style={labelSt}>{f.label}</div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
-            <X size={18} />
-          </button>
+        ))}
+      </div>
+
+      {vaga.benefits?.length > 0 && (
+        <div>
+          <div style={labelSt}>Benefícios</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {vaga.benefits.map((b, i) => (
+              <span key={i} style={{ fontSize: 11, color: "var(--text)", background: "var(--surface-alt)", borderRadius: 99, padding: "3px 10px" }}>{b}</span>
+            ))}
+          </div>
         </div>
+      )}
 
-        <div style={{ padding: "20px 24px", flex: 1 }}>
-          <div style={{ marginBottom: 20 }}>
-            <div style={labelSt}>Responsáveis</div>
-            {canWrite ? (
-              <AssigneeMultiSelect
-                value={responsibleIds}
-                onChange={(ids) => onUpdateResponsibles(ids)}
-                options={users}
-                placeholder="Selecionar responsáveis…"
-              />
-            ) : resolvedResponsibles.length > 0 ? (
-              <AvatarStack users={resolvedResponsibles} size={22} max={4} />
-            ) : (
-              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum responsável definido</div>
-            )}
-          </div>
+      {vaga.description && (
+        <div>
+          <div style={labelSt}>Descrição</div>
+          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{vaga.description}</div>
+        </div>
+      )}
+    </>
+  );
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-            {[
-              { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === vaga.contract_type)?.label || "—" },
-              { label: "Jornada", value: vaga.schedule || "—" },
-              { label: "Escala", value: vaga.shift || "—" },
-              { label: "Prazo para contratação", value: fmt(vaga.hiring_deadline) },
-              { label: "Faixa salarial", value: (vaga.salary_min || vaga.salary_max) ? `R$ ${vaga.salary_min || "0"} – R$ ${vaga.salary_max || "—"}` : "—" },
-              { label: "Candidatos", value: String(candidatosCount) },
-            ].map((f) => (
-              <div key={f.label}>
-                <div style={labelSt}>{f.label}</div>
-                <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+  const center = (
+    <>
+      {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
+      {visibleCustomFields.length > 0 && (
+        <div>
+          <div style={labelSt}>Campos desta etapa</div>
+          <div className="flex flex-col gap-3">
+            {visibleCustomFields.map((field) => (
+              <div key={field.id}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                  {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
+                </div>
+                <RHStageFieldInput
+                  field={field}
+                  value={vaga.custom_fields?.[field.fieldKey]}
+                  onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
+                  users={users}
+                />
               </div>
             ))}
           </div>
+        </div>
+      )}
 
-          {vaga.benefits?.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Benefícios</div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {vaga.benefits.map((b, i) => (
-                  <span key={i} style={{ fontSize: 11, color: "var(--text)", background: "var(--surface-alt)", borderRadius: 99, padding: "3px 10px" }}>{b}</span>
-                ))}
-              </div>
+      {canWrite && (
+        <>
+          {vaga.stage === "publicada" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <button
+                onClick={() => onCopyLink(vaga)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
+              >
+                {copiedSlug === vaga.id ? <Check size={12} color="var(--success)" /> : <Link2 size={12} />}
+                {copiedSlug === vaga.id ? "Link copiado!" : "Copiar link"}
+              </button>
+              <a
+                href={whatsappShareUrl(vaga)}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
+              >
+                <MessageSquare size={12} /> WhatsApp
+              </a>
             </div>
           )}
 
-          {vaga.description && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Descrição</div>
-              <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{vaga.description}</div>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <button onClick={() => onEdit(vaga)} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
+              Editar vaga
+            </button>
+            <button onClick={() => onVerCandidatos(vaga.id)} style={{ flex: 1, background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              Ver candidatos
+            </button>
+          </div>
 
-          {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
-          {visibleCustomFields.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Campos desta etapa</div>
-              <div className="flex flex-col gap-3">
-                {visibleCustomFields.map((field) => (
-                  <div key={field.id}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                      {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
+          {/* Triagem externa por gestor de área (item 8) — link seguro,
+              sem login, escopado só a esta vaga. */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={labelSt}>Avaliação do gestor de área</div>
+              <button
+                onClick={() => setManagerModalOpen(true)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
+              >
+                <Mail size={12} /> Encaminhar pro gestor
+              </button>
+            </div>
+            {managerLinks.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {managerLinks.map((link) => {
+                  const revoked = !!link.revoked_at;
+                  const expired = !revoked && new Date(link.expires_at).getTime() < Date.now();
+                  const status = revoked ? { label: "Revogado", color: "var(--text-dim)" } : expired ? { label: "Expirado", color: "var(--text-dim)" } : { label: "Ativo", color: "var(--success)" };
+                  return (
+                    <div key={link.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link.manager_name}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{link.manager_email}</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: status.color }}>
+                          <ShieldCheck size={11} /> {status.label}
+                        </span>
+                        {!revoked && !expired && (
+                          <button
+                            onClick={() => revokeManagerLink(link.id)}
+                            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--danger)", fontSize: 11, fontWeight: 600 }}
+                          >
+                            Revogar
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <RHStageFieldInput
-                      field={field}
-                      value={vaga.custom_fields?.[field.fieldKey]}
-                      onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
-                      users={users}
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {managerModalOpen && (
+        <EncaminharGestorModal
+          vagaTitle={vaga.title}
+          onSave={async (form) => { await createManagerLink({ ...form, vagaTitle: vaga.title, userId: currentUser?.id }); setManagerModalOpen(false); }}
+          onClose={() => setManagerModalOpen(false)}
+        />
+      )}
+    </>
+  );
+
+  const right = (
+    <>
+      {canWrite && (
+        <div>
+          <div style={labelSt}>Mover para</div>
+          {moveError && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+              <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+              {moveError}
             </div>
           )}
-
-          {canWrite && (
-            <>
-              <div style={{ marginBottom: 20 }}>
-                <div style={labelSt}>Mover para</div>
-                {moveError && (
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
-                    <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-                    {moveError}
-                  </div>
-                )}
-                <StageNavigator
-                  stages={stages}
-                  currentStage={vaga.stage}
-                  onMove={(stageKey) => onStageChange(vaga.id, stageKey)}
-                  getKey={(s) => s.stageKey}
-                />
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {stages.filter((s) => s.stageKey !== vaga.stage).map((s) => (
-                    <button
-                      key={s.stageKey}
-                      onClick={() => onStageChange(vaga.id, s.stageKey)}
-                      style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                    >
-                      <ArrowRight size={10} /> {s.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {vaga.stage === "publicada" && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-                  <button
-                    onClick={() => onCopyLink(vaga)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
-                  >
-                    {copiedSlug === vaga.id ? <Check size={12} color="var(--success)" /> : <Link2 size={12} />}
-                    {copiedSlug === vaga.id ? "Link copiado!" : "Copiar link"}
-                  </button>
-                  <a
-                    href={whatsappShareUrl(vaga)}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
-                  >
-                    <MessageSquare size={12} /> WhatsApp
-                  </a>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button onClick={() => onEdit(vaga)} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
-                  Editar vaga
-                </button>
-                <button onClick={() => onVerCandidatos(vaga.id)} style={{ flex: 1, background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  Ver candidatos
-                </button>
-              </div>
-
-              {/* Triagem externa por gestor de área (item 8) — link seguro,
-                  sem login, escopado só a esta vaga. */}
-              <div style={{ marginTop: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={labelSt}>Avaliação do gestor de área</div>
-                  <button
-                    onClick={() => setManagerModalOpen(true)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
-                  >
-                    <Mail size={12} /> Encaminhar pro gestor
-                  </button>
-                </div>
-                {managerLinks.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    {managerLinks.map((link) => {
-                      const revoked = !!link.revoked_at;
-                      const expired = !revoked && new Date(link.expires_at).getTime() < Date.now();
-                      const status = revoked ? { label: "Revogado", color: "var(--text-dim)" } : expired ? { label: "Expirado", color: "var(--text-dim)" } : { label: "Ativo", color: "var(--success)" };
-                      return (
-                        <div key={link.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link.manager_name}</div>
-                            <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{link.manager_email}</div>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: status.color }}>
-                              <ShieldCheck size={11} /> {status.label}
-                            </span>
-                            {!revoked && !expired && (
-                              <button
-                                onClick={() => revokeManagerLink(link.id)}
-                                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--danger)", fontSize: 11, fontWeight: 600 }}
-                              >
-                                Revogar
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {managerModalOpen && (
-            <EncaminharGestorModal
-              vagaTitle={vaga.title}
-              onSave={async (form) => { await createManagerLink({ ...form, vagaTitle: vaga.title, userId: currentUser?.id }); setManagerModalOpen(false); }}
-              onClose={() => setManagerModalOpen(false)}
-            />
-          )}
-
-          {/* Anexos / Checklists / Atividades / Comentários */}
-          <div style={{ marginTop: 20 }}>
-            <RHDetailDrawerShell
-              domain="vagas"
-              recordId={vaga.id}
-              activities={vaga.activities || []}
-              onAddActivity={onAddActivity}
-              currentUser={currentUser}
-              users={users}
-              stages={stages}
-              notifyMentions={notifyMentions}
-              mentionLink={{ module: "rh_vagas", id: vaga.id }}
-              mentionContextLabel={vaga.title}
-            />
+          <StageNavigator
+            stages={stages}
+            currentStage={vaga.stage}
+            onMove={(stageKey) => onStageChange(vaga.id, stageKey)}
+            getKey={(s) => s.stageKey}
+          />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {stages.filter((s) => s.stageKey !== vaga.stage).map((s) => (
+              <button
+                key={s.stageKey}
+                onClick={() => onStageChange(vaga.id, s.stageKey)}
+                style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+              >
+                <ArrowRight size={10} /> {s.name}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Anexos / Checklists / Atividades / Comentários */}
+      <RHDetailDrawerShell
+        domain="vagas"
+        recordId={vaga.id}
+        activities={vaga.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        notifyMentions={notifyMentions}
+        mentionLink={{ module: "rh_vagas", id: vaga.id }}
+        mentionContextLabel={vaga.title}
+      />
     </>
+  );
+
+  return (
+    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
   );
 }
 
@@ -1686,328 +1691,307 @@ function CandidatoDrawer({
 
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 
-  return (
-    <>
-      {/* Overlay */}
-      <div
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }}
-        onClick={onClose}
-      />
-      {/* Drawer */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: "min(480px, 100vw)",
-          background: "var(--surface)",
-          zIndex: 1000,
-          display: "flex",
-          flexDirection: "column",
-          boxShadow: "var(--shadow-pop)",
-          overflowY: "auto",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <InitialsAvatar name={candidato.name} size={44} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{candidato.name}</div>
-            {candidato.email && <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{candidato.email}</div>}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} />
-                {stageInfo.name}
-              </span>
-              <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{days}d nesta etapa</span>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div style={{ padding: "20px 24px", flex: 1, overflowY: "auto" }}>
-          {/* Info */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-            {[
-              { label: "Vaga",    value: vagaTitle },
-              { label: "Origem",  value: candidato.source || "—" },
-              { label: "Telefone", value: candidato.phone || "—" },
-              { label: "Aplicado em", value: fmt(candidato.created_at) },
-            ].map((f) => (
-              <div key={f.label}>
-                <div style={labelSt}>{f.label}</div>
-                <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
-              </div>
-            ))}
-            <div>
-              <div style={labelSt}>Avaliação</div>
-              <StarRating
-                value={candidato.rating || 0}
-                onChange={canWrite ? (v) => onRatingChange(candidato.id, v) : undefined}
-              />
-            </div>
-          </div>
-
-          {candidato.resume_ext && (
-            <button
-              onClick={async () => {
-                const { data, error: err } = await supabase.storage
-                  .from("rh-curriculos")
-                  .createSignedUrl(`${candidato.candidateId}/curriculo.${candidato.resume_ext}`, 3600);
-                if (!err && data?.signedUrl) window.open(data.signedUrl, "_blank", "noreferrer");
-              }}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", marginBottom: 20 }}
-            >
-              Ver currículo ({candidato.resume_ext.toUpperCase()})
-            </button>
-          )}
-
-          {/* Fit score / justificativa da triagem por IA */}
-          {typeof candidato.fit_score === "number" && (
-            <div style={{ marginBottom: 20, background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ fontWeight: 800, fontSize: 16, color: "#6D28D9" }}>{Math.round(candidato.fit_score)}</span>
-                <span style={{ fontSize: 11, color: "#6D28D9", fontWeight: 600 }}>fit score (IA)</span>
-              </div>
-              {candidato.justificativa && (
-                <div style={{ fontSize: 12, color: "#5B21B6", lineHeight: 1.5 }}>{candidato.justificativa}</div>
-              )}
-            </div>
-          )}
-
-          {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
-          {visibleCustomFields.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Campos desta etapa</div>
-              <div className="flex flex-col gap-3">
-                {visibleCustomFields.map((field) => (
-                  <div key={field.id}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                      {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
-                    </div>
-                    <RHStageFieldInput
-                      field={field}
-                      value={candidato.customFields?.[field.fieldKey]}
-                      onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
-                      users={users}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Motivo de reprovação já registrado */}
-          {candidato.stage === "reprovado" && candidato.motivo_reprovacao && (
-            <div style={{ marginBottom: 20, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
-              <div style={labelSt}>Motivo da reprovação</div>
-              <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{candidato.motivo_reprovacao}</div>
-            </div>
-          )}
-
-          {/* Stage progression */}
-          {canWrite && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Mover para</div>
-              {moveError && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
-                  <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-                  {moveError}
-                </div>
-              )}
-              <StageNavigator
-                stages={stages}
-                currentStage={candidato.stage}
-                onMove={requestStageChange}
-                getKey={(s) => s.stageKey}
-              />
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {stages.filter((s) => s.stageKey !== candidato.stage).map((s) => (
-                  <button
-                    key={s.stageKey}
-                    onClick={() => requestStageChange(s.stageKey)}
-                    style={{
-                      background: `${s.color}18`,
-                      color: s.color,
-                      border: `1px solid ${s.color}44`,
-                      borderRadius: 8,
-                      padding: "4px 10px",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <ArrowRight size={10} /> {s.name}
-                  </button>
-                ))}
-              </div>
-
-              {reprovando && (
-                <div style={{ marginTop: 10, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12 }}>
-                  <div style={{ ...labelSt, color: "var(--danger)" }}>Motivo da reprovação *</div>
-                  <textarea
-                    value={motivoReprovacao}
-                    onChange={(e) => setMotivoReprovacao(e.target.value)}
-                    placeholder="Por que este candidato foi reprovado?"
-                    rows={2}
-                    autoFocus
-                    className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
-                    style={{ borderColor: "#FCA5A5", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={confirmReprovacao}
-                      disabled={savingStage || !motivoReprovacao.trim()}
-                      style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
-                    >
-                      {savingStage ? "Salvando…" : "Confirmar reprovação"}
-                    </button>
-                    <button
-                      onClick={() => { setReprovando(false); setMotivoReprovacao(""); }}
-                      style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Convert to employee — only when aprovado */}
-          {canWrite && candidato.stage === "aprovado" && onHire && (
-            <div style={{
-              background: "#F0FDF4",
-              border: "1px solid #BBF7D0",
-              borderRadius: 12,
-              padding: "14px 16px",
-              marginBottom: 20,
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}>
-              <UserPlus size={20} style={{ color: "var(--success)", flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>Candidato aprovado!</div>
-                <div style={{ fontSize: 12, color: "var(--success)", marginTop: 2 }}>
-                  Converta para funcionário e preencha os dados de admissão.
-                </div>
-              </div>
-              <button
-                onClick={() => { onHire(candidato); onClose(); }}
-                style={{
-                  background: "var(--success)",
-                  color: "#FFF",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "6px 14px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--success)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "var(--success)"; }}
-              >
-                Converter
-              </button>
-            </div>
-          )}
-
-          {/* Notes */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: 6 }}>
-                <MessageSquare size={12} /> Notas
-              </div>
-              {canWrite && !addingNote && (
-                <button
-                  onClick={() => setAddingNote(true)}
-                  style={{ background: "var(--accent-tint)", border: "none", color: "var(--accent)", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                >
-                  <Plus size={11} /> Nota
-                </button>
-              )}
-            </div>
-
-            {addingNote && (
-              <div style={{ marginBottom: 12 }}>
-                <textarea
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  placeholder="Escreva uma nota sobre este candidato…"
-                  rows={3}
-                  autoFocus
-                  className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
-                  style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
-                  onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
-                  onBlur={(e) => { e.target.style.borderColor = "var(--border-strong)"; }}
-                />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={handleAddNote}
-                    disabled={savingNote || !noteText.trim()}
-                    style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
-                  >
-                    {savingNote ? "Salvando…" : "Salvar"}
-                  </button>
-                  <button
-                    onClick={() => { setAddingNote(false); setNoteText(""); }}
-                    style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {(candidato.notes || []).length === 0 && !addingNote ? (
-              <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-dim)", fontSize: 12, opacity: 0.6 }}>
-                Nenhuma nota registrada
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {[...(candidato.notes || [])].reverse().map((note, i) => (
-                  <div
-                    key={i}
-                    style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}
-                  >
-                    <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{note.text}</div>
-                    <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
-                      {note.created_at ? fmt(note.created_at) : "—"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Anexos / Checklists / Atividades / Comentários */}
-          <div style={{ marginTop: 20 }}>
-            <RHDetailDrawerShell
-              domain="candidatos"
-              recordId={candidato.id}
-              activities={candidato.activities || []}
-              onAddActivity={onAddActivity}
-              currentUser={currentUser}
-              users={users}
-              stages={stages}
-              notifyMentions={notifyMentions}
-              mentionLink={{ module: "rh_candidatos", id: candidato.id }}
-              mentionContextLabel={candidato.name}
-            />
-          </div>
+  const header = (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0 }}>
+      <InitialsAvatar name={candidato.name} size={40} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{candidato.name}</div>
+        {candidato.email && <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{candidato.email}</div>}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} />
+            {stageInfo.name}
+          </span>
+          <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{days}d nesta etapa</span>
         </div>
       </div>
+    </div>
+  );
+
+  const left = (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {[
+          { label: "Vaga",    value: vagaTitle },
+          { label: "Origem",  value: candidato.source || "—" },
+          { label: "Telefone", value: candidato.phone || "—" },
+          { label: "Aplicado em", value: fmt(candidato.created_at) },
+        ].map((f) => (
+          <div key={f.label}>
+            <div style={labelSt}>{f.label}</div>
+            <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+          </div>
+        ))}
+        <div>
+          <div style={labelSt}>Avaliação</div>
+          <StarRating
+            value={candidato.rating || 0}
+            onChange={canWrite ? (v) => onRatingChange(candidato.id, v) : undefined}
+          />
+        </div>
+      </div>
+
+      {candidato.resume_ext && (
+        <button
+          onClick={async () => {
+            const { data, error: err } = await supabase.storage
+              .from("rh-curriculos")
+              .createSignedUrl(`${candidato.candidateId}/curriculo.${candidato.resume_ext}`, 3600);
+            if (!err && data?.signedUrl) window.open(data.signedUrl, "_blank", "noreferrer");
+          }}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+        >
+          Ver currículo ({candidato.resume_ext.toUpperCase()})
+        </button>
+      )}
+
+      {/* Fit score / justificativa da triagem por IA */}
+      {typeof candidato.fit_score === "number" && (
+        <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontWeight: 800, fontSize: 16, color: "#6D28D9" }}>{Math.round(candidato.fit_score)}</span>
+            <span style={{ fontSize: 11, color: "#6D28D9", fontWeight: 600 }}>fit score (IA)</span>
+          </div>
+          {candidato.justificativa && (
+            <div style={{ fontSize: 12, color: "#5B21B6", lineHeight: 1.5 }}>{candidato.justificativa}</div>
+          )}
+        </div>
+      )}
     </>
+  );
+
+  const center = (
+    <>
+      {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
+      {visibleCustomFields.length > 0 && (
+        <div>
+          <div style={labelSt}>Campos desta etapa</div>
+          <div className="flex flex-col gap-3">
+            {visibleCustomFields.map((field) => (
+              <div key={field.id}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                  {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
+                </div>
+                <RHStageFieldInput
+                  field={field}
+                  value={candidato.customFields?.[field.fieldKey]}
+                  onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
+                  users={users}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Motivo de reprovação já registrado */}
+      {candidato.stage === "reprovado" && candidato.motivo_reprovacao && (
+        <div style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px" }}>
+          <div style={labelSt}>Motivo da reprovação</div>
+          <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{candidato.motivo_reprovacao}</div>
+        </div>
+      )}
+
+      {/* Convert to employee — only when aprovado */}
+      {canWrite && candidato.stage === "aprovado" && onHire && (
+        <div style={{
+          background: "#F0FDF4",
+          border: "1px solid #BBF7D0",
+          borderRadius: 12,
+          padding: "14px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+        }}>
+          <UserPlus size={20} style={{ color: "var(--success)", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>Candidato aprovado!</div>
+            <div style={{ fontSize: 12, color: "var(--success)", marginTop: 2 }}>
+              Converta para funcionário e preencha os dados de admissão.
+            </div>
+          </div>
+          <button
+            onClick={() => { onHire(candidato); onClose(); }}
+            style={{
+              background: "var(--success)",
+              color: "#FFF",
+              border: "none",
+              borderRadius: 8,
+              padding: "6px 14px",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Converter
+          </button>
+        </div>
+      )}
+
+      {/* Notes */}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: 6 }}>
+            <MessageSquare size={12} /> Notas
+          </div>
+          {canWrite && !addingNote && (
+            <button
+              onClick={() => setAddingNote(true)}
+              style={{ background: "var(--accent-tint)", border: "none", color: "var(--accent)", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+            >
+              <Plus size={11} /> Nota
+            </button>
+          )}
+        </div>
+
+        {addingNote && (
+          <div style={{ marginBottom: 12 }}>
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Escreva uma nota sobre este candidato…"
+              rows={3}
+              autoFocus
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+              onFocus={(e) => { e.target.style.borderColor = "var(--accent)"; }}
+              onBlur={(e) => { e.target.style.borderColor = "var(--border-strong)"; }}
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={handleAddNote}
+                disabled={savingNote || !noteText.trim()}
+                style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
+              >
+                {savingNote ? "Salvando…" : "Salvar"}
+              </button>
+              <button
+                onClick={() => { setAddingNote(false); setNoteText(""); }}
+                style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {(candidato.notes || []).length === 0 && !addingNote ? (
+          <div style={{ textAlign: "center", padding: "24px 0", color: "var(--text-dim)", fontSize: 12, opacity: 0.6 }}>
+            Nenhuma nota registrada
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {[...(candidato.notes || [])].reverse().map((note, i) => (
+              <div
+                key={i}
+                style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}
+              >
+                <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{note.text}</div>
+                <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
+                  {note.created_at ? fmt(note.created_at) : "—"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  const right = (
+    <>
+      {/* Stage progression */}
+      {canWrite && (
+        <div>
+          <div style={labelSt}>Mover para</div>
+          {moveError && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+              <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+              {moveError}
+            </div>
+          )}
+          <StageNavigator
+            stages={stages}
+            currentStage={candidato.stage}
+            onMove={requestStageChange}
+            getKey={(s) => s.stageKey}
+          />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {stages.filter((s) => s.stageKey !== candidato.stage).map((s) => (
+              <button
+                key={s.stageKey}
+                onClick={() => requestStageChange(s.stageKey)}
+                style={{
+                  background: `${s.color}18`,
+                  color: s.color,
+                  border: `1px solid ${s.color}44`,
+                  borderRadius: 8,
+                  padding: "4px 10px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <ArrowRight size={10} /> {s.name}
+              </button>
+            ))}
+          </div>
+
+          {reprovando && (
+            <div style={{ marginTop: 10, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12 }}>
+              <div style={{ ...labelSt, color: "var(--danger)" }}>Motivo da reprovação *</div>
+              <textarea
+                value={motivoReprovacao}
+                onChange={(e) => setMotivoReprovacao(e.target.value)}
+                placeholder="Por que este candidato foi reprovado?"
+                rows={2}
+                autoFocus
+                className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
+                style={{ borderColor: "#FCA5A5", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+              />
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={confirmReprovacao}
+                  disabled={savingStage || !motivoReprovacao.trim()}
+                  style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
+                >
+                  {savingStage ? "Salvando…" : "Confirmar reprovação"}
+                </button>
+                <button
+                  onClick={() => { setReprovando(false); setMotivoReprovacao(""); }}
+                  style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Anexos / Checklists / Atividades / Comentários */}
+      <RHDetailDrawerShell
+        domain="candidatos"
+        recordId={candidato.id}
+        activities={candidato.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        notifyMentions={notifyMentions}
+        mentionLink={{ module: "rh_candidatos", id: candidato.id }}
+        mentionContextLabel={candidato.name}
+      />
+    </>
+  );
+
+  return (
+    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
   );
 }
 
