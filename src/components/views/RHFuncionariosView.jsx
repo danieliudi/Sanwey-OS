@@ -25,6 +25,7 @@ import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHBeneficios } from "../../hooks/use-rh-beneficios";
+import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { EmptyState } from "../ui/EmptyState";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -117,6 +118,121 @@ function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
             style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
           >
             <Plus size={12} /> Solicitar benefício
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+const SIGNATURE_STATUS_COLORS = {
+  pendente_envio: { bg: "var(--surface-alt)", text: "var(--text-dim)" },
+  enviado:        { bg: "var(--warning-bg)", text: "var(--warning)" },
+  assinado:       { bg: "#DCFCE7", text: "#16A34A" },
+  recusado:       { bg: "#FEE2E2", text: "#DC2626" },
+  cancelado:      { bg: "var(--surface-alt)", text: "var(--text-dim)" },
+};
+const SIGNATURE_STATUS_LABELS = {
+  pendente_envio: "Pendente de envio", enviado: "Enviado", assinado: "Assinado",
+  recusado: "Recusado", cancelado: "Cancelado",
+};
+
+function SignatureSection({ colaboradorRow, canWrite }) {
+  const { requests, loading, sending, sendError, sendForSignature, uploadSourceDocument } =
+    useRHSignatureRequests({ domain: "funcionarios", recordId: colaboradorRow.id });
+  const [openForm, setOpenForm] = useState(false);
+  const [file, setFile] = useState(null);
+  const [signerName, setSignerName] = useState(colaboradorRow.fullName || "");
+  const [signerEmail, setSignerEmail] = useState(colaboradorRow.email || "");
+
+  const handleSend = async () => {
+    if (!file || !signerName.trim() || !signerEmail.trim()) return;
+    try {
+      const path = await uploadSourceDocument(file);
+      await sendForSignature({
+        signers: [{ name: signerName.trim(), email: signerEmail.trim() }],
+        sourceStoragePath: path,
+      });
+      setOpenForm(false);
+      setFile(null);
+    } catch {
+      // sendError já reflete a falha — sem alert bloqueante.
+    }
+  };
+
+  return (
+    <div style={{ borderRadius: 12, border: "1px solid var(--border)", padding: "14px 16px", background: "var(--surface-alt)", marginBottom: 20 }}>
+      <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
+        Assinatura eletrônica
+      </div>
+
+      {loading && <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Carregando…</div>}
+      {!loading && requests.length === 0 && (
+        <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 10 }}>Nenhum documento enviado pra assinatura ainda.</div>
+      )}
+      <div className="flex flex-col gap-1.5 mb-2">
+        {requests.map(r => {
+          const color = SIGNATURE_STATUS_COLORS[r.status] || SIGNATURE_STATUS_COLORS.pendente_envio;
+          return (
+            <div key={r.id} className="flex items-center justify-between gap-2" style={{ fontSize: 12 }}>
+              <span style={{ color: "var(--text)", fontWeight: 500 }}>
+                {(r.signers || []).map(s => s.name).join(", ") || "—"}
+              </span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: color.text, background: color.bg, borderRadius: 99, padding: "2px 8px" }}>
+                {SIGNATURE_STATUS_LABELS[r.status] || r.status}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {canWrite && (
+        openForm ? (
+          <div className="flex flex-col gap-2">
+            <input
+              type="file"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="text-xs"
+              style={{ color: "var(--text)" }}
+            />
+            <input
+              type="text"
+              placeholder="Nome do signatário"
+              value={signerName}
+              onChange={(e) => setSignerName(e.target.value)}
+              className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+              style={{ borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+            />
+            <input
+              type="email"
+              placeholder="E-mail do signatário"
+              value={signerEmail}
+              onChange={(e) => setSignerEmail(e.target.value)}
+              className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+              style={{ borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+            />
+            {sendError && <div style={{ fontSize: 11, color: "var(--danger)" }}>{sendError}</div>}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSend}
+                disabled={sending || !file || !signerName.trim() || !signerEmail.trim()}
+                style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
+              >
+                {sending ? "Enviando…" : "Enviar pra assinatura"}
+              </button>
+              <button onClick={() => setOpenForm(false)} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 11 }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setOpenForm(true)}
+            className="flex items-center gap-1"
+            style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
+          >
+            <Plus size={12} /> Enviar documento pra assinatura
           </button>
         )
       )}
@@ -590,6 +706,10 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
 
           {colaboradorRow && (
             <BeneficiosSection colaboradorId={colaboradorRow.id} canWrite={canWrite} currentUser={currentUser} />
+          )}
+
+          {colaboradorRow && (
+            <SignatureSection colaboradorRow={colaboradorRow} canWrite={canWrite} />
           )}
 
           {/* CRM metrics */}
