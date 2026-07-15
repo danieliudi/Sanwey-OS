@@ -889,7 +889,7 @@ export default function App() {
       ],
     });
     return groups;
-  }, [isManager, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia]);
+  }, [isManager, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -949,7 +949,7 @@ export default function App() {
       setSection("marketing");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isManager, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, section]);
+  }, [currentUser, isManager, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, section]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
@@ -1379,7 +1379,7 @@ export default function App() {
           <MobileBottomNav
             section={section}
             onSectionChange={setSection}
-            role={currentUser?.role}
+            roles={currentUserRoles}
             navGroups={navGroups}
             currentUser={currentUser}
             onLogout={handleLogout}

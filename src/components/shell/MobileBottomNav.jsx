@@ -62,8 +62,23 @@ const ROLE_LABELS = {
   rh: "RH", gerente_rh: "Gerente de RH",
 };
 
-function getRoleTabs(role) {
-  return ROLE_TABS[role] || ROLE_TABS.vendedor;
+// `roles` é o array multi-cargo (FASE 1) — antes só considerava
+// `currentUser.role` (o cargo principal, singular), então um usuário com
+// RH como cargo ADICIONAL (não principal) nunca via as abas rápidas de RH
+// aqui embaixo, só através do menu completo (hambúrguer). Agora junta as
+// abas de todo cargo que o usuário acumula, sem repetir id.
+function getRoleTabs(roles) {
+  const list = Array.isArray(roles) && roles.length ? roles : ["vendedor"];
+  const seen = new Set();
+  const tabs = [];
+  for (const role of list) {
+    for (const tab of (ROLE_TABS[role] || [])) {
+      if (seen.has(tab.id)) continue;
+      seen.add(tab.id);
+      tabs.push(tab);
+    }
+  }
+  return tabs.length ? tabs : ROLE_TABS.vendedor;
 }
 
 /* ── Fullscreen slide-up menu overlay ────────────────────────── */
@@ -169,9 +184,9 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
 }
 
 /* ── Main component ──────────────────────────────────────────── */
-export function MobileBottomNav({ section, onSectionChange, role, navGroups, currentUser, onLogout }) {
+export function MobileBottomNav({ section, onSectionChange, roles, navGroups, currentUser, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const tabs = getRoleTabs(role);
+  const tabs = getRoleTabs(roles);
 
   return (
     <>
