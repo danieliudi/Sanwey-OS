@@ -31,6 +31,17 @@ function idsOf(ids, scalar) {
   return Array.isArray(ids) && ids.length ? ids : (scalar ? [scalar] : []);
 }
 
+// `urgencyRank` — used by MinhasTarefasView to sort each module's items
+// before slicing to the top N shown, lower = more urgent. Overdue dates
+// come out negative, so a severely late item naturally outranks one
+// that's merely due soon; items with no relevant date get `Infinity` so
+// they fall to the end instead of faking an urgency they don't have.
+function daysUntil(dateStr, hoje = Date.now()) {
+  if (!dateStr) return Infinity;
+  const ts = new Date(dateStr).getTime();
+  return Number.isNaN(ts) ? Infinity : (ts - hoje) / 86400000;
+}
+
 // App.jsx can't be imported from here (it imports the views that will
 // eventually render this hook's output) — small local re-implementation of
 // the same role-flag helper described in App.jsx:116-130.
@@ -115,6 +126,7 @@ export function useMyTasks({ currentUser } = {}) {
         subtitle: `${leadStageLabel(companyStages, lead.stage)} · ${formatK(lead.value)}`,
         badge: lead.closeDate ? formatDateBR(lead.closeDate) : "Sem previsão",
         badgeTone: "var(--text-dim)",
+        urgencyRank: daysUntil(lead.closeDate),
         section: "crm",
         lead,
         raw: lead,
@@ -134,6 +146,7 @@ export function useMyTasks({ currentUser } = {}) {
         subtitle: CAMPAIGN_STAGE_LABELS[c.stage] || c.stage,
         badge: c.endDate ? formatDateBR(c.endDate) : formatK(c.budget),
         badgeTone: "var(--text-dim)",
+        urgencyRank: daysUntil(c.endDate),
         section: "marketing",
         raw: c,
       });
@@ -152,6 +165,7 @@ export function useMyTasks({ currentUser } = {}) {
         subtitle: DELIVERABLE_STAGE_LABELS[d.stage] || d.stage,
         badge: d.deadline ? formatDateBR(d.deadline) : "Sem prazo",
         badgeTone: "var(--text-dim)",
+        urgencyRank: daysUntil(d.deadline),
         section: "marketing-entregas",
         raw: d,
       });
@@ -173,6 +187,7 @@ export function useMyTasks({ currentUser } = {}) {
         subtitle: PURCHASE_STAGE_LABELS[p.stage] || p.stage,
         badge: formatK(p.totalValue || 0),
         badgeTone: "var(--text-dim)",
+        urgencyRank: daysUntil(p.dueDate),
         section: "marketing-compras",
         raw: p,
       });
@@ -192,6 +207,7 @@ export function useMyTasks({ currentUser } = {}) {
         subtitle: `Avaliação · ${f.tipo || f.cycle || "—"}`,
         badge: f.period_end ? formatDateBR(f.period_end) : "Sem prazo",
         badgeTone: "var(--text-dim)",
+        urgencyRank: daysUntil(f.period_end),
         section: "rh-feedback",
         raw: f,
       });
@@ -212,6 +228,7 @@ export function useMyTasks({ currentUser } = {}) {
         subtitle: v.stage ? v.stage[0].toUpperCase() + v.stage.slice(1) : "—",
         badge: v.stage_changed_at ? formatDateBR(v.stage_changed_at) : "—",
         badgeTone: "var(--text-dim)",
+        urgencyRank: daysUntil(v.hiring_deadline),
         section: "rh-recrutamento",
         raw: v,
       });
@@ -236,6 +253,7 @@ export function useMyTasks({ currentUser } = {}) {
           subtitle: p.requesterName || "—",
           badge: formatK(p.totalValue || 0),
           badgeTone: "var(--warning)",
+          urgencyRank: daysUntil(p.dueDate),
           section: "marketing-compras",
           raw: p,
         });
@@ -253,6 +271,7 @@ export function useMyTasks({ currentUser } = {}) {
           subtitle: q.supplier?.name || "—",
           badge: q.deadline ? formatDateBR(q.deadline) : "Sem prazo",
           badgeTone: "var(--warning)",
+          urgencyRank: daysUntil(q.deadline),
           section: "marketing-fornecedores",
           raw: q,
         });
@@ -272,6 +291,7 @@ export function useMyTasks({ currentUser } = {}) {
           subtitle: r.requesterName || "—",
           badge: PRIORITY_LABELS[r.priority] || r.priority || "—",
           badgeTone: "var(--warning)",
+          urgencyRank: daysUntil(r.deadline),
           section: "marketing-solicitacoes",
           raw: r,
         });
@@ -292,6 +312,7 @@ export function useMyTasks({ currentUser } = {}) {
           subtitle: label,
           badge: r.start_date ? formatDateBR(r.start_date) : "—",
           badgeTone: "var(--warning)",
+          urgencyRank: daysUntil(r.start_date),
           section: "rh-ferias",
           raw: r,
         });
@@ -315,6 +336,7 @@ export function useMyTasks({ currentUser } = {}) {
         subtitle: `${leadStageLabel(companyStages, lead.stage)} · ${formatK(lead.value)}`,
         badge: `${daysIdle(lead)}d sem atividade`,
         badgeTone: "var(--warning)",
+        urgencyRank: -daysIdle(lead),
         section: "crm",
         lead,
         raw: lead,
@@ -344,6 +366,7 @@ export function useMyTasks({ currentUser } = {}) {
             subtitle: `Período de experiência (${exp.marco}d)`,
             badge: `${exp.diasRestantes}d restantes`,
             badgeTone: exp.diasRestantes <= 1 ? "var(--danger)" : "var(--warning)",
+            urgencyRank: exp.diasRestantes,
             section: "rh-funcionarios",
             raw: c,
           });
@@ -361,6 +384,7 @@ export function useMyTasks({ currentUser } = {}) {
             subtitle: "ASO",
             badge: asoDias < 0 ? `Vencido há ${Math.abs(asoDias)}d` : `Vence em ${asoDias}d`,
             badgeTone: asoDias < 0 ? "var(--danger)" : "var(--warning)",
+            urgencyRank: asoDias,
             section: "rh-funcionarios",
             raw: c,
           });
@@ -378,6 +402,7 @@ export function useMyTasks({ currentUser } = {}) {
             subtitle: "Fim de contrato",
             badge: contratoDias < 0 ? `Venceu há ${Math.abs(contratoDias)}d` : `Termina em ${contratoDias}d`,
             badgeTone: contratoDias < 0 ? "var(--danger)" : "var(--warning)",
+            urgencyRank: contratoDias,
             section: "rh-funcionarios",
             raw: c,
           });
@@ -395,6 +420,7 @@ export function useMyTasks({ currentUser } = {}) {
             subtitle: "Aniversário",
             badge: aniversarioDias === 0 ? "Hoje" : `Em ${aniversarioDias}d`,
             badgeTone: "var(--success)",
+            urgencyRank: aniversarioDias,
             section: "rh-funcionarios",
             raw: c,
           });
@@ -412,6 +438,7 @@ export function useMyTasks({ currentUser } = {}) {
             subtitle: "Aniversário de empresa",
             badge: bodasDias === 0 ? "Hoje" : `Em ${bodasDias}d`,
             badgeTone: "var(--success)",
+            urgencyRank: bodasDias,
             section: "rh-funcionarios",
             raw: c,
           });
@@ -438,6 +465,7 @@ export function useMyTasks({ currentUser } = {}) {
           subtitle: f.tipo || f.cycle || "Ciclo de feedback",
           badge: diasParaPrazo < 0 ? `Atrasada ${Math.abs(diasParaPrazo)}d` : `Vence em ${diasParaPrazo}d`,
           badgeTone: diasParaPrazo < 0 ? "var(--danger)" : "var(--warning)",
+          urgencyRank: diasParaPrazo,
           section: "rh-feedback",
           raw: f,
         });

@@ -41,6 +41,24 @@ const SECTIONS = [
 
 const MAX_ITEMS_PER_MODULE = 5;
 
+// Tier primeiro (o que precisa de ação nunca perde lugar pra uma boa
+// notícia), urgencyRank depois (quanto mais vencido/mais perto do prazo,
+// mais em cima) — assim um "Aniversário hoje" (tone success) nunca empurra
+// um "ASO vencido há 40d" pra fora dos 5 primeiros do mesmo módulo.
+function toneTier(badgeTone) {
+  if (badgeTone === "var(--danger)") return 0;
+  if (badgeTone === "var(--success)") return 2;
+  return 1;
+}
+
+function byUrgency(a, b) {
+  const tierDiff = toneTier(a.badgeTone) - toneTier(b.badgeTone);
+  if (tierDiff !== 0) return tierDiff;
+  const ua = Number.isFinite(a.urgencyRank) ? a.urgencyRank : Infinity;
+  const ub = Number.isFinite(b.urgencyRank) ? b.urgencyRank : Infinity;
+  return ua - ub;
+}
+
 function groupByModule(tasks) {
   const map = new Map();
   for (const t of tasks) {
@@ -49,7 +67,9 @@ function groupByModule(tasks) {
     }
     map.get(t.module).items.push(t);
   }
-  return Array.from(map.values());
+  const groups = Array.from(map.values());
+  for (const g of groups) g.items.sort(byUrgency);
+  return groups;
 }
 
 export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadClick }) {
@@ -116,6 +136,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
             groups={bySection[section.id]}
             count={counts[section.id]}
             onTaskClick={handleTaskClick}
+            onSeeAll={onNavigate}
           />
         ))
       )}
@@ -123,7 +144,7 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
   );
 }
 
-function TaskSection({ section, groups, count, onTaskClick }) {
+function TaskSection({ section, groups, count, onTaskClick, onSeeAll }) {
   const Icon = section.icon;
   return (
     <div>
@@ -171,6 +192,7 @@ function TaskSection({ section, groups, count, onTaskClick }) {
               title={group.moduleLabel}
               items={group.items}
               onTaskClick={onTaskClick}
+              onSeeAll={onSeeAll}
             />
           ))}
         </div>
@@ -179,7 +201,7 @@ function TaskSection({ section, groups, count, onTaskClick }) {
   );
 }
 
-function ModuleBucket({ icon: Icon, tone, title, items, onTaskClick }) {
+function ModuleBucket({ icon: Icon, tone, title, items, onTaskClick, onSeeAll }) {
   const shown = items.slice(0, MAX_ITEMS_PER_MODULE);
   const overflow = items.length - shown.length;
 
@@ -236,13 +258,16 @@ function ModuleBucket({ icon: Icon, tone, title, items, onTaskClick }) {
           </button>
         ))}
         {overflow > 0 && (
-          <div
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium"
-            style={{ color: "var(--text-dim)" }}
+          <button
+            onClick={() => onSeeAll?.(shown[0]?.section)}
+            className="w-full flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors duration-150"
+            style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
           >
             <ArrowRight size={11} />
             +{overflow} mais em {title.toLowerCase()}
-          </div>
+          </button>
         )}
       </div>
     </div>
