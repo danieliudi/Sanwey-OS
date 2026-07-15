@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
-import { COMPANY_IDS } from "../../constants/companies";
+import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS } from "../../constants/companies";
 import {
   DELIVERABLE_DEPARTMENTS,
   DELIVERABLE_PRIORITIES,
@@ -68,11 +68,6 @@ function Field({ label: lbl, children, hint: h, required }) {
     </div>
   );
 }
-
-const COMPANY_LABELS = {
-  industria: "Sanwey",
-  resibag:   "Resibag",
-};
 
 export default function MarketingRequestForm() {
   const [form, setForm] = useState({
@@ -146,7 +141,7 @@ export default function MarketingRequestForm() {
         description:     form.description.trim() || null,
         priority:        form.priority,
         deadline:        form.deadline || null,
-        company_ids:     form.companyIds.length > 0 ? form.companyIds : COMPANY_IDS,
+        company_ids:     form.companyIds.length > 0 ? form.companyIds : MARKETING_UNIT_IDS,
         status:          "pendente",
       });
       if (err) throw err;
@@ -310,9 +305,9 @@ export default function MarketingRequestForm() {
             </Field>
           </div>
 
-          <Field label="Empresa" hint="Selecione a(s) empresa(s) para as quais o material será criado">
+          <Field label="Empresa / unidade" hint="Selecione a(s) empresa(s) ou unidade para as quais o material será criado">
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {COMPANY_IDS.map(id => {
+              {MARKETING_UNIT_IDS.map(id => {
                 const selected = form.companyIds.includes(id);
                 return (
                   <button
@@ -331,7 +326,7 @@ export default function MarketingRequestForm() {
                       transition: "all .15s",
                     }}
                   >
-                    {COMPANY_LABELS[id] || id}
+                    {MARKETING_UNIT_LABELS[id] || id}
                   </button>
                 );
               })}

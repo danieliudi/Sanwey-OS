@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
-import { COMPANY_IDS } from "../../constants/companies";
+import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS } from "../../constants/companies";
 
 const ACCENT = "#C7212B";
 
@@ -63,11 +63,6 @@ function Field({ label: lbl, children, hint: h, required }) {
     </div>
   );
 }
-
-const COMPANY_LABELS = {
-  industria: "Sanwey",
-  resibag:   "Resibag",
-};
 
 export default function PurchaseRequestForm() {
   const [form, setForm] = useState({
@@ -135,7 +130,7 @@ export default function PurchaseRequestForm() {
         requester_email:  form.requesterEmail.trim() || null,
         requester_phone:  form.requesterPhone.trim() || null,
         due_date:         form.dueDate || null,
-        company_ids:      form.companyIds.length > 0 ? form.companyIds : COMPANY_IDS,
+        company_ids:      form.companyIds.length > 0 ? form.companyIds : MARKETING_UNIT_IDS,
         stage:            "solicitado",
       });
       if (err) throw err;
@@ -270,9 +265,9 @@ export default function PurchaseRequestForm() {
             />
           </Field>
 
-          <Field label="Empresa" hint="Selecione a(s) empresa(s) para as quais a compra será feita">
+          <Field label="Empresa / unidade" hint="Selecione a(s) empresa(s) ou unidade para as quais a compra será feita">
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {COMPANY_IDS.map(id => {
+              {MARKETING_UNIT_IDS.map(id => {
                 const selected = form.companyIds.includes(id);
                 return (
                   <button
@@ -291,7 +286,7 @@ export default function PurchaseRequestForm() {
                       transition: "all .15s",
                     }}
                   >
-                    {COMPANY_LABELS[id] || id}
+                    {MARKETING_UNIT_LABELS[id] || id}
                   </button>
                 );
               })}

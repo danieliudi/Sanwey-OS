@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
-import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
+import { marketingUnitLabel } from "../../constants/companies";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
@@ -198,7 +198,7 @@ function RequestCard({ request, onApprove, onReject, canWrite }) {
             {request.companyIds?.length > 0 && (
               <span className="flex items-center gap-1">
                 <Building2 size={10} />
-                {request.companyIds.map(id => COMPANIES[id]?.short || id).join(", ")}
+                {request.companyIds.map(id => marketingUnitLabel(id)).join(", ")}
               </span>
             )}
           </div>

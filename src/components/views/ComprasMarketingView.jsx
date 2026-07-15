@@ -8,7 +8,7 @@ import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
 import { PurchaseRequestDetailDrawer } from "../campaign/PurchaseRequestDetailDrawer";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
-import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
+import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
@@ -229,13 +229,13 @@ function CreateModal({ currentUser, onCreate, onClose }) {
           <div>
             <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Empresas</label>
             <div className="flex gap-2">
-              {COMPANY_IDS.map(id => (
+              {MARKETING_UNIT_IDS.map(id => (
                 <button key={id} type="button" onClick={() => toggleCompany(id)}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
                   style={form.companyIds.includes(id)
-                    ? { background: COMPANIES[id]?.primary, color: "#fff", borderColor: COMPANIES[id]?.primary }
+                    ? { background: MARKETING_UNIT_COLORS[id], color: "#fff", borderColor: MARKETING_UNIT_COLORS[id] }
                     : { background: "var(--surface-alt)", color: "var(--text-dim)", borderColor: "var(--border)" }}>
-                  {COMPANIES[id]?.short || id}
+                  {MARKETING_UNIT_LABELS[id] || id}
                 </button>
               ))}
             </div>

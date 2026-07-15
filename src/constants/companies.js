@@ -52,3 +52,25 @@ export const NEUTRAL = {
 };
 
 export const COMPANY_IDS = ["industria", "resibag"];
+
+// Unidades que podem ser selecionadas em solicitações INTERNAS de Marketing
+// (material, compra) — não empresas vendedoras do CRM. Monte Mor não vende
+// nada (por isso fora de COMPANY_IDS), mas ainda gera pedidos de material/
+// compra pro Marketing atender, então entra aqui como uma unidade a mais.
+export const MARKETING_UNIT_IDS = [...COMPANY_IDS, "montemor"];
+
+export const MARKETING_UNIT_LABELS = {
+  industria: COMPANIES.industria.short,
+  resibag: COMPANIES.resibag.short,
+  montemor: "Monte Mor",
+};
+
+export const MARKETING_UNIT_COLORS = {
+  industria: COMPANIES.industria.primary,
+  resibag: COMPANIES.resibag.primary,
+  montemor: "#6B5B95",
+};
+
+export function marketingUnitLabel(id) {
+  return MARKETING_UNIT_LABELS[id] || id;
+}

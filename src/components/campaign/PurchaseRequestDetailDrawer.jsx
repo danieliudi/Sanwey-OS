@@ -4,7 +4,7 @@ import {
   TrendingUp, TrendingDown, AlertCircle, ExternalLink, Loader2,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
-import { COMPANIES } from "../../constants/companies";
+import { MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
 import { PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-marketing-purchase-requests";
 import { formatDateBR } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
@@ -389,12 +389,11 @@ export function PurchaseRequestDetailDrawer({
             )}
             <div className="flex items-center gap-3 flex-wrap">
               {(purchase.companyIds || []).map(id => {
-                const co = COMPANIES[id];
-                if (!co) return null;
+                const color = MARKETING_UNIT_COLORS[id] || "#6B7280";
                 return (
                   <span key={id} className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ background: co.primary + "18", color: co.primary, border: `1px solid ${co.primary}30` }}>
-                    {co.short}
+                    style={{ background: color + "18", color, border: `1px solid ${color}30` }}>
+                    {MARKETING_UNIT_LABELS[id] || id}
                   </span>
                 );
               })}
