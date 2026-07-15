@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, Bot, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
-  ShoppingCart, CheckSquare, Building2,
+  ShoppingCart, CheckSquare, Building2, TrendingUp,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -50,6 +50,7 @@ import { ExplorerView } from "./components/views/ExplorerView";
 import { CRMView } from "./components/views/CRMView";
 import { CRMViagensView } from "./components/views/CRMViagensView";
 import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
+import { InsightsView } from "./components/views/InsightsView";
 import { CrossReferralsView } from "./components/views/CrossReferralsView";
 import { UserManagementView } from "./components/views/UserManagementView";
 import { ClientsManager } from "./components/client/ClientsManager";
@@ -850,6 +851,7 @@ export default function App() {
         label: "Inteligência",
         items: [
           { id: "executive", label: "Executivo",  icon: BarChart3 },
+          { id: "insights",  label: "Insights",   icon: TrendingUp },
           { id: "crossref",  label: "Cross-sell", icon: Shuffle },
           { id: "agents",    label: "Agentes",    icon: Bot },
         ],
@@ -892,7 +894,7 @@ export default function App() {
     // all role flags are false, which would kick the user to "/" on refresh.
     if (!currentUser) return;
 
-    const managerOnly = ["executive", "agents", "crossref", "funnel-history", "automations", "fair-import", "users"];
+    const managerOnly = ["executive", "insights", "agents", "crossref", "funnel-history", "automations", "fair-import", "users"];
     if (!isManager && managerOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -1161,6 +1163,11 @@ export default function App() {
           <Route path={ROUTES.executive} element={
             isManager
               ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES.insights} element={
+            isManager
+              ? <InsightsView leads={leads} pipelines={pipelines} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* Antiga rota /presidencia foi fundida no Executivo. Redireciona

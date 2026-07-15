@@ -17,6 +17,7 @@ export const ROUTES = {
   crossref:          "/cross-sell",
   agents:            "/agentes",
   executive:         "/executivo",
+  insights:          "/insights",
   presidency:        "/presidencia",
   "funnel-history":  "/historico-funil",
   "pipeline-builder":"/pipeline-builder",
