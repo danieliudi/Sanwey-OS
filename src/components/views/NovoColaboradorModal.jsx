@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check } from "lucide-react";
+import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check, Camera } from "lucide-react";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase";
 import { useAI } from "../../hooks/use-ai";
 import { documentExtractionPrompt } from "../../constants/ai-prompts";
 import { periodoExperienciaInfo } from "../../utils/rh-compliance-dates";
+import { DocumentCaptureModal } from "../shared/DocumentCaptureModal";
 
 const DOC_BUCKET = "rh-documentos-colaborador";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -45,6 +46,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
   const [closeVaga, setCloseVaga] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [captureOpen, setCaptureOpen] = useState(false);
   const fileInputRef = useRef();
 
   useEffect(() => {
@@ -129,6 +131,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
   const inputCls = "w-full text-sm rounded-xl border px-3 py-2 outline-none";
 
   return (
+    <>
     <div
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
       onClick={onClose}
@@ -184,6 +187,13 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
               {!extracting && file && !extracted && <FileText size={14} style={{ color: "var(--text-dim)", flexShrink: 0 }} />}
               <input ref={fileInputRef} type="file" accept=".pdf,image/*" onChange={(e) => handleFile(e.target.files?.[0] || null)} style={{ display: "none" }} />
             </label>
+            <button
+              type="button"
+              onClick={() => setCaptureOpen(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#7C3AED", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "6px 0 0" }}
+            >
+              <Camera size={12} /> Ou usar a câmera (com checagem automática de legibilidade)
+            </button>
             {fileError && <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 6 }}>{fileError}</div>}
             {!isConfigured && (
               <div style={{ fontSize: 11, color: "var(--warning)", marginTop: 6 }}>
@@ -331,6 +341,14 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
         </form>
       </div>
     </div>
+    {captureOpen && (
+      <DocumentCaptureModal
+        onCapture={(f) => { setCaptureOpen(false); handleFile(f); }}
+        onClose={() => setCaptureOpen(false)}
+        title="Capturar documento (RG ou CNH)"
+      />
+    )}
+    </>
   );
 }
 
