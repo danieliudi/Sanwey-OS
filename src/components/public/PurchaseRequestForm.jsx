@@ -65,7 +65,7 @@ function Field({ label: lbl, children, hint: h, required }) {
 }
 
 const COMPANY_LABELS = {
-  industria: "Industria",
+  industria: "Sanwey",
   resibag:   "Resibag",
 };
 

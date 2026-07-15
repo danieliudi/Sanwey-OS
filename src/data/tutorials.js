@@ -105,7 +105,7 @@ export const VIDEO_TUTORIALS = {
   ],
   gerente: [
     { id: "v-g1", title: "Gestão de equipe e convites", description: "Usuários", duration: null, url: null,
-      quickStart: { icon: "👥", steps: ["Acesse 'Usuários' → 'Convidar' para adicionar membros", "Defina o papel: Vendedor, Consultor, Gerente ou Admin", "Associe cada usuário à unidade Sanwey correta (Indústria, Resibag…)"] } },
+      quickStart: { icon: "👥", steps: ["Acesse 'Usuários' → 'Convidar' para adicionar membros", "Defina o papel: Vendedor, Consultor, Gerente ou Admin", "Associe cada usuário à unidade Sanwey correta (Sanwey, Resibag…)"] } },
     { id: "v-g2", title: "Configurando o pipeline", description: "Construtor de pipeline", duration: null, url: null,
       quickStart: { icon: "⚙️", steps: ["Acesse 'Construtor de pipeline' em Configuração", "Arraste etapas para reordenar; clique para renomear e definir probabilidade", "Use as regras de transição para controlar quais movimentos são permitidos"] } },
     { id: "v-g3", title: "Criando automações", description: "Automações", duration: null, url: null,
