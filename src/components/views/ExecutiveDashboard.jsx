@@ -7,6 +7,7 @@ import { useAI } from "../../hooks/use-ai";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
@@ -315,11 +316,24 @@ function DepartmentCard({ icon: Icon, iconColor, title, stats, ctaLabel, onNavig
   );
 }
 
+// Sobrepõe a janela rolante de 7 dias a partir de agora — mesmo espírito das
+// outras janelas de alerta do RH (ASO/contrato/aniversário), não é semana de
+// calendário. Só conta solicitação aprovada — pendente entra na outra métrica.
+function overlapsNext7Days(req) {
+  if (req.status !== "aprovado") return false;
+  const now = Date.now();
+  const in7d = now + 7 * 86400000;
+  const start = new Date(req.start_date).getTime();
+  const end = new Date(req.end_date).getTime();
+  return start <= in7d && end >= now;
+}
+
 function DepartmentsOverview({ showMarketing = true, showRH = true }) {
   const navigate = useNavigate();
   const { campaigns, loading: loadingCampaigns } = useMarketingCampaigns({});
   const { vagas, candidatos, loading: loadingRecrutamento } = useRHRecrutamento({});
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({});
+  const { requests: feriasRequests, loading: loadingFerias } = useRHFeriasRequests({});
 
   const dash = "—";
   const campanhasAtivas = loadingCampaigns ? dash : campaigns.filter(c => c.stage !== "encerrado").length;
@@ -327,6 +341,8 @@ function DepartmentsOverview({ showMarketing = true, showRH = true }) {
   const vagasPublicadas = loadingRecrutamento ? dash : vagas.filter(v => v.stage === "publicada").length;
   const candidatosEmProcesso = loadingRecrutamento ? dash : candidatos.filter(c => !["aprovado", "reprovado"].includes(c.stage)).length;
   const onboardingEmAndamento = loadingColaboradores ? dash : colaboradores.filter(c => c.onboardingStage && c.onboardingStage !== "concluido").length;
+  const emFeriasProximos7d = loadingFerias ? dash : feriasRequests.filter(overlapsNext7Days).length;
+  const feriasPendentes = loadingFerias ? dash : feriasRequests.filter(r => r.status === "pendente").length;
 
   return (
     <div className={showMarketing && showRH ? "grid md:grid-cols-2 gap-4" : "grid gap-4"}>
@@ -352,6 +368,8 @@ function DepartmentsOverview({ showMarketing = true, showRH = true }) {
             { label: "Vagas publicadas", value: vagasPublicadas },
             { label: "Candidatos em processo", value: candidatosEmProcesso },
             { label: "Onboarding em andamento", value: onboardingEmAndamento },
+            { label: "Em férias (7 dias)", value: emFeriasProximos7d },
+            { label: "Férias pendentes", value: feriasPendentes },
           ]}
           ctaLabel="Ver RH"
           onNavigate={() => navigate(ROUTES["rh-overview"])}

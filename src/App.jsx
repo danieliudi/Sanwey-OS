@@ -824,7 +824,7 @@ export default function App() {
           { id: "rh-recrutamento", label: "Recrutamento",      icon: BriefcaseBusiness },
           { id: "rh-onboarding",   label: "Onboarding",        icon: ClipboardCheck },
           { id: "rh-treinamentos", label: "Treinamentos",      icon: GraduationCap },
-          { id: "rh-feedback",     label: "Feedback",          icon: MessageSquareText },
+          { id: "rh-feedback",     label: "Avaliação de Desempenho", icon: MessageSquareText },
           { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
           { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
         ],
@@ -838,7 +838,7 @@ export default function App() {
         items: [
           { id: "rh-onboarding",   label: "Onboarding",   icon: ClipboardCheck },
           { id: "rh-treinamentos", label: "Treinamentos", icon: GraduationCap },
-          { id: "rh-feedback",     label: "Feedback",     icon: MessageSquareText },
+          { id: "rh-feedback",     label: "Avaliação de Desempenho", icon: MessageSquareText },
         ],
       });
     }

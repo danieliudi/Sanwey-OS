@@ -439,9 +439,9 @@ function TreinamentoBoardColumn({
               stage={a.status}
               stages={stages}
               onClick={() => onCardClick(a)}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-              onMoveToStage={onMoveToStage}
+              onDragStart={canWrite ? onDragStart : undefined}
+              onDragEnd={canWrite ? onDragEnd : undefined}
+              onMoveToStage={canWrite ? onMoveToStage : undefined}
               agingDays={daysInStage(a.status_changed_at)}
               completeness={getCompleteness?.(a)}
             >

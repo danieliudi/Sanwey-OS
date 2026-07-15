@@ -570,9 +570,9 @@ function FeedbackKanbanColumn({
               stage={f.status}
               stages={stages}
               onClick={() => onCardClick(f)}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-              onMoveToStage={onMoveToStage}
+              onDragStart={canWrite ? onDragStart : undefined}
+              onDragEnd={canWrite ? onDragEnd : undefined}
+              onMoveToStage={canWrite ? onMoveToStage : undefined}
               agingDays={daysInStage(f.status_changed_at)}
               completeness={getCompleteness?.(f)}
             >
@@ -1065,7 +1065,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
       <div>
         <div className="flex items-center gap-2 mb-4">
           <MessageSquare size={22} style={{ color: "var(--text)" }} />
-          <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Feedback</h1>
+          <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Avaliação de Desempenho</h1>
         </div>
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
@@ -1137,7 +1137,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
         <div>
           <div className="flex items-center gap-2">
             <MessageSquare size={22} style={{ color: "var(--text)" }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Feedback</h1>
+            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Avaliação de Desempenho</h1>
           </div>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Ciclos de avaliação e histórico</p>
         </div>
@@ -1245,7 +1245,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
       )}
 
       {novoOpen && <NovoFeedbackModal colaboradores={colaboradores} onSave={createFeedback} onClose={() => setNovoOpen(false)} />}
-      {completandoFeedback && (
+      {canWrite && completandoFeedback && (
         <CompletarFeedbackModal
           feedback={completandoFeedback}
           colaborador={colaboradoresById.get(completandoFeedback.user_id)}
@@ -1266,7 +1266,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           open={stageEditorOpen}
           onClose={() => setStageEditorOpen(false)}
           domain="feedback"
-          domainLabel="Feedback"
+          domainLabel="Avaliação de Desempenho"
           records={feedbacks}
           stageField="status"
         />

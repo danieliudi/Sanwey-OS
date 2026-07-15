@@ -93,6 +93,9 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
     e.preventDefault();
     if (!form.fullName.trim()) { setError("Nome completo é obrigatório."); return; }
     if (!form.frente) { setError("Frente é obrigatória."); return; }
+    // Documento obrigatório só na criação — editar um colaborador legado sem
+    // documento não deve ficar travado retroativamente.
+    if (!initialData && !file) { setError("Anexe uma foto ou PDF do RG/CNH antes de cadastrar."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -101,15 +104,15 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
       const targetId = novo?.id || initialData?.id;
       if (file && targetId) {
         const ext = file.type === "application/pdf" ? "pdf" : (file.type.split("/")[1] || "jpg");
-        // Achado da auditoria: os dois ramos do ternário retornavam "rg",
-        // então document_type nunca refletia o CPF. Prefere CPF quando
-        // informado (RH pode corrigir depois).
-        const documentType = form.cpf ? "cpf" : "rg";
+        // document_type só aceita 'cnh'/'rg' (CHECK constraint da tabela) — o
+        // documento anexado aqui é sempre RG ou CNH (rótulo do campo acima),
+        // nunca "cpf" (isso é só um número, não um documento escaneado).
+        const documentType = "rg";
         const path = `${targetId}/documento.${ext}`;
         const { error: uploadErr } = await supabase.storage.from(DOC_BUCKET).upload(path, file, { contentType: file.type, upsert: true });
-        if (!uploadErr) {
-          await supabase.from("rh_colaboradores").update({ document_type: documentType, document_path: path }).eq("id", targetId);
-        }
+        if (uploadErr) throw new Error(`Funcionário salvo, mas o documento não foi enviado (${uploadErr.message}). Tente anexar novamente editando o cadastro.`);
+        const { error: updateErr } = await supabase.from("rh_colaboradores").update({ document_type: documentType, document_path: path }).eq("id", targetId);
+        if (updateErr) throw new Error(`Funcionário salvo e documento enviado, mas o cadastro não foi vinculado ao arquivo (${updateErr.message}).`);
       }
       onClose();
     } catch (err) {
@@ -160,10 +163,12 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
           <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: 14, marginBottom: 20 }}>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={14} style={{ color: "#7C3AED" }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#5B21B6" }}>Preencher automaticamente com RG ou CNH</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#5B21B6" }}>
+                Documento (RG ou CNH){!initialData && <span style={{ color: "var(--danger)" }}> *</span>}
+              </span>
             </div>
             <p style={{ fontSize: 11, color: "#5B21B6", marginBottom: 10, lineHeight: 1.5 }}>
-              Útil para colaboradores que não sabem ler ou escrever: envie uma foto ou PDF do documento e a IA tenta preencher nome, CPF, RG e nascimento — revise antes de salvar.
+              Envie uma foto ou PDF do documento — fica anexado direto no cadastro do funcionário. Também é útil para colaboradores que não sabem ler ou escrever: a IA tenta preencher nome, CPF, RG e nascimento a partir do arquivo (revise antes de salvar).
             </p>
             <label style={{
               display: "flex", alignItems: "center", gap: 10,

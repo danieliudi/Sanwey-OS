@@ -250,9 +250,9 @@ function OnboardingKanbanColumn({
               stage={c.onboardingStage}
               stages={stages}
               onClick={() => onCardClick(c)}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-              onMoveToStage={onMoveToStage}
+              onDragStart={canWrite ? onDragStart : undefined}
+              onDragEnd={canWrite ? onDragEnd : undefined}
+              onMoveToStage={canWrite ? onMoveToStage : undefined}
               agingDays={daysInStage(c.onboardingStageChangedAt)}
               completeness={getCompleteness?.(c)}
             >

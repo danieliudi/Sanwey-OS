@@ -383,9 +383,9 @@ function FeriasKanbanColumn({
               stage={req.status}
               stages={stages}
               onClick={() => onCardClick(req)}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-              onMoveToStage={onMoveToStage}
+              onDragStart={canWrite ? onDragStart : undefined}
+              onDragEnd={canWrite ? onDragEnd : undefined}
+              onMoveToStage={canWrite ? onMoveToStage : undefined}
               agingDays={daysInStage(req.status_changed_at)}
               completeness={getCompleteness?.(req)}
             >

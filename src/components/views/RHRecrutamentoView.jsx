@@ -916,9 +916,9 @@ function VagaKanbanColumn({
               stage={v.stage}
               stages={stages}
               onClick={() => onCardClick(v)}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
-              onMoveToStage={onMoveToStage}
+              onDragStart={canWrite ? onDragStart : undefined}
+              onDragEnd={canWrite ? onDragEnd : undefined}
+              onMoveToStage={canWrite ? onMoveToStage : undefined}
               agingDays={daysInStage(v.stage_changed_at)}
               completeness={getCompleteness?.(v)}
             >
@@ -2040,9 +2040,9 @@ function KanbanColumn({
                 stage={c.stage}
                 stages={stages}
                 onClick={() => onCardClick(c)}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-                onMoveToStage={onMoveToStage}
+                onDragStart={canWrite ? onDragStart : undefined}
+                onDragEnd={canWrite ? onDragEnd : undefined}
+                onMoveToStage={canWrite ? onMoveToStage : undefined}
                 agingDays={daysInStage(c.stage_changed_at)}
                 completeness={getCompleteness?.(c)}
               >

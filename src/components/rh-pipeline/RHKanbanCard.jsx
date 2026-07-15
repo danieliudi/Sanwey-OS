@@ -45,7 +45,7 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
 
   return (
     <div
-      draggable
+      draggable={!!onDragStart}
       onDragStart={() => onDragStart?.(id)}
       onDragEnd={() => onDragEnd?.()}
       onClick={() => { if (!menuOpen) onClick?.(id); }}
