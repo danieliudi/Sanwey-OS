@@ -66,6 +66,8 @@ const ROLE_LABEL = {
   marketing:         "Marketing",
   gerente_marketing: "Gerente de Marketing",
   agencia:           "Agência",
+  rh:                "RH",
+  gerente_rh:        "Gerente de RH",
 };
 
 const ACCENT_PRESETS = [
@@ -566,7 +568,12 @@ export function SettingsView({
                     <div>
                       <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{currentUser?.name}</div>
                       <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{currentUser?.email}</div>
-                      <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{ROLE_LABEL[currentUser?.role] || currentUser?.role}</div>
+                      <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
+                        {(Array.isArray(currentUser?.roles) && currentUser.roles.length ? currentUser.roles : [currentUser?.role])
+                          .filter(Boolean)
+                          .map(r => ROLE_LABEL[r] || r)
+                          .join(" · ")}
+                      </div>
                     </div>
                   </div>
 
@@ -1240,7 +1247,7 @@ export function SettingsView({
                     )}
                   </div>
                   <p className="text-xs leading-relaxed mt-3" style={{ color: "var(--text-dim)" }}>
-                    Gera ~68 empresas fictícias distribuídas nas 4 unidades, com setor, estado, porte e
+                    Gera ~68 empresas fictícias distribuídas entre Sanwey e Resibag, com setor, estado, porte e
                     funil. Preenche os dropdowns do Explorador, Kanban e Executivo para testes.
                   </p>
                 </Section>
