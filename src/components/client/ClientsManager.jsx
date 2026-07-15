@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Users, X } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, X, Database } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { CLIENT_CATEGORIES, clientCategoryLabel, clientCategoryColor } from "../../constants/client-categories";
@@ -20,13 +20,25 @@ function CategoryTag({ value }) {
   );
 }
 
-export function ClientsManager({ clients = [], loading, onCreate, onUpdate, onDelete, canDelete }) {
+export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport }) {
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null); // null = novo, obj = editando
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
+
+  // Empresas que realmente já venderam pra cada cliente (negócio "ganho"),
+  // derivado dos leads em vez do tag manual — mais confiável pra detectar cross-sell.
+  const wonCompaniesByClient = useMemo(() => {
+    const map = new Map();
+    for (const l of leads) {
+      if (!l.clientId || l.stage !== "ganho" || !l.companyId) continue;
+      if (!map.has(l.clientId)) map.set(l.clientId, new Set());
+      map.get(l.clientId).add(l.companyId);
+    }
+    return map;
+  }, [leads]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -83,13 +95,24 @@ export function ClientsManager({ clients = [], loading, onCreate, onUpdate, onDe
             Cadastro central de clientes — usado para vincular aos cards do Pipeline.
           </p>
         </div>
-        <button
-          onClick={openNew}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-white"
-          style={{ background: "var(--color-industria)", border: "none", cursor: "pointer" }}
-        >
-          <Plus size={15} /> Novo cliente
-        </button>
+        <div className="flex items-center gap-2">
+          {onOpenImport && (
+            <button
+              onClick={onOpenImport}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold border"
+              style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF", cursor: "pointer" }}
+            >
+              <Database size={15} /> Importar planilha
+            </button>
+          )}
+          <button
+            onClick={openNew}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-white"
+            style={{ background: "var(--color-industria)", border: "none", cursor: "pointer" }}
+          >
+            <Plus size={15} /> Novo cliente
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -116,7 +139,7 @@ export function ClientsManager({ clients = [], loading, onCreate, onUpdate, onDe
           <table className="w-full" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Nome", "Categoria", "Cidade / UF", "CNPJ", "Criado em", ""].map((h, i) => (
+                {["Nome", "Categoria", "Cidade / UF", "CNPJ", "Cross-sell", "Criado em", ""].map((h, i) => (
                   <th key={i} className="text-left font-bold uppercase"
                     style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--text-dim)", padding: "10px 12px", borderBottom: "1px solid #E5E7EB" }}>
                     {h}
@@ -136,6 +159,23 @@ export function ClientsManager({ clients = [], loading, onCreate, onUpdate, onDe
                   </td>
                   <td style={{ padding: "12px", fontSize: 12, fontFamily: "monospace", color: "var(--text-dim)" }}>
                     {c.cnpj || "—"}
+                  </td>
+                  <td style={{ padding: "12px" }}>
+                    <div className="flex flex-wrap gap-1">
+                      {COMPANY_IDS.map(id => {
+                        const co = COMPANIES[id];
+                        const won = wonCompaniesByClient.get(c.id)?.has(id);
+                        return (
+                          <span key={id} title={won ? `Já vende para ${co.name}` : `Oportunidade de cross-sell em ${co.name}`}
+                            className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                            style={won
+                              ? { background: co.primary + "1A", color: co.primary }
+                              : { background: "#F3F4F6", color: "#9CA3AF" }}>
+                            {co.short}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </td>
                   <td style={{ padding: "12px", fontSize: 13, color: "var(--text-dim)" }}>
                     {c.createdAt ? formatDateBR(c.createdAt) : "—"}

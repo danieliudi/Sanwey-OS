@@ -108,22 +108,22 @@ export function SettingsView({
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
   onLoadAllDemoData, demoDataLoading = false, demoDataCounts = null,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
-  usersPanel, clientsPanel, onOpenClientImport, isManager = false,
+  usersPanel, isManager = false,
 }) {
   const [activeTab, setActiveTab] = useState("perfil");
   const tabs = useMemo(() => {
     if (!isManager) return PERSONAL_TABS;
-    // Manager order: Perfil, Preferências, Notificações, IA, Clientes, Captura, Dados, Usuários
+    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Usuários
     const list = [
       PERSONAL_TABS[0],
       MANAGER_TABS[0],
       PERSONAL_TABS[1],
       PERSONAL_TABS[2],
+      MANAGER_TABS[1],
+      MANAGER_TABS[2],
     ];
-    if (clientsPanel) list.push({ id: "clientes", label: "Clientes", icon: Users });
-    list.push(MANAGER_TABS[1], MANAGER_TABS[2]);
     return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
-  }, [isManager, usersPanel, clientsPanel]);
+  }, [isManager, usersPanel]);
 
   // ── Vagas públicas (Recrutamento) ─────────────────────────────────────
   // rh_vagas vem cru (snake_case) de useRHRecrutamento — sem mapper camelCase.
@@ -1541,31 +1541,6 @@ export function SettingsView({
                   </div>
                 </div>
               </Section>
-            )}
-
-            {/* ── CLIENTES ── */}
-            {activeTab === "clientes" && (
-              <div className="space-y-4">
-                {clientsPanel}
-                {onOpenClientImport && (
-                  <div className="mt-6 pt-5 border-t" style={{ borderColor: "#F0F0F0" }}>
-                    <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
-                      <div>
-                        <div className="font-semibold text-sm" style={{ color: "var(--text)", marginBottom: 2 }}>
-                          Importar planilha de clientes
-                        </div>
-                        <p className="text-xs" style={{ color: "var(--text-dim)", marginBottom: 0, maxWidth: 480 }}>
-                          Envie um arquivo .xlsx ou .csv com clientes ativos e inativos. A plataforma deduplica
-                          automaticamente por CNPJ — registros já cadastrados são ignorados.
-                        </p>
-                      </div>
-                      <Button variant="primary" icon={Database} onClick={onOpenClientImport}>
-                        Importar planilha
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
             )}
 
             {/* ── USUÁRIOS ── */}

@@ -801,6 +801,7 @@ export default function App() {
         items: [
           { id: "commercial-overview", label: "Visão Geral", icon: LayoutDashboard },
           { id: "crm",          label: "Pipeline",   icon: Layers },
+          { id: "clients",      label: "Clientes",   icon: Users },
           { id: "signals",      label: "Sinais",     icon: Bell },
           { id: "explorer",     label: "Explorador", icon: Globe2 },
           { id: "crm-viagens",  label: "Viagens & Reembolsos", icon: Plane },
@@ -1172,6 +1173,22 @@ export default function App() {
               ? <Navigate to={ROUTES.dashboard} replace />
               : <CRMViagensView currentUser={currentUser} leads={leads} users={users} pushNotification={pushNotification} />
           } />
+          <Route path={ROUTES.clients} element={
+            isAgencia || isPureMarketing || isPureRH
+              ? <Navigate to={ROUTES.dashboard} replace />
+              : (
+                <ClientsManager
+                  clients={clients}
+                  loading={clientsLoading}
+                  leads={leads}
+                  onCreate={createClient}
+                  onUpdate={updateClient}
+                  onDelete={deleteClient}
+                  canDelete={isManager}
+                  onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
+                />
+              )
+          } />
           <Route path={ROUTES.agents} element={
             isManager
               ? <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} />
@@ -1243,17 +1260,6 @@ export default function App() {
               onUpdateMockUser={supabaseEnabled ? null : setMockUser}
               supabaseEnabled={supabaseEnabled}
               isManager={isManager}
-              onOpenClientImport={isManager ? () => setClientImportOpen(true) : null}
-              clientsPanel={isManager ? (
-                <ClientsManager
-                  clients={clients}
-                  loading={clientsLoading}
-                  onCreate={createClient}
-                  onUpdate={updateClient}
-                  onDelete={deleteClient}
-                  canDelete={isManager}
-                />
-              ) : null}
               usersPanel={isManager ? (
                 <UserManagementView
                   users={users}
