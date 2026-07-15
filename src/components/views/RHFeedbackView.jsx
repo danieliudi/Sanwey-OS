@@ -17,6 +17,7 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
@@ -632,152 +633,156 @@ function FeedbackDrawer({
   const evaluatorIds = feedback.evaluator_ids?.length ? feedback.evaluator_ids : (feedback.evaluator_id ? [feedback.evaluator_id] : []);
   const resolvedEvaluators = evaluatorIds.map(id => users.find(u => u.id === id)).filter(Boolean);
 
-  return (
-    <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <InitialsAvatar name={colaborador?.fullName} size={40} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <button
-              onClick={() => onShowHistorico(feedback.user_id)}
-              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-            >
-              <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", textDecoration: "underline" }}>{colaborador?.fullName || "—"}</div>
-              <TrendingUp size={12} color="var(--text-dim)" />
-            </button>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{tipoLabel(feedback.tipo)} · {fmt(feedback.period_start)} – {fmt(feedback.period_end)}</div>
-            <div style={{ marginTop: 8 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
-              </span>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
-            <X size={18} />
-          </button>
+  const header = (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0 }}>
+      <InitialsAvatar name={colaborador?.fullName} size={40} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <button
+          onClick={() => onShowHistorico(feedback.user_id)}
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+        >
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", textDecoration: "underline" }}>{colaborador?.fullName || "—"}</div>
+          <TrendingUp size={12} color="var(--text-dim)" />
+        </button>
+        <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{tipoLabel(feedback.tipo)} · {fmt(feedback.period_start)} – {fmt(feedback.period_end)}</div>
+        <div style={{ marginTop: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
+          </span>
         </div>
+      </div>
+    </div>
+  );
 
-        <div style={{ padding: "20px 24px", flex: 1 }}>
-          {/* Avaliadores (FASE 5) — múltiplos responsáveis pela avaliação */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={labelSt}>Avaliadores</div>
-            {canWrite ? (
-              <AssigneeMultiSelect
-                value={evaluatorIds}
-                onChange={(ids) => onUpdateEvaluators(ids)}
-                options={eligibleEvaluators}
-                placeholder="Selecionar avaliadores…"
-              />
-            ) : resolvedEvaluators.length > 0 ? (
-              <AvatarStack users={resolvedEvaluators} size={22} max={4} />
-            ) : (
-              <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum avaliador definido</div>
-            )}
+  const left = (
+    <>
+      {/* Avaliadores (FASE 5) — múltiplos responsáveis pela avaliação */}
+      <div>
+        <div style={labelSt}>Avaliadores</div>
+        {canWrite ? (
+          <AssigneeMultiSelect
+            value={evaluatorIds}
+            onChange={(ids) => onUpdateEvaluators(ids)}
+            options={eligibleEvaluators}
+            placeholder="Selecionar avaliadores…"
+          />
+        ) : resolvedEvaluators.length > 0 ? (
+          <AvatarStack users={resolvedEvaluators} size={22} max={4} />
+        ) : (
+          <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum avaliador definido</div>
+        )}
+      </div>
+
+      {/* Autoavaliação vs. gestor lado a lado */}
+      <div>
+        <div style={labelSt}>Autoavaliação × Gestor</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 4 }}>Autoavaliação</div>
+            {feedback.self_rating != null ? (
+              <>
+                <div style={{ fontWeight: 800, fontSize: 16, color: ratingColor(feedback.self_rating) }}>{Number(feedback.self_rating).toFixed(1)}/10</div>
+                <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{ratingScaleLabel(feedback.self_rating)}</div>
+              </>
+            ) : <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Ainda não preenchida</div>}
           </div>
-
-          {/* Autoavaliação vs. gestor lado a lado */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={labelSt}>Autoavaliação × Gestor</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
-                <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 4 }}>Autoavaliação</div>
-                {feedback.self_rating != null ? (
-                  <>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: ratingColor(feedback.self_rating) }}>{Number(feedback.self_rating).toFixed(1)}/10</div>
-                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{ratingScaleLabel(feedback.self_rating)}</div>
-                  </>
-                ) : <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Ainda não preenchida</div>}
-              </div>
-              <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
-                <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 4 }}>Gestor</div>
-                {feedback.manager_rating != null ? (
-                  <>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: ratingColor(feedback.manager_rating) }}>{Number(feedback.manager_rating).toFixed(1)}/10</div>
-                    <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{ratingScaleLabel(feedback.manager_rating)}</div>
-                  </>
-                ) : <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Ainda não preenchida</div>}
-              </div>
-            </div>
-          </div>
-
-          {canWrite && !st.terminal && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Mover para</div>
-              {moveError && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
-                  <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-                  {moveError}
-                </div>
-              )}
-              <StageNavigator
-                stages={stages}
-                currentStage={feedback.status}
-                onMove={(stageKey) => onStageChange(feedback.id, stageKey)}
-                getKey={(s) => s.stageKey}
-              />
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {moveTargets.map((s) => (
-                  <button
-                    key={s.stageKey}
-                    onClick={() => onStageChange(feedback.id, s.stageKey)}
-                    style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
-                  >
-                    {s.name}
-                  </button>
-                ))}
-                <button
-                  onClick={onComplete}
-                  style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
-                >
-                  Concluir avaliação
-                </button>
-              </div>
-            </div>
-          )}
-
-          {visibleCustomDefs.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Campos desta etapa</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {visibleCustomDefs.map((f) => (
-                  <div key={f.id}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
-                      {f.label}
-                    </label>
-                    {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
-                    <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {feedback.status === "concluido" && (feedback.conteudo?.pontos_fortes || feedback.conteudo?.pontos_desenvolvimento) && (
-            <div style={{ marginBottom: 20 }}>
-              {feedback.conteudo?.pontos_fortes && <div style={{ marginBottom: 6 }}><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>Pontos fortes: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_fortes}</span></div>}
-              {feedback.conteudo?.pontos_desenvolvimento && <div><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>A desenvolver: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_desenvolvimento}</span></div>}
-            </div>
-          )}
-
-          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-            <RHDetailDrawerShell
-              domain="feedback"
-              recordId={feedback.id}
-              activities={feedback.activities || []}
-              onAddActivity={onAddActivity}
-              currentUser={currentUser}
-              users={users}
-              stages={stages}
-              notifyMentions={notifyMentions}
-              mentionLink={{ module: "rh_feedback", id: feedback.id }}
-              mentionContextLabel={colaborador?.fullName}
-            />
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 4 }}>Gestor</div>
+            {feedback.manager_rating != null ? (
+              <>
+                <div style={{ fontWeight: 800, fontSize: 16, color: ratingColor(feedback.manager_rating) }}>{Number(feedback.manager_rating).toFixed(1)}/10</div>
+                <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{ratingScaleLabel(feedback.manager_rating)}</div>
+              </>
+            ) : <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Ainda não preenchida</div>}
           </div>
         </div>
       </div>
     </>
+  );
+
+  const center = (
+    <>
+      {visibleCustomDefs.length > 0 && (
+        <div>
+          <div style={labelSt}>Campos desta etapa</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {visibleCustomDefs.map((f) => (
+              <div key={f.id}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                  {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                  {f.label}
+                </label>
+                {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+                <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {feedback.status === "concluido" && (feedback.conteudo?.pontos_fortes || feedback.conteudo?.pontos_desenvolvimento) && (
+        <div>
+          {feedback.conteudo?.pontos_fortes && <div style={{ marginBottom: 6 }}><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>Pontos fortes: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_fortes}</span></div>}
+          {feedback.conteudo?.pontos_desenvolvimento && <div><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>A desenvolver: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_desenvolvimento}</span></div>}
+        </div>
+      )}
+    </>
+  );
+
+  const right = (
+    <>
+      {canWrite && !st.terminal && (
+        <div>
+          <div style={labelSt}>Mover para</div>
+          {moveError && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+              <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+              {moveError}
+            </div>
+          )}
+          <StageNavigator
+            stages={stages}
+            currentStage={feedback.status}
+            onMove={(stageKey) => onStageChange(feedback.id, stageKey)}
+            getKey={(s) => s.stageKey}
+          />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {moveTargets.map((s) => (
+              <button
+                key={s.stageKey}
+                onClick={() => onStageChange(feedback.id, s.stageKey)}
+                style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+              >
+                {s.name}
+              </button>
+            ))}
+            <button
+              onClick={onComplete}
+              style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+            >
+              Concluir avaliação
+            </button>
+          </div>
+        </div>
+      )}
+
+      <RHDetailDrawerShell
+        domain="feedback"
+        recordId={feedback.id}
+        activities={feedback.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        notifyMentions={notifyMentions}
+        mentionLink={{ module: "rh_feedback", id: feedback.id }}
+        mentionContextLabel={colaborador?.fullName}
+      />
+    </>
+  );
+
+  return (
+    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
   );
 }
 

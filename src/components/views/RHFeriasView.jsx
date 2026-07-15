@@ -14,6 +14,7 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
@@ -454,123 +455,127 @@ function FeriasDrawer({
     if (ok) { setMoveError(null); onMoved(req.id); }
   };
 
-  return (
-    <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <UserAvatar user={req.profiles} size={40} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{req.profiles?.name || "Desconhecido"}</div>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{leaveTypeLabel(req.type)} · {fmt(req.start_date)} – {fmt(req.end_date)} · {dias}d</div>
-            <div style={{ marginTop: 8 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
-              </span>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div style={{ padding: "20px 24px", flex: 1 }}>
-          {req.notes && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Observações do colaborador</div>
-              <div style={{ fontSize: 13, color: "var(--text)" }}>{req.notes}</div>
-            </div>
-          )}
-
-          {avisoAntecedenciaCurto(req) && (
-            <div style={{ marginBottom: 16, background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--warning)", display: "flex", alignItems: "center", gap: 6 }}>
-              <AlertTriangle size={12} /> Solicitado com menos de {AVISO_MINIMO_DIAS_FERIAS} dias de antecedência (CLT Art. 135).
-            </div>
-          )}
-
-          {docExigido && (
-            <div style={{ marginBottom: 16, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--text-dim)" }}>
-              Documento exigido pra aprovar: <b style={{ color: "var(--text)" }}>{docExigido}</b> (anexar na aba Anexos abaixo).
-            </div>
-          )}
-
-          {canWrite && moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16, background: "#FEF2F2", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
-              <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
-              {moveError}
-            </div>
-          )}
-
-          {canWrite && req.status === "pendente" && (
-            <div style={{ marginBottom: 20, display: "flex", gap: 8 }}>
-              <button onClick={handleAprovarClick} disabled={busy} style={{ flex: 1, background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
-                Aprovar
-              </button>
-              <button onClick={handleRecusarClick} disabled={busy} style={{ flex: 1, background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
-                Recusar
-              </button>
-            </div>
-          )}
-
-          {canWrite && moveTargets.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Mover para</div>
-              <StageNavigator
-                stages={stages}
-                currentStage={req.status}
-                onMove={handleMoveClick}
-                getKey={(s) => s.stageKey}
-              />
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {moveTargets.map((s) => (
-                  <button
-                    key={s.stageKey}
-                    onClick={() => handleMoveClick(s.stageKey)}
-                    disabled={busy}
-                    style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}
-                  >
-                    {s.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {visibleCustomDefs.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Campos desta etapa</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {visibleCustomDefs.map((f) => (
-                  <div key={f.id}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
-                      {f.label}
-                    </label>
-                    {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
-                    <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-            <RHDetailDrawerShell
-              domain="ferias"
-              recordId={req.id}
-              activities={req.activities || []}
-              onAddActivity={onAddActivity}
-              currentUser={currentUser}
-              users={users}
-              stages={stages}
-              notifyMentions={notifyMentions}
-              mentionLink={{ module: "rh_ferias", id: req.id }}
-              mentionContextLabel={req.profiles?.name}
-            />
-          </div>
+  const header = (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0 }}>
+      <UserAvatar user={req.profiles} size={40} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{req.profiles?.name || "Desconhecido"}</div>
+        <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{leaveTypeLabel(req.type)} · {fmt(req.start_date)} – {fmt(req.end_date)} · {dias}d</div>
+        <div style={{ marginTop: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
+          </span>
         </div>
       </div>
+    </div>
+  );
+
+  const left = (
+    <>
+      {req.notes && (
+        <div>
+          <div style={labelSt}>Observações do colaborador</div>
+          <div style={{ fontSize: 13, color: "var(--text)" }}>{req.notes}</div>
+        </div>
+      )}
+
+      {avisoAntecedenciaCurto(req) && (
+        <div style={{ background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--warning)", display: "flex", alignItems: "center", gap: 6 }}>
+          <AlertTriangle size={12} /> Solicitado com menos de {AVISO_MINIMO_DIAS_FERIAS} dias de antecedência (CLT Art. 135).
+        </div>
+      )}
+
+      {docExigido && (
+        <div style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--text-dim)" }}>
+          Documento exigido pra aprovar: <b style={{ color: "var(--text)" }}>{docExigido}</b> (anexar na aba Anexos).
+        </div>
+      )}
     </>
+  );
+
+  const center = (
+    <>
+      {visibleCustomDefs.length > 0 && (
+        <div>
+          <div style={labelSt}>Campos desta etapa</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {visibleCustomDefs.map((f) => (
+              <div key={f.id}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                  {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                  {f.label}
+                </label>
+                {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+                <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const right = (
+    <>
+      {canWrite && moveError && (
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#FEF2F2", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
+          <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+          {moveError}
+        </div>
+      )}
+
+      {canWrite && req.status === "pendente" && (
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={handleAprovarClick} disabled={busy} style={{ flex: 1, background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+            Aprovar
+          </button>
+          <button onClick={handleRecusarClick} disabled={busy} style={{ flex: 1, background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+            Recusar
+          </button>
+        </div>
+      )}
+
+      {canWrite && moveTargets.length > 0 && (
+        <div>
+          <div style={labelSt}>Mover para</div>
+          <StageNavigator
+            stages={stages}
+            currentStage={req.status}
+            onMove={handleMoveClick}
+            getKey={(s) => s.stageKey}
+          />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {moveTargets.map((s) => (
+              <button
+                key={s.stageKey}
+                onClick={() => handleMoveClick(s.stageKey)}
+                disabled={busy}
+                style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <RHDetailDrawerShell
+        domain="ferias"
+        recordId={req.id}
+        activities={req.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        notifyMentions={notifyMentions}
+        mentionLink={{ module: "rh_ferias", id: req.id }}
+        mentionContextLabel={req.profiles?.name}
+      />
+    </>
+  );
+
+  return (
+    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
   );
 }
 

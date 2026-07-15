@@ -17,6 +17,7 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
@@ -487,86 +488,80 @@ function AtribuicaoDrawer({
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
   const moveTargets = stages.filter((s) => s.stageKey !== atribuicao.status);
 
-  return (
-    <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(460px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{treinamento.titulo}</div>
-            <div style={{ marginTop: 8 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
-              </span>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div style={{ padding: "20px 24px", flex: 1 }}>
-          {canWrite && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Mover para</div>
-              {moveError && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
-                  <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-                  {moveError}
-                </div>
-              )}
-              <StageNavigator
-                stages={stages}
-                currentStage={atribuicao.status}
-                onMove={(stageKey) => onStageChange(atribuicao.id, stageKey)}
-                getKey={(s) => s.stageKey}
-              />
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {moveTargets.map((s) => (
-                  <button key={s.stageKey} onClick={() => onStageChange(atribuicao.id, s.stageKey)} style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                    {s.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {visibleCustomDefs.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Campos desta etapa</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {visibleCustomDefs.map((f) => (
-                  <div key={f.id}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
-                      {f.label}
-                    </label>
-                    {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
-                    <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-            <RHDetailDrawerShell
-              domain="treinamentos"
-              recordId={atribuicao.id}
-              activities={atribuicao.activities || []}
-              onAddActivity={onAddActivity}
-              currentUser={currentUser}
-              users={users}
-              stages={stages}
-              notifyMentions={notifyMentions}
-              mentionLink={{ module: "rh_treinamentos", id: atribuicao.id }}
-              mentionContextLabel={[colaborador?.fullName, treinamento?.titulo].filter(Boolean).join(" · ")}
-            />
-          </div>
-        </div>
+  const header = (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
+      <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{treinamento.titulo}</div>
+      <div style={{ marginTop: 8 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
+        </span>
       </div>
+    </div>
+  );
+
+  const left = visibleCustomDefs.length > 0 ? (
+    <div>
+      <div style={labelSt}>Campos desta etapa</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {visibleCustomDefs.map((f) => (
+          <div key={f.id}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+              {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+              {f.label}
+            </label>
+            {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  const right = (
+    <>
+      {canWrite && (
+        <div>
+          <div style={labelSt}>Mover para</div>
+          {moveError && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+              <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+              {moveError}
+            </div>
+          )}
+          <StageNavigator
+            stages={stages}
+            currentStage={atribuicao.status}
+            onMove={(stageKey) => onStageChange(atribuicao.id, stageKey)}
+            getKey={(s) => s.stageKey}
+          />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {moveTargets.map((s) => (
+              <button key={s.stageKey} onClick={() => onStageChange(atribuicao.id, s.stageKey)} style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                {s.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <RHDetailDrawerShell
+        domain="treinamentos"
+        recordId={atribuicao.id}
+        activities={atribuicao.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        notifyMentions={notifyMentions}
+        mentionLink={{ module: "rh_treinamentos", id: atribuicao.id }}
+        mentionContextLabel={[colaborador?.fullName, treinamento?.titulo].filter(Boolean).join(" · ")}
+      />
     </>
+  );
+
+  return (
+    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={null} right={right} />
   );
 }
 
