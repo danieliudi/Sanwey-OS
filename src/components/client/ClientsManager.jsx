@@ -1,13 +1,28 @@
 import React, { useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Users, X, Database } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, X, Database, History, ArrowUpRight } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { CLIENT_CATEGORIES, clientCategoryLabel, clientCategoryColor } from "../../constants/client-categories";
+import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { formatDateBR } from "../../utils/date";
+import { formatBRL } from "../../utils/currency";
 
 const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
 const EMPTY = { name: "", category: "", city: "", state: "", cnpj: "", companyIds: [], notes: "" };
+
+const STAGE_LABELS = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
+
+// Data em que o negócio realmente fechou: data_fechamento (custom field da
+// etapa "ganho") tem prioridade, caindo pra stageChangedAt quando o campo
+// não foi preenchido — sempre existe, pois é setado em toda troca de etapa.
+function wonDate(l) {
+  return l.customFields?.data_fechamento || l.stageChangedAt || l.closeDate || l.createdAt || null;
+}
+function wonValue(l) {
+  const v = l.customFields?.valor_final;
+  return v !== undefined && v !== null && v !== "" ? Number(v) : Number(l.value || 0);
+}
 
 function CategoryTag({ value }) {
   if (!value) return <span style={{ color: "#9CA3AF" }}>—</span>;
@@ -20,35 +35,60 @@ function CategoryTag({ value }) {
   );
 }
 
-export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport }) {
+export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport, onOpenLead }) {
   const [query, setQuery] = useState("");
+  const [onlyOpportunities, setOnlyOpportunities] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null); // null = novo, obj = editando
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
+  const [historyClient, setHistoryClient] = useState(null);
 
-  // Empresas que realmente já venderam pra cada cliente (negócio "ganho"),
-  // derivado dos leads em vez do tag manual — mais confiável pra detectar cross-sell.
-  const wonCompaniesByClient = useMemo(() => {
+  // Todos os negócios (qualquer etapa) por cliente — usado no histórico e,
+  // filtrado por "ganho", pras flags de cross-sell/ticket médio/produtos.
+  const dealsByClient = useMemo(() => {
     const map = new Map();
     for (const l of leads) {
-      if (!l.clientId || l.stage !== "ganho" || !l.companyId) continue;
-      if (!map.has(l.clientId)) map.set(l.clientId, new Set());
-      map.get(l.clientId).add(l.companyId);
+      if (!l.clientId) continue;
+      if (!map.has(l.clientId)) map.set(l.clientId, []);
+      map.get(l.clientId).push(l);
     }
     return map;
   }, [leads]);
 
+  // Estatísticas derivadas dos negócios "ganho" de cada cliente — mais
+  // confiável que o tag manual "Empresas relacionadas" pra detectar cross-sell.
+  const statsByClient = useMemo(() => {
+    const map = new Map();
+    for (const [clientId, deals] of dealsByClient) {
+      const won = deals.filter(l => l.stage === "ganho");
+      if (!won.length) continue;
+      const companies = new Set(won.map(l => l.companyId).filter(Boolean));
+      const products = [...new Set(won.map(l => l.skuName || l.sku).filter(Boolean))];
+      const values = won.map(wonValue);
+      const avgTicket = values.reduce((a, b) => a + b, 0) / values.length;
+      const lastOrder = won.map(wonDate).filter(Boolean).sort().at(-1);
+      map.set(clientId, { companies, products, avgTicket, lastOrder });
+    }
+    return map;
+  }, [dealsByClient]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter(c =>
-      (c.name || "").toLowerCase().includes(q) ||
-      (c.city || "").toLowerCase().includes(q) ||
-      (c.cnpj || "").includes(q) ||
-      clientCategoryLabel(c.category).toLowerCase().includes(q));
-  }, [clients, query]);
+    let list = clients;
+    if (q) {
+      list = list.filter(c =>
+        (c.name || "").toLowerCase().includes(q) ||
+        (c.city || "").toLowerCase().includes(q) ||
+        (c.cnpj || "").includes(q) ||
+        clientCategoryLabel(c.category).toLowerCase().includes(q));
+    }
+    if (onlyOpportunities) {
+      list = list.filter(c => (statsByClient.get(c.id)?.companies.size || 0) < COMPANY_IDS.length);
+    }
+    return list;
+  }, [clients, query, onlyOpportunities, statsByClient]);
 
   const openNew = () => { setEditing(null); setForm(EMPTY); setModalOpen(true); };
   const openEdit = (c) => {
@@ -116,15 +156,21 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
       </div>
 
       {/* Search */}
-      <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg border" style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}>
-        <Search size={15} style={{ color: "var(--text-dim)" }} />
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Buscar por nome, cidade, CNPJ ou categoria…"
-          className="flex-1 text-sm outline-none"
-          style={{ border: "none", background: "transparent", color: "var(--text)" }}
-        />
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border flex-1" style={{ borderColor: "#E5E7EB", background: "var(--surface)", minWidth: 220 }}>
+          <Search size={15} style={{ color: "var(--text-dim)" }} />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Buscar por nome, cidade, CNPJ ou categoria…"
+            className="flex-1 text-sm outline-none"
+            style={{ border: "none", background: "transparent", color: "var(--text)" }}
+          />
+        </div>
+        <label className="inline-flex items-center gap-1.5 text-xs font-medium select-none" style={{ color: "var(--text-dim)", cursor: "pointer" }}>
+          <input type="checkbox" checked={onlyOpportunities} onChange={e => setOnlyOpportunities(e.target.checked)} />
+          Somente oportunidades de cross-sell
+        </label>
       </div>
 
       {/* Table */}
@@ -139,7 +185,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
           <table className="w-full" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Nome", "Categoria", "Cidade / UF", "CNPJ", "Cross-sell", "Criado em", ""].map((h, i) => (
+                {["Nome", "Categoria", "Cidade / UF", "CNPJ", "Cross-sell", "Produtos", "Último pedido", "Ticket médio", ""].map((h, i) => (
                   <th key={i} className="text-left font-bold uppercase"
                     style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--text-dim)", padding: "10px 12px", borderBottom: "1px solid #E5E7EB" }}>
                     {h}
@@ -148,10 +194,22 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
               </tr>
             </thead>
             <tbody>
-              {filtered.map(c => (
+              {filtered.map(c => {
+                const stats = statsByClient.get(c.id);
+                const dealCount = dealsByClient.get(c.id)?.length || 0;
+                return (
                 <tr key={c.id} style={{ borderBottom: "1px solid #F1F1F1" }}>
                   <td style={{ padding: "12px", fontSize: 13 }}>
-                    <span className="font-semibold" style={{ color: "var(--text)" }}>{c.name}</span>
+                    {dealCount > 0 ? (
+                      <button onClick={() => setHistoryClient(c)}
+                        className="font-semibold text-left inline-flex items-center gap-1"
+                        style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                        {c.name}
+                        <History size={12} />
+                      </button>
+                    ) : (
+                      <span className="font-semibold" style={{ color: "var(--text)" }}>{c.name}</span>
+                    )}
                   </td>
                   <td style={{ padding: "12px" }}><CategoryTag value={c.category} /></td>
                   <td style={{ padding: "12px", fontSize: 13, color: "var(--text)" }}>
@@ -164,7 +222,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                     <div className="flex flex-wrap gap-1">
                       {COMPANY_IDS.map(id => {
                         const co = COMPANIES[id];
-                        const won = wonCompaniesByClient.get(c.id)?.has(id);
+                        const won = stats?.companies.has(id);
                         return (
                           <span key={id} title={won ? `Já vende para ${co.name}` : `Oportunidade de cross-sell em ${co.name}`}
                             className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -177,8 +235,14 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                       })}
                     </div>
                   </td>
-                  <td style={{ padding: "12px", fontSize: 13, color: "var(--text-dim)" }}>
-                    {c.createdAt ? formatDateBR(c.createdAt) : "—"}
+                  <td style={{ padding: "12px", fontSize: 12, color: "var(--text-dim)", maxWidth: 180 }}>
+                    {stats?.products.length ? stats.products.join(", ") : "—"}
+                  </td>
+                  <td style={{ padding: "12px", fontSize: 13, color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                    {stats?.lastOrder ? formatDateBR(stats.lastOrder) : "—"}
+                  </td>
+                  <td style={{ padding: "12px", fontSize: 13, color: "var(--text)", whiteSpace: "nowrap" }}>
+                    {stats?.avgTicket ? formatBRL(stats.avgTicket) : "—"}
                   </td>
                   <td style={{ padding: "12px", textAlign: "right", whiteSpace: "nowrap" }}>
                     <button onClick={() => openEdit(c)} title="Editar"
@@ -193,7 +257,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                     )}
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>
@@ -278,6 +342,53 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
               {saving ? "Salvando…" : editing ? "Salvar alterações" : "Criar cliente"}
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Histórico de negócios do cliente */}
+      <Modal open={Boolean(historyClient)} onClose={() => setHistoryClient(null)} title={`Histórico — ${historyClient?.name || ""}`} width={560}>
+        <div className="px-6 py-5">
+          {(dealsByClient.get(historyClient?.id) || [])
+            .slice()
+            .sort((a, b) => new Date(wonDate(b) || b.createdAt || 0) - new Date(wonDate(a) || a.createdAt || 0))
+            .map(l => {
+              const co = COMPANIES[l.companyId];
+              const isWon = l.stage === "ganho";
+              return (
+                <div key={l.id} className="flex items-start justify-between gap-3 py-3" style={{ borderBottom: "1px solid #F1F1F1" }}>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                      {co && (
+                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                          style={{ background: co.primary + "1A", color: co.primary }}>
+                          {co.short}
+                        </span>
+                      )}
+                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                        style={isWon ? { background: "#DCFCE7", color: "#16A34A" } : { background: "#F3F4F6", color: "var(--text-dim)" }}>
+                        {STAGE_LABELS[l.stage] || l.stage}
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>
+                      {l.skuName || l.sku || l.company || "Negócio sem nome"}
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
+                      {formatBRL(isWon ? wonValue(l) : (l.value || 0))} · {formatDateBR(wonDate(l) || l.createdAt)}
+                    </div>
+                  </div>
+                  {onOpenLead && (
+                    <button onClick={() => { onOpenLead(l); setHistoryClient(null); }} title="Abrir no pipeline"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold shrink-0"
+                      style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF", cursor: "pointer" }}>
+                      Abrir <ArrowUpRight size={12} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          {!(dealsByClient.get(historyClient?.id) || []).length && (
+            <p className="text-sm text-center py-6" style={{ color: "var(--text-dim)" }}>Nenhum negócio vinculado a este cliente ainda.</p>
+          )}
         </div>
       </Modal>
 

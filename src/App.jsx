@@ -1186,6 +1186,7 @@ export default function App() {
                   onDelete={deleteClient}
                   canDelete={isManager}
                   onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
+                  onOpenLead={setSelectedLead}
                 />
               )
           } />
