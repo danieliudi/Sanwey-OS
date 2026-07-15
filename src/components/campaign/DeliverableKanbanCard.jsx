@@ -1,9 +1,10 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from "react";
-import { Clock, Star, MoreVertical, ArrowRight } from "lucide-react";
+import React, { memo, useMemo, useRef, useState } from "react";
+import { Clock, Star } from "lucide-react";
 import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MoveStageMenu } from "../shared/MoveStageMenu";
 
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
 const PRIORITY_LABELS = { baixa: "Baixa",   media: "Média",   alta: "Alta"  };
@@ -31,7 +32,7 @@ function DeliverableKanbanCardImpl({
   stages, onMoveToStage, canWrite, onToggleStar, completeness,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const cardRef = useRef(null);
 
   // FASE 5: mais de um responsável por entrega — resolve assignee_ids (com
   // fallback pro assignee escalar em entregas legadas) contra a lista de
@@ -52,17 +53,9 @@ function DeliverableKanbanCardImpl({
   const shadowBase  = `var(--shadow-card)`;
   const shadowHover = `var(--shadow-pop)`;
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
-
   return (
     <div
+      ref={cardRef}
       draggable={canWrite}
       onDragStart={() => canWrite && onDragStart?.(item)}
       onDragEnd={() => onDragEnd?.()}
@@ -130,52 +123,12 @@ function DeliverableKanbanCardImpl({
             item.starred && <Star size={11} fill="#F59E0B" color="#F59E0B" />
           )}
           {canWrite && moveTargets.length > 0 && onMoveToStage && (
-            <div ref={menuRef} style={{ position: "relative" }}>
-              <button
-                onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
-                title="Mover para outra etapa"
-                style={{
-                  background: "transparent", border: "none", color: "var(--text-dim)",
-                  cursor: "pointer", padding: 2, borderRadius: 4, display: "flex",
-                  alignItems: "center", lineHeight: 1,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-              >
-                <MoreVertical size={14} />
-              </button>
-              {menuOpen && (
-                <div
-                  style={{
-                    position: "absolute", top: "calc(100% + 4px)", right: 0,
-                    background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
-                    boxShadow: "var(--shadow-pop)", zIndex: 50, minWidth: 180, overflow: "hidden",
-                  }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div style={{ padding: "6px 12px 4px", fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    Mover para
-                  </div>
-                  {moveTargets.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={e => { e.stopPropagation(); onMoveToStage(item.id, s.id); setMenuOpen(false); }}
-                      style={{
-                        width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
-                        background: "transparent", border: "none", cursor: "pointer", fontSize: 13,
-                        color: "var(--text)", textAlign: "left", transition: "background 0.1s",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
-                      {s.name}
-                      <ArrowRight size={11} style={{ marginLeft: "auto", opacity: 0.4 }} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MoveStageMenu
+              targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
+              onMove={(key) => onMoveToStage(item.id, key)}
+              onOpenChange={setMenuOpen}
+              boundaryRef={cardRef}
+            />
           )}
         </div>
       </div>

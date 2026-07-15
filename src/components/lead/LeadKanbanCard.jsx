@@ -1,9 +1,10 @@
-import React, { memo, useMemo, useRef, useState, useEffect } from "react";
-import { Clock, MoreVertical, ArrowRight, Check, X as XIcon } from "lucide-react";
+import React, { memo, useMemo, useRef, useState } from "react";
+import { Clock, Check, X as XIcon } from "lucide-react";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { CompanyTag } from "../ui/CompanyTag";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 
@@ -29,7 +30,7 @@ function agingStyle(days, slaDays) {
 
 function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const cardRef = useRef(null);
 
   // FASE 5: mais de um responsável por card — resolve owner_ids (com
   // fallback pro owner escalar em leads legados) contra a lista de
@@ -57,17 +58,9 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
   const shadowBase  = `var(--shadow-card)`;
   const shadowHover = `var(--shadow-pop)`;
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
-
   return (
     <div
+      ref={cardRef}
       draggable
       onDragStart={() => onDragStart?.(lead)}
       onDragEnd={() => onDragEnd?.()}
@@ -123,95 +116,12 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
           )}
           <FitScoreCircle score={lead.fitScore} size={30} />
           {moveTargets.length > 0 && onMoveToStage && (
-            <div ref={menuRef} style={{ position: "relative" }}>
-              <button
-                title="Mover para outra etapa"
-                onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-dim)",
-                  cursor: "pointer",
-                  padding: 2,
-                  borderRadius: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  lineHeight: 1,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-              >
-                <MoreVertical size={14} />
-              </button>
-              {menuOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 4px)",
-                    right: 0,
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    boxShadow: "var(--shadow-pop)",
-                    zIndex: 50,
-                    minWidth: 180,
-                    overflow: "hidden",
-                  }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div
-                    style={{
-                      padding: "6px 12px 4px",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: "var(--text-dim)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    Mover para
-                  </div>
-                  {moveTargets.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={e => {
-                        e.stopPropagation();
-                        onMoveToStage(lead.id, s.id);
-                        setMenuOpen(false);
-                      }}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 12px",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: 13,
-                        color: "var(--text)",
-                        textAlign: "left",
-                        transition: "background 0.1s",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
-                    >
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: s.color,
-                          flexShrink: 0,
-                        }}
-                      />
-                      {s.name}
-                      <ArrowRight size={11} style={{ marginLeft: "auto", opacity: 0.4 }} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MoveStageMenu
+              targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
+              onMove={(key) => onMoveToStage(lead.id, key)}
+              onOpenChange={setMenuOpen}
+              boundaryRef={cardRef}
+            />
           )}
         </div>
       </div>

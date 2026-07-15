@@ -1,10 +1,11 @@
-import React, { memo, useMemo, useRef, useState, useEffect } from "react";
-import { Clock, Star, AlertTriangle, TrendingUp, MoreVertical, ArrowRight, Check, X as XIcon } from "lucide-react";
+import React, { memo, useMemo, useRef, useState } from "react";
+import { Clock, Star, AlertTriangle, TrendingUp, Check, X as XIcon } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { CHANNEL_COLORS, MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { formatK } from "../../utils/currency";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MoveStageMenu } from "../shared/MoveStageMenu";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -31,7 +32,7 @@ function slaStyle(daysInStage, sla) {
 
 function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const cardRef = useRef(null);
 
   // FASE 5: mais de um responsável por campanha — resolve owner_ids (com
   // fallback pro owner escalar em campanhas legadas) contra a lista de
@@ -65,17 +66,9 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
 
   const moveTargets = (stages || MARKETING_STAGES).filter(s => s.id !== campaign.stage && !s.terminal);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
-
   return (
     <div
+      ref={cardRef}
       draggable
       onDragStart={() => onDragStart?.(campaign)}
       onDragEnd={() => onDragEnd?.()}
@@ -132,95 +125,12 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
             <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} />
           )}
           {moveTargets.length > 0 && onMoveToStage && (
-            <div ref={menuRef} style={{ position: "relative" }}>
-              <button
-                title="Mover para outra etapa"
-                onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-dim)",
-                  cursor: "pointer",
-                  padding: 2,
-                  borderRadius: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  lineHeight: 1,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-              >
-                <MoreVertical size={14} />
-              </button>
-              {menuOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 4px)",
-                    right: 0,
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    boxShadow: "var(--shadow-pop)",
-                    zIndex: 50,
-                    minWidth: 180,
-                    overflow: "hidden",
-                  }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div
-                    style={{
-                      padding: "6px 12px 4px",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: "var(--text-dim)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    Mover para
-                  </div>
-                  {moveTargets.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={e => {
-                        e.stopPropagation();
-                        onMoveToStage(campaign.id, s.id);
-                        setMenuOpen(false);
-                      }}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 12px",
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        fontSize: 13,
-                        color: "var(--text)",
-                        textAlign: "left",
-                        transition: "background 0.1s",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
-                    >
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: s.color,
-                          flexShrink: 0,
-                        }}
-                      />
-                      {s.name}
-                      <ArrowRight size={11} style={{ marginLeft: "auto", opacity: 0.4 }} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MoveStageMenu
+              targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
+              onMove={(key) => onMoveToStage(campaign.id, key)}
+              onOpenChange={setMenuOpen}
+              boundaryRef={cardRef}
+            />
           )}
         </div>
       </div>

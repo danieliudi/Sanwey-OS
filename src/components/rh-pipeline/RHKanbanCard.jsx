@@ -1,6 +1,7 @@
-import React, { memo, useRef, useState, useEffect } from "react";
-import { Clock, MoreVertical, ArrowRight, Check, X as XIcon } from "lucide-react";
+import React, { memo, useRef, useState } from "react";
+import { Clock, Check, X as XIcon } from "lucide-react";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
+import { MoveStageMenu } from "../shared/MoveStageMenu";
 
 // Tempo na etapa (neutro) vs. SLA estourado (vermelho) — só fica âmbar/
 // vermelho quando de fato passa do slaDays configurado pra etapa; sem SLA,
@@ -21,7 +22,7 @@ function stageKeyOf(s) {
 
 function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, agingDays, completeness, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
+  const cardRef = useRef(null);
 
   const currentStage = stages?.find(s => stageKeyOf(s) === stage);
   const ageStyle = agingDays != null ? agingStyle(agingDays, currentStage?.slaDays) : null;
@@ -34,17 +35,9 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
   const shadowBase  = `var(--shadow-card)`;
   const shadowHover = `var(--shadow-pop)`;
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuOpen]);
-
   return (
     <div
+      ref={cardRef}
       draggable={!!onDragStart}
       onDragStart={() => onDragStart?.(id)}
       onDragEnd={() => onDragEnd?.()}
@@ -100,98 +93,12 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
             <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
           )}
           {moveTargets.length > 0 && onMoveToStage && (
-            <div ref={menuRef} style={{ position: "relative" }}>
-              <button
-                title="Mover para outra etapa"
-                onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-dim)",
-                  cursor: "pointer",
-                  padding: 2,
-                  borderRadius: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  lineHeight: 1,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-              >
-                <MoreVertical size={14} />
-              </button>
-              {menuOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 4px)",
-                    right: 0,
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    boxShadow: "var(--shadow-pop)",
-                    zIndex: 50,
-                    minWidth: 180,
-                    overflow: "hidden",
-                  }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div
-                    style={{
-                      padding: "6px 12px 4px",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: "var(--text-dim)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    Mover para
-                  </div>
-                  {moveTargets.map(s => {
-                    const key = stageKeyOf(s);
-                    return (
-                      <button
-                        key={key}
-                        onClick={e => {
-                          e.stopPropagation();
-                          onMoveToStage(id, key);
-                          setMenuOpen(false);
-                        }}
-                        style={{
-                          width: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          padding: "8px 12px",
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          fontSize: 13,
-                          color: "var(--text)",
-                          textAlign: "left",
-                          transition: "background 0.1s",
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
-                      >
-                        <span
-                          style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: "50%",
-                            background: s.color,
-                            flexShrink: 0,
-                          }}
-                        />
-                        {s.name}
-                        <ArrowRight size={11} style={{ marginLeft: "auto", opacity: 0.4 }} />
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <MoveStageMenu
+              targets={moveTargets.map(s => ({ key: stageKeyOf(s), name: s.name, color: s.color }))}
+              onMove={(key) => onMoveToStage(id, key)}
+              onOpenChange={setMenuOpen}
+              boundaryRef={cardRef}
+            />
           )}
         </div>
       </div>
