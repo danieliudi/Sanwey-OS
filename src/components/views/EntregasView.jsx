@@ -373,10 +373,10 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
       aria-selected={active}
       style={{
         display: "flex", alignItems: "center", gap: 5,
-        padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500,
+        padding: "6px 12px", fontSize: 12, fontWeight: 500,
         background: active ? "var(--accent)" : "var(--surface)",
         color:      active ? "#FFFFFF"  : "var(--text-dim)",
-        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+        border: "none",
         cursor: "pointer",
         transition: "all 0.15s",
       }}
@@ -599,7 +599,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {/* View toggle */}
-          <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", borderRadius: 10, padding: 3 }}>
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     />
             <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela"     />
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
@@ -609,11 +609,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             <button
               onClick={() => setStageEditorOpen(true)}
               title="Editar etapas do Kanban"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
             >
-              <Pencil size={14} />
+              <Pencil size={13} />
               Editar etapas
             </button>
           )}
@@ -621,13 +621,27 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           <button
             onClick={() => exportCSV(filtered, kanbanStages)}
             title="Exportar CSV"
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
           >
-            <Download size={14} />
+            <Download size={13} />
             Exportar CSV
           </button>
+          {/* Nova entrega */}
+          {canWrite && viewMode === "kanban" && (
+            <button
+              onClick={() => setQuickAddStage("solicitacao")}
+              className="flex items-center gap-1.5 font-semibold"
+              style={{ background: "var(--accent)", color: "#FFFFFF", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
+              onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+              aria-label="Criar nova entrega"
+            >
+              <Plus size={14} />
+              Nova entrega
+            </button>
+          )}
         </div>
       </div>
 
@@ -648,7 +662,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             {/* Owner filter (managers only) */}
             {isManager && (
               <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}
-                style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid var(--border)", fontSize: 12, color: ownerFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
+                style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: ownerFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
                 <option value="">Todos responsáveis</option>
                 {Array.from(usersById.values()).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
@@ -808,7 +822,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                       )}
                     </div>
 
-                    <div className="px-2 pt-0.5 pb-1 space-y-2 flex-1 overflow-y-auto" style={{ maxHeight: "62vh", minHeight: 80 }}>
+                    <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ maxHeight: "62vh", minHeight: 80, display: "flex", flexDirection: "column", gap: 6 }}>
                       {stageItems.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
                           style={{ borderColor: isOver ? stage.color + "40" : "var(--border)", color: "var(--text-dim)" }}>
@@ -929,18 +943,6 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       />
     )}
 
-    {canWrite && viewMode === "kanban" && (
-      <button
-        className="fixed z-30 flex items-center gap-2 font-semibold shadow-lg left-6 lg:left-[312px] bottom-20 lg:bottom-6"
-        style={{ height: 52, padding: "0 20px", background: "var(--accent)", color: "#FFFFFF", border: "none", borderRadius: 26, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 16px rgba(30,77,140,0.35)" }}
-        onClick={() => setQuickAddStage("solicitacao")}
-        onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
-        onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-        aria-label="Criar nova entrega">
-        <Plus size={20} />
-        Nova entrega
-      </button>
-    )}
     </>
   );
 }

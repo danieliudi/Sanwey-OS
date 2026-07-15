@@ -277,7 +277,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick }
                     <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({items.length})</span>
                   </div>
                 </div>
-                <div className="px-2 pt-2 pb-2 space-y-2 flex-1 overflow-y-auto" style={{ maxHeight: "62vh" }}>
+                <div className="px-2 pt-2 pb-2 flex-1 overflow-y-auto" style={{ maxHeight: "62vh", display: "flex", flexDirection: "column", gap: 6 }}>
                   {items.length === 0 ? (
                     <div className="text-center py-8 text-xs" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
                       Nenhuma solicitação
@@ -552,12 +552,20 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
           </div>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: "pointer" }}
+            className="flex items-center gap-2 font-semibold"
+            style={{
+              background: "var(--accent)",
+              color: "#FFF",
+              border: "none",
+              borderRadius: 10,
+              padding: "6px 16px",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
           >
-            <Plus size={15} />
+            <Plus size={14} />
             Nova solicitação
           </button>
         </div>

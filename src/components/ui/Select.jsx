@@ -1,13 +1,22 @@
 import React from "react";
 import { ChevronDown } from "lucide-react";
 
-export function Select({ value, onChange, options, placeholder, className = "" }) {
+// size="sm" — dropdown compacto pra sentar ao lado de toggles/botões de
+// toolbar de kanban (mesmo padding/fonte canônicos: 6px/12px, 12px). Só
+// afeta quem passar a prop; todo chamador existente mantém o tamanho padrão.
+const SIZE_CLASSES = {
+  md: "py-2 pl-3 pr-9 text-sm rounded-lg",
+  sm: "py-1.5 pl-3 pr-8 text-xs rounded-xl",
+};
+
+export function Select({ value, onChange, options, placeholder, className = "", size = "md" }) {
+  const sizeClass = SIZE_CLASSES[size] || SIZE_CLASSES.md;
   return (
     <div className={`relative ${className}`}>
       <select
         value={value}
         onChange={onChange}
-        className="w-full appearance-none py-2 pl-3 pr-9 text-sm rounded-lg border transition-colors duration-150 focus:outline-none focus:ring-2 cursor-pointer"
+        className={`w-full appearance-none ${sizeClass} border transition-colors duration-150 focus:outline-none focus:ring-2 cursor-pointer`}
         style={{
           borderColor: "#E5E7EB",
           background: "#FFFFFF",

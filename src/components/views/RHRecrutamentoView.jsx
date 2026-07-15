@@ -2534,7 +2534,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           <select
             value={frenteFilter}
             onChange={(e) => setFrenteFilter(e.target.value)}
-            className="text-xs rounded-xl border px-3 py-2 outline-none"
+            className="text-xs rounded-xl border px-3 py-1.5 outline-none"
             style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
           >
             <option value="todas">Todas as frentes</option>
@@ -2558,13 +2558,13 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
               onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; }}
             >
-              <Pencil size={11} /> Editar etapas
+              <Pencil size={13} /> Editar etapas
             </button>
           )}
           {canWrite && viewMode === "vagas" && (
             <button
               onClick={() => setQuickAddVaga(true)}
-              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "6px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
             >
               <Plus size={14} /> Nova vaga
             </button>
@@ -2572,7 +2572,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           {canTriage && viewMode === "candidatos" && (
             <button
               onClick={() => setTriagemOpen(true)}
-              style={{ background: "#7C3AED", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+              style={{ background: "#7C3AED", color: "#FFF", borderRadius: 10, padding: "6px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
             >
               <Sparkles size={14} /> Triar com IA
             </button>

@@ -695,7 +695,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
             >
-              <Pencil size={11} />
+              <Pencil size={13} />
               Editar etapas
             </button>
           )}
@@ -706,6 +706,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 onChange={e => setOwnerFilter(e.target.value)}
                 options={ownerOptions}
                 className="flex-1 min-w-0 sm:w-44"
+                size="sm"
               />
               {accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
                 <Select
@@ -719,9 +720,34 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                     })),
                   ]}
                   className="flex-1 min-w-0 sm:w-44"
+                  size="sm"
                 />
               )}
             </div>
+          )}
+          {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
+            <button
+              onClick={() => {
+                const firstStage = stages.find(s => !s.terminal);
+                if (firstStage) setCreateModalStage({ stageId: firstStage.id, stage: firstStage, companyId: isGroupView ? firstValidCompany : activeCompany });
+              }}
+              className="flex items-center gap-1.5 font-semibold"
+              style={{
+                background: "var(--accent)",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: 10,
+                padding: "6px 16px",
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
+              onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+              aria-label="Criar novo card"
+            >
+              <Plus size={14} />
+              Novo card
+            </button>
           )}
         </div>
       </div>
@@ -901,8 +927,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
 
                 {/* Cards */}
                 <div
-                  className="px-2 pt-0.5 pb-1 space-y-2 flex-1 overflow-y-auto"
-                  style={{ maxHeight: "62vh", minHeight: 80 }}
+                  className="px-2 pt-2 pb-1 flex-1 overflow-y-auto"
+                  style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "62vh", minHeight: 80 }}
                 >
                   {bucket.leads.length === 0 ? (
                     <div
@@ -1047,33 +1073,6 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       onClose={() => setShowAIChat(false)}
     />
 
-      {/* FAB — botão flutuante único para criar novo card (só no Kanban) */}
-      {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
-        <button
-          className="fixed z-30 flex items-center gap-2 font-semibold shadow-lg left-6 lg:left-[312px] bottom-20 lg:bottom-6"
-          style={{
-            height: 52,
-            padding: "0 20px",
-            background: "var(--accent)",
-            color: "#FFFFFF",
-            border: "none",
-            borderRadius: 26,
-            fontSize: 14,
-            cursor: "pointer",
-            boxShadow: "0 4px 16px rgba(181,0,11,0.35)",
-          }}
-          onClick={() => {
-            const firstStage = stages.find(s => !s.terminal);
-            if (firstStage) setCreateModalStage({ stageId: firstStage.id, stage: firstStage, companyId: isGroupView ? firstValidCompany : activeCompany });
-          }}
-          onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
-          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-          aria-label="Criar novo card"
-        >
-          <Plus size={20} />
-          Novo card
-        </button>
-      )}
     </>
   );
 }

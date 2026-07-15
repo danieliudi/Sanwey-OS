@@ -884,9 +884,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
           </div>
           {canWrite && (
-            <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
+            <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
           )}
-          <Button icon={Plus} onClick={() => setShowSolicitar(true)}>Solicitar</Button>
+          <Button size="sm" icon={Plus} onClick={() => setShowSolicitar(true)}>Solicitar</Button>
         </div>
       </div>
 

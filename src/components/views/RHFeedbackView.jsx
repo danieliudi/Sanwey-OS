@@ -1149,8 +1149,8 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           </div>
           {canWrite && (
             <>
-              <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
-              <Button icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
+              <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
+              <Button size="sm" icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
             </>
           )}
         </div>

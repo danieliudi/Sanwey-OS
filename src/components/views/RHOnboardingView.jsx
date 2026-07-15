@@ -1153,8 +1153,8 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           </div>
           {canWrite && (
             <>
-              <Button variant="secondary" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
-              <Button variant="secondary" icon={Plus} onClick={() => setNovaTemplateOpen(true)}>Template</Button>
+              <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
+              <Button variant="secondary" size="sm" icon={Plus} onClick={() => setNovaTemplateOpen(true)}>Template</Button>
             </>
           )}
         </div>
