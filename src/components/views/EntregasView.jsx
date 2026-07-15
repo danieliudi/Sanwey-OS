@@ -464,7 +464,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     deliverables, loading, canWrite,
     createDeliverable, updateDeliverable, deleteDeliverable,
     changeStage, toggleStar,
-  } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
+  } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
   const campaignsById = useMemo(() => new Map(campaigns.map(c => [c.id, c])), [campaigns]);

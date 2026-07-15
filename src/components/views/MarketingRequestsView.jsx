@@ -6,6 +6,7 @@ import {
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { marketingUnitLabel } from "../../constants/companies";
+import { EditableProtocolNumber } from "../shared/EditableProtocolNumber";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
@@ -147,7 +148,7 @@ function ApproveModal({ request, onConfirm, onClose }) {
 }
 
 /* ── Request Card ─────────────────────────────────────────────────── */
-function RequestCard({ request, onApprove, onReject, canWrite }) {
+function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNumber }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -175,11 +176,14 @@ function RequestCard({ request, onApprove, onReject, canWrite }) {
             )}
           </div>
           <h3 className="font-semibold text-sm leading-snug mb-1" style={{ color: "var(--text)" }}>
-            {request.requestNumber && (
-              <span className="font-mono font-bold mr-1.5" style={{ color: "var(--accent)" }}>
-                {request.requestNumber}
-              </span>
-            )}
+            <span className="font-mono font-bold mr-1.5" style={{ color: "var(--accent)" }}>
+              <EditableProtocolNumber
+                value={request.requestNumber}
+                canWrite={canWrite}
+                onSave={(next) => onUpdateRequestNumber(request.id, next)}
+                mono
+              />
+            </span>
             {request.title}
           </h3>
           <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: "var(--text-dim)" }}>
@@ -272,8 +276,8 @@ function RequestCard({ request, onApprove, onReject, canWrite }) {
 export function MarketingRequestsView({ user, users }) {
   const {
     requests, loading, error, canWrite,
-    approveAndCreateDeliverable, rejectRequest,
-  } = useMarketingRequests({ userId: user?.id, role: user?.role });
+    approveAndCreateDeliverable, rejectRequest, updateRequest,
+  } = useMarketingRequests({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const [statusFilter, setStatusFilter]   = useState("pendente");
   const [approvingReq, setApprovingReq]   = useState(null);
@@ -404,6 +408,7 @@ export function MarketingRequestsView({ user, users }) {
               canWrite={canWrite}
               onApprove={(r) => { setActionError(null); setApprovingReq(r); }}
               onReject={(r)  => { setActionError(null); setRejectingReq(r); }}
+              onUpdateRequestNumber={(id, next) => updateRequest(id, { requestNumber: next })}
             />
           ))}
         </div>

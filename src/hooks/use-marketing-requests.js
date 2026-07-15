@@ -30,6 +30,7 @@ function rowToRequest(r) {
 
 function requestToRow(req, extras = {}) {
   return {
+    request_number:   req.requestNumber ?? null,
     title:            req.title,
     description:      req.description ?? null,
     department:       req.department ?? null,
@@ -50,15 +51,16 @@ function requestToRow(req, extras = {}) {
   };
 }
 
-export function useMarketingRequests({ userId, role, enabled = true } = {}) {
+export function useMarketingRequests({ userId, role, roles, enabled = true } = {}) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
 
-  const canWrite =
-    role === "admin" ||
-    role === "marketing" ||
-    role === "gerente_marketing";
+  // roles[] cobre cargo adicional (ex: gerente_marketing como cargo
+  // secundário) — role sozinho (cargo principal) fica só de fallback pra
+  // chamadas antigas que ainda não passam o array.
+  const roleList = Array.isArray(roles) && roles.length ? roles : (role ? [role] : []);
+  const canWrite = roleList.some(r => ["admin", "marketing", "gerente_marketing"].includes(r));
 
   const fetchAll = useCallback(async () => {
     if (!isSupabaseConfigured || !enabled) return;

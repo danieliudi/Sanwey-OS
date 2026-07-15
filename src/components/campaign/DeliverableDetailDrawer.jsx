@@ -22,6 +22,7 @@ import { deliverableStageSuggestionPrompt } from "../../constants/ai-prompts";
 import { CommentsPanel }              from "../shared/CommentsPanel";
 import { getMentionableUsers }        from "../../utils/mentionable-users";
 import { AssigneeMultiSelect }        from "../shared/AssigneeMultiSelect";
+import { EditableProtocolNumber }     from "../shared/EditableProtocolNumber";
 import { StageNavigator }             from "../shared/StageNavigator";
 
 /* ── Priority helpers ───────────────────────────────────────── */
@@ -873,8 +874,15 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <SectionLabel>Formulário Inicial</SectionLabel>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Nº da Solicitação</div>
+            <EditableProtocolNumber
+              value={item.requestNumber}
+              canWrite={canWrite}
+              onSave={(next) => onUpdate(item.id, { requestNumber: next })}
+            />
+          </div>
           {[
-            { label: "Nº da Solicitação", val: item.requestNumber },
             { label: "Título",       val: item.title },
             { label: "Solicitante",  val: item.requesterName },
             { label: "Departamento", val: item.department },
