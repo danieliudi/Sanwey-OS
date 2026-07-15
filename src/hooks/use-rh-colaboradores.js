@@ -24,6 +24,7 @@ function rowToColaborador(r) {
     frente: r.frente,
     contractType: r.contract_type,
     admissionDate: r.admission_date,
+    periodoExperienciaDias: r.periodo_experiencia_dias,
     employeeStatus: r.employee_status,
     salary: r.salary,
     documentType: r.document_type,
@@ -63,6 +64,8 @@ function colaboradorToRow(c, extras = {}) {
     frente: c.frente || null,
     contract_type: c.contractType || null,
     admission_date: c.admissionDate || null,
+    periodo_experiencia_dias: c.periodoExperienciaDias != null && c.periodoExperienciaDias !== ""
+      ? Number(c.periodoExperienciaDias) : null,
     employee_status: c.employeeStatus || "ativo",
     salary: c.salary != null && c.salary !== "" ? Number(c.salary) : null,
     document_type: c.documentType || null,

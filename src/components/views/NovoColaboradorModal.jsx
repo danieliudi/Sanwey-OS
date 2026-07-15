@@ -19,6 +19,7 @@ const EMPTY_FORM = {
   addressCity: "", addressState: "", addressZip: "",
   jobTitle: "", department: "", frente: "", contractType: "", admissionDate: "",
   employeeStatus: "ativo", salary: "", asoVencimento: "", contratoFim: "",
+  periodoExperienciaDias: "",
 };
 
 function fileToBase64(file) {
@@ -294,6 +295,22 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
                 <label style={labelSt}>Data de admissão</label>
                 <input type="date" value={form.admissionDate} onChange={(e) => set("admissionDate", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
+              {form.contractType === "clt" && (
+                <div>
+                  <label style={labelSt}>Dias de período de experiência</label>
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="90"
+                    value={form.periodoExperienciaDias}
+                    onChange={(e) => set("periodoExperienciaDias", e.target.value)}
+                    className={inputCls}
+                    style={inputSt}
+                    onFocus={focusBlue}
+                    onBlur={blurGray}
+                  />
+                </div>
+              )}
               <div>
                 <label style={labelSt}>Status</label>
                 <select value={form.employeeStatus} onChange={(e) => set("employeeStatus", e.target.value)} className={inputCls} style={inputSt}>
@@ -315,11 +332,15 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
             </div>
             {(() => {
               const exp = periodoExperienciaInfo(form);
-              return exp ? (
+              if (!exp) return null;
+              const custom = Number(form.periodoExperienciaDias) > 0;
+              return (
                 <div style={{ background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
-                  Período de experiência CLT: marco de {exp.marco} dias em {exp.diasRestantes} dia(s).
+                  {custom
+                    ? `Período de experiência: ${exp.marco} dias — termina em ${exp.diasRestantes} dia(s).`
+                    : `Período de experiência CLT (padrão): marco de ${exp.marco} dias em ${exp.diasRestantes} dia(s). Informe "Dias de período de experiência" acima pra usar um valor diferente do padrão.`}
                 </div>
-              ) : null;
+              );
             })()}
           </div>
 

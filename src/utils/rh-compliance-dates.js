@@ -21,10 +21,22 @@ function daysBetween(a, b) {
 // Período de experiência CLT: até 90 dias, normalmente dividido em dois
 // ciclos de até 45 dias (Art. 445, parágrafo único). Só se aplica a
 // contract_type "clt" com admissão recente.
+//
+// Se o colaborador tiver periodoExperienciaDias definido (RH informou um
+// valor próprio no momento da contratação, em vez do padrão CLT 45+45),
+// usa esse valor como marco único (fim do período) — sem os dois ciclos
+// fixos, já que um valor customizado não necessariamente segue a mesma
+// divisão. Sem esse campo (colaboradores antigos, ou não-CLT que ainda
+// assim tenham contractType/admissionDate), cai no cálculo fixo de sempre.
 export function periodoExperienciaInfo(colaborador, hoje = new Date()) {
   if (colaborador?.contractType !== "clt" || !colaborador?.admissionDate) return null;
   const admissao = parseDateInput(colaborador.admissionDate);
   const diasDecorridos = daysBetween(admissao, hoje);
+  const custom = Number(colaborador.periodoExperienciaDias) || null;
+  if (custom) {
+    if (diasDecorridos < 0 || diasDecorridos > custom + 5) return null;
+    return { diasDecorridos, marco: custom, diasRestantes: custom - diasDecorridos };
+  }
   if (diasDecorridos < 0 || diasDecorridos > 95) return null;
   const marco = diasDecorridos <= 45 ? 45 : 90;
   return { diasDecorridos, marco, diasRestantes: marco - diasDecorridos };
