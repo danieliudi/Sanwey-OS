@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from "react";
-import { Send, AtSign } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Send, AtSign, MessageCircle } from "lucide-react";
 
 // Painel de comentários unificado (FASE 4) — usado em todo drawer/modal da
 // plataforma que precise de comentários: mesmo formato de comentário em
@@ -61,6 +61,20 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
   const [mentionStart, setMentionStart] = useState(null);
   const [pickedMentions, setPickedMentions] = useState([]); // [{id, name}]
   const textareaRef = useRef(null);
+  const feedRef = useRef(null);
+
+  // Feed estilo chat: mais antigo em cima, mais novo embaixo (como
+  // WhatsApp/Slack) — os chamadores ordenam por "mais recente primeiro"
+  // pra outros usos (ex: aba Atividades), então inverte só na renderização.
+  const chronological = useMemo(() => [...comments].reverse(), [comments]);
+
+  const prevCountRef = useRef(comments.length);
+  useEffect(() => {
+    if (comments.length !== prevCountRef.current) {
+      feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
+      prevCountRef.current = comments.length;
+    }
+  }, [comments.length]);
 
   const mentionMatches = useMemo(() => {
     if (mentionQuery === null) return [];
@@ -129,31 +143,62 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
   };
 
   return (
-    <div>
-      <div className="text-xs font-semibold mb-2.5" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-        Comentários
+    <div className="flex flex-col" style={{ minHeight: 0 }}>
+      <div className="flex items-center gap-1.5 mb-2.5 shrink-0">
+        <MessageCircle size={13} style={{ color: "var(--text-dim)" }} />
+        <span className="text-xs font-semibold" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
+          Comentários
+        </span>
+        {comments.length > 0 && (
+          <span className="text-[10px] font-medium" style={{ color: "var(--text-faint)" }}>{comments.length}</span>
+        )}
       </div>
 
-      <div className="space-y-3 mb-3" style={{ maxHeight: 260, overflowY: "auto" }}>
-        {comments.length === 0 ? (
-          <div className="text-xs" style={{ color: "var(--text-dim)" }}>Nenhum comentário ainda.</div>
+      <div
+        ref={feedRef}
+        className="flex flex-col gap-3 mb-3 pr-1"
+        style={{ maxHeight: 420, overflowY: "auto" }}
+      >
+        {chronological.length === 0 ? (
+          <div className="text-xs rounded-xl px-3 py-4 text-center" style={{ color: "var(--text-faint)", background: "var(--surface-alt)" }}>
+            Nenhum comentário ainda. Seja o primeiro a comentar.
+          </div>
         ) : (
-          comments.map((c) => (
-            <div key={c.id} className="flex items-start gap-2">
-              <Avatar name={c.authorName} avatarBg={c.avatarBg} avatarUrl={c.avatarUrl} initials={c.initials} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
-                    {c.authorName || "Sistema"}
-                  </span>
-                  <span className="text-[10px]" style={{ color: "var(--text-faint)" }}>{timeAgo(c.createdAt)}</span>
-                </div>
-                <div className="text-xs mt-0.5" style={{ color: "var(--text)", lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                  {renderTextWithMentions(c.text, (c.mentionedNames || []))}
+          chronological.map((c) => {
+            const isOwn = !!currentUser && c.authorId === currentUser.id;
+            return (
+              <div key={c.id} className={`flex items-end gap-2${isOwn ? " flex-row-reverse justify-end" : ""}`}>
+                {!isOwn && <Avatar name={c.authorName} avatarBg={c.avatarBg} avatarUrl={c.avatarUrl} initials={c.initials} size={26} />}
+                <div className="flex flex-col min-w-0" style={{ maxWidth: "84%", alignItems: isOwn ? "flex-end" : "flex-start" }}>
+                  {!isOwn && (
+                    <span className="text-[11px] font-semibold mb-0.5 px-1 truncate" style={{ color: "var(--text-dim)", maxWidth: "100%" }}>
+                      {c.authorName || "Sistema"}
+                    </span>
+                  )}
+                  <div
+                    className="rounded-2xl px-3 py-2 text-xs"
+                    style={{
+                      // Tingido (não sólido) mesmo pra "minhas" mensagens — um
+                      // fundo sólido var(--accent) com texto branco fica
+                      // ilegível no dark mode, onde --accent vira quase-branco.
+                      // color-mix sobre var(--surface) garante contraste com
+                      // var(--text) nos dois temas.
+                      background: isOwn ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "var(--surface-alt)",
+                      color: "var(--text)",
+                      lineHeight: 1.5,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                      borderBottomRightRadius: isOwn ? 4 : 16,
+                      borderBottomLeftRadius: isOwn ? 16 : 4,
+                    }}
+                  >
+                    {renderTextWithMentions(c.text, (c.mentionedNames || []))}
+                  </div>
+                  <span className="text-[10px] mt-0.5 px-1" style={{ color: "var(--text-faint)" }}>{timeAgo(c.createdAt)}</span>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -186,25 +231,29 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
               value={draft}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
-              placeholder="Escreva um comentário… use @ para mencionar alguém"
-              rows={2}
-              className="flex-1 text-xs rounded-lg border px-2.5 py-2 outline-none resize-none"
-              style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+              placeholder="Escreva um comentário… use @ para mencionar"
+              rows={1}
+              className="flex-1 text-xs rounded-2xl border px-3.5 py-2.5 outline-none resize-none"
+              style={{ borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text)", lineHeight: 1.4 }}
+              onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
             />
             <button
               onClick={handleSubmit}
               disabled={!draft.trim() || submitting}
               title="Enviar (Enter)"
-              className="flex items-center justify-center rounded-lg shrink-0"
-              style={{ width: 32, height: 32, background: "var(--accent)", color: "#FFF", border: "none", cursor: draft.trim() ? "pointer" : "default", opacity: draft.trim() ? 1 : 0.5 }}
+              className="flex items-center justify-center rounded-full shrink-0 transition-opacity"
+              style={{ width: 34, height: 34, background: "var(--accent)", color: "#FFF", border: "none", cursor: draft.trim() ? "pointer" : "default", opacity: draft.trim() ? 1 : 0.4 }}
             >
-              <Send size={13} />
+              <Send size={14} />
             </button>
           </div>
-          <div className="flex items-center gap-1 mt-1" style={{ color: "var(--text-faint)" }}>
-            <AtSign size={10} />
-            <span className="text-[10px]">Digite @ para mencionar e notificar alguém com acesso a este card.</span>
-          </div>
+          {!draft && (
+            <div className="flex items-center gap-1 mt-1.5 px-1" style={{ color: "var(--text-faint)" }}>
+              <AtSign size={10} />
+              <span className="text-[10px]">Digite @ pra mencionar e notificar alguém com acesso a este card</span>
+            </div>
+          )}
         </div>
       )}
     </div>

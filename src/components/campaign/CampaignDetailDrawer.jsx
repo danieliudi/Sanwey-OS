@@ -1689,7 +1689,7 @@ export function CampaignDetailDrawer({
 
           {/* ── RIGHT sidebar ── */}
           <aside
-            className="hidden lg:flex lg:flex-col w-full lg:w-[220px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4"
+            className="hidden lg:flex lg:flex-col w-full lg:w-[300px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4"
             style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
             <div>

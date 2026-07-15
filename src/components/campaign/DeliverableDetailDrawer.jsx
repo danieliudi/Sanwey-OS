@@ -1169,7 +1169,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
 
           {/* ── RIGHT sidebar ── */}
           <aside
-            className="hidden lg:flex lg:flex-col w-full lg:w-[220px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4"
+            className="hidden lg:flex lg:flex-col w-full lg:w-[300px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4"
             style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}
           >
             <div>

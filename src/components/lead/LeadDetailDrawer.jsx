@@ -1221,7 +1221,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
 
           {/* ───── RIGHT SIDEBAR ─────────────────────────────────────── */}
           <aside
-            className="hidden lg:block w-full lg:w-[240px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 pb-5"
+            className="hidden lg:flex lg:flex-col w-full lg:w-[300px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 pb-5"
             style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
             <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
