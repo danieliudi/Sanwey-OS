@@ -23,6 +23,7 @@ import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal"
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { StageNavigator } from "../shared/StageNavigator";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -338,171 +339,175 @@ function OnboardingDrawer({
     setTemplateId("");
   };
 
-  return (
-    <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <InitialsAvatar name={colaborador.fullName} size={40} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador.fullName}</div>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{colaborador.jobTitle || "—"} · {colaborador.department || "—"}</div>
-            <div style={{ marginTop: 8 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
-              </span>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex", flexShrink: 0 }}>
-            <X size={18} />
-          </button>
+  const header = (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0 }}>
+      <InitialsAvatar name={colaborador.fullName} size={40} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador.fullName}</div>
+        <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{colaborador.jobTitle || "—"} · {colaborador.department || "—"}</div>
+        <div style={{ marginTop: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
+          </span>
         </div>
+      </div>
+    </div>
+  );
 
-        <div style={{ padding: "20px 24px", flex: 1 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-            {[
-              { label: "Telefone", value: colaborador.phone || "—" },
-              { label: "E-mail", value: colaborador.email || "—" },
-              { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === colaborador.contractType)?.label || "—" },
-              { label: "Data de admissão", value: fmt(colaborador.admissionDate) },
-              { label: "Vaga de origem", value: vagaTitle || "—" },
-              { label: "Checklist", value: total > 0 ? `${done}/${total} concluídas` : "Sem tarefas" },
-            ].map((f) => (
-              <div key={f.label}>
-                <div style={labelSt}>{f.label}</div>
-                <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+  const left = (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      {[
+        { label: "Telefone", value: colaborador.phone || "—" },
+        { label: "E-mail", value: colaborador.email || "—" },
+        { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === colaborador.contractType)?.label || "—" },
+        { label: "Data de admissão", value: fmt(colaborador.admissionDate) },
+        { label: "Vaga de origem", value: vagaTitle || "—" },
+        { label: "Checklist", value: total > 0 ? `${done}/${total} concluídas` : "Sem tarefas" },
+      ].map((f) => (
+        <div key={f.label}>
+          <div style={labelSt}>{f.label}</div>
+          <div style={{ fontSize: 13, color: "var(--text)", fontWeight: 500 }}>{f.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const center = (
+    <>
+      {visibleCustomDefs.length > 0 && (
+        <div>
+          <div style={labelSt}>Campos desta etapa</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {visibleCustomDefs.map((f) => (
+              <div key={f.id}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+                  {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+                  {f.label}
+                </label>
+                {f.helpText && (
+                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>
+                )}
+                <RHStageFieldInput
+                  field={f}
+                  value={getCustomValue(f.fieldKey)}
+                  onChange={(val) => handleCustomChange(f.fieldKey, val)}
+                  users={users}
+                />
               </div>
             ))}
           </div>
+        </div>
+      )}
 
-          {canWrite && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Mover para</div>
-              {moveError && (
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
-                  <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-                  {moveError}
-                </div>
-              )}
-              <StageNavigator
-                stages={stages}
-                currentStage={colaborador.onboardingStage}
-                onMove={(stageKey) => onStageChange(colaborador.id, stageKey)}
-                getKey={(s) => s.stageKey}
+      <div>
+        <div style={{ marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={labelSt}>Checklist de integração</div>
+        </div>
+
+        {tarefas.length === 0 ? (
+          <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 12 }}>Nenhuma tarefa ainda.</div>
+        ) : (
+          <div style={{ marginBottom: 12 }}>
+            {tarefas.map((t) => (
+              <TaskRow
+                key={t.id}
+                tarefa={t}
+                canWrite={canWrite}
+                canToggle={canWrite}
+                onStatusChange={onStatusChange}
+                onDelete={onDeleteTarefa}
               />
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {stages.filter((s) => s.stageKey !== colaborador.onboardingStage).map((s) => (
-                  <button
-                    key={s.stageKey}
-                    onClick={() => onStageChange(colaborador.id, s.stageKey)}
-                    style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-                  >
-                    <ArrowRight size={10} /> {s.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {visibleCustomDefs.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={labelSt}>Campos desta etapa</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {visibleCustomDefs.map((f) => (
-                  <div key={f.id}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                      {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
-                      {f.label}
-                    </label>
-                    {f.helpText && (
-                      <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>
-                    )}
-                    <RHStageFieldInput
-                      field={f}
-                      value={getCustomValue(f.fieldKey)}
-                      onChange={(val) => handleCustomChange(f.fieldKey, val)}
-                      users={users}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={labelSt}>Checklist de integração</div>
+            ))}
           </div>
+        )}
 
-          {tarefas.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 12 }}>Nenhuma tarefa ainda.</div>
-          ) : (
-            <div style={{ marginBottom: 12 }}>
-              {tarefas.map((t) => (
-                <TaskRow
-                  key={t.id}
-                  tarefa={t}
-                  canWrite={canWrite}
-                  canToggle={canWrite}
-                  onStatusChange={onStatusChange}
-                  onDelete={onDeleteTarefa}
-                />
-              ))}
-            </div>
-          )}
-
-          {canWrite && (
-            <>
-              {templates.length > 0 && tarefas.length === 0 && (
-                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                  <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: 1 }}>
-                    <option value="">Aplicar template…</option>
-                    {templates.map((t) => <option key={t.id} value={t.id}>{t.cargo || RH_FRENTE_LABELS[t.frente] || t.frente || "Template"}</option>)}
-                  </select>
-                  <button onClick={handleApplyTemplate} disabled={!templateId} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "0 12px", fontSize: 11, fontWeight: 700, cursor: templateId ? "pointer" : "default", opacity: templateId ? 1 : 0.5 }}>
-                    Aplicar
-                  </button>
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input
-                  type="text"
-                  value={novaTarefa}
-                  onChange={(e) => setNovaTarefa(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTask(); } }}
-                  placeholder="Nova tarefa…"
-                  className="text-xs rounded-lg border px-2 py-1.5 outline-none"
-                  style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: 1 }}
-                />
-                <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
-                  <span style={{ fontSize: 10, color: "var(--text-dim)" }}>D+</span>
-                  <input type="number" min="0" value={novoPrazo} onChange={(e) => setNovoPrazo(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", width: 48 }} />
-                </div>
-                <button onClick={handleAddTask} disabled={!novaTarefa.trim()} style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 8px", cursor: novaTarefa.trim() ? "pointer" : "default", display: "flex", opacity: novaTarefa.trim() ? 1 : 0.5, flexShrink: 0 }}>
-                  <Plus size={13} color="var(--text)" />
+        {canWrite && (
+          <>
+            {templates.length > 0 && tarefas.length === 0 && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: 1 }}>
+                  <option value="">Aplicar template…</option>
+                  {templates.map((t) => <option key={t.id} value={t.id}>{t.cargo || RH_FRENTE_LABELS[t.frente] || t.frente || "Template"}</option>)}
+                </select>
+                <button onClick={handleApplyTemplate} disabled={!templateId} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "0 12px", fontSize: 11, fontWeight: 700, cursor: templateId ? "pointer" : "default", opacity: templateId ? 1 : 0.5 }}>
+                  Aplicar
                 </button>
               </div>
-            </>
-          )}
-
-          {/* Atividades / Anexos / Comentários — adicional ao checklist de
-              integração acima (rh_onboarding_tarefas), que continua intacto. */}
-          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-            <RHDetailDrawerShell
-              domain="onboarding"
-              recordId={colaborador.id}
-              activities={colaborador.activities || []}
-              onAddActivity={onAddActivity}
-              currentUser={currentUser}
-              users={users}
-              stages={stages}
-              notifyMentions={notifyMentions}
-              mentionLink={{ module: "rh_onboarding", id: colaborador.id }}
-              mentionContextLabel={colaborador.fullName}
-            />
-          </div>
-        </div>
+            )}
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <input
+                type="text"
+                value={novaTarefa}
+                onChange={(e) => setNovaTarefa(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTask(); } }}
+                placeholder="Nova tarefa…"
+                className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+                style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: 1 }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                <span style={{ fontSize: 10, color: "var(--text-dim)" }}>D+</span>
+                <input type="number" min="0" value={novoPrazo} onChange={(e) => setNovoPrazo(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", width: 48 }} />
+              </div>
+              <button onClick={handleAddTask} disabled={!novaTarefa.trim()} style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 8px", cursor: novaTarefa.trim() ? "pointer" : "default", display: "flex", opacity: novaTarefa.trim() ? 1 : 0.5, flexShrink: 0 }}>
+                <Plus size={13} color="var(--text)" />
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </>
+  );
+
+  const right = (
+    <>
+      {canWrite && (
+        <div>
+          <div style={labelSt}>Mover para</div>
+          {moveError && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+              <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+              {moveError}
+            </div>
+          )}
+          <StageNavigator
+            stages={stages}
+            currentStage={colaborador.onboardingStage}
+            onMove={(stageKey) => onStageChange(colaborador.id, stageKey)}
+            getKey={(s) => s.stageKey}
+          />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {stages.filter((s) => s.stageKey !== colaborador.onboardingStage).map((s) => (
+              <button
+                key={s.stageKey}
+                onClick={() => onStageChange(colaborador.id, s.stageKey)}
+                style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+              >
+                <ArrowRight size={10} /> {s.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Atividades / Anexos / Comentários — adicional ao checklist de
+          integração acima (rh_onboarding_tarefas), que continua intacto. */}
+      <RHDetailDrawerShell
+        domain="onboarding"
+        recordId={colaborador.id}
+        activities={colaborador.activities || []}
+        onAddActivity={onAddActivity}
+        currentUser={currentUser}
+        users={users}
+        stages={stages}
+        notifyMentions={notifyMentions}
+        mentionLink={{ module: "rh_onboarding", id: colaborador.id }}
+        mentionContextLabel={colaborador.fullName}
+      />
+    </>
+  );
+
+  return (
+    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
   );
 }
 
