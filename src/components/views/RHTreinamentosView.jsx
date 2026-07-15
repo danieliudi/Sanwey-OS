@@ -551,6 +551,7 @@ function AtribuicaoDrawer({
               onAddActivity={onAddActivity}
               currentUser={currentUser}
               users={users}
+              stages={stages}
               notifyMentions={notifyMentions}
               mentionLink={{ module: "rh_treinamentos", id: atribuicao.id }}
               mentionContextLabel={[colaborador?.fullName, treinamento?.titulo].filter(Boolean).join(" · ")}

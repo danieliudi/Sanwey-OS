@@ -1119,6 +1119,7 @@ function VagaDrawer({
               onAddActivity={onAddActivity}
               currentUser={currentUser}
               users={users}
+              stages={stages}
               notifyMentions={notifyMentions}
               mentionLink={{ module: "rh_vagas", id: vaga.id }}
               mentionContextLabel={vaga.title}
@@ -1838,6 +1839,7 @@ function CandidatoDrawer({
               onAddActivity={onAddActivity}
               currentUser={currentUser}
               users={users}
+              stages={stages}
               notifyMentions={notifyMentions}
               mentionLink={{ module: "rh_candidatos", id: candidato.id }}
               mentionContextLabel={candidato.name}

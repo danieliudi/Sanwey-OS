@@ -762,6 +762,7 @@ function FeedbackDrawer({
               onAddActivity={onAddActivity}
               currentUser={currentUser}
               users={users}
+              stages={stages}
               notifyMentions={notifyMentions}
               mentionLink={{ module: "rh_feedback", id: feedback.id }}
               mentionContextLabel={colaborador?.fullName}

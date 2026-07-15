@@ -487,6 +487,7 @@ function OnboardingDrawer({
               onAddActivity={onAddActivity}
               currentUser={currentUser}
               users={users}
+              stages={stages}
               notifyMentions={notifyMentions}
               mentionLink={{ module: "rh_onboarding", id: colaborador.id }}
               mentionContextLabel={colaborador.fullName}

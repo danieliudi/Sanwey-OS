@@ -555,6 +555,7 @@ function FeriasDrawer({
               onAddActivity={onAddActivity}
               currentUser={currentUser}
               users={users}
+              stages={stages}
               notifyMentions={notifyMentions}
               mentionLink={{ module: "rh_ferias", id: req.id }}
               mentionContextLabel={req.profiles?.name}

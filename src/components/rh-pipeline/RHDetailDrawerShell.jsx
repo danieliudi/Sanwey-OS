@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, Paperclip, ListChecks,
+  Activity, Paperclip, ListChecks, History, ArrowRight,
   Plus, Upload, Download, Trash2, Check, X,
   File, FileImage, FileSpreadsheet, FileText, AlertCircle,
 } from "lucide-react";
 import { useRHAttachments } from "../../hooks/use-rh-attachments";
 import { useRHChecklists } from "../../hooks/use-rh-checklists";
+import { useRHStageHistory } from "../../hooks/use-rh-stage-history";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 
@@ -477,17 +478,73 @@ function RHChecklistsPanel({ domain, recordId, currentUser }) {
   );
 }
 
+// ── Histórico ─────────────────────────────────────────────────────────────────
+
+function stageLabel(key, stages) {
+  if (!key) return "—";
+  const found = stages?.find(s => (s.stageKey ?? s.id) === key);
+  return found?.name || key;
+}
+
+function RHStageHistoryPanel({ domain, recordId, stages, currentUser, users }) {
+  const { entries, loading } = useRHStageHistory(domain, recordId);
+
+  if (loading) {
+    return <div className="text-xs text-center py-6" style={{ color: "var(--text-dim)" }}>Carregando…</div>;
+  }
+  if (entries.length === 0) {
+    return (
+      <PlaceholderPanel
+        icon={History}
+        title="Histórico"
+        hint="Toda mudança de etapa vai aparecer aqui, com data e quem moveu."
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {entries.map((e, i) => (
+        <div key={i} className="flex items-start gap-2.5">
+          <div className="flex flex-col items-center flex-shrink-0" style={{ paddingTop: 3 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)" }} />
+            {i < entries.length - 1 && <span style={{ width: 1, flex: 1, minHeight: 16, background: "var(--border)", marginTop: 2 }} />}
+          </div>
+          <div className="flex-1 min-w-0 pb-1">
+            <div className="text-xs font-semibold flex items-center gap-1 flex-wrap" style={{ color: "var(--text)" }}>
+              {e.fromStage ? (
+                <>
+                  {stageLabel(e.fromStage, stages)}
+                  <ArrowRight size={10} style={{ color: "var(--text-dim)" }} />
+                  {stageLabel(e.toStage, stages)}
+                </>
+              ) : (
+                <>Criado em {stageLabel(e.toStage, stages)}</>
+              )}
+            </div>
+            <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+              {authorLabel(e.changedBy, currentUser, users)} · {formatTimestamp(e.changedAt)}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Shell ─────────────────────────────────────────────────────────────────────
 
 export function RHDetailDrawerShell({
   domain, recordId, activities = [], onAddActivity, currentUser,
   users = [], mentionableUsers, notifyMentions, mentionLink, mentionContextLabel,
+  stages,
 }) {
   const showChecklists = domain === "vagas" || domain === "candidatos";
 
   const tabs = useMemo(() => {
     const list = [
       { id: "atividades", label: "Atividades", icon: Activity },
+      { id: "historico", label: "Histórico", icon: History },
       { id: "anexos", label: "Anexos", icon: Paperclip },
     ];
     if (showChecklists) list.push({ id: "checklists", label: "Checklists", icon: ListChecks });
@@ -558,6 +615,10 @@ export function RHDetailDrawerShell({
 
       {tab === "atividades" && (
         <RHActivitiesPanel activities={activities} currentUser={currentUser} users={users} />
+      )}
+
+      {tab === "historico" && (
+        <RHStageHistoryPanel domain={domain} recordId={recordId} stages={stages} currentUser={currentUser} users={users} />
       )}
 
       {tab === "anexos" && (
