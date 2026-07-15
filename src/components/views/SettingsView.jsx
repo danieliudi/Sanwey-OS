@@ -851,7 +851,12 @@ export function SettingsView({
                     </div>
                   </div>
                   {NOTIFICATION_GROUPS
-                    .filter(group => !currentUser?.role || group.roles.includes(currentUser.role))
+                    .filter(group => {
+                      const userRoles = Array.isArray(currentUser?.roles) && currentUser.roles.length
+                        ? currentUser.roles
+                        : (currentUser?.role ? [currentUser.role] : []);
+                      return !userRoles.length || group.roles.some(r => userRoles.includes(r));
+                    })
                     .map(group => (
                       <div key={group.id}>
                         <div

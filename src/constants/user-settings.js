@@ -66,6 +66,54 @@ export const NOTIFICATION_GROUPS = [
       { id: "new_user_joined",   label: "Novo usuário na plataforma", defaultOn: false },
     ],
   },
+  {
+    id: "minhas_entregas",
+    label: "Minhas entregas",
+    roles: ["marketing", "gerente_marketing", "admin"],
+    items: [
+      { id: "new_deliverable_assigned", label: "Nova entrega atribuída a mim", defaultOn: true },
+      { id: "deliverable_stage_change", label: "Mudança de etapa nas minhas entregas", defaultOn: true },
+      { id: "deliverable_due_soon",     label: "Entrega com prazo próximo", defaultOn: true },
+    ],
+  },
+  {
+    id: "solicitacoes_marketing",
+    label: "Solicitações",
+    roles: ["marketing", "gerente_marketing", "admin"],
+    items: [
+      { id: "new_marketing_request",    label: "Nova solicitação recebida", defaultOn: true },
+      { id: "marketing_request_status", label: "Solicitação aprovada ou reprovada", defaultOn: true },
+    ],
+  },
+  {
+    id: "equipe_marketing",
+    label: "Equipe de Marketing",
+    roles: ["gerente_marketing", "admin"],
+    items: [
+      { id: "new_deliverable_team", label: "Nova entrega criada na equipe", defaultOn: false },
+      { id: "despesa_pendente",     label: "Despesa aguardando aprovação", defaultOn: true },
+    ],
+  },
+  {
+    id: "meus_processos_rh",
+    label: "Meus processos",
+    roles: ["rh", "gerente_rh", "admin"],
+    items: [
+      { id: "new_candidato",          label: "Novo candidato em processo seletivo", defaultOn: true },
+      { id: "candidato_stage_change", label: "Mudança de etapa de um candidato", defaultOn: true },
+      { id: "solicitacao_ferias",     label: "Nova solicitação de férias", defaultOn: true },
+    ],
+  },
+  {
+    id: "compliance_rh",
+    label: "Conformidade",
+    roles: ["gerente_rh", "admin"],
+    items: [
+      { id: "aso_vencendo",           label: "ASO vencendo", defaultOn: true },
+      { id: "contrato_vencendo",      label: "Contrato de experiência vencendo", defaultOn: true },
+      { id: "aniversario_colaborador",label: "Aniversário de colaborador", defaultOn: false },
+    ],
+  },
 ];
 
 // Keep NOTIFICATION_PREFS as a flat list for backward compat
