@@ -534,34 +534,11 @@ function RHStageHistoryPanel({ domain, recordId, stages, currentUser, users }) {
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
 
-export function RHDetailDrawerShell({
-  domain, recordId, activities = [], onAddActivity, currentUser,
-  users = [], mentionableUsers, notifyMentions, mentionLink, mentionContextLabel,
-  stages,
-}) {
-  const showChecklists = domain === "vagas" || domain === "candidatos";
-
-  const tabs = useMemo(() => {
-    const list = [
-      { id: "atividades", label: "Atividades", icon: Activity },
-      { id: "historico", label: "Histórico", icon: History },
-      { id: "anexos", label: "Anexos", icon: Paperclip },
-    ];
-    if (showChecklists) list.push({ id: "checklists", label: "Checklists", icon: ListChecks });
-    return list;
-  }, [showChecklists]);
-
-  const [tab, setTab] = useState("atividades");
-
-  useEffect(() => {
-    if (tab === "checklists" && !showChecklists) setTab("atividades");
-  }, [showChecklists, tab]);
-
-  const effectiveMentionableUsers = useMemo(
-    () => mentionableUsers || getMentionableUsers(users, { domain: "rh" }),
-    [mentionableUsers, users]
-  );
-
+// Compartilhado entre RHDetailDrawerShell (abas) e RHDetailComments
+// (painel de comentários) — os dois consomem o mesmo `activities`/
+// `onAddActivity`, só que renderizados em colunas diferentes do drawer
+// agora (abas no centro, comentários sempre visíveis na lateral direita).
+function useRHActivityComments({ activities = [], onAddActivity, currentUser, users = [], notifyMentions, mentionLink, mentionContextLabel }) {
   // Normaliza o array genérico `activities` (jsonb, compartilhado com a aba
   // Atividades) pro formato que o CommentsPanel compartilhado espera —
   // resolvendo autor/avatar reais via `users` em vez do antigo placeholder
@@ -609,6 +586,59 @@ export function RHDetailDrawerShell({
     }
   }, [onAddActivity, currentUser, notifyMentions, mentionLink, mentionContextLabel]);
 
+  return { comments, handleAddComment };
+}
+
+// Comentários — sempre visíveis na lateral direita, junto com a
+// movimentação de card (mesma convenção do resto da plataforma). Separado
+// de RHDetailDrawerShell (abas de Atividades/Histórico/Anexos/Checklists,
+// que agora ficam no centro, igual Lead/Campanha) desde a unificação
+// visual com a referência do Pipefy.
+export function RHDetailComments({
+  activities = [], onAddActivity, currentUser,
+  users = [], mentionableUsers, notifyMentions, mentionLink, mentionContextLabel,
+}) {
+  const effectiveMentionableUsers = useMemo(
+    () => mentionableUsers || getMentionableUsers(users, { domain: "rh" }),
+    [mentionableUsers, users]
+  );
+  const { comments, handleAddComment } = useRHActivityComments({
+    activities, onAddActivity, currentUser, users, notifyMentions, mentionLink, mentionContextLabel,
+  });
+
+  return (
+    <CommentsPanel
+      comments={comments}
+      currentUser={currentUser}
+      mentionableUsers={effectiveMentionableUsers}
+      onAddComment={handleAddComment}
+      disabled={!onAddActivity}
+    />
+  );
+}
+
+export function RHDetailDrawerShell({
+  domain, recordId, activities = [], onAddActivity, currentUser,
+  users = [], stages,
+}) {
+  const showChecklists = domain === "vagas" || domain === "candidatos";
+
+  const tabs = useMemo(() => {
+    const list = [
+      { id: "atividades", label: "Atividades", icon: Activity },
+      { id: "historico", label: "Histórico", icon: History },
+      { id: "anexos", label: "Anexos", icon: Paperclip },
+    ];
+    if (showChecklists) list.push({ id: "checklists", label: "Checklists", icon: ListChecks });
+    return list;
+  }, [showChecklists]);
+
+  const [tab, setTab] = useState("atividades");
+
+  useEffect(() => {
+    if (tab === "checklists" && !showChecklists) setTab("atividades");
+  }, [showChecklists, tab]);
+
   return (
     <div className="space-y-4">
       <RHSideTabs tabs={tabs} activeTab={tab} onChange={setTab} />
@@ -628,14 +658,6 @@ export function RHDetailDrawerShell({
       {tab === "checklists" && showChecklists && (
         <RHChecklistsPanel domain={domain} recordId={recordId} currentUser={currentUser} />
       )}
-
-      <CommentsPanel
-        comments={comments}
-        currentUser={currentUser}
-        mentionableUsers={effectiveMentionableUsers}
-        onAddComment={handleAddComment}
-        disabled={!onAddActivity}
-      />
     </div>
   );
 }

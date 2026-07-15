@@ -12,7 +12,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
-import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
@@ -512,6 +512,18 @@ function FeriasDrawer({
           </div>
         </div>
       )}
+
+      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+        <RHDetailDrawerShell
+          domain="ferias"
+          recordId={req.id}
+          activities={req.activities || []}
+          onAddActivity={onAddActivity}
+          currentUser={currentUser}
+          users={users}
+          stages={stages}
+        />
+      </div>
     </>
   );
 
@@ -547,14 +559,11 @@ function FeriasDrawer({
         </div>
       )}
 
-      <RHDetailDrawerShell
-        domain="ferias"
-        recordId={req.id}
+      <RHDetailComments
         activities={req.activities || []}
         onAddActivity={onAddActivity}
         currentUser={currentUser}
         users={users}
-        stages={stages}
         notifyMentions={notifyMentions}
         mentionLink={{ module: "rh_ferias", id: req.id }}
         mentionContextLabel={req.profiles?.name}

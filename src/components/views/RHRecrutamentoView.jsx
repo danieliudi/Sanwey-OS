@@ -52,7 +52,7 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
-import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { EmptyState } from "../ui/EmptyState";
@@ -1147,6 +1147,19 @@ function VagaDrawer({
           onClose={() => setManagerModalOpen(false)}
         />
       )}
+
+      {/* Anexos / Checklists / Atividades */}
+      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+        <RHDetailDrawerShell
+          domain="vagas"
+          recordId={vaga.id}
+          activities={vaga.activities || []}
+          onAddActivity={onAddActivity}
+          currentUser={currentUser}
+          users={users}
+          stages={stages}
+        />
+      </div>
     </>
   );
 
@@ -1169,15 +1182,13 @@ function VagaDrawer({
         </div>
       )}
 
-      {/* Anexos / Checklists / Atividades / Comentários */}
-      <RHDetailDrawerShell
-        domain="vagas"
-        recordId={vaga.id}
+      {/* Comentários — sempre visíveis na lateral direita, abaixo da
+          movimentação de card (não mais escondidos atrás de uma aba). */}
+      <RHDetailComments
         activities={vaga.activities || []}
         onAddActivity={onAddActivity}
         currentUser={currentUser}
         users={users}
-        stages={stages}
         notifyMentions={notifyMentions}
         mentionLink={{ module: "rh_vagas", id: vaga.id }}
         mentionContextLabel={vaga.title}
@@ -1884,6 +1895,19 @@ function CandidatoDrawer({
           </div>
         )}
       </div>
+
+      {/* Anexos / Checklists / Atividades */}
+      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+        <RHDetailDrawerShell
+          domain="candidatos"
+          recordId={candidato.id}
+          activities={candidato.activities || []}
+          onAddActivity={onAddActivity}
+          currentUser={currentUser}
+          users={users}
+          stages={stages}
+        />
+      </div>
     </>
   );
 
@@ -1937,15 +1961,13 @@ function CandidatoDrawer({
         </div>
       )}
 
-      {/* Anexos / Checklists / Atividades / Comentários */}
-      <RHDetailDrawerShell
-        domain="candidatos"
-        recordId={candidato.id}
+      {/* Comentários — sempre visíveis na lateral direita, abaixo da
+          movimentação de card (não mais escondidos atrás de uma aba). */}
+      <RHDetailComments
         activities={candidato.activities || []}
         onAddActivity={onAddActivity}
         currentUser={currentUser}
         users={users}
-        stages={stages}
         notifyMentions={notifyMentions}
         mentionLink={{ module: "rh_candidatos", id: candidato.id }}
         mentionContextLabel={candidato.name}

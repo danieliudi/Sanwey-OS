@@ -24,7 +24,7 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
-import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
@@ -455,6 +455,20 @@ function OnboardingDrawer({
           </>
         )}
       </div>
+
+      {/* Atividades / Anexos — adicional ao checklist de integração acima
+          (rh_onboarding_tarefas), que continua intacto. */}
+      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+        <RHDetailDrawerShell
+          domain="onboarding"
+          recordId={colaborador.id}
+          activities={colaborador.activities || []}
+          onAddActivity={onAddActivity}
+          currentUser={currentUser}
+          users={users}
+          stages={stages}
+        />
+      </div>
     </>
   );
 
@@ -477,16 +491,13 @@ function OnboardingDrawer({
         </div>
       )}
 
-      {/* Atividades / Anexos / Comentários — adicional ao checklist de
-          integração acima (rh_onboarding_tarefas), que continua intacto. */}
-      <RHDetailDrawerShell
-        domain="onboarding"
-        recordId={colaborador.id}
+      {/* Comentários — sempre visíveis na lateral direita, abaixo da
+          movimentação de card (não mais escondidos atrás de uma aba). */}
+      <RHDetailComments
         activities={colaborador.activities || []}
         onAddActivity={onAddActivity}
         currentUser={currentUser}
         users={users}
-        stages={stages}
         notifyMentions={notifyMentions}
         mentionLink={{ module: "rh_onboarding", id: colaborador.id }}
         mentionContextLabel={colaborador.fullName}

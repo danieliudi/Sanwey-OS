@@ -15,7 +15,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
-import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
@@ -537,14 +537,11 @@ function AtribuicaoDrawer({
         </div>
       )}
 
-      <RHDetailDrawerShell
-        domain="treinamentos"
-        recordId={atribuicao.id}
+      <RHDetailComments
         activities={atribuicao.activities || []}
         onAddActivity={onAddActivity}
         currentUser={currentUser}
         users={users}
-        stages={stages}
         notifyMentions={notifyMentions}
         mentionLink={{ module: "rh_treinamentos", id: atribuicao.id }}
         mentionContextLabel={[colaborador?.fullName, treinamento?.titulo].filter(Boolean).join(" · ")}
@@ -552,8 +549,20 @@ function AtribuicaoDrawer({
     </>
   );
 
+  const center = (
+    <RHDetailDrawerShell
+      domain="treinamentos"
+      recordId={atribuicao.id}
+      activities={atribuicao.activities || []}
+      onAddActivity={onAddActivity}
+      currentUser={currentUser}
+      users={users}
+      stages={stages}
+    />
+  );
+
   return (
-    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={null} right={right} />
+    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
   );
 }
 

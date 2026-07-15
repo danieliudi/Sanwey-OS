@@ -15,7 +15,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
-import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
@@ -726,6 +726,18 @@ function FeedbackDrawer({
           {feedback.conteudo?.pontos_desenvolvimento && <div><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>A desenvolver: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_desenvolvimento}</span></div>}
         </div>
       )}
+
+      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+        <RHDetailDrawerShell
+          domain="feedback"
+          recordId={feedback.id}
+          activities={feedback.activities || []}
+          onAddActivity={onAddActivity}
+          currentUser={currentUser}
+          users={users}
+          stages={stages}
+        />
+      </div>
     </>
   );
 
@@ -754,14 +766,11 @@ function FeedbackDrawer({
         </div>
       )}
 
-      <RHDetailDrawerShell
-        domain="feedback"
-        recordId={feedback.id}
+      <RHDetailComments
         activities={feedback.activities || []}
         onAddActivity={onAddActivity}
         currentUser={currentUser}
         users={users}
-        stages={stages}
         notifyMentions={notifyMentions}
         mentionLink={{ module: "rh_feedback", id: feedback.id }}
         mentionContextLabel={colaborador?.fullName}
