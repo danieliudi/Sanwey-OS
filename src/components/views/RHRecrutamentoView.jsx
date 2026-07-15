@@ -39,6 +39,7 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHManagerLinks } from "../../hooks/use-rh-manager-links";
+import { StageNavigator } from "../shared/StageNavigator";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
@@ -1074,6 +1075,12 @@ function VagaDrawer({
                     {moveError}
                   </div>
                 )}
+                <StageNavigator
+                  stages={stages}
+                  currentStage={vaga.stage}
+                  onMove={(stageKey) => onStageChange(vaga.id, stageKey)}
+                  getKey={(s) => s.stageKey}
+                />
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {stages.filter((s) => s.stageKey !== vaga.stage).map((s) => (
                     <button
@@ -1812,6 +1819,12 @@ function CandidatoDrawer({
                   {moveError}
                 </div>
               )}
+              <StageNavigator
+                stages={stages}
+                currentStage={candidato.stage}
+                onMove={requestStageChange}
+                getKey={(s) => s.stageKey}
+              />
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {stages.filter((s) => s.stageKey !== candidato.stage).map((s) => (
                   <button

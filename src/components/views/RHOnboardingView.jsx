@@ -22,6 +22,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { StageNavigator } from "../shared/StageNavigator";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -383,6 +384,12 @@ function OnboardingDrawer({
                   {moveError}
                 </div>
               )}
+              <StageNavigator
+                stages={stages}
+                currentStage={colaborador.onboardingStage}
+                onMove={(stageKey) => onStageChange(colaborador.id, stageKey)}
+                getKey={(s) => s.stageKey}
+              />
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {stages.filter((s) => s.stageKey !== colaborador.onboardingStage).map((s) => (
                   <button

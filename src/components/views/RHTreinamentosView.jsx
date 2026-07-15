@@ -16,6 +16,7 @@ import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal"
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { StageNavigator } from "../shared/StageNavigator";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
@@ -488,8 +489,8 @@ function AtribuicaoDrawer({
 
   return (
     <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1099 }} onClick={onClose} />
-      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(460px, 100vw)", background: "var(--surface)", zIndex: 1100, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} onClick={onClose} />
+      <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(460px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
@@ -515,6 +516,12 @@ function AtribuicaoDrawer({
                   {moveError}
                 </div>
               )}
+              <StageNavigator
+                stages={stages}
+                currentStage={atribuicao.status}
+                onMove={(stageKey) => onStageChange(atribuicao.id, stageKey)}
+                getKey={(s) => s.stageKey}
+              />
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {moveTargets.map((s) => (
                   <button key={s.stageKey} onClick={() => onStageChange(atribuicao.id, s.stageKey)} style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>

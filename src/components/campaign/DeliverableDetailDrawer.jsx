@@ -22,6 +22,7 @@ import { deliverableStageSuggestionPrompt } from "../../constants/ai-prompts";
 import { CommentsPanel }              from "../shared/CommentsPanel";
 import { getMentionableUsers }        from "../../utils/mentionable-users";
 import { AssigneeMultiSelect }        from "../shared/AssigneeMultiSelect";
+import { StageNavigator }             from "../shared/StageNavigator";
 
 /* ── Priority helpers ───────────────────────────────────────── */
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -1180,6 +1181,14 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
                   <AlertCircle size={12} className="shrink-0 mt-0.5" />
                   {moveError}
                 </div>
+              )}
+              {canWrite && (
+                <StageNavigator
+                  stages={DELIVERABLE_STAGES}
+                  currentStage={item.stage}
+                  onMove={handleMoveStage}
+                  getKey={(s) => s.id}
+                />
               )}
               <div className="space-y-2">
                 {nextStages.map(s => (

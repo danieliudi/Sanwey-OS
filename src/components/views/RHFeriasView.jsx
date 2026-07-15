@@ -13,6 +13,7 @@ import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal"
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHDetailDrawerShell } from "../rh-pipeline/RHDetailDrawerShell";
+import { StageNavigator } from "../shared/StageNavigator";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
@@ -514,6 +515,12 @@ function FeriasDrawer({
           {canWrite && moveTargets.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <div style={labelSt}>Mover para</div>
+              <StageNavigator
+                stages={stages}
+                currentStage={req.status}
+                onMove={handleMoveClick}
+                getKey={(s) => s.stageKey}
+              />
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {moveTargets.map((s) => (
                   <button
