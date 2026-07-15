@@ -158,26 +158,35 @@ export function useInsightsMetrics({ leads = [], pipelines = {} } = {}) {
   const { contratos, beneficios, compras, loading: loadingCustos } = useCustosRaw();
 
   const velocity = useMemo(() => {
+    // Só etapa terminal "de sucesso" conta como "tempo até contratar" —
+    // etapa terminal com lost=true (ex.: 'reprovado') é reprovação, não
+    // contratação, e não pode entrar na mesma média (nem no sampleSize
+    // exibido como "N contratações").
     const contratacaoTerminalKeys = new Set(
-      contratacaoStages.filter(s => s.terminal).map(s => s.stageKey)
+      contratacaoStages.filter(s => s.terminal && !s.lost).map(s => s.stageKey)
     );
     const contratacao = contratacaoTerminalKeys.size > 0
       ? bucketMetric(computeDurations(groupByRecordId(contratacaoRaw), contratacaoTerminalKeys))
       : EMPTY_VELOCITY_METRIC;
 
     const onboardingTerminalKeys = new Set(
-      onboardingStages.filter(s => s.terminal).map(s => s.stageKey)
+      onboardingStages.filter(s => s.terminal && !s.lost).map(s => s.stageKey)
     );
     const onboarding = onboardingTerminalKeys.size > 0
       ? bucketMetric(computeDurations(groupByRecordId(onboardingRaw), onboardingTerminalKeys))
       : EMPTY_VELOCITY_METRIC;
 
-    // Comercial — mesmo critério de etapa terminal (ganho/perdido) usado no
-    // Painel Executivo: pipeline customizado da empresa do lead quando
-    // existir, senão DEFAULT_PIPELINE_STAGES. Todas as empresas juntas numa
-    // única métrica (lead_stage_history não guarda company_id por linha).
+    // Comercial — mesmo critério de etapa terminal usado no Painel
+    // Executivo, mas só a etapa terminal de sucesso (ganho): pipeline
+    // customizado da empresa do lead quando existir, senão
+    // DEFAULT_PIPELINE_STAGES. Terminal com lost=true (perdido) fica de
+    // fora — "Tempo médio de fechamento" e "N negócios fechados" não podem
+    // incluir negócios perdidos na mesma média, mesmo critério aplicado à
+    // contratação (RH) e à aprovação de cotação (Marketing) acima/abaixo.
+    // Todas as empresas juntas numa única métrica (lead_stage_history não
+    // guarda company_id por linha).
     const defaultTerminalIds = new Set(
-      DEFAULT_PIPELINE_STAGES.filter(s => s.terminal).map(s => s.id)
+      DEFAULT_PIPELINE_STAGES.filter(s => s.terminal && !s.lost).map(s => s.id)
     );
     const companyByLeadId = new Map(leads.map(l => [l.id, l.companyId]));
     const fechamentoDurations = [];
@@ -185,8 +194,8 @@ export function useInsightsMetrics({ leads = [], pipelines = {} } = {}) {
       if (!entries.length) continue;
       const companyId = companyByLeadId.get(leadId);
       const companyStages = companyId ? pipelines?.[companyId] : null;
-      const terminalIds = companyStages && companyStages.some(s => s.terminal)
-        ? new Set(companyStages.filter(s => s.terminal).map(s => s.id))
+      const terminalIds = companyStages && companyStages.some(s => s.terminal && !s.lost)
+        ? new Set(companyStages.filter(s => s.terminal && !s.lost).map(s => s.id))
         : defaultTerminalIds;
       const sorted = [...entries].sort((a, b) => new Date(a.changedAt) - new Date(b.changedAt));
       const startMs = new Date(sorted[0].changedAt).getTime();
@@ -201,11 +210,14 @@ export function useInsightsMetrics({ leads = [], pipelines = {} } = {}) {
 
     // Marketing — cotação não usa histórico de etapa genérico, e sim os
     // dois timestamps já gravados direto na linha da cotação
-    // (created_at → approved_at). Cotação ainda pendente/rejeitada (sem
-    // approved_at) fica de fora, mesmo espírito de "em andamento".
+    // (created_at → approved_at). Cotação ainda pendente (sem approved_at)
+    // fica de fora, mesmo espírito de "em andamento". reject_marketing_quote
+    // também grava approved_by/approved_at (só muda o status pra
+    // 'rejeitada') — sem o filtro por status, toda cotação rejeitada
+    // entraria como se fosse uma aprovação.
     const quoteDurations = [];
     for (const q of quotes) {
-      if (!q.createdAt || !q.approvedAt) continue;
+      if (!q.createdAt || !q.approvedAt || q.status !== "aprovada") continue;
       const startMs = new Date(q.createdAt).getTime();
       const endMs = new Date(q.approvedAt).getTime();
       if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) continue;
@@ -217,11 +229,19 @@ export function useInsightsMetrics({ leads = [], pipelines = {} } = {}) {
   }, [contratacaoRaw, onboardingRaw, contratacaoStages, onboardingStages, byLead, leads, pipelines, quotes]);
 
   const custos = useMemo(() => {
+    // `vigencia_fim` é uma coluna `date` do Postgres — chega como string
+    // 'YYYY-MM-DD' e, se parseada com `new Date(...)`, vira meia-noite UTC.
+    // Comparar isso com um Date normalizado em meia-noite LOCAL confunde o
+    // fuso (ex.: Brasil, UTC-3) e classifica como "vencido" um contrato cuja
+    // vigência termina hoje mesmo. Normaliza `today` pra meia-noite local e
+    // compara como string ('YYYY-MM-DD'), sem nunca reparsear como Date —
+    // evita misturar um valor UTC com outro em hora local.
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 10);
 
     const fornecedoresRHTotal = contratos
-      .filter(c => !c.vigencia_fim || new Date(c.vigencia_fim) >= today)
+      .filter(c => !c.vigencia_fim || c.vigencia_fim >= todayStr)
       .reduce((sum, c) => sum + Number(c.valor || 0), 0);
 
     const beneficiosMensalTotal = beneficios.reduce((sum, b) => sum + Number(b.valor || 0), 0);

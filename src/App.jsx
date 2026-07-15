@@ -129,6 +129,15 @@ export default function App() {
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
   const isRHManager        = hasAnyRole(["gerente_rh", "admin"]);
   const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
+  // isInsightsUser: quem o Painel de Insights (src/hooks/use-insights-metrics.js)
+  // de fato consegue ler quase todos os dados — o hook cruza
+  // rh_stage_history/rh_fornecedor_contratos/rh_colaborador_beneficios (RLS
+  // current_user_is_rh(): rh/gerente_rh/admin) e marketing_supplier_quotes/
+  // marketing_purchase_requests (RLS current_user_is_marketing():
+  // marketing/gerente_marketing/admin). "gerente" (gerente Comercial) sozinho
+  // não tem leitura garantida em nenhuma dessas — sem esse gate ele passava
+  // pelo `isManager` genérico e via quase todo card do painel zerado.
+  const isInsightsUser     = hasAnyRole(["admin", "rh", "gerente_rh", "marketing", "gerente_marketing"]);
   const {
     users,
     loading: usersLoading,
@@ -846,17 +855,24 @@ export default function App() {
       });
     }
 
+    // "Inteligência": Executivo/Cross-sell/Agentes ficam sob isManager (gerente
+    // Comercial + admin, mesmo escopo de sempre). Insights entra à parte sob
+    // isInsightsUser — ele cruza dados de RH e Marketing que um gerente
+    // Comercial puro não tem RLS pra ler, então não pode herdar o mesmo gate.
+    const intelItems = [];
+    if (isManager) intelItems.push({ id: "executive", label: "Executivo",  icon: BarChart3 });
+    if (isInsightsUser) intelItems.push({ id: "insights", label: "Insights", icon: TrendingUp });
     if (isManager) {
-      groups.push({
-        label: "Inteligência",
-        items: [
-          { id: "executive", label: "Executivo",  icon: BarChart3 },
-          { id: "insights",  label: "Insights",   icon: TrendingUp },
-          { id: "crossref",  label: "Cross-sell", icon: Shuffle },
-          { id: "agents",    label: "Agentes",    icon: Bot },
-        ],
-      });
+      intelItems.push(
+        { id: "crossref", label: "Cross-sell", icon: Shuffle },
+        { id: "agents",   label: "Agentes",    icon: Bot },
+      );
+    }
+    if (intelItems.length > 0) {
+      groups.push({ label: "Inteligência", items: intelItems });
+    }
 
+    if (isManager) {
       groups.push({
         label: "Configuração",
         items: [
@@ -873,7 +889,7 @@ export default function App() {
       ],
     });
     return groups;
-  }, [isManager, isMarketingUser, isPureMarketing, isAgencia]);
+  }, [isManager, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -894,8 +910,13 @@ export default function App() {
     // all role flags are false, which would kick the user to "/" on refresh.
     if (!currentUser) return;
 
-    const managerOnly = ["executive", "insights", "agents", "crossref", "funnel-history", "automations", "fair-import", "users"];
+    const managerOnly = ["executive", "agents", "crossref", "funnel-history", "automations", "fair-import", "users"];
     if (!isManager && managerOnly.includes(section)) {
+      setSection("dashboard");
+    }
+    // Insights tem gate próprio (isInsightsUser), não o isManager genérico —
+    // ver comentário na definição de isInsightsUser.
+    if (!isInsightsUser && section === "insights") {
       setSection("dashboard");
     }
     const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras"];
@@ -928,7 +949,7 @@ export default function App() {
       setSection("marketing");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isManager, isMarketingUser, isPureMarketing, isAgencia, section]);
+  }, [currentUser, isManager, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, section]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
@@ -1166,7 +1187,7 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.insights} element={
-            isManager
+            isInsightsUser
               ? <InsightsView leads={leads} pipelines={pipelines} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
