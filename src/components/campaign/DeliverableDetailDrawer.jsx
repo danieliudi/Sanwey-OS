@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  X, ArrowRight, ArrowLeft, Trash2, Star,
+  X, ArrowRight, Trash2, Star,
   FileText, Activity, Paperclip, CheckSquare,
   Mail, FileDown, Sparkles,
   Upload, File, FileImage, Download, Plus,
@@ -785,7 +785,6 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   const stageOrder = DELIVERABLE_STAGES.map(s => s.id);
   const currentIdx = stageOrder.indexOf(item.stage);
   const nextStages = DELIVERABLE_STAGES.slice(currentIdx + 1);
-  const prevStages = DELIVERABLE_STAGES.slice(0, currentIdx).reverse();
   const fields     = STAGE_FIELDS[item.stage] || [];
 
   const priorityColor = PRIORITY_COLORS[item.priority] || NEUTRAL.slate;
@@ -1184,40 +1183,11 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
               )}
               {canWrite && (
                 <StageNavigator
-                  stages={DELIVERABLE_STAGES}
-                  currentStage={item.stage}
+                  targets={DELIVERABLE_STAGES.filter(s => s.id !== item.stage)}
                   onMove={handleMoveStage}
                   getKey={(s) => s.id}
                 />
               )}
-              <div className="space-y-2">
-                {nextStages.map(s => (
-                  <button key={s.id}
-                    onClick={() => canWrite && handleMoveStage(s.id)}
-                    disabled={!canWrite}
-                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
-                    style={{ background: s.color + "14", color: s.color, border: `1px solid ${s.color}30`, opacity: canWrite ? 1 : 0.5 }}
-                    onMouseEnter={e => { if (canWrite) e.currentTarget.style.background = s.color + "22"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = s.color + "14"; }}
-                  >
-                    <span>{s.name}</span>
-                    <ArrowRight size={14} />
-                  </button>
-                ))}
-                {prevStages.map(s => (
-                  <button key={s.id}
-                    onClick={() => canWrite && handleMoveStage(s.id)}
-                    disabled={!canWrite}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                    style={{ background: "#FFFFFF", color: "var(--text)", border: "1px solid #E5E7EB", opacity: canWrite ? 1 : 0.5 }}
-                    onMouseEnter={e => { if (canWrite) e.currentTarget.style.background = "var(--surface-alt)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
-                  >
-                    <ArrowLeft size={13} />
-                    <span>{s.name}</span>
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Comentários — sempre visíveis na lateral direita, abaixo da

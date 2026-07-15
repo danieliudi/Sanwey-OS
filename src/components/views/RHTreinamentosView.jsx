@@ -530,18 +530,10 @@ function AtribuicaoDrawer({
             </div>
           )}
           <StageNavigator
-            stages={stages}
-            currentStage={atribuicao.status}
+            targets={moveTargets}
             onMove={(stageKey) => onStageChange(atribuicao.id, stageKey)}
             getKey={(s) => s.stageKey}
           />
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {moveTargets.map((s) => (
-              <button key={s.stageKey} onClick={() => onStageChange(atribuicao.id, s.stageKey)} style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                {s.name}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 

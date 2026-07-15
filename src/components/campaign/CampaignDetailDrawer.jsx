@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
-  ArrowLeft, ArrowRight, Sparkles, Mail, FileDown,
+  ArrowRight, Sparkles, Mail, FileDown,
   RotateCcw, Copy, Loader2, AlertCircle, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -16,6 +16,7 @@ import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { StageNavigator } from "../shared/StageNavigator";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
@@ -1692,37 +1693,18 @@ export function CampaignDetailDrawer({
             className="hidden lg:flex lg:flex-col w-full lg:w-[300px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4"
             style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
-            <div>
-              <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-                Mover campanha para etapa
+            {canWrite && (
+              <div>
+                <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
+                  Mover campanha para etapa
+                </div>
+                <StageNavigator
+                  targets={MARKETING_STAGES.filter(s => s.id !== stage?.id)}
+                  onMove={moveToStage}
+                  getKey={(s) => s.id}
+                />
               </div>
-              <div className="space-y-2">
-                {stageNav.next && (
-                  <button
-                    onClick={() => canWrite && moveToStage(stageNav.next.id)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
-                    style={{ background: stageNav.next.color + "14", color: stageNav.next.color, border: `1px solid ${stageNav.next.color}30` }}
-                    onMouseEnter={e => { e.currentTarget.style.background = stageNav.next.color + "22"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = stageNav.next.color + "14"; }}
-                  >
-                    <span>{stageNav.next.name}</span>
-                    <ArrowRight size={14} />
-                  </button>
-                )}
-                {stageNav.prev && (
-                  <button
-                    onClick={() => canWrite && moveToStage(stageNav.prev.id)}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                    style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                  >
-                    <ArrowLeft size={13} />
-                    <span>{stageNav.prev.name}</span>
-                  </button>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Comentários — sempre visíveis na lateral direita, abaixo da
                 movimentação de card (não mais escondidos atrás de uma aba). */}

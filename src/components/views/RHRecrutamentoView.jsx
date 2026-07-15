@@ -9,7 +9,6 @@ import {
   User,
   X,
   MessageSquare,
-  ArrowRight,
   UserPlus,
   Link2,
   Check,
@@ -1163,22 +1162,10 @@ function VagaDrawer({
             </div>
           )}
           <StageNavigator
-            stages={stages}
-            currentStage={vaga.stage}
+            targets={stages.filter((s) => s.stageKey !== vaga.stage)}
             onMove={(stageKey) => onStageChange(vaga.id, stageKey)}
             getKey={(s) => s.stageKey}
           />
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {stages.filter((s) => s.stageKey !== vaga.stage).map((s) => (
-              <button
-                key={s.stageKey}
-                onClick={() => onStageChange(vaga.id, s.stageKey)}
-                style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-              >
-                <ArrowRight size={10} /> {s.name}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
@@ -1913,34 +1900,10 @@ function CandidatoDrawer({
             </div>
           )}
           <StageNavigator
-            stages={stages}
-            currentStage={candidato.stage}
+            targets={stages.filter((s) => s.stageKey !== candidato.stage)}
             onMove={requestStageChange}
             getKey={(s) => s.stageKey}
           />
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {stages.filter((s) => s.stageKey !== candidato.stage).map((s) => (
-              <button
-                key={s.stageKey}
-                onClick={() => requestStageChange(s.stageKey)}
-                style={{
-                  background: `${s.color}18`,
-                  color: s.color,
-                  border: `1px solid ${s.color}44`,
-                  borderRadius: 8,
-                  padding: "4px 10px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                <ArrowRight size={10} /> {s.name}
-              </button>
-            ))}
-          </div>
 
           {reprovando && (
             <div style={{ marginTop: 10, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12 }}>

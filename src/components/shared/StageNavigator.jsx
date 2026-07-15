@@ -1,51 +1,30 @@
-import React, { useMemo } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import React from "react";
+import { ArrowRight } from "lucide-react";
 
-// Botões dedicados de "etapa anterior/próxima", no padrão do drawer de
-// Lead do CRM (LeadDetailDrawer.jsx) — complementa (não substitui) a grade
-// de "mover para qualquer etapa" que já existe em cada drawer, pra cobrir
-// o caso mais comum (avançar/voltar um passo) com um clique só e destaque
-// visual, sem perder a opção de pular pra uma etapa não-adjacente (ex:
-// reprovar de qualquer estágio do funil).
-export function StageNavigator({ stages, currentStage, onMove, getKey = (s) => s.stageKey ?? s.id }) {
-  const { prev, next } = useMemo(() => {
-    if (!stages?.length || currentStage == null) return { prev: null, next: null };
-    const idx = stages.findIndex((s) => getKey(s) === currentStage);
-    if (idx < 0) return { prev: null, next: null };
-    return {
-      prev: idx > 0 ? stages[idx - 1] : null,
-      next: idx < stages.length - 1 ? stages[idx + 1] : null,
-    };
-  }, [stages, currentStage, getKey]);
-
-  if (!prev && !next) return null;
+// "Mover para etapa" — padrão único da plataforma (alinhado à referência
+// Pipefy): lista completa das etapas restantes como pills coloridos
+// empilhados, sem distinção de anterior/próxima. Cada chamador já filtra
+// `targets` de acordo com as próprias regras de negócio (ex: excluir
+// etapas terminais, esconder a etapa atual).
+export function StageNavigator({ targets, onMove, getKey = (s) => s.stageKey ?? s.id, disabled = false }) {
+  if (!targets?.length) return null;
 
   return (
-    <div className="flex gap-2 mb-2">
-      {prev && (
+    <div className="flex flex-col gap-1.5">
+      {targets.map((s) => (
         <button
-          onClick={() => onMove(getKey(prev))}
-          className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-          style={{ background: "var(--surface)", color: prev.color || "var(--text-dim)", border: `1px solid ${(prev.color || "#8A8680")}40` }}
-          onMouseEnter={e => { e.currentTarget.style.background = `${prev.color || "#8A8680"}10`; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+          key={getKey(s)}
+          onClick={() => onMove(getKey(s))}
+          disabled={disabled}
+          className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+          style={{ background: `${s.color}14`, color: s.color, border: `1px solid ${s.color}30`, opacity: disabled ? 0.6 : 1, cursor: disabled ? "default" : "pointer" }}
+          onMouseEnter={e => { if (!disabled) e.currentTarget.style.background = `${s.color}22`; }}
+          onMouseLeave={e => { e.currentTarget.style.background = `${s.color}14`; }}
         >
-          <ArrowLeft size={13} />
-          <span className="truncate">{prev.name}</span>
-        </button>
-      )}
-      {next && (
-        <button
-          onClick={() => onMove(getKey(next))}
-          className="flex-1 flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-          style={{ background: `${next.color}14`, color: next.color, border: `1px solid ${next.color}30` }}
-          onMouseEnter={e => { e.currentTarget.style.background = `${next.color}22`; }}
-          onMouseLeave={e => { e.currentTarget.style.background = `${next.color}14`; }}
-        >
-          <span className="truncate">{next.name}</span>
+          <span className="truncate">{s.name}</span>
           <ArrowRight size={13} />
         </button>
-      )}
+      ))}
     </div>
   );
 }

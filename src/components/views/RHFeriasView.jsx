@@ -539,23 +539,11 @@ function FeriasDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           <StageNavigator
-            stages={stages}
-            currentStage={req.status}
+            targets={moveTargets}
             onMove={handleMoveClick}
             getKey={(s) => s.stageKey}
+            disabled={busy}
           />
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {moveTargets.map((s) => (
-              <button
-                key={s.stageKey}
-                onClick={() => handleMoveClick(s.stageKey)}
-                disabled={busy}
-                style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}
-              >
-                {s.name}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 

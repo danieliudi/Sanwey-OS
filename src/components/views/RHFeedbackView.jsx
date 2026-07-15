@@ -741,28 +741,16 @@ function FeedbackDrawer({
             </div>
           )}
           <StageNavigator
-            stages={stages}
-            currentStage={feedback.status}
+            targets={moveTargets}
             onMove={(stageKey) => onStageChange(feedback.id, stageKey)}
             getKey={(s) => s.stageKey}
           />
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {moveTargets.map((s) => (
-              <button
-                key={s.stageKey}
-                onClick={() => onStageChange(feedback.id, s.stageKey)}
-                style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
-              >
-                {s.name}
-              </button>
-            ))}
-            <button
-              onClick={onComplete}
-              style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
-            >
-              Concluir avaliação
-            </button>
-          </div>
+          <button
+            onClick={onComplete}
+            style={{ marginTop: 6, width: "100%", background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+          >
+            Concluir avaliação
+          </button>
         </div>
       )}
 

@@ -3,7 +3,7 @@ import {
   X, MapPin, Network, Package, Users, Sparkles, Copy, Send,
   Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
   Check, Trash2, Mail, ChevronDown, ChevronUp,
-  Clock, GitBranch, CalendarClock, ArrowLeft, ArrowRight, History,
+  Clock, GitBranch, CalendarClock, ArrowRight, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
   File, FileImage, FileSpreadsheet, AlertCircle,
 } from "lucide-react";
@@ -30,6 +30,7 @@ import { getInvalidFields, EMAIL_PATTERN } from "../../utils/field-validation";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
+import { StageNavigator } from "../shared/StageNavigator";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
@@ -1233,38 +1234,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 {moveError}
               </div>
             )}
-            <div className="space-y-2">
-              {stageNav.next && (() => {
-                const nextColor = stageNav.next.color || company.primary;
-                return (
-                  <button
-                    onClick={() => moveToStage(stageNav.next.id)}
-                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer"
-                    style={{ background: nextColor + "14", color: nextColor, border: `1px solid ${nextColor}30` }}
-                    onMouseEnter={e => { e.currentTarget.style.background = nextColor + "22"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = nextColor + "14"; }}
-                  >
-                    <span>{stageNav.next.name}</span>
-                    <ArrowRight size={14} />
-                  </button>
-                );
-              })()}
-              {stageNav.prev && (() => {
-                const prevColor = stageNav.prev.color || "var(--text-dim)";
-                return (
-                  <button
-                    onClick={() => moveToStage(stageNav.prev.id)}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                    style={{ background: "var(--surface)", color: prevColor, border: `1px solid ${prevColor}40` }}
-                    onMouseEnter={e => { e.currentTarget.style.background = prevColor + "10"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                  >
-                    <ArrowLeft size={13} />
-                    <span>{stageNav.prev.name}</span>
-                  </button>
-                );
-              })()}
-            </div>
+            <StageNavigator
+              targets={companyStages.filter((s) => s.id !== lead.stage)}
+              onMove={moveToStage}
+              getKey={(s) => s.id}
+            />
 
             {/* Comentários — sempre visíveis na lateral direita, abaixo da
                 movimentação de card (não mais escondidos atrás de uma aba). */}

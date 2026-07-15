@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ClipboardCheck, Plus, X, Check, Trash2, ArrowRight,
+  ClipboardCheck, Plus, X, Check, Trash2,
   Briefcase, Pencil, Settings2, AlertCircle,
   LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
@@ -470,22 +470,10 @@ function OnboardingDrawer({
             </div>
           )}
           <StageNavigator
-            stages={stages}
-            currentStage={colaborador.onboardingStage}
+            targets={stages.filter((s) => s.stageKey !== colaborador.onboardingStage)}
             onMove={(stageKey) => onStageChange(colaborador.id, stageKey)}
             getKey={(s) => s.stageKey}
           />
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {stages.filter((s) => s.stageKey !== colaborador.onboardingStage).map((s) => (
-              <button
-                key={s.stageKey}
-                onClick={() => onStageChange(colaborador.id, s.stageKey)}
-                style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44`, borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-              >
-                <ArrowRight size={10} /> {s.name}
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
