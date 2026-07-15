@@ -34,6 +34,7 @@ export const ROUTES = {
   "marketing-compras":        "/marketing/compras",
   "rh-overview":          "/rh",
   "rh-funcionarios":      "/rh/funcionarios",
+  "rh-fornecedores":      "/rh/fornecedores",
   "rh-recrutamento":      "/rh/recrutamento",
   "rh-onboarding":        "/rh/onboarding",
   "rh-treinamentos":      "/rh/treinamentos",

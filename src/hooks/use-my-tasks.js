@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import {
   AlertTriangle, Clock, Layers, Megaphone, Package, ShoppingCart, Truck,
-  Inbox, CalendarClock, MessageSquareText, BriefcaseBusiness, Users,
+  Inbox, CalendarClock, MessageSquareText, BriefcaseBusiness, Users, Gift,
 } from "lucide-react";
 import { useLeads } from "./use-leads";
 import { usePipelines } from "./use-pipelines";
@@ -14,6 +14,7 @@ import { useRHFeedback } from "./use-rh-feedback";
 import { useRHFeriasRequests } from "./use-rh-ferias-requests";
 import { useRHRecrutamento } from "./use-rh-recrutamento";
 import { useRHColaboradores } from "./use-rh-colaboradores";
+import { useRHBeneficios } from "./use-rh-beneficios";
 import {
   periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim,
   diasParaAniversario, diasParaBodasEmpresa,
@@ -87,10 +88,11 @@ export function useMyTasks({ currentUser } = {}) {
   const { requests: feriasRequests, loading: feriasLoading } = useRHFeriasRequests({});
   const { vagas, loading: recrutamentoLoading } = useRHRecrutamento({ userId });
   const { colaboradores, loading: colaboradoresLoading } = useRHColaboradores({ userId });
+  const { colaboradorBeneficios, loading: beneficiosLoading } = useRHBeneficios({ userId });
 
   const loading = leadsLoading || campaignsLoading || deliverablesLoading || purchasesLoading
     || quotesLoading || marketingRequestsLoading || feedbacksLoading || feriasLoading
-    || recrutamentoLoading || colaboradoresLoading;
+    || recrutamentoLoading || colaboradoresLoading || beneficiosLoading;
 
   const isRHManagerUser = hasAnyRole(currentUser, ["admin", "gerente_rh"]);
 
@@ -372,6 +374,30 @@ export function useMyTasks({ currentUser } = {}) {
           });
         }
 
+        // Período de experiência concluído (não só "prestes a vencer") e
+        // ninguém ainda solicitou nenhum benefício pra essa pessoa — vira
+        // uma tarefa real de RH, não só um alerta informativo como o de
+        // cima. Some sozinho quando o primeiro benefício é solicitado.
+        if (exp && exp.diasRestantes <= 0) {
+          const jaTemBeneficio = (colaboradorBeneficios || []).some(b => b.colaboradorId === c.id && b.status !== "cancelado");
+          if (!jaTemBeneficio) {
+            out.push({
+              id: `resp-beneficios-${c.id}`,
+              bucket: "responsibility",
+              module: "beneficios",
+              moduleLabel: "Benefícios",
+              icon: Gift,
+              title: c.fullName,
+              subtitle: "Período de experiência concluído",
+              badge: "Solicitar benefícios",
+              badgeTone: "var(--warning)",
+              urgencyRank: exp.diasRestantes,
+              section: "rh-funcionarios",
+              raw: c,
+            });
+          }
+        }
+
         const asoDias = asoDiasParaVencer(c);
         if (asoDias != null && asoDias <= 30) {
           out.push({
@@ -476,7 +502,7 @@ export function useMyTasks({ currentUser } = {}) {
   }, [
     userId, currentUser, leads, pipelines, campaigns, deliverables, purchases, quotes,
     marketingRequests, feedbacks, feriasRequests, vagas, colaboradores, colaboradoresById,
-    meuColaborador, isRHManagerUser,
+    meuColaborador, isRHManagerUser, colaboradorBeneficios,
   ]);
 
   const counts = useMemo(() => ({

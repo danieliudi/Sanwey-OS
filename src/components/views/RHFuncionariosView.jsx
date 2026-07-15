@@ -13,6 +13,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Gift,
+  Check,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -22,10 +24,105 @@ import {
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useRHBeneficios } from "../../hooks/use-rh-beneficios";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { EmptyState } from "../ui/EmptyState";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
+
+const BENEFICIO_STATUS_COLORS = {
+  solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
+  aprovado:   { bg: "#DBEAFE", text: "#2563EB" },
+  ativo:      { bg: "#DCFCE7", text: "#16A34A" },
+  cancelado:  { bg: "var(--surface-alt)", text: "var(--text-dim)" },
+};
+const BENEFICIO_STATUS_LABELS = { solicitado: "Solicitado", aprovado: "Aprovado", ativo: "Ativo", cancelado: "Cancelado" };
+
+function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
+  const { catalogo, colaboradorBeneficios, solicitarBeneficio, aprovarBeneficio } = useRHBeneficios({ userId: currentUser?.id });
+  const [picking, setPicking] = useState(false);
+  const [pickedId, setPickedId] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const meus = colaboradorBeneficios.filter(b => b.colaboradorId === colaboradorId);
+  const catalogoById = new Map(catalogo.filter(c => c.isActive).map(c => [c.id, c]));
+  const disponiveis = catalogo.filter(c => c.isActive && !meus.some(b => b.beneficioCatalogoId === c.id && b.status !== "cancelado"));
+
+  const handleSolicitar = async () => {
+    if (!pickedId) return;
+    setSaving(true);
+    try {
+      await solicitarBeneficio(colaboradorId, pickedId);
+      setPicking(false);
+      setPickedId("");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ borderRadius: 12, border: "1px solid var(--border)", padding: "14px 16px", background: "var(--surface-alt)", marginBottom: 20 }}>
+      <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+        <Gift size={13} /> Benefícios
+      </div>
+      {meus.length === 0 && <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 10 }}>Nenhum benefício vinculado ainda.</div>}
+      <div className="flex flex-col gap-1.5 mb-2">
+        {meus.map(b => {
+          const cat = catalogoById.get(b.beneficioCatalogoId);
+          const color = BENEFICIO_STATUS_COLORS[b.status] || BENEFICIO_STATUS_COLORS.solicitado;
+          return (
+            <div key={b.id} className="flex items-center justify-between gap-2" style={{ fontSize: 12 }}>
+              <span style={{ color: "var(--text)", fontWeight: 500 }}>{cat?.nomeExibicao || "—"}</span>
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 10, fontWeight: 700, color: color.text, background: color.bg, borderRadius: 99, padding: "2px 8px" }}>
+                  {BENEFICIO_STATUS_LABELS[b.status] || b.status}
+                </span>
+                {canWrite && b.status === "solicitado" && (
+                  <button
+                    onClick={() => aprovarBeneficio(b.id)}
+                    title="Aprovar"
+                    style={{ background: "none", border: "none", color: "var(--success)", cursor: "pointer", display: "flex" }}
+                  >
+                    <Check size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {canWrite && (
+        picking ? (
+          <div className="flex items-center gap-2">
+            <select
+              className="text-xs rounded-lg border px-2 py-1.5 outline-none flex-1"
+              style={{ borderColor: "var(--border-strong)", background: "var(--surface)", color: "var(--text)" }}
+              value={pickedId}
+              onChange={(e) => setPickedId(e.target.value)}
+            >
+              <option value="">Selecionar benefício…</option>
+              {disponiveis.map(c => <option key={c.id} value={c.id}>{c.nomeExibicao}</option>)}
+            </select>
+            <button onClick={handleSolicitar} disabled={saving || !pickedId} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+              Solicitar
+            </button>
+            <button onClick={() => setPicking(false)} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 11 }}>
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setPicking(true)}
+            className="flex items-center gap-1"
+            style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
+          >
+            <Plus size={12} /> Solicitar benefício
+          </button>
+        )
+      )}
+    </div>
+  );
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -130,7 +227,7 @@ function StatusBadge({ statusId }) {
 
 // ── Employee Detail Modal ─────────────────────────────────────────────────────
 
-function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, onClose }) {
+function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, onClose, currentUser }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState(null);
@@ -490,6 +587,10 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
               </div>
             )}
           </div>
+
+          {colaboradorRow && (
+            <BeneficiosSection colaboradorId={colaboradorRow.id} canWrite={canWrite} currentUser={currentUser} />
+          )}
 
           {/* CRM metrics */}
           {userLeads.length > 0 && (
@@ -1033,6 +1134,7 @@ export function RHFuncionariosView({
           colaboradorRow={colaboradores.find((c) => c.profileId === selected.id)}
           onUpdateColaborador={updateColaborador}
           onClose={() => setSelected(null)}
+          currentUser={currentUser}
         />
       )}
 

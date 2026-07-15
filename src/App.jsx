@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, Bot, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
-  ShoppingCart, CheckSquare,
+  ShoppingCart, CheckSquare, Building2,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -68,6 +68,7 @@ import { FornecedoresView } from "./components/views/FornecedoresView";
 import { ComprasMarketingView } from "./components/views/ComprasMarketingView";
 import { RHOverviewView } from "./components/views/RHOverviewView";
 import { RHFuncionariosView } from "./components/views/RHFuncionariosView";
+import { RHFornecedoresView } from "./components/views/RHFornecedoresView";
 import { RHRecrutamentoView } from "./components/views/RHRecrutamentoView";
 import { RHOnboardingView } from "./components/views/RHOnboardingView";
 import { RHTreinamentosView } from "./components/views/RHTreinamentosView";
@@ -827,6 +828,7 @@ export default function App() {
           { id: "rh-feedback",     label: "Avaliação de Desempenho", icon: MessageSquareText },
           { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
           { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
+          { id: "rh-fornecedores", label: "Fornecedores",      icon: Building2 },
         ],
       });
     } else {
@@ -1295,6 +1297,11 @@ export default function App() {
                   onUpdateUser={updateUser}
                   canWrite={isRHManager}
                 />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["rh-fornecedores"]} element={
+            isRHUser
+              ? <RHFornecedoresView currentUser={currentUser} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-recrutamento"]} element={
