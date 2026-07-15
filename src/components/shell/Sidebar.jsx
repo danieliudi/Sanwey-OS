@@ -92,15 +92,23 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
       )}
       <aside style={sidebarStyle}>
         {/* ── Brand ── */}
-        <div
+        <button
+          onClick={() => handleNavClick("dashboard")}
+          title="Ir para o início"
           style={{
             height: 64,
             display: "flex",
             alignItems: "center",
             padding: "0 20px",
             gap: 12,
-            borderBottom: `1px solid ${T.border}`,
             flexShrink: 0,
+            background: "none",
+            border: "none",
+            borderBottom: `1px solid ${T.border}`,
+            cursor: "pointer",
+            width: "100%",
+            textAlign: "left",
+            fontFamily: "inherit",
           }}
         >
           <div
@@ -125,7 +133,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 14 }}>Gestão Sanwey</div>
             <div style={{ color: "var(--text-faint)", fontSize: 11 }}>Plataforma integrada</div>
           </div>
-        </div>
+        </button>
 
         {/* ── Nav ── */}
         <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "4px 0 8px", scrollbarWidth: "none" }}>
