@@ -124,11 +124,16 @@ export default function App() {
   const isMarketingUser    = hasAnyRole(["marketing", "gerente_marketing", "admin"]);
   // isPureMarketing: only the marketing dept roles — drives sidebar and dashboard rendering
   const isPureMarketing    = rolesSubsetOf(["marketing", "gerente_marketing"]);
+  const isMarketingManager = hasAnyRole(["gerente_marketing", "admin"]);
   const isAgencia          = hasAnyRole(["agencia"]);
   // RH roles
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
   const isRHManager        = hasAnyRole(["gerente_rh", "admin"]);
   const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
+  // Painel Executivo deixou de ser exclusivo do gerente Comercial: cada
+  // gerente de departamento acessa pra ver (só) o card do próprio setor.
+  const canSeeExecutive    = isManagerRole || isMarketingManager || isRHManager;
+  const isAdmin            = hasAnyRole(["admin"]);
   // isInsightsUser: quem o Painel de Insights (src/hooks/use-insights-metrics.js)
   // de fato consegue ler quase todos os dados — o hook cruza
   // rh_stage_history/rh_fornecedor_contratos/rh_colaborador_beneficios (RLS
@@ -861,7 +866,7 @@ export default function App() {
     // isInsightsUser — ele cruza dados de RH e Marketing que um gerente
     // Comercial puro não tem RLS pra ler, então não pode herdar o mesmo gate.
     const intelItems = [];
-    if (isManager) intelItems.push({ id: "executive", label: "Executivo",  icon: BarChart3 });
+    if (canSeeExecutive) intelItems.push({ id: "executive", label: "Executivo",  icon: BarChart3 });
     if (isInsightsUser) intelItems.push({ id: "insights", label: "Insights", icon: TrendingUp });
     if (isManager) {
       intelItems.push(
@@ -890,7 +895,7 @@ export default function App() {
       ],
     });
     return groups;
-  }, [isManager, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH]);
+  }, [isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -911,8 +916,14 @@ export default function App() {
     // all role flags are false, which would kick the user to "/" on refresh.
     if (!currentUser) return;
 
-    const managerOnly = ["executive", "agents", "crossref", "funnel-history", "automations", "fair-import", "users"];
+    const managerOnly = ["agents", "crossref", "funnel-history", "automations", "fair-import", "users"];
     if (!isManager && managerOnly.includes(section)) {
+      setSection("dashboard");
+    }
+    // "executive" (Painel Executivo) não é mais exclusivo do gerente
+    // Comercial — gerente de Marketing/RH também acessa, só vê o recorte
+    // do próprio departamento lá dentro (ver canSeeExecutive).
+    if (!canSeeExecutive && section === "executive") {
       setSection("dashboard");
     }
     // Insights tem gate próprio (isInsightsUser), não o isManager genérico —
@@ -950,7 +961,7 @@ export default function App() {
       setSection("marketing");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isManager, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, section]);
+  }, [currentUser, isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, section]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
@@ -1200,8 +1211,8 @@ export default function App() {
             <Navigate to={ROUTES.explorer} replace />
           } />
           <Route path={ROUTES.executive} element={
-            isManager
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} />
+            canSeeExecutive
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager} isRHManager={isRHManager} isComercialManager={isManager} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.insights} element={
@@ -1261,6 +1272,8 @@ export default function App() {
               onUpdateMockUser={supabaseEnabled ? null : setMockUser}
               supabaseEnabled={supabaseEnabled}
               isManager={isManager}
+              isMarketingManager={isMarketingManager}
+              isRHManager={isRHManager}
               usersPanel={isManager ? (
                 <UserManagementView
                   users={users}

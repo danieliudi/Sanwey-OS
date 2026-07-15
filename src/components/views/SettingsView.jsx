@@ -110,22 +110,22 @@ export function SettingsView({
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
   onLoadAllDemoData, demoDataLoading = false, demoDataCounts = null,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
-  usersPanel, isManager = false,
+  usersPanel, isManager = false, isMarketingManager = false, isRHManager = false,
 }) {
+  // Painel Executivo não é mais exclusivo do gerente Comercial — gerente de
+  // Marketing/RH também acessa a aba Preferências, só que só enxerga (e só
+  // mexe n)o próprio recorte de widgets do Painel Executivo lá dentro.
+  const canSeeExecutive = isManager || isMarketingManager || isRHManager;
   const [activeTab, setActiveTab] = useState("perfil");
   const tabs = useMemo(() => {
-    if (!isManager) return PERSONAL_TABS;
+    if (!isManager && !canSeeExecutive) return PERSONAL_TABS;
     // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Usuários
-    const list = [
-      PERSONAL_TABS[0],
-      MANAGER_TABS[0],
-      PERSONAL_TABS[1],
-      PERSONAL_TABS[2],
-      MANAGER_TABS[1],
-      MANAGER_TABS[2],
-    ];
+    const list = [PERSONAL_TABS[0]];
+    list.push(MANAGER_TABS[0]);
+    list.push(PERSONAL_TABS[1], PERSONAL_TABS[2]);
+    if (isManager) list.push(MANAGER_TABS[1], MANAGER_TABS[2]);
     return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
-  }, [isManager, usersPanel]);
+  }, [isManager, canSeeExecutive, usersPanel]);
 
   // ── Vagas públicas (Recrutamento) ─────────────────────────────────────
   // rh_vagas vem cru (snake_case) de useRHRecrutamento — sem mapper camelCase.
@@ -709,6 +709,7 @@ export function SettingsView({
             {/* ── PREFERÊNCIAS ── */}
             {activeTab === "preferencias" && (
               <div className="space-y-4">
+                {isManager && (
                 <Section
                   title="Empresas ativas"
                   description="Quais empresas aparecem no seletor do topo e nos filtros do app."
@@ -754,7 +755,9 @@ export function SettingsView({
                     })}
                   </div>
                 </Section>
+                )}
 
+                {isManager && (
                 <Section
                   title="Widgets do Dashboard"
                   description="Quais StatCards aparecem no topo do Dashboard."
@@ -770,25 +773,32 @@ export function SettingsView({
                     ))}
                   </div>
                 </Section>
+                )}
 
-                {isManager && (
+                {canSeeExecutive && (
                   <Section
                     title="Widgets do Painel Executivo"
-                    description="O Painel Executivo não é do Comercial — é a visão de todos os departamentos que você tem acesso. Escolha o que aparece no seu."
+                    description="Cada gerente de departamento só vê (e só escolhe) o próprio recorte do Painel Executivo."
                   >
                     <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
-                      {EXECUTIVE_WIDGETS.map(w => (
-                        <ToggleRow
-                          key={w.id}
-                          label={w.label}
-                          checked={settings.visibleExecutiveWidgets.includes(w.id)}
-                          onChange={() => toggleExecutiveWidget(w.id)}
-                        />
-                      ))}
+                      {EXECUTIVE_WIDGETS
+                        .filter(w =>
+                          (w.dept === "comercial" && isManager) ||
+                          (w.dept === "marketing" && isMarketingManager) ||
+                          (w.dept === "rh" && isRHManager))
+                        .map(w => (
+                          <ToggleRow
+                            key={w.id}
+                            label={w.label}
+                            checked={settings.visibleExecutiveWidgets.includes(w.id)}
+                            onChange={() => toggleExecutiveWidget(w.id)}
+                          />
+                        ))}
                     </div>
                   </Section>
                 )}
 
+                {isManager && (
                 <Section
                   title="Etapas visíveis no Kanban"
                   description="Esconda etapas que você não usa no dia a dia."
@@ -804,6 +814,7 @@ export function SettingsView({
                     ))}
                   </div>
                 </Section>
+                )}
               </div>
             )}
 

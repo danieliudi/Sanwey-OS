@@ -11,14 +11,17 @@ export const DASHBOARD_WIDGETS = [
 // Painel Executivo é cross-departamento (Comercial + Marketing + RH), não uma
 // tela do Comercial — cada executivo com acesso escolhe o que aparece no
 // próprio painel.
+// `dept` decide quem consegue ver/alternar cada widget em Configurações e no
+// próprio Painel Executivo — cada gerente de departamento só mexe (e só vê)
+// nos do seu setor; admin acumula todos os depts e por isso vê tudo.
 export const EXECUTIVE_WIDGETS = [
-  { id: "outras_marketing",  label: "Cartão Marketing (outras áreas)" },
-  { id: "outras_rh",         label: "Cartão RH (outras áreas)" },
-  { id: "comercial_kpis",    label: "KPIs de Comercial" },
-  { id: "tab_charts",        label: "Aba Gráficos" },
-  { id: "tab_analytics",     label: "Aba Análise" },
-  { id: "tab_ia",            label: "Aba IA" },
-  { id: "tab_historico",     label: "Aba Histórico" },
+  { id: "outras_marketing",  label: "Cartão Marketing",   dept: "marketing" },
+  { id: "outras_rh",         label: "Cartão RH",          dept: "rh" },
+  { id: "comercial_kpis",    label: "KPIs de Comercial",  dept: "comercial" },
+  { id: "tab_charts",        label: "Aba Gráficos",       dept: "comercial" },
+  { id: "tab_analytics",     label: "Aba Análise",        dept: "comercial" },
+  { id: "tab_ia",            label: "Aba IA",             dept: "comercial" },
+  { id: "tab_historico",     label: "Aba Histórico",      dept: "comercial" },
 ];
 
 export const NOTIFICATION_GROUPS = [

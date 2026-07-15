@@ -51,10 +51,21 @@ function filterByPeriod(leads, period) {
   });
 }
 
-export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, currentUser, activeCompany, visibleWidgets }) {
+export function ExecutiveDashboard({
+  leads, crossReferrals, pipelines, users, currentUser, activeCompany, visibleWidgets,
+  isAdmin = false, isComercialManager = false, isMarketingManager = false, isRHManager = false,
+}) {
   const [period, setPeriod] = useState("all");
   const [tab, setTab] = useState("overview");
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
+
+  // Cada gerente de departamento só vê o(s) recorte(s) do próprio setor —
+  // admin continua vendo tudo. Um usuário com múltiplos cargos (ex: gerente
+  // Comercial + gerente de Marketing) vê as duas seções, nunca a de RH.
+  const showComercial = isAdmin || isComercialManager;
+  const showMarketingCard = (isAdmin || isMarketingManager) && widgetVisible("outras_marketing");
+  const showRHCard = (isAdmin || isRHManager) && widgetVisible("outras_rh");
+  const showDepartmentsOverview = showMarketingCard || showRHCard;
 
   const visibleTabs = useMemo(
     () => TABS.filter(t => t.id === "overview" || widgetVisible(`tab_${t.id}`)),
@@ -168,117 +179,123 @@ export function ExecutiveDashboard({ leads, crossReferrals, pipelines, users, cu
             Painel Executivo
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            Visão consolidada do Grupo · {filteredLeads.length} leads · {PERIODS.find(p => p.id === period)?.label}
+            {showComercial
+              ? <>Visão consolidada do Grupo · {filteredLeads.length} leads · {PERIODS.find(p => p.id === period)?.label}</>
+              : "Visão do seu departamento"}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-            {PERIODS.map(p => (
-              <button
-                key={p.id}
-                onClick={() => setPeriod(p.id)}
-                className="px-2.5 py-1.5 text-xs font-semibold cursor-pointer transition-colors"
-                style={{
-                  background: period === p.id ? "var(--accent)" : "var(--surface)",
-                  color: period === p.id ? "#FFFFFF" : "var(--text-dim)",
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
+        {showComercial && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+              {PERIODS.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setPeriod(p.id)}
+                  className="px-2.5 py-1.5 text-xs font-semibold cursor-pointer transition-colors"
+                  style={{
+                    background: period === p.id ? "var(--accent)" : "var(--surface)",
+                    color: period === p.id ? "#FFFFFF" : "var(--text-dim)",
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
+              title="Imprimir / salvar como PDF"
+            >
+              <Printer size={11} />
+              Exportar PDF
+            </button>
           </div>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-            style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-            title="Imprimir / salvar como PDF"
-          >
-            <Printer size={11} />
-            Exportar PDF
-          </button>
-        </div>
+        )}
       </div>
 
-      {/* Outras áreas do Grupo — o painel executivo não é departamento
-          nenhum, é uma visão total da plataforma; cada cartão é
-          configurável em Configurações. Só admin tem RLS pra ler
-          Marketing/RH; gerente comercial não, então mostrar isso pra ele
-          seria só uma parede de zeros enganosa. */}
-      {currentUser?.role === "admin" && (widgetVisible("outras_marketing") || widgetVisible("outras_rh")) && (
+      {/* Outras áreas do Grupo — cada gerente de departamento só vê o
+          cartão do próprio setor (admin vê os dois, conforme os toggles
+          em Configurações → Preferências). */}
+      {showDepartmentsOverview && (
         <div className="print:hidden">
           <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
-            Outras áreas
+            {showComercial ? "Outras áreas" : "Seu departamento"}
           </div>
           <DepartmentsOverview
-            showMarketing={widgetVisible("outras_marketing")}
-            showRH={widgetVisible("outras_rh")}
+            showMarketing={showMarketingCard}
+            showRH={showRHCard}
           />
         </div>
       )}
 
-      {/* KPI strip — Comercial */}
-      {widgetVisible("comercial_kpis") && (
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
-            Comercial
+      {showComercial && (
+        <>
+          {/* KPI strip — Comercial */}
+          {widgetVisible("comercial_kpis") && (
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
+                Comercial
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Pipeline aberto"     sublabel="Em aberto" accent={"var(--text)"} />
+                <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
+                <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
+                <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
+                <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
+                <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
+              </div>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+            {visibleTabs.map(t => {
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  title={t.hint}
+                  className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
+                  style={{
+                    color: active ? "var(--text)" : "var(--text-dim)",
+                    borderBottomColor: active ? "var(--accent)" : "transparent",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Pipeline aberto"     sublabel="Em aberto" accent={"var(--text)"} />
-            <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
-            <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
-            <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
-            <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
-            <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
-          </div>
-        </div>
-      )}
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto" style={{ borderColor: "var(--border)" }}>
-        {visibleTabs.map(t => {
-          const active = tab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              title={t.hint}
-              className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
-              style={{
-                color: active ? "var(--text)" : "var(--text-dim)",
-                borderBottomColor: active ? "var(--accent)" : "transparent",
-                letterSpacing: "0.08em",
-              }}
-            >
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+          {tab === "overview" && (
+            <OverviewTab
+              metricsByCompany={metricsByCompany}
+              maxPipeline={maxPipeline}
+              funnelStages={funnelStages}
+            />
+          )}
 
-      {tab === "overview" && (
-        <OverviewTab
-          metricsByCompany={metricsByCompany}
-          maxPipeline={maxPipeline}
-          funnelStages={funnelStages}
-        />
-      )}
+          {tab === "charts" && (
+            <ExecutiveCharts leads={filteredLeads} pipelines={pipelines} users={users} />
+          )}
 
-      {tab === "charts" && (
-        <ExecutiveCharts leads={filteredLeads} pipelines={pipelines} users={users} />
-      )}
+          {tab === "analytics" && (
+            <AnalyticsTab allLeads={leads} period={period} users={users} />
+          )}
 
-      {tab === "analytics" && (
-        <AnalyticsTab allLeads={leads} period={period} users={users} />
-      )}
+          {tab === "ia" && (
+            <AIExecutivePanel leads={filteredLeads} users={users} currentUser={currentUser} />
+          )}
 
-      {tab === "ia" && (
-        <AIExecutivePanel leads={filteredLeads} users={users} currentUser={currentUser} />
-      )}
-
-      {tab === "historico" && (
-        <FunnelHistoryView user={currentUser} activeCompany={activeCompany} leads={leads} users={users} />
+          {tab === "historico" && (
+            <FunnelHistoryView user={currentUser} activeCompany={activeCompany} leads={leads} users={users} />
+          )}
+        </>
       )}
     </div>
   );
