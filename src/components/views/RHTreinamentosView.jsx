@@ -914,6 +914,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
   const [atribuindoTo, setAtribuindoTo] = useState(null);
   const [boardTreinamento, setBoardTreinamento] = useState(null);
   const [expanded, setExpanded]         = useState(new Set());
+  const [catalogQuery, setCatalogQuery] = useState("");
 
   const loading = loadingTreinamentos || loadingColaboradores;
 
@@ -936,6 +937,12 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
     () => meuColaborador ? atribuicoes.filter(a => a.colaborador_id === meuColaborador.id) : [],
     [atribuicoes, meuColaborador]
   );
+
+  const filteredTreinamentos = useMemo(() => {
+    const q = catalogQuery.trim().toLowerCase();
+    if (!q) return treinamentos;
+    return treinamentos.filter(t => (t.titulo || "").toLowerCase().includes(q));
+  }, [treinamentos, catalogQuery]);
 
   const toggleExpand = (id) => setExpanded(prev => {
     const next = new Set(prev);
@@ -974,8 +981,20 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           {treinamentos.length === 0 ? (
             <EmptyState icon={GraduationCap} title="Nenhum treinamento cadastrado" description="Cadastre um treinamento para começar a montar o catálogo." />
           ) : (
+            <>
+              <input
+                type="text"
+                value={catalogQuery}
+                onChange={(e) => setCatalogQuery(e.target.value)}
+                placeholder="Buscar treinamento por título…"
+                className="w-full text-sm rounded-xl border px-3 py-2 outline-none mb-3"
+                style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", maxWidth: 360 }}
+              />
+              {filteredTreinamentos.length === 0 ? (
+                <EmptyState icon={GraduationCap} title="Nenhum treinamento encontrado" description="Ajuste a busca." />
+              ) : (
             <div className="flex flex-col gap-3">
-              {treinamentos.map(t => {
+              {filteredTreinamentos.map(t => {
                 const atribs = atribuicoesByTreinamento.get(t.id) || [];
                 const concluidos = atribs.filter(a => a.status === "concluido").length;
                 const vencidos = atribs.filter(a => a.status === "vencido").length;
@@ -1060,6 +1079,8 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
                 );
               })}
             </div>
+              )}
+            </>
           )}
         </>
       ) : !meuColaborador ? (

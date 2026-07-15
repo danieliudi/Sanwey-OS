@@ -115,6 +115,40 @@ function ratingColor(r) {
   return r >= 7 ? "var(--success)" : r >= 4 ? "var(--warning)" : "var(--danger)";
 }
 
+// Resumo no topo — mesmo padrão do ComplianceStats de Treinamentos, que
+// não tinha equivalente aqui (inconsistência de densidade informacional
+// entre as duas telas de RH mais correlatas).
+function AvaliacaoStats({ feedbacks }) {
+  const stats = useMemo(() => {
+    const ativos = feedbacks.filter((f) => f.status !== "concluido");
+    const atrasados = ativos.filter(isAtrasado);
+    const concluidos = feedbacks.filter((f) => f.status === "concluido");
+    const notas = concluidos.map((f) => f.final_rating).filter((n) => typeof n === "number");
+    const media = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : null;
+    return { ativos: ativos.length, atrasados: atrasados.length, concluidos: concluidos.length, media };
+  }, [feedbacks]);
+
+  if (feedbacks.length === 0) return null;
+
+  const tiles = [
+    { label: "Ciclos ativos", value: stats.ativos, color: "var(--text)" },
+    { label: "Atrasados",     value: stats.atrasados, color: stats.atrasados > 0 ? "var(--danger)" : "var(--text)" },
+    { label: "Concluídos",    value: stats.concluidos, color: "var(--text)" },
+    { label: "Nota média",    value: stats.media != null ? stats.media.toFixed(1) : "—", color: ratingColor(stats.media) },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      {tiles.map((t) => (
+        <div key={t.label} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "10px 14px", background: "var(--surface)" }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: t.color, lineHeight: 1 }}>{t.value}</div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>{t.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ratingScaleLabel(r) {
   if (r == null) return null;
   const n = Number(r);
@@ -497,7 +531,12 @@ function HistoricoDrawer({ colaborador, feedbacksDoColaborador, onClose }) {
 
 // ── Card do Kanban ────────────────────────────────────────────────────────────
 
+function isAtrasado(feedback) {
+  return feedback.status !== "concluido" && feedback.period_end && new Date(feedback.period_end) < new Date();
+}
+
 function FeedbackCardBody({ feedback, colaborador }) {
+  const atrasado = isAtrasado(feedback);
   return (
     <>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
@@ -506,7 +545,7 @@ function FeedbackCardBody({ feedback, colaborador }) {
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {colaborador?.fullName || "—"}
           </div>
-          <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
+          <div style={{ fontSize: 10, color: atrasado ? "var(--danger)" : "var(--text-dim)", fontWeight: atrasado ? 700 : 400 }}>
             {tipoLabel(feedback.tipo)} · até {fmt(feedback.period_end)}
           </div>
         </div>
@@ -514,6 +553,11 @@ function FeedbackCardBody({ feedback, colaborador }) {
       <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
         {autoavaliacaoLabel(feedback, colaborador)}
       </div>
+      {atrasado && (
+        <div style={{ marginTop: 4, display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, color: "var(--danger)" }}>
+          <AlertCircle size={10} /> Atrasado
+        </div>
+      )}
       {feedback.final_rating != null && (
         <div style={{ marginTop: 6, fontWeight: 800, fontSize: 14, color: ratingColor(feedback.final_rating) }}>
           {Number(feedback.final_rating).toFixed(1)}<span style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 400 }}> /10</span>
@@ -825,7 +869,7 @@ function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, on
                     {st.name}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(f.period_end)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: isAtrasado(f) ? "var(--danger)" : "var(--text-dim)", fontWeight: isAtrasado(f) ? 700 : 400 }}>{fmt(f.period_end)}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
                   {resolvedEvaluators.length > 0 ? (
                     <div className="flex items-center gap-1.5">
@@ -1165,6 +1209,8 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           )}
         </div>
       </div>
+
+      <AvaliacaoStats feedbacks={feedbacks} />
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
