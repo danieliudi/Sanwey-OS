@@ -27,6 +27,8 @@ import {
   LayoutGrid,
   List,
   CalendarDays as CalendarIcon,
+  Mail,
+  ShieldCheck,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -36,6 +38,7 @@ import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
+import { useRHManagerLinks } from "../../hooks/use-rh-manager-links";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
@@ -943,6 +946,11 @@ function VagaDrawer({
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
 
+  // Encaminhar candidatos da vaga pro gestor de área avaliar sem login
+  // (item 8) — link seguro por e-mail, escopado a essa vaga específica.
+  const { links: managerLinks, createLink: createManagerLink, revokeLink: revokeManagerLink } = useRHManagerLinks(vaga.id);
+  const [managerModalOpen, setManagerModalOpen] = useState(false);
+
   const stageInfo = findStage(stages, vaga.stage);
   const pri = priorityInfo(vaga.priority);
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
@@ -1107,7 +1115,59 @@ function VagaDrawer({
                   Ver candidatos
                 </button>
               </div>
+
+              {/* Triagem externa por gestor de área (item 8) — link seguro,
+                  sem login, escopado só a esta vaga. */}
+              <div style={{ marginTop: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={labelSt}>Avaliação do gestor de área</div>
+                  <button
+                    onClick={() => setManagerModalOpen(true)}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
+                  >
+                    <Mail size={12} /> Encaminhar pro gestor
+                  </button>
+                </div>
+                {managerLinks.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {managerLinks.map((link) => {
+                      const revoked = !!link.revoked_at;
+                      const expired = !revoked && new Date(link.expires_at).getTime() < Date.now();
+                      const status = revoked ? { label: "Revogado", color: "var(--text-dim)" } : expired ? { label: "Expirado", color: "var(--text-dim)" } : { label: "Ativo", color: "var(--success)" };
+                      return (
+                        <div key={link.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px" }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link.manager_name}</div>
+                            <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{link.manager_email}</div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: status.color }}>
+                              <ShieldCheck size={11} /> {status.label}
+                            </span>
+                            {!revoked && !expired && (
+                              <button
+                                onClick={() => revokeManagerLink(link.id)}
+                                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--danger)", fontSize: 11, fontWeight: 600 }}
+                              >
+                                Revogar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </>
+          )}
+
+          {managerModalOpen && (
+            <EncaminharGestorModal
+              vagaTitle={vaga.title}
+              onSave={async (form) => { await createManagerLink({ ...form, vagaTitle: vaga.title, userId: currentUser?.id }); setManagerModalOpen(false); }}
+              onClose={() => setManagerModalOpen(false)}
+            />
           )}
 
           {/* Anexos / Checklists / Atividades / Comentários */}
@@ -1128,6 +1188,93 @@ function VagaDrawer({
         </div>
       </div>
     </>
+  );
+}
+
+function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const valid = name.trim().length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  const handleSave = async () => {
+    if (!valid) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({ managerName: name.trim(), managerEmail: email.trim().toLowerCase() });
+    } catch (err) {
+      setError(err.message || "Não foi possível gerar o link.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>Encaminhar candidatos pro gestor</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <div style={{ padding: "20px 24px 24px" }}>
+          <p style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5, marginBottom: 16 }}>
+            O gestor vai receber um link seguro por e-mail com todos os candidatos da vaga "{vagaTitle}". Ele confirma o próprio e-mail antes de ver qualquer dado — sem precisar de login na plataforma.
+          </p>
+          <div style={{ marginBottom: 12 }}>
+            <div style={labelSt}>Nome do gestor *</div>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Ana Souza"
+              autoFocus
+              className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+            />
+          </div>
+          <div style={{ marginBottom: 4 }}>
+            <div style={labelSt}>E-mail do gestor *</div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="gestor@empresa.com"
+              className="w-full text-sm rounded-lg border px-3 py-2 outline-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+            />
+          </div>
+          {error && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginTop: 12, fontSize: 11 }}>
+              <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
+              {error}
+            </div>
+          )}
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={handleSave}
+              disabled={saving || !valid}
+              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !valid ? 0.6 : 1 }}
+            >
+              {saving ? "Enviando…" : "Enviar link"}
+            </button>
+            <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

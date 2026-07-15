@@ -6,6 +6,7 @@ import LeadCaptureForm from "./components/public/LeadCaptureForm";
 import JobApplicationForm from "./components/public/JobApplicationForm";
 import MarketingRequestForm from "./components/public/MarketingRequestForm";
 import PurchaseRequestForm from "./components/public/PurchaseRequestForm";
+import ManagerVagaReviewPage from "./components/public/ManagerVagaReviewPage";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Route path="/vagas/:slug" element={<JobApplicationForm />} />
         <Route path="/solicitar-marketing" element={<MarketingRequestForm />} />
         <Route path="/solicitar-compra" element={<PurchaseRequestForm />} />
+        <Route path="/gestor-vaga/:token" element={<ManagerVagaReviewPage />} />
         <Route path="/*" element={<App />} />
       </Routes>
     </BrowserRouter>
