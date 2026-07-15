@@ -14,6 +14,7 @@ import {
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
+import { callAI } from "../../hooks/use-ai";
 
 function Section({ title, description, children }) {
   return (
@@ -279,6 +280,18 @@ export function SettingsView({
   const [aiTestMsg, setAiTestMsg] = useState('');
   const [aiTesting, setAiTesting] = useState(false);
 
+  // ── D4Sign status (assinatura eletrônica) ────────────────────────────
+  const [d4signStatus, setD4signStatus] = useState(null); // null=carregando | { configured, webhookConfigured, sandbox } | { error }
+  useEffect(() => {
+    if (activeTab !== "ia" || !isManager) return;
+    let cancelled = false;
+    supabase.functions.invoke("d4sign-status", { body: {} }).then(({ data, error }) => {
+      if (cancelled) return;
+      setD4signStatus(error ? { error: error.message } : (data?.error ? { error: data.error } : data));
+    });
+    return () => { cancelled = true; };
+  }, [activeTab, isManager]);
+
   useEffect(() => {
     if (currentUser?.aiConfig) {
       setAiForm({
@@ -324,40 +337,11 @@ export function SettingsView({
       const messages = [
         { role: 'user', content: 'Responda apenas: "Conexão OK"' }
       ];
-      let text = '';
-      if (config.provider === 'openai') {
-        const r = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: config.model, messages, max_tokens: 20 }),
-        });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error?.message || 'Erro');
-        text = d.choices[0]?.message?.content || '';
-      } else if (config.provider === 'gemini') {
-        const r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Responda apenas: "Conexão OK"' }] }] }),
-          }
-        );
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error?.message || 'Erro');
-        text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      } else {
-        // Anthropic passa pela edge function ai-assistant (a API key não
-        // pode ir direto do browser pro provider — precisa de CORS
-        // liberado, que só a function tem). Antes isso não chamava nada e
-        // sempre reportava sucesso, mesmo com a function fora do ar.
-        const { data, error } = await supabase.functions.invoke('ai-assistant', {
-          body: { provider: config.provider, model: config.model, apiKey: config.apiKey, messages, maxTokens: 20 },
-        });
-        if (error) throw new Error(error.message || 'Erro ao chamar ai-assistant');
-        if (data?.error) throw new Error(data.error);
-        text = data?.content || '';
-      }
+      // callAI passa pela edge function ai-assistant sempre que o Supabase
+      // está configurado (chave nunca sai do browser), independente do
+      // provedor — só cai pro fetch direto (OpenAI/Gemini) em modo local/
+      // demo sem Supabase.
+      const text = await callAI(config.provider, config.model, config.apiKey, messages, 20);
       setAiTestResult('ok');
       setAiTestMsg(text.trim().slice(0, 80));
     } catch (e) {
@@ -904,6 +888,7 @@ export function SettingsView({
 
             {/* ── IA ── */}
             {activeTab === "ia" && (
+              <div className="space-y-4">
               <Section title="Integrações de IA" description="Configure sua LLM para usar os recursos de IA do CRM.">
                 <div className="space-y-5">
                   {/* Status badge */}
@@ -1082,6 +1067,54 @@ export function SettingsView({
                   )}
                 </div>
               </Section>
+
+              {isManager && (
+                <Section
+                  title="Assinatura eletrônica (D4Sign)"
+                  description="Usado pelo RH pra enviar documentos de colaboradores pra assinatura eletrônica."
+                >
+                  {d4signStatus === null ? (
+                    <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text-dim)" }}>
+                      <Loader2 size={13} className="animate-spin" /> Checando status…
+                    </div>
+                  ) : d4signStatus.error ? (
+                    <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+                      <AlertCircle size={13} />
+                      <span>Não foi possível checar o status: {d4signStatus.error}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div
+                        className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+                        style={d4signStatus.configured
+                          ? { background: "var(--success-bg)", color: "var(--success)" }
+                          : { background: "var(--danger-bg)", color: "var(--danger)" }}
+                      >
+                        {d4signStatus.configured ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                        <span className="font-semibold">
+                          {d4signStatus.configured ? "Configurado e ativo" : "Não configurado"}
+                        </span>
+                        {d4signStatus.configured && d4signStatus.sandbox && (
+                          <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                            SANDBOX
+                          </span>
+                        )}
+                      </div>
+                      {d4signStatus.configured && (
+                        <p className="text-[11px]" style={{ color: "var(--text-dim)" }}>
+                          Webhook de retorno de assinatura: {d4signStatus.webhookConfigured ? "configurado" : "não configurado"}.
+                        </p>
+                      )}
+                      {!d4signStatus.configured && (
+                        <p className="text-[11px]" style={{ color: "var(--text-dim)" }}>
+                          Faltam os secrets D4SIGN_API_TOKEN, D4SIGN_CRYPT_KEY e/ou D4SIGN_SAFE_UUID no projeto Supabase.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </Section>
+              )}
+              </div>
             )}
 
             {/* ── APARÊNCIA ── */}

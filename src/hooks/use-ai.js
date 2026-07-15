@@ -43,6 +43,16 @@ async function callViaEdge(provider, model, apiKey, messages, maxTokens) {
   return data?.content || '';
 }
 
+// Chamada única de IA usada tanto pelo uso real (useAI) quanto pelo botão
+// "Testar conexão" em Configurações. A chave de API nunca sai do browser
+// quando o Supabase está configurado — sempre passa pela edge function
+// ai-assistant, independente do provedor. Só cai pro fetch direto (chave
+// exposta no cliente) quando não há Supabase disponível pra fazer de proxy.
+export async function callAI(provider, model, apiKey, messages, maxTokens) {
+  if (isSupabaseConfigured) return callViaEdge(provider, model, apiKey, messages, maxTokens);
+  return callDirect(provider, model, apiKey, messages, maxTokens);
+}
+
 export function useAI(currentUser) {
   const aiConfig = currentUser?.aiConfig;
   const isConfigured = Boolean(aiConfig?.provider && aiConfig?.apiKey && aiConfig?.model);
@@ -50,8 +60,7 @@ export function useAI(currentUser) {
   const complete = useCallback(async (messages, { maxTokens = 1200 } = {}) => {
     if (!isConfigured) throw new Error('Configure sua LLM nas Configurações → Integrações de IA.');
     const { provider, model, apiKey } = aiConfig;
-    if (provider === 'anthropic') return callViaEdge(provider, model, apiKey, messages, maxTokens);
-    return callDirect(provider, model, apiKey, messages, maxTokens);
+    return callAI(provider, model, apiKey, messages, maxTokens);
   }, [aiConfig, isConfigured]);
 
   return { complete, isConfigured, provider: aiConfig?.provider, model: aiConfig?.model };
