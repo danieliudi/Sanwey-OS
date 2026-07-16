@@ -59,23 +59,47 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   // Mantém o digitado localmente e salva com debounce (600ms) para não bater
   // no Supabase a cada tecla.
   const [customDraft, setCustomDraft] = useState({});
+  const [customSaveState, setCustomSaveState] = useState(null); // null | "saving" | "saved"
   const customDebounceRef = useRef(null);
+  // Ref espelha o rascunho ACUMULADO: o corpo do timer precisa mesclar todos
+  // os campos tocados, não só o último. Sem isso, editar A e depois B em <600ms
+  // gravava só B (o timer de A era cancelado) — perda silenciosa de dados.
+  const customDraftRef = useRef({});
+  const savedTimerRef = useRef(null);
 
   useEffect(() => {
     setCustomDraft({});
+    customDraftRef.current = {};
+    setCustomSaveState(null);
     setMobileTab("info");
     setMoveError(null);
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
-    return () => { if (customDebounceRef.current) clearTimeout(customDebounceRef.current); };
+    return () => {
+      // Flush do rascunho pendente antes de trocar de lead/fechar/desmontar —
+      // senão editar um campo e fechar em <600ms perdia a edição (o timer só
+      // era cancelado). `lead` aqui é o lead anterior (deps = [lead?.id]).
+      if (customDebounceRef.current) { clearTimeout(customDebounceRef.current); customDebounceRef.current = null; }
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      if (lead && Object.keys(customDraftRef.current).length > 0) {
+        onUpdate(lead.id, { customFields: { ...(lead.customFields || {}), ...customDraftRef.current } });
+      }
+    };
   }, [lead?.id]);
 
   const handleCustomChange = useCallback((fieldKey, value) => {
-    setCustomDraft(prev => ({ ...prev, [fieldKey]: value }));
+    const next = { ...customDraftRef.current, [fieldKey]: value };
+    customDraftRef.current = next;
+    setCustomDraft(next);
+    setCustomSaveState("saving");
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     customDebounceRef.current = setTimeout(() => {
       if (!lead) return;
-      const merged = { ...(lead.customFields || {}), [fieldKey]: value };
+      const merged = { ...(lead.customFields || {}), ...customDraftRef.current };
       onUpdate(lead.id, { customFields: merged });
+      customDebounceRef.current = null;
+      setCustomSaveState("saved");
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setCustomSaveState(null), 2000);
     }, 600);
   }, [lead, onUpdate]);
 
@@ -957,6 +981,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
                   Fase atual · {DEFAULT_PIPELINE_STAGES.find(s => s.id === lead.stage)?.name || lead.stage}
                 </div>
+                {customSaveState && (
+                  <span style={{ fontSize: 11, color: "var(--text-dim)", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    {customSaveState === "saving" ? "Salvando…" : "Salvo ✓"}
+                  </span>
+                )}
               </div>
               <div className="space-y-4">
                 {visibleCustomDefs.map(f => (

@@ -641,10 +641,12 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
 
 // ── Linha de despesa ──────────────────────────────────────────────────────────
 
-function DespesaRow({ despesa, onVerComprovante }) {
+function DespesaRow({ despesa, onVerComprovante, onRefazer }) {
   const info = STATUS_REEMBOLSO[despesa.status_reembolso] || STATUS_REEMBOLSO.pendente;
   const [opening, setOpening] = useState(false);
   const [verError, setVerError] = useState(null);
+  const [refazendo, setRefazendo] = useState(false);
+  const rejeitada = despesa.status_reembolso === "rejeitado";
 
   const handleVer = async () => {
     setOpening(true);
@@ -655,6 +657,19 @@ function DespesaRow({ despesa, onVerComprovante }) {
       setVerError(err?.message || "Não foi possível abrir o comprovante.");
     } finally {
       setOpening(false);
+    }
+  };
+
+  const handleRefazer = async () => {
+    if (!onRefazer) return;
+    if (!window.confirm("Refazer esta despesa? A rejeitada será removida e você poderá lançar uma nova corrigida.")) return;
+    setRefazendo(true);
+    setVerError(null);
+    try {
+      await onRefazer(despesa);
+    } catch (err) {
+      setVerError(err?.message || "Não foi possível refazer a despesa.");
+      setRefazendo(false);
     }
   };
 
@@ -675,6 +690,20 @@ function DespesaRow({ despesa, onVerComprovante }) {
           <span style={{ width: 22, display: "inline-block" }} />
         )}
       </div>
+      {/* Motivo da rejeição (obrigatório pro gestor) agora fica visível de forma
+          durável — antes só aparecia numa notificação efêmera. Achado da auditoria. */}
+      {rejeitada && despesa.observacao_gestor && (
+        <div style={{ fontSize: 11, color: "var(--danger)", background: "var(--danger-bg, rgba(220,38,38,0.08))", borderRadius: 6, padding: "6px 8px" }}>
+          <strong>Motivo da rejeição:</strong> {despesa.observacao_gestor}
+        </div>
+      )}
+      {rejeitada && onRefazer && (
+        <div>
+          <button onClick={handleRefazer} disabled={refazendo} style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", background: "none", border: "none", cursor: refazendo ? "default" : "pointer", padding: "2px 0", display: "inline-flex", alignItems: "center", gap: 4 }}>
+            {refazendo ? <Loader2 size={12} className="animate-spin" /> : null} Refazer despesa
+          </button>
+        </div>
+      )}
       {verError && <div style={{ fontSize: 10, color: "var(--danger)" }}>{verError}</div>}
     </div>
   );
@@ -762,6 +791,14 @@ export function CRMViagensPlanejamentoView({ currentUser, leads = [], pushNotifi
     }
   };
 
+  // Refazer uma despesa rejeitada: remove a rejeitada (agora permitido pela
+  // RLS pro próprio dono) e reabre o formulário pra lançar a corrigida —
+  // antes o vendedor ficava sem saída, só via a etiqueta "Rejeitado".
+  const handleRefazerDespesa = async (despesa) => {
+    await deleteDespesa(despesa.id);
+    setShowNovaDespesa(true);
+  };
+
   const handleVerComprovante = async (despesa) => {
     const url = await getComprovanteUrl(despesa.comprovante_path);
     window.open(url, "_blank");
@@ -840,7 +877,7 @@ export function CRMViagensPlanejamentoView({ currentUser, leads = [], pushNotifi
         ) : (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
             {despesasDoMes.map((d) => (
-              <DespesaRow key={d.id} despesa={d} onVerComprovante={handleVerComprovante} />
+              <DespesaRow key={d.id} despesa={d} onVerComprovante={handleVerComprovante} onRefazer={handleRefazerDespesa} />
             ))}
           </div>
         )}

@@ -685,23 +685,36 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   const customDefs = stageFieldsHook.getFields(item.stage);
   const [customDraft, setCustomDraft] = useState({});
   const customDebounceRef = useRef(null);
+  // Ref espelha o rascunho ACUMULADO — o timer precisa mesclar todos os campos
+  // tocados, não só o último (senão editar A e B em <600ms grava só B). Flush
+  // no cleanup pra não perder a edição ao fechar em <600ms. Achado da auditoria.
+  const customDraftRef = useRef({});
 
   useEffect(() => {
     setCustomDraft({});
+    customDraftRef.current = {};
     setMoveError(null);
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
-    return () => { if (customDebounceRef.current) clearTimeout(customDebounceRef.current); };
+    return () => {
+      if (customDebounceRef.current) { clearTimeout(customDebounceRef.current); customDebounceRef.current = null; }
+      if (Object.keys(customDraftRef.current).length > 0) {
+        onUpdate(item.id, { customFields: { ...(item.customFields || {}), ...customDraftRef.current } });
+      }
+    };
   }, [item.id]);
 
   const getCustomValue = (fieldKey) =>
     fieldKey in customDraft ? customDraft[fieldKey] : (item.customFields?.[fieldKey] ?? "");
 
   const handleCustomChange = (fieldKey, value) => {
-    setCustomDraft(prev => ({ ...prev, [fieldKey]: value }));
+    const next = { ...customDraftRef.current, [fieldKey]: value };
+    customDraftRef.current = next;
+    setCustomDraft(next);
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     customDebounceRef.current = setTimeout(() => {
-      const merged = { ...(item.customFields || {}), [fieldKey]: value };
+      const merged = { ...(item.customFields || {}), ...customDraftRef.current };
       onUpdate(item.id, { customFields: merged });
+      customDebounceRef.current = null;
     }, 600);
   };
 

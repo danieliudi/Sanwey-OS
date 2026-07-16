@@ -32,10 +32,22 @@ const SUBJECTS: Record<EmailType, string> = {
 
 // ── Template builders ─────────────────────────────────────────────────────────
 
+// Escapa HTML dos valores antes de injetar no template — sem isso, uma
+// variável (ex: nome do candidato) podia carregar markup/links de phishing
+// direto no corpo do e-mail. Achado da 2ª auditoria.
+function escapeHtml(s: string): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function applyVars(html: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce(
     (acc, [key, value]) =>
-      acc.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value ?? ""),
+      acc.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), escapeHtml(value ?? "")),
     html,
   );
 }
@@ -444,6 +456,23 @@ Deno.serve(async (req) => {
     if (userErr || !userData?.user) {
       return new Response(JSON.stringify({ error: "Sessão inválida" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Achado da 2ª auditoria: faltava checar cargo (só validava sessão). Sem
+    // isso, qualquer autenticado (inclusive uma conta "agencia" externa)
+    // conseguia disparar e-mail de "noreply@sanwey.com.br" pra destinatário
+    // arbitrário com variáveis controladas — relay de phishing/spam a partir
+    // do domínio da empresa. As telas que usam esta função são todas RH-only.
+    const { data: callerProfile } = await supabase
+      .from("profiles")
+      .select("roles")
+      .eq("id", userData.user.id)
+      .maybeSingle();
+    const callerRoles: string[] = Array.isArray(callerProfile?.roles) ? callerProfile.roles : [];
+    if (!callerRoles.some((r) => ["rh", "gerente_rh", "admin"].includes(r))) {
+      return new Response(JSON.stringify({ error: "Sem permissão para enviar e-mails de RH." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 

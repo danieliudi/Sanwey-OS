@@ -136,7 +136,6 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick }) {
 
 /* ── Create modal (formulário interno, mesmos campos do público) ────── */
 function CreateModal({ currentUser, onCreate, onClose }) {
-  useEscToClose(onClose);
   const [form, setForm] = useState({
     itemName:       "",
     description:    "",
@@ -148,6 +147,19 @@ function CreateModal({ currentUser, onCreate, onClose }) {
   });
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState(null);
+
+  // Guarda contra descarte acidental: fechar por clique-fora/ESC/Cancelar com
+  // o formulário preenchido pede confirmação. Achado da 2ª auditoria.
+  const initialSnapshotRef = useRef(null);
+  const stateRef = useRef(null);
+  stateRef.current = JSON.stringify(form);
+  if (initialSnapshotRef.current === null) initialSnapshotRef.current = stateRef.current;
+  const guardedClose = useCallback(() => {
+    if (stateRef.current !== initialSnapshotRef.current
+        && !window.confirm("Descartar os dados preenchidos? As informações não salvas serão perdidas.")) return;
+    onClose();
+  }, [onClose]);
+  useEscToClose(guardedClose);
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
   const toggleCompany = (id) => setForm(prev => ({
@@ -182,11 +194,11 @@ function CreateModal({ currentUser, onCreate, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      onClick={e => { if (e.target === e.currentTarget) guardedClose(); }}>
       <form onSubmit={handleSubmit} className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-base" style={{ color: "var(--text)" }}>Nova solicitação de compra</h3>
-          <button type="button" onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer" }}>
+          <button type="button" onClick={guardedClose} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer" }}>
             <X size={16} />
           </button>
         </div>
@@ -245,7 +257,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
         {error && <div className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{error}</div>}
 
         <div className="flex justify-end gap-2 mt-5">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
+          <button type="button" onClick={guardedClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
           <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg text-sm font-semibold"
             style={{ background: "var(--accent)", color: "#fff", opacity: saving ? 0.6 : 1 }}>

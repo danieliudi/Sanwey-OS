@@ -246,6 +246,18 @@ export function LeadCreateModal({
   // não precisar abrir o card de novo só pra preencher o que a fase pede.
   const [customValues, setCustomValues] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Guarda contra descarte acidental: fechar por clique-fora/ESC/X com o
+  // formulário preenchido pede confirmação. Achado da 2ª auditoria.
+  const initialSnapshotRef = useRef(null);
+  const stateRef = useRef(null);
+  stateRef.current = JSON.stringify({ values, customValues });
+  if (initialSnapshotRef.current === null) initialSnapshotRef.current = stateRef.current;
+  const guardedClose = useCallback(() => {
+    if (stateRef.current !== initialSnapshotRef.current
+        && !window.confirm("Descartar os dados preenchidos? As informações não salvas serão perdidas.")) return;
+    onClose();
+  }, [onClose]);
   const [error, setError] = useState(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [duplicates, setDuplicates] = useState([]);
@@ -402,7 +414,7 @@ export function LeadCreateModal({
 
   // ESC fecha o modal via hook global (pilha LIFO) — funciona mesmo sem foco
   // dentro do modal, diferente do antigo onKeyDown na raiz.
-  useEscToClose(onClose, open);
+  useEscToClose(guardedClose, open);
 
   const company = COMPANIES[companyId];
   const requiredMissing = (formConfig || []).some(e =>
@@ -416,7 +428,7 @@ export function LeadCreateModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6"
       style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)" }}
-      onClick={onClose}
+      onClick={guardedClose}
       role="dialog"
       aria-modal="true"
     >
@@ -465,7 +477,7 @@ export function LeadCreateModal({
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={guardedClose}
               className="p-1.5 rounded-lg transition-colors cursor-pointer"
               style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}

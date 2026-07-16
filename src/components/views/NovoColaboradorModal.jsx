@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check, Camera } from "lucide-react";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
@@ -50,11 +50,24 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
   const [captureOpen, setCaptureOpen] = useState(false);
   const fileInputRef = useRef();
 
+  // Guarda contra descarte acidental: fechar por clique-fora/ESC/Cancelar com
+  // o formulário preenchido pede confirmação. Sem isso, um clique na área
+  // escura apagava ~25 campos (e o re-upload + re-extração da IA) sem aviso.
+  // Achado da 2ª auditoria.
+  const initialSnapshotRef = useRef(JSON.stringify(initialData ? { ...EMPTY_FORM, ...initialData } : EMPTY_FORM));
+  const stateRef = useRef({ form, file });
+  stateRef.current = { form, file };
+  const guardedClose = useCallback(() => {
+    const dirty = JSON.stringify(stateRef.current.form) !== initialSnapshotRef.current || !!stateRef.current.file;
+    if (dirty && !window.confirm("Descartar os dados preenchidos? As informações não salvas serão perdidas.")) return;
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") onClose(); };
+    const h = (e) => { if (e.key === "Escape") guardedClose(); };
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
+  }, [guardedClose]);
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
@@ -135,7 +148,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
     <>
     <div
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
+      onClick={guardedClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 620, boxShadow: "var(--shadow-pop)", maxHeight: "92vh", overflowY: "auto" }}
@@ -143,7 +156,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
       >
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{initialData ? "Editar Funcionário" : "Novo Funcionário"}</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
+          <button onClick={guardedClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
             <X size={18} />
           </button>
         </div>
@@ -355,7 +368,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
             <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Cadastrar funcionário"}
             </button>
-            <button type="button" onClick={onClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
               Cancelar
             </button>
           </div>
