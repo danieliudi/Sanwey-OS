@@ -1035,7 +1035,16 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
       for (const colaborador of colaboradores.filter(c => c.employeeStatus === "ativo")) {
         const feedbacksDoColaborador = feedbacks.filter(f => f.user_id === colaborador.id);
         const proximo = nextPendingCycle(colaborador, feedbacksDoColaborador);
-        if (proximo) await createPendingCycle(colaborador.id, proximo.tipo, proximo.periodStart, proximo.periodEnd);
+        if (!proximo) continue;
+        // try/catch por colaborador — sem isso, um erro (ex: colaborador sem
+        // admissionDate gerando period_start nulo, rejeitado pelo banco)
+        // interrompia o for e ninguém depois dele na lista era reconciliado
+        // nessa sessão, sem nenhum aviso (achado da auditoria).
+        try {
+          await createPendingCycle(colaborador.id, proximo.tipo, proximo.periodStart, proximo.periodEnd);
+        } catch (e) {
+          console.error(`Falha ao reconciliar ciclo de feedback de ${colaborador.name || colaborador.id}:`, e);
+        }
       }
     })();
   }, [canWrite, loading, colaboradores, feedbacks, createPendingCycle]);

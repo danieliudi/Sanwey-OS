@@ -12,8 +12,11 @@ const MANAGER_ROLES = new Set(["gerente", "admin"]);
 // viagens; gerente também planeja as próprias E gerencia o time (por isso
 // aparece nas duas abas); admin só gerencia (não tem viagens próprias).
 export function CRMViagensView({ currentUser, leads, users, pushNotification }) {
-  const podePlanejarPropria = COMERCIAL_ROLES.has(currentUser?.role);
-  const isGestor = MANAGER_ROLES.has(currentUser?.role);
+  // roles[] cobre cargo adicional (ex: vendedor como cargo secundário) —
+  // currentUser.role sozinho (cargo principal) fica só de fallback.
+  const userRoleList = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
+  const podePlanejarPropria = userRoleList.some(r => COMERCIAL_ROLES.has(r));
+  const isGestor = userRoleList.some(r => MANAGER_ROLES.has(r));
 
   const tabs = [];
   if (podePlanejarPropria) tabs.push({ id: "minhas", label: "Minhas viagens", icon: Plane });

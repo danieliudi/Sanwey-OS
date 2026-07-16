@@ -208,6 +208,7 @@ export default function App() {
   const { campaigns } = useMarketingCampaigns({
     userId: currentUser?.id,
     role: currentUser?.role,
+    roles: currentUser?.roles,
     companies: currentUser?.companies,
     enabled: Boolean(currentUser) && (isMarketingUser || isAgencia),
   });

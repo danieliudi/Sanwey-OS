@@ -452,8 +452,11 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline }) {
   const isGroupView = activeCompany === "all";
-  const isManager = user.role === "gerente" || user.role === "admin";
-  const isConsultor = user.role === "consultor";
+  // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
+  // user.role sozinho (cargo principal) fica só de fallback.
+  const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
+  const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
+  const isConsultor = userRoleList.includes("consultor");
 
   // IDs of consultores supervised by this vendedor
   const subordinateIds = useMemo(() => {

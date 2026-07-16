@@ -19,8 +19,11 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
   const usersById = useUsersById(users);
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
   const isGroupView = activeCompany === "all";
-  const isManager = user.role === "gerente" || user.role === "admin";
-  const isConsultor = user.role === "consultor";
+  // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
+  // user.role sozinho (cargo principal) fica só de fallback.
+  const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
+  const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
+  const isConsultor = userRoleList.includes("consultor");
   const companyData = isGroupView ? null : COMPANIES[activeCompany];
   const accent = companyData?.primary || null;
 

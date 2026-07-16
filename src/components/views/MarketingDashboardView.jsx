@@ -509,7 +509,7 @@ function SectionLabel({ children }) {
 // ── Main view ──────────────────────────────────────────────────────────────────────
 
 export function MarketingDashboardView({ user }) {
-  const { campaigns,    loading: lC } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
+  const { campaigns,    loading: lC } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
   const { deliverables, loading: lD } = useMarketingDeliverables({ userId: user?.id, role: user?.role });
   const { expenses,     loading: lE } = useMarketingExpenses({ userId: user?.id, role: user?.role });
 

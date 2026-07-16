@@ -646,7 +646,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     changeStage,
     toggleStar,
     updateChecklist,
-  } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
+  } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const stageFields = useRHStageFields("marketing");
 

@@ -142,6 +142,14 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     if (!current) return;
     const merged = { ...current, ...patch };
     const row = deliverableToRow(merged);
+    // request_number só deve ir na escrita quando o patch pede explicitamente
+    // (EditableProtocolNumber) — do contrário, qualquer edição de campo não
+    // relacionado (prioridade, prazo, etapa...) reenviaria o valor lido do
+    // estado local do componente (pode estar desatualizado se outra pessoa
+    // mudou o número entretanto) e dispararia à toa o trigger de sincronia
+    // do razão de protocolo, podendo reverter silenciosamente um número já
+    // alterado por outra pessoa nesse meio tempo (achado da auditoria).
+    if (!("requestNumber" in patch)) delete row.request_number;
     const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
     if (err) throw err;
     setDeliverables(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));

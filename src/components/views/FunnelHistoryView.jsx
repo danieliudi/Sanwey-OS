@@ -106,7 +106,10 @@ function StageCell({ stageId, isFirst, isPrevSame }) {
 // ── Main view ──────────────────────────────────────────────────────────────
 export function FunnelHistoryView({ user, activeCompany, leads, users }) {
   const isGroupView = activeCompany === "all";
-  const isManager = user.role === "gerente" || user.role === "admin";
+  // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
+  // user.role sozinho (cargo principal) fica só de fallback.
+  const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
+  const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
   const usersById = useUsersById(users);
 
   const [granularity, setGranularity] = useState("weekly");

@@ -229,7 +229,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
   const [rejectObs, setRejectObs] = useState("");
 
   const vendedoresComerciais = useMemo(
-    () => (users || []).filter((u) => COMERCIAL_ROLES.has(u.role)),
+    () => (users || []).filter((u) => (u.roles?.length ? u.roles : [u.role]).some(r => COMERCIAL_ROLES.has(r))),
     [users]
   );
 

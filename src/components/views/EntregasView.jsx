@@ -466,7 +466,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     changeStage, toggleStar,
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
 
-  const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role });
+  const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
   const campaignsById = useMemo(() => new Map(campaigns.map(c => [c.id, c])), [campaigns]);
   const stageFields = useRHStageFields("marketing_deliverables");
 

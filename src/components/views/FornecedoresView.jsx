@@ -156,7 +156,7 @@ function SupplierModal({ supplier, onSave, onClose }) {
 /* ── Suppliers tab ───────────────────────────────────────────────── */
 function SuppliersTab({ user }) {
   const { suppliers, loading, canWrite, createSupplier, updateSupplier, deleteSupplier } =
-    useMarketingSuppliers({ userId: user?.id, role: user?.role });
+    useMarketingSuppliers({ userId: user?.id, role: user?.role, roles: user?.roles });
   const [editing, setEditing] = useState(null); // supplier | "new" | null
   const [confirmDelete, setConfirmDelete] = useState(null);
 
@@ -479,11 +479,11 @@ function QuoteCard({ quote, canApprove, sending, onApprove, onReject, onResend, 
 
 /* ── Quotes tab ───────────────────────────────────────────────────── */
 function QuotesTab({ user }) {
-  const { suppliers } = useMarketingSuppliers({ userId: user?.id, role: user?.role });
+  const { suppliers } = useMarketingSuppliers({ userId: user?.id, role: user?.role, roles: user?.roles });
   const {
     quotes, loading, error, canWrite, canApprove, sendingId,
     createQuote, approveAndSendQuote, resendQuoteEmail, rejectQuote, recordResponse,
-  } = useMarketingQuotes({ userId: user?.id, role: user?.role });
+  } = useMarketingQuotes({ userId: user?.id, role: user?.role, roles: user?.roles });
   const { template, saveTemplate } = useMarketingQuoteTemplate({ enabled: canApprove });
 
   const [statusFilter, setStatusFilter] = useState("pendente");

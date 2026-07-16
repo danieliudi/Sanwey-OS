@@ -499,7 +499,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
     approvePurchase, rejectPurchase, getLastPurchasePrice,
   } = useMarketingPurchaseRequests();
 
-  const { suppliers } = useMarketingSuppliers({ userId: user?.id, role: user?.role });
+  const { suppliers } = useMarketingSuppliers({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
   const [showCreate, setShowCreate] = useState(false);

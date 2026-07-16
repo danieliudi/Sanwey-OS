@@ -72,6 +72,7 @@ function leadStageLabel(companyStages, stage) {
 export function useMyTasks({ currentUser } = {}) {
   const userId = currentUser?.id;
   const role = currentUser?.role;
+  const roles = currentUser?.roles;
   const companies = currentUser?.companies;
 
   const { leads, loading: leadsLoading } = useLeads({ userId, role, companies });
@@ -79,11 +80,11 @@ export function useMyTasks({ currentUser } = {}) {
   // channel) — reused as-is rather than approximating staleness, since the
   // real per-company SLA config was readily available here.
   const { pipelines } = usePipelines();
-  const { campaigns, loading: campaignsLoading } = useMarketingCampaigns({ userId, role });
-  const { deliverables, loading: deliverablesLoading } = useMarketingDeliverables({ userId, role });
+  const { campaigns, loading: campaignsLoading } = useMarketingCampaigns({ userId, role, roles });
+  const { deliverables, loading: deliverablesLoading } = useMarketingDeliverables({ userId, role, roles });
   const { purchases, loading: purchasesLoading } = useMarketingPurchaseRequests({});
-  const { quotes, loading: quotesLoading } = useMarketingQuotes({ userId, role });
-  const { requests: marketingRequests, loading: marketingRequestsLoading } = useMarketingRequests({ userId, role });
+  const { quotes, loading: quotesLoading } = useMarketingQuotes({ userId, role, roles });
+  const { requests: marketingRequests, loading: marketingRequestsLoading } = useMarketingRequests({ userId, role, roles });
   const { feedbacks, loading: feedbacksLoading } = useRHFeedback({ userId });
   const { requests: feriasRequests, loading: feriasLoading } = useRHFeriasRequests({});
   const { vagas, loading: recrutamentoLoading } = useRHRecrutamento({ userId });
