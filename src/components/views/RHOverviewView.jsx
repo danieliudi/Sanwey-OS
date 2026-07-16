@@ -331,7 +331,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
                   fontWeight: 800,
                   color: sc.accent,
                   lineHeight: 1,
-                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontFamily: "'Barlow Condensed', Inter, sans-serif",
                 }}
               >
                 {sc.value}

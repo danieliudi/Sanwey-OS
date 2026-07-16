@@ -60,7 +60,7 @@ export function generateICS({ campaigns = [], personalEvents = [], calendarName 
       [
         c.channel  ? `Canal: ${c.channel}` : "",
         c.kpi      ? `KPI: ${c.kpi}` : "",
-        c.budget   ? `Budget: R$${c.budget}` : "",
+        c.budget   ? `Orçamento: R$${c.budget}` : "",
         c.agencyName ? `Agência: ${c.agencyName}` : "",
       ].filter(Boolean).join("\\n")
     );

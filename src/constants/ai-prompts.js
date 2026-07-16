@@ -333,7 +333,7 @@ Analise os dados da campanha e recomende se é hora de avançar de etapa.`,
 **Dias nesta etapa:** ${daysInStage}d
 **Canal:** ${campaign.channel || '—'}
 **KPI principal:** ${campaign.kpi || '—'}
-**Budget:** R$ ${campaign.budget?.toLocaleString('pt-BR') || '—'}
+**Orçamento:** R$ ${campaign.budget?.toLocaleString('pt-BR') || '—'}
 **Lançamento:** ${launchDays !== null ? (launchDays > 0 ? `em ${launchDays} dias` : `${Math.abs(launchDays)} dias atrás`) : '—'}
 **Checklist de aprovação:** ${checklistTotal > 0 ? `${checklistDone}/${checklistTotal} itens concluídos` : 'Não configurado'}
 **Agência:** ${campaign.agencyName || '—'}

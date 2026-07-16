@@ -614,7 +614,7 @@ export function FornecedoresView({ user }) {
   return (
     <div className="max-w-5xl mx-auto space-y-4">
       <div>
-        <h1 className="font-bold text-xl" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>Fornecedores</h1>
+        <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>Fornecedores</h1>
         <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
           Agências, gráficas, confecções e outros parceiros de marketing — cadastro e cotações
         </p>

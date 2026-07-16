@@ -173,7 +173,7 @@ export default function PurchaseRequestForm() {
               </div>
             )}
             <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 360, margin: 0, lineHeight: 1.6 }}>
-              Recebemos seu pedido de compra{requestNumber ? ` (protocolo ${requestNumber})` : ""}. A equipe de Marketing irá analisar e cuidar de toda a compra até a entrega.
+              Recebemos sua solicitação de compra{requestNumber ? ` (protocolo ${requestNumber})` : ""}. A equipe de Marketing irá analisar e cuidar de toda a compra até a entrega.
             </p>
           </div>
         </div>

@@ -450,7 +450,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle }) {
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
@@ -464,6 +464,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     return new Set((users || []).filter(u => u.supervisorId === user.id).map(u => u.id));
   }, [users, user.id, user.role]);
   const [ownerFilter, setOwnerFilter] = useState("all");
+  const [starredOnly, setStarredOnly] = useState(false);
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "calendar"
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
@@ -519,13 +520,18 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   }, [leads, activeCompany, user.id, user.role, user.sectors, isGroupView, isManager, isConsultor, subordinateIds]);
 
   const scopedLeads = useMemo(() => {
+    let s = companyScopedLeads;
     if (isManager && ownerFilter !== "all") {
       // FASE 5: filtro "mostrar leads do fulano" bate se fulano estiver em
       // QUALQUER posição de ownerIds, não só como owner (principal).
-      return companyScopedLeads.filter(l => getLeadOwnerIds(l).includes(ownerFilter));
+      s = s.filter(l => getLeadOwnerIds(l).includes(ownerFilter));
     }
-    return companyScopedLeads;
-  }, [companyScopedLeads, ownerFilter, isManager]);
+    // Achado da 2ª auditoria: a estrela de favoritar existia na tabela mas
+    // não filtrava nada — mesmo padrão "Só favoritos" já usado em
+    // Entregas/Marketing.
+    if (starredOnly) s = s.filter(l => l.starred);
+    return s;
+  }, [companyScopedLeads, ownerFilter, isManager, starredOnly]);
 
   const byStage = useMemo(() => {
     const bucket = Object.create(null);
@@ -690,6 +696,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               label="Calendário"
             />
           </div>
+          <button
+            onClick={() => setStarredOnly(v => !v)}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "var(--border)"}`, background: starredOnly ? "#FFFBEB" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+          >
+            <Star size={11} fill={starredOnly ? "#F59E0B" : "none"} />
+            Só favoritos
+          </button>
           {isManager && !isGroupView && (
             <button
               onClick={() => setStageManagerOpen(true)}
@@ -1212,9 +1225,19 @@ function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
                   transition: "background 100ms",
                 }}
               >
-                {/* Star */}
+                {/* Star — clicável (achado da 2ª auditoria: célula era só leitura) */}
                 <td style={{ padding: "10px 4px 10px 12px", width: 36 }}>
-                  {lead.starred && <Star size={13} fill="#F59E0B" color="#F59E0B" />}
+                  {onStarToggle ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onStarToggle(lead.id); }}
+                      style={{ display: "flex", background: "transparent", border: "none", cursor: "pointer", padding: 2 }}
+                      title={lead.starred ? "Remover dos favoritos" : "Marcar como favorito"}
+                    >
+                      <Star size={13} fill={lead.starred ? "#F59E0B" : "none"} color={lead.starred ? "#F59E0B" : "var(--text-dim)"} />
+                    </button>
+                  ) : (
+                    lead.starred && <Star size={13} fill="#F59E0B" color="#F59E0B" />
+                  )}
                 </td>
                 {/* Company */}
                 <td style={{ padding: "10px 12px" }}>

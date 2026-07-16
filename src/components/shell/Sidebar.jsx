@@ -207,7 +207,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
         >
           <button
             onClick={() => handleNavClick("settings")}
-            title="Meu perfil"
+            title="Configurações"
             style={{
               flex: 1,
               minWidth: 0,

@@ -35,6 +35,32 @@ function Section({ title, description, children }) {
   );
 }
 
+// Achado da 2ª auditoria: os 4 botões de copiar link desta tela não davam
+// nenhuma confirmação visual de sucesso (padrão já usado em CampaignCalendar,
+// DeliverableDetailDrawer, LeadAIPanel, ComprasMarketingView).
+function CopyLinkButton({ url, className, style }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard?.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className={className}
+      style={{
+        ...style,
+        ...(copied ? { background: "#DCFCE7", color: "#15803D", borderColor: "#BBF7D0" } : {}),
+      }}
+      title={url}
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+      {copied ? "Copiado!" : "Copiar"}
+    </button>
+  );
+}
+
 function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
   return (
     <label
@@ -436,7 +462,7 @@ export function SettingsView({
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-            {isManager ? "Configurações" : "Meu perfil"}
+            Configurações
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {isManager
@@ -1391,17 +1417,11 @@ export function SettingsView({
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <button
-                                  onClick={() => navigator.clipboard?.writeText(url)}
+                                <CopyLinkButton
+                                  url={url}
                                   className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
                                   style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                                  title="Copiar link"
-                                >
-                                  <Copy size={12} />
-                                  Copiar
-                                </button>
+                                />
                                 <a
                                   href={url}
                                   target="_blank"
@@ -1453,17 +1473,11 @@ export function SettingsView({
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/solicitar-marketing`)}
+                          <CopyLinkButton
+                            url={`${window.location.origin}/solicitar-marketing`}
                             className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
                             style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                            title="Copiar link"
-                          >
-                            <Copy size={12} />
-                            Copiar
-                          </button>
+                          />
                           <a
                             href={`${window.location.origin}/solicitar-marketing`}
                             target="_blank"
@@ -1493,17 +1507,11 @@ export function SettingsView({
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/solicitar-compra`)}
+                          <CopyLinkButton
+                            url={`${window.location.origin}/solicitar-compra`}
                             className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
                             style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                            title="Copiar link"
-                          >
-                            <Copy size={12} />
-                            Copiar
-                          </button>
+                          />
                           <a
                             href={`${window.location.origin}/solicitar-compra`}
                             target="_blank"
@@ -1565,17 +1573,11 @@ export function SettingsView({
                                   ))}
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                  <button
-                                    onClick={() => navigator.clipboard?.writeText(url)}
+                                  <CopyLinkButton
+                                    url={url}
                                     className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer transition-colors"
                                     style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
-                                    title="Copiar link"
-                                  >
-                                    <Copy size={12} />
-                                    Copiar
-                                  </button>
+                                  />
                                   <a
                                     href={url}
                                     target="_blank"

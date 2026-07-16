@@ -1,58 +1,66 @@
 import React, { useState } from "react";
+import {
+  CheckSquare, Handshake, Megaphone, Users, Bell, Globe2, Package, DollarSign,
+  LayoutDashboard, BriefcaseBusiness, CalendarCheck, Menu as MenuIcon, Settings as SettingsIcon, LogOut,
+} from "lucide-react";
 
+// Ícones alinhados com os mesmos ids usados no navGroups do desktop
+// (App.jsx) — antes esta barra usava Material Symbols enquanto o resto da
+// plataforma usa lucide-react, uma biblioteca visualmente inconsistente
+// pra cada mesma seção. Achado da 2ª auditoria.
 /* ── Role-aware bottom tab sets ──────────────────────────────── */
 const ROLE_TABS = {
   admin: [
-    { id: "dashboard",       label: "Início",       icon: "home" },
-    { id: "crm",             label: "CRM",          icon: "handshake" },
-    { id: "marketing",       label: "Campanhas",    icon: "campaign" },
-    { id: "rh-funcionarios", label: "RH",           icon: "group" },
+    { id: "dashboard",       label: "Minhas Tarefas",       icon: CheckSquare },
+    { id: "crm",             label: "CRM",          icon: Handshake },
+    { id: "marketing",       label: "Campanhas",    icon: Megaphone },
+    { id: "rh-funcionarios", label: "RH",           icon: Users },
   ],
   gerente: [
-    { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "crm",                label: "CRM",       icon: "handshake" },
-    { id: "signals",            label: "Sinais",    icon: "monitoring" },
-    { id: "explorer",           label: "Explorador",icon: "explore" },
+    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
+    { id: "crm",                label: "CRM",       icon: Handshake },
+    { id: "signals",            label: "Sinais",    icon: Bell },
+    { id: "explorer",           label: "Explorador",icon: Globe2 },
   ],
   gerente_marketing: [
-    { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "marketing",          label: "Campanhas", icon: "campaign" },
-    { id: "marketing-entregas", label: "Entregas",  icon: "inventory_2" },
-    { id: "marketing-despesas", label: "Despesas",  icon: "payments" },
+    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
+    { id: "marketing",          label: "Campanhas", icon: Megaphone },
+    { id: "marketing-entregas", label: "Entregas",  icon: Package },
+    { id: "marketing-despesas", label: "Despesas",  icon: DollarSign },
   ],
   marketing: [
-    { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "marketing",          label: "Campanhas", icon: "campaign" },
-    { id: "marketing-entregas", label: "Entregas",  icon: "inventory_2" },
-    { id: "marketing-despesas", label: "Despesas",  icon: "payments" },
+    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
+    { id: "marketing",          label: "Campanhas", icon: Megaphone },
+    { id: "marketing-entregas", label: "Entregas",  icon: Package },
+    { id: "marketing-despesas", label: "Despesas",  icon: DollarSign },
   ],
   vendedor: [
-    { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "crm",                label: "CRM",       icon: "handshake" },
-    { id: "signals",            label: "Sinais",    icon: "monitoring" },
-    { id: "explorer",           label: "Explorador",icon: "explore" },
+    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
+    { id: "crm",                label: "CRM",       icon: Handshake },
+    { id: "signals",            label: "Sinais",    icon: Bell },
+    { id: "explorer",           label: "Explorador",icon: Globe2 },
   ],
   consultor: [
-    { id: "dashboard",          label: "Início",    icon: "home" },
-    { id: "crm",                label: "CRM",       icon: "handshake" },
-    { id: "signals",            label: "Sinais",    icon: "monitoring" },
-    { id: "explorer",           label: "Explorador",icon: "explore" },
+    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
+    { id: "crm",                label: "CRM",       icon: Handshake },
+    { id: "signals",            label: "Sinais",    icon: Bell },
+    { id: "explorer",           label: "Explorador",icon: Globe2 },
   ],
   agencia: [
-    { id: "marketing",          label: "Campanhas", icon: "campaign" },
-    { id: "marketing-entregas", label: "Entregas",  icon: "inventory_2" },
+    { id: "marketing",          label: "Campanhas", icon: Megaphone },
+    { id: "marketing-entregas", label: "Entregas",  icon: Package },
   ],
   rh: [
-    { id: "rh-overview",     label: "Visão Geral",  icon: "dashboard" },
-    { id: "rh-funcionarios", label: "Funcionários",  icon: "group" },
-    { id: "rh-recrutamento", label: "Recrutamento",  icon: "work" },
-    { id: "rh-ferias",       label: "Férias",        icon: "beach_access" },
+    { id: "rh-overview",     label: "Visão Geral",  icon: LayoutDashboard },
+    { id: "rh-funcionarios", label: "Funcionários",  icon: Users },
+    { id: "rh-recrutamento", label: "Recrutamento",  icon: BriefcaseBusiness },
+    { id: "rh-ferias",       label: "Férias",        icon: CalendarCheck },
   ],
   gerente_rh: [
-    { id: "rh-overview",     label: "Visão Geral",  icon: "dashboard" },
-    { id: "rh-funcionarios", label: "Funcionários",  icon: "group" },
-    { id: "rh-recrutamento", label: "Recrutamento",  icon: "work" },
-    { id: "rh-ferias",       label: "Férias",        icon: "beach_access" },
+    { id: "rh-overview",     label: "Visão Geral",  icon: LayoutDashboard },
+    { id: "rh-funcionarios", label: "Funcionários",  icon: Users },
+    { id: "rh-recrutamento", label: "Recrutamento",  icon: BriefcaseBusiness },
+    { id: "rh-ferias",       label: "Férias",        icon: CalendarCheck },
   ],
 };
 
@@ -164,14 +172,14 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
             onClick={() => { onSectionChange("settings"); onClose(); }}
             style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#6B7280", textAlign: "left", fontFamily: "inherit" }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
+            <SettingsIcon size={20} />
             Configurações
           </button>
           <button
             onClick={() => { onLogout?.(); onClose(); }}
             style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#DC2626", textAlign: "left", fontFamily: "inherit" }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>logout</span>
+            <LogOut size={20} />
             Sair da conta
           </button>
         </div>
@@ -194,7 +202,7 @@ export function MobileBottomNav({ section, onSectionChange, roles, navGroups, cu
         className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-white border-t border-border-subtle z-30 flex justify-around items-stretch"
         style={{ height: 64 }}
       >
-        {tabs.map(({ id, label, icon }) => {
+        {tabs.map(({ id, label, icon: Icon }) => {
           const active = section === id;
           return (
             <button
@@ -211,13 +219,11 @@ export function MobileBottomNav({ section, onSectionChange, roles, navGroups, cu
               }}
               aria-label={label}
             >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 24, fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}
-              >
-                {icon}
-              </span>
-              <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, lineHeight: 1 }}>
+              <Icon size={24} strokeWidth={active ? 2.3 : 2} />
+              {/* whiteSpace/overflow/ellipsis: "Minhas Tarefas" é mais longo que
+                  "Início" (unificado com o desktop, achado da 2ª auditoria) —
+                  evita quebra feia de linha em telas estreitas. */}
+              <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", padding: "0 2px" }}>
                 {label}
               </span>
             </button>
@@ -235,7 +241,7 @@ export function MobileBottomNav({ section, onSectionChange, roles, navGroups, cu
           }}
           aria-label="Menu"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 24 }}>menu</span>
+          <MenuIcon size={24} />
           <span style={{ fontSize: 11, fontWeight: 500, lineHeight: 1 }}>Menu</span>
         </button>
       </nav>

@@ -904,8 +904,16 @@ export default function App() {
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
-    if (section === "settings" && !isManager)          return "Meu perfil";
+    // Unificado com o rótulo já usado no MobileBottomNav e no tooltip do
+    // Sidebar ("Configurações") — antes só o não-gerente via "Meu perfil"
+    // aqui, uma 3ª variação de nome pra mesma tela. Achado da 2ª auditoria.
+    if (section === "settings" && !isManager)          return "Configurações";
+    // Três seções distintas usam o mesmo rótulo de menu "Visão Geral" — sem o
+    // sufixo de departamento, o título do topbar ficava ambíguo (só Marketing
+    // tinha o sufixo). Achado da 2ª auditoria.
+    if (section === "commercial-overview")             return "Visão Geral · Comercial";
     if (section === "marketing-home")                  return "Visão Geral · Marketing";
+    if (section === "rh-overview")                     return "Visão Geral · RH";
     if (section === "marketing-solicitacoes")          return "Solicitações · Marketing";
     if (section === "marketing-fornecedores")          return "Fornecedores · Marketing";
     for (const g of navGroups) {
@@ -1173,6 +1181,7 @@ export default function App() {
               onLeadClick={setSelectedLead}
               onStageChange={handleStageChange}
               onAddLead={handleAddLead}
+              onStarToggle={toggleStar}
               visibleStages={settings.visibleKanbanStages}
               pipelineTransitions={pipelineTransitions}
               clients={clients}

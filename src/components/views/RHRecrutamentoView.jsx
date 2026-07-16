@@ -34,6 +34,7 @@ import {
   RH_CONTRACT_TYPES,
 } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
+import { formatBRL } from "../../utils/currency";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
@@ -360,6 +361,17 @@ function daysInStage(dateStr) {
 function fmt(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("pt-BR");
+}
+
+// Achado da 2ª auditoria: valores brutos concatenados com "—" ("R$ 3000 – R$ —")
+// quando só um dos limites era preenchido. Agora usa formatBRL e frases naturais.
+function fmtSalaryRange(min, max) {
+  const hasMin = min != null && min !== "";
+  const hasMax = max != null && max !== "";
+  if (!hasMin && !hasMax) return "—";
+  if (hasMin && !hasMax) return `A partir de ${formatBRL(min)}`;
+  if (!hasMin && hasMax) return `Até ${formatBRL(max)}`;
+  return `${formatBRL(min)} – ${formatBRL(max)}`;
 }
 
 // ── Kanban/Tabela/Calendário — mesmo padrão de ComprasMarketingView/RHFeriasView ──
@@ -1009,7 +1021,7 @@ function VagaDrawer({
           { label: "Jornada", value: vaga.schedule || "—" },
           { label: "Escala", value: vaga.shift || "—" },
           { label: "Prazo para contratação", value: fmt(vaga.hiring_deadline) },
-          { label: "Faixa salarial", value: (vaga.salary_min || vaga.salary_max) ? `R$ ${vaga.salary_min || "0"} – R$ ${vaga.salary_max || "—"}` : "—" },
+          { label: "Faixa salarial", value: fmtSalaryRange(vaga.salary_min, vaga.salary_max) },
           { label: "Candidatos", value: String(candidatosCount) },
         ].map((f) => (
           <div key={f.label}>

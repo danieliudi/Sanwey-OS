@@ -440,7 +440,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                     <span
                       className="text-sm font-bold"
                       style={{
-                        fontFamily: "'Barlow Condensed', sans-serif",
+                        fontFamily: "'Barlow Condensed', Inter, sans-serif",
                         color: CLASS_COLORS[d.label] || "var(--text)",
                       }}
                     >
@@ -591,7 +591,7 @@ function CompareCard({ label, curr, prev, fmt }) {
       <div
         className="leading-none mb-2"
         style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Barlow Condensed', Inter, sans-serif",
           fontWeight: 900,
           fontSize: 28,
           color: "var(--text)",

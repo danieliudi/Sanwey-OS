@@ -184,7 +184,7 @@ export default function MarketingRequestForm() {
               </div>
             )}
             <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 360, margin: 0, lineHeight: 1.6 }}>
-              Recebemos seu pedido{requestNumber ? ` (protocolo ${requestNumber})` : ""}. A equipe de Marketing irá analisá-lo e você receberá um retorno em breve.
+              Recebemos sua solicitação{requestNumber ? ` (protocolo ${requestNumber})` : ""}. A equipe de Marketing irá analisá-la e você receberá um retorno em breve.
             </p>
           </div>
         </div>

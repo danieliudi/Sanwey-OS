@@ -105,7 +105,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     { label: "Cross-sell", key: null },
     { label: "Produtos", key: "products" },
     { label: "Último pedido", key: "lastOrder" },
-    { label: "Ticket médio", key: "avgTicket" },
+    { label: "Ticket médio", key: "avgTicket", numeric: true },
     { label: "", key: null },
   ];
   const sortValue = (c, col) => {
@@ -232,7 +232,20 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando…</div>
       ) : filtered.length === 0 ? (
         <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>
-          {query ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado ainda."}
+          {clients.length === 0 ? (
+            "Nenhum cliente cadastrado ainda."
+          ) : (
+            <>
+              Nenhum cliente corresponde aos filtros aplicados.{" "}
+              <button
+                onClick={() => { setQuery(""); setOnlyOpportunities(false); }}
+                className="font-semibold underline cursor-pointer"
+                style={{ background: "none", border: "none", color: "var(--accent)", padding: 0 }}
+              >
+                Limpar filtros
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -240,7 +253,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
             <thead>
               <tr>
                 {COLS.map((col, i) => (
-                  <th key={i} className="text-left font-bold uppercase"
+                  <th key={i} className={col.numeric ? "text-right font-bold uppercase" : "text-left font-bold uppercase"}
                     onClick={() => toggleSort(col.key)}
                     style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--text-dim)", padding: "10px 12px", borderBottom: "1px solid #E5E7EB", cursor: col.key ? "pointer" : "default", userSelect: "none", whiteSpace: "nowrap" }}>
                     {col.label}
@@ -299,7 +312,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                   <td style={{ padding: "12px", fontSize: 13, color: "var(--text-dim)", whiteSpace: "nowrap" }}>
                     {stats?.lastOrder ? formatDateBR(stats.lastOrder) : "—"}
                   </td>
-                  <td style={{ padding: "12px", fontSize: 13, color: "var(--text)", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "12px", fontSize: 13, color: "var(--text)", whiteSpace: "nowrap", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                     {stats?.avgTicket ? formatBRL(stats.avgTicket) : "—"}
                   </td>
                   <td style={{ padding: "12px", textAlign: "right", whiteSpace: "nowrap" }}>

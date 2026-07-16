@@ -225,9 +225,9 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
             </div>
           </div>
 
-          {/* Budget */}
+          {/* Orçamento */}
           <div style={{ marginBottom: 16 }}>
-            <label style={labelSt}>Budget (R$)</label>
+            <label style={labelSt}>Orçamento (R$)</label>
             <CurrencyInput
               prefix={null}
               placeholder="0,00"
@@ -393,7 +393,7 @@ function KpiBar({ campaigns }) {
   return (
     <div className="grid grid-cols-3 gap-2 mb-3">
       <KpiCard label="Campanhas ativas" value={String(active)} />
-      <KpiCard label="Budget total"     value={formatK(totalBudget)} />
+      <KpiCard label="Orçamento total"     value={formatK(totalBudget)} />
       <KpiCard label="Urgente"          value={String(urgent)} red={urgent > 0} />
     </div>
   );
@@ -568,7 +568,7 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
-            {["Campanha", "Empresa(s)", "Canal", "Etapa", "Responsável", "Budget", "Lançamento"].map(h => (
+            {["Campanha", "Empresa(s)", "Canal", "Etapa", "Responsável", "Orçamento", "Lançamento"].map(h => (
               <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
                 {h}
               </th>
@@ -728,7 +728,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
 
   const exportCampaignsCSV = useCallback(() => {
     const rows = [
-      ["Nome", "Canal", "Budget", "KPI", "Etapa", "Empresas", "Lançamento"].join(","),
+      ["Nome", "Canal", "Orçamento", "KPI", "Etapa", "Empresas", "Lançamento"].join(","),
       ...filteredCampaigns.map(c => [
         `"${c.name}"`, c.channel || "", c.budget, c.kpi || "",
         c.stage, (c.companyIds || []).join(";"),
@@ -910,7 +910,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               onClick={() => setQuickAddStage("briefing")}
               className="flex items-center gap-1.5 font-semibold"
               style={{
-                background: "var(--color-industria)",
+                background: "var(--accent)",
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: 10,

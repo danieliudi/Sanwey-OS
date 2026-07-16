@@ -923,10 +923,11 @@ export function RHFuncionariosView({
         {canWrite && (
           <button
             onClick={() => setNovoColaboradorOpen(true)}
+            className="flex items-center gap-1.5 font-semibold"
             style={{
               background: "var(--accent)", color: "#FFF", borderRadius: 10,
-              padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none",
-              cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 16px", fontSize: 13, border: "none",
+              cursor: "pointer",
             }}
           >
             <Plus size={14} /> Novo Funcionário

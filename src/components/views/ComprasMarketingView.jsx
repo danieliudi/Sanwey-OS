@@ -359,7 +359,7 @@ function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
             {["Protocolo", "Item", "Fornecedor", "Valor", "Vencimento", "Etapa", "Responsável"].map(h => (
-              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+              <th key={h} className={h === "Valor" ? "text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" : "text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide"} style={{ color: "var(--text-dim)" }}>
                 {h}
               </th>
             ))}

@@ -673,7 +673,7 @@ export function MarketingDashboardView({ user }) {
           sub={kpi.live > 0 ? "em exibição" : "nenhuma ao vivo"}
         />
         <KpiCard
-          icon={DollarSign} label="Budget comprometido"
+          icon={DollarSign} label="Orçamento comprometido"
           value={kpi.budget > 0 ? formatBRL(kpi.budget) : "R$ 0"}
           delta={mom.expenses.d} invertDelta color={accentColor}
         />

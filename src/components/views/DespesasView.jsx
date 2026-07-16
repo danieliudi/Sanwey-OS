@@ -512,7 +512,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                 {["Descrição", "Campanha", "Categoria", "Empresa(s)", "Valor", "Vencimento", "Status", ""].map(h => (
                   <th
                     key={h}
-                    className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide"
+                    className={h === "Valor" ? "text-right px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" : "text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide"}
                     style={{ color: "var(--text-dim)" }}
                   >
                     {h}

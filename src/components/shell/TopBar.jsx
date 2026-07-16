@@ -2,6 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Search, Moon, Sun } from "lucide-react";
 import { NotificationCenter } from "./NotificationCenter";
 
+// Achado da 2ª auditoria: o badge do atalho de busca mostrava só um ícone
+// de lupa (redundante com o ícone da própria busca), sem indicar o atalho
+// de teclado real (Cmd+K/Ctrl+K já tratado em App.jsx).
+const isMacPlatform = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent || navigator.platform || "");
+const SEARCH_SHORTCUT_LABEL = isMacPlatform ? "⌘K" : "Ctrl K";
+
 function applyCustomAccent(isDark) {
   if (isDark) {
     document.documentElement.style.removeProperty("--accent");
@@ -118,16 +124,18 @@ export function TopBar({
           <span
             className="select-none rounded-sm flex items-center justify-center"
             style={{
-              width: 22,
+              padding: "0 6px",
               height: 20,
               background: "var(--surface-alt)",
               color: "var(--text-faint)",
               border: "1px solid var(--border-strong)",
+              fontSize: 11,
+              fontWeight: 600,
               flexShrink: 0,
             }}
-            title="Buscar"
+            title="Atalho de busca"
           >
-            <Search size={12} strokeWidth={2.25} />
+            {SEARCH_SHORTCUT_LABEL}
           </span>
         </button>
       )}
