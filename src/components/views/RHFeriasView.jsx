@@ -4,6 +4,7 @@ import {
   LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { RH_LEAVE_TYPES } from "../../constants/rh-config";
+import { parseDateInput } from "../../utils/date";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
@@ -641,7 +642,10 @@ function FeriasCalendarView({ requests, stages, onPillClick }) {
     const map = new Map();
     for (const req of requests) {
       if (!req.start_date) continue;
-      const d = new Date(req.start_date.slice ? req.start_date.slice(0, 10) : req.start_date);
+      // start_date é coluna `date` — parseDateInput constrói meia-noite LOCAL
+      // (não UTC), pra a pill cair na célula certa do calendário. Antes new Date()
+      // jogava pro dia anterior em fuso negativo. Achado da 2ª auditoria.
+      const d = parseDateInput(req.start_date);
       if (Number.isNaN(d.getTime())) continue;
       const k = dayKey(d);
       if (!map.has(k)) map.set(k, []);

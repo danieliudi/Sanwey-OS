@@ -68,7 +68,7 @@ Deno.serve(async (req: Request) => {
   // Look up user by calendar_token
   const { data: profile } = await db
     .from("profiles")
-    .select("id, name, companies, role")
+    .select("id, name, companies, role, roles")
     .eq("calendar_token", token)
     .maybeSingle();
 
@@ -106,14 +106,21 @@ Deno.serve(async (req: Request) => {
   if (type === "marketing" || type === "all") {
     let query = db.from("marketing_campaigns").select("id,name,stage,channel,kpi,budget,launch_date,end_date,company_ids");
 
-    // Non-admin / non-gerente_marketing: scope by companies
+    // Non-admin / non-gerente_marketing: scope by companies.
+    // Achado da 2ª auditoria: antes o filtro só era aplicado quando companies
+    // era um array NÃO vazio — com companies = '{}' (default e valor comum pós
+    // convite) NENHUM filtro entrava e a query devolvia TODAS as campanhas de
+    // todas as empresas (fail-open). Agora escopo vazio = zero campanhas, e a
+    // checagem de papel usa roles[] (não o escalar legado).
     const fullAccessRoles = ["admin", "gerente_marketing"];
-    if (!fullAccessRoles.includes(profile.role as string) && Array.isArray(profile.companies)) {
-      // Filter: company_ids overlaps with user's companies
-      const comps = profile.companies as string[];
-      if (comps.length > 0) {
-        query = query.overlaps("company_ids", comps);
-      }
+    const userRoles = Array.isArray(profile.roles) && profile.roles.length
+      ? (profile.roles as string[])
+      : (profile.role ? [profile.role as string] : []);
+    const hasFullAccess = userRoles.some((r) => fullAccessRoles.includes(r));
+    if (!hasFullAccess) {
+      // comps vazio não casa nada — sempre aplica o overlaps.
+      const comps = Array.isArray(profile.companies) ? (profile.companies as string[]) : [];
+      query = query.overlaps("company_ids", comps);
     }
 
     const { data: campaignRows } = await query;

@@ -429,7 +429,11 @@ export default function App() {
   const despesaPendenteVistaRef = useRef(new Set());
   useEffect(() => {
     if (!isManagerRole) return;
-    const hojeISO = new Date().toISOString().slice(0, 10);
+    // Dia LOCAL, não UTC — toISOString() vira o dia seguinte entre ~21h e 24h
+    // BRT, furando o guard "uma vez por dia" (mesmo fix já feito no lembrete de
+    // conformidade acima). Achado da 2ª auditoria.
+    const hoje = new Date();
+    const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
     for (const d of despesasParaLembretes) {
       if (d.status_reembolso !== "pendente" || !d.created_at) continue;
       const diasPendente = Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000);

@@ -30,6 +30,7 @@ import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { EmptyState } from "../ui/EmptyState";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
+import { formatDateBR } from "../../utils/date";
 
 const BENEFICIO_STATUS_COLORS = {
   solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
@@ -242,10 +243,11 @@ function SignatureSection({ colaboradorRow, canWrite }) {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+// Delega pro formatDateBR (via parseDateInput) — colunas `date` chegam como
+// "AAAA-MM-DD" e new Date() as interpretava como meia-noite UTC, exibindo o
+// dia anterior em fuso negativo (Brasil). Achado da 2ª auditoria.
 function fmt(dateStr) {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("pt-BR");
+  return formatDateBR(dateStr);
 }
 
 function statusInfo(statusId) {
@@ -407,7 +409,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
       // Send welcome email only when admission_date is set for the first time
       if (!hadAdmissionDate && nowHasAdmissionDate && user.email) {
         try {
-          const startDate = new Date(form.admission_date).toLocaleDateString("pt-BR");
+          const startDate = formatDateBR(form.admission_date);
           await supabase.functions.invoke("rh-send-email", {
             body: {
               type: "welcome",

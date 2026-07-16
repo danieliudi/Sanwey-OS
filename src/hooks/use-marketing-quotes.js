@@ -25,7 +25,9 @@ function rowToQuote(r) {
     sentAt: r.sent_at ?? null,
     emailError: r.email_error ?? null,
     responseNotes: r.response_notes ?? null,
-    responseValue: r.response_value ?? null,
+    // numeric vem como string do PostgREST — coage pra número aqui (senão
+    // formatBRL exibia "R$ 0" e qualquer soma quebrava). Achado da auditoria.
+    responseValue: r.response_value != null ? Number(r.response_value) : null,
     createdAt: r.created_at ?? null,
     updatedAt: r.updated_at ?? null,
   };

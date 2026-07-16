@@ -6,13 +6,19 @@ const brlOneDecimal = new Intl.NumberFormat("pt-BR", {
   style: "currency", currency: "BRL", maximumFractionDigits: 1,
 });
 
+// PostgREST serializa colunas `numeric` como STRING (ex: "380") pra preservar
+// precisão — então coagimos antes de formatar. Sem isso, formatBRL("380")
+// caía no !isFinite e exibia "R$ 0" (achado da 2ª auditoria: valor de cotação
+// de fornecedor sempre "R$ 0"). Number(número) é no-op, então é seguro.
 export function formatBRL(value) {
-  if (!Number.isFinite(value)) return "R$ 0";
-  return brlFull.format(value);
+  const n = typeof value === "string" ? Number(value) : value;
+  if (!Number.isFinite(n)) return "R$ 0";
+  return brlFull.format(n);
 }
 
 // "R$ 123k" / "R$ 1.2M" — compact display used across KPI cards.
-export function formatBRLCompact(value, { decimals = 0 } = {}) {
+export function formatBRLCompact(rawValue, { decimals = 0 } = {}) {
+  const value = typeof rawValue === "string" ? Number(rawValue) : rawValue;
   if (!Number.isFinite(value)) return "R$ 0";
   const abs = Math.abs(value);
   if (abs >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(decimals === 0 ? 2 : decimals)}M`;
@@ -29,7 +35,8 @@ const ptBRNumber = (decimals) => new Intl.NumberFormat("pt-BR", {
   minimumFractionDigits: decimals,
   maximumFractionDigits: decimals,
 });
-export function formatK(value, decimals = 0) {
+export function formatK(rawValue, decimals = 0) {
+  const value = typeof rawValue === "string" ? Number(rawValue) : rawValue;
   if (!Number.isFinite(value)) return "R$ 0";
   const abs = Math.abs(value);
   if (abs >= 1_000_000) {
@@ -42,7 +49,8 @@ export function formatK(value, decimals = 0) {
   return brlFull.format(value);
 }
 
-export function formatM(value, decimals = 2) {
+export function formatM(rawValue, decimals = 2) {
+  const value = typeof rawValue === "string" ? Number(rawValue) : rawValue;
   if (!Number.isFinite(value)) return "R$ 0";
   return `R$ ${(value / 1_000_000).toFixed(decimals)}M`;
 }
