@@ -1790,8 +1790,21 @@ function CandidatoDrawer({
         </div>
       )}
 
-      {/* Convert to employee — only when aprovado */}
-      {canWrite && candidato.stage === "aprovado" && onHire && (
+      {/* Já contratado — sinal durável + sem botão de converter de novo */}
+      {candidato.hired_at && (
+        <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+          <Check size={20} style={{ color: "var(--success)", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>Contratado</div>
+            <div style={{ fontSize: 12, color: "var(--success)", marginTop: 2 }}>
+              Convertido em funcionário em {fmt(candidato.hired_at)}.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Convert to employee — only when aprovado e ainda não contratado */}
+      {canWrite && candidato.stage === "aprovado" && !candidato.hired_at && onHire && (
         <div style={{
           background: "#F0FDF4",
           border: "1px solid #BBF7D0",
@@ -2351,7 +2364,7 @@ function addDays(base, days) {
 export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
-    createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, attachTriagemToVaga,
+    createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const { cargos, createCargo, deleteCargo } = useRHCargoTemplates({ userId: user?.id });
   const { createColaborador } = useRHColaboradores({ userId: user?.id });
@@ -2427,6 +2440,12 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     }
     if (_closeVaga && vaga?.id) {
       await changeVagaStage(vaga.id, "encerrada");
+    }
+    // Marca a aplicação como contratada — dá sinal durável de "já contratado"
+    // e trava a 2ª conversão (antes o candidato ficava em "Aprovado" com o CTA
+    // "Converter" ativo, gerando cadastro/onboarding em dobro). Achado da auditoria.
+    if (hiringCandidato?.id) {
+      await markHired(hiringCandidato.id).catch((e) => console.error("markHired falhou:", e));
     }
     return novo;
   };

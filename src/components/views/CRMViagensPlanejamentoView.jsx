@@ -361,6 +361,30 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
             </div>
           )}
 
+          {/* Desfecho registrado por engano deixava a visita travada — sem
+              editar, desfazer nem excluir. Agora dá pra excluir (e recriar
+              corrigida) também com status realizado/não realizado. Achado da
+              2ª auditoria. */}
+          {registro.status !== "planejado" && (
+            !confirmandoExclusao ? (
+              <button onClick={() => setConfirmandoExclusao(true)} style={{ display: "flex", alignItems: "center", gap: 8, background: "transparent", color: "var(--text-faint)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                <Trash2 size={14} /> Excluir visita
+              </button>
+            ) : (
+              <div style={{ background: "#FEF2F2", borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 12, color: "#B91C1C", marginBottom: 8 }}>Excluir esta visita? Essa ação não pode ser desfeita. Se foi um engano, exclua e registre de novo.</div>
+                <div className="flex gap-2">
+                  <button onClick={handleExcluir} disabled={saving} style={{ flex: 1, background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+                    {saving ? "Excluindo…" : "Confirmar exclusão"}
+                  </button>
+                  <button onClick={() => setConfirmandoExclusao(false)} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+
           {registro.status === "planejado" && (
             <>
               {action === null && (

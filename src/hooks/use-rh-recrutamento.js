@@ -39,6 +39,7 @@ function joinAplicacao(aplicacao, candidatosById) {
     notes: aplicacao.notes || [],
     rating: aplicacao.rating,
     created_at: aplicacao.created_at,
+    hired_at: aplicacao.hired_at || null,
     // Campos customizados por etapa (rh_pipeline_stage_fields) e timeline de
     // atividades — usados pelo RHDetailDrawerShell / RHStageFieldInput.
     customFields: aplicacao.custom_fields || {},
@@ -165,6 +166,15 @@ export function useRHRecrutamento({ userId } = {}) {
     setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, ...patch } : a));
   }, []);
 
+  // Marca a aplicação como contratada (usado após converter o candidato em
+  // funcionário) — dá sinal durável de "já contratado" e trava a 2ª conversão.
+  const markHired = useCallback(async (aplicacaoId) => {
+    const when = new Date().toISOString();
+    const { error } = await supabase.from("rh_aplicacoes").update({ hired_at: when }).eq("id", aplicacaoId);
+    if (error) throw new Error(error.message);
+    setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, hired_at: when } : a));
+  }, []);
+
   const addNote = useCallback(async (aplicacaoId, note) => {
     const current = aplicacoes.find(a => a.id === aplicacaoId);
     const notes = [...(current?.notes || []), note];
@@ -218,7 +228,8 @@ export function useRHRecrutamento({ userId } = {}) {
     updateAplicacao,
     addNote,
     changeRating,
+    markHired,
     attachTriagemToVaga,
     refetch: fetchAll,
-  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, attachTriagemToVaga, fetchAll]);
+  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga, fetchAll]);
 }

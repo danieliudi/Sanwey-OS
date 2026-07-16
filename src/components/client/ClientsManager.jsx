@@ -44,6 +44,10 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
   const [historyClient, setHistoryClient] = useState(null);
+  const [sortCol, setSortCol] = useState(null); // null = ordem natural
+  const [sortDir, setSortDir] = useState("asc");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
 
   // Todos os negócios (qualquer etapa) por cliente — usado no histórico e,
   // filtrado por "ganho", pras flags de cross-sell/ticket médio/produtos.
@@ -89,6 +93,56 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     }
     return list;
   }, [clients, query, onlyOpportunities, statsByClient]);
+
+  // Colunas ordenáveis (key null = não ordena). Achado da 2ª auditoria:
+  // faltava ordenação por coluna (a tela de Funcionários já tinha) e
+  // paginação em listas potencialmente grandes.
+  const COLS = [
+    { label: "Nome", key: "name" },
+    { label: "Categoria", key: "category" },
+    { label: "Cidade / UF", key: "city" },
+    { label: "CNPJ", key: "cnpj" },
+    { label: "Cross-sell", key: null },
+    { label: "Produtos", key: "products" },
+    { label: "Último pedido", key: "lastOrder" },
+    { label: "Ticket médio", key: "avgTicket" },
+    { label: "", key: null },
+  ];
+  const sortValue = (c, col) => {
+    const stats = statsByClient.get(c.id);
+    switch (col) {
+      case "name":      return (c.name || "").toLowerCase();
+      case "category":  return clientCategoryLabel(c.category).toLowerCase();
+      case "city":      return `${c.city || ""} ${c.state || ""}`.trim().toLowerCase();
+      case "cnpj":      return c.cnpj || "";
+      case "products":  return stats?.products.length || 0;
+      case "lastOrder": return stats?.lastOrder ? new Date(stats.lastOrder).getTime() : 0;
+      case "avgTicket": return stats?.avgTicket || 0;
+      default:          return "";
+    }
+  };
+  const sorted = useMemo(() => {
+    if (!sortCol) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const va = sortValue(a, sortCol), vb = sortValue(b, sortCol);
+      const cmp = (typeof va === "number" && typeof vb === "number")
+        ? va - vb
+        : String(va).localeCompare(String(vb), "pt-BR");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortCol, sortDir, statsByClient]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paged = sorted.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const toggleSort = (col) => {
+    if (!col) return;
+    if (sortCol === col) setSortDir(d => (d === "asc" ? "desc" : "asc"));
+    else { setSortCol(col); setSortDir("asc"); }
+    setPage(0);
+  };
 
   const openNew = () => { setEditing(null); setForm(EMPTY); setModalOpen(true); };
   const openEdit = (c) => {
@@ -185,16 +239,20 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
           <table className="w-full" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Nome", "Categoria", "Cidade / UF", "CNPJ", "Cross-sell", "Produtos", "Último pedido", "Ticket médio", ""].map((h, i) => (
+                {COLS.map((col, i) => (
                   <th key={i} className="text-left font-bold uppercase"
-                    style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--text-dim)", padding: "10px 12px", borderBottom: "1px solid #E5E7EB" }}>
-                    {h}
+                    onClick={() => toggleSort(col.key)}
+                    style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--text-dim)", padding: "10px 12px", borderBottom: "1px solid #E5E7EB", cursor: col.key ? "pointer" : "default", userSelect: "none", whiteSpace: "nowrap" }}>
+                    {col.label}
+                    {col.key && sortCol === col.key && (
+                      <span style={{ marginLeft: 4 }}>{sortDir === "asc" ? "▲" : "▼"}</span>
+                    )}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(c => {
+              {paged.map(c => {
                 const stats = statsByClient.get(c.id);
                 const dealCount = dealsByClient.get(c.id)?.length || 0;
                 return (
@@ -260,6 +318,26 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
               );})}
             </tbody>
           </table>
+          {/* Contador + paginação — antes a lista renderizava todas as linhas
+              de uma vez. Achado da 2ª auditoria. */}
+          <div className="flex items-center justify-between flex-wrap gap-2" style={{ padding: "10px 12px", fontSize: 12, color: "var(--text-dim)" }}>
+            <span>
+              {sorted.length} {sorted.length === 1 ? "cliente" : "clientes"}
+              {totalPages > 1 && ` · pág. ${safePage + 1}/${totalPages}`}
+            </span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0}
+                  className="px-2.5 py-1 rounded-lg" style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", cursor: safePage === 0 ? "default" : "pointer", opacity: safePage === 0 ? 0.5 : 1 }}>
+                  Anterior
+                </button>
+                <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={safePage >= totalPages - 1}
+                  className="px-2.5 py-1 rounded-lg" style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", cursor: safePage >= totalPages - 1 ? "default" : "pointer", opacity: safePage >= totalPages - 1 ? 0.5 : 1 }}>
+                  Próxima
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
