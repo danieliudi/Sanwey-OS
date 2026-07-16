@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertCircle, Upload, FileText } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { friendlyError } from "../../utils/friendly-error";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -88,7 +89,7 @@ export default function JobApplicationForm() {
 
       setDone(true);
     } catch (err) {
-      setError(err.message || "Não foi possível enviar sua candidatura. Tente novamente.");
+      setError(friendlyError(err, "Não foi possível enviar sua candidatura. Tente novamente."));
     } finally {
       setSubmitting(false);
     }

@@ -467,13 +467,14 @@ export function LeadCreateModal({
             {isManager && (
               <button
                 onClick={() => setShowBuilder(true)}
-                className="flex items-center gap-1 p-1.5 rounded-lg transition-colors cursor-pointer"
-                style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors cursor-pointer"
+                style={{ color: "var(--text-dim)", background: "transparent", border: "none", fontSize: 12, fontWeight: 600 }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.color = "var(--text)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                 title="Configurar campos do formulário"
+                aria-label="Configurar formulário"
               >
-                <Settings size={15} />
+                <Settings size={15} /> Configurar formulário
               </button>
             )}
             <button

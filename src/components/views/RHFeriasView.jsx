@@ -800,16 +800,30 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const handleRecusar = useCallback(async (req, { onBlocked } = {}) => {
     const blockMsg = getStageBlockMessage(req);
     if (blockMsg) { (onBlocked || alert)(blockMsg); return false; }
+    // Captura o MOTIVO da recusa antes de confirmar — antes recusava no
+    // primeiro clique e o e-mail mandava req.notes (as observações do PRÓPRIO
+    // colaborador) como se fosse o motivo do gestor. Achado da 2ª auditoria.
+    const motivo = window.prompt(`Motivo da recusa de "${req.profiles?.name || "esta solicitação"}" (será enviado ao colaborador):`);
+    if (motivo === null) return false; // cancelou
+    const motivoLimpo = motivo.trim();
+    if (!motivoLimpo) { alert("Informe o motivo da recusa."); return false; }
     setBusyId(req.id);
     try {
       await changeStatus(req.id, "recusado");
-      const sent = await sendRhEmail("ferias_rejeitadas", req, { REASON: req.notes || "Não informado", MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
+      // Grava no histórico do card pra ficar durável (não só no e-mail).
+      await addActivity(req.id, {
+        type: "recusa",
+        text: `Recusado: ${motivoLimpo}`,
+        by: currentUser?.name || currentUser?.email || "",
+        at: new Date().toISOString(),
+      }).catch(() => {});
+      const sent = await sendRhEmail("ferias_rejeitadas", req, { REASON: motivoLimpo, MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
       if (!sent) alert(`Recusa registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
       return true;
     } finally {
       setBusyId(null);
     }
-  }, [changeStatus, currentUser, getStageBlockMessage]);
+  }, [changeStatus, addActivity, currentUser, getStageBlockMessage]);
 
   // Mover genérico pra qualquer etapa do pipeline dinâmico de férias (além
   // dos atalhos Aprovar/Recusar) — cobre pipelines com mais de

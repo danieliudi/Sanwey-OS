@@ -9,7 +9,7 @@ import { PurchaseRequestDetailDrawer } from "../campaign/PurchaseRequestDetailDr
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
-import { formatK } from "../../utils/currency";
+import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
 import { AvatarStack } from "../shared/AvatarStack";
@@ -379,7 +379,7 @@ function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
                   <div className="truncate">{p.itemName}</div>
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{suppliersById.get(p.supplierId)?.name || "—"}</td>
-                <td className="px-4 py-3 text-sm font-semibold" style={{ color: "var(--text)" }}>{p.totalValue != null ? formatK(p.totalValue) : "—"}</td>
+                <td className="px-4 py-3 text-sm font-semibold text-right" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{p.totalValue != null ? formatBRL(p.totalValue) : "—"}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(p.dueDate)}</td>
                 <td className="px-4 py-3">
                   <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>

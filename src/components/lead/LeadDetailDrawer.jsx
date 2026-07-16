@@ -5,7 +5,7 @@ import {
   Check, Trash2, Mail, ChevronDown, ChevronUp,
   Clock, GitBranch, CalendarClock, ArrowRight, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
-  File, FileImage, FileSpreadsheet, AlertCircle,
+  File, FileImage, FileSpreadsheet, AlertCircle, Pencil,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -1768,11 +1768,24 @@ function ChecklistsPanel({ leadId, companyId, currentUser, companyColor }) {
               ) : (
                 <button
                   className="flex-1 text-left text-xs font-semibold"
-                  style={{ color: "var(--text)", background: "none", border: "none", cursor: "text" }}
-                  onDoubleClick={() => { setEditingTitleId(cl.id); setEditingTitleText(cl.title); }}
-                  title="Clique duplo para renomear"
+                  style={{ color: "var(--text)", background: "none", border: "none", cursor: "pointer" }}
+                  onClick={() => { setEditingTitleId(cl.id); setEditingTitleText(cl.title); }}
+                  title="Renomear checklist"
                 >
                   {cl.title}
+                </button>
+              )}
+              {editingTitleId !== cl.id && (
+                <button
+                  onClick={() => { setEditingTitleId(cl.id); setEditingTitleText(cl.title); }}
+                  className="p-1 rounded transition-colors shrink-0"
+                  style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+                  title="Renomear checklist"
+                  aria-label="Renomear checklist"
+                >
+                  <Pencil size={11} />
                 </button>
               )}
               {items.length > 0 && (

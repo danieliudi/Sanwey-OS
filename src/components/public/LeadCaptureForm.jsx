@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { friendlyError } from "../../utils/friendly-error";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 
 const PRIORITIES = ["Alta", "Média", "Baixa"];
@@ -130,7 +131,7 @@ export default function LeadCaptureForm() {
       if (err) throw err;
       setDone(true);
     } catch (err) {
-      setError(err.message || "Não foi possível enviar. Tente novamente.");
+      setError(friendlyError(err, "Não foi possível enviar. Tente novamente."));
     } finally {
       setSubmitting(false);
     }

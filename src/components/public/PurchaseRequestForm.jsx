@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { friendlyError } from "../../utils/friendly-error";
 import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS } from "../../constants/companies";
 
 const ACCENT = "#C7212B";
@@ -138,7 +139,7 @@ export default function PurchaseRequestForm() {
       setRequestNumber(numberData || null);
       setDone(true);
     } catch (err) {
-      setError(err.message || "Não foi possível enviar. Tente novamente.");
+      setError(friendlyError(err, "Não foi possível enviar. Tente novamente."));
     } finally {
       setSubmitting(false);
     }

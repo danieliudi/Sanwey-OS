@@ -3,7 +3,7 @@ import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Lo
 import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
 import { EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
-import { formatK } from "../../utils/currency";
+import { formatK, formatBRL } from "../../utils/currency";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
@@ -584,8 +584,11 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                       })}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold" style={{ color: "var(--text)" }}>
-                    {formatK(expense.amount || 0)}
+                  {/* Valor exato na célula (formatK só nos KPIs/totais) +
+                      alinhado à direita com tabular-nums pra comparar coluna
+                      abaixo. Achado da 2ª auditoria. */}
+                  <td className="px-4 py-3 text-sm font-semibold text-right" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+                    {formatBRL(expense.amount || 0)}
                   </td>
                   <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
                     {formatDateBR(expense.dueDate)}
