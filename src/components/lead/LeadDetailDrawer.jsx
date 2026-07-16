@@ -930,9 +930,12 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
             )}
 
             {/* ── Tab: PDF ── */}
-            {sideTab === "pdf" && (
-              <ProposalPanel lead={lead} currentUser={currentUser} allLeads={allLeads} />
-            )}
+            {/* Mantido montado (display:none) quando a aba não está ativa pra
+                não perder o rascunho da proposta ao trocar de aba; key={lead.id}
+                reseta ao navegar pra outro lead. Achado da 2ª auditoria. */}
+            <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
+              <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} />
+            </div>
           </aside>
 
           {/* ───── CENTER ─────────────────────────────────────────────── */}

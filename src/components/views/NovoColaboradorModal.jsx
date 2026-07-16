@@ -4,6 +4,7 @@ import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../c
 import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { supabase } from "../../lib/supabase";
+import { formatPhone, formatCPF } from "../../utils/masks";
 import { useAI } from "../../hooks/use-ai";
 import { documentExtractionPrompt } from "../../constants/ai-prompts";
 import { periodoExperienciaInfo } from "../../utils/rh-compliance-dates";
@@ -48,7 +49,10 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [invalidField, setInvalidField] = useState(null); // "fullName" | "frente" | "file" | null
   const fileInputRef = useRef();
+  const nameRef = useRef();
+  const frenteRef = useRef();
 
   // Guarda contra descarte acidental: fechar por clique-fora/ESC/Cancelar com
   // o formulário preenchido pede confirmação. Sem isso, um clique na área
@@ -69,7 +73,10 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
     return () => document.removeEventListener("keydown", h);
   }, [guardedClose]);
 
-  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+  const set = (key, val) => {
+    setForm((f) => ({ ...f, [key]: val }));
+    if (invalidField === key) setInvalidField(null); // limpa o destaque ao editar
+  };
 
   const handleFile = async (f) => {
     setFileError(null);
@@ -107,11 +114,20 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.fullName.trim()) { setError("Nome completo é obrigatório."); return; }
-    if (!form.frente) { setError("Frente é obrigatória."); return; }
+    // Validação inline: destaca o campo obrigatório inválido e leva o foco/
+    // scroll até ele, em vez de só mostrar um banner longe do campo. Achado
+    // da 2ª auditoria.
+    const focusInvalid = (field, ref) => {
+      setInvalidField(field);
+      ref?.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      ref?.current?.focus?.();
+    };
+    if (!form.fullName.trim()) { setError("Nome completo é obrigatório."); focusInvalid("fullName", nameRef); return; }
+    if (!form.frente) { setError("Frente é obrigatória."); focusInvalid("frente", frenteRef); return; }
     // Documento obrigatório só na criação — editar um colaborador legado sem
     // documento não deve ficar travado retroativamente.
-    if (!initialData && !file) { setError("Anexe uma foto ou PDF do RG/CNH antes de cadastrar."); return; }
+    if (!initialData && !file) { setError("Anexe uma foto ou PDF do RG/CNH antes de cadastrar."); focusInvalid("file", fileInputRef); return; }
+    setInvalidField(null);
     setSaving(true);
     setError(null);
     try {
@@ -220,11 +236,11 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Nome completo *</label>
-                <input type="text" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} autoFocus />
+                <input ref={nameRef} type="text" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} className={inputCls} style={invalidField === "fullName" ? { ...inputSt, borderColor: "var(--danger)" } : inputSt} onFocus={focusBlue} onBlur={blurGray} autoFocus />
               </div>
               <div>
                 <label style={labelSt}>CPF</label>
-                <input type="text" value={form.cpf} onChange={(e) => set("cpf", e.target.value)} placeholder="000.000.000-00" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <input type="text" value={form.cpf} onChange={(e) => set("cpf", formatCPF(e.target.value))} placeholder="000.000.000-00" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
                 <label style={labelSt}>RG</label>
@@ -239,7 +255,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
               </div>
               <div>
                 <label style={labelSt}>Telefone</label>
-                <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="(11) 99999-0000" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <input type="tel" value={form.phone} onChange={(e) => set("phone", formatPhone(e.target.value))} placeholder="(11) 99999-0000" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
                 <label style={labelSt}>E-mail (opcional)</label>
@@ -285,7 +301,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
               </div>
               <div>
                 <label style={labelSt}>Frente *</label>
-                <select value={form.frente} onChange={(e) => set("frente", e.target.value)} className={inputCls} style={inputSt}>
+                <select ref={frenteRef} value={form.frente} onChange={(e) => set("frente", e.target.value)} className={inputCls} style={invalidField === "frente" ? { ...inputSt, borderColor: "var(--danger)" } : inputSt}>
                   <option value="">Selecionar</option>
                   {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
                 </select>
