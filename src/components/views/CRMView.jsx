@@ -781,6 +781,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           stages={allStages}
           users={usersById}
           onLeadClick={onLeadClick}
+          onStarToggle={onStarToggle}
           isGroupView={isGroupView}
         />
       ) : (<>
@@ -1113,7 +1114,7 @@ function SortIcon({ col, sortCol, sortDir }) {
     : <ArrowDown size={11} style={{ color: "var(--accent)", flexShrink: 0 }} />;
 }
 
-function LeadTableView({ leads, stages, users, onLeadClick, isGroupView }) {
+function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGroupView }) {
   const [sortCol, setSortCol] = useState("stageChangedAt");
   const [sortDir, setSortDir] = useState("desc");
   const [hoveredRow, setHoveredRow] = useState(null);
