@@ -525,7 +525,9 @@ export function MarketingDashboardView({ user }) {
     [dbCampaignStages]
   );
 
-  const isAgencia = user?.role === "agencia";
+  // roles[] cobre cargo adicional — user.role sozinho fica só de fallback.
+  // Achado da 2ª auditoria (esta view ficou de fora do fix a28bfb5).
+  const isAgencia = (user?.roles?.length ? user.roles : (user?.role ? [user.role] : [])).includes("agencia");
   const loading   = lC || lD || lE;
 
   // ── Company filter ──

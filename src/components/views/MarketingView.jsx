@@ -686,8 +686,12 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
 
   const usersById = useUsersById(users);
 
-  const isManager  = user?.role === "gerente_marketing" || user?.role === "admin";
-  const isAgencia  = user?.role === "agencia";
+  // roles[] cobre cargo adicional (ex: gerente_marketing como cargo
+  // secundário) — user.role sozinho (cargo principal) fica só de fallback.
+  // Achado da 2ª auditoria (esta view ficou de fora do fix a28bfb5).
+  const userRoleList = user?.roles?.length ? user.roles : (user?.role ? [user.role] : []);
+  const isManager  = userRoleList.includes("gerente_marketing") || userRoleList.includes("admin");
+  const isAgencia  = userRoleList.includes("agencia");
 
   const [selected, setSelected]               = useState(null);
   const [draggedCampaign, setDraggedCampaign] = useState(null);

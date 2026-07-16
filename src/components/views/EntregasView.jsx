@@ -498,7 +498,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const [starredOnly,    setStarredOnly]    = useState(false);
   const [showFilters,    setShowFilters]    = useState(false);
 
-  const isManager = user?.role === "admin" || user?.role === "gerente_marketing";
+  // roles[] cobre cargo adicional — user.role sozinho fica só de fallback.
+  // Achado da 2ª auditoria (esta view ficou de fora do fix a28bfb5).
+  const userRoleList = user?.roles?.length ? user.roles : (user?.role ? [user.role] : []);
+  const isManager = userRoleList.includes("admin") || userRoleList.includes("gerente_marketing");
 
   const toggleCompanyFilter = (id) =>
     setCompanyFilter(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);

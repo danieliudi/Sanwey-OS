@@ -10,7 +10,7 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
 import { formatK, formatBRL } from "../../utils/currency";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, parseDateInput } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
 import { AvatarStack } from "../shared/AvatarStack";
 
@@ -119,7 +119,11 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick }) {
       <div className="flex items-center justify-between text-[11px]" style={{ color: "var(--text-dim)" }}>
         <span className="truncate" style={{ maxWidth: "70%" }}>{supplier?.name || "Sem fornecedor"}</span>
         {purchase.dueDate && (
-          <span style={{ color: new Date(purchase.dueDate) < new Date() ? "#DC2626" : "var(--text-dim)", fontWeight: 500 }}>
+          // due_date é date-only ("AAAA-MM-DD"); comparar contra o instante
+          // atual (new Date()) fazia o item acender vermelho ~21h da véspera
+          // (meia-noite UTC vira 21h BRT) e durante todo o próprio dia de
+          // vencimento. Agora compara início-do-dia local. Achado da auditoria.
+          <span style={{ color: parseDateInput(purchase.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) ? "#DC2626" : "var(--text-dim)", fontWeight: 500 }}>
             {formatDateBR(purchase.dueDate)}
           </span>
         )}
@@ -414,7 +418,9 @@ function CalendarView({ purchases, onPillClick }) {
     const map = new Map();
     for (const p of purchases) {
       if (!p.dueDate) continue;
-      const d = new Date(p.dueDate.slice ? p.dueDate.slice(0, 10) : p.dueDate);
+      // Mesmo bug de fuso do vencido acima: date-only via new Date() cai um
+      // dia antes em BRT. parseDateInput constrói meia-noite local.
+      const d = parseDateInput(p.dueDate);
       if (Number.isNaN(d.getTime())) continue;
       const k = dayKey(d);
       if (!map.has(k)) map.set(k, []);

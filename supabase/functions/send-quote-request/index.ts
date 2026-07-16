@@ -59,12 +59,18 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Sessão inválida" }, 401);
   }
 
+  // Achado da 2ª auditoria: checava só o cargo principal escalar (profile.role)
+  // — usuário com gerente_marketing/admin como cargo ADICIONAL (roles[]) tomava
+  // 403 indevido. scalar ⊆ roles, então isso só negava acesso legítimo.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, name, email")
+    .select("role, roles, name, email")
     .eq("id", userData.user.id)
     .single();
-  if (!profile || !["admin", "gerente_marketing"].includes(profile.role)) {
+  const profileRoles: string[] = Array.isArray(profile?.roles) && profile.roles.length
+    ? profile.roles
+    : (profile?.role ? [profile.role] : []);
+  if (!profile || !profileRoles.some((r) => ["admin", "gerente_marketing"].includes(r))) {
     return jsonResponse({ error: "Somente gerente de marketing ou admin pode enviar cotações" }, 403);
   }
 

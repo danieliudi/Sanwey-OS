@@ -271,7 +271,10 @@ export function AgentActionsView({ currentUser, activeCompany }) {
   const [resolveError, setResolveError] = useState(null);
   const [configOpen, setConfigOpen] = useState(false);
 
-  const isManager = currentUser?.role === "gerente" || currentUser?.role === "admin";
+  // roles[] cobre cargo adicional — currentUser.role sozinho fica só de fallback.
+  // Achado da 2ª auditoria (esta view ficou de fora do fix a28bfb5).
+  const userRoleList = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
+  const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
   const { isAgentEnabled, toggleAgent } = useAgentConfig();
 
   // ── Fetch ────────────────────────────────────────────────────────────────

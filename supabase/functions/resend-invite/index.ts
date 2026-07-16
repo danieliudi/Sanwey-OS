@@ -32,13 +32,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Achado da 2ª auditoria: checava só o cargo principal escalar (profile.role)
+    // — usuário com admin/gerente/gerente_marketing como cargo ADICIONAL
+    // (roles[]) tomava 403 indevido pra reenviar convite.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, roles")
       .eq("id", userData.user.id)
       .single();
+    const profileRoles: string[] = Array.isArray(profile?.roles) && profile.roles.length
+      ? profile.roles
+      : (profile?.role ? [profile.role] : []);
 
-    if (!profile || !["admin", "gerente", "gerente_marketing"].includes(profile.role)) {
+    if (!profile || !profileRoles.some((r) => ["admin", "gerente", "gerente_marketing"].includes(r))) {
       return new Response(JSON.stringify({ error: "Sem permissão" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
