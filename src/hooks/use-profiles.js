@@ -22,7 +22,12 @@ function rowToUser(r) {
     avatarUrl: r.avatar_url || null,
     sectors: Array.isArray(r.sectors) ? r.sectors : [],
     supervisorId: r.supervisor_id || null,
-    aiConfig: r.ai_config || null,
+    // ai_config (chave de API de IA em texto plano) NUNCA deve ser mapeada
+    // aqui — este hook busca o roster inteiro (visível a colegas de
+    // departamento/gerentes via profiles_select), e nenhum lugar do app lê
+    // .aiConfig de outra entrada que não seja o próprio currentUser (que
+    // vem de um fetch separado, escopado só à própria linha, em
+    // use-supabase-auth.js). Achado da auditoria de plataforma.
     // Opt-out de notificação de @menção (FASE 4) — precisa viver no banco
     // (não em localStorage como o resto das preferências de notificação),
     // porque quem decide se cria a notificação é a RPC

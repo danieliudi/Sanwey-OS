@@ -47,14 +47,19 @@ Deno.serve(async (req) => {
 
     if (!documentUuid) return jsonResponse({ error: "Payload sem uuid do documento." }, 400);
 
-    // Verificação de assinatura do webhook — só pula se ainda não temos
-    // secret configurado (fase de preparo, antes das credenciais reais).
-    if (webhookSecret) {
-      const receivedHash = req.headers.get("hash") || req.headers.get("x-d4sign-hash") || "";
-      const expectedHash = await sha256Hex(`${documentUuid}${webhookSecret}`);
-      if (!receivedHash || receivedHash !== expectedHash) {
-        return jsonResponse({ error: "Assinatura do webhook inválida." }, 401);
-      }
+    // Achado da auditoria de plataforma: sem D4SIGN_WEBHOOK_SECRET configurado,
+    // este endpoint processava QUALQUER payload sem verificação nenhuma (fail
+    // open) — bastava saber o uuid de um documento (visível em logs/telas) pra
+    // forjar um callback e marcar assinatura como concluída/recusada. Agora
+    // falha fechado: sem secret configurado, o endpoint recusa tudo em vez de
+    // aceitar sem checar.
+    if (!webhookSecret) {
+      return jsonResponse({ error: "Webhook não configurado (D4SIGN_WEBHOOK_SECRET ausente)." }, 503);
+    }
+    const receivedHash = req.headers.get("hash") || req.headers.get("x-d4sign-hash") || "";
+    const expectedHash = await sha256Hex(`${documentUuid}${webhookSecret}`);
+    if (!receivedHash || receivedHash !== expectedHash) {
+      return jsonResponse({ error: "Assinatura do webhook inválida." }, 401);
     }
 
     const { data: existing } = await supabase

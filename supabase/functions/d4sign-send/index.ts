@@ -35,6 +35,22 @@ Deno.serve(async (req) => {
     const { data: userData, error: userErr } = await supabase.auth.getUser(jwt);
     if (userErr || !userData?.user) return jsonResponse({ error: "Sessão inválida" }, 401);
 
+    // Achado crítico da auditoria de plataforma: faltava checar cargo (só
+    // validava sessão válida) e faltava validar que sourceStorageBucket/
+    // sourceStoragePath pertencem mesmo ao registro informado — qualquer
+    // usuário autenticado, de qualquer cargo, conseguia pedir o download de
+    // QUALQUER arquivo de QUALQUER bucket (currículos, comprovantes, anexos)
+    // e mandar pra um e-mail arbitrário via signers.
+    const { data: callerProfile } = await supabase
+      .from("profiles")
+      .select("roles")
+      .eq("id", userData.user.id)
+      .maybeSingle();
+    const callerRoles: string[] = Array.isArray(callerProfile?.roles) ? callerProfile.roles : [];
+    if (!callerRoles.some((r) => ["rh", "gerente_rh", "admin"].includes(r))) {
+      return jsonResponse({ error: "Sem permissão para enviar documentos para assinatura." }, 403);
+    }
+
     const apiToken = Deno.env.get("D4SIGN_API_TOKEN");
     const cryptKey = Deno.env.get("D4SIGN_CRYPT_KEY");
     const safeUuid = Deno.env.get("D4SIGN_SAFE_UUID");
@@ -52,6 +68,18 @@ Deno.serve(async (req) => {
 
     if (!domain || !recordId || !Array.isArray(signers) || !signers.length || !sourceStorageBucket || !sourceStoragePath) {
       return jsonResponse({ error: "Parâmetros obrigatórios: domain, recordId, signers, sourceStorageBucket, sourceStoragePath." }, 400);
+    }
+
+    // Só o bucket dedicado à assinatura eletrônica, e só um path que
+    // pertença mesmo ao domain/recordId informado (formato usado pelo
+    // client: `${domain}/${recordId}/...`) — sem isso, qualquer bucket
+    // arbitrário (currículos, comprovantes, anexos de leads) e qualquer
+    // path podiam ser baixados com a service role e enviados a terceiros.
+    if (sourceStorageBucket !== "rh-documentos-assinatura") {
+      return jsonResponse({ error: "Bucket de origem inválido." }, 400);
+    }
+    if (!sourceStoragePath.startsWith(`${domain}/${recordId}/`)) {
+      return jsonResponse({ error: "Caminho de origem não pertence ao registro informado." }, 400);
     }
 
     const authQS = `tokenAPI=${encodeURIComponent(apiToken)}&cryptKey=${encodeURIComponent(cryptKey)}`;

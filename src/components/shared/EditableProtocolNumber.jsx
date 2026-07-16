@@ -40,7 +40,9 @@ export function EditableProtocolNumber({ value, canWrite, onSave, mono = false }
       await onSave(trimmed);
       setEditing(false);
     } catch (err) {
-      setError(err?.message?.includes("marketing_protocol_numbers_pkey")
+      setError(err?.message?.includes("inválido")
+        ? "Número inválido — use um valor entre 1 e 999999."
+        : err?.message?.includes("marketing_protocol_numbers_pkey")
         ? "Esse número já está em uso."
         : (err?.message || "Erro ao salvar."));
     } finally {
@@ -54,6 +56,7 @@ export function EditableProtocolNumber({ value, canWrite, onSave, mono = false }
         <input
           autoFocus
           value={draft}
+          maxLength={8}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") save(e); if (e.key === "Escape") setEditing(false); }}
           style={{ fontSize: 12, padding: "2px 5px", borderRadius: 5, border: "1px solid var(--border)", color: "var(--text)", background: "var(--surface)", width: 90 }}

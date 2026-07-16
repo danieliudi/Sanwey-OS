@@ -138,6 +138,11 @@ export function useSupabaseAuth() {
         sectors: Array.isArray(profile.sectors) ? profile.sectors : [],
         supervisorId: profile.supervisor_id || null,
         calendarToken: profile.calendar_token || null,
+        // Só aqui — este fetch é escopado à própria linha (eq("id", userId)),
+        // diferente do roster de useProfiles() (não deve expor ai_config de
+        // ninguém além do próprio dono). Sem isso, o Provider/Model/Chave
+        // salvos em Configurações nunca recarregavam após um refresh.
+        aiConfig: profile.ai_config || null,
       }
     : null;
 

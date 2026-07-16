@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -9,6 +10,25 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
+    // Achado da auditoria de plataforma: esta function não verificava
+    // autenticação nenhuma — virava um proxy aberto pras APIs de
+    // OpenAI/Anthropic/Gemini pra qualquer chamador que descobrisse a URL
+    // (pública, extraível do próprio bundle JS), usável com custo/quota do
+    // Supabase mesmo sem nenhuma conta no Sanwey CRM.
+    const authHeader = req.headers.get("Authorization") || "";
+    const jwt = authHeader.replace(/^Bearer\s+/i, "");
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: "Autenticação necessária" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+    }
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const { data: userData, error: userErr } = await supabaseAuth.auth.getUser(jwt);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Sessão inválida" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     const { provider, model, apiKey, messages, maxTokens = 1200 } = await req.json();
     let content = "";
 

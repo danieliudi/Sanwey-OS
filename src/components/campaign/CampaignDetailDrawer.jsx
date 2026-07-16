@@ -516,9 +516,15 @@ function EditSelect({ value, onChange, options, placeholder = "Selecionar…" })
 
 // ── Entregas tab ─────────────────────────────────────────────────────────────
 
-function EntregasTab({ campaign, canWrite }) {
+function EntregasTab({ campaign, canWrite, currentUser }) {
+  // Achado da auditoria de plataforma: sem role/roles, o canWrite interno do
+  // hook ficava sempre false e createDeliverable virava um no-op silencioso
+  // (retornava null sem erro) mesmo pra quem tinha permissão de verdade.
   const { deliverables, loading, createDeliverable } = useMarketingDeliverables({
     campaignId: campaign.id,
+    userId: currentUser?.id,
+    role: currentUser?.role,
+    roles: currentUser?.roles,
   });
   const [creating, setCreating] = useState(false);
   const [title, setTitle]       = useState("");
@@ -1439,7 +1445,7 @@ export function CampaignDetailDrawer({
       );
     }
     if (sideTab === "entregas") {
-      return <EntregasTab campaign={campaign} canWrite={canWrite} />;
+      return <EntregasTab campaign={campaign} canWrite={canWrite} currentUser={currentUser} />;
     }
     if (sideTab === "email") return <PlaceholderPanel label="Integração de e-mail" />;
     if (sideTab === "pdf")   return <PlaceholderPanel label="Exportar PDF" />;
