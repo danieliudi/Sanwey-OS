@@ -87,9 +87,13 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) { setError("Nome do cargo é obrigatório."); return; }
-    if (salaryMin !== "" && salaryMax !== "" && Number(salaryMin) > Number(salaryMax)) {
-      setError("O salário mínimo não pode ser maior que o máximo."); return;
-    }
+    if (!department) { setError("Departamento é obrigatório."); return; }
+    if (!contractType) { setError("Tipo de contrato é obrigatório."); return; }
+    if (salaryMin === "" || salaryMax === "") { setError("Informe a faixa salarial completa (mínimo e máximo)."); return; }
+    if (Number(salaryMin) > Number(salaryMax)) { setError("O salário mínimo não pode ser maior que o máximo."); return; }
+    if (!schedule.trim()) { setError("Jornada é obrigatória."); return; }
+    if (!shift.trim()) { setError("Turno é obrigatório."); return; }
+    if (!description.trim()) { setError("Descrição do cargo é obrigatória — preencha à mão ou gere com IA."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -125,48 +129,48 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
           <div className="flex flex-col gap-3">
             <div>
               <label style={labelSt}>Nome do cargo *</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Analista de RH Pleno" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} autoFocus />
+              <input required type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Analista de RH Pleno" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} autoFocus />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label style={labelSt}>Departamento</label>
-                <select value={department} onChange={(e) => setDepartment(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
-                  <option value="">—</option>
+                <label style={labelSt}>Departamento *</label>
+                <select required value={department} onChange={(e) => setDepartment(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                  <option value="">Selecione…</option>
                   {RH_DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelSt}>Tipo de contrato</label>
-                <select value={contractType} onChange={(e) => setContractType(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
-                  <option value="">—</option>
+                <label style={labelSt}>Tipo de contrato *</label>
+                <select required value={contractType} onChange={(e) => setContractType(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                  <option value="">Selecione…</option>
                   {RH_CONTRACT_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label style={labelSt}>Salário mínimo (faixa)</label>
-                <input type="number" min="0" step="0.01" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} placeholder="R$ 0,00" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                <label style={labelSt}>Salário mínimo (faixa) *</label>
+                <input required type="number" min="0" step="0.01" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} placeholder="R$ 0,00" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
               </div>
               <div>
-                <label style={labelSt}>Salário máximo (faixa)</label>
-                <input type="number" min="0" step="0.01" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} placeholder="R$ 0,00" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                <label style={labelSt}>Salário máximo (faixa) *</label>
+                <input required type="number" min="0" step="0.01" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} placeholder="R$ 0,00" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label style={labelSt}>Jornada</label>
-                <input type="text" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Ex: 44h semanais" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                <label style={labelSt}>Jornada *</label>
+                <input required type="text" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Ex: 44h semanais" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
               </div>
               <div>
-                <label style={labelSt}>Turno</label>
-                <input type="text" value={shift} onChange={(e) => setShift(e.target.value)} placeholder="Ex: Comercial" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                <label style={labelSt}>Turno *</label>
+                <input required type="text" value={shift} onChange={(e) => setShift(e.target.value)} placeholder="Ex: Comercial" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
               </div>
             </div>
 
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <label style={labelSt}>Descrição do cargo</label>
+                <label style={labelSt}>Descrição do cargo *</label>
                 <button
                   type="button" onClick={handleGenerate}
                   disabled={aiLoading || !aiConfigured}
@@ -177,7 +181,7 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
                   {aiLoading ? "Gerando…" : "Gerar com IA"}
                 </button>
               </div>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={7} placeholder="Responsabilidades, requisitos e resumo do cargo…" className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-y" style={inputSt} />
+              <textarea required value={description} onChange={(e) => setDescription(e.target.value)} rows={7} placeholder="Responsabilidades, requisitos e resumo do cargo… (ou gere com IA)" className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-y" style={inputSt} />
               {aiError && <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>{aiError}</div>}
             </div>
           </div>
