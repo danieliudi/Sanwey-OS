@@ -1,26 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, X, RotateCcw, Loader2, AlertTriangle, Upload } from "lucide-react";
 import { assessImageQuality } from "../../utils/image-quality";
-import { useDocumentLegibility } from "../../hooks/use-document-legibility";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// Ferramenta de captura de documento com moldura-guia (câmera) + checagem
-// automática de legibilidade via IA (chave da empresa, ver
-// check-document-legibility). Pré-filtro client-side (desfoque/brilho)
-// roda antes pra rejeitar de graça os casos óbvios sem gastar a chamada de
-// IA. Sempre tem fallback pro input de arquivo tradicional — câmera
-// indisponível/permissão negada não deve travar quem só quer anexar o PDF.
+// Ferramenta de captura de documento com moldura-guia (câmera) + checagem de
+// qualidade 100% local (desfoque/brilho via canvas, ver utils/image-quality)
+// — nenhum documento de identidade sai do navegador. Existiu uma checagem
+// extra via IA (check-document-legibility, chave da empresa) que foi
+// removida por decisão explícita: documento de colaborador não pode passar
+// por nenhuma IA, nem a paga pela própria empresa. Sempre tem fallback pro
+// input de arquivo tradicional — câmera indisponível/permissão negada não
+// deve travar quem só quer anexar o PDF.
 export function DocumentCaptureModal({ onCapture, onClose, title = "Capturar documento" }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -29,7 +21,6 @@ export function DocumentCaptureModal({ onCapture, onClose, title = "Capturar doc
   const [cameraError, setCameraError] = useState(null);
   const [phase, setPhase] = useState("camera"); // camera | checking | rejected
   const [rejection, setRejection] = useState(null);
-  const { check } = useDocumentLegibility();
 
   useEffect(() => {
     let cancelled = false;
@@ -89,21 +80,8 @@ export function DocumentCaptureModal({ onCapture, onClose, title = "Capturar doc
       }
     }
 
-    try {
-      const base64 = await fileToBase64(file);
-      const result = await check(base64, file.type);
-      if (result.configured && result.legivel === false) {
-        setRejection({ motivo: result.motivo || "Documento ilegível.", sugestao: result.sugestao });
-        setPhase("rejected");
-        return;
-      }
-    } catch {
-      // Checagem por IA falhou — segue sem bloquear, mesmo padrão do resto
-      // da IA opcional na plataforma.
-    }
-
     onCapture(file);
-  }, [check, onCapture]);
+  }, [onCapture]);
 
   const handleCapture = useCallback(() => {
     const video = videoRef.current;
