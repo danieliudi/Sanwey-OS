@@ -15,9 +15,11 @@ import { useRHFeriasRequests } from "./use-rh-ferias-requests";
 import { useRHRecrutamento } from "./use-rh-recrutamento";
 import { useRHColaboradores } from "./use-rh-colaboradores";
 import { useRHBeneficios } from "./use-rh-beneficios";
+import { useRHTreinamentos } from "./use-rh-treinamentos";
 import {
   periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim,
   diasParaAniversario, diasParaBodasEmpresa,
+  aprendizDiasParaFim, treinamentoDiasParaVencer, avaliacaoDiasParaVencer,
 } from "../utils/rh-compliance-dates";
 import { isStale, daysIdle } from "../utils/pipeline-metrics";
 import { DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
@@ -90,10 +92,11 @@ export function useMyTasks({ currentUser } = {}) {
   const { vagas, loading: recrutamentoLoading } = useRHRecrutamento({ userId });
   const { colaboradores, loading: colaboradoresLoading } = useRHColaboradores({ userId });
   const { colaboradorBeneficios, loading: beneficiosLoading } = useRHBeneficios({ userId });
+  const { treinamentos, atribuicoes, loading: treinamentosLoading } = useRHTreinamentos({ userId });
 
   const loading = leadsLoading || campaignsLoading || deliverablesLoading || purchasesLoading
     || quotesLoading || marketingRequestsLoading || feedbacksLoading || feriasLoading
-    || recrutamentoLoading || colaboradoresLoading || beneficiosLoading;
+    || recrutamentoLoading || colaboradoresLoading || beneficiosLoading || treinamentosLoading;
 
   const isRHManagerUser = hasAnyRole(currentUser, ["admin", "gerente_rh"]);
 
@@ -435,6 +438,29 @@ export function useMyTasks({ currentUser } = {}) {
           });
         }
 
+        // Jovem Aprendiz (Áudio 6): janela mais larga (60d) — o RH precisa de
+        // 2 meses de antecedência pra repor a vaga e não furar a cota. Alerta
+        // separado do "Fim de contrato" temporário acima.
+        if (c.contractType === "aprendiz") {
+          const aprDias = aprendizDiasParaFim(c);
+          if (aprDias != null && aprDias <= 60) {
+            out.push({
+              id: `alert-aprendiz-${c.id}`,
+              bucket: "alert",
+              module: "colaboradores",
+              moduleLabel: "Conformidade RH",
+              icon: AlertTriangle,
+              title: c.fullName,
+              subtitle: "Fim do contrato de aprendizagem",
+              badge: aprDias < 0 ? `Encerrou há ${Math.abs(aprDias)}d` : `Encerra em ${aprDias}d`,
+              badgeTone: aprDias <= 0 ? "var(--danger)" : "var(--warning)",
+              urgencyRank: aprDias,
+              section: "rh-funcionarios",
+              raw: c,
+            });
+          }
+        }
+
         const aniversarioDias = diasParaAniversario(c);
         if (aniversarioDias != null) {
           out.push({
@@ -471,6 +497,60 @@ export function useMyTasks({ currentUser } = {}) {
           });
         }
       }
+
+      // Vencimento de treinamento NR/obrigatório (Áudio 4): certificado que
+      // vence antes da auditoria. Cruza atribuição concluída × treinamento
+      // (validade) × colaborador ativo. Janela de 30d (inclui já-vencido).
+      const treinamentosById = new Map((treinamentos || []).map(t => [t.id, t]));
+      for (const atr of (atribuicoes || [])) {
+        if (atr.status !== "concluido") continue;
+        const tr = treinamentosById.get(atr.treinamento_id);
+        if (!tr) continue;
+        const col = colaboradoresById.get(atr.colaborador_id);
+        if (!col || col.employeeStatus !== "ativo") continue;
+        const venceDias = treinamentoDiasParaVencer(atr, tr);
+        if (venceDias == null || venceDias > 30) continue;
+        out.push({
+          id: `alert-treino-${atr.id}`,
+          bucket: "alert",
+          module: "treinamentos",
+          moduleLabel: "Conformidade RH",
+          icon: AlertTriangle,
+          title: col.fullName,
+          subtitle: `Treinamento: ${tr.titulo || tr.tipo || "—"}`,
+          badge: venceDias < 0 ? `Vencido há ${Math.abs(venceDias)}d` : `Vence em ${venceDias}d`,
+          badgeTone: venceDias <= 0 ? "var(--danger)" : "var(--warning)",
+          urgencyRank: venceDias,
+          section: "rh-treinamentos",
+          raw: atr,
+        });
+      }
+
+      // Avaliação de desempenho ATRASADA (Áudio 5): avaliação com prazo já
+      // vencido e ainda não concluída — o RH precisa cobrar. Distinto da
+      // tarefa "sou avaliador" (resp-feedback) e do alerta pessoal de
+      // autoavaliação. Só atrasadas, pra não duplicar/poluir. A criação
+      // automática por regra de cargo vem na Onda 2.
+      for (const f of (feedbacks || [])) {
+        if (f.status === "concluido") continue;
+        const avalDias = avaliacaoDiasParaVencer(f);
+        if (avalDias == null || avalDias >= 0) continue;
+        const col = colaboradoresById.get(f.user_id);
+        out.push({
+          id: `alert-avaliacao-${f.id}`,
+          bucket: "alert",
+          module: "feedback",
+          moduleLabel: "Conformidade RH",
+          icon: MessageSquareText,
+          title: col?.fullName || "Colaborador",
+          subtitle: `Avaliação atrasada · ${f.tipo || f.cycle || "—"}`,
+          badge: `Atrasada ${Math.abs(avalDias)}d`,
+          badgeTone: "var(--danger)",
+          urgencyRank: avalDias,
+          section: "rh-feedback",
+          raw: f,
+        });
+      }
     }
 
     // Personal autoavaliação deadline — matches App.jsx's per-user
@@ -503,7 +583,7 @@ export function useMyTasks({ currentUser } = {}) {
   }, [
     userId, currentUser, leads, pipelines, campaigns, deliverables, purchases, quotes,
     marketingRequests, feedbacks, feriasRequests, vagas, colaboradores, colaboradoresById,
-    meuColaborador, isRHManagerUser, colaboradorBeneficios,
+    meuColaborador, isRHManagerUser, colaboradorBeneficios, treinamentos, atribuicoes,
   ]);
 
   const counts = useMemo(() => ({

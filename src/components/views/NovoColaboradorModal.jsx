@@ -21,6 +21,7 @@ const EMPTY_FORM = {
   jobTitle: "", department: "", frente: "", contractType: "", admissionDate: "",
   employeeStatus: "ativo", salary: "", asoVencimento: "", contratoFim: "",
   periodoExperienciaDias: "",
+  aprendizInicio: "", aprendizFim: "",
 };
 
 function fileToBase64(file) {
@@ -339,6 +340,20 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
                     onBlur={blurGray}
                   />
                 </div>
+              )}
+              {/* Jovem Aprendiz (Áudio 6): datas do contrato de aprendizagem.
+                  O fim alimenta o lembrete de reposição ~2 meses antes. */}
+              {form.contractType === "aprendiz" && (
+                <>
+                  <div>
+                    <label style={labelSt}>Início do contrato de aprendizagem</label>
+                    <input type="date" value={form.aprendizInicio} onChange={(e) => set("aprendizInicio", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                  </div>
+                  <div>
+                    <label style={labelSt}>Fim do contrato de aprendizagem</label>
+                    <input type="date" value={form.aprendizFim} onChange={(e) => set("aprendizFim", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                  </div>
+                </>
               )}
               <div>
                 <label style={labelSt}>Status</label>

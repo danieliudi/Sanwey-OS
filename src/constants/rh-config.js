@@ -19,10 +19,17 @@ export const RH_CONTRACT_TYPES = [
   { id: "clt",        label: "CLT" },
   { id: "pj",         label: "PJ" },
   { id: "estagio",    label: "Estágio" },
+  { id: "aprendiz",   label: "Jovem Aprendiz" },
   { id: "temporario", label: "Temporário" },
   { id: "autonomo",   label: "Autônomo" },
   { id: "socio",      label: "Sócio" },
 ];
+
+// Cota de jovens aprendizes (Áudio 6 do RH). A Lei do Aprendiz exige um
+// percentual do quadro — o número exato varia por empresa, então o RH define
+// a meta aqui. 0 = "não definida" (o painel só mostra a contagem de ativos).
+// Futuro (Onda 2+): mover pra uma tela de configuração de RH.
+export const RH_APRENDIZ_COTA_ALVO = 0;
 
 export const RH_EMPLOYEE_STATUSES = [
   { id: "ativo",      label: "Ativo",      color: "#16A34A", bg: "#DCFCE7" },

@@ -32,7 +32,7 @@ import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
 import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
 import { useCRMDespesas } from "./hooks/use-crm-despesas";
-import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa } from "./utils/rh-compliance-dates";
+import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim } from "./utils/rh-compliance-dates";
 import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
@@ -406,6 +406,17 @@ export default function App() {
           type: "compliance_contrato",
           title: contratoDias < 0 ? "Contrato temporário venceu" : "Fim de contrato temporário se aproximando",
           body: `${c.fullName}: contrato ${contratoDias < 0 ? "venceu há " + Math.abs(contratoDias) + " dia(s)" : "termina em " + contratoDias + " dia(s)"}.`,
+        });
+      }
+
+      // Jovem Aprendiz (Áudio 6): 2 meses de antecedência pra repor a vaga
+      // sem furar a cota. Janela de 60d, coluna dedicada aprendizFim.
+      const aprDias = c.contractType === "aprendiz" ? aprendizDiasParaFim(c, hoje) : null;
+      if (aprDias != null && aprDias <= 60 && marcar(c.id, "aprendiz_fim")) {
+        pushNotification({
+          type: "compliance_aprendiz",
+          title: aprDias <= 0 ? "Contrato de aprendiz encerrado" : "Contrato de aprendiz encerrando",
+          body: `${c.fullName}: contrato de aprendizagem ${aprDias < 0 ? "encerrou há " + Math.abs(aprDias) + " dia(s)" : "encerra em " + aprDias + " dia(s)"} — providencie efetivação/reposição.`,
         });
       }
 

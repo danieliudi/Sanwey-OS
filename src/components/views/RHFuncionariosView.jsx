@@ -20,6 +20,7 @@ import {
   RH_DEPARTMENTS,
   RH_CONTRACT_TYPES,
   RH_EMPLOYEE_STATUSES,
+  RH_APRENDIZ_COTA_ALVO,
 } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { supabase } from "../../lib/supabase";
@@ -359,6 +360,8 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
     salary:          user.salary          != null ? String(user.salary) : "",
     aso_vencimento:  colaboradorRow?.asoVencimento || "",
     contrato_fim:    colaboradorRow?.contratoFim || "",
+    aprendiz_inicio: colaboradorRow?.aprendizInicio || "",
+    aprendiz_fim:    colaboradorRow?.aprendizFim || "",
   });
 
   // Estimativas informativas — período de experiência CLT e aviso-prévio
@@ -402,6 +405,8 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
           frente: form.frente || null,
           asoVencimento: form.aso_vencimento || null,
           contratoFim: form.contrato_fim || null,
+          aprendizInicio: form.aprendiz_inicio || null,
+          aprendizFim: form.aprendiz_fim || null,
         });
       }
       setEditing(false);
@@ -673,6 +678,34 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                     onBlur={blurGray}
                   />
                 </div>
+                {form.contract_type === "aprendiz" && (
+                  <>
+                    <div>
+                      <label style={labelSt}>Início do contrato de aprendizagem</label>
+                      <input
+                        type="date"
+                        value={form.aprendiz_inicio}
+                        onChange={(e) => set("aprendiz_inicio", e.target.value)}
+                        className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                        style={inputSt}
+                        onFocus={focusBlue}
+                        onBlur={blurGray}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelSt}>Fim do contrato de aprendizagem</label>
+                      <input
+                        type="date"
+                        value={form.aprendiz_fim}
+                        onChange={(e) => set("aprendiz_fim", e.target.value)}
+                        className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                        style={inputSt}
+                        onFocus={focusBlue}
+                        onBlur={blurGray}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -685,6 +718,10 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                   { label: "Salário",           value: user.salary != null ? `R$ ${Number(user.salary).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—" },
                   { label: "Vencimento do ASO", value: fmt(colaboradorRow?.asoVencimento) },
                   { label: "Fim do contrato",   value: fmt(colaboradorRow?.contratoFim) },
+                  ...(user.contract_type === "aprendiz" ? [
+                    { label: "Início aprendizagem", value: fmt(colaboradorRow?.aprendizInicio) },
+                    { label: "Fim aprendizagem",    value: fmt(colaboradorRow?.aprendizFim) },
+                  ] : []),
                 ].map((f) => (
                   <div key={f.label}>
                     <div style={labelSt}>{f.label}</div>
@@ -840,12 +877,16 @@ export function RHFuncionariosView({
 
   const stats = useMemo(() => {
     const statusOf = (e) => e.employeeStatus || e.employee_status || "ativo";
+    // Aprendiz pode estar num profile (snake_case) ou num colaborador sem
+    // acesso (camelCase) — cobrir os dois nomes de campo.
+    const contractOf = (e) => e.contractType || e.contract_type || "";
     const all = [...users, ...colaboradoresSemAcesso];
     return {
       total:      all.length,
       ativos:     all.filter((e) => statusOf(e) === "ativo").length,
       ferias:     all.filter((e) => statusOf(e) === "ferias").length,
       desligados: all.filter((e) => statusOf(e) === "desligado").length,
+      aprendizes: all.filter((e) => statusOf(e) === "ativo" && contractOf(e) === "aprendiz").length,
     };
   }, [users, colaboradoresSemAcesso]);
 
@@ -945,6 +986,13 @@ export function RHFuncionariosView({
           { label: "Ativos",      value: stats.ativos,     color: "var(--success)" },
           { label: "Férias",      value: stats.ferias,     color: "var(--accent)" },
           { label: "Desligados",  value: stats.desligados, color: "var(--text-dim)" },
+          // Cota de aprendizes (Áudio 6): mostra ativos e, se houver meta,
+          // "ativos/meta" em vermelho quando abaixo da cota (risco legal).
+          ...((stats.aprendizes > 0 || RH_APRENDIZ_COTA_ALVO > 0) ? [{
+            label: RH_APRENDIZ_COTA_ALVO > 0 ? "Aprendizes (cota)" : "Aprendizes",
+            value: RH_APRENDIZ_COTA_ALVO > 0 ? `${stats.aprendizes}/${RH_APRENDIZ_COTA_ALVO}` : stats.aprendizes,
+            color: (RH_APRENDIZ_COTA_ALVO > 0 && stats.aprendizes < RH_APRENDIZ_COTA_ALVO) ? "var(--danger)" : "var(--success)",
+          }] : []),
         ].map((s) => (
           <div
             key={s.label}

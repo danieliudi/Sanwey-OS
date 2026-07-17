@@ -60,6 +60,38 @@ export function contratoDiasParaFim(colaborador, hoje = new Date()) {
   return daysBetween(hoje, parseDateInput(colaborador.contratoFim));
 }
 
+// Jovem Aprendiz (Áudio 6): dias até o fim do contrato de aprendizagem.
+// Coluna dedicada (aprendizFim) pra não colidir com o "contrato temporário".
+// Só faz sentido pra quem é contractType "aprendiz"; o chamador filtra.
+export function aprendizDiasParaFim(colaborador, hoje = new Date()) {
+  if (!colaborador?.aprendizFim) return null;
+  return daysBetween(hoje, parseDateInput(colaborador.aprendizFim));
+}
+
+// Vencimento de treinamento NR/obrigatório (Áudio 4): data_conclusao +
+// validade_dias. data_conclusao é timestamptz (parseDateInput passa direto,
+// sem risco de fuso). Retorna dias até vencer (negativo = já venceu), ou null
+// se a atribuição não foi concluída ou o treinamento não tem validade.
+export function treinamentoDiasParaVencer(atribuicao, treinamento, hoje = new Date()) {
+  const validade = Number(treinamento?.validade_dias ?? treinamento?.validadeDias) || null;
+  const conclusao = atribuicao?.data_conclusao ?? atribuicao?.dataConclusao;
+  if (!validade || !conclusao) return null;
+  const base = parseDateInput(conclusao);
+  if (Number.isNaN(base.getTime())) return null;
+  const vence = new Date(base.getFullYear(), base.getMonth(), base.getDate() + validade);
+  return daysBetween(hoje, vence);
+}
+
+// Avaliação de desempenho devida (Áudio 5): dias até (ou desde) o fim do
+// período de avaliação, enquanto ela não foi concluída. period_end é date-only.
+export function avaliacaoDiasParaVencer(avaliacao, hoje = new Date()) {
+  const fim = avaliacao?.period_end ?? avaliacao?.periodEnd;
+  if (!fim) return null;
+  const d = parseDateInput(fim);
+  if (Number.isNaN(d.getTime())) return null;
+  return daysBetween(hoje, d);
+}
+
 function isMesDiaProximo(dateStr, hoje, janelaDias) {
   if (!dateStr) return null;
   const d = parseDateInput(dateStr);
