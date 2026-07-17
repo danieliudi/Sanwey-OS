@@ -29,6 +29,7 @@ import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHBeneficios } from "../../hooks/use-rh-beneficios";
 import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
+import { RHAttachmentsPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { EmptyState } from "../ui/EmptyState";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -240,6 +241,34 @@ function SignatureSection({ colaboradorRow, canWrite }) {
           </button>
         )
       )}
+    </div>
+  );
+}
+
+// Holerite e comprovante de ponto (Onda 5, prep painel do colaborador): o RH
+// sobe o PDF/imagem gerado pelo sistema externo (folha de pagamento, ponto
+// homologado) — é só consulta, não um processamento de folha nem um relógio
+// de ponto dentro da plataforma. Reaproveita rh_attachments (mesmo mecanismo
+// do onboarding), com domínios dedicados pra não misturar com outros anexos.
+function DocumentosSection({ colaboradorId, canWrite, currentUser }) {
+  return (
+    <div style={{ borderRadius: 12, border: "1px solid var(--border)", padding: "14px 16px", background: "var(--surface-alt)", marginBottom: 20 }}>
+      <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
+        Documentos (consulta)
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>Holerite</div>
+          <RHAttachmentsPanel domain="holerite" recordId={colaboradorId} currentUser={currentUser} readOnly={!canWrite} />
+        </div>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>Ponto</div>
+          <RHAttachmentsPanel domain="ponto" recordId={colaboradorId} currentUser={currentUser} readOnly={!canWrite} />
+        </div>
+      </div>
+      <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 10 }}>
+        Suba aqui o PDF/imagem já emitido pelo sistema de folha e pelo registrador de ponto homologado. É só pra consulta — não substitui nenhum dos dois sistemas.
+      </p>
     </div>
   );
 }
@@ -796,6 +825,10 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
 
           {colaboradorRow && (
             <SignatureSection colaboradorRow={colaboradorRow} canWrite={canWrite} />
+          )}
+
+          {colaboradorRow && (
+            <DocumentosSection colaboradorId={colaboradorRow.id} canWrite={canWrite} currentUser={currentUser} />
           )}
 
           {/* CRM metrics */}

@@ -143,7 +143,9 @@ function formatBytes(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function RHAttachmentsPanel({ domain, recordId, currentUser }) {
+// readOnly esconde anexar/remover — usado pro colaborador só ver e baixar
+// (ex: holerite/ponto, que só o RH anexa) sem poder mexer no que já existe.
+export function RHAttachmentsPanel({ domain, recordId, currentUser, readOnly = false }) {
   const { attachments, loading, uploading, error, upload, remove, getSignedUrl } = useRHAttachments(domain, recordId);
   const [downloadingId, setDownloadingId] = useState(null);
   const inputRef = useRef(null);
@@ -164,30 +166,32 @@ function RHAttachmentsPanel({ domain, recordId, currentUser }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
-          style={{
-            background: "var(--accent)",
-            color: "#FFFFFF",
-            border: "none",
-            opacity: uploading ? 0.6 : 1,
-            cursor: uploading ? "not-allowed" : "pointer",
-          }}
-        >
-          <Upload size={12} />
-          {uploading ? "Enviando…" : "Anexar arquivo"}
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={e => { if (e.target.files?.length) { handleFiles(e.target.files); e.target.value = ""; } }}
-        />
-      </div>
+      {!readOnly && (
+        <div>
+          <button
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+            style={{
+              background: "var(--accent)",
+              color: "#FFFFFF",
+              border: "none",
+              opacity: uploading ? 0.6 : 1,
+              cursor: uploading ? "not-allowed" : "pointer",
+            }}
+          >
+            <Upload size={12} />
+            {uploading ? "Enviando…" : "Anexar arquivo"}
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={e => { if (e.target.files?.length) { handleFiles(e.target.files); e.target.value = ""; } }}
+          />
+        </div>
+      )}
 
       {error && (
         <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
@@ -243,17 +247,19 @@ function RHAttachmentsPanel({ domain, recordId, currentUser }) {
               >
                 <Download size={13} />
               </button>
-              <button
-                onClick={() => remove(att)}
-                className="p-1.5 rounded-lg transition-colors"
-                style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                title="Remover arquivo"
-                aria-label="Remover arquivo"
-              >
-                <Trash2 size={13} />
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => remove(att)}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                  title="Remover arquivo"
+                  aria-label="Remover arquivo"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
             </div>
           ))}
         </div>
