@@ -15,6 +15,7 @@ import {
   ArrowDown,
   Gift,
   Check,
+  Upload,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -35,6 +36,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
 import { formatDateBR } from "../../utils/date";
+import { matchDocumentToColaborador } from "../../utils/rh-document-matching";
 
 const BENEFICIO_STATUS_COLORS = {
   solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
@@ -269,6 +271,218 @@ function DocumentosSection({ colaboradorId, canWrite, currentUser }) {
       <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 10 }}>
         Suba aqui o PDF/imagem já emitido pelo sistema de folha e pelo registrador de ponto homologado. É só pra consulta — não substitui nenhum dos dois sistemas.
       </p>
+    </div>
+  );
+}
+
+const CONFIDENCE_INFO = {
+  cpf:  { label: "CPF",       bg: "var(--success-bg)", text: "var(--success)" },
+  nome: { label: "Nome",      bg: "var(--warning-bg)", text: "var(--warning)" },
+  null: { label: "Sem sugestão", bg: "var(--surface)", text: "var(--text-dim)" },
+};
+
+// Upload em lote de holerite/ponto com sugestão de vínculo por CPF/nome no
+// nome do arquivo (ver utils/rh-document-matching) — 100% local, nenhuma IA
+// lê o conteúdo do documento. RH sempre confirma (ou troca manualmente) o
+// colaborador antes do arquivo entrar no banco de documentos de alguém.
+function BulkDocumentUploadModal({ colaboradores, currentUser, onClose }) {
+  const [domain, setDomain] = useState("holerite");
+  const [rows, setRows] = useState([]);
+  const [busyId, setBusyId] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const sortedColaboradores = useMemo(
+    () => [...colaboradores].sort((a, b) => (a.fullName || "").localeCompare(b.fullName || "")),
+    [colaboradores]
+  );
+
+  const addFiles = (fileList) => {
+    const newRows = Array.from(fileList).map((file) => {
+      const suggestion = matchDocumentToColaborador(file.name, colaboradores);
+      return {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        suggestion,
+        manualId: suggestion?.colaboradorId || "",
+        status: "pendente", // pendente | aprovado | rejeitado
+      };
+    });
+    setRows((prev) => [...prev, ...newRows]);
+  };
+
+  const setManual = (rowId, colaboradorId) => {
+    setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, manualId: colaboradorId } : r)));
+  };
+
+  const reject = (rowId) => {
+    setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, status: "rejeitado" } : r)));
+  };
+
+  const approve = async (rowId) => {
+    const row = rows.find((r) => r.id === rowId);
+    if (!row || !row.manualId) return;
+    setBusyId(rowId);
+    try {
+      const file = row.file;
+      const ext = file.name.split(".").pop();
+      const path = `${domain}/${row.manualId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: storageErr } = await supabase.storage
+        .from("rh-attachments")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (storageErr) throw storageErr;
+
+      const { error: dbErr } = await supabase.from("rh_attachments").insert({
+        domain,
+        record_id: row.manualId,
+        file_name: file.name,
+        file_path: path,
+        file_size: file.size,
+        mime_type: file.type || null,
+        uploaded_by: currentUser?.id || null,
+      });
+      if (dbErr) throw dbErr;
+
+      setRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, status: "aprovado" } : r)));
+    } catch (e) {
+      alert("Falha ao subir o arquivo: " + (e.message || String(e)));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const pendentes = rows.filter((r) => r.status === "pendente").length;
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 720, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflow: "hidden" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>Importar documentos em lote</div>
+            <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
+              Sugestão de vínculo por CPF/nome no arquivo — sem IA, sem sair da plataforma. Você aprova cada um.
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>Tipo:</span>
+          {["holerite", "ponto"].map((d) => (
+            <button
+              key={d}
+              onClick={() => setDomain(d)}
+              style={{
+                padding: "5px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                border: domain === d ? "1px solid var(--accent)" : "1px solid var(--border)",
+                background: domain === d ? "var(--accent)" : "var(--surface)",
+                color: domain === d ? "#FFF" : "var(--text-dim)",
+              }}
+            >
+              {d === "holerite" ? "Holerite" : "Ponto"}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: 20, overflowY: "auto", flex: 1 }}>
+          <label
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: 6, padding: "24px 16px", borderRadius: 12, cursor: "pointer",
+              border: `2px dashed ${dragOver ? "var(--accent)" : "var(--border)"}`,
+              background: dragOver ? "var(--accent-tint)" : "var(--surface-alt)",
+            }}
+          >
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>Arraste os arquivos aqui ou clique pra selecionar</span>
+            <span style={{ fontSize: 11, color: "var(--text-dim)" }}>PDF ou imagem, vários de uma vez</span>
+            <input type="file" multiple accept=".pdf,image/*" style={{ display: "none" }} onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+          </label>
+
+          {rows.length > 0 && (
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+              {rows.map((row) => {
+                const basis = row.manualId && row.manualId === row.suggestion?.colaboradorId ? row.suggestion.basis : null;
+                const info = CONFIDENCE_INFO[basis || "null"];
+                return (
+                  <div
+                    key={row.id}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
+                      border: "1px solid var(--border)",
+                      background: row.status === "aprovado" ? "var(--success-bg)" : row.status === "rejeitado" ? "var(--surface-alt)" : "var(--surface)",
+                      opacity: row.status === "rejeitado" ? 0.55 : 1,
+                    }}
+                  >
+                    <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {row.file.name}
+                      </div>
+                      {row.status === "pendente" && (
+                        <span style={{ display: "inline-block", marginTop: 4, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: info.bg, color: info.text }}>
+                          {info.label}
+                        </span>
+                      )}
+                      {row.status === "aprovado" && <span style={{ fontSize: 11, color: "var(--success)", fontWeight: 700 }}>Vinculado e enviado</span>}
+                      {row.status === "rejeitado" && <span style={{ fontSize: 11, color: "var(--text-dim)" }}>Rejeitado — não enviado</span>}
+                    </div>
+
+                    {row.status === "pendente" && (
+                      <>
+                        <select
+                          value={row.manualId}
+                          onChange={(e) => setManual(row.id, e.target.value)}
+                          style={{ fontSize: 12, padding: "6px 8px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", maxWidth: 180 }}
+                        >
+                          <option value="">Selecione o colaborador…</option>
+                          {sortedColaboradores.map((c) => (
+                            <option key={c.id} value={c.id}>{c.fullName}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => approve(row.id)}
+                          disabled={!row.manualId || busyId === row.id}
+                          style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: row.manualId ? "pointer" : "default", opacity: row.manualId ? 1 : 0.5 }}
+                        >
+                          <Check size={12} /> {busyId === row.id ? "Enviando…" : "Aprovar"}
+                        </button>
+                        <button
+                          onClick={() => reject(row.id)}
+                          disabled={busyId === row.id}
+                          style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-dim)", borderRadius: 8, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}
+                        >
+                          Rejeitar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: "12px 20px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
+            {rows.length === 0 ? "Nenhum arquivo ainda" : `${pendentes} pendente(s) de ${rows.length}`}
+          </span>
+          <button
+            onClick={onClose}
+            style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", cursor: "pointer" }}
+          >
+            Concluir
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -936,6 +1150,7 @@ export function RHFuncionariosView({
   const [filterContract, setFilterContract] = useState("all");
   const [selected, setSelected]     = useState(null);
   const [novoColaboradorOpen, setNovoColaboradorOpen] = useState(false);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [editingColaborador, setEditingColaborador]   = useState(null);
   const [sortCol, setSortCol] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
@@ -1042,17 +1257,30 @@ export function RHFuncionariosView({
           </p>
         </div>
         {canWrite && (
-          <button
-            onClick={() => setNovoColaboradorOpen(true)}
-            className="flex items-center gap-1.5 font-semibold"
-            style={{
-              background: "var(--accent)", color: "#FFF", borderRadius: 10,
-              padding: "6px 16px", fontSize: 13, border: "none",
-              cursor: "pointer",
-            }}
-          >
-            <Plus size={14} /> Novo Funcionário
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setBulkUploadOpen(true)}
+              className="flex items-center gap-1.5 font-semibold"
+              style={{
+                background: "var(--surface)", color: "var(--text)", borderRadius: 10,
+                padding: "6px 16px", fontSize: 13, border: "1px solid var(--border)",
+                cursor: "pointer",
+              }}
+            >
+              <Upload size={14} /> Importar Documentos
+            </button>
+            <button
+              onClick={() => setNovoColaboradorOpen(true)}
+              className="flex items-center gap-1.5 font-semibold"
+              style={{
+                background: "var(--accent)", color: "#FFF", borderRadius: 10,
+                padding: "6px 16px", fontSize: 13, border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <Plus size={14} /> Novo Funcionário
+            </button>
+          </div>
         )}
       </div>
 
@@ -1403,6 +1631,14 @@ export function RHFuncionariosView({
           initialData={editingColaborador}
           onSave={(patch) => updateColaborador(editingColaborador.id, patch)}
           onClose={() => setEditingColaborador(null)}
+        />
+      )}
+
+      {bulkUploadOpen && (
+        <BulkDocumentUploadModal
+          colaboradores={colaboradores}
+          currentUser={currentUser}
+          onClose={() => setBulkUploadOpen(false)}
         />
       )}
     </div>
