@@ -11,6 +11,10 @@ const TIPO_LABELS = {
   convenio_medico: "Convênio médico",
   seguradora: "Seguradora",
   terceirizada_rh: "Terceirizada de RH",
+  grafica: "Gráfica",
+  uniformes: "Uniformes",
+  agencia_marketing: "Agência de Marketing",
+  fotografo_videomaker: "Fotógrafo/Vídeomaker",
   outro: "Outro",
 };
 
@@ -42,14 +46,28 @@ function labelSt() {
   return { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 }
 
+const EMPTY_FORNECEDOR_FORM = { name: "", tipo: "convenio_medico", contactName: "", email: "", phone: "", notes: "" };
+
 function NovoFornecedorModal({ onSave, onClose }) {
-  const [form, setForm] = useState({ name: "", tipo: "convenio_medico", contactName: "", email: "", phone: "", notes: "" });
+  const [form, setForm] = useState(EMPTY_FORNECEDOR_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // Clicar fora não deve zerar o que já foi digitado — pede confirmação se
+  // o formulário estiver sujo, mesmo padrão do cadastro de Funcionários.
+  const dirty = JSON.stringify(form) !== JSON.stringify(EMPTY_FORNECEDOR_FORM);
+  const guardedClose = () => {
+    if (dirty && !window.confirm("Descartar os dados preenchidos? As informações não salvas serão perdidas.")) return;
+    onClose();
+  };
 
   const submit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) { setError("Nome é obrigatório."); return; }
+    if (!form.tipo) { setError("Tipo é obrigatório."); return; }
+    if (!form.contactName.trim()) { setError("Contato é obrigatório."); return; }
+    if (!form.phone.trim()) { setError("Telefone é obrigatório."); return; }
+    if (!form.email.trim()) { setError("E-mail é obrigatório."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -66,36 +84,36 @@ function NovoFornecedorModal({ onSave, onClose }) {
   const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={guardedClose}>
       <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Novo fornecedor</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={18} /></button>
+          <button onClick={guardedClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={18} /></button>
         </div>
         <form onSubmit={submit} style={{ padding: "20px 24px 24px" }} className="flex flex-col gap-3">
           <div>
             <label style={labelSt()}>Nome *</label>
-            <input autoFocus className={inputCls} style={inputSt} value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} />
+            <input required autoFocus className={inputCls} style={inputSt} value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} />
           </div>
           <div>
-            <label style={labelSt()}>Tipo</label>
-            <select className={inputCls} style={inputSt} value={form.tipo} onChange={(e) => setForm(f => ({ ...f, tipo: e.target.value }))}>
+            <label style={labelSt()}>Tipo *</label>
+            <select required className={inputCls} style={inputSt} value={form.tipo} onChange={(e) => setForm(f => ({ ...f, tipo: e.target.value }))}>
               {Object.entries(TIPO_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={labelSt()}>Contato</label>
-              <input className={inputCls} style={inputSt} value={form.contactName} onChange={(e) => setForm(f => ({ ...f, contactName: e.target.value }))} />
+              <label style={labelSt()}>Contato *</label>
+              <input required className={inputCls} style={inputSt} value={form.contactName} onChange={(e) => setForm(f => ({ ...f, contactName: e.target.value }))} />
             </div>
             <div>
-              <label style={labelSt()}>Telefone</label>
-              <input className={inputCls} style={inputSt} value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
+              <label style={labelSt()}>Telefone *</label>
+              <input required className={inputCls} style={inputSt} value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
             </div>
           </div>
           <div>
-            <label style={labelSt()}>E-mail</label>
-            <input type="email" className={inputCls} style={inputSt} value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
+            <label style={labelSt()}>E-mail *</label>
+            <input required type="email" className={inputCls} style={inputSt} value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
           </div>
           <div>
             <label style={labelSt()}>Notas</label>
@@ -106,7 +124,7 @@ function NovoFornecedorModal({ onSave, onClose }) {
             <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
               {saving ? "Salvando…" : "Cadastrar"}
             </button>
-            <button type="button" onClick={onClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
               Cancelar
             </button>
           </div>
@@ -116,10 +134,18 @@ function NovoFornecedorModal({ onSave, onClose }) {
   );
 }
 
+const EMPTY_CONTRATO_FORM = { titulo: "", vigenciaInicio: "", vigenciaFim: "", valor: "", status: "ativo" };
+
 function NovoContratoModal({ fornecedorId, onSave, onClose }) {
-  const [form, setForm] = useState({ titulo: "", vigenciaInicio: "", vigenciaFim: "", valor: "", status: "ativo" });
+  const [form, setForm] = useState(EMPTY_CONTRATO_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(EMPTY_CONTRATO_FORM);
+  const guardedClose = () => {
+    if (dirty && !window.confirm("Descartar os dados preenchidos? As informações não salvas serão perdidas.")) return;
+    onClose();
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -140,11 +166,11 @@ function NovoContratoModal({ fornecedorId, onSave, onClose }) {
   const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={guardedClose}>
       <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Novo contrato</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={18} /></button>
+          <button onClick={guardedClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={18} /></button>
         </div>
         <form onSubmit={submit} style={{ padding: "20px 24px 24px" }} className="flex flex-col gap-3">
           <div>
@@ -178,7 +204,7 @@ function NovoContratoModal({ fornecedorId, onSave, onClose }) {
             <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
               {saving ? "Salvando…" : "Criar contrato"}
             </button>
-            <button type="button" onClick={onClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
               Cancelar
             </button>
           </div>

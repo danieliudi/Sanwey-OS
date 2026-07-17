@@ -41,6 +41,17 @@ function fmtBanda(min, max) {
   return min != null ? `A partir de ${formatBRL(min)}` : `Até ${formatBRL(max)}`;
 }
 
+// Turno vira "HH:MM às HH:MM" a partir de dois <input type="time">. Ao editar
+// um cargo salvo antes dessa mudança (turno como texto livre, ex: "Comercial"),
+// tenta recuperar os dois horários se o texto já tiver esse formato; senão os
+// campos nascem vazios e o usuário preenche do zero — não dá pra migrar um
+// texto arbitrário em horário.
+function parseShiftRange(raw) {
+  const matches = String(raw || "").match(/\d{1,2}:\d{2}/g);
+  if (!matches || matches.length < 2) return { start: "", end: "" };
+  return { start: matches[0], end: matches[1] };
+}
+
 // ── Modal: cargo (criar/editar) com descrição por IA ──────────────────────────
 
 function CargoModal({ initialData, currentUser, onSave, onClose }) {
@@ -50,7 +61,9 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
   const [salaryMin, setSalaryMin]     = useState(initialData?.salary_min ?? "");
   const [salaryMax, setSalaryMax]     = useState(initialData?.salary_max ?? "");
   const [schedule, setSchedule]       = useState(initialData?.schedule || "");
-  const [shift, setShift]             = useState(initialData?.shift || "");
+  const initialShift = useMemo(() => parseShiftRange(initialData?.shift), [initialData]);
+  const [shiftStart, setShiftStart]   = useState(initialShift.start);
+  const [shiftEnd, setShiftEnd]       = useState(initialShift.end);
   const [description, setDescription] = useState(initialData?.description || "");
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState(null);
@@ -58,6 +71,7 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
   const [aiError, setAiError]         = useState(null);
 
   const { complete, isConfigured: aiConfigured } = useAI(currentUser);
+  const shift = shiftStart && shiftEnd ? `${shiftStart} às ${shiftEnd}` : "";
 
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -93,7 +107,7 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
     if (salaryMin === "" || salaryMax === "") { setError("Informe a faixa salarial completa (mínimo e máximo)."); return; }
     if (Number(salaryMin) > Number(salaryMax)) { setError("O salário mínimo não pode ser maior que o máximo."); return; }
     if (!schedule.trim()) { setError("Jornada é obrigatória."); return; }
-    if (!shift.trim()) { setError("Turno é obrigatório."); return; }
+    if (!shiftStart || !shiftEnd) { setError("Informe o horário completo do turno (início e fim)."); return; }
     if (!description.trim()) { setError("Descrição do cargo é obrigatória — preencha à mão ou gere com IA."); return; }
     setSaving(true);
     setError(null);
@@ -165,7 +179,11 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
               </div>
               <div>
                 <label style={labelSt}>Turno *</label>
-                <input required type="text" value={shift} onChange={(e) => setShift(e.target.value)} placeholder="Ex: Comercial" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                <div className="flex items-center gap-1.5">
+                  <input required type="time" value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
+                  <span style={{ fontSize: 12, color: "var(--text-dim)" }}>às</span>
+                  <input required type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
+                </div>
               </div>
             </div>
 

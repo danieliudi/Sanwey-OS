@@ -1,16 +1,19 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MoreVertical, ArrowRight } from "lucide-react";
 
 // Botão "…" + dropdown "Mover para" compartilhado por todos os Kanbans
-// (Entregas, Campanhas, Leads, RH). Abre pra cima quando não sobra espaço
-// entre o botão e o fim do próprio card (boundaryRef) — sem isso, um card
-// curto seguido de outro card fazia o menu nascer por cima do card de baixo
-// (bug real, reportado no Kanban de Entregas). Usa o fim do card, não da
-// viewport/coluna com scroll, porque ambos costumam ter espaço de sobra —
-// quem realmente fica "no caminho" é o próximo card da lista.
-export function MoveStageMenu({ targets, onMove, onOpenChange, boundaryRef }) {
+// (Entregas, Campanhas, Leads, RH). O dropdown é renderizado via portal em
+// document.body e posicionado com coordenadas de viewport (position: fixed)
+// — toda coluna de Kanban aqui tem a lista de cards num container com
+// overflow-y: auto separado do cabeçalho; um menu posicionado como filho
+// normal (position: absolute) que abre pra cima perto do topo da lista era
+// cortado por esse overflow e "sumia" atrás do cabeçalho da coluna (bug
+// real, reportado no RH e reproduzível em qualquer Kanban). Fora da coluna,
+// via portal, o overflow dela deixa de valer pro menu.
+export function MoveStageMenu({ targets, onMove, onOpenChange }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [openUpward, setOpenUpward] = useState(false);
+  const [pos, setPos] = useState(null); // { top | bottom, left } em coordenadas de viewport
   const wrapRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -20,23 +23,36 @@ export function MoveStageMenu({ targets, onMove, onOpenChange, boundaryRef }) {
 
   useEffect(() => {
     if (!menuOpen) return;
-    const handler = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setMenuOpen(false);
+    const handleOutside = (e) => {
+      if (wrapRef.current?.contains(e.target) || dropdownRef.current?.contains(e.target)) return;
+      setMenuOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    // Fecha ao rolar qualquer ancestral com scroll — o menu é fixed e não
+    // acompanharia o botão, ficando "flutuando" solto na tela.
+    const close = () => setMenuOpen(false);
+    document.addEventListener("mousedown", handleOutside);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
   }, [menuOpen]);
+
+  useEffect(() => { if (!menuOpen) setPos(null); }, [menuOpen]);
 
   useLayoutEffect(() => {
     if (!menuOpen || !wrapRef.current || !dropdownRef.current) return;
     const btnRect = wrapRef.current.getBoundingClientRect();
-    const menuHeight = dropdownRef.current.offsetHeight;
-    const boundaryBottom = boundaryRef?.current
-      ? boundaryRef.current.getBoundingClientRect().bottom
-      : window.innerHeight;
-    const spaceBelow = Math.min(boundaryBottom, window.innerHeight) - btnRect.bottom;
-    setOpenUpward(spaceBelow < menuHeight + 12);
-  }, [menuOpen, targets.length, boundaryRef]);
+    const menuRect = dropdownRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - btnRect.bottom;
+    const openUpward = spaceBelow < menuRect.height + 12;
+    const left = Math.max(8, Math.min(btnRect.right - menuRect.width, window.innerWidth - menuRect.width - 8));
+    setPos(openUpward
+      ? { bottom: window.innerHeight - btnRect.top + 4, left }
+      : { top: btnRect.bottom + 4, left });
+  }, [menuOpen, targets.length]);
 
   if (!targets?.length || !onMove) return null;
 
@@ -55,15 +71,17 @@ export function MoveStageMenu({ targets, onMove, onOpenChange, boundaryRef }) {
       >
         <MoreVertical size={14} />
       </button>
-      {menuOpen && (
+      {menuOpen && createPortal(
         <div
           ref={dropdownRef}
           style={{
-            position: "absolute",
-            ...(openUpward ? { bottom: "calc(100% + 4px)" } : { top: "calc(100% + 4px)" }),
-            right: 0,
+            position: "fixed",
+            top: pos?.top,
+            bottom: pos?.bottom,
+            left: pos?.left ?? -9999,
+            visibility: pos ? "visible" : "hidden",
             background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
-            boxShadow: "var(--shadow-pop)", zIndex: 50, minWidth: 180, overflow: "hidden",
+            boxShadow: "var(--shadow-pop)", zIndex: 2000, minWidth: 180, overflow: "hidden",
           }}
           onClick={e => e.stopPropagation()}
         >
@@ -87,7 +105,8 @@ export function MoveStageMenu({ targets, onMove, onOpenChange, boundaryRef }) {
               <ArrowRight size={11} style={{ marginLeft: "auto", opacity: 0.4 }} />
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

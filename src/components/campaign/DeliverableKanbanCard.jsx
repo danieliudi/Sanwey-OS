@@ -127,7 +127,6 @@ function DeliverableKanbanCardImpl({
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
               onMove={(key) => onMoveToStage(item.id, key)}
               onOpenChange={setMenuOpen}
-              boundaryRef={cardRef}
             />
           )}
         </div>

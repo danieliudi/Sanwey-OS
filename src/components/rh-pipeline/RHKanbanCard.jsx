@@ -97,7 +97,6 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
               targets={moveTargets.map(s => ({ key: stageKeyOf(s), name: s.name, color: s.color }))}
               onMove={(key) => onMoveToStage(id, key)}
               onOpenChange={setMenuOpen}
-              boundaryRef={cardRef}
             />
           )}
         </div>

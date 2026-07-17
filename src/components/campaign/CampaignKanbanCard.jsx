@@ -129,7 +129,6 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
               onMove={(key) => onMoveToStage(campaign.id, key)}
               onOpenChange={setMenuOpen}
-              boundaryRef={cardRef}
             />
           )}
         </div>

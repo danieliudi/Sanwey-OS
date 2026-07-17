@@ -120,7 +120,6 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
               onMove={(key) => onMoveToStage(lead.id, key)}
               onOpenChange={setMenuOpen}
-              boundaryRef={cardRef}
             />
           )}
         </div>

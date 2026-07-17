@@ -50,10 +50,10 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [captureOpen, setCaptureOpen] = useState(false);
-  const [invalidField, setInvalidField] = useState(null); // "fullName" | "frente" | "file" | null
+  const [invalidField, setInvalidField] = useState(null); // chave de `form`, "file", ou null
   const fileInputRef = useRef();
-  const nameRef = useRef();
-  const frenteRef = useRef();
+  const fieldRefs = useRef({});
+  const registerField = (key) => (el) => { fieldRefs.current[key] = el; };
 
   // Guarda contra descarte acidental: fechar por clique-fora/ESC/Cancelar com
   // o formulário preenchido pede confirmação. Sem isso, um clique na área
@@ -113,21 +113,64 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
     }
   };
 
+  // Todo o cadastro é obrigatório — dados pessoais e profissionais — exceto
+  // os campos que só existem condicionalmente (período de experiência,
+  // datas de aprendizagem, fim de contrato) e só valem pra quem se aplica.
+  const REQUIRED_FIELDS = [
+    ["fullName", "Nome completo"],
+    ["cpf", "CPF"],
+    ["rg", "RG"],
+    ["birthDate", "Data de nascimento"],
+    ["phone", "Telefone"],
+    ["email", "E-mail"],
+    ["addressStreet", "Rua"],
+    ["addressNumber", "Número"],
+    ["addressZip", "CEP"],
+    ["addressNeighborhood", "Bairro"],
+    ["addressCity", "Cidade"],
+    ["addressState", "Estado"],
+    ["jobTitle", "Cargo"],
+    ["frente", "Frente"],
+    ["department", "Departamento"],
+    ["contractType", "Tipo de contrato"],
+    ["admissionDate", "Data de admissão"],
+    ["salary", "Salário"],
+    ["asoVencimento", "Vencimento do ASO"],
+  ];
+  if (form.contractType === "clt") REQUIRED_FIELDS.push(["periodoExperienciaDias", "Dias de período de experiência"]);
+  if (form.contractType === "aprendiz") {
+    REQUIRED_FIELDS.push(["aprendizInicio", "Início do contrato de aprendizagem"]);
+    REQUIRED_FIELDS.push(["aprendizFim", "Fim do contrato de aprendizagem"]);
+  }
+  if (form.contractType === "temporario") REQUIRED_FIELDS.push(["contratoFim", "Fim do contrato"]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Validação inline: destaca o campo obrigatório inválido e leva o foco/
     // scroll até ele, em vez de só mostrar um banner longe do campo. Achado
     // da 2ª auditoria.
-    const focusInvalid = (field, ref) => {
+    const focusInvalid = (field) => {
       setInvalidField(field);
-      ref?.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      ref?.current?.focus?.();
+      const el = fieldRefs.current[field];
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      el?.focus?.();
     };
-    if (!form.fullName.trim()) { setError("Nome completo é obrigatório."); focusInvalid("fullName", nameRef); return; }
-    if (!form.frente) { setError("Frente é obrigatória."); focusInvalid("frente", frenteRef); return; }
+    for (const [key, label] of REQUIRED_FIELDS) {
+      const val = form[key];
+      if (val == null || String(val).trim() === "") {
+        setError(`${label} é obrigatório.`);
+        focusInvalid(key);
+        return;
+      }
+    }
     // Documento obrigatório só na criação — editar um colaborador legado sem
     // documento não deve ficar travado retroativamente.
-    if (!initialData && !file) { setError("Anexe uma foto ou PDF do RG/CNH antes de cadastrar."); focusInvalid("file", fileInputRef); return; }
+    if (!initialData && !file) {
+      setError("Anexe uma foto ou PDF do RG/CNH antes de cadastrar.");
+      setInvalidField("file");
+      fileInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setInvalidField(null);
     setSaving(true);
     setError(null);
@@ -160,6 +203,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
   const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
   const inputCls = "w-full text-sm rounded-xl border px-3 py-2 outline-none";
+  const fieldSt = (key) => (invalidField === key ? { ...inputSt, borderColor: "var(--danger)" } : inputSt);
 
   return (
     <>
@@ -237,105 +281,106 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Nome completo *</label>
-                <input ref={nameRef} type="text" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} className={inputCls} style={invalidField === "fullName" ? { ...inputSt, borderColor: "var(--danger)" } : inputSt} onFocus={focusBlue} onBlur={blurGray} autoFocus />
+                <input ref={registerField("fullName")} type="text" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} className={inputCls} style={fieldSt("fullName")} onFocus={focusBlue} onBlur={blurGray} autoFocus />
               </div>
               <div>
-                <label style={labelSt}>CPF</label>
-                <input type="text" value={form.cpf} onChange={(e) => set("cpf", formatCPF(e.target.value))} placeholder="000.000.000-00" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>CPF *</label>
+                <input ref={registerField("cpf")} type="text" value={form.cpf} onChange={(e) => set("cpf", formatCPF(e.target.value))} placeholder="000.000.000-00" className={inputCls} style={fieldSt("cpf")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
-                <label style={labelSt}>RG</label>
-                <input type="text" value={form.rg} onChange={(e) => set("rg", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>RG *</label>
+                <input ref={registerField("rg")} type="text" value={form.rg} onChange={(e) => set("rg", e.target.value)} className={inputCls} style={fieldSt("rg")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               <div>
-                <label style={labelSt}>Nascimento</label>
-                <input type="date" value={form.birthDate} onChange={(e) => set("birthDate", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Nascimento *</label>
+                <input ref={registerField("birthDate")} type="date" value={form.birthDate} onChange={(e) => set("birthDate", e.target.value)} className={inputCls} style={fieldSt("birthDate")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
-                <label style={labelSt}>Telefone</label>
-                <input type="tel" value={form.phone} onChange={(e) => set("phone", formatPhone(e.target.value))} placeholder="(11) 99999-0000" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Telefone *</label>
+                <input ref={registerField("phone")} type="tel" value={form.phone} onChange={(e) => set("phone", formatPhone(e.target.value))} placeholder="(11) 99999-0000" className={inputCls} style={fieldSt("phone")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
-                <label style={labelSt}>E-mail (opcional)</label>
-                <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>E-mail *</label>
+                <input ref={registerField("email")} type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputCls} style={fieldSt("email")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
             </div>
 
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>Endereço</div>
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
               <div>
-                <label style={labelSt}>Rua</label>
-                <input type="text" value={form.addressStreet} onChange={(e) => set("addressStreet", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Rua *</label>
+                <input ref={registerField("addressStreet")} type="text" value={form.addressStreet} onChange={(e) => set("addressStreet", e.target.value)} className={inputCls} style={fieldSt("addressStreet")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
-                <label style={labelSt}>Número</label>
-                <input type="text" value={form.addressNumber} onChange={(e) => set("addressNumber", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Número *</label>
+                <input ref={registerField("addressNumber")} type="text" value={form.addressNumber} onChange={(e) => set("addressNumber", e.target.value)} className={inputCls} style={fieldSt("addressNumber")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
-                <label style={labelSt}>CEP</label>
-                <input type="text" value={form.addressZip} onChange={(e) => set("addressZip", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>CEP *</label>
+                <input ref={registerField("addressZip")} type="text" value={form.addressZip} onChange={(e) => set("addressZip", e.target.value)} className={inputCls} style={fieldSt("addressZip")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               <div>
-                <label style={labelSt}>Bairro</label>
-                <input type="text" value={form.addressNeighborhood} onChange={(e) => set("addressNeighborhood", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Bairro *</label>
+                <input ref={registerField("addressNeighborhood")} type="text" value={form.addressNeighborhood} onChange={(e) => set("addressNeighborhood", e.target.value)} className={inputCls} style={fieldSt("addressNeighborhood")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
-                <label style={labelSt}>Cidade</label>
-                <input type="text" value={form.addressCity} onChange={(e) => set("addressCity", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Cidade *</label>
+                <input ref={registerField("addressCity")} type="text" value={form.addressCity} onChange={(e) => set("addressCity", e.target.value)} className={inputCls} style={fieldSt("addressCity")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
-                <label style={labelSt}>Estado</label>
-                <input type="text" value={form.addressState} onChange={(e) => set("addressState", e.target.value)} maxLength={2} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Estado *</label>
+                <input ref={registerField("addressState")} type="text" value={form.addressState} onChange={(e) => set("addressState", e.target.value)} maxLength={2} className={inputCls} style={fieldSt("addressState")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
             </div>
 
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>Dados profissionais</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label style={labelSt}>Cargo</label>
-                <input type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} placeholder="Ex: Operador de produção" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Cargo *</label>
+                <input ref={registerField("jobTitle")} type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} placeholder="Ex: Operador de produção" className={inputCls} style={fieldSt("jobTitle")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
                 <label style={labelSt}>Frente *</label>
-                <select ref={frenteRef} value={form.frente} onChange={(e) => set("frente", e.target.value)} className={inputCls} style={invalidField === "frente" ? { ...inputSt, borderColor: "var(--danger)" } : inputSt}>
+                <select ref={registerField("frente")} value={form.frente} onChange={(e) => set("frente", e.target.value)} className={inputCls} style={fieldSt("frente")}>
                   <option value="">Selecionar</option>
                   {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelSt}>Departamento</label>
-                <select value={form.department} onChange={(e) => set("department", e.target.value)} className={inputCls} style={inputSt}>
+                <label style={labelSt}>Departamento *</label>
+                <select ref={registerField("department")} value={form.department} onChange={(e) => set("department", e.target.value)} className={inputCls} style={fieldSt("department")}>
                   <option value="">Selecionar</option>
                   {RH_DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelSt}>Tipo de contrato</label>
-                <select value={form.contractType} onChange={(e) => set("contractType", e.target.value)} className={inputCls} style={inputSt}>
+                <label style={labelSt}>Tipo de contrato *</label>
+                <select ref={registerField("contractType")} value={form.contractType} onChange={(e) => set("contractType", e.target.value)} className={inputCls} style={fieldSt("contractType")}>
                   <option value="">Selecionar</option>
                   {RH_CONTRACT_TYPES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                 </select>
               </div>
               <div>
-                <label style={labelSt}>Data de admissão</label>
-                <input type="date" value={form.admissionDate} onChange={(e) => set("admissionDate", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Data de admissão *</label>
+                <input ref={registerField("admissionDate")} type="date" value={form.admissionDate} onChange={(e) => set("admissionDate", e.target.value)} className={inputCls} style={fieldSt("admissionDate")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               {form.contractType === "clt" && (
                 <div>
-                  <label style={labelSt}>Dias de período de experiência</label>
+                  <label style={labelSt}>Dias de período de experiência *</label>
                   <input
+                    ref={registerField("periodoExperienciaDias")}
                     type="number"
                     min={1}
                     placeholder="90"
                     value={form.periodoExperienciaDias}
                     onChange={(e) => set("periodoExperienciaDias", e.target.value)}
                     className={inputCls}
-                    style={inputSt}
+                    style={fieldSt("periodoExperienciaDias")}
                     onFocus={focusBlue}
                     onBlur={blurGray}
                   />
@@ -346,12 +391,12 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
               {form.contractType === "aprendiz" && (
                 <>
                   <div>
-                    <label style={labelSt}>Início do contrato de aprendizagem</label>
-                    <input type="date" value={form.aprendizInicio} onChange={(e) => set("aprendizInicio", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                    <label style={labelSt}>Início do contrato de aprendizagem *</label>
+                    <input ref={registerField("aprendizInicio")} type="date" value={form.aprendizInicio} onChange={(e) => set("aprendizInicio", e.target.value)} className={inputCls} style={fieldSt("aprendizInicio")} onFocus={focusBlue} onBlur={blurGray} />
                   </div>
                   <div>
-                    <label style={labelSt}>Fim do contrato de aprendizagem</label>
-                    <input type="date" value={form.aprendizFim} onChange={(e) => set("aprendizFim", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                    <label style={labelSt}>Fim do contrato de aprendizagem *</label>
+                    <input ref={registerField("aprendizFim")} type="date" value={form.aprendizFim} onChange={(e) => set("aprendizFim", e.target.value)} className={inputCls} style={fieldSt("aprendizFim")} onFocus={focusBlue} onBlur={blurGray} />
                   </div>
                 </>
               )}
@@ -362,17 +407,19 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
                 </select>
               </div>
               <div>
-                <label style={labelSt}>Salário (R$)</label>
-                <CurrencyInput prefix={null} value={form.salary} onChange={v => set("salary", v)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Salário (R$) *</label>
+                <CurrencyInput prefix={null} value={form.salary} onChange={v => set("salary", v)} className={inputCls} style={fieldSt("salary")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
-                <label style={labelSt}>Vencimento do ASO</label>
-                <input type="date" value={form.asoVencimento} onChange={(e) => set("asoVencimento", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <label style={labelSt}>Vencimento do ASO *</label>
+                <input ref={registerField("asoVencimento")} type="date" value={form.asoVencimento} onChange={(e) => set("asoVencimento", e.target.value)} className={inputCls} style={fieldSt("asoVencimento")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
-              <div>
-                <label style={labelSt}>Fim do contrato (se temporário)</label>
-                <input type="date" value={form.contratoFim} onChange={(e) => set("contratoFim", e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
-              </div>
+              {form.contractType === "temporario" && (
+                <div>
+                  <label style={labelSt}>Fim do contrato *</label>
+                  <input ref={registerField("contratoFim")} type="date" value={form.contratoFim} onChange={(e) => set("contratoFim", e.target.value)} className={inputCls} style={fieldSt("contratoFim")} onFocus={focusBlue} onBlur={blurGray} />
+                </div>
+              )}
             </div>
             {(() => {
               const exp = periodoExperienciaInfo(form);
