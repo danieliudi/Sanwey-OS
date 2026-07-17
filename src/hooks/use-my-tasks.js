@@ -498,6 +498,26 @@ export function useMyTasks({ currentUser } = {}) {
         }
       }
 
+      // Offboarding (Onda 3, item 10): desligado sem entrevista de saída
+      // registrada. Loop separado — o de cima pula tudo que não é 'ativo'.
+      for (const c of (colaboradores || [])) {
+        if (c.employeeStatus !== "desligado" || c.desligamentoTipo) continue;
+        out.push({
+          id: `resp-offboarding-${c.id}`,
+          bucket: "responsibility",
+          module: "colaboradores",
+          moduleLabel: "Offboarding",
+          icon: AlertTriangle,
+          title: c.fullName,
+          subtitle: "Desligado sem entrevista de saída",
+          badge: "Registrar entrevista",
+          badgeTone: "var(--warning)",
+          urgencyRank: 0,
+          section: "rh-funcionarios",
+          raw: c,
+        });
+      }
+
       // Vencimento de treinamento NR/obrigatório (Áudio 4): certificado que
       // vence antes da auditoria. Cruza atribuição concluída × treinamento
       // (validade) × colaborador ativo. Janela de 30d (inclui já-vencido).

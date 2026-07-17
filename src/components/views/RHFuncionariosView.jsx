@@ -21,6 +21,8 @@ import {
   RH_CONTRACT_TYPES,
   RH_EMPLOYEE_STATUSES,
   RH_APRENDIZ_COTA_ALVO,
+  RH_DESLIGAMENTO_TIPOS,
+  RH_ENTREVISTA_SAIDA_PERGUNTAS,
 } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { supabase } from "../../lib/supabase";
@@ -362,6 +364,10 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
     contrato_fim:    colaboradorRow?.contratoFim || "",
     aprendiz_inicio: colaboradorRow?.aprendizInicio || "",
     aprendiz_fim:    colaboradorRow?.aprendizFim || "",
+    desligamento_date:   colaboradorRow?.desligamentoDate || "",
+    desligamento_tipo:   colaboradorRow?.desligamentoTipo || "",
+    desligamento_motivo: colaboradorRow?.desligamentoMotivo || "",
+    desligamento_meta:   colaboradorRow?.desligamentoMeta || {},
   });
 
   // Estimativas informativas — período de experiência CLT e aviso-prévio
@@ -401,12 +407,19 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
         salary:          form.salary !== "" ? parseFloat(form.salary) : null,
       });
       if (colaboradorRow && onUpdateColaborador) {
+        const desligPatch = form.employee_status === "desligado" ? {
+          desligamentoTipo: form.desligamento_tipo || null,
+          desligamentoDate: form.desligamento_date || new Date().toISOString().slice(0, 10),
+          desligamentoMotivo: form.desligamento_motivo || null,
+          desligamentoMeta: form.desligamento_meta || {},
+        } : {};
         await onUpdateColaborador(colaboradorRow.id, {
           frente: form.frente || null,
           asoVencimento: form.aso_vencimento || null,
           contratoFim: form.contrato_fim || null,
           aprendizInicio: form.aprendiz_inicio || null,
           aprendizFim: form.aprendiz_fim || null,
+          ...desligPatch,
         });
       }
       setEditing(false);
@@ -705,6 +718,40 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                       />
                     </div>
                   </>
+                )}
+
+                {form.employee_status === "desligado" && (
+                  <div style={{ gridColumn: "1 / -1", marginTop: 4, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 10 }}>Entrevista de desligamento</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={labelSt}>Tipo de desligamento</label>
+                        <select value={form.desligamento_tipo} onChange={(e) => set("desligamento_tipo", e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                          <option value="">Selecione…</option>
+                          {RH_DESLIGAMENTO_TIPOS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={labelSt}>Data do desligamento</label>
+                        <input type="date" value={form.desligamento_date} onChange={(e) => set("desligamento_date", e.target.value)} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 12 }}>
+                      <label style={labelSt}>Motivo</label>
+                      <textarea value={form.desligamento_motivo} onChange={(e) => set("desligamento_motivo", e.target.value)} rows={2} className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={inputSt} />
+                    </div>
+                    {RH_ENTREVISTA_SAIDA_PERGUNTAS.map((q) => (
+                      <div key={q.key} style={{ marginTop: 12 }}>
+                        <label style={labelSt}>{q.label}</label>
+                        <textarea
+                          value={form.desligamento_meta?.[q.key] || ""}
+                          onChange={(e) => set("desligamento_meta", { ...(form.desligamento_meta || {}), [q.key]: e.target.value })}
+                          rows={2}
+                          className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={inputSt}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             ) : (

@@ -38,6 +38,24 @@ export const RH_EMPLOYEE_STATUSES = [
   { id: "desligado",  label: "Desligado",  color: "#6B7280", bg: "#F3F4F6" },
 ];
 
+// Offboarding (Onda 3, item 10) — tipo do desligamento (bate com o CHECK da
+// coluna rh_colaboradores.desligamento_tipo) e as perguntas da entrevista de
+// saída (respostas gravadas em desligamento_meta por chave `key`).
+export const RH_DESLIGAMENTO_TIPOS = [
+  { id: "voluntario",   label: "Voluntário (pediu demissão)", voluntario: true },
+  { id: "involuntario", label: "Involuntário (demitido)",     voluntario: false },
+  { id: "fim_contrato", label: "Fim de contrato",             voluntario: false },
+  { id: "justa_causa",  label: "Justa causa",                 voluntario: false },
+  { id: "acordo",       label: "Acordo",                      voluntario: null },
+];
+
+export const RH_ENTREVISTA_SAIDA_PERGUNTAS = [
+  { key: "motivo_principal", label: "Motivo principal da saída" },
+  { key: "pontos_positivos", label: "O que a empresa faz bem" },
+  { key: "pontos_melhoria",  label: "O que a empresa poderia melhorar" },
+  { key: "recontrataria",    label: "Recontrataria / recomendaria a empresa?" },
+];
+
 export const RH_RECRUITMENT_STAGES = [
   { id: "triagem",     name: "Triagem",          color: "#6366F1", order: 1 },
   { id: "entrevista1", name: "Entrevista RH",     color: "#0EA5E9", order: 2 },

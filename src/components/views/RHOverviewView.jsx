@@ -14,7 +14,9 @@ import {
   RH_DEPARTMENTS,
   RH_CONTRACT_TYPES,
   RH_EMPLOYEE_STATUSES,
+  RH_DESLIGAMENTO_TIPOS,
 } from "../../constants/rh-config";
+import { parseDateInput } from "../../utils/date";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
@@ -198,6 +200,21 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
     (c) => c.employeeStatus === "afastado"
   ).length;
 
+  // Turnover / offboarding (Onda 3, item 10): desligados nos últimos 12 meses,
+  // taxa aproximada e distribuição por tipo de saída.
+  const desligados12m = colaboradores.filter((c) => {
+    if (c.employeeStatus !== "desligado" || !c.desligamentoDate) return false;
+    const d = parseDateInput(c.desligamentoDate);
+    if (Number.isNaN(d.getTime())) return false;
+    return (Date.now() - d.getTime()) <= 365 * 86400000;
+  });
+  const turnoverRate = totalAtivos > 0 ? Math.round((desligados12m.length / (totalAtivos + desligados12m.length)) * 100) : 0;
+  const desligadosVoluntarios = desligados12m.filter((c) => c.desligamentoTipo === "voluntario").length;
+  const exitPorTipo = RH_DESLIGAMENTO_TIPOS
+    .map((t) => ({ ...t, n: desligados12m.filter((c) => c.desligamentoTipo === t.id).length }))
+    .filter((t) => t.n > 0);
+  const semEntrevista = desligados12m.filter((c) => !c.desligamentoTipo).length;
+
   const recentAdmissions = [...colaboradores]
     .filter((c) => c.admissionDate)
     .sort(
@@ -342,6 +359,45 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
             </div>
           ))}
         </div>
+
+        {desligados12m.length > 0 && (
+          <div style={{ ...card, padding: 20, marginBottom: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <UserMinus size={16} color="var(--text-dim)" />
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>Turnover (últimos 12 meses)</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Barlow Condensed', Inter, sans-serif", lineHeight: 1 }}>{desligados12m.length}</div>
+                <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 4 }}>Desligamentos</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: turnoverRate >= 20 ? "var(--danger)" : "var(--text)", fontFamily: "'Barlow Condensed', Inter, sans-serif", lineHeight: 1 }}>{turnoverRate}%</div>
+                <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 4 }}>Taxa aproximada</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Barlow Condensed', Inter, sans-serif", lineHeight: 1 }}>
+                  {desligados12m.length ? Math.round((desligadosVoluntarios / desligados12m.length) * 100) : 0}%
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 4 }}>Voluntários</div>
+              </div>
+            </div>
+            {exitPorTipo.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+                {exitPorTipo.map((t) => (
+                  <span key={t.id} style={{ fontSize: 11, fontWeight: 600, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 99, padding: "3px 10px" }}>
+                    {t.label.split(" (")[0]}: <b style={{ color: "var(--text)" }}>{t.n}</b>
+                  </span>
+                ))}
+              </div>
+            )}
+            {semEntrevista > 0 && (
+              <div style={{ fontSize: 11, color: "var(--warning)", fontWeight: 600, marginTop: 10 }}>
+                {semEntrevista} desligamento(s) sem entrevista de saída registrada.
+              </div>
+            )}
+          </div>
+        )}
 
         <div
           className="rh-three-col"
