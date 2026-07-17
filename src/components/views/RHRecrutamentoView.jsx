@@ -41,6 +41,7 @@ import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHManagerLinks } from "../../hooks/use-rh-manager-links";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { QRCodeButton } from "../shared/QRCodeButton";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
@@ -1094,6 +1095,7 @@ function VagaDrawer({
               >
                 <MessageSquare size={12} /> WhatsApp
               </a>
+              <QRCodeButton url={`${window.location.origin}/vagas/${vaga.link_slug}`} title={vaga.title} buttonLabel="QR" compact />
             </div>
           )}
 
@@ -2514,7 +2516,7 @@ function addDays(base, days) {
 export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
-    createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, bulkReprovarComEmail, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
+    createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const { cargos, createCargo, deleteCargo } = useRHCargoTemplates({ userId: user?.id });
   const { createColaborador } = useRHColaboradores({ userId: user?.id });
@@ -2762,14 +2764,14 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     await updateAplicacao(aplicacaoId, { activities });
   };
 
-  const handleCopyLink = async (vaga) => {
-    const link = `${window.location.origin}/vagas/${vaga.link_slug}`;
+  const handleCopyLink = async (vaga, urlOverride) => {
+    const link = urlOverride || `${window.location.origin}/vagas/${vaga.link_slug}`;
     try {
       await navigator.clipboard.writeText(link);
       setCopiedSlug(vaga.id);
       setTimeout(() => setCopiedSlug((s) => (s === vaga.id ? null : s)), 2000);
     } catch {
-      window.prompt("Copie o link da vaga:", link);
+      window.prompt("Copie o link:", link);
     }
   };
 
@@ -2976,6 +2978,23 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
       ) : (
         /* ═══ Kanban de CANDIDATOS (existente) ═══ */
         <>
+          {/* Banco de talentos (Onda 2, item 5): link/QR público de candidatura
+              espontânea — sempre disponível, independente de vaga aberta. */}
+          {canWrite && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-dim)" }}>Banco de talentos:</span>
+              <button
+                onClick={() => handleCopyLink({ id: "__banco_talentos__" }, `${window.location.origin}/trabalhe-conosco`)}
+                title="Copiar link de candidatura espontânea"
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
+              >
+                {copiedSlug === "__banco_talentos__" ? <Check size={12} color="var(--success)" /> : <Link2 size={12} />}
+                {copiedSlug === "__banco_talentos__" ? "Link copiado!" : "Copiar link"}
+              </button>
+              <QRCodeButton url={`${window.location.origin}/trabalhe-conosco`} title="Trabalhe conosco" buttonLabel="QR code" />
+            </div>
+          )}
+
           {/* Vaga selector */}
           {vagas.length > 0 && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
@@ -3019,6 +3038,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
               >
                 <MessageSquare size={12} /> Compartilhar no WhatsApp
               </a>
+              <QRCodeButton url={`${window.location.origin}/vagas/${activeVaga.link_slug}`} title={activeVaga.title} buttonLabel="QR code" />
             </div>
           )}
 
@@ -3046,6 +3066,23 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                     >
                       Limpar
                     </button>
+                    <select
+                      value=""
+                      onChange={async (e) => {
+                        const stageKey = e.target.value;
+                        if (!stageKey) return;
+                        await bulkMoveStage({ aplicacaoIds: [...selectedCandIds], stageKey });
+                        setSelectedCandIds(new Set());
+                      }}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer"
+                      style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}
+                      title="Mover os selecionados para uma etapa"
+                    >
+                      <option value="">Mover para…</option>
+                      {candStages.filter((s) => !s.lost).map((s) => (
+                        <option key={s.stageKey} value={s.stageKey}>{s.name}</option>
+                      ))}
+                    </select>
                     <button
                       onClick={() => setBulkReprovarOpen(true)}
                       className="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5"

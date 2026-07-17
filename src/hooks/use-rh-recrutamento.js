@@ -212,6 +212,19 @@ export function useRHRecrutamento({ userId } = {}) {
     return { movidos: ids.length, emails: emailOk ? emails.length : 0, semEmail, emailOk };
   }, [aplicacoes, candidatosPool]);
 
+  // Avanço em massa (Onda 2, item 5): move N aplicações pra uma etapa qualquer
+  // do funil de uma vez — triagem rápida do banco de talentos. Mesmo padrão
+  // .update().in('id', ids) da reprovação em massa, sem o envio de e-mail.
+  const bulkMoveStage = useCallback(async ({ aplicacaoIds = [], stageKey }) => {
+    const ids = [...new Set(aplicacaoIds)].filter(Boolean);
+    if (!ids.length || !stageKey) return { movidos: 0 };
+    const patch = { etapa_pipeline: stageKey, stage_changed_at: new Date().toISOString() };
+    const { error } = await supabase.from("rh_aplicacoes").update(patch).in("id", ids);
+    if (error) throw new Error(error.message);
+    setAplicacoes(prev => prev.map(a => ids.includes(a.id) ? { ...a, ...patch } : a));
+    return { movidos: ids.length };
+  }, []);
+
   // Marca a aplicação como contratada (usado após converter o candidato em
   // funcionário) — dá sinal durável de "já contratado" e trava a 2ª conversão.
   const markHired = useCallback(async (aplicacaoId) => {
@@ -272,11 +285,12 @@ export function useRHRecrutamento({ userId } = {}) {
     createCandidato,
     changeStage,
     bulkReprovarComEmail,
+    bulkMoveStage,
     updateAplicacao,
     addNote,
     changeRating,
     markHired,
     attachTriagemToVaga,
     refetch: fetchAll,
-  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, bulkReprovarComEmail, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga, fetchAll]);
+  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga, fetchAll]);
 }
