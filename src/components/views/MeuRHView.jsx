@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   Home, Megaphone, ClipboardCheck, GraduationCap, MessageSquareText,
-  CalendarCheck, FileText, User, Plus, Loader2,
+  CalendarCheck, FileText, User, Plus, Loader2, Pencil, X, Check,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useMyColaborador } from "../../hooks/use-my-colaborador";
@@ -12,6 +12,7 @@ import { RHFeedbackView } from "./RHFeedbackView";
 import { RHAttachmentsPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { RH_LEAVE_TYPES } from "../../constants/rh-config";
 import { formatDateBR } from "../../utils/date";
+import { computeFeriasSaldo } from "../../utils/rh-ferias-saldo";
 import { EmptyState } from "../ui/EmptyState";
 
 // Painel do colaborador (/meu-rh) — pra quem tem login mas nenhum cargo
@@ -155,7 +156,7 @@ function SolicitarFeriasForm({ currentUser, onCreated }) {
   );
 }
 
-function MeuFeriasPanel({ currentUser }) {
+function MeuFeriasPanel({ currentUser, admissionDate }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -174,9 +175,18 @@ function MeuFeriasPanel({ currentUser }) {
   React.useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
   const leaveLabel = (typeId) => RH_LEAVE_TYPES.find(t => t.id === typeId)?.label || typeId;
+  const saldo = useMemo(() => computeFeriasSaldo(admissionDate, requests), [admissionDate, requests]);
 
   return (
     <div>
+      {saldo && (
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 16, padding: "12px 16px", borderRadius: 12, background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+          <span style={{ fontSize: 24, fontWeight: 800, color: "var(--text)" }}>{saldo.saldo}</span>
+          <span style={{ fontSize: 12, color: "var(--text-dim)" }}>
+            dia(s) de férias disponíveis · {saldo.diasDireito} adquiridos, {saldo.diasGozados} já gozados
+          </span>
+        </div>
+      )}
       <SolicitarFeriasForm currentUser={currentUser} onCreated={fetchRequests} />
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
@@ -204,12 +214,173 @@ function MeuFeriasPanel({ currentUser }) {
 
 const CAMPO_LABELS = [
   ["fullName", "Nome completo"], ["cpf", "CPF"], ["rg", "RG"],
-  ["phone", "Telefone"], ["email", "E-mail"],
   ["jobTitle", "Cargo"], ["department", "Departamento"],
   ["admissionDate", "Admissão"], ["employeeStatus", "Status"],
 ];
 
-function MeusDadosPanel({ meuColaborador }) {
+// Campos que a própria pessoa pode propor atualização — nome/CPF/RG/cargo/
+// departamento/admissão exigem documento ou já têm fluxo próprio
+// (rh_movimentacoes), então ficam de fora de propósito.
+const EDITABLE_SIMPLE = [["phone", "phone", "Telefone"], ["email", "email", "E-mail"]];
+const ADDRESS_FIELDS = [
+  ["addressStreet", "address_street", "Rua"],
+  ["addressNumber", "address_number", "Número"],
+  ["addressComplement", "address_complement", "Complemento"],
+  ["addressNeighborhood", "address_neighborhood", "Bairro"],
+  ["addressCity", "address_city", "Cidade"],
+  ["addressState", "address_state", "Estado"],
+  ["addressZip", "address_zip", "CEP"],
+];
+
+const REQUEST_STATUS_INFO = {
+  pendente: { label: "Aguardando RH", bg: "var(--warning-bg)", text: "var(--warning)" },
+  aprovado: { label: "Aprovado",      bg: "var(--success-bg)", text: "var(--success)" },
+  recusado: { label: "Recusado",      bg: "var(--danger-bg)",  text: "var(--danger)" },
+};
+
+async function insertDataUpdateRequest({ colaboradorId, currentUserId, field, currentValue, newValue, motivo }) {
+  return supabase.from("rh_data_update_requests").insert({
+    colaborador_id: colaboradorId,
+    requested_by: currentUserId,
+    field,
+    current_value: currentValue || null,
+    new_value: newValue,
+    motivo: motivo || null,
+  });
+}
+
+function EditFieldInline({ colaboradorId, currentUserId, dbField, currentValue, onSubmitted }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(currentValue || "");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!value.trim() || value.trim() === (currentValue || "")) { setOpen(false); return; }
+    setSaving(true);
+    await insertDataUpdateRequest({ colaboradorId, currentUserId, field: dbField, currentValue, newValue: value.trim() });
+    setSaving(false);
+    setOpen(false);
+    onSubmitted?.();
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => { setValue(currentValue || ""); setOpen(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "inline-flex" }}>
+        <Pencil size={11} />
+      </button>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1 mt-1">
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        autoFocus
+        style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", flex: 1 }}
+      />
+      <button onClick={submit} disabled={saving} style={{ background: "var(--accent)", border: "none", borderRadius: 6, padding: 4, cursor: "pointer", display: "flex" }}>
+        <Check size={11} color="#FFF" />
+      </button>
+      <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}>
+        <X size={11} />
+      </button>
+    </div>
+  );
+}
+
+function EditEnderecoForm({ colaboradorId, currentUserId, meuColaborador, onSubmitted }) {
+  const [open, setOpen] = useState(false);
+  const [values, setValues] = useState(() => Object.fromEntries(ADDRESS_FIELDS.map(([key]) => [key, meuColaborador[key] || ""])));
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    const changed = ADDRESS_FIELDS.filter(([key]) => (values[key] || "").trim() !== (meuColaborador[key] || ""));
+    if (changed.length === 0) { setOpen(false); return; }
+    setSaving(true);
+    await Promise.all(changed.map(([key, dbField]) =>
+      insertDataUpdateRequest({ colaboradorId, currentUserId, field: dbField, currentValue: meuColaborador[key], newValue: (values[key] || "").trim() })
+    ));
+    setSaving(false);
+    setOpen(false);
+    onSubmitted?.();
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} style={{ fontSize: 11, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+        <Pencil size={11} /> Atualizar endereço
+      </button>
+    );
+  }
+  return (
+    <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 12, marginTop: 8, background: "var(--surface-alt)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+        {ADDRESS_FIELDS.map(([key, , label]) => (
+          <div key={key}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)" }}>{label}</label>
+            <input
+              value={values[key]}
+              onChange={(e) => setValues(v => ({ ...v, [key]: e.target.value }))}
+              style={{ width: "100%", marginTop: 2, fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)" }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <button onClick={submit} disabled={saving} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          {saving ? "Enviando…" : "Enviar solicitação"}
+        </button>
+        <button onClick={() => setOpen(false)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-dim)", borderRadius: 8, padding: "5px 12px", fontSize: 12, cursor: "pointer" }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MinhasSolicitacoesList({ currentUser, refreshKey }) {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    let active = true;
+    if (!isSupabaseConfigured || !currentUser?.id) { setLoading(false); return; }
+    setLoading(true);
+    supabase
+      .from("rh_data_update_requests")
+      .select("*")
+      .eq("requested_by", currentUser.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (active) { setRequests(data || []); setLoading(false); } });
+    return () => { active = false; };
+  }, [currentUser?.id, refreshKey]);
+
+  if (loading || requests.length === 0) return null;
+
+  const fieldLabel = (f) => (EDITABLE_SIMPLE.find(e => e[1] === f) || ADDRESS_FIELDS.find(e => e[1] === f) || [null, null, f])[2];
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+        Minhas solicitações de atualização
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {requests.map(r => {
+          const info = REQUEST_STATUS_INFO[r.status] || REQUEST_STATUS_INFO.pendente;
+          return (
+            <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 12, padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--text)" }}>{fieldLabel(r.field)}: <span style={{ color: "var(--text-dim)" }}>{r.new_value}</span></span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: info.bg, color: info.text }}>{info.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MeusDadosPanel({ meuColaborador, currentUser }) {
+  const [refreshKey, setRefreshKey] = useState(0);
   if (!meuColaborador) {
     return <EmptyState icon={User} title="Nenhum dado cadastrado" description="Fale com o RH se isso não for esperado." />;
   }
@@ -217,6 +388,7 @@ function MeusDadosPanel({ meuColaborador }) {
     meuColaborador.addressStreet, meuColaborador.addressNumber, meuColaborador.addressComplement,
     meuColaborador.addressNeighborhood, meuColaborador.addressCity, meuColaborador.addressState,
   ].filter(Boolean).join(", ");
+  const bump = () => setRefreshKey(k => k + 1);
 
   return (
     <div>
@@ -229,14 +401,25 @@ function MeusDadosPanel({ meuColaborador }) {
             </div>
           </div>
         ))}
+        {EDITABLE_SIMPLE.map(([key, dbField, label]) => (
+          <div key={key}>
+            <div className="flex items-center gap-1.5">
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+              <EditFieldInline colaboradorId={meuColaborador.id} currentUserId={currentUser.id} dbField={dbField} currentValue={meuColaborador[key]} onSubmitted={bump} />
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text)", marginTop: 2 }}>{meuColaborador[key] || "—"}</div>
+          </div>
+        ))}
         <div style={{ gridColumn: "1 / -1" }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Endereço</div>
-          <div style={{ fontSize: 13, color: "var(--text)", marginTop: 2 }}>{endereco || "—"}</div>
+          <div style={{ fontSize: 13, color: "var(--text)", marginTop: 2, marginBottom: 6 }}>{endereco || "—"}</div>
+          <EditEnderecoForm colaboradorId={meuColaborador.id} currentUserId={currentUser.id} meuColaborador={meuColaborador} onSubmitted={bump} />
         </div>
       </div>
-      <p style={{ fontSize: 12, color: "var(--text-dim)", borderTop: "1px solid var(--border)", paddingTop: 12 }}>
-        Encontrou algo errado ou desatualizado? Fale com o RH pra corrigir — essa tela ainda não tem um jeito de solicitar
-        atualização direto por aqui.
+      <MinhasSolicitacoesList currentUser={currentUser} refreshKey={refreshKey} />
+      <p style={{ fontSize: 12, color: "var(--text-dim)", borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 16 }}>
+        Nome, CPF, RG, cargo, departamento e admissão exigem documento — fale com o RH pra corrigir esses. Telefone,
+        e-mail e endereço você pode propor atualização aqui; o RH revisa antes de valer.
       </p>
     </div>
   );
@@ -282,7 +465,7 @@ export function MeuRHView({ currentUser, notifyMentions }) {
       {tab === "onboarding" && <RHOnboardingView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
       {tab === "treinamentos" && <RHTreinamentosView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
       {tab === "avaliacao" && <RHFeedbackView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
-      {tab === "ferias" && <MeuFeriasPanel currentUser={currentUser} />}
+      {tab === "ferias" && <MeuFeriasPanel currentUser={currentUser} admissionDate={meuColaborador?.admissionDate} />}
       {tab === "documentos" && (
         meuColaborador ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -299,7 +482,7 @@ export function MeuRHView({ currentUser, notifyMentions }) {
           <EmptyState icon={FileText} title="Nenhum documento ainda" description="Holerite e comprovante de ponto aparecem aqui quando o RH subir." />
         )
       )}
-      {tab === "meus-dados" && <MeusDadosPanel meuColaborador={meuColaborador} />}
+      {tab === "meus-dados" && <MeusDadosPanel meuColaborador={meuColaborador} currentUser={currentUser} />}
     </div>
   );
 }

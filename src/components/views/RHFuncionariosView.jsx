@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   X,
   Search,
@@ -271,6 +271,89 @@ function DocumentosSection({ colaboradorId, canWrite, currentUser }) {
       <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 10 }}>
         Suba aqui o PDF/imagem já emitido pelo sistema de folha e pelo registrador de ponto homologado. É só pra consulta — não substitui nenhum dos dois sistemas.
       </p>
+    </div>
+  );
+}
+
+const UPDATE_REQUEST_FIELD_LABELS = {
+  phone: "Telefone", email: "E-mail",
+  address_street: "Rua", address_number: "Número", address_complement: "Complemento",
+  address_neighborhood: "Bairro", address_city: "Cidade", address_state: "Estado", address_zip: "CEP",
+};
+
+// Solicitações de atualização de dados que o próprio colaborador propôs no
+// painel dele (/meu-rh) — só pendentes aparecem aqui pra revisão; aprovar
+// aplica o valor em rh_colaboradores via approve_rh_data_update_request
+// (RPC), recusar só marca o status. Ver migration rh_data_update_requests.
+function SolicitacoesAtualizacaoSection({ colaboradorId, canWrite }) {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState(null);
+
+  const fetchPendentes = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("rh_data_update_requests")
+      .select("*")
+      .eq("colaborador_id", colaboradorId)
+      .eq("status", "pendente")
+      .order("created_at", { ascending: true });
+    setRequests(data || []);
+    setLoading(false);
+  }, [colaboradorId]);
+
+  useEffect(() => { fetchPendentes(); }, [fetchPendentes]);
+
+  const approve = async (id) => {
+    setBusyId(id);
+    const { error } = await supabase.rpc("approve_rh_data_update_request", { p_id: id });
+    setBusyId(null);
+    if (error) { alert("Falha ao aprovar: " + error.message); return; }
+    setRequests((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const reject = async (id) => {
+    const motivo = window.prompt("Motivo da recusa (opcional):") || null;
+    setBusyId(id);
+    const { error } = await supabase.rpc("reject_rh_data_update_request", { p_id: id, p_motivo: motivo });
+    setBusyId(null);
+    if (error) { alert("Falha ao recusar: " + error.message); return; }
+    setRequests((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  if (loading || requests.length === 0 || !canWrite) return null;
+
+  return (
+    <div style={{ borderRadius: 12, border: "1px solid var(--warning)", padding: "14px 16px", background: "var(--warning-bg)", marginBottom: 20 }}>
+      <div style={{ fontWeight: 700, fontSize: 12, color: "var(--warning)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
+        Solicitações de atualização pendentes ({requests.length})
+      </div>
+      <div className="flex flex-col gap-2">
+        {requests.map((r) => (
+          <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "var(--surface)", borderRadius: 10, padding: "8px 12px" }}>
+            <div style={{ fontSize: 12, color: "var(--text)" }}>
+              <strong>{UPDATE_REQUEST_FIELD_LABELS[r.field] || r.field}:</strong>{" "}
+              <span style={{ color: "var(--text-dim)" }}>{r.current_value || "—"}</span> → <strong>{r.new_value}</strong>
+            </div>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => approve(r.id)}
+                disabled={busyId === r.id}
+                style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+              >
+                Aprovar
+              </button>
+              <button
+                onClick={() => reject(r.id)}
+                disabled={busyId === r.id}
+                style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-dim)", borderRadius: 6, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}
+              >
+                Recusar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1039,6 +1122,10 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
 
           {colaboradorRow && (
             <SignatureSection colaboradorRow={colaboradorRow} canWrite={canWrite} />
+          )}
+
+          {colaboradorRow && (
+            <SolicitacoesAtualizacaoSection colaboradorId={colaboradorRow.id} canWrite={canWrite} />
           )}
 
           {colaboradorRow && (
