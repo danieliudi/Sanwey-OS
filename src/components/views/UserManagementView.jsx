@@ -68,6 +68,13 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || "").trim());
 }
 
+// Setores só filtram lead pra quem vende de fato (DashboardView/CRMView
+// filtram por user.sectors só quando role é vendedor ou consultor) — pras
+// demais funções o campo não faz nada, então nem faz sentido mostrar.
+function roleUsesSectors(role) {
+  return role === "vendedor" || role === "consultor";
+}
+
 export function UserManagementView({
   users, leads = [],
   currentUser,
@@ -238,12 +245,13 @@ export function UserManagementView({
   }, []);
 
   const toggleFormRole = useCallback((role) => {
-    setForm(prev => ({
-      ...prev,
-      additionalRoles: prev.additionalRoles.includes(role)
+    setForm(prev => {
+      const nextAdditional = prev.additionalRoles.includes(role)
         ? prev.additionalRoles.filter(r => r !== role)
-        : [...prev.additionalRoles, role],
-    }));
+        : [...prev.additionalRoles, role];
+      const stillNeedsSectors = roleUsesSectors(prev.role) || nextAdditional.some(roleUsesSectors);
+      return { ...prev, additionalRoles: nextAdditional, sectors: stillNeedsSectors ? prev.sectors : [] };
+    });
   }, []);
 
   const toggleSector = useCallback((s) => {
@@ -574,7 +582,14 @@ export function UserManagementView({
             </div>
             <div>
               <FieldLabel>Função principal</FieldLabel>
-              <Select value={form.role} onChange={e => setForm(prev => ({ ...prev, role: e.target.value, additionalRoles: prev.additionalRoles.filter(r => r !== e.target.value) }))} options={roleOptions} />
+              <Select value={form.role} onChange={e => {
+                const nextRole = e.target.value;
+                setForm(prev => {
+                  const nextAdditional = prev.additionalRoles.filter(r => r !== nextRole);
+                  const stillNeedsSectors = roleUsesSectors(nextRole) || nextAdditional.some(roleUsesSectors);
+                  return { ...prev, role: nextRole, additionalRoles: nextAdditional, sectors: stillNeedsSectors ? prev.sectors : [] };
+                });
+              }} options={roleOptions} />
             </div>
           </div>
           <div>
@@ -621,6 +636,7 @@ export function UserManagementView({
               })}
             </div>
           </div>
+          {(roleUsesSectors(form.role) || form.additionalRoles.some(roleUsesSectors)) && (
           <div>
             <FieldLabel>Setores</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
@@ -642,6 +658,7 @@ export function UserManagementView({
               })}
             </div>
           </div>
+          )}
           {form.role === "consultor" && (
             <div>
               <FieldLabel>Supervisor (vendedor)</FieldLabel>
@@ -672,7 +689,10 @@ export function UserManagementView({
           </div>
           <div>
             <FieldLabel>Função</FieldLabel>
-            <Select value={inviteForm.role} onChange={e => setInviteForm(prev => ({ ...prev, role: e.target.value }))} options={roleOptions} />
+            <Select value={inviteForm.role} onChange={e => {
+              const nextRole = e.target.value;
+              setInviteForm(prev => ({ ...prev, role: nextRole, sectors: roleUsesSectors(nextRole) ? prev.sectors : [] }));
+            }} options={roleOptions} />
           </div>
           <div>
             <FieldLabel>Empresas com acesso {(inviteForm.role === "vendedor" || inviteForm.role === "consultor") && "*"}</FieldLabel>
@@ -693,6 +713,7 @@ export function UserManagementView({
               })}
             </div>
           </div>
+          {roleUsesSectors(inviteForm.role) && (
           <div>
             <FieldLabel>Setores</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
@@ -714,6 +735,7 @@ export function UserManagementView({
               })}
             </div>
           </div>
+          )}
           {inviteForm.role === "consultor" && (
             <div>
               <FieldLabel>Supervisor (vendedor)</FieldLabel>
