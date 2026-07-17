@@ -37,6 +37,8 @@ import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
 import { PendingAssignmentScreen } from "./components/shell/PendingAssignmentScreen";
+import { TermsGateScreen } from "./components/shell/TermsGateScreen";
+import { useTermsAcceptance } from "./hooks/use-terms-acceptance";
 import { Sidebar } from "./components/shell/Sidebar";
 import { TopBar } from "./components/shell/TopBar";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
@@ -105,6 +107,7 @@ export default function App() {
 
   const [mockUser, setMockUser] = usePersistentState(STORAGE_KEYS.currentUser, null);
   const currentUser = supabaseEnabled ? supaUser : mockUser;
+  const { accepted: termsAccepted, loading: loadingTerms, accept: acceptTerms } = useTermsAcceptance(currentUser);
 
   const [onboardingDoneMap, setOnboardingDoneMap] = usePersistentState("gs_v4_onboarding", {});
   const showOnboarding = Boolean(currentUser && !onboardingDoneMap[currentUser.id]);
@@ -1058,6 +1061,18 @@ export default function App() {
       <PendingAssignmentScreen
         currentUser={currentUser}
         onRefresh={refreshProfile}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  // Bloqueia o resto do app até aceitar a versão vigente dos termos —
+  // proteção jurídica pra empresa, ver terms_acceptances/TermsGateScreen.
+  if (supabaseEnabled && !loadingTerms && !termsAccepted) {
+    return (
+      <TermsGateScreen
+        currentUser={currentUser}
+        onAccept={acceptTerms}
         onLogout={handleLogout}
       />
     );
