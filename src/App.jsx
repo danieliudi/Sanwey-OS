@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, Bot, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
-  ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase,
+  ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -77,6 +77,7 @@ import { RHFeedbackView } from "./components/views/RHFeedbackView";
 import { RHFeriasView } from "./components/views/RHFeriasView";
 import { RHCargosView } from "./components/views/RHCargosView";
 import { RHComunicacaoView } from "./components/views/RHComunicacaoView";
+import { RHBemEstarView } from "./components/views/RHBemEstarView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -865,6 +866,7 @@ export default function App() {
           { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
           { id: "rh-cargos",       label: "Cargos & Salários", icon: Briefcase },
           { id: "rh-comunicacao",  label: "Comunicação",       icon: Megaphone },
+          { id: "rh-bem-estar",    label: "Bem-estar",         icon: HeartHandshake },
           { id: "rh-fornecedores", label: "Fornecedores",      icon: Building2 },
         ],
       });
@@ -976,7 +978,7 @@ export default function App() {
     // RH sections only for rh/gerente_rh/admin
     // Onboarding/Treinamentos ficam de fora do guard — todo colaborador acessa
     // o próprio checklist, não só o time de RH (RLS já restringe os dados).
-    const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias", "rh-cargos", "rh-comunicacao"];
+    const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias", "rh-cargos", "rh-comunicacao", "rh-bem-estar"];
     if (!isRHUser && rhSections.includes(section)) {
       setSection("dashboard");
     }
@@ -1414,6 +1416,11 @@ export default function App() {
           <Route path={ROUTES["rh-comunicacao"]} element={
             isRHManager
               ? <RHComunicacaoView currentUser={currentUser} canWrite={isRHManager} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["rh-bem-estar"]} element={
+            isRHManager
+              ? <RHBemEstarView currentUser={currentUser} canWrite={isRHManager} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
