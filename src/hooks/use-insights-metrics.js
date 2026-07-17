@@ -71,7 +71,7 @@ function useCustosRaw() {
     (async () => {
       try {
         const [contratosRes, beneficiosRes, comprasRes] = await Promise.all([
-          supabase.from("rh_fornecedor_contratos").select("valor, vigencia_fim"),
+          supabase.from("rh_fornecedor_contratos").select("valor, vigencia_fim, rh_fornecedores(name)"),
           supabase.from("rh_colaborador_beneficios").select("valor"),
           supabase.from("marketing_purchase_requests").select("total_value"),
         ]);
@@ -239,10 +239,29 @@ export function useInsightsMetrics({ leads = [], pipelines = {} } = {}) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().slice(0, 10);
+    const em90d = new Date(today);
+    em90d.setDate(em90d.getDate() + 90);
+    const em90dStr = em90d.toISOString().slice(0, 10);
 
     const fornecedoresRHTotal = contratos
       .filter(c => !c.vigencia_fim || c.vigencia_fim >= todayStr)
       .reduce((sum, c) => sum + Number(c.valor || 0), 0);
+
+    // Vencendo em breve (dentro de 90 dias, ainda vigente hoje) — mesmo
+    // critério de comparação por string 'YYYY-MM-DD' usado acima, pra não
+    // reintroduzir o bug de fuso já corrigido (ver comentário logo acima).
+    const vencendoEmBreve = contratos.filter(
+      c => c.vigencia_fim && c.vigencia_fim >= todayStr && c.vigencia_fim <= em90dStr
+    );
+    const proximoVencimento = vencendoEmBreve.length
+      ? [...vencendoEmBreve].sort((a, b) => a.vigencia_fim.localeCompare(b.vigencia_fim))[0]
+      : null;
+    const contratosVencendo90d = {
+      count: vencendoEmBreve.length,
+      totalValor: vencendoEmBreve.reduce((sum, c) => sum + Number(c.valor || 0), 0),
+      proximoNome: proximoVencimento?.rh_fornecedores?.name || null,
+      proximoData: proximoVencimento?.vigencia_fim || null,
+    };
 
     const beneficiosMensalTotal = beneficios.reduce((sum, b) => sum + Number(b.valor || 0), 0);
 
@@ -257,7 +276,7 @@ export function useInsightsMetrics({ leads = [], pipelines = {} } = {}) {
       if (l.stage === "ganho") leadsGanhosTotal += Number(l.value || 0);
     }
 
-    return { fornecedoresRHTotal, beneficiosMensalTotal, comprasMarketingTotal, leadsGanhosTotal };
+    return { fornecedoresRHTotal, beneficiosMensalTotal, comprasMarketingTotal, leadsGanhosTotal, contratosVencendo90d };
   }, [contratos, beneficios, compras, leads]);
 
   const loading = (

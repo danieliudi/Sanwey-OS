@@ -1,8 +1,9 @@
 import React, { useMemo } from "react";
-import { Clock, CheckCircle2, TrendingUp, Megaphone, Briefcase, Wallet, ShoppingCart, HandCoins } from "lucide-react";
+import { Clock, CheckCircle2, TrendingUp, Megaphone, Briefcase, Wallet, ShoppingCart, HandCoins, AlertTriangle } from "lucide-react";
 import { useInsightsMetrics } from "../../hooks/use-insights-metrics";
 import { StatCard } from "../ui/StatCard";
 import { formatK } from "../../utils/currency";
+import { formatDateBR } from "../../utils/date";
 
 // Painel de Insights — Fase 1 (velocidade): tempo médio nos processos-chave
 // de RH/Comercial/Marketing, comparado com o período anterior, e os custos
@@ -109,6 +110,15 @@ export function InsightsView({ leads, pipelines }) {
     },
   ]), [custos]);
 
+  const vencendo = custos.contratosVencendo90d;
+  const riscoCard = {
+    value: String(vencendo.count),
+    label: "Contratos de fornecedor vencendo em 90 dias",
+    sublabel: vencendo.count === 0
+      ? "Nenhum contrato vigente vence nesse período"
+      : `${formatK(vencendo.totalValor)} em risco de renovação${vencendo.proximoNome ? ` · próximo: ${vencendo.proximoNome} (${formatDateBR(vencendo.proximoData)})` : ""}`,
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>
@@ -160,6 +170,20 @@ export function InsightsView({ leads, pipelines }) {
               sublabel={c.sublabel}
             />
           ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
+          Riscos
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            icon={AlertTriangle}
+            value={riscoCard.value}
+            label={riscoCard.label}
+            sublabel={riscoCard.sublabel}
+          />
         </div>
       </div>
     </div>
