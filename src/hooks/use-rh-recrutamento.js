@@ -166,6 +166,52 @@ export function useRHRecrutamento({ userId } = {}) {
     setAplicacoes(prev => prev.map(a => a.id === aplicacaoId ? { ...a, ...patch } : a));
   }, []);
 
+  // Reprovação em massa (Áudio 8 do RH): move N aplicações pra etapa "lost"
+  // com um motivo único e dispara UM e-mail de retorno negativo em cópia
+  // oculta pros candidatos que têm e-mail. O envio é NÃO-BLOQUEANTE: a
+  // reprovação persiste mesmo se o e-mail falhar. lostStageKey é resolvido
+  // pelo chamador (a etapa marcada como lost no editor), não hardcodado.
+  const bulkReprovarComEmail = useCallback(async ({ aplicacaoIds = [], lostStageKey, motivo, enviarEmail = true, vagaTitle = "" }) => {
+    const ids = [...new Set(aplicacaoIds)].filter(Boolean);
+    if (!ids.length) return { movidos: 0, emails: 0, semEmail: 0, emailOk: false };
+
+    // 1) Move em lote pra etapa de reprovação (quando informada).
+    if (lostStageKey) {
+      const patch = { etapa_pipeline: lostStageKey, stage_changed_at: new Date().toISOString() };
+      if (motivo !== undefined) patch.motivo_reprovacao = motivo || null;
+      const { error } = await supabase.from("rh_aplicacoes").update(patch).in("id", ids);
+      if (error) throw new Error(error.message);
+      setAplicacoes(prev => prev.map(a => ids.includes(a.id) ? { ...a, ...patch } : a));
+    }
+
+    // 2) Coleta e-mails únicos dos candidatos selecionados (filtra sem e-mail).
+    const emailById = new Map(candidatosPool.map(c => [c.id, c.email]));
+    const idSet = new Set(ids);
+    const selected = aplicacoes.filter(a => idSet.has(a.id));
+    const emails = [...new Set(selected.map(a => emailById.get(a.candidate_id)).filter(Boolean))];
+    const semEmail = selected.filter(a => !emailById.get(a.candidate_id)).length;
+
+    // 3) Um único disparo em BCC (não-bloqueante).
+    let emailOk = false;
+    if (enviarEmail && emails.length) {
+      try {
+        const { error } = await supabase.functions.invoke("rh-send-email", {
+          body: {
+            type: "candidato_reprovado",
+            to: "noreply@sanwey.com.br",
+            bcc: emails,
+            variables: { VAGA_TITLE: vagaTitle || "—" },
+          },
+        });
+        if (error) throw error;
+        emailOk = true;
+      } catch (e) {
+        console.warn("[use-rh-recrutamento] reprovação em massa: e-mail falhou:", e);
+      }
+    }
+    return { movidos: ids.length, emails: emailOk ? emails.length : 0, semEmail, emailOk };
+  }, [aplicacoes, candidatosPool]);
+
   // Marca a aplicação como contratada (usado após converter o candidato em
   // funcionário) — dá sinal durável de "já contratado" e trava a 2ª conversão.
   const markHired = useCallback(async (aplicacaoId) => {
@@ -225,11 +271,12 @@ export function useRHRecrutamento({ userId } = {}) {
     changeVagaStage,
     createCandidato,
     changeStage,
+    bulkReprovarComEmail,
     updateAplicacao,
     addNote,
     changeRating,
     markHired,
     attachTriagemToVaga,
     refetch: fetchAll,
-  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga, fetchAll]);
+  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, bulkReprovarComEmail, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga, fetchAll]);
 }

@@ -2069,6 +2069,116 @@ function ReprovacaoDropModal({ info, onConfirm, onClose }) {
   );
 }
 
+// ── Reprovação em massa (Áudio 8) ─────────────────────────────────────────────
+// Reprova os candidatos selecionados de uma vez e dispara UM e-mail de retorno
+// negativo em cópia oculta pros que têm e-mail. Substitui o "responder um a um
+// no WhatsApp".
+function BulkReprovarModal({ selectedCandidatos, temEtapaReprovacao, onConfirm, onClose }) {
+  const [motivo, setMotivo] = useState("");
+  const [enviarEmail, setEnviarEmail] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(null); // resultado após confirmar
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const total = selectedCandidatos.length;
+  const comEmail = new Set(selectedCandidatos.filter((c) => c.email).map((c) => c.email)).size;
+  const semEmail = selectedCandidatos.filter((c) => !c.email).length;
+
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+
+  const handleConfirm = async () => {
+    setSaving(true);
+    try {
+      const res = await onConfirm({ motivo: motivo.trim(), enviarEmail });
+      setDone(res || { movidos: total, emails: enviarEmail ? comEmail : 0, semEmail });
+    } catch (e) {
+      setDone({ erro: e?.message || "Erro ao reprovar." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 440, boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>Reprovar em massa</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {done ? (
+          <div style={{ padding: "24px" }}>
+            {done.erro ? (
+              <div style={{ fontSize: 14, color: "var(--danger)" }}>{done.erro}</div>
+            ) : (
+              <div style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.6 }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>Pronto!</div>
+                {done.movidos > 0 && <div>• {done.movidos} candidato(s) movido(s) para reprovado.</div>}
+                {enviarEmail && <div>• {done.emailOk ? `${done.emails}` : "0"} e-mail(s) de retorno enviado(s) em cópia oculta.</div>}
+                {done.semEmail > 0 && <div style={{ color: "var(--warning)" }}>• {done.semEmail} sem e-mail não receberam retorno.</div>}
+                {enviarEmail && !done.emailOk && done.emails === 0 && semEmail < total && (
+                  <div style={{ color: "var(--warning)", marginTop: 4 }}>O envio do e-mail pode ter falhado — verifique a configuração de e-mail.</div>
+                )}
+              </div>
+            )}
+            <div className="flex mt-4">
+              <button onClick={onClose} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>Fechar</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: "20px 24px 24px" }}>
+            <div style={{ fontSize: 14, color: "var(--text)", marginBottom: 14, lineHeight: 1.6 }}>
+              Você vai reprovar <strong>{total}</strong> candidato(s).
+              {!temEtapaReprovacao && <div style={{ color: "var(--warning)", fontSize: 12, marginTop: 4 }}>Nenhuma etapa de reprovação configurada — os candidatos não serão movidos, só o e-mail será enviado.</div>}
+            </div>
+
+            <label className="flex items-center gap-2 mb-3" style={{ cursor: "pointer", fontSize: 13, color: "var(--text)" }}>
+              <input type="checkbox" checked={enviarEmail} onChange={(e) => setEnviarEmail(e.target.checked)} style={{ cursor: "pointer" }} />
+              Enviar e-mail de retorno negativo (cópia oculta)
+            </label>
+            {enviarEmail && (
+              <div style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "var(--text-dim)", marginBottom: 14, lineHeight: 1.5 }}>
+                {comEmail} candidato(s) receberão o e-mail.
+                {semEmail > 0 && <span style={{ color: "var(--warning)" }}> {semEmail} sem e-mail não receberão.</span>}
+              </div>
+            )}
+
+            <div style={labelSt}>Motivo (interno, opcional)</div>
+            <textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Registro interno do motivo — não vai no e-mail (que é genérico)."
+              rows={2}
+              className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+            />
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={handleConfirm}
+                disabled={saving || total === 0}
+                style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || total === 0 ? 0.6 : 1 }}
+              >
+                {saving ? "Processando…" : "Confirmar reprovação"}
+              </button>
+              <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Kanban Column ─────────────────────────────────────────────────────────────
 
 function CandidatoCardBody({ candidato: c, vagas }) {
@@ -2214,12 +2324,25 @@ function KanbanColumn({
 
 // ── Candidato Tabela ──────────────────────────────────────────────────────────
 
-function CandidatoTableView({ candidatos, vagas, stages, onRowClick }) {
+function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable, selectedIds, onToggleSelect, onToggleAll }) {
+  const allSelected = selectable && candidatos.length > 0 && candidatos.every((c) => selectedIds?.has(c.id));
+  const baseCols = 6;
   return (
     <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {selectable && (
+              <th className="px-3 py-2.5" style={{ width: 36 }}>
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={() => onToggleAll?.(candidatos)}
+                  title="Selecionar todos"
+                  style={{ cursor: "pointer" }}
+                />
+              </th>
+            )}
             {["Candidato", "Vaga", "Etapa", "Origem", "Aplicado em", "Avaliação"].map(h => (
               <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
                 {h}
@@ -2229,19 +2352,34 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick }) {
         </thead>
         <tbody>
           {candidatos.length === 0 && (
-            <tr><td colSpan={6} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhum candidato encontrado.</td></tr>
+            <tr><td colSpan={selectable ? baseCols + 1 : baseCols} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhum candidato encontrado.</td></tr>
           )}
           {candidatos.map((c) => {
             const st = findStage(stages, c.stage);
             const vagaTitle = vagas.find((v) => v.id === c.vaga_id)?.title || "—";
+            const checked = selectedIds?.has(c.id) || false;
             return (
-              <tr key={c.id} onClick={() => onRowClick(c)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+              <tr key={c.id} onClick={() => onRowClick(c)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer", background: checked ? "var(--surface-alt)" : "transparent" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                onMouseLeave={e => { e.currentTarget.style.background = checked ? "var(--surface-alt)" : "transparent"; }}>
+                {selectable && (
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onToggleSelect?.(c.id)}
+                      title={c.email ? `Selecionar ${c.name}` : `${c.name} não tem e-mail`}
+                      style={{ cursor: "pointer" }}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <InitialsAvatar name={c.name} size={26} />
                     <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{c.name}</span>
+                    {selectable && !c.email && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--warning-bg)", color: "var(--warning)" }} title="Sem e-mail — não receberá retorno">sem e-mail</span>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{vagaTitle}</td>
@@ -2376,7 +2514,7 @@ function addDays(base, days) {
 export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
-    createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
+    createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, bulkReprovarComEmail, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const { cargos, createCargo, deleteCargo } = useRHCargoTemplates({ userId: user?.id });
   const { createColaborador } = useRHColaboradores({ userId: user?.id });
@@ -2405,6 +2543,10 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const [triagemOpen, setTriagemOpen]       = useState(false);
   const [hiringCandidato, setHiringCandidato] = useState(null);
 
+  // ── Reprovação em massa (Áudio 8): seleção múltipla na tabela de candidatos ──
+  const [selectedCandIds, setSelectedCandIds] = useState(() => new Set());
+  const [bulkReprovarOpen, setBulkReprovarOpen] = useState(false);
+
   // ── Drag-and-drop (Vagas) ──────────────────────────────────────────────────
   const [draggedVagaId, setDraggedVagaId]   = useState(null);
   const [dragOverVagaStage, setDragOverVagaStage] = useState(null);
@@ -2427,6 +2569,22 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     [candidatos, selectedCandidatoId]
   );
   const vagaEmDrawer = useMemo(() => vagas.find((v) => v.id === vagaDrawerId) || null, [vagas, vagaDrawerId]);
+
+  // ── Reprovação em massa: seleção + etapa de reprovação resolvida ──
+  // A etapa de reprovação é a marcada como "lost" no editor (não hardcode).
+  const lostCandStage = useMemo(() => candStages.find((s) => s.lost) || null, [candStages]);
+  const toggleCandSelect = (id) => setSelectedCandIds((prev) => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+  const toggleCandSelectAll = (list) => setSelectedCandIds((prev) => {
+    const allSel = list.length > 0 && list.every((c) => prev.has(c.id));
+    return allSel ? new Set() : new Set(list.map((c) => c.id));
+  });
+  // Limpa a seleção quando sai da tabela de candidatos (evita agir sobre
+  // ids que não estão mais visíveis).
+  useEffect(() => {
+    if (viewMode !== "candidatos" || boardMode !== "table") setSelectedCandIds(new Set());
+  }, [viewMode, boardMode, selectedVaga, frenteFilter]);
   const vagaDoCandidatoContratando = useMemo(
     () => (hiringCandidato ? vagas.find((v) => v.id === hiringCandidato.vaga_id) : null),
     [hiringCandidato, vagas]
@@ -2871,12 +3029,44 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           )}
 
           {boardMode === "table" ? (
-            <CandidatoTableView
-              candidatos={filteredCandidatos}
-              vagas={vagas}
-              stages={candStages}
-              onRowClick={(c) => setSelectedCandidatoId(c.id)}
-            />
+            <>
+              {canWrite && selectedCandIds.size > 0 && (
+                <div
+                  className="flex items-center justify-between gap-3 flex-wrap mb-3 rounded-xl border"
+                  style={{ background: "var(--surface)", borderColor: "var(--accent)", padding: "10px 14px", boxShadow: "var(--shadow-card)" }}
+                >
+                  <div className="text-sm" style={{ color: "var(--text)" }}>
+                    <strong>{selectedCandIds.size}</strong> candidato(s) selecionado(s)
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedCandIds(new Set())}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer"
+                      style={{ background: "var(--surface)", color: "var(--text-dim)", borderColor: "var(--border)" }}
+                    >
+                      Limpar
+                    </button>
+                    <button
+                      onClick={() => setBulkReprovarOpen(true)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5"
+                      style={{ background: "var(--danger)", color: "#FFF", border: "none" }}
+                    >
+                      <Mail size={13} /> Reprovar e enviar retorno
+                    </button>
+                  </div>
+                </div>
+              )}
+              <CandidatoTableView
+                candidatos={filteredCandidatos}
+                vagas={vagas}
+                stages={candStages}
+                onRowClick={(c) => setSelectedCandidatoId(c.id)}
+                selectable={canWrite}
+                selectedIds={selectedCandIds}
+                onToggleSelect={toggleCandSelect}
+                onToggleAll={toggleCandSelectAll}
+              />
+            </>
           ) : boardMode === "calendar" ? (
             <CandidatoCalendarView
               candidatos={filteredCandidatos}
@@ -3060,6 +3250,24 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           info={pendingReprovacaoDrop}
           onConfirm={confirmReprovacaoDrop}
           onClose={() => setPendingReprovacaoDrop(null)}
+        />
+      )}
+
+      {bulkReprovarOpen && (
+        <BulkReprovarModal
+          selectedCandidatos={candidatos.filter((c) => selectedCandIds.has(c.id))}
+          temEtapaReprovacao={Boolean(lostCandStage)}
+          onConfirm={async ({ motivo, enviarEmail }) => {
+            const res = await bulkReprovarComEmail({
+              aplicacaoIds: [...selectedCandIds],
+              lostStageKey: lostCandStage?.stageKey,
+              motivo,
+              enviarEmail,
+            });
+            setSelectedCandIds(new Set());
+            return res;
+          }}
+          onClose={() => setBulkReprovarOpen(false)}
         />
       )}
 
