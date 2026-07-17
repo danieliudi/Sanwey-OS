@@ -76,6 +76,7 @@ import { RHTreinamentosView } from "./components/views/RHTreinamentosView";
 import { RHFeedbackView } from "./components/views/RHFeedbackView";
 import { RHFeriasView } from "./components/views/RHFeriasView";
 import { RHCargosView } from "./components/views/RHCargosView";
+import { RHComunicacaoView } from "./components/views/RHComunicacaoView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -863,6 +864,7 @@ export default function App() {
           { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
           { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
           { id: "rh-cargos",       label: "Cargos & Salários", icon: Briefcase },
+          { id: "rh-comunicacao",  label: "Comunicação",       icon: Megaphone },
           { id: "rh-fornecedores", label: "Fornecedores",      icon: Building2 },
         ],
       });
@@ -974,7 +976,7 @@ export default function App() {
     // RH sections only for rh/gerente_rh/admin
     // Onboarding/Treinamentos ficam de fora do guard — todo colaborador acessa
     // o próprio checklist, não só o time de RH (RLS já restringe os dados).
-    const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias", "rh-cargos"];
+    const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias", "rh-cargos", "rh-comunicacao"];
     if (!isRHUser && rhSections.includes(section)) {
       setSection("dashboard");
     }
@@ -1407,6 +1409,11 @@ export default function App() {
           <Route path={ROUTES["rh-cargos"]} element={
             isRHManager
               ? <RHCargosView currentUser={currentUser} canWrite={isRHManager} isDirector={isAdmin} users={users} notifyMentions={notifyMentions} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["rh-comunicacao"]} element={
+            isRHManager
+              ? <RHComunicacaoView currentUser={currentUser} canWrite={isRHManager} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
