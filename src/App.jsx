@@ -830,6 +830,7 @@ export default function App() {
           { id: "signals",      label: "Sinais",     icon: Bell },
           { id: "explorer",     label: "Explorador", icon: Globe2 },
           { id: "crm-viagens",  label: "Viagens & Reembolsos", icon: Plane },
+          ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
         ],
       });
     }
@@ -884,18 +885,17 @@ export default function App() {
       });
     }
 
-    // "Inteligência": Executivo/Cross-sell/Agentes ficam sob isManager (gerente
-    // Comercial + admin, mesmo escopo de sempre). Insights entra à parte sob
+    // "Inteligência": Executivo/Agentes ficam sob isManager (gerente Comercial
+    // + admin, mesmo escopo de sempre). Insights entra à parte sob
     // isInsightsUser — ele cruza dados de RH e Marketing que um gerente
     // Comercial puro não tem RLS pra ler, então não pode herdar o mesmo gate.
+    // Cross-sell morou aqui antes, mas é uma ferramenta comercial (indicação
+    // entre empresas do grupo) — mudou pra dentro do grupo "Comercial".
     const intelItems = [];
     if (canSeeExecutive) intelItems.push({ id: "executive", label: "Executivo",  icon: BarChart3 });
     if (isInsightsUser) intelItems.push({ id: "insights", label: "Insights", icon: TrendingUp });
     if (isManager) {
-      intelItems.push(
-        { id: "crossref", label: "Cross-sell", icon: Shuffle },
-        { id: "agents",   label: "Agentes",    icon: Bot },
-      );
+      intelItems.push({ id: "agents", label: "Agentes", icon: Bot });
     }
     if (intelItems.length > 0) {
       groups.push({ label: "Inteligência", items: intelItems });

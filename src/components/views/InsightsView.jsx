@@ -124,8 +124,8 @@ export function InsightsView({ leads, pipelines }) {
           Painel de Insights
         </h1>
         <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-          Cruza dados de RH, Comercial e Marketing já registrados no CRM pra mostrar a velocidade dos
-          processos-chave e os principais custos correntes.
+          Cruza dados de RH, Comercial e Marketing já registrados na plataforma, para mostrar a
+          insights relacionados aos processos-chave e custos.
         </p>
       </div>
 
