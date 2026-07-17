@@ -5,6 +5,7 @@ import {
 import { useRHSuppliers } from "../../hooks/use-rh-suppliers";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
+import { CurrencyInput } from "../ui/CurrencyInput";
 
 const TIPO_LABELS = {
   convenio_medico: "Convênio médico",
@@ -163,7 +164,7 @@ function NovoContratoModal({ fornecedorId, onSave, onClose }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label style={labelSt()}>Valor (R$)</label>
-              <input type="number" step="0.01" className={inputCls} style={inputSt} value={form.valor} onChange={(e) => setForm(f => ({ ...f, valor: e.target.value }))} />
+              <CurrencyInput className={inputCls} style={inputSt} value={form.valor} onChange={(v) => setForm(f => ({ ...f, valor: v }))} />
             </div>
             <div>
               <label style={labelSt()}>Status</label>
@@ -219,8 +220,8 @@ function NovoEventoForm({ contratoId, onSave, onDone }) {
       </div>
       {form.tipo === "reajuste" && (
         <div className="grid grid-cols-2 gap-2">
-          <input type="number" step="0.01" placeholder="Valor anterior" className={inputCls} style={inputSt} value={form.valorAnterior} onChange={(e) => setForm(f => ({ ...f, valorAnterior: e.target.value }))} />
-          <input type="number" step="0.01" placeholder="Valor novo" className={inputCls} style={inputSt} value={form.valorNovo} onChange={(e) => setForm(f => ({ ...f, valorNovo: e.target.value }))} />
+          <CurrencyInput placeholder="Valor anterior" className={inputCls} style={inputSt} value={form.valorAnterior} onChange={(v) => setForm(f => ({ ...f, valorAnterior: v }))} />
+          <CurrencyInput placeholder="Valor novo" className={inputCls} style={inputSt} value={form.valorNovo} onChange={(v) => setForm(f => ({ ...f, valorNovo: v }))} />
         </div>
       )}
       <input placeholder="Descrição (opcional)" className={inputCls} style={inputSt} value={form.descricao} onChange={(e) => setForm(f => ({ ...f, descricao: e.target.value }))} />

@@ -13,6 +13,7 @@ import { RH_DEPARTMENTS, RH_CONTRACT_TYPES } from "../../constants/rh-config";
 import { formatBRL } from "../../utils/currency";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { CurrencyInput } from "../ui/CurrencyInput";
 
 const TIPO_MOV = [
   { id: "promocao", label: "Promoção" },
@@ -150,11 +151,11 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Salário mínimo (faixa) *</label>
-                <input required type="number" min="0" step="0.01" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} placeholder="R$ 0,00" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                <CurrencyInput required value={salaryMin} onChange={setSalaryMin} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
               </div>
               <div>
                 <label style={labelSt}>Salário máximo (faixa) *</label>
-                <input required type="number" min="0" step="0.01" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} placeholder="R$ 0,00" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                <CurrencyInput required value={salaryMax} onChange={setSalaryMax} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -308,7 +309,7 @@ function MovimentacaoModal({ colaboradores, cargos, onCreate, onClose }) {
             </div>
             <div>
               <label style={labelSt}>Novo salário</label>
-              <input type="number" min="0" step="0.01" value={salarioNovo} onChange={(e) => setSalarioNovo(e.target.value)} placeholder="Deixe vazio se não muda" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+              <CurrencyInput value={salarioNovo} onChange={setSalarioNovo} placeholder="Opcional" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
             </div>
             <div>
               <label style={labelSt}>Justificativa</label>

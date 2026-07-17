@@ -12,6 +12,7 @@ import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
+import { CurrencyInput } from "../ui/CurrencyInput";
 
 const BUCKET = "marketing-attachments";
 
@@ -523,11 +524,11 @@ export function PurchaseRequestDetailDrawer({
                   <FieldRow label="Quantidade">
                     <input type="number" min="0" value={quantity} onChange={e => handleQuantityChange(e.target.value)} style={inputBase} />
                   </FieldRow>
-                  <FieldRow label="Preço unitário (R$)">
-                    <input type="number" min="0" step="0.01" value={unitPrice} onChange={e => handleUnitPriceChange(e.target.value)} style={inputBase} />
+                  <FieldRow label="Preço unitário">
+                    <CurrencyInput value={unitPrice} onChange={handleUnitPriceChange} style={inputBase} />
                   </FieldRow>
-                  <FieldRow label="Valor total (R$)">
-                    <input type="number" min="0" step="0.01" value={totalValue} onChange={e => handleTotalValueChange(e.target.value)} style={inputBase} />
+                  <FieldRow label="Valor total">
+                    <CurrencyInput value={totalValue} onChange={handleTotalValueChange} style={inputBase} />
                   </FieldRow>
                   <FieldRow label="Prazo">
                     <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputBase} />

@@ -4,7 +4,7 @@ import { Upload, X, ChevronRight, ChevronLeft, Download, Check } from "lucide-re
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
-import { maskCurrencyBR } from "../../utils/currency";
+import { parseCurrencyBR } from "../../utils/currency";
 
 // ---------------------------------------------------------------------------
 // CRM field definitions for column mapping
@@ -86,12 +86,12 @@ function normalizeCNPJ(raw) {
 }
 
 // Fonte textual (CSV) é sempre pt-BR — "." é separador de milhar, "," é
-// decimal (mesmo parser da máscara de moeda dos formulários, pra não
-// interpretar "1.234,56" como 1.234 dividindo por mil o valor real).
+// decimal na posição escrita, sem deslocar dígitos (célula "5000" continua
+// valendo 5000, não 50,00).
 function parseValue(raw) {
   if (!raw) return 0;
   if (typeof raw === "number") return raw;
-  const { value } = maskCurrencyBR(raw);
+  const { value } = parseCurrencyBR(raw);
   return value ?? 0;
 }
 

@@ -37,23 +37,16 @@ export function CurrencyInput({
   const handleChange = (e) => {
     const el = e.target;
     const raw = el.value;
-    const caret = el.selectionStart ?? raw.length;
-    const digitsLeft = (raw.slice(0, caret).match(/\d/g) || []).length;
     const { display: masked, value: numeric } = maskCurrencyBR(raw);
     setDisplay(masked);
     onChange?.(numeric == null ? "" : numeric);
-    // Reposiciona o cursor após o reformat: conta os dígitos que ficavam à
-    // esquerda do cursor e recoloca depois da mesma quantidade de dígitos.
+    // Máscara de cents-shift (estilo maquininha): o dígito digitado sempre
+    // entra pela direita, então o cursor fica sempre travado no final —
+    // não há posição "no meio" que faça sentido pra esse tipo de campo.
     requestAnimationFrame(() => {
       const node = inputRef.current;
       if (!node) return;
-      let pos = 0;
-      let seen = 0;
-      while (pos < masked.length && seen < digitsLeft) {
-        if (/\d/.test(masked[pos])) seen++;
-        pos++;
-      }
-      try { node.setSelectionRange(pos, pos); } catch { /* input pode não suportar seleção */ }
+      try { node.setSelectionRange(masked.length, masked.length); } catch { /* input pode não suportar seleção */ }
     });
   };
 

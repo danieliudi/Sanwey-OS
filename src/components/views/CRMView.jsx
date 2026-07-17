@@ -3,6 +3,7 @@ import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as Cal
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
 import { exportLeadsCSV } from "../../utils/export-leads";
 import { logExport } from "../../utils/log-export";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
@@ -167,11 +168,9 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
           <option key={s} value={s}>{s}</option>
         ))}
       </select>
-      <input
-        type="number"
-        placeholder="Valor (R$)"
+      <CurrencyInput
         value={value}
-        onChange={e => setValue(e.target.value)}
+        onChange={setValue}
         className="w-full text-xs rounded-lg border px-2.5 py-1.5 outline-none"
         style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
         onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}

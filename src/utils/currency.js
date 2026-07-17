@@ -57,16 +57,34 @@ export function formatM(rawValue, decimals = 2) {
 
 // ── Máscara de INPUT de moeda (pt-BR) ────────────────────────────────────────
 // Ao contrário das funções acima (formatação de saída), estas alimentam um
-// campo editável: separador de milhar "." e decimal "," conforme o usuário
-// digita, devolvendo um número LIMPO pro estado (nunca o texto formatado — uma
-// string "1.000.000" quebraria somas/comparações downstream).
+// campo editável, devolvendo um número LIMPO pro estado (nunca o texto
+// formatado — uma string "1.000.000" quebraria somas/comparações downstream).
 
-// Recebe o texto cru que está no input e devolve { display, value }, onde
-// `display` é o texto já com separador de milhar e `value` é number|null
-// (null = campo vazio).
+// Digitação ao vivo (CurrencyInput): o campo se preenche sozinho, sem o
+// usuário precisar apertar "." ou "," — cada dígito digitado entra pela
+// direita, empurrando os 2 últimos como centavos (mesmo padrão de caixa
+// eletrônico/maquininha). "123456" digitado vira 1234.56 → "1.234,56".
+// Backspace remove o último dígito e desloca de volta, naturalmente.
 export function maskCurrencyBR(raw) {
   if (raw == null) return { display: "", value: null };
-  let s = String(raw).replace(/[^\d,]/g, "");           // só dígitos e vírgula
+  const digits = String(raw).replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+  if (digits === "") return { display: "", value: null };
+  const cents = parseInt(digits, 10);
+  const value = cents / 100;
+  const display = value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return { display, value };
+}
+
+// Parser pra texto JÁ COMPLETO vindo de fora (célula de CSV/planilha) — aqui
+// "." é separador de milhar e "," é decimal na posição em que o usuário (ou
+// o Excel) escreveu, SEM deslocar dígitos como a máscara de digitação ao
+// vivo acima faz (uma célula "5000" tem que continuar valendo 5000, não
+// 50,00). Mantido separado de propósito — mesmo nome antigo da máscara de
+// digitação foi reaproveitado pra essa function até esta correção; agora
+// que os dois usos divergem, precisam de duas funções.
+export function parseCurrencyBR(raw) {
+  if (raw == null) return { display: "", value: null };
+  let s = String(raw).replace(/[^\d,]/g, "");
   const firstComma = s.indexOf(",");
   let intPart, decPart, hasComma;
   if (firstComma === -1) {
@@ -74,9 +92,9 @@ export function maskCurrencyBR(raw) {
   } else {
     hasComma = true;
     intPart = s.slice(0, firstComma).replace(/,/g, "");
-    decPart = s.slice(firstComma + 1).replace(/,/g, "").slice(0, 2); // máx. 2 casas
+    decPart = s.slice(firstComma + 1).replace(/,/g, "").slice(0, 2);
   }
-  intPart = intPart.replace(/^0+(?=\d)/, "");            // tira zeros à esquerda
+  intPart = intPart.replace(/^0+(?=\d)/, "");
   const groupedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   let display = groupedInt;
   if (hasComma) display = (groupedInt || "0") + "," + decPart;
@@ -90,12 +108,12 @@ export function maskCurrencyBR(raw) {
   return { display, value };
 }
 
-// Formata um valor vindo do estado/banco (number, ou string numérica "crua"
-// com ponto decimal como as gravadas por <input type=number>) pro texto de
-// exibição pt-BR do input. Não força casas decimais.
+// Formata um valor vindo do estado/banco (number, ou string numérica "crua")
+// pro texto de exibição do input — sempre com 2 casas decimais, pra bater
+// com o formato oficial (R$ 1.234,56) mesmo em valores redondos.
 export function formatCurrencyBRForInput(value) {
   if (value === "" || value == null) return "";
   const n = typeof value === "number" ? value : parseFloat(value);
   if (!Number.isFinite(n)) return "";
-  return n.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

@@ -58,6 +58,7 @@ import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDr
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { EmptyState } from "../ui/EmptyState";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
 
@@ -635,11 +636,11 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
               </div>
               <div>
                 <label style={labelSt}>Salário mín. (R$)</label>
-                <input type="number" min="0" step="0.01" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <CurrencyInput value={salaryMin} onChange={setSalaryMin} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
                 <label style={labelSt}>Salário máx. (R$)</label>
-                <input type="number" min="0" step="0.01" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+                <CurrencyInput value={salaryMax} onChange={setSalaryMax} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
                 <label style={labelSt}>Jornada</label>
@@ -809,8 +810,8 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
                 <option value="">Tipo de contrato</option>
                 {RH_CONTRACT_TYPES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
-              <input type="number" min="0" step="0.01" value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} placeholder="Salário mín." className={inputCls} style={inputSt} />
-              <input type="number" min="0" step="0.01" value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} placeholder="Salário máx." className={inputCls} style={inputSt} />
+              <CurrencyInput value={salaryMin} onChange={setSalaryMin} placeholder="Mín." className={inputCls} style={inputSt} />
+              <CurrencyInput value={salaryMax} onChange={setSalaryMax} placeholder="Máx." className={inputCls} style={inputSt} />
               <input type="text" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Jornada" className={inputCls} style={inputSt} />
               <input type="text" value={shift} onChange={(e) => setShift(e.target.value)} placeholder="Escala" className={inputCls} style={inputSt} />
             </div>
