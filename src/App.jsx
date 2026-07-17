@@ -1344,6 +1344,7 @@ export default function App() {
               isManager={isManager}
               isMarketingManager={isMarketingManager}
               isRHManager={isRHManager}
+              isAdmin={isAdmin}
               usersPanel={isManager ? (
                 <UserManagementView
                   users={users}

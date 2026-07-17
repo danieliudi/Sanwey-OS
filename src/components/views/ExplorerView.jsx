@@ -8,6 +8,7 @@ import { CnpjLookupCard } from "./CnpjLookupCard";
 import { ProspectSuggestions } from "./ProspectSuggestions";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { exportLeadsToCSV } from "../../utils/export-csv";
+import { logExport } from "../../utils/log-export";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { ImportModal } from "../lead/ImportModal";
 
@@ -70,7 +71,10 @@ export function ExplorerView({
               variant="primary"
               size="sm"
               icon={Upload}
-              onClick={() => exportLeadsToCSV(leads, { usersById, filename: `sanwey-leads-explorer-${new Date().toISOString().slice(0, 10)}.csv` })}
+              onClick={() => {
+                exportLeadsToCSV(leads, { usersById, filename: `sanwey-leads-explorer-${new Date().toISOString().slice(0, 10)}.csv` });
+                logExport(currentUser?.id, "leads_explorer", leads.length);
+              }}
             >
               Exportar
             </Button>

@@ -9,6 +9,7 @@ import { Button } from "../ui/Button";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, daysSince } from "../../utils/date";
 import { exportLeadsToCSV } from "../../utils/export-csv";
+import { logExport } from "../../utils/log-export";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { isStale, daysIdle } from "../../utils/pipeline-metrics";
 
@@ -142,7 +143,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
               variant="secondary"
               icon={Download}
               size="sm"
-              onClick={() => exportLeadsToCSV(scopedLeads, { usersById })}
+              onClick={() => { exportLeadsToCSV(scopedLeads, { usersById }); logExport(user?.id, "leads_dashboard", scopedLeads.length); }}
             >
               Exportar
             </Button>

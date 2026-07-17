@@ -32,6 +32,7 @@ import { isSupabaseConfigured } from "../../lib/supabase";
 import { useCRMViagens } from "../../hooks/use-crm-viagens";
 import { useCRMDespesas } from "../../hooks/use-crm-despesas";
 import { csvRow, triggerDownload, formatBRNumber, formatDate } from "../../utils/export-csv";
+import { logExport } from "../../utils/log-export";
 import { COMERCIAL_ROLES, monthKeyOf, monthLabel, fmtMoney, STATUS_VISITA, STATUS_REEMBOLSO } from "../../utils/viagens";
 
 const CATEGORIA_COLORS = ["#7C3AED", "#2563EB", "#DB2777", "#D97706", "#059669", "#DC2626", "#0891B2", "#65A30D"];
@@ -280,6 +281,7 @@ export function CRMViagensRelatoriosView({ currentUser, users }) {
       r.motivo_divergencia || "",
     ]));
     triggerDownload(`viagens-${periodoSlug}.csv`, [header, ...rows].join("\r\n"));
+    logExport(currentUser?.id, "viagens_registros", registrosFiltrados.length);
   }
 
   function handleExportDespesas() {
@@ -293,6 +295,7 @@ export function CRMViagensRelatoriosView({ currentUser, users }) {
       d.descricao || "",
     ]));
     triggerDownload(`despesas-viagens-${periodoSlug}.csv`, [header, ...rows].join("\r\n"));
+    logExport(currentUser?.id, "viagens_despesas", despesasFiltradas.length);
   }
 
   function handleDownloadTemplate() {

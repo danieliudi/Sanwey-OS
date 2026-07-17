@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
+  ShieldCheck,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { supabase } from "../../lib/supabase";
@@ -85,6 +86,70 @@ function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
   );
 }
 
+const EXPORT_DOMAIN_LABEL = {
+  leads_crm: "Leads (Pipeline)",
+  leads_dashboard: "Leads (Minhas Tarefas)",
+  leads_explorer: "Leads (Explorador)",
+  viagens_registros: "Viagens (registros)",
+  viagens_despesas: "Viagens (despesas)",
+};
+
+// Trilha de exportações de CSV — proteção de dados estratégicos contra
+// vazamento pra concorrente. Só admin vê (ver export_audit_log RLS);
+// não bloqueia exportação nenhuma, só dá visibilidade de quem exportou
+// o quê e quando.
+function ExportAuditPanel() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    supabase
+      .from("export_audit_log")
+      .select("*, profiles(name)")
+      .order("exported_at", { ascending: false })
+      .limit(100)
+      .then(({ data }) => { if (active) { setRows(data || []); setLoading(false); } });
+    return () => { active = false; };
+  }, []);
+
+  return (
+    <Section
+      title="Exportações de dados"
+      description="Últimas 100 exportações de CSV (leads, viagens) — quem, o quê, quantos registros e quando."
+    >
+      {loading ? (
+        <div className="text-xs" style={{ color: "var(--text-dim)" }}>Carregando…</div>
+      ) : rows.length === 0 ? (
+        <div className="text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma exportação registrada ainda.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr style={{ color: "var(--text-dim)" }}>
+                <th className="text-left font-semibold pb-2">Quem</th>
+                <th className="text-left font-semibold pb-2">O quê</th>
+                <th className="text-left font-semibold pb-2">Registros</th>
+                <th className="text-left font-semibold pb-2">Quando</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.id} style={{ borderTop: "1px solid #F0F0F0" }}>
+                  <td className="py-1.5" style={{ color: "var(--text)" }}>{r.profiles?.name || "—"}</td>
+                  <td className="py-1.5" style={{ color: "var(--text)" }}>{EXPORT_DOMAIN_LABEL[r.domain] || r.domain}</td>
+                  <td className="py-1.5" style={{ color: "var(--text-dim)" }}>{r.record_count}</td>
+                  <td className="py-1.5" style={{ color: "var(--text-dim)" }}>{new Date(r.exported_at).toLocaleString("pt-BR")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Section>
+  );
+}
+
 const ROLE_LABEL = {
   admin:             "Administrador",
   gerente:           "Gerente Comercial",
@@ -137,7 +202,7 @@ export function SettingsView({
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
   onLoadAllDemoData, demoDataLoading = false, demoDataCounts = null,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
-  usersPanel, isManager = false, isMarketingManager = false, isRHManager = false,
+  usersPanel, isManager = false, isMarketingManager = false, isRHManager = false, isAdmin = false,
 }) {
   // Painel Executivo não é mais exclusivo do gerente Comercial — gerente de
   // Marketing/RH também acessa a aba Preferências, só que só enxerga (e só
@@ -151,8 +216,9 @@ export function SettingsView({
     list.push(MANAGER_TABS[0]);
     list.push(PERSONAL_TABS[1], PERSONAL_TABS[2]);
     if (isManager) list.push(MANAGER_TABS[1], MANAGER_TABS[2]);
+    if (isAdmin) list.push({ id: "seguranca", label: "Segurança", icon: ShieldCheck });
     return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
-  }, [isManager, canSeeExecutive, usersPanel]);
+  }, [isManager, canSeeExecutive, usersPanel, isAdmin]);
 
   // ── Vagas públicas (Recrutamento) ─────────────────────────────────────
   // rh_vagas vem cru (snake_case) de useRHRecrutamento — sem mapper camelCase.
@@ -1599,6 +1665,13 @@ export function SettingsView({
                   </div>
                 </div>
               </Section>
+            )}
+
+            {/* ── SEGURANÇA (admin) ── */}
+            {activeTab === "seguranca" && isAdmin && (
+              <div className="space-y-4">
+                <ExportAuditPanel />
+              </div>
             )}
 
             {/* ── USUÁRIOS ── */}
