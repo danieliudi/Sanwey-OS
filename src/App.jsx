@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, Bot, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
-  ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake,
+  ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -78,6 +78,7 @@ import { RHFeriasView } from "./components/views/RHFeriasView";
 import { RHCargosView } from "./components/views/RHCargosView";
 import { RHComunicacaoView } from "./components/views/RHComunicacaoView";
 import { RHBemEstarView } from "./components/views/RHBemEstarView";
+import { MeuRHView } from "./components/views/MeuRHView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -129,6 +130,9 @@ export default function App() {
   const isPureMarketing    = rolesSubsetOf(["marketing", "gerente_marketing"]);
   const isMarketingManager = hasAnyRole(["gerente_marketing", "admin"]);
   const isAgencia          = hasAnyRole(["agencia"]);
+  // Papel "portal": login sem nenhum cargo operacional (ex.: Engenharia) —
+  // acessa só /meu-rh, mesmo espírito do isAgencia acima (guard total).
+  const isPortalOnly       = rolesSubsetOf(["portal"]);
   // RH roles
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
   const isRHManager        = hasAnyRole(["gerente_rh", "admin"]);
@@ -793,6 +797,18 @@ export default function App() {
   }, [accessibleCompanies, activeCompany]);
 
   const navGroups = useMemo(() => {
+    // Portal: só "Meu RH", nada mais — mesmo espírito do isAgencia abaixo.
+    if (isPortalOnly) {
+      return [
+        {
+          label: null,
+          items: [
+            { id: "meu-rh", label: "Meu RH", icon: Home },
+          ],
+        },
+      ];
+    }
+
     // Agência: only Campanhas + Entregas, nothing else.
     if (isAgencia) {
       return [
@@ -918,7 +934,7 @@ export default function App() {
       ],
     });
     return groups;
-  }, [isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH]);
+  }, [isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -991,8 +1007,13 @@ export default function App() {
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
+    // Portal: só acessa /meu-rh, qualquer outra rota digitada direto na URL
+    // volta pra lá — mesmo espírito do guard de agência acima.
+    if (isPortalOnly && section !== "meu-rh") {
+      setSection("meu-rh");
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, section]);
+  }, [currentUser, isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
@@ -1116,7 +1137,9 @@ export default function App() {
         >
         <Routes>
           <Route path={ROUTES.dashboard} element={
-            isAgencia ? (
+            isPortalOnly ? (
+              <Navigate to={ROUTES["meu-rh"]} replace />
+            ) : isAgencia ? (
               // Agência mantém o comportamento antigo — papel externo restrito,
               // com nav própria de só 2 itens (Campanhas/Entregas); Minhas
               // Tarefas agrega módulos (RH, CRM interno) fora do seu escopo.
@@ -1422,6 +1445,9 @@ export default function App() {
             isRHManager
               ? <RHBemEstarView currentUser={currentUser} canWrite={isRHManager} />
               : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["meu-rh"]} element={
+            <MeuRHView currentUser={currentUser} notifyMentions={notifyMentions} />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
           {/* Catch-all: rota desconhecida volta pro Início. */}
