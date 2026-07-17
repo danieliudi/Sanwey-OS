@@ -32,10 +32,12 @@ export function useRHComunicacao({ userId } = {}) {
     return () => { activeRef.current = false; supabase.removeChannel(channel); };
   }, [fetchAll]);
 
-  // Comunicado: retorna quantos destinatários receberam.
-  const enviarComunicado = useCallback(async ({ title, body, scopeType = "todos", scopeValue = null }) => {
+  // Comunicado: retorna quantos destinatários receberam. `importante` ignora
+  // o opt-out de notificações (mention_notifications_enabled) — só alcança
+  // quem tem login na plataforma.
+  const enviarComunicado = useCallback(async ({ title, body, scopeType = "todos", scopeValue = null, importante = false }) => {
     const { data, error } = await supabase.rpc("broadcast_announcement", {
-      p_title: title, p_body: body || null, p_scope_type: scopeType, p_scope_value: scopeValue, p_link: null,
+      p_title: title, p_body: body || null, p_scope_type: scopeType, p_scope_value: scopeValue, p_link: null, p_importante: importante,
     });
     if (error) throw new Error(error.message);
     return data ?? 0;

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Bell, Check, GitBranch, Calendar, User, Trash2, X, AtSign } from "lucide-react";
+import { Bell, Check, GitBranch, Calendar, User, Trash2, X, AtSign, Megaphone } from "lucide-react";
 import { formatDateBR } from "../../utils/date";
 
 const TYPE_ICON = {
@@ -7,6 +7,8 @@ const TYPE_ICON = {
   stage_changed: GitBranch,
   lead_assigned: User,
   mention: AtSign,
+  comunicado: Megaphone,
+  comunicado_importante: Megaphone,
   default: Bell,
 };
 
@@ -15,6 +17,8 @@ const TYPE_COLOR = {
   stage_changed: "var(--text-dim)",
   lead_assigned: "var(--accent)",
   mention: "var(--accent)",
+  comunicado: "var(--accent)",
+  comunicado_importante: "var(--danger)",
   default: "var(--text-dim)",
 };
 

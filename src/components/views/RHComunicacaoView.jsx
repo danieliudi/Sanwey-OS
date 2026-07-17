@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Megaphone, Plus, X, Send, ClipboardList, BarChart3, Trash2, Check,
-  Loader2, Lock,
+  Loader2, Lock, AlertTriangle,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHComunicacao } from "../../hooks/use-rh-comunicacao";
@@ -26,6 +26,7 @@ function ComunicadoComposer({ onSend }) {
   const [body, setBody]   = useState("");
   const [scopeType, setScopeType] = useState("todos");
   const [scopeValue, setScopeValue] = useState("");
+  const [importante, setImportante] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError]   = useState(null);
   const [result, setResult] = useState(null);
@@ -35,9 +36,9 @@ function ComunicadoComposer({ onSend }) {
     if (scopeType !== "todos" && !scopeValue) { setError("Escolha a frente/departamento."); return; }
     setSending(true); setError(null); setResult(null);
     try {
-      const n = await onSend({ title: title.trim(), body: body.trim() || null, scopeType, scopeValue: scopeType === "todos" ? null : scopeValue });
+      const n = await onSend({ title: title.trim(), body: body.trim() || null, scopeType, scopeValue: scopeType === "todos" ? null : scopeValue, importante });
       setResult(n);
-      setTitle(""); setBody("");
+      setTitle(""); setBody(""); setImportante(false);
     } catch (e) {
       setError(e?.message || "Erro ao enviar comunicado.");
     } finally {
@@ -77,6 +78,26 @@ function ComunicadoComposer({ onSend }) {
             </div>
           )}
         </div>
+
+        <label
+          style={{
+            display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
+            borderRadius: 10, padding: "10px 12px",
+            border: `1px solid ${importante ? "var(--danger)" : "var(--border)"}`,
+            background: importante ? "#FEF2F2" : "var(--surface-alt)",
+          }}
+        >
+          <input type="checkbox" checked={importante} onChange={(e) => setImportante(e.target.checked)} style={{ marginTop: 2, flexShrink: 0 }} />
+          <span>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: importante ? "var(--danger)" : "var(--text)" }}>
+              <AlertTriangle size={13} /> Importante
+            </span>
+            <span style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2, display: "block" }}>
+              Entrega mesmo pra quem desativou notificações. Use só pra avisos que ninguém pode perder (segurança, mudança de política, recesso).
+            </span>
+          </span>
+        </label>
+
         {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
         {result != null && (
           <div style={{ background: "#DCFCE7", color: "var(--success)", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600 }}>
@@ -84,12 +105,16 @@ function ComunicadoComposer({ onSend }) {
           </div>
         )}
         <div>
-          <button onClick={handleSend} disabled={sending} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, border: "none", cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}>
-            {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} {sending ? "Enviando…" : "Enviar comunicado"}
+          <button
+            onClick={handleSend} disabled={sending}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importante ? "var(--danger)" : "var(--accent)", color: "#FFF", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, border: "none", cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} {sending ? "Enviando…" : importante ? "Enviar comunicado importante" : "Enviar comunicado"}
           </button>
         </div>
         <p style={{ fontSize: 11, color: "var(--text-dim)" }}>
-          Vai como notificação pra cada colaborador (respeita quem desativou notificações). Não expõe a lista de destinatários.
+          Vai como notificação pra cada colaborador com login na plataforma. Não expõe a lista de destinatários.
+          {" "}Quem ainda não tem acesso ao sistema não recebe por aqui — veja com o RH os outros canais (WhatsApp/SMS/mural físico).
         </p>
       </div>
     </div>
