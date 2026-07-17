@@ -314,12 +314,58 @@ function computeCompliance(atribuicoes) {
   return { total, ok, vencidos, pendentes, pct: total > 0 ? Math.round((ok / total) * 100) : 100 };
 }
 
+function parseAuditDate(str) {
+  if (!str) return null;
+  const [y, m, d] = String(str).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d); // meia-noite local
+}
+
+function vencDateOnly(atribuicao, treinamento) {
+  const v = vencimentoDate(atribuicao, treinamento);
+  return v ? new Date(v.getFullYear(), v.getMonth(), v.getDate()) : null;
+}
+
+// Projeção pré-auditoria (Onda 2, Áudio 4): dada uma data de auditoria, o que
+// estará em não-conformidade quando o auditor chegar? Cruza o estado atual com
+// os vencimentos que caem até lá, e ainda cobra o comprovante (concluído sem
+// certificado = pendência documental). Cada atribuição conta uma vez no total,
+// mas pode aparecer em mais de um motivo.
+function computePreAuditoria(atribuicoes, treinamentosById, auditDate) {
+  const buckets = { vencidos: [], pendentes: [], venceAteData: [], semCertificado: [] };
+  const pendenciaIds = new Set();
+  for (const a of atribuicoes) {
+    if (a.status === "vencido") {
+      buckets.vencidos.push(a); pendenciaIds.add(a.id); continue;
+    }
+    if (a.status === "concluido") {
+      const venc = vencDateOnly(a, treinamentosById.get(a.treinamento_id));
+      if (venc && venc.getTime() <= auditDate.getTime()) { buckets.venceAteData.push(a); pendenciaIds.add(a.id); }
+      if (!a.certificado_url) { buckets.semCertificado.push(a); pendenciaIds.add(a.id); }
+      continue;
+    }
+    // pendente / qualquer status não-terminal ainda por fazer
+    buckets.pendentes.push(a); pendenciaIds.add(a.id);
+  }
+  const total = atribuicoes.length;
+  const prontos = total - pendenciaIds.size;
+  return {
+    ...buckets,
+    totalPendencias: pendenciaIds.size,
+    prontos,
+    pct: total > 0 ? Math.round((prontos / total) * 100) : 100,
+  };
+}
+
 // R26: relatório de compliance cruzando TODOS os treinamentos, com filtro
 // por treinamento e por frente — antes só existia % por board individual,
 // sem nenhum jeito de ver a conformidade agregada por frente.
 function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
   const [treinamentoFiltro, setTreinamentoFiltro] = useState("todos");
   const [frenteFiltro, setFrenteFiltro] = useState("todas");
+  const [auditDateStr, setAuditDateStr] = useState("");
+
+  const treinamentosById = useMemo(() => new Map(treinamentos.map((t) => [t.id, t])), [treinamentos]);
 
   const filtradas = useMemo(() => {
     return atribuicoes.filter((a) => {
@@ -330,6 +376,12 @@ function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
   }, [atribuicoes, treinamentoFiltro, frenteFiltro, colaboradoresById]);
 
   const stats = useMemo(() => computeCompliance(filtradas), [filtradas]);
+
+  const auditDate = useMemo(() => parseAuditDate(auditDateStr), [auditDateStr]);
+  const preAudit = useMemo(
+    () => (auditDate ? computePreAuditoria(filtradas, treinamentosById, auditDate) : null),
+    [auditDate, filtradas, treinamentosById]
+  );
 
   const porFrente = useMemo(() => {
     return RH_FRENTES.map((id) => {
@@ -363,7 +415,51 @@ function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
           <option value="todas">Todas as frentes</option>
           {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
         </select>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 600 }}>Auditoria em</span>
+          <input
+            type="date"
+            value={auditDateStr}
+            onChange={(e) => setAuditDateStr(e.target.value)}
+            className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+            style={selectSt}
+            title="Projeta as pendências que existirão até esta data"
+          />
+          {auditDateStr && (
+            <button onClick={() => setAuditDateStr("")} title="Limpar" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", display: "flex", padding: 2 }}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
       </div>
+
+      {preAudit && (
+        <div className="mb-3 rounded-xl border" style={{ borderColor: preAudit.totalPendencias > 0 ? "#FCA5A5" : "#86EFAC", background: preAudit.totalPendencias > 0 ? "#FEF2F2" : "#F0FDF4", padding: "12px 16px" }}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <AlertTriangle size={16} style={{ color: preAudit.totalPendencias > 0 ? "var(--danger)" : "var(--success)", flexShrink: 0 }} />
+            <span style={{ fontSize: 14, fontWeight: 800, color: preAudit.totalPendencias > 0 ? "var(--danger)" : "var(--success)" }}>
+              {preAudit.totalPendencias === 0
+                ? `Tudo em conformidade para a auditoria de ${fmt(auditDate)}`
+                : `${preAudit.totalPendencias} pendência${preAudit.totalPendencias !== 1 ? "s" : ""} até a auditoria de ${fmt(auditDate)}`}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-dim)", marginLeft: "auto" }}>{preAudit.pct}% pronto</span>
+          </div>
+          {preAudit.totalPendencias > 0 && (
+            <div className="flex items-center gap-2 flex-wrap mt-2">
+              {[
+                { n: preAudit.vencidos.length, label: "vencido", labelP: "vencidos" },
+                { n: preAudit.pendentes.length, label: "nunca feito", labelP: "nunca feitos" },
+                { n: preAudit.venceAteData.length, label: "vence até a data", labelP: "vencem até a data" },
+                { n: preAudit.semCertificado.length, label: "sem certificado", labelP: "sem certificado" },
+              ].filter((b) => b.n > 0).map((b) => (
+                <span key={b.label} style={{ fontSize: 11, fontWeight: 700, color: "var(--danger)", background: "#FEE2E2", borderRadius: 99, padding: "2px 10px" }}>
+                  {b.n} {b.n !== 1 ? b.labelP : b.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
         {tiles.map((t) => (
           <div key={t.label} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "10px 14px", background: "var(--surface)" }}>
@@ -458,7 +554,7 @@ function TreinamentoBoardColumn({
 
 function AtribuicaoDrawer({
   atribuicao, treinamento, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, moveError, onUpdateCustomFields, onAddActivity, onClose, notifyMentions,
+  onStageChange, moveError, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onClose, notifyMentions,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -469,8 +565,24 @@ function AtribuicaoDrawer({
   const stageFieldsHook = useRHStageFields("treinamentos");
   const customDefs = stageFieldsHook.getFields(atribuicao.status);
   const [customDraft, setCustomDraft] = useState({});
+  const [certDraft, setCertDraft] = useState(atribuicao.certificado_url || "");
+  const [reciclando, setReciclando] = useState(false);
 
-  useEffect(() => { setCustomDraft({}); }, [atribuicao.id]);
+  useEffect(() => { setCustomDraft({}); setCertDraft(atribuicao.certificado_url || ""); }, [atribuicao.id, atribuicao.certificado_url]);
+
+  const saveCert = () => {
+    const next = certDraft.trim();
+    if (next === (atribuicao.certificado_url || "")) return;
+    onUpdateCertificado?.(next);
+  };
+
+  const handleReciclar = async () => {
+    if (reciclando) return;
+    setReciclando(true);
+    try { await onReciclar?.(); } finally { setReciclando(false); }
+  };
+
+  const podeReciclar = atribuicao.status === "vencido" || atribuicao.status === "concluido";
 
   const handleCustomChange = (fieldKey, value) => {
     setCustomDraft((prev) => ({ ...prev, [fieldKey]: value }));
@@ -500,7 +612,43 @@ function AtribuicaoDrawer({
     </div>
   );
 
-  const left = visibleCustomDefs.length > 0 ? (
+  const certRelevante = atribuicao.status === "concluido" || atribuicao.status === "vencido";
+  const certBlock = certRelevante ? (
+    <div>
+      <div style={labelSt}>Certificado de conclusão</div>
+      {canWrite ? (
+        <>
+          <input
+            type="url"
+            value={certDraft}
+            onChange={(e) => setCertDraft(e.target.value)}
+            onBlur={saveCert}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}
+            placeholder="https://drive.google.com/… (link do comprovante)"
+            className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+          />
+          {atribuicao.certificado_url ? (
+            <a href={atribuicao.certificado_url} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 11, color: "var(--accent)", fontWeight: 600 }}>
+              <ExternalLink size={12} /> Abrir certificado
+            </a>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, fontSize: 11, color: "var(--warning)", fontWeight: 600 }}>
+              <AlertCircle size={11} /> Sem certificado em mãos — o auditor vai cobrar.
+            </div>
+          )}
+        </>
+      ) : atribuicao.certificado_url ? (
+        <a href={atribuicao.certificado_url} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--accent)", fontWeight: 600 }}>
+          <ExternalLink size={12} /> Abrir certificado
+        </a>
+      ) : (
+        <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Sem certificado anexado.</div>
+      )}
+    </div>
+  ) : null;
+
+  const customBlock = visibleCustomDefs.length > 0 ? (
     <div>
       <div style={labelSt}>Campos desta etapa</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -515,6 +663,13 @@ function AtribuicaoDrawer({
           </div>
         ))}
       </div>
+    </div>
+  ) : null;
+
+  const left = (certBlock || customBlock) ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {certBlock}
+      {customBlock}
     </div>
   ) : null;
 
@@ -534,6 +689,24 @@ function AtribuicaoDrawer({
             onMove={(stageKey) => onStageChange(atribuicao.id, stageKey)}
             getKey={(s) => s.stageKey}
           />
+        </div>
+      )}
+
+      {canWrite && podeReciclar && onReciclar && (
+        <div>
+          <div style={labelSt}>Reciclagem</div>
+          <button
+            onClick={handleReciclar}
+            disabled={reciclando}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--accent-tint)", color: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: reciclando ? "default" : "pointer", opacity: reciclando ? 0.6 : 1 }}
+          >
+            <RefreshCw size={13} /> {reciclando ? "Reabrindo…" : "Reciclar treinamento"}
+          </button>
+          <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 6 }}>
+            {atribuicao.status === "vencido"
+              ? "Reabre pra nova realização — zera conclusão e certificado."
+              : "Antecipa a próxima rodada antes do vencimento — zera conclusão e certificado."}
+          </p>
         </div>
       )}
 
@@ -577,7 +750,7 @@ function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresB
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
-            {["Colaborador", "Cargo", "Etapa", "Conclusão", "Vencimento"].map(h => (
+            {["Colaborador", "Cargo", "Etapa", "Conclusão", "Vencimento", "Certificado"].map(h => (
               <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
                 {h}
               </th>
@@ -586,7 +759,7 @@ function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresB
         </thead>
         <tbody>
           {atribuicoes.length === 0 && (
-            <tr><td colSpan={5} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Ninguém atribuído ainda.</td></tr>
+            <tr><td colSpan={6} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Ninguém atribuído ainda.</td></tr>
           )}
           {atribuicoes.map((a) => {
             const st = findStage(stages, a.status);
@@ -606,6 +779,20 @@ function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresB
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(a.data_conclusao)}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: a.status === "vencido" ? "var(--danger)" : "var(--text-dim)", fontWeight: a.status === "vencido" ? 700 : 400 }}>
                   {venc ? fmt(venc) : "—"}
+                </td>
+                <td className="px-4 py-3 text-xs">
+                  {a.certificado_url ? (
+                    <a href={a.certificado_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--accent)", fontWeight: 600 }}>
+                      <ExternalLink size={12} /> Ver
+                    </a>
+                  ) : a.status === "concluido" ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "var(--warning)", fontWeight: 600 }}>
+                      <AlertCircle size={11} /> Sem certificado
+                    </span>
+                  ) : (
+                    <span style={{ color: "var(--text-dim)" }}>—</span>
+                  )}
                 </td>
               </tr>
             );
@@ -723,7 +910,7 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
 
 function TreinamentoBoardModal({
   treinamento, atribuicoes, colaboradoresById, canWrite, currentUser, users,
-  onChangeStage, onUpdateCustomFields, onAddActivity, onClose, notifyMentions,
+  onChangeStage, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onClose, notifyMentions,
 }) {
   const { stages, loading: loadingStages } = useRHPipelineStages("treinamentos");
   const stageFields = useRHStageFields("treinamentos");
@@ -871,6 +1058,8 @@ function TreinamentoBoardModal({
           onStageChange={(id, stage) => { handleMove(id, stage); }}
           moveError={moveError}
           onUpdateCustomFields={(merged) => onUpdateCustomFields(drawerAtrib.id, merged)}
+          onUpdateCertificado={(url) => onUpdateCertificado(drawerAtrib.id, url)}
+          onReciclar={() => onReciclar(drawerAtrib.id)}
           onAddActivity={(entry) => onAddActivity(drawerAtrib.id, entry)}
           onClose={() => setDrawerId(null)}
           notifyMentions={notifyMentions}
@@ -906,7 +1095,8 @@ function TreinamentoBoardModal({
 export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = [], notifyMentions }) {
   const {
     treinamentos, atribuicoes, loading: loadingTreinamentos, createTreinamento, updateTreinamento,
-    assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, updateAtribuicaoCustomFields, addAtribuicaoActivity,
+    assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado,
+    updateAtribuicaoCustomFields, addAtribuicaoActivity,
   } = useRHTreinamentos({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const [novoOpen, setNovoOpen]         = useState(false);
@@ -1056,18 +1246,27 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
                           <div style={{ fontSize: 12, color: "var(--text-dim)", padding: "8px 0" }}>Ninguém atribuído ainda.</div>
                         ) : atribs.map(a => {
                           const info = atribuicaoStatusInfo(a, t);
+                          const venc = vencimentoDate(a, t);
+                          const venceEmBreve = a.status === "concluido" && venc && (venc.getTime() - Date.now()) <= 30 * 86400000;
+                          const podeReciclar = a.status === "vencido" || venceEmBreve;
                           return (
                             <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
                               <span style={{ flex: 1, fontSize: 12, color: "var(--text)" }}>{colaboradoresById.get(a.colaborador_id)?.fullName || "—"}</span>
+                              {a.status === "concluido" && !a.certificado_url && (
+                                <span title="Concluído sem certificado em mãos" style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 10, fontWeight: 700, color: "var(--warning)" }}>
+                                  <AlertCircle size={10} /> sem certificado
+                                </span>
+                              )}
                               <span style={{ fontSize: 10, fontWeight: 700, color: info.color, background: info.bg, borderRadius: 99, padding: "2px 9px" }}>
                                 {info.label}
                               </span>
-                              {canWrite && a.status === "vencido" && (
+                              {canWrite && podeReciclar && (
                                 <button
-                                  onClick={() => updateAtribuicaoStatus(a.id, "pendente")}
+                                  onClick={() => reciclarAtribuicao(a.id)}
+                                  title={a.status === "vencido" ? "Reabrir para nova realização" : "Antecipar a próxima rodada antes de vencer"}
                                   style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 10, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}
                                 >
-                                  <RefreshCw size={10} /> Revalidar
+                                  <RefreshCw size={10} /> Reciclar
                                 </button>
                               )}
                             </div>
@@ -1136,6 +1335,8 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           users={users}
           onChangeStage={changeAtribuicaoStage}
           onUpdateCustomFields={updateAtribuicaoCustomFields}
+          onUpdateCertificado={updateAtribuicaoCertificado}
+          onReciclar={reciclarAtribuicao}
           onAddActivity={addAtribuicaoActivity}
           onClose={() => setBoardTreinamento(null)}
           notifyMentions={notifyMentions}

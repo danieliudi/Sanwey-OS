@@ -64,10 +64,20 @@ export function useRHTreinamentos({ userId } = {}) {
     reconciliandoRef.current = true;
     (async () => {
       const now = new Date().toISOString();
+      // Só reflete no estado local os IDs que realmente persistiram — antes o
+      // erro do UPDATE era engolido e o "vencido" divergia do banco (era o
+      // caso do CHECK obsoleto que rejeitava 'vencido'; corrigido na migração
+      // 20260729, mas o guarda continua valendo p/ qualquer rejeição futura).
+      const persistidos = [];
       for (const a of paraVencer) {
-        await supabase.from("rh_treinamento_atribuicoes").update({ status: "vencido", status_changed_at: now }).eq("id", a.id);
+        const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ status: "vencido", status_changed_at: now }).eq("id", a.id);
+        if (error) { console.warn("Falha ao marcar treinamento como vencido:", a.id, error.message); continue; }
+        persistidos.push(a.id);
       }
-      setAtribuicoes(prev => prev.map(a => paraVencer.some(p => p.id === a.id) ? { ...a, status: "vencido", status_changed_at: now } : a));
+      if (persistidos.length > 0) {
+        const ids = new Set(persistidos);
+        setAtribuicoes(prev => prev.map(a => ids.has(a.id) ? { ...a, status: "vencido", status_changed_at: now } : a));
+      }
     })();
   }, [loading, treinamentos, atribuicoes]);
 
@@ -96,7 +106,9 @@ export function useRHTreinamentos({ userId } = {}) {
   const changeAtribuicaoStage = useCallback(async (atribuicaoId, stage) => {
     const patch = { status: stage, status_changed_at: new Date().toISOString() };
     if (stage === "concluido") patch.data_conclusao = new Date().toISOString();
-    if (stage === "pendente") patch.data_conclusao = null;
+    // Voltar pra pendente = zera a conclusão e o certificado (que agora está
+    // obsoleto — a nova rodada emite um novo comprovante).
+    if (stage === "pendente") { patch.data_conclusao = null; patch.certificado_url = null; }
     const { error } = await supabase.from("rh_treinamento_atribuicoes").update(patch).eq("id", atribuicaoId);
     if (error) throw new Error(error.message);
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, ...patch } : a));
@@ -105,6 +117,35 @@ export function useRHTreinamentos({ userId } = {}) {
   const updateAtribuicaoStatus = useCallback(async (atribuicaoId, status) => {
     await changeAtribuicaoStage(atribuicaoId, status);
   }, [changeAtribuicaoStage]);
+
+  // Reciclagem (Onda 2, Áudio 4): reabre um treinamento periódico pra nova
+  // realização — vencido OU concluído prestes a vencer (reciclagem proativa,
+  // antes de abrir buraco de conformidade). Zera conclusão/certificado e
+  // deixa um registro de auditoria no feed (type "note", igual comentário).
+  const reciclarAtribuicao = useCallback(async (atribuicaoId, { note } = {}) => {
+    const current = atribuicoes.find(a => a.id === atribuicaoId);
+    const now = new Date().toISOString();
+    const entry = {
+      id: `recic-${now}-${Math.random().toString(36).slice(2, 7)}`,
+      type: "note",
+      body: note?.trim() || "Reciclagem iniciada — treinamento reaberto para nova realização.",
+      createdBy: userId || null,
+      mentionedIds: [],
+      createdAt: now,
+    };
+    const nextActivities = [...(Array.isArray(current?.activities) ? current.activities : []), entry];
+    const patch = { status: "pendente", data_conclusao: null, certificado_url: null, status_changed_at: now, activities: nextActivities };
+    const { error } = await supabase.from("rh_treinamento_atribuicoes").update(patch).eq("id", atribuicaoId);
+    if (error) throw new Error(error.message);
+    setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, ...patch } : a));
+  }, [atribuicoes, userId]);
+
+  const updateAtribuicaoCertificado = useCallback(async (atribuicaoId, url) => {
+    const value = url?.trim() || null;
+    const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ certificado_url: value }).eq("id", atribuicaoId);
+    if (error) throw new Error(error.message);
+    setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, certificado_url: value } : a));
+  }, []);
 
   const updateAtribuicaoCustomFields = useCallback(async (atribuicaoId, customFields) => {
     const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ custom_fields: customFields }).eq("id", atribuicaoId);
@@ -136,8 +177,10 @@ export function useRHTreinamentos({ userId } = {}) {
     assignToUsers,
     updateAtribuicaoStatus,
     changeAtribuicaoStage,
+    reciclarAtribuicao,
+    updateAtribuicaoCertificado,
     updateAtribuicaoCustomFields,
     addAtribuicaoActivity,
     refetch: fetchAll,
-  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, updateAtribuicaoCustomFields, addAtribuicaoActivity, fetchAll]);
+  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado, updateAtribuicaoCustomFields, addAtribuicaoActivity, fetchAll]);
 }

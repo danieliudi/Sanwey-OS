@@ -1,0 +1,23 @@
+-- Correção de bug (Onda 2, Áudio 4): "vencido" nunca persistia no banco.
+--
+-- A migração 20260709_rh_treinamentos_kanban.sql promoveu 'vencido' a etapa
+-- real (inseriu em rh_pipeline_stages) e criou o trigger
+-- validate_stage_rh_treinamento_atribuicoes como validador de status — mas
+-- esqueceu de remover o CHECK inline antigo (status IN
+-- ('pendente','concluido')) criado no CREATE TABLE original do mini-LMS.
+--
+-- Resultado: TODO UPDATE para status='vencido' (a reconciliação de vencimento
+-- em use-rh-treinamentos.js) era rejeitado silenciosamente pelo Postgres — o
+-- erro não era checado no hook, e o estado só era atualizado em memória.
+-- "Vencido" existia na tela até dar reload e sumia; status_changed_at também
+-- não avançava. Confirmado ao vivo: zero linhas 'vencido' apesar da lógica.
+--
+-- O trigger validate_rh_stage já é a autoridade correta: valida o status
+-- contra rh_pipeline_stages (onde 'vencido' e quaisquer etapas customizadas
+-- existem), igual ao modelo dinâmico de rh_aplicacoes.etapa_pipeline (sem
+-- CHECK). Basta remover o CHECK obsoleto.
+--
+-- Já aplicada ao projeto vivo via MCP (apply_migration); este arquivo existe
+-- para que um `supabase db reset` reproduza o mesmo schema.
+ALTER TABLE public.rh_treinamento_atribuicoes
+  DROP CONSTRAINT IF EXISTS rh_treinamento_atribuicoes_status_check;
