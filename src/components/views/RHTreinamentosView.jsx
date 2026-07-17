@@ -9,6 +9,7 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useMyColaborador } from "../../hooks/use-my-colaborador";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
@@ -1099,6 +1100,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
     updateAtribuicaoCustomFields, addAtribuicaoActivity,
   } = useRHTreinamentos({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
+  const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
   const [novoOpen, setNovoOpen]         = useState(false);
   const [editingTreinamento, setEditingTreinamento] = useState(null);
   const [atribuindoTo, setAtribuindoTo] = useState(null);
@@ -1106,7 +1108,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
   const [expanded, setExpanded]         = useState(new Set());
   const [catalogQuery, setCatalogQuery] = useState("");
 
-  const loading = loadingTreinamentos || loadingColaboradores;
+  const loading = loadingTreinamentos || loadingColaboradores || loadingMeuColaborador;
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
 
@@ -1119,10 +1121,6 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
     return map;
   }, [atribuicoes]);
 
-  const meuColaborador = useMemo(
-    () => colaboradores.find(c => c.profileId === currentUser?.id) || null,
-    [colaboradores, currentUser?.id]
-  );
   const myAtribuicoes = useMemo(
     () => meuColaborador ? atribuicoes.filter(a => a.colaborador_id === meuColaborador.id) : [],
     [atribuicoes, meuColaborador]

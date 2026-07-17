@@ -10,6 +10,7 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useMyColaborador } from "../../hooks/use-my-colaborador";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
@@ -1126,6 +1127,7 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
 export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentions }) {
   const { templates, tarefas, loading: loadingTarefas, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, deleteTarefa } = useRHOnboarding({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador, createColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
   const { feedbacks, createPendingCycle } = useRHFeedback({ userId: currentUser?.id });
@@ -1245,7 +1247,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
     await updateColaborador(colaboradorId, { activities: nextActivities });
   }, [colaboradores, updateColaborador]);
 
-  const loading = loadingTarefas || loadingColaboradores || loadingStages;
+  const loading = loadingTarefas || loadingColaboradores || loadingStages || loadingMeuColaborador;
 
   const vagasById = useMemo(() => new Map(vagas.map((v) => [v.id, v])), [vagas]);
 
@@ -1286,11 +1288,6 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
     }).filter((f) => f.total > 0);
     return { total: colaboradores.length, overall, semTarefas: colaboradores.length - comTarefas.length, porFrente };
   }, [colaboradores, tarefasByColaborador]);
-
-  const meuColaborador = useMemo(
-    () => colaboradores.find((c) => c.profileId === currentUser?.id) || null,
-    [colaboradores, currentUser?.id]
-  );
 
   const drawerColaborador = useMemo(
     () => colaboradores.find((c) => c.id === drawerColaboradorId) || null,

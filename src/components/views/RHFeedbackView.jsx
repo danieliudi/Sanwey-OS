@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useMyColaborador } from "../../hooks/use-my-colaborador";
 import { useRHMovimentacoes } from "../../hooks/use-rh-movimentacoes";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
@@ -1083,6 +1084,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, addFeedbackActivity,
   } = useRHFeedback({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
+  const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
   const { createMovimentacao } = useRHMovimentacoes({ userId: currentUser?.id });
   const { stages, loading: loadingStages } = useRHPipelineStages("feedback");
   const feedbackStageFields = useRHStageFields("feedback");
@@ -1105,7 +1107,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     setMoveError(null);
   }, [drawerFeedbackId]);
 
-  const loading = loadingFeedbacks || loadingColaboradores || loadingStages;
+  const loading = loadingFeedbacks || loadingColaboradores || loadingStages || loadingMeuColaborador;
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
   const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
@@ -1190,10 +1192,6 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     })();
   }, [canWrite, loading, colaboradores, feedbacks, createPendingCycle]);
 
-  const meuColaborador = useMemo(
-    () => colaboradores.find(c => c.profileId === currentUser?.id) || null,
-    [colaboradores, currentUser?.id]
-  );
 
   // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
   // vazio/inválido — mesmo padrão de Onboarding. Mover pra "concluido" abre
