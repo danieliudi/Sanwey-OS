@@ -63,6 +63,28 @@ export function useRHOnboarding({ userId } = {}) {
     return novas;
   }, [userId]);
 
+  // Tarefa em lote (Onda 2, item 7): cria a MESMA tarefa (ex: "entrega de
+  // uniforme", "aviso de segurança NR") pra vários colaboradores de uma vez —
+  // colaboradorIds × items num único insert, sem template. Espelha o formato
+  // de assignToUsers dos treinamentos.
+  const applyTaskToMany = useCallback(async (colaboradorIds, items) => {
+    const ids = [...new Set(colaboradorIds)].filter(Boolean);
+    if (!ids.length || !items?.length) return [];
+    const rows = ids.flatMap((colaboradorId) =>
+      items.map((item) => ({
+        colaborador_id: colaboradorId,
+        template_id: null,
+        titulo: item.titulo,
+        data_limite: item.dataLimite || null,
+        created_by: userId,
+      }))
+    );
+    const { data: novas, error } = await supabase.from("rh_onboarding_tarefas").insert(rows).select();
+    if (error) throw new Error(error.message);
+    setTarefas(prev => [...(novas || []), ...prev]);
+    return novas;
+  }, [userId]);
+
   const updateTarefaStatus = useCallback(async (tarefaId, status) => {
     const { error } = await supabase.from("rh_onboarding_tarefas").update({ status, updated_at: new Date().toISOString() }).eq("id", tarefaId);
     if (error) throw new Error(error.message);
@@ -81,8 +103,9 @@ export function useRHOnboarding({ userId } = {}) {
     loading,
     createTemplate,
     applyChecklist,
+    applyTaskToMany,
     updateTarefaStatus,
     deleteTarefa,
     refetch: fetchAll,
-  }), [templates, tarefas, loading, createTemplate, applyChecklist, updateTarefaStatus, deleteTarefa, fetchAll]);
+  }), [templates, tarefas, loading, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, deleteTarefa, fetchAll]);
 }

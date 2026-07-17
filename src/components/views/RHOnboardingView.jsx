@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ClipboardCheck, Plus, X, Check, Trash2,
-  Briefcase, Pencil, Settings2, AlertCircle,
+  Briefcase, Pencil, Settings2, AlertCircle, Users,
   LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { RH_CONTRACT_TYPES, RH_DEPARTMENTS } from "../../constants/rh-config";
@@ -17,6 +17,7 @@ import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useProfiles } from "../../hooks/use-profiles";
 import { nextPendingCycle } from "../../utils/rh-feedback-cycles";
+import { parseDateInput } from "../../utils/date";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
@@ -49,6 +50,18 @@ function addDays(base, days) {
   const d = new Date(base);
   d.setDate(d.getDate() + Number(days || 0));
   return d.toISOString().slice(0, 10);
+}
+
+// Soma de dias fuso-seguro (Onda 2, item 7): parseia data-só no fuso local e
+// devolve yyyy-mm-dd sem passar por UTC — usado nos marcos ancorados na
+// admissão (D+10/45/60), onde o -1 dia do addDays() distorceria o marco.
+const TIPO_TRILHA_LABELS = { administrativa: "Administrativa", operacional: "Operacional", iso: "ISO (10/45/60)" };
+
+function addDaysLocalISO(baseISO, days) {
+  const d = parseDateInput(baseISO);
+  if (Number.isNaN(d.getTime())) return null;
+  const r = new Date(d.getFullYear(), d.getMonth(), d.getDate() + Number(days || 0));
+  return `${r.getFullYear()}-${String(r.getMonth() + 1).padStart(2, "0")}-${String(r.getDate()).padStart(2, "0")}`;
 }
 
 function daysInStage(dateStr) {
@@ -347,8 +360,11 @@ function OnboardingDrawer({
   const handleApplyTemplate = () => {
     const tpl = templates.find((t) => t.id === templateId);
     if (!tpl || !Array.isArray(tpl.checklist_padrao) || tpl.checklist_padrao.length === 0) return;
-    const today = new Date().toISOString().slice(0, 10);
-    onApplyTemplate(colaborador.id, tpl.checklist_padrao.map((i) => ({ titulo: i.titulo, dataLimite: addDays(today, i.dias_prazo) })), tpl.id);
+    // Marcos ancorados na data de admissão (trilha ISO 10/45/60): "D+N" passa a
+    // significar N dias APÓS a admissão, não após a data de aplicação. Sem
+    // admissão cadastrada, cai no fallback de hoje.
+    const anchor = colaborador.admissionDate ? String(colaborador.admissionDate).slice(0, 10) : new Date().toISOString().slice(0, 10);
+    onApplyTemplate(colaborador.id, tpl.checklist_padrao.map((i) => ({ titulo: i.titulo, dataLimite: addDaysLocalISO(anchor, i.dias_prazo) })), tpl.id);
     setTemplateId("");
   };
 
@@ -440,7 +456,11 @@ function OnboardingDrawer({
               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                 <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="text-xs rounded-lg border px-2 py-1.5 outline-none" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", flex: 1 }}>
                   <option value="">Aplicar template…</option>
-                  {templates.map((t) => <option key={t.id} value={t.id}>{t.cargo || RH_FRENTE_LABELS[t.frente] || t.frente || "Template"}</option>)}
+                  {templates.map((t) => {
+                    const base = t.cargo || RH_FRENTE_LABELS[t.frente] || t.frente || "Template";
+                    const trilha = t.tipo_trilha ? ` · ${TIPO_TRILHA_LABELS[t.tipo_trilha] || t.tipo_trilha}` : "";
+                    return <option key={t.id} value={t.id}>{base}{trilha}</option>;
+                  })}
                 </select>
                 <button onClick={handleApplyTemplate} disabled={!templateId} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "0 12px", fontSize: 11, fontWeight: 700, cursor: templateId ? "pointer" : "default", opacity: templateId ? 1 : 0.5 }}>
                   Aplicar
@@ -528,6 +548,7 @@ function OnboardingDrawer({
 function NovaTemplateModal({ onSave, onClose }) {
   const [cargo, setCargo]   = useState("");
   const [frente, setFrente] = useState("");
+  const [tipoTrilha, setTipoTrilha] = useState("");
   const [items, setItems]   = useState([{ titulo: "", diasPrazo: 7 }]);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState(null);
@@ -547,6 +568,7 @@ function NovaTemplateModal({ onSave, onClose }) {
       await onSave({
         cargo: cargo.trim() || null,
         frente: frente.trim() || null,
+        tipo_trilha: tipoTrilha || null,
         checklist_padrao: validItems.map(i => ({ titulo: i.titulo.trim(), dias_prazo: Number(i.diasPrazo) || 0 })),
       });
       onClose();
@@ -583,6 +605,18 @@ function NovaTemplateModal({ onSave, onClose }) {
               </div>
             </div>
             <div>
+              <label style={labelSt}>Trilha</label>
+              <select value={tipoTrilha} onChange={(e) => setTipoTrilha(e.target.value)} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt}>
+                <option value="">Geral</option>
+                <option value="administrativa">Administrativa</option>
+                <option value="operacional">Operacional</option>
+                <option value="iso">ISO (marcos 10/45/60)</option>
+              </select>
+              <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
+                Diferencia trilhas por tipo de cargo. Na trilha ISO, os "D+N" contam a partir da admissão do colaborador.
+              </p>
+            </div>
+            <div>
               <label style={labelSt}>Checklist padrão</label>
               <div className="flex flex-col gap-2">
                 {items.map((item, idx) => (
@@ -611,6 +645,140 @@ function NovaTemplateModal({ onSave, onClose }) {
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal: tarefa em lote ─────────────────────────────────────────────────────
+// Envia UMA tarefa (aviso de segurança, entrega de uniforme, etc.) pra um grupo
+// de colaboradores em onboarding de uma vez. Filtra por frente e deixa marcar/
+// desmarcar quem recebe. Prazo é D+N a partir de hoje (não é um marco de
+// admissão — é um aviso pontual).
+function BulkTarefaModal({ colaboradores, onApply, onClose }) {
+  const [titulo, setTitulo] = useState("");
+  const [prazoDias, setPrazoDias] = useState(3);
+  const [frenteFiltro, setFrenteFiltro] = useState("todas");
+  const [selected, setSelected] = useState(() => new Set(colaboradores.map((c) => c.id)));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(0);
+
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const visiveis = useMemo(
+    () => colaboradores.filter((c) => frenteFiltro === "todas" || c.frente === frenteFiltro),
+    [colaboradores, frenteFiltro]
+  );
+  const toggle = (id) => setSelected((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const selVisiveis = visiveis.filter((c) => selected.has(c.id)).length;
+  const allVisiveisSel = visiveis.length > 0 && selVisiveis === visiveis.length;
+  const toggleAll = () => setSelected((prev) => {
+    const next = new Set(prev);
+    if (allVisiveisSel) visiveis.forEach((c) => next.delete(c.id));
+    else visiveis.forEach((c) => next.add(c.id));
+    return next;
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const ids = [...selected];
+    if (!titulo.trim()) { setError("Descreva a tarefa."); return; }
+    if (ids.length === 0) { setError("Selecione ao menos um colaborador."); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      const dataLimite = addDays(new Date().toISOString().slice(0, 10), prazoDias);
+      await onApply(ids, [{ titulo: titulo.trim(), dataLimite }]);
+      setDone(ids.length);
+    } catch (err) {
+      setError(err?.message || "Erro ao enviar a tarefa em lote.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", fontSize: 13 };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "var(--shadow-pop)", maxHeight: "88vh", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Tarefa em lote</div>
+          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
+        </div>
+
+        {done > 0 ? (
+          <div style={{ padding: "28px 24px", textAlign: "center" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#DCFCE7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+              <Check size={24} color="var(--success)" />
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>Tarefa enviada a {done} colaborador{done !== 1 ? "es" : ""}</div>
+            <button onClick={onClose} style={{ marginTop: 16, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>Fechar</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", minHeight: 0, flex: 1 }}>
+            <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+              <div>
+                <label style={labelSt}>Tarefa</label>
+                <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Aviso de segurança NR / Entrega de uniforme" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} autoFocus />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={labelSt}>Prazo (D+ dias)</label>
+                  <input type="number" min="0" value={prazoDias} onChange={(e) => setPrazoDias(Number(e.target.value) || 0)} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                </div>
+                <div>
+                  <label style={labelSt}>Frente</label>
+                  <select value={frenteFiltro} onChange={(e) => setFrenteFiltro(e.target.value)} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt}>
+                    <option value="todas">Todas</option>
+                    {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <label style={{ ...labelSt, marginBottom: 0 }}>Destinatários ({selVisiveis}/{visiveis.length})</label>
+                  {visiveis.length > 0 && (
+                    <button type="button" onClick={toggleAll} style={{ fontSize: 11, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
+                      {allVisiveisSel ? "Desmarcar todos" : "Marcar todos"}
+                    </button>
+                  )}
+                </div>
+                <div style={{ border: "1px solid var(--border)", borderRadius: 10, maxHeight: 180, overflowY: "auto" }}>
+                  {visiveis.length === 0 ? (
+                    <div style={{ fontSize: 12, color: "var(--text-dim)", padding: "12px" }}>Nenhum colaborador nesta frente.</div>
+                  ) : visiveis.map((c) => (
+                    <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px", cursor: "pointer", borderBottom: "1px solid var(--border)" }}>
+                      <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
+                      <span style={{ fontSize: 13, color: "var(--text)" }}>{c.fullName}</span>
+                      {c.jobTitle && <span style={{ fontSize: 11, color: "var(--text-dim)" }}>· {c.jobTitle}</span>}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
+            </div>
+
+            <div style={{ padding: "12px 24px 20px", display: "flex", gap: 8, borderTop: "1px solid var(--border)" }}>
+              <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+                {saving ? "Enviando…" : `Enviar a ${selected.size}`}
+              </button>
+              <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -956,7 +1124,7 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentions }) {
-  const { templates, tarefas, loading: loadingTarefas, createTemplate, applyChecklist, updateTarefaStatus, deleteTarefa } = useRHOnboarding({ userId: currentUser?.id });
+  const { templates, tarefas, loading: loadingTarefas, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, deleteTarefa } = useRHOnboarding({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador, createColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
@@ -966,6 +1134,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const { users } = useProfiles();
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
   const [novaTemplateOpen, setNovaTemplateOpen] = useState(false);
+  const [bulkTarefaOpen, setBulkTarefaOpen] = useState(false);
   const [addColaboradorStage, setAddColaboradorStage] = useState(null);
   const [drawerColaboradorId, setDrawerColaboradorId] = useState(null);
   const [stageEditorOpen, setStageEditorOpen] = useState(false);
@@ -1179,6 +1348,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           {canWrite && (
             <>
               <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
+              <Button variant="secondary" size="sm" icon={Users} onClick={() => setBulkTarefaOpen(true)}>Tarefa em lote</Button>
               <Button variant="secondary" size="sm" icon={Plus} onClick={() => setNovaTemplateOpen(true)}>Template</Button>
             </>
           )}
@@ -1304,6 +1474,13 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
 
       {novaTemplateOpen && (
         <NovaTemplateModal onSave={createTemplate} onClose={() => setNovaTemplateOpen(false)} />
+      )}
+      {bulkTarefaOpen && (
+        <BulkTarefaModal
+          colaboradores={colaboradores}
+          onApply={applyTaskToMany}
+          onClose={() => setBulkTarefaOpen(false)}
+        />
       )}
 
       {addColaboradorStage && (
