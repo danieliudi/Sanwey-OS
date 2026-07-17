@@ -10,7 +10,8 @@ import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useProfiles } from "../../hooks/use-profiles";
-import { nextPendingCycle } from "../../utils/rh-feedback-cycles";
+import { nextPendingCycle, addDaysISO } from "../../utils/rh-feedback-cycles";
+import { formatBRL } from "../../utils/currency";
 import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -35,12 +36,13 @@ function isEvaluatorEligible(u) {
 }
 
 const TIPOS = [
-  { id: "30_dias",   label: "30 dias" },
-  { id: "60_dias",   label: "60 dias" },
-  { id: "90_dias",   label: "90 dias" },
-  { id: "semestral", label: "Semestral" },
-  { id: "anual",     label: "Anual" },
-  { id: "ad_hoc",    label: "Ad-hoc" },
+  { id: "30_dias",     label: "30 dias" },
+  { id: "60_dias",     label: "60 dias" },
+  { id: "90_dias",     label: "90 dias" },
+  { id: "semestral",   label: "Semestral" },
+  { id: "anual",       label: "Anual" },
+  { id: "ad_hoc",      label: "Ad-hoc" },
+  { id: "reavaliacao", label: "Reavaliação" },
 ];
 
 // Nota qualitativa-ancorada em vez de número solto: pesquisa de mercado
@@ -304,11 +306,21 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
 
 // ── Modal: completar ciclo pendente (RH) ───────────────────────────────────────
 
+const DESFECHOS = [
+  { id: "mantido",   label: "Mantido no cargo",  hint: "Segue no ciclo normal de avaliação." },
+  { id: "promovido", label: "Promovido",          hint: "Registra ajuste de salário no cadastro." },
+  { id: "reavaliar", label: "Reavaliar",          hint: "Agenda uma nova avaliação em 3 ou 6 meses." },
+  { id: "reprovado", label: "Não aprovado",       hint: "Encerra com parecer negativo." },
+];
+
 function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) {
   const [managerRating, setManagerRating]         = useState(null);
   const [pontosFortes, setPontosFortes]           = useState("");
   const [pontosDesenvolvimento, setPontosDesenvolvimento] = useState("");
   const [notas, setNotas]                         = useState("");
+  const [desfecho, setDesfecho]                   = useState("mantido");
+  const [novoSalario, setNovoSalario]             = useState("");
+  const [reavaliarMeses, setReavaliarMeses]       = useState("3");
   const [saving, setSaving]                       = useState(false);
   const [error, setError]                         = useState(null);
 
@@ -320,6 +332,10 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (desfecho === "promovido" && novoSalario !== "" && !(Number(novoSalario) > 0)) {
+      setError("Informe um salário válido para a promoção (ou deixe em branco).");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -328,6 +344,9 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
         pontosFortes: pontosFortes.trim(),
         pontosDesenvolvimento: pontosDesenvolvimento.trim(),
         notas: notas.trim() || null,
+        desfecho,
+        novoSalario: desfecho === "promovido" ? (novoSalario === "" ? null : Number(novoSalario)) : null,
+        reavaliarMeses: desfecho === "reavaliar" ? Number(reavaliarMeses) : null,
       });
       onClose();
     } catch (err) {
@@ -372,6 +391,58 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
               <label style={labelSt}>Notas (texto livre)</label>
               <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={2} className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={inputSt} />
             </div>
+
+            <div>
+              <label style={labelSt}>Desfecho</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {DESFECHOS.map((d) => {
+                  const active = desfecho === d.id;
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => setDesfecho(d.id)}
+                      style={{
+                        textAlign: "left", padding: "8px 10px", borderRadius: 10, cursor: "pointer",
+                        border: `1.5px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                        background: active ? "var(--accent-tint)" : "var(--surface)",
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 700, color: active ? "var(--accent)" : "var(--text)" }}>{d.label}</div>
+                      <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>{d.hint}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {desfecho === "promovido" && (
+              <div>
+                <label style={labelSt}>Novo salário (opcional)</label>
+                <input
+                  type="number" min="0" step="0.01" value={novoSalario}
+                  onChange={(e) => setNovoSalario(e.target.value)}
+                  placeholder={colaborador?.salary != null ? `Atual: ${formatBRL(colaborador.salary)}` : "R$ 0,00"}
+                  className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt}
+                />
+                <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
+                  Se preenchido, atualiza o salário no cadastro do colaborador e guarda o histórico no desfecho.
+                </p>
+              </div>
+            )}
+
+            {desfecho === "reavaliar" && (
+              <div>
+                <label style={labelSt}>Reavaliar em</label>
+                <select value={reavaliarMeses} onChange={(e) => setReavaliarMeses(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                  <option value="3">3 meses</option>
+                  <option value="6">6 meses</option>
+                </select>
+                <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
+                  Cria automaticamente um novo ciclo de reavaliação com esse prazo.
+                </p>
+              </div>
+            )}
           </div>
 
           {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
@@ -1010,7 +1081,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     feedbacks, loading: loadingFeedbacks, createFeedback, createPendingCycle, completeFeedback,
     submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, addFeedbackActivity,
   } = useRHFeedback({ userId: currentUser?.id });
-  const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, loading: loadingColaboradores, updateColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const { stages, loading: loadingStages } = useRHPipelineStages("feedback");
   const feedbackStageFields = useRHStageFields("feedback");
   const { users } = useProfiles();
@@ -1036,6 +1107,40 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
   const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
+
+  // Conclusão + desfecho estruturado (Onda 2): grava a avaliação e dispara os
+  // efeitos colaterais do desfecho — promoção ajusta salário no cadastro,
+  // "reavaliar" agenda automaticamente um novo ciclo de reavaliação. Feito
+  // aqui (não no hook) porque é onde updateColaborador/createPendingCycle
+  // estão disponíveis. Efeitos são best-effort: a conclusão nunca é revertida
+  // se o efeito colateral falhar (log no console).
+  const handleCompleteFeedback = useCallback(async (avaliacaoId, data) => {
+    const fb = feedbacks.find(f => f.id === avaliacaoId);
+    const colaborador = fb ? colaboradoresById.get(fb.user_id) : null;
+    const desfecho = data.desfecho || null;
+    const desfechoMeta = {};
+    if (desfecho === "promovido" && data.novoSalario != null && Number(data.novoSalario) > 0) {
+      desfechoMeta.salario_anterior = colaborador?.salary ?? null;
+      desfechoMeta.salario_novo = Number(data.novoSalario);
+    }
+    if (desfecho === "reavaliar" && data.reavaliarMeses) {
+      desfechoMeta.reavaliar_meses = Number(data.reavaliarMeses);
+    }
+
+    await completeFeedback(avaliacaoId, { ...data, desfecho, desfechoMeta });
+
+    if (desfechoMeta.salario_novo != null && colaborador) {
+      try { await updateColaborador(colaborador.id, { salary: desfechoMeta.salario_novo }); }
+      catch (e) { console.error("Falha ao ajustar salário na promoção:", e); }
+    }
+    if (desfecho === "reavaliar" && desfechoMeta.reavaliar_meses && colaborador) {
+      try {
+        const hoje = new Date().toISOString().slice(0, 10);
+        const fim = addDaysISO(hoje, desfechoMeta.reavaliar_meses * 30);
+        await createPendingCycle(colaborador.id, "reavaliacao", hoje, fim);
+      } catch (e) { console.error("Falha ao agendar reavaliação:", e); }
+    }
+  }, [feedbacks, colaboradoresById, completeFeedback, updateColaborador, createPendingCycle]);
 
   // Reconciliação automática: ao abrir a tela, gera o próximo ciclo pendente
   // (check-in de onboarding ou semestral recorrente) pra quem já está sem
@@ -1327,7 +1432,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
         <CompletarFeedbackModal
           feedback={completandoFeedback}
           colaborador={colaboradoresById.get(completandoFeedback.user_id)}
-          onComplete={completeFeedback}
+          onComplete={handleCompleteFeedback}
           onClose={() => setCompletandoId(null)}
         />
       )}

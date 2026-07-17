@@ -100,6 +100,12 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
       status_changed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+    // Desfecho estruturado (Onda 2): promovido/mantido/reavaliar/reprovado +
+    // contexto (salário antigo→novo, prazo de reavaliação). Os efeitos
+    // colaterais (ajuste de salário, novo ciclo de reavaliação) ficam na tela,
+    // onde updateColaborador/createPendingCycle estão disponíveis.
+    if (data.desfecho !== undefined) patch.desfecho = data.desfecho || null;
+    if (data.desfechoMeta !== undefined) patch.desfecho_meta = data.desfechoMeta || {};
     const { error } = await supabase.from("rh_avaliacoes").update(patch).eq("id", avaliacaoId);
     if (error) throw new Error(error.message);
     setFeedbacks(prev => prev.map(f => f.id === avaliacaoId ? { ...f, ...patch } : f));
