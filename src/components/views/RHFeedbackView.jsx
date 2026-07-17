@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeedback } from "../../hooks/use-rh-feedback";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useRHMovimentacoes } from "../../hooks/use-rh-movimentacoes";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useProfiles } from "../../hooks/use-profiles";
@@ -308,7 +309,7 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
 
 const DESFECHOS = [
   { id: "mantido",   label: "Mantido no cargo",  hint: "Segue no ciclo normal de avaliação." },
-  { id: "promovido", label: "Promovido",          hint: "Registra ajuste de salário no cadastro." },
+  { id: "promovido", label: "Promovido",          hint: "Envia o ajuste de salário para aprovação da diretoria." },
   { id: "reavaliar", label: "Reavaliar",          hint: "Agenda uma nova avaliação em 3 ou 6 meses." },
   { id: "reprovado", label: "Não aprovado",       hint: "Encerra com parecer negativo." },
 ];
@@ -1081,7 +1082,8 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     feedbacks, loading: loadingFeedbacks, createFeedback, createPendingCycle, completeFeedback,
     submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, addFeedbackActivity,
   } = useRHFeedback({ userId: currentUser?.id });
-  const { colaboradores, loading: loadingColaboradores, updateColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
+  const { createMovimentacao } = useRHMovimentacoes({ userId: currentUser?.id });
   const { stages, loading: loadingStages } = useRHPipelineStages("feedback");
   const feedbackStageFields = useRHStageFields("feedback");
   const { users } = useProfiles();
@@ -1108,12 +1110,12 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
   const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
 
-  // Conclusão + desfecho estruturado (Onda 2): grava a avaliação e dispara os
-  // efeitos colaterais do desfecho — promoção ajusta salário no cadastro,
-  // "reavaliar" agenda automaticamente um novo ciclo de reavaliação. Feito
-  // aqui (não no hook) porque é onde updateColaborador/createPendingCycle
-  // estão disponíveis. Efeitos são best-effort: a conclusão nunca é revertida
-  // se o efeito colateral falhar (log no console).
+  // Conclusão + desfecho estruturado (Onda 2, revisto na Onda 3): grava a
+  // avaliação e dispara os efeitos do desfecho. Promoção NÃO altera mais o
+  // salário direto — cria uma movimentação PENDENTE que só vale após a
+  // diretoria aprovar (item 9), fechando o furo de "salário aplicado sem
+  // aprovação". "Reavaliar" agenda um novo ciclo. Efeitos best-effort: a
+  // conclusão nunca é revertida se um efeito colateral falhar.
   const handleCompleteFeedback = useCallback(async (avaliacaoId, data) => {
     const fb = feedbacks.find(f => f.id === avaliacaoId);
     const colaborador = fb ? colaboradoresById.get(fb.user_id) : null;
@@ -1122,6 +1124,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     if (desfecho === "promovido" && data.novoSalario != null && Number(data.novoSalario) > 0) {
       desfechoMeta.salario_anterior = colaborador?.salary ?? null;
       desfechoMeta.salario_novo = Number(data.novoSalario);
+      desfechoMeta.aguardando_aprovacao = true;
     }
     if (desfecho === "reavaliar" && data.reavaliarMeses) {
       desfechoMeta.reavaliar_meses = Number(data.reavaliarMeses);
@@ -1129,9 +1132,29 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
 
     await completeFeedback(avaliacaoId, { ...data, desfecho, desfechoMeta });
 
-    if (desfechoMeta.salario_novo != null && colaborador) {
-      try { await updateColaborador(colaborador.id, { salary: desfechoMeta.salario_novo }); }
-      catch (e) { console.error("Falha ao ajustar salário na promoção:", e); }
+    // Promoção com ajuste de salário → movimentação pendente (aprovação da
+    // diretoria aplica o salário de fato).
+    if (desfecho === "promovido" && desfechoMeta.salario_novo != null && colaborador) {
+      try {
+        const mov = await createMovimentacao({
+          colaboradorId: colaborador.id,
+          tipo: "promocao",
+          cargoAnterior: colaborador.jobTitle ?? null,
+          departmentAnterior: colaborador.department ?? null,
+          salarioAnterior: desfechoMeta.salario_anterior,
+          salarioNovo: desfechoMeta.salario_novo,
+          avaliacaoId,
+          motivo: "Promoção via avaliação de desempenho",
+        });
+        const directorIds = (users || []).filter(u => (u.roles?.length ? u.roles : [u.role]).includes("admin")).map(u => u.id);
+        if (directorIds.length && notifyMentions) {
+          notifyMentions(directorIds, {
+            title: "Movimentação aguardando aprovação",
+            body: `${colaborador.fullName} · Promoção`,
+            link: { module: "rh_movimentacoes", id: mov?.id },
+          }).catch(() => {});
+        }
+      } catch (e) { console.error("Falha ao criar movimentação de promoção:", e); }
     }
     if (desfecho === "reavaliar" && desfechoMeta.reavaliar_meses && colaborador) {
       try {
@@ -1140,7 +1163,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
         await createPendingCycle(colaborador.id, "reavaliacao", hoje, fim);
       } catch (e) { console.error("Falha ao agendar reavaliação:", e); }
     }
-  }, [feedbacks, colaboradoresById, completeFeedback, updateColaborador, createPendingCycle]);
+  }, [feedbacks, colaboradoresById, completeFeedback, createMovimentacao, createPendingCycle, users, notifyMentions]);
 
   // Reconciliação automática: ao abrir a tela, gera o próximo ciclo pendente
   // (check-in de onboarding ou semestral recorrente) pra quem já está sem

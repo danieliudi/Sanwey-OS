@@ -166,6 +166,39 @@ Retorne APENAS um JSON no formato abaixo, sem texto adicional, sem markdown:
   ];
 }
 
+// Descrição de cargo (Onda 3, item 8): gera responsabilidades + requisitos +
+// resumo a partir do que já está no catálogo (nome/depto/faixa/benefícios).
+export function cargoDescriptionPrompt(cargo) {
+  const benefits = Array.isArray(cargo?.benefits) ? cargo.benefits.filter(Boolean) : [];
+  const faixa = (cargo?.salary_min != null || cargo?.salary_max != null)
+    ? `R$ ${cargo?.salary_min?.toLocaleString("pt-BR") || "—"} a R$ ${cargo?.salary_max?.toLocaleString("pt-BR") || "—"}`
+    : "não informada";
+  return [
+    {
+      role: "system",
+      content: `Você é um especialista de RH brasileiro. Escreva uma descrição de cargo objetiva e realista em português brasileiro, pronta pra usar num catálogo interno e em anúncios de vaga. Não invente exigências absurdas nem cite a faixa salarial no texto. Use linguagem clara e inclusiva.
+
+Estruture EXATAMENTE assim, com estes títulos em negrito markdown:
+**Resumo do cargo**
+(2-3 frases)
+**Responsabilidades**
+(5 a 8 itens em lista)
+**Requisitos**
+(5 a 7 itens em lista, separando desejáveis de obrigatórios quando fizer sentido)`,
+    },
+    {
+      role: "user",
+      content: `Gere a descrição para o cargo:
+**Cargo:** ${cargo?.name || "—"}
+**Departamento:** ${cargo?.department || "—"}
+**Tipo de contrato:** ${cargo?.contract_type || "—"}
+**Jornada:** ${cargo?.schedule || "—"}${cargo?.shift ? ` · turno ${cargo.shift}` : ""}
+**Faixa salarial (só contexto, não citar):** ${faixa}
+${benefits.length ? `**Benefícios:** ${benefits.join(", ")}` : ""}`,
+    },
+  ];
+}
+
 // orderHistory: outros negócios já ganhos do mesmo cliente (mesmo clientId),
 // usado pra sugerir upsell/cross-sell com base no que ele já comprou.
 export function proposalPrompt(lead, orderHistory = []) {

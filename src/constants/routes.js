@@ -42,6 +42,7 @@ export const ROUTES = {
   "rh-treinamentos":      "/rh/treinamentos",
   "rh-feedback":          "/rh/feedback",
   "rh-ferias":            "/rh/ferias",
+  "rh-cargos":            "/rh/cargos",
   profile:                "/perfil",
 };
 

@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon, Bot, Zap, LifeBuoy, Megaphone,
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
-  ShoppingCart, CheckSquare, Building2, TrendingUp,
+  ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -75,6 +75,7 @@ import { RHOnboardingView } from "./components/views/RHOnboardingView";
 import { RHTreinamentosView } from "./components/views/RHTreinamentosView";
 import { RHFeedbackView } from "./components/views/RHFeedbackView";
 import { RHFeriasView } from "./components/views/RHFeriasView";
+import { RHCargosView } from "./components/views/RHCargosView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -513,6 +514,7 @@ export default function App() {
     rh_treinamentos: "rh-treinamentos",
     rh_feedback: "rh-feedback",
     rh_ferias: "rh-ferias",
+    rh_movimentacoes: "rh-cargos",
   };
   const handleNotificationNavigate = useCallback((link) => {
     if (!link?.module) return;
@@ -860,6 +862,7 @@ export default function App() {
           { id: "rh-feedback",     label: "Avaliação de Desempenho", icon: MessageSquareText },
           { id: "rh-ferias",       label: "Férias & Licenças", icon: CalendarCheck },
           { id: "rh-funcionarios", label: "Funcionários",      icon: Users },
+          { id: "rh-cargos",       label: "Cargos & Salários", icon: Briefcase },
           { id: "rh-fornecedores", label: "Fornecedores",      icon: Building2 },
         ],
       });
@@ -971,7 +974,7 @@ export default function App() {
     // RH sections only for rh/gerente_rh/admin
     // Onboarding/Treinamentos ficam de fora do guard — todo colaborador acessa
     // o próprio checklist, não só o time de RH (RLS já restringe os dados).
-    const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias"];
+    const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias", "rh-cargos"];
     if (!isRHUser && rhSections.includes(section)) {
       setSection("dashboard");
     }
@@ -1399,6 +1402,11 @@ export default function App() {
           <Route path={ROUTES["rh-ferias"]} element={
             isRHUser
               ? <RHFeriasView currentUser={currentUser} users={users} canWrite={isRHManager} notifyMentions={notifyMentions} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["rh-cargos"]} element={
+            isRHManager
+              ? <RHCargosView currentUser={currentUser} canWrite={isRHManager} isDirector={isAdmin} users={users} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
