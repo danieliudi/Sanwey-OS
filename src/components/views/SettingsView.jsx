@@ -817,16 +817,24 @@ export function SettingsView({
                     {COMPANY_IDS.map(id => {
                       const c = COMPANIES[id];
                       const enabled = settings.enabledCompanies.includes(id);
+                      // Última empresa ativa não pode ser desligada (precisa sobrar
+                      // pelo menos uma) — antes o clique simplesmente não fazia nada,
+                      // sem nenhum sinal de por quê. Achado da auditoria de fricção.
+                      const isLastEnabled = enabled && settings.enabledCompanies.length === 1;
                       return (
                         <button
                           key={id}
                           type="button"
                           onClick={() => toggleCompany(id)}
+                          disabled={isLastEnabled}
+                          title={isLastEnabled ? "Pelo menos uma empresa precisa ficar ativa" : undefined}
                           className="p-3 rounded-lg border flex items-center gap-2.5 transition-all duration-150 text-left"
                           style={{
                             background: enabled ? c.light : "var(--surface)",
                             borderColor: enabled ? c.primary + "80" : "var(--border)",
                             boxShadow: enabled ? `0 0 0 1px ${c.primary}40` : "none",
+                            cursor: isLastEnabled ? "not-allowed" : "pointer",
+                            opacity: isLastEnabled ? 0.7 : 1,
                           }}
                           onMouseEnter={e => {
                             if (!enabled) {
@@ -903,14 +911,23 @@ export function SettingsView({
                   description="Esconda etapas que você não usa no dia a dia."
                 >
                   <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
-                    {DEFAULT_PIPELINE_STAGES.map(s => (
-                      <ToggleRow
-                        key={s.id}
-                        label={s.name}
-                        checked={settings.visibleKanbanStages.includes(s.id)}
-                        onChange={() => toggleStage(s.id)}
-                      />
-                    ))}
+                    {DEFAULT_PIPELINE_STAGES.map(s => {
+                      const checked = settings.visibleKanbanStages.includes(s.id);
+                      // Última etapa visível não pode ser escondida — antes o
+                      // clique simplesmente não fazia nada. Achado da auditoria
+                      // de fricção de 18/07.
+                      const isLastVisible = checked && settings.visibleKanbanStages.length === 1;
+                      return (
+                        <ToggleRow
+                          key={s.id}
+                          label={s.name}
+                          sublabel={isLastVisible ? "Pelo menos uma etapa precisa ficar visível" : undefined}
+                          checked={checked}
+                          disabled={isLastVisible}
+                          onChange={() => toggleStage(s.id)}
+                        />
+                      );
+                    })}
                   </div>
                 </Section>
                 )}

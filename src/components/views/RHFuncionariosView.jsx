@@ -678,6 +678,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
   const [editing, setEditing] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState(null);
+  const [emailWarning, setEmailWarning] = useState(null);
   const [form, setForm] = useState({
     job_title:       user.job_title       || "",
     frente:          user.frente          || "",
@@ -795,7 +796,11 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
             },
           });
         } catch (emailErr) {
-          // Non-blocking — log but don't surface to user
+          // Não-bloqueante (o cadastro já foi salvo), mas o RH precisa saber
+          // que o e-mail de boas-vindas não saiu — mesmo padrão de aviso já
+          // usado em RHFeriasView pra falha de notificação. Achado da
+          // auditoria de fricção de 18/07: antes só ia pro console.
+          setEmailWarning("Cadastro salvo, mas o e-mail de boas-vindas não foi enviado. Avise o colaborador manualmente.");
           console.warn("[RHFuncionariosView] welcome email error:", emailErr);
         }
       }
@@ -1196,6 +1201,12 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
           {error && (
             <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
               {error}
+            </div>
+          )}
+
+          {emailWarning && (
+            <div style={{ background: "var(--warning-bg)", color: "var(--warning)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
+              {emailWarning}
             </div>
           )}
 
