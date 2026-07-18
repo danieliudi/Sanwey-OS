@@ -521,7 +521,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           </div>
           {/* Mobile tab bar */}
           <div className="flex border-t" style={{ borderColor: "var(--border)" }}>
-            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
+            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }, { id: "acoes", label: "AÇÕES" }].map(t => (
               <button
                 key={t.id}
                 onClick={() => setMobileTab(t.id)}
@@ -1268,63 +1268,44 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           </div>
           </main>
 
-          {/* ───── RIGHT SIDEBAR ─────────────────────────────────────── */}
+          {/* ───── MOBILE: aba "Ações" — mesmo conteúdo da aside direita
+              (mover etapa livre + comentários), antes só existente no
+              desktop; no mobile só dava pra avançar pra próxima etapa
+              via CTA fixo no rodapé. ─────────────────────────────────── */}
+          {mobileTab === "acoes" && (
+            <div className="lg:hidden flex-1 min-h-0 overflow-y-auto p-5 pb-24" style={{ background: "var(--surface-alt)" }}>
+              <MoveAndCommentsPanel
+                moveError={moveError}
+                stageTargets={companyStages.filter((s) => s.id !== lead.stage)}
+                onMove={moveToStage}
+                commentsFeed={commentsFeed}
+                currentUser={currentUser}
+                mentionableUsers={mentionableUsers}
+                onAddComment={handleAddComment}
+                isManager={isManager}
+                onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
+                onGoToIA={() => { setSideTab("ia"); setMobileTab("info"); }}
+              />
+            </div>
+          )}
+
+          {/* ───── RIGHT SIDEBAR (desktop) ───────────────────────────── */}
           <aside
             className="hidden lg:flex lg:flex-col w-full lg:w-[300px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 pb-5"
             style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
-            <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-              Mover card para fase
-            </div>
-            {moveError && (
-              <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
-                <AlertCircle size={12} className="shrink-0 mt-0.5" />
-                {moveError}
-              </div>
-            )}
-            <StageNavigator
-              targets={companyStages.filter((s) => s.id !== lead.stage)}
+            <MoveAndCommentsPanel
+              moveError={moveError}
+              stageTargets={companyStages.filter((s) => s.id !== lead.stage)}
               onMove={moveToStage}
-              getKey={(s) => s.id}
+              commentsFeed={commentsFeed}
+              currentUser={currentUser}
+              mentionableUsers={mentionableUsers}
+              onAddComment={handleAddComment}
+              isManager={isManager}
+              onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
+              onGoToIA={() => setSideTab("ia")}
             />
-
-            {/* Comentários — sempre visíveis na lateral direita, abaixo da
-                movimentação de card (não mais escondidos atrás de uma aba). */}
-            <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-              <CommentsPanel
-                comments={commentsFeed}
-                currentUser={currentUser}
-                mentionableUsers={mentionableUsers}
-                onAddComment={handleAddComment}
-              />
-            </div>
-
-            <div className="mt-5 pt-4 border-t space-y-2" style={{ borderColor: "var(--border)" }}>
-              {isManager && onNavigateToPipelineBuilder && (
-                <a
-                  href="#"
-                  onClick={e => { e.preventDefault(); onNavigateToPipelineBuilder(); }}
-                  className="flex items-center gap-2 text-xs"
-                  style={{ color: "var(--text-dim)", textDecoration: "none" }}
-                  onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
-                >
-                  <GitBranch size={12} />
-                  Editar etapas do pipeline
-                </a>
-              )}
-              <a
-                href="#"
-                onClick={e => { e.preventDefault(); setSideTab("ia"); }}
-                className="flex items-center gap-2 text-xs"
-                style={{ color: "var(--text-dim)", textDecoration: "none" }}
-                onMouseEnter={e => { e.currentTarget.style.color = "#7C3AED"; }}
-                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
-              >
-                <Sparkles size={12} />
-                Mover cards com IA
-              </a>
-            </div>
           </aside>
         </div>
 
@@ -1445,6 +1426,71 @@ function SideTabs({ activeTab, onChange }) {
         );
       })}
     </div>
+  );
+}
+
+// ── Mover etapa + comentários — compartilhado entre a aside desktop e a
+// aba "Ações" do mobile (achado da auditoria de fricção de 18/07: no
+// mobile só dava pra avançar pra próxima etapa via CTA fixo, sem pular
+// etapa livremente e sem acesso a comentários/@menção). ──────────────
+function MoveAndCommentsPanel({
+  moveError, stageTargets, onMove,
+  commentsFeed, currentUser, mentionableUsers, onAddComment,
+  isManager, onNavigateToPipelineBuilder, onGoToIA,
+}) {
+  return (
+    <>
+      <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
+        Mover card para fase
+      </div>
+      {moveError && (
+        <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+          <AlertCircle size={12} className="shrink-0 mt-0.5" />
+          {moveError}
+        </div>
+      )}
+      <StageNavigator
+        targets={stageTargets}
+        onMove={onMove}
+        getKey={(s) => s.id}
+      />
+
+      <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+        <CommentsPanel
+          comments={commentsFeed}
+          currentUser={currentUser}
+          mentionableUsers={mentionableUsers}
+          onAddComment={onAddComment}
+        />
+      </div>
+
+      <div className="mt-5 pt-4 border-t space-y-2" style={{ borderColor: "var(--border)" }}>
+        {isManager && onNavigateToPipelineBuilder && (
+          <a
+            href="#"
+            onClick={e => { e.preventDefault(); onNavigateToPipelineBuilder(); }}
+            className="flex items-center gap-2 text-xs"
+            style={{ color: "var(--text-dim)", textDecoration: "none" }}
+            onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+          >
+            <GitBranch size={12} />
+            Editar etapas do pipeline
+          </a>
+        )}
+        <a
+          href="#"
+          onClick={e => { e.preventDefault(); onGoToIA(); }}
+          className="flex items-center gap-2 text-xs"
+          style={{ color: "var(--text-dim)", textDecoration: "none" }}
+          onMouseEnter={e => { e.currentTarget.style.color = "#7C3AED"; }}
+          onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+        >
+          <Sparkles size={12} />
+          Mover cards com IA
+        </a>
+      </div>
+    </>
   );
 }
 
