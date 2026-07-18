@@ -119,12 +119,12 @@ export function useRHRecrutamento({ userId } = {}) {
     await updateVaga(id, { stage: newStage, stage_changed_at: new Date().toISOString() });
   }, [updateVaga]);
 
-  // Cria/atualiza o candidato no talent pool (dedup por e-mail) e cria a
-  // aplicação para a vaga selecionada. Requer vaga — toda aplicação pertence
-  // a uma vaga; para só cadastrar no talent pool sem vincular a nada, use a
-  // tela de triagem por IA (Fase 2).
+  // Cria/atualiza o candidato no talent pool (dedup por e-mail) e, se uma
+  // vaga foi informada, cria a aplicação pra ela. Vaga é opcional — sem ela,
+  // o candidato só entra no banco de talentos (achado da auditoria de
+  // fricção de 18/07: RH não conseguia guardar um candidato pra depois sem
+  // já vincular a uma vaga específica).
   const createCandidato = useCallback(async (data) => {
-    if (!data.vaga_id) throw new Error("Selecione a vaga.");
     const email = data.email || null;
     const candidateRow = { name: data.name, email, phone: data.phone || null, source: data.source || null, created_by: userId };
     const { data: cand, error: candErr } = email
@@ -132,10 +132,15 @@ export function useRHRecrutamento({ userId } = {}) {
       : await supabase.from("rh_candidatos").insert(candidateRow).select().single();
     if (candErr) throw new Error(candErr.message);
 
+    if (!data.vaga_id) {
+      await fetchAll();
+      return cand;
+    }
+
     const { data: aplic, error: aplicErr } = await supabase
       .from("rh_aplicacoes")
       .upsert(
-        { candidate_id: cand.id, vaga_id: data.vaga_id, etapa_pipeline: data.stage || "triagem" },
+        { candidate_id: cand.id, vaga_id: data.vaga_id, etapa_pipeline: data.stage || "triagem", custom_fields: data.customFields || {} },
         { onConflict: "candidate_id,vaga_id" }
       )
       .select()

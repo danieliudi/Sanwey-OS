@@ -1478,11 +1478,14 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
 
 // ── Novo Candidato Modal ──────────────────────────────────────────────────────
 
-function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose, users }) {
+function NovoCandidatoModal({ defaultStage, defaultVagaId, vagas, stages, onSave, onClose, users }) {
   const [name, setName]     = useState("");
   const [email, setEmail]   = useState("");
   const [phone, setPhone]   = useState("");
-  const [vagaId, setVagaId] = useState("");
+  // Vaga é opcional — sem ela, o candidato só entra no banco de talentos
+  // (achado da auditoria de fricção de 18/07). Pré-preenche com a vaga já
+  // filtrada em tela (aba Candidatos), quando houver uma.
+  const [vagaId, setVagaId] = useState(defaultVagaId || "");
   const [source, setSource] = useState("");
   const [stage]             = useState(defaultStage);
   const [saving, setSaving] = useState(false);
@@ -1490,7 +1493,9 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose, user
 
   const candStageFields = useRHStageFields("candidatos");
   const [customValues, setCustomValues] = useState({});
-  const visibleFields = resolveVisibleFields(candStageFields.getFields(stage), customValues);
+  // Campos por etapa só fazem sentido quando há uma aplicação (vaga
+  // selecionada) — sem vaga não existe etapa_pipeline pra vincular.
+  const visibleFields = vagaId ? resolveVisibleFields(candStageFields.getFields(stage), customValues) : [];
 
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -1505,7 +1510,6 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose, user
     const invalid = getInvalidFields(visibleFields, customValues);
     if (invalid.length > 0) { setError(`Corrija antes: ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`); return; }
     if (!name.trim()) { setError("Nome obrigatório."); return; }
-    if (!vagaId) { setError("Selecione a vaga."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -1572,9 +1576,9 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose, user
               <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-0000" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
             </div>
             <div>
-              <label style={labelSt}>Vaga *</label>
+              <label style={labelSt}>Vaga</label>
               <select value={vagaId} onChange={(e) => setVagaId(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
-                <option value="">Selecionar vaga</option>
+                <option value="">Sem vaga — só banco de talentos</option>
                 {vagas.map((v) => (
                   <option key={v.id} value={v.id}>{v.title}</option>
                 ))}
@@ -3274,6 +3278,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
       {addCandidatoStage && (
         <NovoCandidatoModal
           defaultStage={addCandidatoStage}
+          defaultVagaId={selectedVaga !== "todas" ? selectedVaga : ""}
           vagas={vagas}
           stages={candStages}
           onSave={handleCreateCandidato}
