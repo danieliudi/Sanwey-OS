@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { useOrgAIStatus } from "./use-org-ai-status";
 
 async function callDirect(provider, model, apiKey, messages, maxTokens) {
   if (provider === 'openai') {
@@ -53,15 +54,27 @@ export async function callAI(provider, model, apiKey, messages, maxTokens) {
   return callDirect(provider, model, apiKey, messages, maxTokens);
 }
 
+// Fallback org-wide: quando o usuário não tem chave pessoal salva, mas a
+// empresa configurou uma chave própria (secrets AI_ORG_* no projeto
+// Supabase, só acessível pela edge function — nunca chega no cliente),
+// os recursos de IA continuam funcionando sem o usuário precisar criar
+// conta em provedor nenhum. Chave pessoal, quando presente, tem prioridade.
 export function useAI(currentUser) {
   const aiConfig = currentUser?.aiConfig;
-  const isConfigured = Boolean(aiConfig?.provider && aiConfig?.apiKey && aiConfig?.model);
+  const hasPersonalConfig = Boolean(aiConfig?.provider && aiConfig?.apiKey && aiConfig?.model);
+  const orgConfigured = useOrgAIStatus();
+  const isConfigured = hasPersonalConfig || (isSupabaseConfigured && orgConfigured);
 
   const complete = useCallback(async (messages, { maxTokens = 1200 } = {}) => {
-    if (!isConfigured) throw new Error('Configure sua LLM nas Configurações → Integrações de IA.');
-    const { provider, model, apiKey } = aiConfig;
-    return callAI(provider, model, apiKey, messages, maxTokens);
-  }, [aiConfig, isConfigured]);
+    if (!isConfigured) throw new Error('Configure sua LLM nas Configurações → Integrações de IA (ou peça a um admin pra configurar a chave da empresa).');
+    if (hasPersonalConfig) {
+      const { provider, model, apiKey } = aiConfig;
+      return callAI(provider, model, apiKey, messages, maxTokens);
+    }
+    // Sem chave pessoal: usa o fallback org-wide (edge function resolve
+    // provider/model/apiKey a partir dos secrets do projeto).
+    return callAI(null, null, null, messages, maxTokens);
+  }, [aiConfig, hasPersonalConfig, isConfigured]);
 
   return { complete, isConfigured, provider: aiConfig?.provider, model: aiConfig?.model };
 }

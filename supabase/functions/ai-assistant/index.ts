@@ -29,7 +29,40 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Sessão inválida" }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    const { provider, model, apiKey, messages, maxTokens = 1200 } = await req.json();
+    const body = await req.json();
+
+    // Checagem de status pro card "IA da empresa" em Configurações — não
+    // precisa de sessão com chave nenhuma, só confirma (sem nunca revelar)
+    // se os secrets AI_ORG_* estão configurados no projeto.
+    if (body.action === "status") {
+      const configured = Boolean(Deno.env.get("AI_ORG_API_KEY") && Deno.env.get("AI_ORG_PROVIDER") && Deno.env.get("AI_ORG_MODEL"));
+      return new Response(
+        JSON.stringify({ configured, provider: configured ? Deno.env.get("AI_ORG_PROVIDER") : null }),
+        { headers: { ...cors, "Content-Type": "application/json" } }
+      );
+    }
+
+    let { provider, model, apiKey, messages, maxTokens = 1200 } = body;
+
+    // Fallback pra chave da empresa (org-wide) quando o usuário não tem
+    // chave pessoal configurada — mesmo padrão já usado pro D4SIGN_API_TOKEN
+    // (secret do projeto Supabase, nunca chega no cliente). Chave pessoal
+    // continua tendo prioridade quando presente (override do usuário).
+    if (!apiKey) {
+      const orgKey = Deno.env.get("AI_ORG_API_KEY");
+      const orgProvider = Deno.env.get("AI_ORG_PROVIDER");
+      const orgModel = Deno.env.get("AI_ORG_MODEL");
+      if (!orgKey || !orgProvider || !orgModel) {
+        return new Response(
+          JSON.stringify({ error: "IA não configurada. Configure sua chave pessoal em Configurações → Integrações de IA, ou peça a um admin pra configurar a chave da empresa." }),
+          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
+        );
+      }
+      provider = orgProvider;
+      model = orgModel;
+      apiKey = orgKey;
+    }
+
     let content = "";
 
     if (provider === "openai") {

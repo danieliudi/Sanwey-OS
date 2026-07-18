@@ -372,17 +372,36 @@ export function SettingsView({
   const [aiTestMsg, setAiTestMsg] = useState('');
   const [aiTesting, setAiTesting] = useState(false);
 
+  // ── IA da empresa (org-wide) ──────────────────────────────────────────
+  // Só um card de status (configurado/não) — a chave em si é um secret do
+  // projeto Supabase (AI_ORG_PROVIDER/AI_ORG_MODEL/AI_ORG_API_KEY), nunca
+  // editável por aqui, mesmo padrão do D4Sign abaixo.
+  const [orgAiStatus, setOrgAiStatus] = useState(null); // null=carregando | { configured, provider } | { error }
+  useEffect(() => {
+    if (activeTab !== "ia" || !isAdmin) return;
+    let cancelled = false;
+    supabase.functions.invoke("ai-assistant", { body: { action: "status" } }).then(({ data, error }) => {
+      if (cancelled) return;
+      setOrgAiStatus(error ? { error: error.message } : (data?.error ? { error: data.error } : data));
+    });
+    return () => { cancelled = true; };
+  }, [activeTab, isAdmin]);
+
   // ── D4Sign status (assinatura eletrônica) ────────────────────────────
   const [d4signStatus, setD4signStatus] = useState(null); // null=carregando | { configured, webhookConfigured, sandbox } | { error }
+  // D4Sign é usado pelo RH pra enviar documento pra assinatura — checagem
+  // de status só valia pro gestor Comercial antes disso (achado da
+  // auditoria de fricção de 18/07: quem realmente usa não conseguia ver).
+  const canSeeD4Sign = isManager || isRHManager;
   useEffect(() => {
-    if (activeTab !== "ia" || !isManager) return;
+    if (activeTab !== "ia" || !canSeeD4Sign) return;
     let cancelled = false;
     supabase.functions.invoke("d4sign-status", { body: {} }).then(({ data, error }) => {
       if (cancelled) return;
       setD4signStatus(error ? { error: error.message } : (data?.error ? { error: data.error } : data));
     });
     return () => { cancelled = true; };
-  }, [activeTab, isManager]);
+  }, [activeTab, canSeeD4Sign]);
 
   useEffect(() => {
     if (currentUser?.aiConfig) {
@@ -396,9 +415,13 @@ export function SettingsView({
 
   const selectedProvider = AI_PROVIDER_MAP[aiForm.provider];
 
+  // Troca de provedor limpa a chave também — uma chave da OpenAI (sk-...)
+  // deixada no campo ao trocar pra Anthropic/Gemini só ia falhar depois,
+  // com um erro sem relação óbvia com a causa real (achado da auditoria de
+  // fricção de 18/07).
   const handleAiProviderChange = (providerId) => {
     const p = AI_PROVIDER_MAP[providerId];
-    setAiForm(f => ({ ...f, provider: providerId, model: p?.models[0]?.id || '' }));
+    setAiForm(f => ({ ...f, provider: providerId, model: p?.models[0]?.id || '', apiKey: '' }));
     setAiTestResult(null);
   };
 
@@ -981,7 +1004,43 @@ export function SettingsView({
             {/* ── IA ── */}
             {activeTab === "ia" && (
               <div className="space-y-4">
-              <Section title="Integrações de IA" description="Configure sua LLM para usar os recursos de IA do CRM.">
+              {isAdmin && (
+                <Section
+                  title="IA da empresa (org-wide)"
+                  description="Chave configurada uma vez pelo admin, usada como fallback pra quem não tem chave pessoal — assim vendedor/marketing/RH não precisam criar conta em provedor de IA nenhum pra usar os recursos."
+                >
+                  {orgAiStatus === null ? (
+                    <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text-dim)" }}>
+                      <Loader2 size={13} className="animate-spin" /> Checando status…
+                    </div>
+                  ) : orgAiStatus.error ? (
+                    <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+                      <AlertCircle size={13} />
+                      <span>Não foi possível checar o status: {orgAiStatus.error}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div
+                        className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+                        style={orgAiStatus.configured
+                          ? { background: "var(--success-bg)", color: "var(--success)" }
+                          : { background: "var(--danger-bg)", color: "var(--danger)" }}
+                      >
+                        {orgAiStatus.configured ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                        <span className="font-semibold">
+                          {orgAiStatus.configured ? `Configurado (${orgAiStatus.provider})` : "Não configurado"}
+                        </span>
+                      </div>
+                      {!orgAiStatus.configured && (
+                        <p className="text-[11px]" style={{ color: "var(--text-dim)" }}>
+                          Faltam os secrets AI_ORG_PROVIDER, AI_ORG_MODEL e AI_ORG_API_KEY no projeto Supabase. Enquanto não configurado, cada usuário continua precisando da própria chave pessoal (abaixo) pra usar os recursos de IA.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </Section>
+              )}
+              <Section title="Integrações de IA" description="Configure sua LLM para usar os recursos de IA do CRM (opcional — sua chave pessoal tem prioridade sobre a chave da empresa, se houver).">
                 <div className="space-y-5">
                   {/* Status badge */}
                   {currentUser?.aiConfig?.provider && (
@@ -1160,7 +1219,7 @@ export function SettingsView({
                 </div>
               </Section>
 
-              {isManager && (
+              {canSeeD4Sign && (
                 <Section
                   title="Assinatura eletrônica (D4Sign)"
                   description="Usado pelo RH pra enviar documentos de colaboradores pra assinatura eletrônica."
