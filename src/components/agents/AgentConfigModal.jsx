@@ -59,7 +59,9 @@ export function AgentConfigModal({
           <Info size={12} className="shrink-0 mt-0.5" />
           <span>
             Desativar um agente esconde as sugestões dele desta tela. Os agentes continuam rodando no backend —
-            a frequência de execução e os prompts são configurados pelo time técnico.
+            a frequência de execução e os prompts são configurados pelo time técnico. <strong>Essa configuração é só
+            deste navegador/dispositivo</strong> — não é compartilhada com o resto do time nem sincroniza entre
+            computadores, mesmo pro mesmo login.
           </span>
         </div>
 
