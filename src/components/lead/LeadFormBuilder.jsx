@@ -2,7 +2,7 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   X, GripVertical, Trash2, Star, ToggleLeft, ToggleRight,
   Type, Hash, DollarSign, CalendarDays, Mail, Phone, AlignLeft,
-  MapPin, Building2, Tag, User,
+  MapPin, Building2, Tag, User, Plus, ChevronUp, ChevronDown,
 } from "lucide-react";
 import { FIELD_DEFS, FIELD_DEFS_ARRAY } from "../../constants/lead-form-fields";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -48,6 +48,27 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
   // Remove
   const removeField = useCallback((id) => {
     setFields(prev => prev.filter(f => f.id !== id || f.locked));
+  }, []);
+
+  // Adiciona ao fim da lista via clique — fallback pra quem usa touch/mobile,
+  // onde o drag-and-drop de HTML5 não funciona (achado da auditoria de
+  // fricção de 18/07). Reordenar depois disso é via os botões ↑/↓ na linha.
+  const addField = useCallback((fieldId) => {
+    const def = FIELD_DEFS[fieldId];
+    if (!def) return;
+    setFields(prev => [...prev, { ...def, required: false }]);
+  }, []);
+
+  // Move um campo uma posição pra cima/baixo — mesmo fallback de clique.
+  const moveField = useCallback((id, direction) => {
+    setFields(prev => {
+      const idx = prev.findIndex(f => f.id === id);
+      const target = idx + direction;
+      if (idx < 0 || target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
   }, []);
 
   // Save
@@ -135,7 +156,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
               Configurar formulário de criação
             </div>
             <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
-              Arraste campos da esquerda para o formulário · reordene arrastando
+              Arraste ou clique num campo à esquerda para adicionar · reordene arrastando ou pelos botões ↑↓
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -195,6 +216,8 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                       draggable
                       onDragStart={e => handlePaletteDragStart(e, f.id)}
                       onDragEnd={handleDropEnd}
+                      onClick={() => addField(f.id)}
+                      title="Clique para adicionar ao fim do formulário"
                       className="flex items-center gap-2 px-2.5 py-2 rounded-lg mb-1 cursor-grab active:cursor-grabbing select-none"
                       style={{
                         background: "#FFFFFF",
@@ -208,7 +231,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                     >
                       <FieldTypeIcon type={f.type} size={12} />
                       <span className="font-medium flex-1">{f.label}</span>
-                      <GripVertical size={11} style={{ color: "var(--text-dim)", opacity: 0.5 }} />
+                      <Plus size={12} style={{ color: "var(--text-dim)", opacity: 0.6 }} />
                     </div>
                   ))}
                 </div>
@@ -260,6 +283,10 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
                       onDragEnd={handleDropEnd}
                       onToggleRequired={() => toggleRequired(field.id)}
                       onRemove={() => removeField(field.id)}
+                      onMoveUp={() => moveField(field.id, -1)}
+                      onMoveDown={() => moveField(field.id, 1)}
+                      canMoveUp={index > 0}
+                      canMoveDown={index < fields.length - 1}
                     />
                     <DropZone
                       idx={index + 1}
@@ -313,7 +340,7 @@ function DropZone({ idx, active, onDragOver, onDragLeave, onDrop }) {
   );
 }
 
-function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, onRemove }) {
+function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, onRemove, onMoveUp, onMoveDown, canMoveUp, canMoveDown }) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -331,6 +358,28 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
       }}
     >
       <GripVertical size={14} style={{ color: "var(--text-dim)", opacity: 0.5, flexShrink: 0 }} />
+      {/* Fallback de clique pra reordenar — o drag-and-drop de HTML5 não
+          funciona em touch/mobile (achado da auditoria de fricção de 18/07). */}
+      <div className="flex flex-col shrink-0" style={{ gap: 1 }}>
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={!canMoveUp}
+          title="Mover para cima"
+          style={{ display: "flex", background: "none", border: "none", padding: 0, cursor: canMoveUp ? "pointer" : "default", color: canMoveUp ? "var(--text-dim)" : "#E5E7EB" }}
+        >
+          <ChevronUp size={12} />
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={!canMoveDown}
+          title="Mover para baixo"
+          style={{ display: "flex", background: "none", border: "none", padding: 0, cursor: canMoveDown ? "pointer" : "default", color: canMoveDown ? "var(--text-dim)" : "#E5E7EB" }}
+        >
+          <ChevronDown size={12} />
+        </button>
+      </div>
       <FieldTypeIcon type={field.type} size={13} />
       <span className="flex-1 text-sm font-medium" style={{ color: "var(--text)" }}>
         {field.label}
