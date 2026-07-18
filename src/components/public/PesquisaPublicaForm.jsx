@@ -79,7 +79,7 @@ export default function PesquisaPublicaForm() {
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {perguntas.map((q) => (
           <div key={q.key}>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 8 }}>{q.label}</label>
+            <label htmlFor={q.tipo !== "escala" ? `pergunta-${q.key}` : undefined} style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 8 }}>{q.label}</label>
             {q.tipo === "escala" ? (
               <div style={{ display: "flex", gap: 8 }}>
                 {[1, 2, 3, 4, 5].map((n) => {
@@ -94,7 +94,7 @@ export default function PesquisaPublicaForm() {
                 })}
               </div>
             ) : (
-              <textarea value={answers[q.key] || ""} onChange={(e) => set(q.key, e.target.value)} rows={3}
+              <textarea id={`pergunta-${q.key}`} value={answers[q.key] || ""} onChange={(e) => set(q.key, e.target.value)} rows={3}
                 style={{ width: "100%", fontSize: 14, borderRadius: 8, border: "1px solid #D1D5DB", padding: "10px 12px", color: "#201a1a", outline: "none", boxSizing: "border-box", fontFamily: "inherit", resize: "vertical" }} />
             )}
           </div>

@@ -89,12 +89,12 @@ export default function BemEstarPublicaForm() {
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Seu nome</label>
-          <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como o RH vai te chamar" style={input} />
+          <label htmlFor="bemestar-nome" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Seu nome *</label>
+          <input id="bemestar-nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como o RH vai te chamar" style={input} />
         </div>
         <div>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Unidade</label>
-          <select value={unidade} onChange={(e) => setUnidade(e.target.value)} style={input}>
+          <label htmlFor="bemestar-unidade" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Unidade</label>
+          <select id="bemestar-unidade" value={unidade} onChange={(e) => setUnidade(e.target.value)} style={input}>
             {UNIDADES.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
           </select>
         </div>

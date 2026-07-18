@@ -229,15 +229,25 @@ const input = {
   fontFamily: "inherit",
 };
 
+// Toque no texto do rótulo não focava o campo (label solto, sem
+// htmlFor/id) — no celular, onde esse form é acessado via QR code, o
+// alvo maior e mais natural pro toque é o próprio texto, não a caixinha
+// do input. Achado da auditoria de fricção de 18/07. Não se aplica ao
+// upload de arquivo (o próprio child já é um <label> envolvendo o input
+// escondido — a associação nativa já existe por aninhamento).
+const LABELABLE_TYPES = new Set(["input", "select", "textarea"]);
 function Field({ label, hint, required, children }) {
+  const id = `f-${label.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+  const labelable = React.isValidElement(children) && LABELABLE_TYPES.has(children.type);
+  const child = labelable ? React.cloneElement(children, { id: children.props.id || id }) : children;
   return (
     <div>
-      <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 2 }}>
+      <label htmlFor={labelable ? id : undefined} style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 2 }}>
         {required && <span style={{ color: "#C7212B", marginRight: 4 }}>*</span>}
         {label}
       </label>
       {hint && <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8 }}>{hint}</div>}
-      {children}
+      {child}
     </div>
   );
 }
