@@ -22,6 +22,10 @@ function rowToUser(r) {
     avatarUrl: r.avatar_url || null,
     sectors: Array.isArray(r.sectors) ? r.sectors : [],
     supervisorId: r.supervisor_id || null,
+    // Fornecedor de marketing vinculado — só usado por role "agencia", pra
+    // escopar o que essa agência específica enxerga (ver migration
+    // 20260718_marketing_agencia_supplier_scoping.sql). null = sem trava.
+    supplierId: r.supplier_id || null,
     // ai_config (chave de API de IA em texto plano) NUNCA deve ser mapeada
     // aqui — este hook busca o roster inteiro (visível a colegas de
     // departamento/gerentes via profiles_select), e nenhum lugar do app lê
@@ -114,6 +118,7 @@ export function useProfiles({ enabled = true } = {}) {
     if (patch.avatarBg !== undefined) dbPatch.avatar_bg = patch.avatarBg;
     if (patch.sectors !== undefined) dbPatch.sectors = patch.sectors;
     if (patch.supervisorId !== undefined) dbPatch.supervisor_id = patch.supervisorId || null;
+    if (patch.supplierId !== undefined) dbPatch.supplier_id = patch.supplierId || null;
     if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
     if (patch.aiConfig !== undefined) dbPatch.ai_config = patch.aiConfig;
     // Campos de RH que também vivem em profiles pra quem tem login (ver

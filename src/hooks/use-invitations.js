@@ -8,6 +8,7 @@ function rowToInvitation(r) {
     role: r.role,
     companies: Array.isArray(r.companies) ? r.companies : [],
     sectors: Array.isArray(r.sectors) ? r.sectors : [],
+    supplierId: r.supplier_id || null,
     invitedBy: r.invited_by,
     createdAt: r.created_at,
     acceptedAt: r.accepted_at,
@@ -79,7 +80,7 @@ export function useInvitations({ enabled = true } = {}) {
     };
   }, [enabled, fetchAll]);
 
-  const createInvitation = useCallback(async ({ email, role, companies, sectors, supervisorId, invitedBy }) => {
+  const createInvitation = useCallback(async ({ email, role, companies, sectors, supervisorId, supplierId, invitedBy }) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado.");
     const normalizedEmail = (email || "").trim().toLowerCase();
     if (!normalizedEmail) throw new Error("Informe o e-mail.");
@@ -91,6 +92,7 @@ export function useInvitations({ enabled = true } = {}) {
         companies: Array.isArray(companies) ? companies : [],
         sectors: Array.isArray(sectors) ? sectors : [],
         supervisor_id: supervisorId || null,
+        supplier_id: supplierId || null,
         invited_by: invitedBy || null,
       })
       .select()

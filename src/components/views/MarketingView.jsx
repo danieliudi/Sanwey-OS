@@ -5,6 +5,7 @@ import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
 } from "../../constants/marketing-pipelines";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
+import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { usePersonalEvents } from "../../hooks/use-personal-events";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
@@ -49,9 +50,18 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
   const [launchDate, setLaunchDate] = useState("");
   const [endDate, setEndDate]       = useState("");
   const [agencyName, setAgencyName] = useState("");
+  const [supplierId, setSupplierId] = useState("");
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState(null);
   const [customValues, setCustomValues] = useState({});
+
+  // Vínculo opcional a um fornecedor de marketing cadastrado (categoria
+  // "agência") — quando preenchido, escopa quem tem role="agencia" e um
+  // fornecedor vinculado ao próprio login a só enxergar esta campanha se for
+  // a mesma agência (ver 20260718_marketing_agencia_supplier_scoping.sql).
+  // Hoje é opcional porque só existe uma agência cadastrada.
+  const { suppliers } = useMarketingSuppliers({});
+  const agencySuppliers = useMemo(() => suppliers.filter(s => s.category === "agencia" && s.isActive), [suppliers]);
 
   const visibleFields = resolveVisibleFields(stageFields.getFields(stageId), customValues);
 
@@ -95,6 +105,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
         launchDate:     localDateInputToISOString(launchDate),
         endDate:        localDateInputToISOString(endDate),
         agencyName:     agencyName.trim() || null,
+        supplierId:     supplierId || null,
         createdBy:      currentUser?.id || null,
         notes:          [],
         activities:     [],
@@ -292,6 +303,23 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
               onFocus={focusBlue}
               onBlur={blurGray}
             />
+            {agencySuppliers.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <label style={labelSt}>Fornecedor vinculado (opcional)</label>
+                <select
+                  value={supplierId}
+                  onChange={e => setSupplierId(e.target.value)}
+                  className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                  style={inputSt}
+                >
+                  <option value="">Nenhum</option>
+                  {agencySuppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
+                  Vincula a campanha a um fornecedor cadastrado — só passa a restringir o acesso quando essa agência também estiver vinculada a um login específico em Configurações → Usuários.
+                </div>
+              </div>
+            )}
           </div>
 
           {visibleFields.length > 0 && (

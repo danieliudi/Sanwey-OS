@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
+import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
@@ -19,10 +20,10 @@ const EMPTY_FORM = {
   // aqui (ver save() e profiles_sync_roles no banco).
   additionalRoles: [],
   companies: [], initials: "", avatarBg: "var(--accent)",
-  sectors: [], supervisorId: "",
+  sectors: [], supervisorId: "", supplierId: "",
 };
 
-const EMPTY_INVITE = { email: "", role: "vendedor", companies: [], sectors: [], supervisorId: "" };
+const EMPTY_INVITE = { email: "", role: "vendedor", companies: [], sectors: [], supervisorId: "", supplierId: "" };
 
 const ROLE_OPTIONS_BASE = [
   { value: "consultor",         label: "Consultor" },
@@ -75,6 +76,14 @@ function roleUsesSectors(role) {
   return role === "vendedor" || role === "consultor";
 }
 
+// Fornecedor vinculado só existe pra escopar login de agência a UM fornecedor
+// de marketing específico (ver 20260718_marketing_agencia_supplier_scoping.sql)
+// — hoje opcional (só existe uma agência cadastrada), mas já deixa pronto pra
+// quando houver mais de uma.
+function roleUsesSupplier(role) {
+  return role === "agencia";
+}
+
 export function UserManagementView({
   users, leads = [],
   currentUser,
@@ -85,6 +94,9 @@ export function UserManagementView({
 }) {
   const isAdmin = currentUser?.role === "admin";
   const roleOptions = isAdmin ? ROLE_OPTIONS_ADMIN : ROLE_OPTIONS_BASE;
+
+  const { suppliers } = useMarketingSuppliers({});
+  const agencySuppliers = useMemo(() => suppliers.filter(s => s.category === "agencia" && s.isActive), [suppliers]);
 
   const canEdit = useCallback((target) => {
     if (!target || !currentUser) return false;
@@ -122,7 +134,7 @@ export function UserManagementView({
   const startEdit = useCallback((u) => {
     setEditing(u.id);
     const additionalRoles = Array.isArray(u.roles) ? u.roles.filter(r => r !== u.role) : [];
-    setForm({ ...EMPTY_FORM, ...u, additionalRoles, sectors: Array.isArray(u.sectors) ? u.sectors : [], supervisorId: u.supervisorId || "" });
+    setForm({ ...EMPTY_FORM, ...u, additionalRoles, sectors: Array.isArray(u.sectors) ? u.sectors : [], supervisorId: u.supervisorId || "", supplierId: u.supplierId || "" });
     setModalError(null);
   }, []);
 
@@ -157,7 +169,7 @@ export function UserManagementView({
       if (form.id) {
         if (onUpdateUser) {
           const roles = [form.role, ...(form.additionalRoles || []).filter(r => r !== form.role)];
-          await onUpdateUser(form.id, { name: form.name, role: form.role, roles, companies: form.companies, initials, avatarBg: form.avatarBg, sectors: form.sectors || [], supervisorId: form.supervisorId || null });
+          await onUpdateUser(form.id, { name: form.name, role: form.role, roles, companies: form.companies, initials, avatarBg: form.avatarBg, sectors: form.sectors || [], supervisorId: form.supervisorId || null, supplierId: form.supplierId || null });
         } else if (onUsersChange) {
           onUsersChange(prev => prev.map(u => u.id === form.id ? { ...u, ...form, initials } : u));
         }
@@ -189,7 +201,7 @@ export function UserManagementView({
     setInviting(true);
     setInviteError(null);
     try {
-      await onCreateInvitation({ email, role: inviteForm.role, companies: inviteForm.companies, sectors: inviteForm.sectors || [], supervisorId: inviteForm.supervisorId || null, invitedBy: currentUser?.id });
+      await onCreateInvitation({ email, role: inviteForm.role, companies: inviteForm.companies, sectors: inviteForm.sectors || [], supervisorId: inviteForm.supervisorId || null, supplierId: inviteForm.supplierId || null, invitedBy: currentUser?.id });
       setInviteJustSent(email);
       setInviteForm(EMPTY_INVITE);
     } catch (e) {
@@ -250,7 +262,13 @@ export function UserManagementView({
         ? prev.additionalRoles.filter(r => r !== role)
         : [...prev.additionalRoles, role];
       const stillNeedsSectors = roleUsesSectors(prev.role) || nextAdditional.some(roleUsesSectors);
-      return { ...prev, additionalRoles: nextAdditional, sectors: stillNeedsSectors ? prev.sectors : [] };
+      const stillNeedsSupplier = roleUsesSupplier(prev.role) || nextAdditional.some(roleUsesSupplier);
+      return {
+        ...prev,
+        additionalRoles: nextAdditional,
+        sectors: stillNeedsSectors ? prev.sectors : [],
+        supplierId: stillNeedsSupplier ? prev.supplierId : "",
+      };
     });
   }, []);
 
@@ -587,7 +605,8 @@ export function UserManagementView({
                 setForm(prev => {
                   const nextAdditional = prev.additionalRoles.filter(r => r !== nextRole);
                   const stillNeedsSectors = roleUsesSectors(nextRole) || nextAdditional.some(roleUsesSectors);
-                  return { ...prev, role: nextRole, additionalRoles: nextAdditional, sectors: stillNeedsSectors ? prev.sectors : [] };
+                  const stillNeedsSupplier = roleUsesSupplier(nextRole) || nextAdditional.some(roleUsesSupplier);
+                  return { ...prev, role: nextRole, additionalRoles: nextAdditional, sectors: stillNeedsSectors ? prev.sectors : [], supplierId: stillNeedsSupplier ? prev.supplierId : "" };
                 });
               }} options={roleOptions} />
             </div>
@@ -665,6 +684,19 @@ export function UserManagementView({
               <Select value={form.supervisorId || ""} onChange={e => setForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
             </div>
           )}
+          {(roleUsesSupplier(form.role) || form.additionalRoles.some(roleUsesSupplier)) && (
+            <div>
+              <FieldLabel>Fornecedor vinculado <span style={{ textTransform: "none", fontWeight: 400 }}>(opcional)</span></FieldLabel>
+              <Select
+                value={form.supplierId || ""}
+                onChange={e => setForm(prev => ({ ...prev, supplierId: e.target.value }))}
+                options={[{ value: "", label: "Nenhum (sem restrição)" }, ...agencySuppliers.map(s => ({ value: s.id, label: s.name }))]}
+              />
+              <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+                Restringe o acesso deste login às campanhas/entregas do fornecedor selecionado. Deixe em branco enquanto houver apenas uma agência cadastrada.
+              </div>
+            </div>
+          )}
           {modalError && (
             <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "var(--danger)" }}>{modalError}</div>
           )}
@@ -691,7 +723,12 @@ export function UserManagementView({
             <FieldLabel>Função</FieldLabel>
             <Select value={inviteForm.role} onChange={e => {
               const nextRole = e.target.value;
-              setInviteForm(prev => ({ ...prev, role: nextRole, sectors: roleUsesSectors(nextRole) ? prev.sectors : [] }));
+              setInviteForm(prev => ({
+                ...prev,
+                role: nextRole,
+                sectors: roleUsesSectors(nextRole) ? prev.sectors : [],
+                supplierId: roleUsesSupplier(nextRole) ? prev.supplierId : "",
+              }));
             }} options={roleOptions} />
           </div>
           <div>
@@ -740,6 +777,19 @@ export function UserManagementView({
             <div>
               <FieldLabel>Supervisor (vendedor)</FieldLabel>
               <Select value={inviteForm.supervisorId || ""} onChange={e => setInviteForm(prev => ({ ...prev, supervisorId: e.target.value }))} options={vendedorOptions} />
+            </div>
+          )}
+          {roleUsesSupplier(inviteForm.role) && (
+            <div>
+              <FieldLabel>Fornecedor vinculado <span style={{ textTransform: "none", fontWeight: 400 }}>(opcional)</span></FieldLabel>
+              <Select
+                value={inviteForm.supplierId || ""}
+                onChange={e => setInviteForm(prev => ({ ...prev, supplierId: e.target.value }))}
+                options={[{ value: "", label: "Nenhum (sem restrição)" }, ...agencySuppliers.map(s => ({ value: s.id, label: s.name }))]}
+              />
+              <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+                Restringe o acesso deste login às campanhas/entregas do fornecedor selecionado. Deixe em branco enquanto houver apenas uma agência cadastrada.
+              </div>
             </div>
           )}
           {inviteError && (
