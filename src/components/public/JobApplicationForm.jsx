@@ -11,6 +11,12 @@ const ALLOWED_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 const ACCENT = "#C7212B";
+const UNIDADES = [
+  { id: "", label: "Não tenho preferência" },
+  { id: "sanwey", label: "Sanwey" },
+  { id: "resibag", label: "Resibag" },
+  { id: "montemor", label: "Monte Mor" },
+];
 
 function formatPhone(digits) {
   const d = (digits || "").replace(/\D/g, "").slice(0, 11);
@@ -24,7 +30,7 @@ export default function JobApplicationForm() {
   const { slug } = useParams();
 
   const [vaga, setVaga] = useState(undefined); // undefined = loading, null = não encontrada
-  const [form, setForm] = useState({ nome: "", email: "", telefone: "", linkedin: "", consentimento: false });
+  const [form, setForm] = useState({ nome: "", email: "", telefone: "", linkedin: "", unidade: "", consentimento: false });
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -88,6 +94,7 @@ export default function JobApplicationForm() {
         p_linkedin: form.linkedin.trim() || null,
         p_consentimento_lgpd: form.consentimento,
         p_resume_ext: ext,
+        p_frente: form.unidade || null,
       });
       if (rpcErr) throw rpcErr;
 
@@ -201,6 +208,12 @@ export default function JobApplicationForm() {
 
         <Field label="LinkedIn (opcional)">
           <input type="url" value={form.linkedin} onChange={e => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/…" style={input} />
+        </Field>
+
+        <Field label="Unidade de interesse" hint="Além desta vaga, avise se também tem interesse em outra unidade">
+          <select value={form.unidade} onChange={e => set("unidade", e.target.value)} style={input}>
+            {UNIDADES.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
+          </select>
         </Field>
 
         <Field
