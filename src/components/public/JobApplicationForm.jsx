@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertCircle, Upload, FileText } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
+import { RH_OPERATIONAL_DEPARTMENTS } from "../../constants/rh-config";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -56,15 +57,21 @@ export default function JobApplicationForm() {
     setFile(f);
   };
 
+  // Vagas operacionais/chão-de-fábrica não exigem currículo formatado —
+  // candidato desse perfil raramente tem um pronto em PDF/DOCX, e a
+  // exigência bloqueava a candidatura sem alternativa nenhuma (achado da
+  // auditoria de fricção de 18/07). RPC também relaxa a mesma exigência.
+  const resumeRequired = !RH_OPERATIONAL_DEPARTMENTS.includes(vaga?.department);
+
   const canSubmit = useMemo(() => (
     form.nome.trim().length >= 2 &&
-    Boolean(file) &&
+    (!resumeRequired || Boolean(file)) &&
     // Pelo menos um contato — sem isso o RH não tem como retornar pro
     // candidato (achado da auditoria de fricção de 18/07).
     Boolean(form.email.trim() || form.telefone.replace(/\D/g, "")) &&
     form.consentimento &&
     !submitting
-  ), [form, file, submitting]);
+  ), [form, file, submitting, resumeRequired]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,7 +79,7 @@ export default function JobApplicationForm() {
     setSubmitting(true);
     setError(null);
     try {
-      const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
+      const ext = file ? (file.name.split(".").pop() || "pdf").toLowerCase() : null;
       const { data: candidateId, error: rpcErr } = await supabase.rpc("submit_job_application", {
         p_vaga_slug: slug,
         p_nome: form.nome.trim(),
@@ -84,11 +91,20 @@ export default function JobApplicationForm() {
       });
       if (rpcErr) throw rpcErr;
 
-      const path = `${candidateId}/curriculo.${ext}`;
-      const { error: uploadErr } = await supabase.storage
-        .from("rh-curriculos")
-        .upload(path, file, { contentType: file.type, upsert: true });
-      if (uploadErr) throw uploadErr;
+      if (file) {
+        const path = `${candidateId}/curriculo.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("rh-curriculos")
+          .upload(path, file, { contentType: file.type, upsert: true });
+        if (uploadErr) throw uploadErr;
+      }
+
+      // Confirmação por e-mail — fire-and-forget: não bloqueia a tela de
+      // sucesso nem falha a candidatura se o e-mail não sair (achado da
+      // auditoria de fricção de 18/07).
+      supabase.functions
+        .invoke("rh-send-email", { body: { type: "candidatura_recebida", vagaSlug: slug, candidateId } })
+        .catch(err => console.warn("Falha ao enviar e-mail de confirmação de candidatura:", err));
 
       setDone(true);
     } catch (err) {
@@ -187,7 +203,11 @@ export default function JobApplicationForm() {
           <input type="url" value={form.linkedin} onChange={e => set("linkedin", e.target.value)} placeholder="https://linkedin.com/in/…" style={input} />
         </Field>
 
-        <Field label="Currículo" hint="PDF ou DOCX, até 10MB" required>
+        <Field
+          label="Currículo"
+          hint={resumeRequired ? "PDF ou DOCX, até 10MB" : "PDF ou DOCX, até 10MB — opcional para esta vaga"}
+          required={resumeRequired}
+        >
           <label style={{
             display: "flex", alignItems: "center", gap: 10,
             border: `1px dashed ${fileError ? "#DC2626" : "#D1D5DB"}`, borderRadius: 8,

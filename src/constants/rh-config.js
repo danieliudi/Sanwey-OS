@@ -15,6 +15,12 @@ export const RH_DEPARTMENTS = [
   "Atendimento",
 ];
 
+// Departamentos operacionais/chão-de-fábrica — usado tanto pra tornar
+// currículo opcional na candidatura pública (candidato de produção
+// raramente tem currículo formatado) quanto, futuramente, pra exigir
+// turno só de quem realmente trabalha em escala.
+export const RH_OPERATIONAL_DEPARTMENTS = ["Operações", "Logística", "Produção", "Qualidade"];
+
 export const RH_CONTRACT_TYPES = [
   { id: "clt",        label: "CLT" },
   { id: "pj",         label: "PJ" },

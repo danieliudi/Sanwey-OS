@@ -13,17 +13,22 @@ type EmailType =
   | "welcome"
   | "candidato_aprovado"
   | "candidato_reprovado"
-  | "vaga_manager_link";
+  | "vaga_manager_link"
+  | "candidatura_recebida";
 
 interface SendEmailBody {
   type: EmailType;
-  to: string;
+  to?: string;
   // Lote/cópia oculta (Áudio 8 do RH): reprovação em massa. Quando presente,
   // os destinatários vão só em BCC (nunca se veem entre si) e `to` é o próprio
   // remetente. O Resend limita ~50 destinatários por chamada, então o handler
   // quebra em blocos.
   bcc?: string[];
-  variables: Record<string, string>;
+  variables?: Record<string, string>;
+  // Usados só por "candidatura_recebida" (disparado pelo próprio formulário
+  // público, sem login) — ver handlePublicCandidaturaRecebida.
+  vagaSlug?: string;
+  candidateId?: string;
 }
 
 // ── Subjects ──────────────────────────────────────────────────────────────────
@@ -35,6 +40,7 @@ const SUBJECTS: Record<EmailType, string> = {
   candidato_aprovado:  "Parabéns! Sua candidatura foi aprovada — Grupo Sanwey",
   candidato_reprovado: "Retorno sobre seu processo seletivo — Grupo Sanwey",
   vaga_manager_link:   "Candidatos pra sua avaliação — Grupo Sanwey",
+  candidatura_recebida:"Recebemos sua candidatura — Grupo Sanwey",
 };
 
 // ── Template builders ─────────────────────────────────────────────────────────
@@ -146,6 +152,16 @@ function tplCandidatoReprovado(vars: Record<string, string>): string {
   return applyVars(shell(inner, "#8A8680"), vars);
 }
 
+function tplCandidaturaRecebida(vars: Record<string, string>): string {
+  // Disparado pelo próprio formulário público de candidatura (sem login) —
+  // achado da auditoria de fricção de 18/07: candidato enviava currículo e
+  // não recebia nenhuma confirmação, só a tela do navegador.
+  const inner = `<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">Recebemos sua candidatura!</h1>
+    <p style="margin:0 0 18px;font-size:15px;color:#8A8680;line-height:1.6;">Olá, <strong style="color:#2C2C2B;">{{CANDIDATE_NAME}}</strong>! Confirmamos o recebimento da sua candidatura pra vaga de <strong style="color:#2C2C2B;">{{VAGA_TITLE}}</strong> no Grupo Sanwey.</p>
+    <p style="margin:0;font-size:15px;color:#8A8680;line-height:1.6;">Nosso time de RH vai analisar seu perfil com atenção e entraremos em contato caso haja fit com a posição. Agradecemos muito o seu interesse em fazer parte do nosso time!</p>`;
+  return applyVars(shell(inner, "#C7212B"), vars);
+}
+
 function tplVagaManagerLink(vars: Record<string, string>): string {
   const inner = `<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">Candidatos pra sua avaliação</h1>
     <p style="margin:0 0 24px;font-size:15px;color:#8A8680;line-height:1.6;">Olá, <strong style="color:#2C2C2B;">{{MANAGER_NAME}}</strong>! O RH separou os candidatos da vaga <strong style="color:#2C2C2B;">{{VAGA_TITLE}}</strong> pra você avaliar e aprovar ou reprovar — não precisa de login, é só clicar no link abaixo e confirmar seu e-mail.</p>
@@ -162,7 +178,84 @@ function buildHtml(type: EmailType, vars: Record<string, string>): string {
     case "candidato_aprovado": return tplCandidatoAprovado(vars);
     case "candidato_reprovado":return tplCandidatoReprovado(vars);
     case "vaga_manager_link":  return tplVagaManagerLink(vars);
+    case "candidatura_recebida": return tplCandidaturaRecebida(vars);
   }
+}
+
+// ── Público: confirmação de candidatura ──────────────────────────────────────
+// Disparado pelo próprio JobApplicationForm (sem login) — nunca aceita `to`/
+// `variables` livres do cliente pra este tipo. Sempre re-deriva e-mail/nome/
+// vaga do banco via vagaSlug+candidateId (usando o client service-role, que
+// já ignora RLS), confirmando que o candidateId de fato se candidatou àquela
+// vaga antes de disparar qualquer coisa — evita que a rota vire um relay de
+// e-mail arbitrário só porque não exige JWT de usuário.
+async function handlePublicCandidaturaRecebida(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+): Promise<Response> {
+  const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+  const noop = () => new Response(JSON.stringify({ success: true, sent: 0 }), { headers: jsonHeaders });
+
+  const vagaSlug = typeof body.vagaSlug === "string" ? body.vagaSlug.trim() : "";
+  const candidateId = typeof body.candidateId === "string" ? body.candidateId.trim() : "";
+  if (!vagaSlug || !candidateId) {
+    return new Response(JSON.stringify({ error: "vagaSlug e candidateId são obrigatórios" }), {
+      status: 400, headers: jsonHeaders,
+    });
+  }
+
+  const { data: vaga } = await supabase
+    .from("rh_vagas")
+    .select("id, title")
+    .eq("link_slug", vagaSlug)
+    .maybeSingle();
+  if (!vaga) return noop();
+
+  const { data: aplicacao } = await supabase
+    .from("rh_aplicacoes")
+    .select("id")
+    .eq("candidate_id", candidateId)
+    .eq("vaga_id", vaga.id)
+    .maybeSingle();
+  if (!aplicacao) return noop();
+
+  const { data: candidato } = await supabase
+    .from("rh_candidatos")
+    .select("name, email")
+    .eq("id", candidateId)
+    .maybeSingle();
+  if (!candidato?.email) return noop(); // e-mail é opcional na candidatura
+
+  const html = buildHtml("candidatura_recebida", {
+    CANDIDATE_NAME: candidato.name || "",
+    VAGA_TITLE: vaga.title || "",
+  });
+
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) {
+    console.warn("[rh-send-email] RESEND_API_KEY não configurada. Confirmação de candidatura NÃO enviada.");
+    return noop();
+  }
+
+  const resendRes = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "noreply@sanwey.com.br",
+      to: candidato.email,
+      subject: SUBJECTS.candidatura_recebida,
+      html,
+    }),
+  });
+
+  if (!resendRes.ok) {
+    const errBody = await resendRes.text();
+    console.error("[rh-send-email] Resend error (candidatura_recebida):", resendRes.status, errBody);
+    // Não é motivo pra derrubar a candidatura em si — só loga e segue.
+    return new Response(JSON.stringify({ success: false, sent: 0 }), { headers: jsonHeaders });
+  }
+
+  return new Response(JSON.stringify({ success: true, sent: 1 }), { headers: jsonHeaders });
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -173,6 +266,38 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Parse and validate body
+    const body: SendEmailBody = await req.json();
+
+    const validTypes: EmailType[] = [
+      "ferias_aprovadas",
+      "ferias_rejeitadas",
+      "welcome",
+      "candidato_aprovado",
+      "candidato_reprovado",
+      "vaga_manager_link",
+      "candidatura_recebida",
+    ];
+
+    if (!body?.type || !validTypes.includes(body.type)) {
+      return new Response(
+        JSON.stringify({ error: `'type' inválido. Use: ${validTypes.join(", ")}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // "candidatura_recebida" é público — disparado pelo formulário de
+    // candidatura sem login. Não passa pelo gate de JWT/role abaixo (ver
+    // handlePublicCandidaturaRecebida pra como evita virar relay aberto).
+    if (body.type === "candidatura_recebida") {
+      return await handlePublicCandidaturaRecebida(supabase, body);
+    }
+
     // Validate JWT — caller must be an authenticated Supabase user
     const authHeader = req.headers.get("Authorization") || "";
     const jwt = authHeader.replace(/^Bearer\s+/i, "");
@@ -181,11 +306,6 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
 
     const { data: userData, error: userErr } = await supabase.auth.getUser(jwt);
     if (userErr || !userData?.user) {
@@ -206,25 +326,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Sem permissão para enviar e-mails de RH." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    // Parse and validate body
-    const body: SendEmailBody = await req.json();
-
-    const validTypes: EmailType[] = [
-      "ferias_aprovadas",
-      "ferias_rejeitadas",
-      "welcome",
-      "candidato_aprovado",
-      "candidato_reprovado",
-      "vaga_manager_link",
-    ];
-
-    if (!body?.type || !validTypes.includes(body.type)) {
-      return new Response(
-        JSON.stringify({ error: `'type' inválido. Use: ${validTypes.join(", ")}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
     }
 
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
