@@ -70,7 +70,7 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
       <div
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 999,
-          background: "#FFFFFF",
+          background: "var(--surface)",
           borderRadius: "16px 16px 0 0",
           boxShadow: "var(--shadow-pop)",
           maxHeight: "88vh",
@@ -79,14 +79,14 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
       >
         {/* Drag handle */}
         <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 2px" }}>
-          <div style={{ width: 36, height: 4, background: "#E5E7EB", borderRadius: 2 }} />
+          <div style={{ width: 36, height: 4, background: "var(--border-strong)", borderRadius: 2 }} />
         </div>
 
         {/* Nav groups */}
         {(navGroups || []).map((group, gi) => (
           <div key={gi}>
             {group.label && (
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", padding: "12px 20px 4px" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", padding: "12px 20px 4px" }}>
                 {group.label}
               </div>
             )}
@@ -105,7 +105,7 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
                     borderLeft: `3px solid ${active ? "var(--accent)" : "transparent"}`,
                     cursor: "pointer",
                     fontSize: 15, fontWeight: active ? 700 : 500,
-                    color: active ? "var(--accent)" : "#201a1a",
+                    color: active ? "var(--accent)" : "var(--text)",
                     textAlign: "left",
                     fontFamily: "inherit",
                   }}
@@ -133,21 +133,21 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
                 {(currentUser.name || "?").charAt(0).toUpperCase()}
               </div>
               <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: "#201a1a", lineHeight: 1.3 }}>{currentUser.name}</div>
-                <div style={{ fontSize: 11, color: "#6B7280" }}>{ROLE_LABELS[currentUser.role] || currentUser.role}</div>
+                <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text)", lineHeight: 1.3 }}>{currentUser.name}</div>
+                <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{ROLE_LABELS[currentUser.role] || currentUser.role}</div>
               </div>
             </div>
           )}
           <button
             onClick={() => { onSectionChange("settings"); onClose(); }}
-            style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#6B7280", textAlign: "left", fontFamily: "inherit" }}
+            style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "var(--text-dim)", textAlign: "left", fontFamily: "inherit" }}
           >
             <SettingsIcon size={20} />
             Configurações
           </button>
           <button
             onClick={() => { onLogout?.(); onClose(); }}
-            style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#DC2626", textAlign: "left", fontFamily: "inherit" }}
+            style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "var(--danger)", textAlign: "left", fontFamily: "inherit" }}
           >
             <LogOut size={20} />
             Sair da conta
@@ -169,8 +169,8 @@ export function MobileBottomNav({ section, onSectionChange, roles, navGroups, cu
   return (
     <>
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-white border-t border-border-subtle z-30 flex justify-around items-stretch"
-        style={{ height: 64 }}
+        className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex justify-around items-stretch"
+        style={{ height: 64, background: "var(--surface)", borderTop: "1px solid var(--border)" }}
       >
         {tabs.map(({ id, label, icon: Icon }) => {
           const active = section === id;
@@ -182,7 +182,7 @@ export function MobileBottomNav({ section, onSectionChange, roles, navGroups, cu
               style={{
                 background: active ? "var(--surface-alt)" : "transparent",
                 border: "none",
-                color: active ? "var(--accent)" : "#5c5f60",
+                color: active ? "var(--accent)" : "var(--text-dim)",
                 cursor: "pointer",
                 padding: "4px 0",
                 fontFamily: "inherit",
@@ -206,7 +206,7 @@ export function MobileBottomNav({ section, onSectionChange, roles, navGroups, cu
           className="flex flex-col items-center justify-center flex-1 h-full gap-0.5"
           style={{
             background: "transparent", border: "none",
-            color: "#5c5f60", cursor: "pointer",
+            color: "var(--text-dim)", cursor: "pointer",
             padding: "4px 0", fontFamily: "inherit",
           }}
           aria-label="Menu"

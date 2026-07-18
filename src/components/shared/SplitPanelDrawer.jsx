@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
+import { useBodyScrollLock } from "../../hooks/use-body-scroll-lock";
 
 // Chrome estrutural do drawer de detalhe no padrão do CRM (LeadDetailDrawer):
 // modal centralizado (não desliza da lateral), 3 colunas — info à esquerda,
@@ -7,6 +8,10 @@ import { X } from "lucide-react";
 // as 3 colunas empilham em sequência com scroll único (mais simples e sem
 // esconder nada, diferente do CRM que esconde a coluna direita no mobile).
 export function SplitPanelDrawer({ onClose, header, left, center, right }) {
+  // Componente só existe montado quando o drawer está aberto (o pai
+  // renderiza condicionalmente) — trava o scroll do body enquanto estiver
+  // montado, destrava no unmount. Achado da auditoria de fricção de 18/07.
+  useBodyScrollLock(true);
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", h);
