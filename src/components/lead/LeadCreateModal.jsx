@@ -10,6 +10,7 @@ import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/fiel
 import { isValidCnpj, EMAIL_PATTERN } from "../../utils/field-validation";
 import { StageFieldInput } from "./StageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { localDateInputToISOString } from "../../utils/date";
 
@@ -21,6 +22,14 @@ function normalizeName(name) {
 
 function cnpjDigits(s) {
   return (s || "").replace(/\D/g, "");
+}
+
+// Array vazio é truthy em JS — sem isso, "owner" virando array (múltiplos
+// responsáveis) faria um required ficar sempre satisfeito mesmo sem
+// ninguém selecionado.
+function isFieldEmpty(val) {
+  if (Array.isArray(val)) return val.length === 0;
+  return !val || (typeof val === "string" && !val.trim());
 }
 
 // Procura matches existentes por nome (substring case-insensitive) ou CNPJ.
@@ -108,24 +117,20 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
   }
 
   if (def.type === "user") {
+    // FASE 5: mais de um responsável por card, igual ao resto do CRM
+    // (LeadDetailDrawer, campanhas) — antes só dava pra escolher um único
+    // responsável já na criação, diferente de qualquer outro card já criado.
     const visible = (users || []).filter(u =>
       u.companies?.includes(companyId) &&
       (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
     );
     return (
-      <select
-        value={value || ""}
-        onChange={e => onChange(e.target.value)}
-        style={{ ...baseStyle, appearance: "none", paddingRight: 32,
-          backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
-          backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", backgroundSize: "14px",
-        }}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-      >
-        <option value="">Responsável</option>
-        {visible.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-      </select>
+      <AssigneeMultiSelect
+        value={Array.isArray(value) ? value : (value ? [value] : [])}
+        onChange={onChange}
+        options={visible}
+        placeholder="Selecionar responsáveis…"
+      />
     );
   }
 
@@ -237,7 +242,7 @@ export function LeadCreateModal({
   createClient,
 }) {
   const [values, setValues] = useState(() => ({
-    owner: currentUser?.id || "",
+    owner: currentUser?.id ? [currentUser.id] : [],
     sector: currentUser?.sectors?.[0] || "",
     contactEmail: "",
   }));
@@ -272,7 +277,7 @@ export function LeadCreateModal({
   // Focus first input when modal opens
   React.useEffect(() => {
     if (open) {
-      setValues({ owner: currentUser?.id || "", sector: currentUser?.sectors?.[0] || "", contactEmail: "" });
+      setValues({ owner: currentUser?.id ? [currentUser.id] : [], sector: currentUser?.sectors?.[0] || "", contactEmail: "" });
       setCustomValues({});
       setError(null);
       setSaving(false);
@@ -312,8 +317,7 @@ export function LeadCreateModal({
     // Validate required fields
     for (const entry of formConfig) {
       if (!entry.required) continue;
-      const val = values[entry.id];
-      if (!val || (typeof val === "string" && !val.trim())) {
+      if (isFieldEmpty(values[entry.id])) {
         const def = FIELD_DEFS[entry.id];
         setError(`O campo "${def?.label || entry.id}" é obrigatório.`);
         return;
@@ -346,8 +350,12 @@ export function LeadCreateModal({
         ? localDateInputToISOString(values.closeDate)
         : new Date(now.getTime() + 30 * 86400000).toISOString();
 
-      const resolvedOwner = values.owner || currentUser?.id || null;
-      const ownerUser = (users || []).find(u => u.id === resolvedOwner);
+      // FASE 5: "owner" agora é um array (AssigneeMultiSelect) — mesmo
+      // padrão de ownerIds[] + owner escalar (primeiro da lista) usado em
+      // todo o resto do CRM (LeadDetailDrawer, campanhas, entregas).
+      const ownerIds = Array.isArray(values.owner) ? values.owner : (values.owner ? [values.owner] : []);
+      const primaryOwner = ownerIds[0] || currentUser?.id || null;
+      const ownerUser = (users || []).find(u => u.id === primaryOwner);
 
       const lead = {
         id: newId(),
@@ -357,7 +365,8 @@ export function LeadCreateModal({
         companyId,
         stage: stageId,
         status: stageId,
-        owner: resolvedOwner,
+        owner: primaryOwner,
+        ownerIds: ownerIds.length ? ownerIds : (primaryOwner ? [primaryOwner] : []),
         sector: values.sector || ownerUser?.sectors?.[0] || currentUser?.sectors?.[0] || null,
         value: parseFloat(values.value) || 0,
         probability: Number.isFinite(stage?.probability) ? stage.probability : 10,
@@ -417,9 +426,7 @@ export function LeadCreateModal({
   useEscToClose(guardedClose, open);
 
   const company = COMPANIES[companyId];
-  const requiredMissing = (formConfig || []).some(e =>
-    e.required && (!values[e.id] || (typeof values[e.id] === "string" && !values[e.id].trim()))
-  );
+  const requiredMissing = (formConfig || []).some(e => e.required && isFieldEmpty(values[e.id]));
   const isSubmitDisabled = saving || requiredMissing;
 
   if (!open) return null;
