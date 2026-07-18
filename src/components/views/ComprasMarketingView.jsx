@@ -197,7 +197,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}
       onClick={e => { if (e.target === e.currentTarget) guardedClose(); }}>
       <form onSubmit={handleSubmit} className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <div className="flex items-center justify-between mb-4">

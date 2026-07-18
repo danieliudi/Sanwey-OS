@@ -36,6 +36,11 @@
   --shadow-card:   0 1px 2px rgba(55,53,47,0.05);
   --shadow-pop:    0 12px 32px rgba(55,53,47,0.14), 0 2px 8px rgba(55,53,47,0.06);
 
+  /* Scrim atrás de modal/drawer/menu — antes cada tela reimplementava com
+     opacidade própria (0.4/0.45/0.5, divergente sem motivo). Achado da
+     auditoria de fricção de 18/07. */
+  --overlay-scrim: rgba(0,0,0,0.45);
+
   /* Product tokens — identidade de empresa (não white-label) */
   --color-resibag:   #16A34A;
   --color-industria: #C7212B;
@@ -88,6 +93,10 @@
   /* Sombra mais forte no escuro — rgba(0,0,0,..) some contra fundo escuro */
   --shadow-card:   0 1px 2px rgba(0,0,0,0.22);
   --shadow-pop:    0 16px 40px rgba(0,0,0,0.45);
+
+  /* Scrim mais forte no escuro — preto puro contra fundo já escuro precisa
+     de mais opacidade pra separar visualmente o modal do resto da tela. */
+  --overlay-scrim: rgba(0,0,0,0.6);
 }
 
 /* Native form controls in dark mode */

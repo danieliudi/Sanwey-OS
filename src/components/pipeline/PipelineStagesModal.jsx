@@ -58,7 +58,7 @@ export function PipelineStagesModal({
     <>
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: "rgba(0,0,0,0.45)" }}
+        style={{ background: "var(--overlay-scrim)" }}
         onClick={onClose}
       >
         <div

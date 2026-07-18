@@ -79,7 +79,7 @@ function SupplierModal({ supplier, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <form onSubmit={handleSubmit} className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-4" style={{ color: "var(--text)" }}>
@@ -214,7 +214,7 @@ function SuppliersTab({ user }) {
       )}
 
       {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}
           onClick={e => { if (e.target === e.currentTarget) setConfirmDelete(null); }}>
           <div className="rounded-2xl p-6 w-full max-w-sm" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
             <h3 className="font-bold text-base mb-2" style={{ color: "var(--text)" }}>Excluir fornecedor?</h3>
@@ -262,7 +262,7 @@ function NewQuoteModal({ suppliers, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <form onSubmit={handleSubmit} className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-4" style={{ color: "var(--text)" }}>Nova solicitação de cotação</h3>
@@ -322,7 +322,7 @@ function RejectQuoteModal({ quote, onConfirm, onClose }) {
   const [saving, setSaving] = useState(false);
   useEscToClose(onClose);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-1" style={{ color: "var(--text)" }}>Rejeitar cotação</h3>
@@ -348,7 +348,7 @@ function RecordResponseModal({ quote, onConfirm, onClose }) {
   const [saving, setSaving] = useState(false);
   useEscToClose(onClose);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-1" style={{ color: "var(--text)" }}>Registrar resposta do fornecedor</h3>
@@ -378,7 +378,7 @@ function TemplateModal({ template, onSave, onClose }) {
   const [saving, setSaving] = useState(false);
   useEscToClose(onClose);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="rounded-2xl p-6 w-full max-w-2xl" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-1" style={{ color: "var(--text)" }}>Template do e-mail de cotação</h3>

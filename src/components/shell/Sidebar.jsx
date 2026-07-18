@@ -87,7 +87,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
       {isMobile && mobileOpen && (
         <div
           onClick={onMobileClose}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 49 }}
+          style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 49 }}
         />
       )}
       <aside style={sidebarStyle}>

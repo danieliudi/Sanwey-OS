@@ -20,7 +20,7 @@ export class ErrorBoundary extends React.Component {
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-6"
-        style={{ background: "rgba(0,0,0,0.5)" }}
+        style={{ background: "var(--overlay-scrim)" }}
         onClick={this.reset}
       >
         <div

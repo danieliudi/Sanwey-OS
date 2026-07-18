@@ -136,7 +136,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center"
-      style={{ zIndex: 60, background: "rgba(0,0,0,0.45)" }}
+      style={{ zIndex: 60, background: "var(--overlay-scrim)" }}
     >
       <div
         className="flex flex-col rounded-xl overflow-hidden shadow-2xl"

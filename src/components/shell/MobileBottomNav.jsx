@@ -64,7 +64,7 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
   return (
     <>
       <div
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 998 }}
+        style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 998 }}
         onClick={onClose}
       />
       <div

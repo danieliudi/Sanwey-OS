@@ -434,7 +434,7 @@ export function LeadCreateModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6"
-      style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)" }}
+      style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
       onClick={guardedClose}
       role="dialog"
       aria-modal="true"

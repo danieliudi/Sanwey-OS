@@ -58,7 +58,7 @@ function RejectModal({ request, onConfirm, onClose }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.45)" }}
+      style={{ background: "var(--overlay-scrim)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
@@ -105,7 +105,7 @@ function ApproveModal({ request, onConfirm, onClose }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.45)" }}
+      style={{ background: "var(--overlay-scrim)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>

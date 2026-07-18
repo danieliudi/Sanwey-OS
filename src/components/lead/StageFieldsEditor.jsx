@@ -91,7 +91,7 @@ export function StageFieldsEditor({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }}
+      style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(2px)" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"

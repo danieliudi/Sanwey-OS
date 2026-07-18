@@ -102,7 +102,7 @@ export function SignalDetailDrawer({ signal, onClose, onAddLead, currentUser }) 
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center p-4 md:p-6"
-      style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)" }}
+      style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"

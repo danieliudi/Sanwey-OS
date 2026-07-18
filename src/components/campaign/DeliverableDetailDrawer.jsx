@@ -934,7 +934,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   return (
     <div
       className="fixed inset-0 z-40 flex lg:items-center lg:justify-center lg:p-6"
-      style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)" }}
+      style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
