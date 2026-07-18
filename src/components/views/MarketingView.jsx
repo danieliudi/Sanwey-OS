@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, List, Calendar as CalendarIcon, Pencil, Settings2 } from "lucide-react";
+import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, List, Calendar as CalendarIcon, Pencil, Settings2, AlertCircle } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
@@ -724,6 +724,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const [selected, setSelected]               = useState(null);
   const [draggedCampaign, setDraggedCampaign] = useState(null);
   const [dragOverStage, setDragOverStage]     = useState(null);
+  const [stageError, setStageError]           = useState(null);
   const [quickAddStage, setQuickAddStage]     = useState(null);
   const [filterCompany, setFilterCompany]     = useState("all");
   const [filterChannel, setFilterChannel]     = useState("all");
@@ -789,16 +790,19 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   // asterisco visual, confirmado ao vivo que não travava nada. Mesmo padrão
   // do attemptStageChange do Pipeline de CRM (CRMView.jsx), mas lendo os
   // campos via useRHStageFields("marketing") — Marketing não usa a tabela
-  // antiga pipeline_stage_fields.
+  // antiga pipeline_stage_fields. Banner não-bloqueante em vez de alert()
+  // nativo — trava sessões automatizadas/headless (achado da auditoria de
+  // fricção de 18/07).
   const attemptStageChange = useCallback(async (campaignId, toStage) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     if (!campaign) return;
     const fields = stageFields.getFields(campaign.stage);
     const missing = getMissingRequiredFields(fields, campaign.customFields || {});
     if (missing.length > 0) {
-      alert(`Não dá pra mover "${campaign.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      setStageError(`Não dá pra mover "${campaign.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
+    setStageError(null);
     await handleStageChange(campaignId, toStage);
   }, [campaigns, stageFields, handleStageChange]);
 
@@ -862,6 +866,18 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
 
   return (
     <>
+    {stageError && (
+      <div
+        className="fixed z-50 flex items-start gap-2 p-3 rounded-xl text-sm shadow-lg"
+        style={{ top: 16, right: 16, maxWidth: 380, background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FCA5A5" }}
+      >
+        <AlertCircle size={15} className="shrink-0 mt-0.5" />
+        <span className="flex-1">{stageError}</span>
+        <button onClick={() => setStageError(null)} className="shrink-0" style={{ color: "#B91C1C" }}>
+          <X size={14} />
+        </button>
+      </div>
+    )}
     <div>
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">

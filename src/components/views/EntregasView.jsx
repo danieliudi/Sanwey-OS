@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
-  Filter, CalendarDays, LayoutGrid, List, Pencil, Settings2,
+  Filter, CalendarDays, LayoutGrid, List, Pencil, Settings2, AlertCircle,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
@@ -486,6 +486,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
 
   const [draggedItem,    setDraggedItem]    = useState(null);
   const [dragOverStage,  setDragOverStage]  = useState(null);
+  const [stageError,     setStageError]     = useState(null);
   const [quickAddStage,  setQuickAddStage]  = useState(null);
   const [selected,       setSelected]       = useState(null);
   const [viewMode,       setViewMode]       = useState("kanban"); // "kanban" | "table" | "calendar"
@@ -537,9 +538,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     const missingStatic = getMissingStaticFields(item.stage, item.stageData);
     if (missing.length > 0 || missingStatic.length > 0) {
       const labels = [...missing.map(f => f.label), ...missingStatic.map(f => f.label)];
-      alert(`Não dá pra mover "${item.title}": preencha antes — ${labels.join(", ")}.`);
+      setStageError(`Não dá pra mover "${item.title}": preencha antes — ${labels.join(", ")}.`);
       return false;
     }
+    setStageError(null);
     await changeStage(itemId, toStage);
     return true;
   }, [deliverables, stageFields, changeStage]);
@@ -588,6 +590,18 @@ export function EntregasView({ user, users = [], notifyMentions }) {
 
   return (
     <>
+    {stageError && (
+      <div
+        className="fixed z-50 flex items-start gap-2 p-3 rounded-xl text-sm shadow-lg"
+        style={{ top: 16, right: 16, maxWidth: 380, background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FCA5A5" }}
+      >
+        <AlertCircle size={15} className="shrink-0 mt-0.5" />
+        <span className="flex-1">{stageError}</span>
+        <button onClick={() => setStageError(null)} className="shrink-0" style={{ color: "#B91C1C" }}>
+          <X size={14} />
+        </button>
+      </div>
+    )}
     <div>
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Upload, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star } from "lucide-react";
+import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Upload, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star, AlertCircle } from "lucide-react";
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
 import { exportLeadsCSV } from "../../utils/export-leads";
 import { logExport } from "../../utils/log-export";
@@ -469,6 +469,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
+  const [stageError, setStageError] = useState(null);
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["prospeccao"]));
   const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -571,20 +572,24 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // pro "Mover para" do menu do card. Antes disso "required" era só o
   // asterisco visual, confirmado ao vivo que não travava nada (inclusive
   // corrompendo métricas do Painel Executivo com value/probability vazios).
+  // Usa banner não-bloqueante em vez de alert() nativo — alert() trava
+  // sessões automatizadas/headless sem handler de diálogo (achado da
+  // auditoria de fricção de 18/07).
   const attemptStageChange = useCallback((leadId, targetStageId) => {
     const lead = scopedLeads.find(l => l.id === leadId) || leads.find(l => l.id === leadId);
     if (!lead) return;
     const fields = stageFields.getFields(lead.companyId, lead.stage);
     const missing = getMissingRequiredFields(fields, lead.customFields || {});
     if (missing.length > 0) {
-      alert(`Não dá pra mover "${lead.company}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      setStageError(`Não dá pra mover "${lead.company}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
     const invalid = getInvalidFields(fields, lead.customFields || {});
     if (invalid.length > 0) {
-      alert(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      setStageError(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
+    setStageError(null);
     onStageChange(leadId, targetStageId);
   }, [scopedLeads, leads, stageFields, onStageChange]);
 
@@ -620,6 +625,18 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
 
   return (
     <>
+    {stageError && (
+      <div
+        className="fixed z-50 flex items-start gap-2 p-3 rounded-xl text-sm shadow-lg"
+        style={{ top: 16, right: 16, maxWidth: 380, background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FCA5A5" }}
+      >
+        <AlertCircle size={15} className="shrink-0 mt-0.5" />
+        <span className="flex-1">{stageError}</span>
+        <button onClick={() => setStageError(null)} className="shrink-0" style={{ color: "#B91C1C" }}>
+          <X size={14} />
+        </button>
+      </div>
+    )}
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">

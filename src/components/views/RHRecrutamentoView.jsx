@@ -2540,6 +2540,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const [editingVaga, setEditingVaga]       = useState(null);
   const [vagaDrawerId, setVagaDrawerId]     = useState(null);
   const [vagaMoveError, setVagaMoveError]   = useState(null);
+  const [candMoveError, setCandMoveError]   = useState(null);
   const [cargosManagerOpen, setCargosManagerOpen] = useState(false);
   const [addCandidatoStage, setAddCandidatoStage] = useState(null);
   const [copiedSlug, setCopiedSlug]         = useState(null);
@@ -2712,14 +2713,15 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     const fields = candStageFields.getFields(candidato.stage);
     const missing = getMissingRequiredFields(fields, candidato.customFields || {});
     if (missing.length > 0) {
-      alert(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      setCandMoveError(`Não dá pra mover "${candidato.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
     const invalid = getInvalidFields(fields, candidato.customFields || {});
     if (invalid.length > 0) {
-      alert(`Não dá pra mover "${candidato.name}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      setCandMoveError(`Não dá pra mover "${candidato.name}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
+    setCandMoveError(null);
     const targetStage = candStages.find((s) => s.stageKey === newStage);
     if (targetStage?.lost) {
       setPendingReprovacaoDrop({ aplicacaoId: id, stageKey: newStage, stageName: targetStage.name });
@@ -2819,6 +2821,18 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {candMoveError && (
+        <div
+          className="fixed z-50 flex items-start gap-2 p-3 rounded-xl text-sm shadow-lg"
+          style={{ top: 16, right: 16, maxWidth: 380, background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FCA5A5" }}
+        >
+          <AlertCircle size={15} className="shrink-0 mt-0.5" />
+          <span className="flex-1">{candMoveError}</span>
+          <button onClick={() => setCandMoveError(null)} className="shrink-0" style={{ color: "#B91C1C" }}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>

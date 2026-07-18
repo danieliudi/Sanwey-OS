@@ -45,6 +45,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const [deleting, setDeleting] = useState(false);
   const [editingContactEmail, setEditingContactEmail] = useState(false);
   const [contactEmailDraft, setContactEmailDraft] = useState("");
+  const [contactEmailError, setContactEmailError] = useState(null);
   const [emailsOpen, setEmailsOpen] = useState(true);
   const [noteText, setNoteText] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
@@ -384,14 +385,15 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     const newStage = e.target.value;
     const missing = getMissingRequiredFields(customDefs, customValuesByKey);
     if (missing.length > 0) {
-      alert(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+      setMoveError(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
     const invalid = getInvalidFields(customDefs, customValuesByKey);
     if (invalid.length > 0) {
-      alert(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      setMoveError(`Não dá pra mover "${lead.company}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
       return;
     }
+    setMoveError(null);
     setStage(newStage);
     onUpdate(lead.id, { stage: newStage, stageChangedAt: new Date().toISOString() });
   };
@@ -435,21 +437,24 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
 
   const handleStartEditContactEmail = () => {
     setContactEmailDraft(lead.contactEmail || "");
+    setContactEmailError(null);
     setEditingContactEmail(true);
   };
 
   const handleSaveContactEmail = () => {
     const trimmed = contactEmailDraft.trim();
     if (trimmed && !new RegExp(EMAIL_PATTERN).test(trimmed)) {
-      alert("E-mail inválido.");
+      setContactEmailError("E-mail inválido.");
       return;
     }
+    setContactEmailError(null);
     onUpdate(lead.id, { contactEmail: trimmed || null });
     setEditingContactEmail(false);
   };
 
   const handleCancelContactEmail = () => {
     setContactEmailDraft(lead.contactEmail || "");
+    setContactEmailError(null);
     setEditingContactEmail(false);
   };
 
@@ -1039,6 +1044,12 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               Etapa do funil
             </label>
             <Select value={stage || ""} onChange={handleStageChange} options={STAGE_OPTIONS} />
+            {moveError && (
+              <div className="flex items-start gap-2 p-2.5 mt-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+                <AlertCircle size={12} className="shrink-0 mt-0.5" />
+                <span>{moveError}</span>
+              </div>
+            )}
           </div>
 
           {/* E-mail do contato */}
@@ -1074,25 +1085,30 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
             )}
 
             {editingContactEmail && (
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="email"
-                  value={contactEmailDraft}
-                  onChange={e => setContactEmailDraft(e.target.value)}
-                  placeholder="contato@empresa.com.br"
-                  className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
-                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-                  onFocus={e => { e.currentTarget.style.borderColor = company.primary; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
-                  onKeyDown={e => { if (e.key === "Enter") handleSaveContactEmail(); if (e.key === "Escape") handleCancelContactEmail(); }}
-                  autoFocus
-                />
-                <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveContactEmail}>
-                  Salvar
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleCancelContactEmail}>
-                  Cancelar
-                </Button>
+              <div className="mt-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="email"
+                    value={contactEmailDraft}
+                    onChange={e => { setContactEmailDraft(e.target.value); setContactEmailError(null); }}
+                    placeholder="contato@empresa.com.br"
+                    className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
+                    style={{ borderColor: contactEmailError ? "var(--danger)" : "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                    onFocus={e => { if (!contactEmailError) e.currentTarget.style.borderColor = company.primary; }}
+                    onBlur={e => { if (!contactEmailError) e.currentTarget.style.borderColor = "var(--border)"; }}
+                    onKeyDown={e => { if (e.key === "Enter") handleSaveContactEmail(); if (e.key === "Escape") handleCancelContactEmail(); }}
+                    autoFocus
+                  />
+                  <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveContactEmail}>
+                    Salvar
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleCancelContactEmail}>
+                    Cancelar
+                  </Button>
+                </div>
+                {contactEmailError && (
+                  <div className="text-xs mt-1" style={{ color: "var(--danger)" }}>{contactEmailError}</div>
+                )}
               </div>
             )}
           </div>
