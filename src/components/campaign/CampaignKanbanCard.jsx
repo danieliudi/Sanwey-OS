@@ -30,7 +30,7 @@ function slaStyle(daysInStage, sla) {
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
-function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
+function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -124,10 +124,11 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
           {campaign.starred && (
             <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} />
           )}
-          {moveTargets.length > 0 && onMoveToStage && (
+          {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
-              onMove={(key) => onMoveToStage(campaign.id, key)}
+              onMove={onMoveToStage ? (key) => onMoveToStage(campaign.id, key) : undefined}
+              onDelete={onDeleteCard ? () => onDeleteCard(campaign.id) : undefined}
               onOpenChange={setMenuOpen}
             />
           )}

@@ -450,13 +450,21 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle }) {
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
   const isConsultor = userRoleList.includes("consultor");
+
+  // Mesma regra de permissão do botão de excluir dentro do LeadDetailDrawer
+  // (canDelete) — reaproveitada aqui pro atalho de excluir direto no "..."
+  // do card, sem precisar abrir o detalhe primeiro.
+  const canDeleteLead = useCallback((lead) => Boolean(onDeleteLead && (
+    isManager ||
+    ((lead.ownerIds || []).includes(user.id) || lead.owner === user.id || lead.createdBy === user.id)
+  )), [onDeleteLead, isManager, user.id]);
 
   // IDs of consultores supervised by this vendedor
   const subordinateIds = useMemo(() => {
@@ -826,6 +834,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         onDragEnd={handleDragEnd}
                         stages={stages}
                         onMoveToStage={attemptStageChange}
+                        onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
                         completeness={getLeadCompleteness(lead)}
                       />
                     ))
@@ -977,6 +986,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         onDragEnd={handleDragEnd}
                         stages={stages}
                         onMoveToStage={attemptStageChange}
+                        onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
                         completeness={getLeadCompleteness(lead)}
                       />
                     ))

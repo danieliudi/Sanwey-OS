@@ -162,6 +162,12 @@ export function useRHTreinamentos({ userId } = {}) {
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, activities: nextActivities } : a));
   }, [atribuicoes]);
 
+  const deleteAtribuicao = useCallback(async (atribuicaoId) => {
+    const { error } = await supabase.from("rh_treinamento_atribuicoes").delete().eq("id", atribuicaoId);
+    if (error) throw new Error(error.message);
+    setAtribuicoes(prev => prev.filter(a => a.id !== atribuicaoId));
+  }, []);
+
   const updateTreinamento = useCallback(async (id, patch) => {
     const { error } = await supabase.from("rh_treinamentos").update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
     if (error) throw new Error(error.message);
@@ -180,7 +186,8 @@ export function useRHTreinamentos({ userId } = {}) {
     reciclarAtribuicao,
     updateAtribuicaoCertificado,
     updateAtribuicaoCustomFields,
+    deleteAtribuicao,
     addAtribuicaoActivity,
     refetch: fetchAll,
-  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado, updateAtribuicaoCustomFields, addAtribuicaoActivity, fetchAll]);
+  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado, updateAtribuicaoCustomFields, deleteAtribuicao, addAtribuicaoActivity, fetchAll]);
 }
