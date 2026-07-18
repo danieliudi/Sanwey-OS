@@ -11,6 +11,7 @@ import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
+import { EmptyState } from "../ui/EmptyState";
 import { formatK, formatM } from "../../utils/currency";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
@@ -55,6 +56,7 @@ export function ExecutiveDashboard({
   leads, crossReferrals, pipelines, users, currentUser, activeCompany, visibleWidgets,
   isAdmin = false, isComercialManager = false, isMarketingManager = false, isRHManager = false,
 }) {
+  const navigate = useNavigate();
   const [period, setPeriod] = useState("all");
   const [tab, setTab] = useState("overview");
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
@@ -215,6 +217,27 @@ export function ExecutiveDashboard({
           </div>
         )}
       </div>
+
+      {/* Sem Comercial e sem nenhum cartão de departamento — geralmente um
+          gerente de Marketing/RH que desligou o próprio widget em
+          Configurações → Preferências, o que deixava a tela em branco
+          (achado da auditoria de fricção de 18/07). */}
+      {!showComercial && !showDepartmentsOverview && (
+        <EmptyState
+          icon={Briefcase}
+          title="Nada para mostrar aqui"
+          description="As seções deste painel foram ocultadas em Configurações → Preferências. Habilite ao menos uma para ver os dados do seu departamento."
+          action={
+            <button
+              onClick={() => navigate(ROUTES.settings)}
+              className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
+              style={{ background: "var(--accent)", color: "#FFFFFF" }}
+            >
+              Ir para Configurações
+            </button>
+          }
+        />
+      )}
 
       {/* Outras áreas do Grupo — cada gerente de departamento só vê o
           cartão do próprio setor (admin vê os dois, conforme os toggles

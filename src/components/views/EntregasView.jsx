@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
   Filter, CalendarDays, LayoutGrid, List, Pencil, Settings2, AlertCircle,
@@ -32,6 +33,14 @@ const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
 // getLeadOwnerIds em CRMView.jsx / getCampaignOwnerIds em MarketingView.jsx.
 function getDeliverableAssigneeIds(d) {
   return Array.isArray(d.assigneeIds) && d.assigneeIds.length ? d.assigneeIds : (d.assignee ? [d.assignee] : []);
+}
+
+// Mesmo critério do card "Presas em revisão" do Painel de Marketing
+// (MarketingDashboardView.jsx) — usado pra manter os dois em sincronia
+// quando o card leva pra cá com o filtro pré-aplicado.
+function isStuckInRevisao(d) {
+  return d.stage === "revisao" && d.stageChangedAt &&
+    (Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000 > 3;
 }
 
 function isStaticValueEmpty(v) {
@@ -460,6 +469,7 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
 
 /* ── Main view ───────────────────────────────────────────────── */
 export function EntregasView({ user, users = [], notifyMentions }) {
+  const location = useLocation();
   const {
     deliverables, loading, canWrite,
     createDeliverable, updateDeliverable, deleteDeliverable,
@@ -490,7 +500,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const [quickAddStage,  setQuickAddStage]  = useState(null);
   const [selected,       setSelected]       = useState(null);
   const [viewMode,       setViewMode]       = useState("kanban"); // "kanban" | "table" | "calendar"
-  const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["solicitacao"]));
+  const [expandedMobileStages, setExpandedMobileStages] = useState(() => {
+    const s = new Set(["solicitacao"]);
+    if (location.state?.filterStage) s.add(location.state.filterStage);
+    return s;
+  });
   const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   /* Filters */
@@ -498,6 +512,9 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const [companyFilter,  setCompanyFilter]  = useState([]);
   const [starredOnly,    setStarredOnly]    = useState(false);
   const [showFilters,    setShowFilters]    = useState(false);
+  // Deep-link do card "Presas em revisão" no Painel de Marketing (achado
+  // da auditoria de fricção de 18/07) — chega via navigate(..., {state}).
+  const [stuckOnly,      setStuckOnly]      = useState(Boolean(location.state?.stuckOnly));
 
   // roles[] cobre cargo adicional — user.role sozinho fica só de fallback.
   // Achado da 2ª auditoria (esta view ficou de fora do fix a28bfb5).
@@ -507,16 +524,17 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const toggleCompanyFilter = (id) =>
     setCompanyFilter(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
-  const activeFilterCount = (ownerFilter ? 1 : 0) + companyFilter.length + (starredOnly ? 1 : 0);
+  const activeFilterCount = (ownerFilter ? 1 : 0) + companyFilter.length + (starredOnly ? 1 : 0) + (stuckOnly ? 1 : 0);
 
   /* Filtered deliverables */
   const filtered = useMemo(() => {
     let list = deliverables;
+    if (stuckOnly)               list = list.filter(isStuckInRevisao);
     if (ownerFilter)             list = list.filter(d => getDeliverableAssigneeIds(d).includes(ownerFilter));
     if (companyFilter.length > 0) list = list.filter(d => companyFilter.some(c => d.companyIds?.includes(c)));
     if (starredOnly)             list = list.filter(d => d.starred);
     return list;
-  }, [deliverables, ownerFilter, companyFilter, starredOnly]);
+  }, [deliverables, ownerFilter, companyFilter, starredOnly, stuckOnly]);
 
   const handleDragStart = useCallback((item) => setDraggedItem(item), []);
   const handleDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
@@ -674,6 +692,17 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           )}
         </button>
 
+        {/* Chip do deep-link "Presas em revisão" (Painel de Marketing) —
+            fica visível mesmo com o painel de filtros fechado. */}
+        {stuckOnly && (
+          <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: "1px solid #FED7AA", background: "#FFF7ED", color: "#D97706", fontSize: 11, fontWeight: 600 }}>
+            Presas em revisão · +3 dias
+            <button onClick={() => setStuckOnly(false)} style={{ display: "flex", color: "#D97706", background: "none", border: "none", cursor: "pointer", padding: 0 }} title="Limpar filtro">
+              <X size={11} />
+            </button>
+          </span>
+        )}
+
         {showFilters && (
           <>
             {/* Owner filter (managers only) */}
@@ -705,7 +734,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             </button>
 
             {activeFilterCount > 0 && (
-              <button onClick={() => { setOwnerFilter(""); setCompanyFilter([]); setStarredOnly(false); }}
+              <button onClick={() => { setOwnerFilter(""); setCompanyFilter([]); setStarredOnly(false); setStuckOnly(false); }}
                 style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--danger)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
                 <X size={11} /> Limpar
               </button>

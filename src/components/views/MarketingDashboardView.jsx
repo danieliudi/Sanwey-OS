@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Megaphone, Package, DollarSign, Zap, Award, ArrowUp, ArrowDown,
 } from "lucide-react";
+import { ROUTES } from "../../constants/routes";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie, AreaChart, Area,
@@ -398,6 +400,7 @@ function CategoryDonut({ expenses }) {
 // ── Agency metrics ───────────────────────────────────────────────────────────────
 
 function AgencyMetrics({ deliverables, primaryColor }) {
+  const navigate = useNavigate();
   const m = useMemo(() => {
     const done = deliverables.filter(d => d.stage === "entregue");
     const onTime = done.filter(d => d.deadline && d.stageChangedAt &&
@@ -414,12 +417,16 @@ function AgencyMetrics({ deliverables, primaryColor }) {
 
   const slaColor = m.sla == null ? "var(--text-dim)" : m.sla >= 80 ? "#16A34A" : m.sla >= 60 ? "#D97706" : "#DC2626";
 
-  const card = (value, label, sub, color, warn) => (
-    <div style={{
-      background: warn ? "#FFF7ED" : "var(--surface)",
-      border: `1px solid ${warn ? "#FED7AA" : "var(--border)"}`,
-      borderRadius: 12, padding: "16px 18px", textAlign: "center", flex: 1,
-    }}>
+  const card = (value, label, sub, color, warn, onClick) => (
+    <div
+      onClick={onClick}
+      style={{
+        background: warn ? "#FFF7ED" : "var(--surface)",
+        border: `1px solid ${warn ? "#FED7AA" : "var(--border)"}`,
+        borderRadius: 12, padding: "16px 18px", textAlign: "center", flex: 1,
+        cursor: onClick ? "pointer" : "default",
+      }}
+    >
       <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: "-0.02em", lineHeight: 1 }}>
         {value}
       </div>
@@ -435,7 +442,9 @@ function AgencyMetrics({ deliverables, primaryColor }) {
       {card(m.avgLead != null ? `${m.avgLead}d` : "—", "Lead time médio",
             "Pendente → Entregue", primaryColor || "var(--text)", false)}
       {card(m.stuck, "Presas em revisão",
-            "Mais de 3 dias", m.stuck > 0 ? "#D97706" : "#16A34A", m.stuck > 0)}
+            m.stuck > 0 ? "Mais de 3 dias · clique para ver" : "Mais de 3 dias",
+            m.stuck > 0 ? "#D97706" : "#16A34A", m.stuck > 0,
+            m.stuck > 0 ? () => navigate(ROUTES["marketing-entregas"], { state: { filterStage: "revisao", stuckOnly: true } }) : undefined)}
     </div>
   );
 }
