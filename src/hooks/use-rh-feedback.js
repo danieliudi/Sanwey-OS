@@ -149,6 +149,12 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, evaluator_id: evaluatorId, evaluator_ids: evaluatorIds } : f));
   }, []);
 
+  const deleteFeedback = useCallback(async (id) => {
+    const { error } = await supabase.from("rh_avaliacoes").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    setFeedbacks(prev => prev.filter(f => f.id !== id));
+  }, []);
+
   const addFeedbackActivity = useCallback(async (id, entry) => {
     const current = feedbacks.find(f => f.id === id);
     if (!current) return;
@@ -168,7 +174,8 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     changeFeedbackStage,
     updateFeedbackCustomFields,
     updateFeedbackEvaluators,
+    deleteFeedback,
     addFeedbackActivity,
     refetch: fetchAll,
-  }), [feedbacks, loading, createFeedback, createPendingCycle, completeFeedback, submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, addFeedbackActivity, fetchAll]);
+  }), [feedbacks, loading, createFeedback, createPendingCycle, completeFeedback, submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, deleteFeedback, addFeedbackActivity, fetchAll]);
 }

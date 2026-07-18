@@ -753,6 +753,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                           onClick={setSelected}
                           stages={kanbanStages}
                           onMoveToStage={canWrite ? attemptStageChange : null}
+                          onDeleteCard={canWrite ? handleDelete : null}
                           onToggleStar={canWrite ? toggleStar : null}
                           completeness={getItemCompleteness(item)}
                         />
@@ -855,6 +856,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                             onClick={setSelected}
                             stages={kanbanStages}
                             onMoveToStage={canWrite ? attemptStageChange : null}
+                            onDeleteCard={canWrite ? handleDelete : null}
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
                           />

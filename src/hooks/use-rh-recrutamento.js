@@ -119,6 +119,25 @@ export function useRHRecrutamento({ userId } = {}) {
     await updateVaga(id, { stage: newStage, stage_changed_at: new Date().toISOString() });
   }, [updateVaga]);
 
+  // Exclui a vaga (card do Kanban de Vagas) — o banco cascateia (ON DELETE
+  // CASCADE em rh_aplicacoes.vaga_id) e remove junto as candidaturas ligadas
+  // a ela; refletimos os dois lados no estado local pra não depender só do
+  // roundtrip do realtime.
+  const deleteVaga = useCallback(async (id) => {
+    const { error } = await supabase.from("rh_vagas").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    setVagas(prev => prev.filter(v => v.id !== id));
+    setAplicacoes(prev => prev.filter(a => a.vaga_id !== id));
+  }, []);
+
+  // Exclui a candidatura (card do Kanban de Candidatos) — remove só o
+  // vínculo candidato↔vaga, não o candidato do talent pool.
+  const deleteAplicacao = useCallback(async (id) => {
+    const { error } = await supabase.from("rh_aplicacoes").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    setAplicacoes(prev => prev.filter(a => a.id !== id));
+  }, []);
+
   // Cria/atualiza o candidato no talent pool (dedup por e-mail) e cria a
   // aplicação para a vaga selecionada. Requer vaga — toda aplicação pertence
   // a uma vaga; para só cadastrar no talent pool sem vincular a nada, use a
@@ -282,6 +301,8 @@ export function useRHRecrutamento({ userId } = {}) {
     createVaga,
     updateVaga,
     changeVagaStage,
+    deleteVaga,
+    deleteAplicacao,
     createCandidato,
     changeStage,
     bulkReprovarComEmail,
@@ -292,5 +313,5 @@ export function useRHRecrutamento({ userId } = {}) {
     markHired,
     attachTriagemToVaga,
     refetch: fetchAll,
-  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga, fetchAll]);
+  }), [vagas, candidatos, candidatosPool, aplicacoes, loading, createVaga, updateVaga, changeVagaStage, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga, fetchAll]);
 }

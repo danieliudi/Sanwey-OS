@@ -1,17 +1,35 @@
-import React, { useEffect } from "react";
-import { X } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { X, Trash2 } from "lucide-react";
 
 // Chrome estrutural do drawer de detalhe no padrão do CRM (LeadDetailDrawer):
 // modal centralizado (não desliza da lateral), 3 colunas — info à esquerda,
 // formulário/etapa no centro, movimentação+comentários à direita. Em mobile
 // as 3 colunas empilham em sequência com scroll único (mais simples e sem
 // esconder nada, diferente do CRM que esconde a coluna direita no mobile).
-export function SplitPanelDrawer({ onClose, header, left, center, right }) {
+//
+// onDelete (opcional): botão de excluir no header, com confirmação inline —
+// mesmo padrão do LeadDetailDrawer (Trash2 → "Confirmar exclusão"/"Cancelar"),
+// pra dar paridade de exclusão aos kanbans de RH que usam este shell.
+export function SplitPanelDrawer({ onClose, header, left, center, right, onDelete, deleteLabel = "Excluir card" }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
+
+  const handleDeleteConfirmed = async () => {
+    if (!onDelete) return;
+    setDeleting(true);
+    try {
+      await onDelete();
+      onClose();
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div
@@ -31,16 +49,52 @@ export function SplitPanelDrawer({ onClose, header, left, center, right }) {
           style={{ background: "var(--surface)", borderColor: "var(--border)" }}
         >
           <div className="flex-1 min-w-0">{header}</div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer shrink-0"
-            style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-            aria-label="Fechar"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {onDelete && !confirmDelete && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
+                style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                aria-label={deleteLabel}
+                title={deleteLabel}
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+            {onDelete && confirmDelete && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleDeleteConfirmed}
+                  disabled={deleting}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                  style={{ background: "#B91C1C", color: "#FFFFFF", border: "none", opacity: deleting ? 0.6 : 1 }}
+                >
+                  {deleting ? "Excluindo…" : "Confirmar exclusão"}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="p-1.5 rounded-lg text-xs cursor-pointer transition-colors"
+                  style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer shrink-0"
+              style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+              aria-label="Fechar"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
