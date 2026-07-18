@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   X,
   Search,
@@ -696,6 +696,23 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
     desligamento_meta:   colaboradorRow?.desligamentoMeta || {},
   });
 
+  // Snapshot dos valores originais — usado só pra não travar retroativamente
+  // um campo que esse registro já tinha vazio antes de virar obrigatório
+  // (mesma lógica do NovoColaboradorModal). Achado da auditoria de fricção
+  // de 18/07: este modal (editar quem já tem login) não validava nada,
+  // enquanto o modal irmão (editar quem não tem login) exige os mesmos
+  // campos sempre — convergindo pro mesmo nível de exigência aqui.
+  const originalRef = useRef({
+    job_title: user.job_title || "", frente: user.frente || "", department: user.department || "",
+    contract_type: user.contract_type || "", admission_date: user.admission_date || "",
+    salary: user.salary != null ? String(user.salary) : "", aso_vencimento: colaboradorRow?.asoVencimento || "",
+  });
+  const REQUIRED_FIELDS = [
+    ["job_title", "Cargo"], ["frente", "Frente"], ["department", "Departamento"],
+    ["contract_type", "Tipo de contrato"], ["admission_date", "Data de admissão"],
+    ["salary", "Salário"], ["aso_vencimento", "Vencimento do ASO"],
+  ];
+
   // Estimativas informativas — período de experiência CLT e aviso-prévio
   // quando a pessoa está desligada. Não bloqueiam nada, é só contexto.
   const expInfo = colaboradorRow ? periodoExperienciaInfo(colaboradorRow) : null;
@@ -717,6 +734,15 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
   );
 
   const handleSave = async () => {
+    for (const [key, label] of REQUIRED_FIELDS) {
+      const val = form[key];
+      const isEmpty = val == null || String(val).trim() === "";
+      if (!isEmpty) continue;
+      const legacyMissing = !originalRef.current[key];
+      if (legacyMissing) continue;
+      setError(`${label} é obrigatório.`);
+      return;
+    }
     setSaving(true);
     setError(null);
     // Detect if admission_date is being set for the first time
@@ -901,7 +927,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
             {editing ? (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={labelSt}>Cargo</label>
+                  <label style={labelSt}>Cargo *</label>
                   <input
                     type="text"
                     value={form.job_title}
@@ -914,7 +940,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                   />
                 </div>
                 <div>
-                  <label style={labelSt}>Frente</label>
+                  <label style={labelSt}>Frente *</label>
                   <select
                     value={form.frente}
                     onChange={(e) => set("frente", e.target.value)}
@@ -928,7 +954,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                   </select>
                 </div>
                 <div>
-                  <label style={labelSt}>Departamento</label>
+                  <label style={labelSt}>Departamento *</label>
                   <select
                     value={form.department}
                     onChange={(e) => set("department", e.target.value)}
@@ -942,7 +968,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                   </select>
                 </div>
                 <div>
-                  <label style={labelSt}>Tipo de Contrato</label>
+                  <label style={labelSt}>Tipo de Contrato *</label>
                   <select
                     value={form.contract_type}
                     onChange={(e) => set("contract_type", e.target.value)}
@@ -956,7 +982,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                   </select>
                 </div>
                 <div>
-                  <label style={labelSt}>Data de Admissão</label>
+                  <label style={labelSt}>Data de Admissão *</label>
                   <input
                     type="date"
                     value={form.admission_date}
@@ -981,7 +1007,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                   </select>
                 </div>
                 <div>
-                  <label style={labelSt}>Salário (R$)</label>
+                  <label style={labelSt}>Salário (R$) *</label>
                   <CurrencyInput
                     prefix={null}
                     value={form.salary}
@@ -994,7 +1020,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                   />
                 </div>
                 <div>
-                  <label style={labelSt}>Vencimento do ASO</label>
+                  <label style={labelSt}>Vencimento do ASO *</label>
                   <input
                     type="date"
                     value={form.aso_vencimento}

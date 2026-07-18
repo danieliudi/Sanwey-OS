@@ -9,6 +9,10 @@ import { useAI } from "../../hooks/use-ai";
 import { documentExtractionPrompt } from "../../constants/ai-prompts";
 import { periodoExperienciaInfo } from "../../utils/rh-compliance-dates";
 import { DocumentCaptureModal } from "../shared/DocumentCaptureModal";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
 
 const DOC_BUCKET = "rh-documentos-colaborador";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -39,9 +43,16 @@ function parseExtraction(text) {
   return JSON.parse(match[0]);
 }
 
-export function NovoColaboradorModal({ currentUser, initialData, hireContext, onSave, onClose }) {
+export function NovoColaboradorModal({ currentUser, initialData, hireContext, contextNote, stageId, users, onSave, onClose }) {
   const { complete, isConfigured, provider } = useAI(currentUser);
   const [form, setForm] = useState(() => initialData ? { ...EMPTY_FORM, ...initialData } : EMPTY_FORM);
+  // Campos da etapa de Onboarding (só quando criado via "+" de uma coluna do
+  // Kanban) — mesmo mecanismo de campos customizados por etapa usado em
+  // vaga/candidato/campanha. `stageId` ausente (fluxo de contratação via
+  // Recrutamento, ou edição em Funcionários) simplesmente não renderiza nada.
+  const onboardingStageFields = useRHStageFields("onboarding");
+  const [customValues, setCustomValues] = useState({});
+  const visibleCustomFields = stageId ? resolveVisibleFields(onboardingStageFields.getFields(stageId), customValues) : [];
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -60,10 +71,12 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
   // escura apagava ~25 campos (e o re-upload + re-extração da IA) sem aviso.
   // Achado da 2ª auditoria.
   const initialSnapshotRef = useRef(JSON.stringify(initialData ? { ...EMPTY_FORM, ...initialData } : EMPTY_FORM));
-  const stateRef = useRef({ form, file });
-  stateRef.current = { form, file };
+  const stateRef = useRef({ form, file, customValues });
+  stateRef.current = { form, file, customValues };
   const guardedClose = useCallback(() => {
-    const dirty = JSON.stringify(stateRef.current.form) !== initialSnapshotRef.current || !!stateRef.current.file;
+    const dirty = JSON.stringify(stateRef.current.form) !== initialSnapshotRef.current
+      || !!stateRef.current.file
+      || Object.keys(stateRef.current.customValues).length > 0;
     if (dirty && !window.confirm("Descartar os dados preenchidos? As informações não salvas serão perdidas.")) return;
     onClose();
   }, [onClose]);
@@ -157,9 +170,28 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
     };
     for (const [key, label] of REQUIRED_FIELDS) {
       const val = form[key];
-      if (val == null || String(val).trim() === "") {
-        setError(`${label} é obrigatório.`);
-        focusInvalid(key);
+      const isEmpty = val == null || String(val).trim() === "";
+      if (!isEmpty) continue;
+      // Registro editado que já nasceu sem este campo (obrigatoriedade
+      // adicionada depois que o cadastro existia, ex: "Frente") não trava
+      // retroativamente uma edição pontual — exigir só vale pra cadastro
+      // novo, ou se o campo já tinha valor e foi apagado agora. Achado da
+      // auditoria de fricção de 18/07.
+      const legacyMissing = initialData && (initialData[key] == null || String(initialData[key]).trim() === "");
+      if (legacyMissing) continue;
+      setError(`${label} é obrigatório.`);
+      focusInvalid(key);
+      return;
+    }
+    if (stageId) {
+      const missingCustom = getMissingRequiredFields(visibleCustomFields, customValues);
+      if (missingCustom.length > 0) {
+        setError(`Preencha antes: ${missingCustom.map(f => f.label).join(", ")}.`);
+        return;
+      }
+      const invalidCustom = getInvalidFields(visibleCustomFields, customValues);
+      if (invalidCustom.length > 0) {
+        setError(`Corrija antes: ${invalidCustom.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
         return;
       }
     }
@@ -175,7 +207,10 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
     setSaving(true);
     setError(null);
     try {
-      const payload = hireContext ? { ...form, _closeVaga: closeVaga } : form;
+      const stageExtras = stageId
+        ? { onboardingStage: stageId, onboardingStageChangedAt: new Date().toISOString(), customFields: customValues }
+        : {};
+      const payload = hireContext ? { ...form, ...stageExtras, _closeVaga: closeVaga } : { ...form, ...stageExtras };
       const novo = await onSave(payload);
       const targetId = novo?.id || initialData?.id;
       if (file && targetId) {
@@ -223,6 +258,11 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          {contextNote && !hireContext && (
+            <div style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 12, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "var(--text-dim)", fontWeight: 600 }}>
+              {contextNote}
+            </div>
+          )}
           {hireContext && (
             <div style={{ background: "var(--success-bg)", border: "1px solid #BBF7D0", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "var(--success)", marginBottom: 6 }}>
@@ -433,6 +473,30 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, on
                 </div>
               );
             })()}
+
+            {stageId && visibleCustomFields.length > 0 && (
+              <div style={{ marginTop: 4, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                  Campos desta etapa
+                </div>
+                <div className="flex flex-col gap-3">
+                  {visibleCustomFields.map((f) => (
+                    <div key={f.id}>
+                      <label style={labelSt}>
+                        {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>}
+                        {f.label}
+                      </label>
+                      <RHStageFieldInput
+                        field={f}
+                        value={customValues[f.fieldKey]}
+                        onChange={(val) => setCustomValues((prev) => ({ ...prev, [f.fieldKey]: val }))}
+                        users={users}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {error && (

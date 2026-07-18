@@ -4,7 +4,7 @@ import {
   Briefcase, Pencil, Settings2, AlertCircle, Users,
   LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
-import { RH_CONTRACT_TYPES, RH_DEPARTMENTS } from "../../constants/rh-config";
+import { RH_CONTRACT_TYPES } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { isSupabaseConfigured } from "../../lib/supabase";
@@ -31,6 +31,7 @@ import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } 
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { NovoColaboradorModal } from "./NovoColaboradorModal";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
 // As etapas vêm de rh_pipeline_stages (domain="onboarding"), editáveis pelo RH
@@ -785,159 +786,6 @@ function BulkTarefaModal({ colaboradores, onApply, onClose }) {
   );
 }
 
-// ── Novo Colaborador Modal ────────────────────────────────────────────────────
-// Cria um colaborador direto numa etapa específica do onboarding (via "+" da
-// coluna) — antes só existia o caminho indireto (contratar um candidato no
-// Recrutamento, que sempre cai na etapa default). Mesmo padrão de
-// "campos desta etapa" do NovaVagaModal/NovoCandidatoModal/CampaignCreateModal.
-function NovoColaboradorModal({ stageId, stages, users, onSave, onClose }) {
-  const [fullName, setFullName]         = useState("");
-  const [jobTitle, setJobTitle]         = useState("");
-  const [frente, setFrente]             = useState("");
-  const [department, setDepartment]     = useState("");
-  const [contractType, setContractType] = useState("");
-  const [admissionDate, setAdmissionDate] = useState("");
-  const [saving, setSaving]             = useState(false);
-  const [error, setError]               = useState(null);
-
-  const onboardingStageFields = useRHStageFields("onboarding");
-  const [customValues, setCustomValues] = useState({});
-  const visibleFields = resolveVisibleFields(onboardingStageFields.getFields(stageId), customValues);
-
-  const stageInfo = findStage(stages, stageId);
-
-  useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!fullName.trim()) { setError("Nome completo é obrigatório."); return; }
-    if (!frente) { setError("Frente é obrigatória."); return; }
-    const missing = getMissingRequiredFields(visibleFields, customValues);
-    if (missing.length > 0) { setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`); return; }
-    const invalid = getInvalidFields(visibleFields, customValues);
-    if (invalid.length > 0) { setError(`Corrija antes: ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`); return; }
-    setSaving(true);
-    setError(null);
-    try {
-      await onSave({
-        fullName: fullName.trim(),
-        jobTitle: jobTitle.trim() || null,
-        frente: frente || null,
-        department: department || null,
-        contractType: contractType || null,
-        admissionDate: admissionDate || null,
-        onboardingStage: stageId,
-        onboardingStageChangedAt: new Date().toISOString(),
-        customFields: customValues,
-      });
-      onClose();
-    } catch (err) {
-      setError(err?.message || "Erro ao criar colaborador.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
-  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", fontSize: 13 };
-  const inputCls = "w-full text-sm rounded-xl border px-3 py-2 outline-none";
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Novo colaborador</div>
-            {stageInfo && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} />
-                <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 500 }}>{stageInfo.name}</span>
-              </div>
-            )}
-          </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
-        </div>
-        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
-          <div className="flex flex-col gap-3">
-            <div>
-              <label style={labelSt}>Nome completo *</label>
-              <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nome completo" className={inputCls} style={inputSt} autoFocus />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <div>
-                <label style={labelSt}>Cargo</label>
-                <input type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="Ex: Vendedor Externo" className={inputCls} style={inputSt} />
-              </div>
-              <div>
-                <label style={labelSt}>Frente *</label>
-                <select value={frente} onChange={(e) => setFrente(e.target.value)} className={inputCls} style={inputSt}>
-                  <option value="">Selecionar</option>
-                  {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={labelSt}>Departamento</label>
-                <select value={department} onChange={(e) => setDepartment(e.target.value)} className={inputCls} style={inputSt}>
-                  <option value="">Selecionar</option>
-                  {RH_DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={labelSt}>Tipo de contrato</label>
-                <select value={contractType} onChange={(e) => setContractType(e.target.value)} className={inputCls} style={inputSt}>
-                  <option value="">Selecionar</option>
-                  {RH_CONTRACT_TYPES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={labelSt}>Data de admissão</label>
-                <input type="date" value={admissionDate} onChange={(e) => setAdmissionDate(e.target.value)} className={inputCls} style={inputSt} />
-              </div>
-            </div>
-          </div>
-
-          {visibleFields.length > 0 && (
-            <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-                Campos desta etapa {stageInfo?.name ? `· ${stageInfo.name}` : ""}
-              </div>
-              <div className="flex flex-col gap-3">
-                {visibleFields.map((f) => (
-                  <div key={f.id}>
-                    <label style={labelSt}>
-                      {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>}
-                      {f.label}
-                    </label>
-                    <RHStageFieldInput
-                      field={f}
-                      value={customValues[f.fieldKey]}
-                      onChange={(val) => setCustomValues((prev) => ({ ...prev, [f.fieldKey]: val }))}
-                      users={users}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
-
-          <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
-              {saving ? "Criando…" : "Adicionar colaborador"}
-            </button>
-            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 // ── Visão individual (colaborador logado, não-RH) ────────────────────────────
 
 function MeuChecklist({ colaborador, tarefas, onStatusChange }) {
@@ -1218,7 +1066,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
 
   // Criação direta numa etapa do onboarding (via "+" da coluna) — além do
   // caminho indireto já existente (contratar candidato no Recrutamento).
-  const handleCreateColaborador = async (data) => { await createColaborador(data); };
+  const handleCreateColaborador = async (data) => createColaborador(data);
 
   // Drag-and-drop nativo entre colunas — reusa o mesmo handleStageChange
   // (com os side-effects de treinamento/feedback) usado pelos botões
@@ -1482,9 +1330,10 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
 
       {addColaboradorStage && (
         <NovoColaboradorModal
+          currentUser={currentUser}
           stageId={addColaboradorStage}
-          stages={stages}
           users={users}
+          contextNote={`Adicionando à etapa · ${findStage(stages, addColaboradorStage)?.name || ""}`}
           onSave={handleCreateColaborador}
           onClose={() => setAddColaboradorStage(null)}
         />
