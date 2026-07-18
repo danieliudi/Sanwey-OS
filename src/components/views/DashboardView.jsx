@@ -147,7 +147,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
               variant="secondary"
               icon={Download}
               size="sm"
-              onClick={() => { exportLeadsToCSV(scopedLeads, { usersById }); logExport(user?.id, "leads_dashboard", scopedLeads.length); }}
+              onClick={() => { exportLeadsToCSV(scopedLeads, { usersById, pipelines }); logExport(user?.id, "leads_dashboard", scopedLeads.length); }}
             >
               Exportar
             </Button>

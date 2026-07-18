@@ -9,6 +9,16 @@ const STAGE_LABELS = Object.fromEntries(
   DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name])
 );
 
+// Nome da etapa considerando o pipeline customizado da empresa do lead —
+// sem isso, uma empresa que renomeou uma etapa no Construtor de Pipeline
+// via o export mostrava sempre o nome padrão global (achado da auditoria
+// de fricção de 18/07 — as duas exportações de CSV divergiam nisso).
+function resolveStageLabel(lead, pipelines) {
+  const companyStages = pipelines?.[lead.companyId];
+  const custom = Array.isArray(companyStages) ? companyStages.find(s => s.id === lead.stage) : null;
+  return custom?.name || STAGE_LABELS[lead.stage] || lead.stage || "";
+}
+
 export function csvCell(v) {
   if (v === null || v === undefined) return "";
   const s = String(v);
@@ -54,7 +64,7 @@ export function formatDate(iso) {
 }
 
 // Exporta a lista de leads do escopo atual.
-export function exportLeadsToCSV(leads, { usersById, filename } = {}) {
+export function exportLeadsToCSV(leads, { usersById, filename, pipelines } = {}) {
   const header = [
     "Empresa",
     "Razão social",
@@ -82,7 +92,7 @@ export function exportLeadsToCSV(leads, { usersById, filename } = {}) {
     l.razaoSocial || "",
     l.cnpj || "",
     COMPANIES[l.companyId]?.name || l.companyId || "",
-    STAGE_LABELS[l.stage] || l.stage || "",
+    resolveStageLabel(l, pipelines),
     l.clientClassification || "",
     formatBRNumber(l.value),
     l.probability ?? "",

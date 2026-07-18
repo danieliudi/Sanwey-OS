@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X, ChevronDown, TrendingUp, Settings, LayoutGrid, Calendar as CalendarIcon, Download, Upload, Bot, Pencil, List, ArrowUpDown, ArrowUp, ArrowDown, Star, AlertCircle } from "lucide-react";
 import { PipelineChatPanel } from "../ai/PipelineChatPanel";
-import { exportLeadsCSV } from "../../utils/export-leads";
+import { exportLeadsToCSV } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
@@ -662,7 +662,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           )}
           {/* Exportar CSV */}
           <button
-            onClick={() => { exportLeadsCSV(scopedLeads, users, pipelines); logExport(user?.id, "leads_crm", scopedLeads.length); }}
+            onClick={() => { exportLeadsToCSV(scopedLeads, { usersById, pipelines }); logExport(user?.id, "leads_crm", scopedLeads.length); }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
             style={{
               background: "var(--surface)",
