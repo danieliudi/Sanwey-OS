@@ -495,7 +495,22 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
   const applyCargo = (id) => {
     setCargoId(id);
     const cargo = cargos.find((c) => c.id === id);
-    if (!cargo) return;
+    if (!cargo) {
+      // "Sem cargo padrão — preencher manualmente" (id vazio) não limpava os
+      // campos que um cargo escolhido antes tinha preenchido — a vaga saía
+      // com cargo_template_id null mas salário/benefícios/turno de um cargo
+      // que não é mais o selecionado, sem nenhum aviso. Achado da auditoria
+      // de fricção de 18/07.
+      setJobTitle("");
+      setDept("");
+      setContractType("");
+      setSalaryMin("");
+      setSalaryMax("");
+      setBenefits("");
+      setSchedule("");
+      setShift("");
+      return;
+    }
     setJobTitle(cargo.name || "");
     setDept(cargo.department || "");
     setContractType(cargo.contract_type || "");

@@ -18,6 +18,15 @@ const DOC_BUCKET = "rh-documentos-colaborador";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 
+// Estado (UF) era texto livre num formulário onde todo campo vizinho
+// (Frente, Departamento, Tipo de contrato) é lista fixa — permitia "sp",
+// "SP " ou nome por extenso. Achado da auditoria de fricção de 18/07.
+const BR_UFS = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
+  "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
+  "SP", "SE", "TO",
+];
+
 const EMPTY_FORM = {
   fullName: "", cpf: "", rg: "", birthDate: "", phone: "", email: "",
   addressStreet: "", addressNumber: "", addressComplement: "", addressNeighborhood: "",
@@ -374,7 +383,10 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
               </div>
               <div>
                 <label style={labelSt}>Estado *</label>
-                <input ref={registerField("addressState")} type="text" value={form.addressState} onChange={(e) => set("addressState", e.target.value)} maxLength={2} className={inputCls} style={fieldSt("addressState")} onFocus={focusBlue} onBlur={blurGray} />
+                <select ref={registerField("addressState")} value={form.addressState} onChange={(e) => set("addressState", e.target.value)} className={inputCls} style={fieldSt("addressState")} onFocus={focusBlue} onBlur={blurGray}>
+                  <option value="">Selecionar</option>
+                  {BR_UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+                </select>
               </div>
             </div>
 
