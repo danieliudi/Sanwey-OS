@@ -9,7 +9,7 @@ import { useRHMovimentacoes } from "../../hooks/use-rh-movimentacoes";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useAI } from "../../hooks/use-ai";
 import { cargoDescriptionPrompt } from "../../constants/ai-prompts";
-import { RH_DEPARTMENTS, RH_CONTRACT_TYPES } from "../../constants/rh-config";
+import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_OPERATIONAL_DEPARTMENTS } from "../../constants/rh-config";
 import { formatBRL } from "../../utils/currency";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
@@ -64,6 +64,15 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
   const initialShift = useMemo(() => parseShiftRange(initialData?.shift), [initialData]);
   const [shiftStart, setShiftStart]   = useState(initialShift.start);
   const [shiftEnd, setShiftEnd]       = useState(initialShift.end);
+  // Turno só é obrigatório pra quem de fato trabalha em escala — cargo de
+  // escritório (Comercial, Marketing, Financeiro, Jurídico, Diretoria, TI,
+  // Atendimento) travava a criação exigindo um horário que não existe pra
+  // essas funções (achado da auditoria de fricção de 18/07). Ao editar,
+  // parte do que já tinha salvo; ao criar, sugere com base no departamento
+  // (chão-de-fábrica costuma ter turno) mas o RH pode ajustar livremente.
+  const [temTurno, setTemTurno] = useState(() =>
+    initialData ? Boolean(initialShift.start && initialShift.end) : RH_OPERATIONAL_DEPARTMENTS.includes(department)
+  );
   const [description, setDescription] = useState(initialData?.description || "");
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState(null);
@@ -107,7 +116,7 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
     if (salaryMin === "" || salaryMax === "") { setError("Informe a faixa salarial completa (mínimo e máximo)."); return; }
     if (Number(salaryMin) > Number(salaryMax)) { setError("O salário mínimo não pode ser maior que o máximo."); return; }
     if (!schedule.trim()) { setError("Jornada é obrigatória."); return; }
-    if (!shiftStart || !shiftEnd) { setError("Informe o horário completo do turno (início e fim)."); return; }
+    if (temTurno && (!shiftStart || !shiftEnd)) { setError("Informe o horário completo do turno (início e fim)."); return; }
     if (!description.trim()) { setError("Descrição do cargo é obrigatória — preencha à mão ou gere com IA."); return; }
     setSaving(true);
     setError(null);
@@ -119,7 +128,7 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
         salary_min: salaryMin !== "" ? Number(salaryMin) : null,
         salary_max: salaryMax !== "" ? Number(salaryMax) : null,
         schedule: schedule.trim() || null,
-        shift: shift.trim() || null,
+        shift: temTurno ? (shift.trim() || null) : null,
         description: description.trim() || null,
       });
       onClose();
@@ -149,7 +158,14 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Departamento *</label>
-                <select required value={department} onChange={(e) => setDepartment(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                <select
+                  required
+                  value={department}
+                  onChange={(e) => {
+                    setDepartment(e.target.value);
+                    if (!initialData) setTemTurno(RH_OPERATIONAL_DEPARTMENTS.includes(e.target.value));
+                  }}
+                  className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
                   <option value="">Selecione…</option>
                   {RH_DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -178,12 +194,18 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
                 <input required type="text" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Ex: 44h semanais" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
               </div>
               <div>
-                <label style={labelSt}>Turno *</label>
-                <div className="flex items-center gap-1.5">
-                  <input required type="time" value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
-                  <span style={{ fontSize: 12, color: "var(--text-dim)" }}>às</span>
-                  <input required type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
-                </div>
+                <label style={labelSt}>Turno</label>
+                <label className="flex items-center gap-1.5 mb-1.5" style={{ fontSize: 12, color: "var(--text)", cursor: "pointer" }}>
+                  <input type="checkbox" checked={temTurno} onChange={(e) => setTemTurno(e.target.checked)} />
+                  Trabalha em turnos?
+                </label>
+                {temTurno && (
+                  <div className="flex items-center gap-1.5">
+                    <input required type="time" value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
+                    <span style={{ fontSize: 12, color: "var(--text-dim)" }}>às</span>
+                    <input required type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
+                  </div>
+                )}
               </div>
             </div>
 
