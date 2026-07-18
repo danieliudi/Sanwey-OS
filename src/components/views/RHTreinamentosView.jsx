@@ -536,7 +536,7 @@ function AtribuicaoCardBody({ atribuicao, colaborador }) {
 
 function TreinamentoBoardColumn({
   stage, stages, atribList, colaboradoresById,
-  onCardClick, onDragStart, onDragEnd, onMoveToStage,
+  onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteAtribuicao,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness,
 }) {
@@ -574,6 +574,7 @@ function TreinamentoBoardColumn({
               onDragStart={canWrite ? onDragStart : undefined}
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
+              onDeleteCard={canWrite ? onDeleteAtribuicao : undefined}
               agingDays={daysInStage(a.status_changed_at)}
               completeness={getCompleteness?.(a)}
             >
@@ -588,7 +589,7 @@ function TreinamentoBoardColumn({
 
 function AtribuicaoDrawer({
   atribuicao, treinamento, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, moveError, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onClose, notifyMentions,
+  onStageChange, moveError, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onClose, notifyMentions, onDelete, onEditFields,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -753,6 +754,22 @@ function AtribuicaoDrawer({
         mentionLink={{ module: "rh_treinamentos", id: atribuicao.id }}
         mentionContextLabel={[colaborador?.fullName, treinamento?.titulo].filter(Boolean).join(" · ")}
       />
+
+      {canWrite && onEditFields && (
+        <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); onEditFields(st); }}
+            className="flex items-center gap-2 text-xs"
+            style={{ color: "var(--text-dim)", textDecoration: "none" }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
+          >
+            <Settings2 size={12} />
+            Editar campos desta etapa
+          </a>
+        </div>
+      )}
     </>
   );
 
@@ -769,7 +786,15 @@ function AtribuicaoDrawer({
   );
 
   return (
-    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+      onDelete={canWrite && onDelete ? () => onDelete(atribuicao.id) : undefined}
+      deleteLabel="Excluir atribuição"
+    />
   );
 }
 
@@ -944,7 +969,7 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
 
 function TreinamentoBoardModal({
   treinamento, atribuicoes, colaboradoresById, canWrite, currentUser, users,
-  onChangeStage, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onClose, notifyMentions,
+  onChangeStage, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onClose, notifyMentions, onDelete,
 }) {
   const { stages, loading: loadingStages } = useRHPipelineStages("treinamentos");
   const stageFields = useRHStageFields("treinamentos");
@@ -1066,6 +1091,7 @@ function TreinamentoBoardModal({
                   onDragStart={setDraggedId}
                   onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
                   onMoveToStage={handleMove}
+                  onDeleteAtribuicao={canWrite ? onDelete : undefined}
                   isDragOver={dragOverStageKey === stage.stageKey}
                   onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
                   onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
@@ -1097,6 +1123,8 @@ function TreinamentoBoardModal({
           onAddActivity={(entry) => onAddActivity(drawerAtrib.id, entry)}
           onClose={() => setDrawerId(null)}
           notifyMentions={notifyMentions}
+          onDelete={onDelete}
+          onEditFields={setFieldEditorStage}
         />
       )}
 
@@ -1130,7 +1158,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
   const {
     treinamentos, atribuicoes, loading: loadingTreinamentos, createTreinamento, updateTreinamento,
     assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado,
-    updateAtribuicaoCustomFields, addAtribuicaoActivity,
+    updateAtribuicaoCustomFields, deleteAtribuicao, addAtribuicaoActivity,
   } = useRHTreinamentos({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
@@ -1371,6 +1399,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           onAddActivity={addAtribuicaoActivity}
           onClose={() => setBoardTreinamento(null)}
           notifyMentions={notifyMentions}
+          onDelete={deleteAtribuicao}
         />
       )}
     </div>

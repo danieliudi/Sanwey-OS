@@ -29,7 +29,7 @@ function agingStyle(days, sla) {
 
 function DeliverableKanbanCardImpl({
   item, users, onClick, onDragStart, onDragEnd,
-  stages, onMoveToStage, canWrite, onToggleStar, completeness,
+  stages, onMoveToStage, onDeleteCard, canWrite, onToggleStar, completeness,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
@@ -122,10 +122,11 @@ function DeliverableKanbanCardImpl({
           ) : (
             item.starred && <Star size={11} fill="#F59E0B" color="#F59E0B" />
           )}
-          {canWrite && moveTargets.length > 0 && onMoveToStage && (
+          {canWrite && ((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
-              onMove={(key) => onMoveToStage(item.id, key)}
+              onMove={onMoveToStage ? (key) => onMoveToStage(item.id, key) : undefined}
+              onDelete={onDeleteCard ? () => onDeleteCard(item.id) : undefined}
               onOpenChange={setMenuOpen}
             />
           )}

@@ -1237,6 +1237,7 @@ export default function App() {
               onLeadClick={setSelectedLead}
               onStageChange={handleStageChange}
               onAddLead={handleAddLead}
+              onDeleteLead={deleteLead}
               onStarToggle={toggleStar}
               visibleStages={settings.visibleKanbanStages}
               pipelineTransitions={pipelineTransitions}

@@ -1100,6 +1100,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           onDragEnd={handleDragEnd}
                           stages={kanbanStages}
                           onMoveToStage={attemptStageChange}
+                          onDeleteCard={canWrite ? handleDelete : undefined}
                           completeness={getCampaignCompleteness(c)}
                         />
                       ))
@@ -1242,6 +1243,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                             onDragEnd={handleDragEnd}
                             stages={kanbanStages}
                             onMoveToStage={attemptStageChange}
+                            onDeleteCard={canWrite ? handleDelete : undefined}
                             completeness={getCampaignCompleteness(c)}
                           />
                         ))

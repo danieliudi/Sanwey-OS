@@ -28,7 +28,7 @@ function agingStyle(days, slaDays) {
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
-function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, completeness }) {
+function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -115,10 +115,11 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
             <CompletenessBadge filled={completeness.filled} total={completeness.total} size={30} />
           )}
           <FitScoreCircle score={lead.fitScore} size={30} />
-          {moveTargets.length > 0 && onMoveToStage && (
+          {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
-              onMove={(key) => onMoveToStage(lead.id, key)}
+              onMove={onMoveToStage ? (key) => onMoveToStage(lead.id, key) : undefined}
+              onDelete={onDeleteCard ? () => onDeleteCard(lead.id) : undefined}
               onOpenChange={setMenuOpen}
             />
           )}

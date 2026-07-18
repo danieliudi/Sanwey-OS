@@ -368,8 +368,10 @@ function AddFieldForm({ onAdd, onCancel, accent, busy, fields }) {
 
 // ── FieldRow ──────────────────────────────────────────────────────────────────
 
-function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, onToggleRequired, onSaveConditions, isFirst, isLast, busy }) {
+function FieldRow({ field, accent, otherFields, onDelete, onRename, onMoveUp, onMoveDown, onToggleRequired, onSaveConditions, isFirst, isLast, busy }) {
   const [confirmDel, setConfirmDel] = useState(false);
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState(field.label);
   const [editingCond, setEditingCond] = useState(false);
   const [draftVisibleIf, setDraftVisibleIf]   = useState(field.visibleIf || null);
   const [draftRequiredIf, setDraftRequiredIf] = useState(field.requiredIf || null);
@@ -390,6 +392,13 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
     setEditingCond(false);
   };
 
+  const commitRename = () => {
+    const trimmed = labelDraft.trim();
+    setEditingLabel(false);
+    if (trimmed && trimmed !== field.label) onRename(field.id, trimmed);
+    else setLabelDraft(field.label);
+  };
+
   return (
     <div
       style={{
@@ -407,10 +416,25 @@ function FieldRow({ field, accent, otherFields, onDelete, onMoveUp, onMoveDown, 
 
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {field.required && <span style={{ color: accent, marginRight: 2 }}>*</span>}
-            {field.label}
-          </div>
+          {editingLabel ? (
+            <input
+              autoFocus
+              value={labelDraft}
+              onChange={(e) => setLabelDraft(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { setLabelDraft(field.label); setEditingLabel(false); } }}
+              style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", width: "100%", border: `1px solid ${accent}`, borderRadius: 4, padding: "1px 4px", outline: "none" }}
+            />
+          ) : (
+            <div
+              onClick={() => { setLabelDraft(field.label); setEditingLabel(true); }}
+              title="Clique para renomear"
+              style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}
+            >
+              {field.required && <span style={{ color: accent, marginRight: 2 }}>*</span>}
+              {field.label}
+            </div>
+          )}
           <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
             {typeMeta?.label || field.fieldType}
             {hasConditions && <span style={{ color: accent }}> · Condicional</span>}
@@ -606,6 +630,16 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
       return stageFields.updateField(id, { ...f, required: newRequired });
     });
 
+  // Renomeia só o rótulo visível — nunca o fieldKey, que é a chave estável
+  // usada pra guardar os valores já preenchidos nos cards (mudar o fieldKey
+  // orfanaria os dados existentes).
+  const handleRename = (id, newLabel) =>
+    run(() => {
+      const f = fields.find(f => f.id === id);
+      if (!f) return Promise.resolve();
+      return stageFields.updateField(id, { ...f, label: newLabel });
+    });
+
   const handleSaveConditions = (id, { visibleIf, requiredIf, validationRule }) =>
     run(() => {
       const f = fields.find(f => f.id === id);
@@ -707,6 +741,7 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
               busy={busy}
               onDelete={handleDelete}
               onToggleRequired={handleToggleRequired}
+              onRename={handleRename}
               onSaveConditions={handleSaveConditions}
               onMoveUp={() => handleMoveUp(idx)}
               onMoveDown={() => handleMoveDown(idx)}

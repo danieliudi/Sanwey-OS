@@ -349,7 +349,7 @@ function FeriasCardBody({ req, canWrite, onAprovar, onRecusar, busy }) {
 }
 
 function FeriasKanbanColumn({
-  stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage,
+  stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteRequest,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, onAprovar, onRecusar, busyId,
 }) {
@@ -389,6 +389,7 @@ function FeriasKanbanColumn({
               onDragStart={canWrite ? onDragStart : undefined}
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
+              onDeleteCard={canWrite ? onDeleteRequest : undefined}
               agingDays={daysInStage(req.status_changed_at)}
               completeness={getCompleteness?.(req)}
             >
@@ -405,7 +406,7 @@ function FeriasKanbanColumn({
 
 function FeriasDrawer({
   req, canWrite, stages, users, currentUser,
-  onAprovar, onRecusar, onMoveToStage, onUpdateCustomFields, onAddActivity, onClose, onMoved, busy, notifyMentions,
+  onAprovar, onRecusar, onMoveToStage, onUpdateCustomFields, onAddActivity, onClose, onMoved, busy, notifyMentions, onDelete, onEditFields,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -569,11 +570,35 @@ function FeriasDrawer({
         mentionLink={{ module: "rh_ferias", id: req.id }}
         mentionContextLabel={req.profiles?.name}
       />
+
+      {canWrite && onEditFields && (
+        <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); onEditFields(st); }}
+            className="flex items-center gap-2 text-xs"
+            style={{ color: "var(--text-dim)", textDecoration: "none" }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
+          >
+            <Settings2 size={12} />
+            Editar campos desta etapa
+          </a>
+        </div>
+      )}
     </>
   );
 
   return (
-    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+      onDelete={canWrite && onDelete ? () => onDelete(req.id) : undefined}
+      deleteLabel="Excluir solicitação"
+    />
   );
 }
 
@@ -737,7 +762,7 @@ function FeriasCalendarView({ requests, stages, onPillClick }) {
 // ── Main View ─────────────────────────────────────────────────────────────────
 
 export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions }) {
-  const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, addActivity } = useRHFeriasRequests({});
+  const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, deleteRequest, addActivity } = useRHFeriasRequests({});
   const { stages, loading: loadingStages } = useRHPipelineStages("ferias");
   const feriasStageFields = useRHStageFields("ferias");
 
@@ -982,6 +1007,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                 onDragStart={setDraggedId}
                 onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
                 onMoveToStage={handleMoveToStage}
+                onDeleteRequest={canWrite ? deleteRequest : undefined}
                 isDragOver={dragOverStageKey === stage.stageKey}
                 onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
                 onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
@@ -1006,6 +1032,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                 onDragStart={setDraggedId}
                 onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
                 onMoveToStage={handleMoveToStage}
+                onDeleteRequest={canWrite ? deleteRequest : undefined}
                 isDragOver={dragOverStageKey === stage.stageKey}
                 onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
                 onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
@@ -1040,6 +1067,8 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
           onMoved={(id) => { setDrawerReqId(null); reopenAfterMove(setDrawerReqId, id); }}
           busy={busyId === drawerReq.id}
           notifyMentions={notifyMentions}
+          onDelete={deleteRequest}
+          onEditFields={setFieldEditorStage}
         />
       )}
 

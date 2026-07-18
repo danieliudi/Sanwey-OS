@@ -642,7 +642,7 @@ function FeedbackCardBody({ feedback, colaborador }) {
 
 function FeedbackKanbanColumn({
   stage, stages, feedbackList, colaboradoresById,
-  onCardClick, onDragStart, onDragEnd, onMoveToStage,
+  onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteFeedback,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness,
 }) {
@@ -692,6 +692,7 @@ function FeedbackKanbanColumn({
               onDragStart={canWrite ? onDragStart : undefined}
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
+              onDeleteCard={canWrite ? onDeleteFeedback : undefined}
               agingDays={daysInStage(f.status_changed_at)}
               completeness={getCompleteness?.(f)}
             >
@@ -708,7 +709,7 @@ function FeedbackKanbanColumn({
 
 function FeedbackDrawer({
   feedback, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, moveError, onComplete, onUpdateCustomFields, onUpdateEvaluators, onAddActivity, onShowHistorico, onClose, notifyMentions,
+  onStageChange, moveError, onComplete, onUpdateCustomFields, onUpdateEvaluators, onAddActivity, onShowHistorico, onClose, notifyMentions, onDelete, onEditFields,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -905,11 +906,35 @@ function FeedbackDrawer({
         mentionLink={{ module: "rh_feedback", id: feedback.id }}
         mentionContextLabel={colaborador?.fullName}
       />
+
+      {canWrite && onEditFields && (
+        <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); onEditFields(st); }}
+            className="flex items-center gap-2 text-xs"
+            style={{ color: "var(--text-dim)", textDecoration: "none" }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
+          >
+            <Settings2 size={12} />
+            Editar campos desta etapa
+          </a>
+        </div>
+      )}
     </>
   );
 
   return (
-    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+      onDelete={canWrite && onDelete ? () => onDelete(feedback.id) : undefined}
+      deleteLabel="Excluir ciclo de feedback"
+    />
   );
 }
 
@@ -1081,7 +1106,7 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
 export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions }) {
   const {
     feedbacks, loading: loadingFeedbacks, createFeedback, createPendingCycle, completeFeedback,
-    submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, addFeedbackActivity,
+    submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, deleteFeedback, addFeedbackActivity,
   } = useRHFeedback({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
@@ -1393,6 +1418,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                 onDragStart={handleCardDragStart}
                 onDragEnd={handleCardDragEnd}
                 onMoveToStage={handleStageChange}
+                onDeleteFeedback={canWrite ? deleteFeedback : undefined}
                 isDragOver={dragOverStageKey === stage.stageKey}
                 onColumnDragOver={handleColumnDragOver}
                 onColumnDragLeave={handleColumnDragLeave}
@@ -1415,6 +1441,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                 onDragStart={handleCardDragStart}
                 onDragEnd={handleCardDragEnd}
                 onMoveToStage={handleStageChange}
+                onDeleteFeedback={canWrite ? deleteFeedback : undefined}
                 isDragOver={dragOverStageKey === stage.stageKey}
                 onColumnDragOver={handleColumnDragOver}
                 onColumnDragLeave={handleColumnDragLeave}
@@ -1445,6 +1472,8 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           onShowHistorico={(colaboradorId) => { setHistoricoColaboradorId(colaboradorId); setDrawerFeedbackId(null); }}
           onClose={() => setDrawerFeedbackId(null)}
           notifyMentions={notifyMentions}
+          onDelete={deleteFeedback}
+          onEditFields={setFieldEditorStage}
         />
       )}
 

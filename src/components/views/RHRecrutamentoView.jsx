@@ -462,6 +462,95 @@ function StarRating({ value = 0, max = 5, onChange }) {
   );
 }
 
+// ── Editor de benefícios (chips clicáveis: adicionar, remover, renomear) ───────
+
+function BenefitsEditor({ value, onChange }) {
+  const [draft, setDraft] = useState("");
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [editText, setEditText] = useState("");
+
+  const addBenefit = () => {
+    const t = draft.trim();
+    if (!t) return;
+    if (!value.includes(t)) onChange([...value, t]);
+    setDraft("");
+  };
+
+  const removeBenefit = (idx) => onChange(value.filter((_, i) => i !== idx));
+
+  const startEdit = (idx) => { setEditingIdx(idx); setEditText(value[idx]); };
+
+  const commitEdit = () => {
+    const t = editText.trim();
+    if (t) onChange(value.map((b, i) => (i === editingIdx ? t : b)));
+    else removeBenefit(editingIdx);
+    setEditingIdx(null);
+  };
+
+  const chipSt = { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 500, color: "var(--text)", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 999, padding: "4px 6px 4px 12px" };
+
+  return (
+    <div>
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {value.map((b, idx) => (
+            editingIdx === idx ? (
+              <input
+                key={idx}
+                autoFocus
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingIdx(null); }}
+                className="text-xs rounded-full border px-3 py-1 outline-none"
+                style={{ borderColor: "var(--accent)", color: "var(--text)", background: "var(--surface)", width: `${Math.max(60, editText.length * 7 + 28)}px` }}
+              />
+            ) : (
+              <span key={idx} style={chipSt}>
+                <button
+                  type="button"
+                  onClick={() => startEdit(idx)}
+                  title="Clique para renomear"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", font: "inherit", padding: 0 }}
+                >
+                  {b}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeBenefit(idx)}
+                  title="Remover"
+                  style={{ background: "var(--surface)", border: "none", borderRadius: "50%", width: 15, height: 15, cursor: "pointer", color: "var(--text-dim)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+                >
+                  <X size={10} />
+                </button>
+              </span>
+            )
+          ))}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addBenefit(); } }}
+          placeholder="Ex: VT, VR, Plano de saúde…"
+          className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
+          style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+        />
+        <button
+          type="button"
+          onClick={addBenefit}
+          title="Adicionar benefício"
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, borderRadius: 10, border: "1px solid var(--border-strong)", background: "var(--surface-alt)", color: "var(--text)", cursor: "pointer" }}
+        >
+          <Plus size={15} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Nova Vaga Modal ───────────────────────────────────────────────────────────
 
 function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, stageId, users }) {
@@ -477,7 +566,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
   const [contractType, setContractType] = useState(initialData?.contract_type || "");
   const [salaryMin, setSalaryMin]   = useState(initialData?.salary_min != null ? String(initialData.salary_min) : "");
   const [salaryMax, setSalaryMax]   = useState(initialData?.salary_max != null ? String(initialData.salary_max) : "");
-  const [benefits, setBenefits]     = useState((initialData?.benefits || []).join(", "));
+  const [benefits, setBenefits]     = useState(initialData?.benefits || []);
   const [schedule, setSchedule]     = useState(initialData?.schedule || "");
   const [shift, setShift]           = useState(initialData?.shift || "");
   const [deadline, setDeadline]     = useState(initialData?.hiring_deadline ? initialData.hiring_deadline.slice(0, 10) : "");
@@ -516,7 +605,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
     setContractType(cargo.contract_type || "");
     setSalaryMin(cargo.salary_min != null ? String(cargo.salary_min) : "");
     setSalaryMax(cargo.salary_max != null ? String(cargo.salary_max) : "");
-    setBenefits((cargo.benefits || []).join(", "));
+    setBenefits(cargo.benefits || []);
     setSchedule(cargo.schedule || "");
     setShift(cargo.shift || "");
   };
@@ -543,7 +632,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
         contract_type: contractType || null,
         salary_min: salaryMin !== "" ? Number(salaryMin) : null,
         salary_max: salaryMax !== "" ? Number(salaryMax) : null,
-        benefits: benefits.split(",").map((b) => b.trim()).filter(Boolean),
+        benefits,
         schedule: schedule.trim() || null,
         shift: shift.trim() || null,
         hiring_deadline: deadline || null,
@@ -573,16 +662,16 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 560, boxShadow: "var(--shadow-pop)", maxHeight: "92vh", overflowY: "auto" }}
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 560, boxShadow: "var(--shadow-pop)", maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{initialData ? "Editar Vaga" : "Nova Vaga"}</div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, borderRadius: 8, display: "flex" }}>
             <X size={18} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px", overflowY: "auto", flex: 1 }}>
           <div className="flex flex-col gap-3">
             <div>
               <label style={labelSt}>Título da vaga *</label>
@@ -614,13 +703,13 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
             </div>
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <label style={{ ...labelSt, marginBottom: 0 }}>Cargo (preenche o resto automaticamente)</label>
+              <label style={{ ...labelSt, marginBottom: 0 }}>Modelo de cargo salvo (opcional — preenche os campos abaixo)</label>
               <button type="button" onClick={onManageCargos} style={{ fontSize: 11, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                 <Settings2 size={11} /> Gerenciar cargos
               </button>
             </div>
             <select value={cargoId} onChange={(e) => applyCargo(e.target.value)} className={inputCls} style={inputSt}>
-              <option value="">Sem cargo padrão — preencher manualmente</option>
+              <option value="">Sem modelo — preencher manualmente</option>
               {cargos.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
 
@@ -672,8 +761,8 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
             </div>
 
             <div>
-              <label style={labelSt}>Benefícios (separados por vírgula)</label>
-              <input type="text" value={benefits} onChange={(e) => setBenefits(e.target.value)} placeholder="VT, VR, Plano de saúde" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
+              <label style={labelSt}>Benefícios</label>
+              <BenefitsEditor value={benefits} onChange={setBenefits} />
             </div>
 
             <div>
@@ -750,7 +839,7 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
   const [contractType, setContractType] = useState("");
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
-  const [benefits, setBenefits]   = useState("");
+  const [benefits, setBenefits]   = useState([]);
   const [schedule, setSchedule]   = useState("");
   const [shift, setShift]         = useState("");
   const [saving, setSaving]       = useState(false);
@@ -761,7 +850,7 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
   const inputCls = "w-full text-sm rounded-lg border px-2.5 py-1.5 outline-none";
 
   const reset = () => {
-    setName(""); setDept(""); setContractType(""); setSalaryMin(""); setSalaryMax(""); setBenefits(""); setSchedule(""); setShift("");
+    setName(""); setDept(""); setContractType(""); setSalaryMin(""); setSalaryMax(""); setBenefits([]); setSchedule(""); setShift("");
   };
 
   const handleAdd = async () => {
@@ -775,7 +864,7 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
         contract_type: contractType || null,
         salary_min: salaryMin !== "" ? Number(salaryMin) : null,
         salary_max: salaryMax !== "" ? Number(salaryMax) : null,
-        benefits: benefits.split(",").map((b) => b.trim()).filter(Boolean),
+        benefits,
         schedule: schedule.trim() || null,
         shift: shift.trim() || null,
       });
@@ -833,7 +922,10 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
               <input type="text" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Jornada" className={inputCls} style={inputSt} />
               <input type="text" value={shift} onChange={(e) => setShift(e.target.value)} placeholder="Escala" className={inputCls} style={inputSt} />
             </div>
-            <input type="text" value={benefits} onChange={(e) => setBenefits(e.target.value)} placeholder="Benefícios (separados por vírgula)" className={inputCls} style={inputSt} />
+            <div>
+              <label style={labelSt}>Benefícios</label>
+              <BenefitsEditor value={benefits} onChange={setBenefits} />
+            </div>
           </div>
 
           {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{error}</div>}
@@ -885,7 +977,7 @@ function VagaCard({ vaga, candidatosCount, usersById }) {
 
 function VagaKanbanColumn({
   stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
-  onMoveToStage, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
+  onMoveToStage, onDeleteVaga, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
   getCompleteness, onAddVaga, usersById,
 }) {
   return (
@@ -955,6 +1047,7 @@ function VagaKanbanColumn({
               onDragStart={canWrite ? onDragStart : undefined}
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
+              onDeleteCard={canWrite ? onDeleteVaga : undefined}
               agingDays={daysInStage(v.stage_changed_at)}
               completeness={getCompleteness?.(v)}
             >
@@ -972,6 +1065,7 @@ function VagaKanbanColumn({
 function VagaDrawer({
   vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onCopyLink, onClose, onVerCandidatos, copiedSlug,
   customFields, onCustomFieldChange, onAddActivity, currentUser, users, moveError, notifyMentions, onUpdateResponsibles,
+  onDelete, onEditFields,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -1229,11 +1323,35 @@ function VagaDrawer({
         mentionLink={{ module: "rh_vagas", id: vaga.id }}
         mentionContextLabel={vaga.title}
       />
+
+      {canWrite && onEditFields && (
+        <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); onEditFields(stageInfo); }}
+            className="flex items-center gap-2 text-xs"
+            style={{ color: "var(--text-dim)", textDecoration: "none" }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
+          >
+            <Settings2 size={12} />
+            Editar campos desta etapa
+          </a>
+        </div>
+      )}
     </>
   );
 
   return (
-    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+      onDelete={canWrite && onDelete ? () => onDelete(vaga.id) : undefined}
+      deleteLabel="Excluir vaga"
+    />
   );
 }
 
@@ -1641,7 +1759,7 @@ function NovoCandidatoModal({ defaultStage, defaultVagaId, vagas, stages, onSave
 
 function CandidatoDrawer({
   candidato, vagas, stages, canWrite, onStageChange, onStageMoved, onAddNote, onRatingChange, onClose, onHire,
-  customFields, onCustomFieldChange, onAddActivity, currentUser, users, notifyMentions,
+  customFields, onCustomFieldChange, onAddActivity, currentUser, users, notifyMentions, onDelete, onEditFields,
 }) {
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
@@ -2031,11 +2149,35 @@ function CandidatoDrawer({
         mentionLink={{ module: "rh_candidatos", id: candidato.id }}
         mentionContextLabel={candidato.name}
       />
+
+      {canWrite && onEditFields && (
+        <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); onEditFields(stageInfo); }}
+            className="flex items-center gap-2 text-xs"
+            style={{ color: "var(--text-dim)", textDecoration: "none" }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
+          >
+            <Settings2 size={12} />
+            Editar campos desta etapa
+          </a>
+        </div>
+      )}
     </>
   );
 
   return (
-    <SplitPanelDrawer onClose={onClose} header={header} left={left} center={center} right={right} />
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+      onDelete={canWrite && onDelete ? () => onDelete(candidato.id) : undefined}
+      deleteLabel="Excluir candidatura"
+    />
   );
 }
 
@@ -2261,7 +2403,7 @@ function CandidatoCardBody({ candidato: c, vagas }) {
 
 function KanbanColumn({
   stage, stages, candidatos, vagas, canWrite, onCardClick, onAddCandidato,
-  onMoveToStage, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
+  onMoveToStage, onDeleteCandidato, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
   getCompleteness,
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -2343,6 +2485,7 @@ function KanbanColumn({
                 onDragStart={canWrite ? onDragStart : undefined}
                 onDragEnd={canWrite ? onDragEnd : undefined}
                 onMoveToStage={canWrite ? onMoveToStage : undefined}
+                onDeleteCard={canWrite ? onDeleteCandidato : undefined}
                 agingDays={daysInStage(c.stage_changed_at)}
                 completeness={getCompleteness?.(c)}
               >
@@ -2548,7 +2691,7 @@ function addDays(base, days) {
 export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
-    createVaga, updateVaga, changeVagaStage, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
+    createVaga, updateVaga, changeVagaStage, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const { cargos, createCargo, deleteCargo } = useRHCargoTemplates({ userId: user?.id });
   const { createColaborador } = useRHColaboradores({ userId: user?.id });
@@ -2982,6 +3125,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                   canWrite={canWrite}
                   onCardClick={(v) => setVagaDrawerId(v.id)}
                   onMoveToStage={attemptVagaStageChange}
+                  onDeleteVaga={(id) => deleteVaga(id)}
                   onDragStart={handleVagaDragStart}
                   onDragEnd={handleVagaDragEnd}
                   isDragOver={dragOverVagaStage === stage.stageKey}
@@ -3006,6 +3150,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                   canWrite={canWrite}
                   onCardClick={(v) => setVagaDrawerId(v.id)}
                   onMoveToStage={attemptVagaStageChange}
+                  onDeleteVaga={(id) => deleteVaga(id)}
                   onDragStart={handleVagaDragStart}
                   onDragEnd={handleVagaDragEnd}
                   isDragOver={dragOverVagaStage === stage.stageKey}
@@ -3170,6 +3315,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                     onCardClick={(c) => setSelectedCandidatoId(c.id)}
                     onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
                     onMoveToStage={attemptCandStageChange}
+                    onDeleteCandidato={(id) => deleteAplicacao(id)}
                     onDragStart={handleCandDragStart}
                     onDragEnd={handleCandDragEnd}
                     isDragOver={dragOverCandStage === stage.stageKey}
@@ -3194,6 +3340,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                     onCardClick={(c) => setSelectedCandidatoId(c.id)}
                     onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
                     onMoveToStage={attemptCandStageChange}
+                    onDeleteCandidato={(id) => deleteAplicacao(id)}
                     onDragStart={handleCandDragStart}
                     onDragEnd={handleCandDragEnd}
                     isDragOver={dragOverCandStage === stage.stageKey}
@@ -3272,6 +3419,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           users={profileUsers}
           notifyMentions={notifyMentions}
           onUpdateResponsibles={(ids) => updateVaga(vagaEmDrawer.id, { responsible_ids: ids })}
+          onDelete={deleteVaga}
+          onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
         />
       )}
 
@@ -3305,6 +3454,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           currentUser={user}
           users={profileUsers}
           notifyMentions={notifyMentions}
+          onDelete={deleteAplicacao}
+          onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
         />
       )}
 
