@@ -1109,7 +1109,16 @@ export function CampaignDetailDrawer({
   canWrite,
   currentUser,
   notifyMentions,
+  stages,
 }) {
+  // Etapas dinâmicas (rh_pipeline_stages, já buscadas pelo pai) — cai pro
+  // MARKETING_STAGES fixo só se a lista do banco vier vazia. Antes este
+  // drawer sempre usava a lista fixa das 6 etapas originais, então renomear/
+  // adicionar/remover etapa via "Editar etapas" quebrava o badge, a
+  // navegação prev/next e o "mover para etapa" pra qualquer campanha fora
+  // dessas 6 — enquanto o Kanban ao lado já mostrava a etapa nova certinho.
+  // Achado da auditoria de fricção de 18/07.
+  const effectiveStages = stages?.length ? stages : MARKETING_STAGES;
   const [sideTab, setSideTab]           = useState("form");
   const [draft, setDraft]               = useState({});
   const [mobileTab, setMobileTab]       = useState("info");
@@ -1163,16 +1172,16 @@ export function CampaignDetailDrawer({
     finally { setDeleting(false); }
   };
 
-  const stageIdx = MARKETING_STAGES.findIndex(s => s.id === get("stage"));
-  const stage    = MARKETING_STAGES[stageIdx] || null;
+  const stageIdx = effectiveStages.findIndex(s => s.id === get("stage"));
+  const stage    = effectiveStages[stageIdx] || null;
 
   const stageNav = useMemo(() => {
     if (stageIdx < 0) return { prev: null, next: null };
     return {
-      prev: stageIdx > 0 ? MARKETING_STAGES[stageIdx - 1] : null,
-      next: stageIdx < MARKETING_STAGES.length - 1 ? MARKETING_STAGES[stageIdx + 1] : null,
+      prev: stageIdx > 0 ? effectiveStages[stageIdx - 1] : null,
+      next: stageIdx < effectiveStages.length - 1 ? effectiveStages[stageIdx + 1] : null,
     };
-  }, [stageIdx]);
+  }, [stageIdx, effectiveStages]);
 
   const moveToStage = useCallback((toStageId) => {
     if (!campaign || !toStageId) return;
@@ -1690,7 +1699,7 @@ export function CampaignDetailDrawer({
                   Mover campanha para etapa
                 </div>
                 <StageNavigator
-                  targets={MARKETING_STAGES.filter(s => s.id !== stage?.id)}
+                  targets={effectiveStages.filter(s => s.id !== stage?.id)}
                   onMove={moveToStage}
                   getKey={(s) => s.id}
                 />

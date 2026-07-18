@@ -35,8 +35,9 @@ function getCampaignOwnerIds(c) {
 
 // ── Create modal ─────────────────────────────────────────────────────────────
 
-function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose }) {
-  const stage = MARKETING_STAGES.find(s => s.id === stageId);
+function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose, stages }) {
+  const effectiveStages = stages?.length ? stages : MARKETING_STAGES;
+  const stage = effectiveStages.find(s => s.id === stageId);
   const stageFields = useRHStageFields("marketing");
 
   const [name, setName]             = useState("");
@@ -1033,6 +1034,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           canWrite={canWrite || user?.role !== "agencia"}
           calendarToken={user?.calendarToken ?? null}
           supabaseUrl={import.meta.env.VITE_SUPABASE_URL ?? null}
+          stages={kanbanStages}
         />
       )}
 
@@ -1276,6 +1278,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           canWrite={canWrite}
           currentUser={user}
           notifyMentions={notifyMentions}
+          stages={kanbanStages}
         />
       )}
 
@@ -1311,6 +1314,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         users={users}
         onAdd={handleQuickAdd}
         onClose={() => setQuickAddStage(null)}
+        stages={kanbanStages}
       />
     )}
     </>

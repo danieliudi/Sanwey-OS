@@ -11,7 +11,7 @@ import { formatDateBR, daysSince } from "../../utils/date";
 import { exportLeadsToCSV } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
 import { useUsersById } from "../../hooks/use-users-by-id";
-import { isStale, daysIdle } from "../../utils/pipeline-metrics";
+import { isStale, daysIdle, getLeadOwnerIds } from "../../utils/pipeline-metrics";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 const CLOSING_HORIZON_DAYS = 7;
@@ -36,10 +36,14 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
   const scopedLeads = useMemo(() => {
     let s = leads;
     if (!isGroupView) s = s.filter(l => l.companyId === activeCompany);
+    // getLeadOwnerIds() em vez de `owner` (escalar) — um lead onde o
+    // usuário é só co-responsável (ownerIds[]) nunca aparecia aqui, mesmo
+    // já aparecendo no Kanban do Pipeline (CRMView já usava getLeadOwnerIds
+    // em tudo). Achado da auditoria de fricção de 18/07.
     if (isConsultor) {
-      s = s.filter(l => l.owner === user.id);
+      s = s.filter(l => getLeadOwnerIds(l).includes(user.id));
     } else if (!isManager) {
-      s = s.filter(l => l.owner === user.id || subordinateIds.has(l.owner));
+      s = s.filter(l => getLeadOwnerIds(l).some(id => id === user.id || subordinateIds.has(id)));
     }
     if (user.sectors?.length && (user.role === "vendedor" || user.role === "consultor")) {
       s = s.filter(l => !l.sector || user.sectors.includes(l.sector));

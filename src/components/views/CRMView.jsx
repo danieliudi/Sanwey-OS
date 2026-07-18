@@ -23,15 +23,9 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { formatK } from "../../utils/currency";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
-
-// FASE 5: ids de todos os responsáveis de um lead — usa owner_ids quando
-// disponível, com fallback pro owner escalar em leads legados que por
-// algum motivo não tenham sido preenchidos pelo backfill da migração.
-function getLeadOwnerIds(l) {
-  return Array.isArray(l.ownerIds) && l.ownerIds.length ? l.ownerIds : (l.owner ? [l.owner] : []);
-}
 
 // ── Quick-add form ────────────────────────────────────────────────────────────
 

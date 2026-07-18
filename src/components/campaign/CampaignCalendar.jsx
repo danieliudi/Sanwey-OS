@@ -289,7 +289,9 @@ export function CampaignCalendar({
   canWrite = false,
   calendarToken = null,
   supabaseUrl = null,
+  stages = null,
 }) {
+  const effectiveStages = stages?.length ? stages : MARKETING_STAGES;
   const [currentMonth, setCurrentMonth] = useState(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
@@ -338,7 +340,7 @@ export function CampaignCalendar({
       if (!c.launchDate) return;
       const start = startOfDay(new Date(c.launchDate));
       const end   = c.endDate ? startOfDay(new Date(c.endDate)) : start;
-      const stage = MARKETING_STAGES.find(s => s.id === c.stage);
+      const stage = effectiveStages.find(s => s.id === c.stage);
       evts.push({ id: c.id, type: "campaign", start, end, color: stage?.color || "#888", label: c.name, data: c });
     });
 
@@ -350,7 +352,7 @@ export function CampaignCalendar({
     });
 
     return evts;
-  }, [campaigns, personalEvents]);
+  }, [campaigns, personalEvents, effectiveStages]);
 
   // Per-week layout data
   const weekData = useMemo(() => {
@@ -609,7 +611,7 @@ export function CampaignCalendar({
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
         <span className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>Etapas:</span>
-        {MARKETING_STAGES.map(s => (
+        {effectiveStages.map(s => (
           <div key={s.id} className="flex items-center gap-1.5">
             <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
             <span className="text-xs" style={{ color: "var(--text-dim)" }}>{s.name}</span>

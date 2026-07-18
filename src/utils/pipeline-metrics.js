@@ -7,6 +7,17 @@ import { DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const DEFAULT_SLA_DAYS = 14;
 
+// FASE 5: ids de todos os responsáveis de um lead — usa owner_ids quando
+// disponível, com fallback pro owner escalar em leads legados que por
+// algum motivo não tenham sido preenchidos pelo backfill da migração.
+// Movido de CRMView.jsx pra cá pra ser compartilhado — o Dashboard
+// filtrava só por `owner` (escalar), então um lead onde o usuário era
+// apenas co-responsável nunca aparecia em "Minhas tarefas", mesmo já
+// aparecendo no Kanban do Pipeline. Achado da auditoria de fricção de 18/07.
+export function getLeadOwnerIds(l) {
+  return Array.isArray(l.ownerIds) && l.ownerIds.length ? l.ownerIds : (l.owner ? [l.owner] : []);
+}
+
 // Fallback: se a empresa não tem pipeline custom, usa o default global.
 function findStage(stageId, companyStages) {
   if (Array.isArray(companyStages)) {
