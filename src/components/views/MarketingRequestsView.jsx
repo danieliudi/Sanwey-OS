@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   Inbox, CheckCircle2, XCircle, Clock, Filter, Plus, ChevronDown,
-  CalendarDays, Building2, Tag, AlertCircle, ExternalLink,
+  CalendarDays, Building2, Tag, AlertCircle, ExternalLink, Copy, Check,
 } from "lucide-react";
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -272,6 +272,36 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
   );
 }
 
+/* ── Copy public link ─── mesmo padrão do ComprasMarketingView, que já
+   tinha isso — Solicitações não deixava copiar o link público daqui,
+   só enterrado em Configurações → Integrações (achado da auditoria de
+   fricção de 18/07). ──────────────────────────────────────────────── */
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/solicitar-marketing`;
+  const handleCopy = () => {
+    navigator.clipboard?.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      title={url}
+      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
+      style={{
+        background: copied ? "#DCFCE7" : "var(--surface)",
+        borderColor: copied ? "#BBF7D0" : "var(--border)",
+        color: copied ? "#15803D" : "var(--text-dim)",
+        cursor: "pointer",
+      }}
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+      {copied ? "Link copiado!" : "Copiar link público"}
+    </button>
+  );
+}
+
 /* ── Main View ────────────────────────────────────────────────────── */
 export function MarketingRequestsView({ user, users }) {
   const {
@@ -335,12 +365,15 @@ export function MarketingRequestsView({ user, users }) {
             Pedidos de material recebidos de outros departamentos
           </p>
         </div>
-        <div
-          className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-dim)" }}
-        >
-          <AlertCircle size={12} />
-          {counts.pendente} pendente{counts.pendente !== 1 ? "s" : ""}
+        <div className="flex items-center gap-2 flex-wrap">
+          <CopyLinkButton />
+          <div
+            className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-dim)" }}
+          >
+            <AlertCircle size={12} />
+            {counts.pendente} pendente{counts.pendente !== 1 ? "s" : ""}
+          </div>
         </div>
       </div>
 
