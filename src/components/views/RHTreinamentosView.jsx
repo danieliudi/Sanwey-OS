@@ -228,10 +228,28 @@ function AtribuirModal({ treinamento, colaboradores, onAssign, onClose }) {
   const [selected, setSelected] = useState(new Set());
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState(null);
+  // Filtro por Frente + "marcar todos visíveis" — mesmo padrão do
+  // BulkTarefaModal (Onboarding), que já resolve isso pra empresa com
+  // várias frentes e dezenas de colaboradores. Achado da auditoria de
+  // fricção de 18/07: aqui a lista era única, sem filtro nem busca.
+  const [frenteFiltro, setFrenteFiltro] = useState("todas");
+
+  const visiveis = useMemo(
+    () => colaboradores.filter(c => frenteFiltro === "todas" || c.frente === frenteFiltro),
+    [colaboradores, frenteFiltro]
+  );
 
   const toggle = (id) => setSelected(prev => {
     const next = new Set(prev);
     next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const selVisiveis = visiveis.filter(c => selected.has(c.id)).length;
+  const allVisiveisSel = visiveis.length > 0 && selVisiveis === visiveis.length;
+  const toggleAllVisiveis = () => setSelected(prev => {
+    const next = new Set(prev);
+    if (allVisiveisSel) visiveis.forEach(c => next.delete(c.id));
+    else visiveis.forEach(c => next.add(c.id));
     return next;
   });
 
@@ -279,10 +297,25 @@ function AtribuirModal({ treinamento, colaboradores, onAssign, onClose }) {
             </button>
           </div>
         )}
+        <div style={{ padding: "10px 24px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <select
+            value={frenteFiltro}
+            onChange={(e) => setFrenteFiltro(e.target.value)}
+            style={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border-strong)", background: "var(--surface-alt)", color: "var(--text)", padding: "4px 8px" }}
+          >
+            <option value="todas">Todas as frentes</option>
+            {RH_FRENTES.map((id) => <option key={id} value={id}>{RH_FRENTE_LABELS[id]}</option>)}
+          </select>
+          {visiveis.length > 0 && (
+            <button type="button" onClick={toggleAllVisiveis} style={{ fontSize: 11, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
+              {allVisiveisSel ? "Desmarcar todos" : "Marcar todos visíveis"}
+            </button>
+          )}
+        </div>
         <div style={{ padding: "12px 24px", overflowY: "auto", flex: 1 }}>
-          {colaboradores.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum colaborador cadastrado ainda.</div>
-          ) : colaboradores.map(c => (
+          {visiveis.length === 0 ? (
+            <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum colaborador nesta frente.</div>
+          ) : visiveis.map(c => (
             <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}>
               <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} />
               <span style={{ fontSize: 13, color: "var(--text)" }}>{c.fullName}</span>
