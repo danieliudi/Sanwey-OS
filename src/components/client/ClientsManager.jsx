@@ -487,7 +487,12 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
       <Modal open={Boolean(confirmId)} onClose={() => setConfirmId(null)} title="Excluir cliente" width={400}>
         <div className="px-6 py-5 space-y-4">
           <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
-            Tem certeza que deseja excluir este cliente? Os cards vinculados perderão a referência.
+            {(() => {
+              const n = dealsByClient.get(confirmId)?.length || 0;
+              return n > 0
+                ? `Tem certeza que deseja excluir este cliente? ${n} negócio${n !== 1 ? "s" : ""} vinculado${n !== 1 ? "s" : ""} vão perder a referência a ele.`
+                : "Tem certeza que deseja excluir este cliente? Não há negócios vinculados a ele.";
+            })()}
           </p>
           <div className="flex justify-end gap-2">
             <button onClick={() => setConfirmId(null)} className="px-4 py-2 text-sm rounded-lg border"

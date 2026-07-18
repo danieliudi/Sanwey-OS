@@ -520,6 +520,17 @@ export function SettingsView({
     });
   }, [settings.notifications, onUpdate]);
 
+  // "Restaurar padrão" apagava empresas/widgets/notificações com um clique
+  // e zero confirmação — ao lado de "Limpar dados locais" e "Limpar todos os
+  // leads", que exigem confirmação (a segunda até digitar uma palavra). A
+  // fricção antes de uma ação destrutiva deveria refletir o tamanho do
+  // estrago, não a tela em que o botão está. Achado da auditoria de 18/07.
+  const handleResetSettings = useCallback(() => {
+    if (window.confirm("Isso vai restaurar todas as preferências (empresas ativas, widgets, notificações) para o padrão. Continuar?")) {
+      onReset();
+    }
+  }, [onReset]);
+
   const handleClearLocal = useCallback(() => {
     if (window.confirm("Isso vai apagar leads, configurações e sessão local. Continuar?")) {
       onClearLocalData();
@@ -560,7 +571,7 @@ export function SettingsView({
           </p>
         </div>
         {isManager && (
-          <Button variant="ghost" icon={RotateCcw} onClick={onReset}>
+          <Button variant="ghost" icon={RotateCcw} onClick={handleResetSettings}>
             Restaurar padrão
           </Button>
         )}
