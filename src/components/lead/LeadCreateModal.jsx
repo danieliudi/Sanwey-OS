@@ -654,14 +654,14 @@ export function LeadCreateModal({
 
         {/* Footer */}
         <div
-          className="px-5 py-4 border-t shrink-0"
+          className="px-5 py-4 border-t shrink-0 flex gap-2"
           style={{ borderColor: "#E5E7EB", background: "rgba(250,250,248,0.97)" }}
         >
           <button
             type="submit"
             form="lead-create-form"
             disabled={isSubmitDisabled}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-colors"
             style={{
               background: isSubmitDisabled ? "#9CA3AF" : "var(--accent)",
               color: "#FFFFFF",
@@ -673,6 +673,14 @@ export function LeadCreateModal({
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saving ? "Criando…" : "Criar card"}
+          </button>
+          <button
+            type="button"
+            onClick={guardedClose}
+            className="py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors"
+            style={{ border: "1px solid #E5E7EB", background: "#FFFFFF", color: "var(--text-dim)", cursor: "pointer" }}
+          >
+            Cancelar
           </button>
         </div>
       </div>
