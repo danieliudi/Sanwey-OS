@@ -34,6 +34,16 @@ export default function PesquisaPublicaForm() {
   const perguntas = useMemo(() => Array.isArray(pesquisa?.perguntas) ? pesquisa.perguntas : [], [pesquisa]);
   const set = (k, v) => setAnswers((a) => ({ ...a, [k]: v }));
 
+  // Sem flag de obrigatoriedade por pergunta no cadastro (RHComunicacaoView)
+  // — toda pergunta renderizada é, na prática, obrigatória, então o botão
+  // segue o mesmo padrão de asterisco + desabilitado dos outros formulários
+  // públicos (TalentPoolForm/JobApplicationForm/LeadCaptureForm).
+  const isAnswered = (q) => {
+    const v = answers[q.key];
+    return q.tipo === "escala" ? (v !== undefined && v !== null && v !== "") : Boolean(String(v || "").trim());
+  };
+  const canSubmit = perguntas.length > 0 && perguntas.every(isAnswered) && !submitting;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true); setError(null);
@@ -79,7 +89,9 @@ export default function PesquisaPublicaForm() {
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {perguntas.map((q) => (
           <div key={q.key}>
-            <label htmlFor={q.tipo !== "escala" ? `pergunta-${q.key}` : undefined} style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 8 }}>{q.label}</label>
+            <label htmlFor={q.tipo !== "escala" ? `pergunta-${q.key}` : undefined} style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 8 }}>
+              <span style={{ color: ACCENT, marginRight: 4 }}>*</span>{q.label}
+            </label>
             {q.tipo === "escala" ? (
               <div style={{ display: "flex", gap: 8 }}>
                 {[1, 2, 3, 4, 5].map((n) => {
@@ -106,8 +118,8 @@ export default function PesquisaPublicaForm() {
           </div>
         )}
 
-        <button type="submit" disabled={submitting}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, background: submitting ? "#D1D5DB" : ACCENT, color: "#FFF", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 700, cursor: submitting ? "default" : "pointer" }}>
+        <button type="submit" disabled={!canSubmit}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, background: canSubmit ? ACCENT : "#D1D5DB", color: "#FFF", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 700, cursor: canSubmit ? "pointer" : "not-allowed" }}>
           {submitting && <Loader2 size={14} className="animate-spin" />} {submitting ? "Enviando…" : "Enviar resposta"}
         </button>
       </form>

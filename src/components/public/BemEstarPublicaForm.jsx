@@ -39,6 +39,8 @@ export default function BemEstarPublicaForm() {
     return () => { active = false; };
   }, [id]);
 
+  const canSubmit = nome.trim().length >= 2 && !submitting;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (nome.trim().length < 2) { setError("Digite seu nome."); return; }
@@ -103,8 +105,8 @@ export default function BemEstarPublicaForm() {
             <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 2 }} /><span>{error}</span>
           </div>
         )}
-        <button type="submit" disabled={submitting}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, background: submitting ? "#D1D5DB" : ACCENT, color: "#FFF", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 700, cursor: submitting ? "default" : "pointer" }}>
+        <button type="submit" disabled={!canSubmit}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, background: canSubmit ? ACCENT : "#D1D5DB", color: "#FFF", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 700, cursor: canSubmit ? "pointer" : "not-allowed" }}>
           {submitting && <Loader2 size={14} className="animate-spin" />} {submitting ? "Entrando…" : "Entrar na fila"}
         </button>
       </form>

@@ -637,7 +637,7 @@ export function UserManagementView({
             <Input value={form.email} onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))} placeholder="email@sanwey.com.br" icon={Mail} type="email" disabled={supabaseEnabled} />
           </div>
           <div>
-            <FieldLabel>Empresas com acesso *</FieldLabel>
+            <FieldLabel>Empresas com acesso {formCompanyRequired && "*"}</FieldLabel>
             <div className="grid grid-cols-2 gap-2">
               {COMPANY_IDS.map(id => {
                 const c = COMPANIES[id];
