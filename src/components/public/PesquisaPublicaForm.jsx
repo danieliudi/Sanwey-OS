@@ -52,7 +52,7 @@ export default function PesquisaPublicaForm() {
     return <Shell><div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}><Loader2 size={24} className="animate-spin" style={{ color: ACCENT }} /></div></Shell>;
   }
   if (!pesquisa) {
-    return <Shell><h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Pesquisa indisponível</h1><p style={{ color: "#5c5f60", fontSize: 14 }}>Este link não corresponde a nenhuma pesquisa aberta no momento.</p></Shell>;
+    return <Shell><h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Pesquisa indisponível</h1><p style={{ color: "#5c5f60", fontSize: 14 }}>Este link não corresponde a nenhuma pesquisa aberta no momento — pode ter sido encerrada. Se você recebeu este link recentemente, avise o RH pra conferir.</p></Shell>;
   }
   if (done) {
     return (

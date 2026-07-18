@@ -53,6 +53,9 @@ export default function TalentPoolForm() {
   const canSubmit = useMemo(() => (
     form.nome.trim().length >= 2 &&
     Boolean(file) &&
+    // Pelo menos um contato — sem isso o RH não tem como retornar pro
+    // candidato (achado da auditoria de fricção de 18/07).
+    Boolean(form.email.trim() || form.telefone.replace(/\D/g, "")) &&
     form.consentimento &&
     !submitting
   ), [form, file, submitting]);
@@ -133,11 +136,11 @@ export default function TalentPoolForm() {
           <input type="text" value={form.nome} onChange={e => set("nome", e.target.value)} placeholder="Digite aqui …" style={input} />
         </Field>
 
-        <Field label="E-mail" hint="Usaremos para retornar sobre oportunidades">
+        <Field label="E-mail" hint="Informe e-mail ou telefone para podermos retornar">
           <input type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="email@dominio.com" style={input} />
         </Field>
 
-        <Field label="Telefone">
+        <Field label="Telefone" hint="Informe e-mail ou telefone para podermos retornar">
           <input type="tel" value={form.telefone} onChange={e => set("telefone", formatPhone(e.target.value))} placeholder="(99) 99999-9999" style={input} />
         </Field>
 

@@ -84,7 +84,7 @@ export default function LeadCaptureForm() {
       <ShellCard>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Link inválido</h1>
         <p style={{ color: "#5c5f60", fontSize: 14 }}>
-          O endereço deste formulário não corresponde a nenhuma empresa do grupo.
+          O endereço deste formulário não corresponde a nenhuma empresa do grupo. Se você recebeu este link de um vendedor Sanwey, confirme o endereço com ele.
         </p>
       </ShellCard>
     );

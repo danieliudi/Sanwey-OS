@@ -59,6 +59,9 @@ export default function JobApplicationForm() {
   const canSubmit = useMemo(() => (
     form.nome.trim().length >= 2 &&
     Boolean(file) &&
+    // Pelo menos um contato — sem isso o RH não tem como retornar pro
+    // candidato (achado da auditoria de fricção de 18/07).
+    Boolean(form.email.trim() || form.telefone.replace(/\D/g, "")) &&
     form.consentimento &&
     !submitting
   ), [form, file, submitting]);
@@ -109,9 +112,15 @@ export default function JobApplicationForm() {
     return (
       <ShellCard>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Vaga não encontrada</h1>
-        <p style={{ color: "#5c5f60", fontSize: 14 }}>
-          Este link não corresponde a nenhuma vaga aberta no momento.
+        <p style={{ color: "#5c5f60", fontSize: 14, marginBottom: 16 }}>
+          Este link não corresponde a nenhuma vaga aberta no momento — pode ter sido preenchida ou encerrada.
         </p>
+        <a
+          href="/trabalhe-conosco"
+          style={{ display: "inline-block", padding: "10px 18px", borderRadius: 10, background: ACCENT, color: "#FFF", fontSize: 14, fontWeight: 700, textDecoration: "none" }}
+        >
+          Ver outras vagas / deixar currículo
+        </a>
       </ShellCard>
     );
   }
@@ -166,11 +175,11 @@ export default function JobApplicationForm() {
           <input type="text" value={form.nome} onChange={e => set("nome", e.target.value)} placeholder="Digite aqui …" style={input} />
         </Field>
 
-        <Field label="E-mail" hint="Usaremos para retornar sobre sua candidatura">
+        <Field label="E-mail" hint="Informe e-mail ou telefone para podermos retornar">
           <input type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="email@dominio.com" style={input} />
         </Field>
 
-        <Field label="Telefone">
+        <Field label="Telefone" hint="Informe e-mail ou telefone para podermos retornar">
           <input type="tel" value={form.telefone} onChange={e => set("telefone", formatPhone(e.target.value))} placeholder="(99) 99999-9999" style={input} />
         </Field>
 

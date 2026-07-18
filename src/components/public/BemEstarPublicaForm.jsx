@@ -59,7 +59,7 @@ export default function BemEstarPublicaForm() {
     return <Shell><div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}><Loader2 size={24} className="animate-spin" style={{ color: ACCENT }} /></div></Shell>;
   }
   if (!sessao) {
-    return <Shell><h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Fila indisponível</h1><p style={{ color: "#5c5f60", fontSize: 14 }}>Este link não corresponde a nenhuma sessão aberta no momento.</p></Shell>;
+    return <Shell><h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Fila indisponível</h1><p style={{ color: "#5c5f60", fontSize: 14 }}>Este link não corresponde a nenhuma sessão aberta no momento — se você está no local, avise o RH ou o responsável pelo atendimento pra abrir a fila.</p></Shell>;
   }
   if (ticket) {
     return (
