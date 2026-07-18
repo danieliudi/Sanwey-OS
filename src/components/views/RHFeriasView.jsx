@@ -996,7 +996,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
         <FeriasCalendarView requests={filtered} stages={stages} onPillClick={(r) => setDrawerReqId(r.id)} />
       ) : (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16 }} className="flex-col md:flex-row">
-          <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
+          <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
             {stages.map((stage) => (
               <FeriasKanbanColumn
                 key={stage.id}

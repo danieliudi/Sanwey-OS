@@ -1406,7 +1406,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
         />
       ) : (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
-          <div style={{ display: "flex", gap: 12, flexShrink: 0 }} className="hidden md:flex">
+          <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
             {stages.map((stage) => (
               <FeedbackKanbanColumn
                 key={stage.id}
