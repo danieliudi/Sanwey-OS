@@ -684,6 +684,9 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
                       {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>}
                       {f.label}
                     </label>
+                    {f.helpText && (
+                      <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>
+                    )}
                     <RHStageFieldInput
                       field={f}
                       value={customValues[f.fieldKey]}
@@ -1065,6 +1068,9 @@ function VagaDrawer({
                 <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
                   {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
                 </div>
+                {field.helpText && (
+                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{field.helpText}</div>
+                )}
                 <RHStageFieldInput
                   field={field}
                   value={vaga.custom_fields?.[field.fieldKey]}
@@ -1577,6 +1583,9 @@ function NovoCandidatoModal({ defaultStage, vagas, stages, onSave, onClose, user
                       {f.effectiveRequired && <span style={{ color: "var(--danger)", marginRight: 2 }}>*</span>}
                       {f.label}
                     </label>
+                    {f.helpText && (
+                      <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>
+                    )}
                     <RHStageFieldInput
                       field={f}
                       value={customValues[f.fieldKey]}
@@ -1785,6 +1794,9 @@ function CandidatoDrawer({
                 <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
                   {field.label}{field.effectiveRequired && <span style={{ color: "var(--danger)" }}> *</span>}
                 </div>
+                {field.helpText && (
+                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{field.helpText}</div>
+                )}
                 <RHStageFieldInput
                   field={field}
                   value={candidato.customFields?.[field.fieldKey]}

@@ -458,11 +458,12 @@ function ActivityLog({ activities }) {
 
 // ── Field helpers ─────────────────────────────────────────────────────────────
 
-function Field({ label, children }) {
+function Field({ label, children, hint }) {
   return (
     <div>
       <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>{label}</div>
       {children}
+      {hint && <div className="text-[11px] mt-1" style={{ color: "var(--text-faint)" }}>{hint}</div>}
     </div>
   );
 }
@@ -1326,7 +1327,7 @@ export function CampaignDetailDrawer({
                 />
               )}
             </Field>
-            <Field label="Performance">
+            <Field label="Performance" hint="Nota de 0 a 100 — combine com o KPI da campanha pra manter um critério consistente entre campanhas.">
               {isAgencia ? <ReadValue value={get("performanceScore") > 0 ? String(get("performanceScore")) : null} /> : <EditInput value={get("performanceScore") || ""} onChange={v => set("performanceScore", parseInt(v) || 0)} type="number" placeholder="0–100" />}
             </Field>
             <Field label="Lançamento">

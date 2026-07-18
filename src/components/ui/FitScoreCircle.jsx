@@ -14,7 +14,11 @@ function FitScoreCircleImpl({ score, size = 44 }) {
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+    <div
+      className="relative flex items-center justify-center"
+      style={{ width: size, height: size }}
+      title={`Fit score: ${score}/100 — pontuação de potencial do lead com base no perfil e comportamento`}
+    >
       <svg width={size} height={size} className="absolute inset-0 -rotate-90">
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#E5E5E5" strokeWidth="3" />
         <circle
