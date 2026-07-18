@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
-  ArrowRight, Sparkles, Mail, FileDown,
+  ArrowRight, Sparkles,
   RotateCcw, Copy, Loader2, AlertCircle, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -50,8 +50,6 @@ const SIDE_TABS = [
   { id: "arquivos",    label: "Arquivos",    icon: Paperclip },
   { id: "criativo",    label: "Checklist",   icon: ListChecks },
   { id: "entregas",    label: "Entregas",    icon: Package },
-  { id: "email",       label: "Email",       icon: Mail },
-  { id: "pdf",         label: "PDF",         icon: FileDown },
 ];
 
 function SideTabs({ activeId, onChange }) {
@@ -78,17 +76,6 @@ function SideTabs({ activeId, onChange }) {
           </button>
         );
       })}
-    </div>
-  );
-}
-
-// ── Placeholder panel ─────────────────────────────────────────────────────────
-
-function PlaceholderPanel({ label }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-10 gap-2">
-      <div className="text-sm font-semibold" style={{ color: "var(--text-dim)" }}>{label}</div>
-      <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>em breve</span>
     </div>
   );
 }
@@ -1132,7 +1119,6 @@ export function CampaignDetailDrawer({
   const pendingPatch = useRef({});
 
   const isAgencia = currentUser?.role === "agencia";
-  const isManager = ["admin", "gerente_marketing"].includes(currentUser?.role);
 
   const flushPending = useCallback(() => {
     if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
@@ -1448,8 +1434,6 @@ export function CampaignDetailDrawer({
     if (sideTab === "entregas") {
       return <EntregasTab campaign={campaign} canWrite={canWrite} currentUser={currentUser} />;
     }
-    if (sideTab === "email") return <PlaceholderPanel label="Integração de e-mail" />;
-    if (sideTab === "pdf")   return <PlaceholderPanel label="Exportar PDF" />;
     return null;
   }
 
@@ -1736,18 +1720,6 @@ export function CampaignDetailDrawer({
                 <Sparkles size={12} />
                 Mover cards com IA
               </button>
-              {isManager && (
-                <button
-                  className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
-                  style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0, textAlign: "left", opacity: 0.7 }}
-                  onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.opacity = "1"; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.opacity = "0.7"; }}
-                  title="Configure automações de mover cards nas Configurações"
-                >
-                  <Activity size={12} />
-                  Configurar mover cards
-                </button>
-              )}
             </div>
           </aside>
         </div>

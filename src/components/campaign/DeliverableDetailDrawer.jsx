@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, ArrowRight, Trash2, Star,
   FileText, Activity, Paperclip, CheckSquare,
-  Mail, FileDown, Sparkles,
+  Sparkles,
   Upload, File, FileImage, Download, Plus,
   Check, Loader2, AlertCircle, RotateCcw, Copy,
 } from "lucide-react";
@@ -71,8 +71,6 @@ const SIDE_TABS = [
   { id: "ia",          label: "IA",          icon: Sparkles },
   { id: "anexos",      label: "Anexos",      icon: Paperclip },
   { id: "checklists",  label: "Checklists",  icon: CheckSquare },
-  { id: "email",       label: "Email",       icon: Mail },
-  { id: "pdf",         label: "PDF",         icon: FileDown },
 ];
 
 function SideTabs({ activeId, onChange }) {
@@ -102,16 +100,6 @@ function SideTabs({ activeId, onChange }) {
           </button>
         );
       })}
-    </div>
-  );
-}
-
-/* ── Placeholder panel ─────────────────────────────────────── */
-function PlaceholderPanel({ label }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 0", gap: 8 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-dim)" }}>{label}</div>
-      <span style={{ fontSize: 11, padding: "2px 10px", borderRadius: 9999, background: "var(--surface-alt)", color: "var(--text-dim)" }}>em breve</span>
     </div>
   );
 }
@@ -940,8 +928,6 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     if (sideTab === "ia")          return <DeliverableAIPanel item={item} currentUser={currentUser} />;
     if (sideTab === "anexos")      return <AnexosTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
     if (sideTab === "checklists")  return <ChecklistsTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
-    if (sideTab === "email") return <PlaceholderPanel label="Integração de e-mail" />;
-    if (sideTab === "pdf")   return <PlaceholderPanel label="Exportar PDF" />;
     return null;
   }
 
