@@ -1,67 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
-  CheckSquare, Handshake, Megaphone, Users, Bell, Globe2, Package, DollarSign,
-  LayoutDashboard, BriefcaseBusiness, CalendarCheck, Menu as MenuIcon, Settings as SettingsIcon, LogOut,
+  Menu as MenuIcon, Settings as SettingsIcon, LogOut,
 } from "lucide-react";
 
-// Ícones alinhados com os mesmos ids usados no navGroups do desktop
-// (App.jsx) — antes esta barra usava Material Symbols enquanto o resto da
-// plataforma usa lucide-react, uma biblioteca visualmente inconsistente
-// pra cada mesma seção. Achado da 2ª auditoria.
-/* ── Role-aware bottom tab sets ──────────────────────────────── */
-const ROLE_TABS = {
-  admin: [
-    { id: "dashboard",       label: "Minhas Tarefas",       icon: CheckSquare },
-    { id: "crm",             label: "CRM",          icon: Handshake },
-    { id: "marketing",       label: "Campanhas",    icon: Megaphone },
-    { id: "rh-funcionarios", label: "RH",           icon: Users },
-  ],
-  gerente: [
-    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
-    { id: "crm",                label: "CRM",       icon: Handshake },
-    { id: "signals",            label: "Sinais",    icon: Bell },
-    { id: "explorer",           label: "Explorador",icon: Globe2 },
-  ],
-  gerente_marketing: [
-    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
-    { id: "marketing",          label: "Campanhas", icon: Megaphone },
-    { id: "marketing-entregas", label: "Entregas",  icon: Package },
-    { id: "marketing-despesas", label: "Despesas",  icon: DollarSign },
-  ],
-  marketing: [
-    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
-    { id: "marketing",          label: "Campanhas", icon: Megaphone },
-    { id: "marketing-entregas", label: "Entregas",  icon: Package },
-    { id: "marketing-despesas", label: "Despesas",  icon: DollarSign },
-  ],
-  vendedor: [
-    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
-    { id: "crm",                label: "CRM",       icon: Handshake },
-    { id: "signals",            label: "Sinais",    icon: Bell },
-    { id: "explorer",           label: "Explorador",icon: Globe2 },
-  ],
-  consultor: [
-    { id: "dashboard",          label: "Minhas Tarefas",    icon: CheckSquare },
-    { id: "crm",                label: "CRM",       icon: Handshake },
-    { id: "signals",            label: "Sinais",    icon: Bell },
-    { id: "explorer",           label: "Explorador",icon: Globe2 },
-  ],
-  agencia: [
-    { id: "marketing",          label: "Campanhas", icon: Megaphone },
-    { id: "marketing-entregas", label: "Entregas",  icon: Package },
-  ],
-  rh: [
-    { id: "rh-overview",     label: "Visão Geral",  icon: LayoutDashboard },
-    { id: "rh-funcionarios", label: "Funcionários",  icon: Users },
-    { id: "rh-recrutamento", label: "Recrutamento",  icon: BriefcaseBusiness },
-    { id: "rh-ferias",       label: "Férias",        icon: CalendarCheck },
-  ],
-  gerente_rh: [
-    { id: "rh-overview",     label: "Visão Geral",  icon: LayoutDashboard },
-    { id: "rh-funcionarios", label: "Funcionários",  icon: Users },
-    { id: "rh-recrutamento", label: "Recrutamento",  icon: BriefcaseBusiness },
-    { id: "rh-ferias",       label: "Férias",        icon: CalendarCheck },
-  ],
+// Guarda só os IDS por cargo — label/ícone vêm por lookup do navGroups
+// (mesma fonte do Sidebar/menu hambúrguer), nunca redeclarados aqui. Antes
+// esta tabela hardcodava label/ícone próprios (ex: "crm" virava "CRM" +
+// ícone de aperto de mãos aqui, mas "Pipeline" + ícone de camadas no resto
+// do app) — o mesmo destino tinha nome e ícone diferentes conforme o
+// controle usado. Achado da auditoria de fricção de 18/07.
+/* ── Role-aware bottom tab id sets ──────────────────────────────── */
+const ROLE_TAB_IDS = {
+  admin:              ["dashboard", "crm", "marketing", "rh-funcionarios"],
+  gerente:            ["dashboard", "crm", "signals", "explorer"],
+  gerente_marketing:  ["dashboard", "marketing", "marketing-entregas", "marketing-despesas"],
+  marketing:          ["dashboard", "marketing", "marketing-entregas", "marketing-despesas"],
+  vendedor:           ["dashboard", "crm", "signals", "explorer"],
+  consultor:          ["dashboard", "crm", "signals", "explorer"],
+  agencia:            ["marketing", "marketing-entregas"],
+  rh:                 ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias"],
+  gerente_rh:         ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias"],
 };
 
 const ROLE_LABELS = {
@@ -70,23 +28,35 @@ const ROLE_LABELS = {
   rh: "RH", gerente_rh: "Gerente de RH",
 };
 
+function flattenNavGroups(navGroups) {
+  const map = new Map();
+  for (const group of (navGroups || [])) {
+    for (const item of (group.items || [])) map.set(item.id, item);
+  }
+  return map;
+}
+
 // `roles` é o array multi-cargo (FASE 1) — antes só considerava
 // `currentUser.role` (o cargo principal, singular), então um usuário com
 // RH como cargo ADICIONAL (não principal) nunca via as abas rápidas de RH
 // aqui embaixo, só através do menu completo (hambúrguer). Agora junta as
 // abas de todo cargo que o usuário acumula, sem repetir id.
-function getRoleTabs(roles) {
+function getRoleTabs(roles, navGroups) {
+  const byId = flattenNavGroups(navGroups);
   const list = Array.isArray(roles) && roles.length ? roles : ["vendedor"];
   const seen = new Set();
   const tabs = [];
   for (const role of list) {
-    for (const tab of (ROLE_TABS[role] || [])) {
-      if (seen.has(tab.id)) continue;
-      seen.add(tab.id);
-      tabs.push(tab);
+    for (const id of (ROLE_TAB_IDS[role] || [])) {
+      if (seen.has(id)) continue;
+      const item = byId.get(id);
+      if (!item) continue;
+      seen.add(id);
+      tabs.push(item);
     }
   }
-  return tabs.length ? tabs : ROLE_TABS.vendedor;
+  if (tabs.length) return tabs;
+  return (ROLE_TAB_IDS.vendedor || []).map(id => byId.get(id)).filter(Boolean);
 }
 
 /* ── Fullscreen slide-up menu overlay ────────────────────────── */
@@ -194,7 +164,7 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
 /* ── Main component ──────────────────────────────────────────── */
 export function MobileBottomNav({ section, onSectionChange, roles, navGroups, currentUser, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const tabs = getRoleTabs(roles);
+  const tabs = useMemo(() => getRoleTabs(roles, navGroups), [roles, navGroups]);
 
   return (
     <>

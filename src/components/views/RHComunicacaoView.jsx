@@ -62,13 +62,13 @@ function ComunicadoComposer({ onSend }) {
             <label style={labelSt}>Enviar para</label>
             <select value={scopeType} onChange={(e) => { setScopeType(e.target.value); setScopeValue(""); }} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
               <option value="todos">Todos os colaboradores</option>
-              <option value="frente">Por unidade (frente)</option>
+              <option value="frente">Por frente</option>
               <option value="departamento">Por departamento</option>
             </select>
           </div>
           {scopeType !== "todos" && (
             <div>
-              <label style={labelSt}>{scopeType === "frente" ? "Unidade" : "Departamento"}</label>
+              <label style={labelSt}>{scopeType === "frente" ? "Frente" : "Departamento"}</label>
               <select value={scopeValue} onChange={(e) => setScopeValue(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
                 <option value="">Selecione…</option>
                 {(scopeType === "frente" ? RH_FRENTES.map((id) => ({ id, label: RH_FRENTE_LABELS[id] })) : RH_DEPARTMENTS.map((d) => ({ id: d, label: d }))).map((o) => (
