@@ -168,8 +168,13 @@ export function MobileBottomNav({ section, onSectionChange, roles, navGroups, cu
 
   return (
     <>
+      {/* Breakpoint precisa bater com o wrapper "lg:hidden" em App.jsx e
+          com o useIsMobile (width<1024) do Sidebar/TopBar — achado da
+          auditoria mobile: era "md:hidden" (768px), mais restritivo que o
+          wrapper, então entre 768-1023px nem esta nav nem a Sidebar (que já
+          está em modo drawer nessa faixa) apareciam — nenhuma navegação. */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex justify-around items-stretch"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex justify-around items-stretch"
         style={{ height: 64, background: "var(--surface)", borderTop: "1px solid var(--border)" }}
       >
         {tabs.map(({ id, label, icon: Icon }) => {
