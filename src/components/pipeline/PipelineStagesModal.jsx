@@ -304,27 +304,27 @@ function StageRow({
   return (
     <div>
       <div
-        className="w-full flex items-center gap-3 px-4 py-3"
+        className="w-full flex items-center gap-3 px-4 py-3 flex-wrap sm:flex-nowrap"
         style={{ background: "var(--surface-alt)" }}
       >
         <button
           onClick={() => setExpanded(v => !v)}
-          className="flex items-center gap-3 flex-1 text-left cursor-pointer"
+          className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
         >
           <div className="w-2 h-2 rounded-full shrink-0" style={{ background: fromStage.color }} />
-          <span className="text-xs font-bold" style={{ color: fromStage.color, minWidth: 16 }}>
+          <span className="text-xs font-bold shrink-0" style={{ color: fromStage.color, minWidth: 16 }}>
             {fromStage.code}
           </span>
-          <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+          <span className="text-xs font-semibold min-w-0 truncate" style={{ color: "var(--text)" }}>
             De: {fromStage.name}
           </span>
-          <span className="text-xs" style={{ color: "var(--text-dim)" }}>
+          <span className="text-xs shrink-0 hidden sm:inline" style={{ color: "var(--text-dim)" }}>
             · {allowedDests.length} de {possibleDests.length} destinos
           </span>
         </button>
 
-        {/* Bulk actions */}
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Bulk actions — empilha abaixo do sm pra não ficar cortada pelo overflow-hidden do card pai */}
+        <div className="flex items-center gap-1 flex-wrap w-full sm:w-auto sm:flex-nowrap sm:shrink-0">
           <BulkBtn onClick={onForwardOnly} icon={FastForward} label="Só avançar" tone={accent} />
           <BulkBtn onClick={onSetAll}      icon={CheckCheck}   label="Permitir todas" tone="#047857" />
           <BulkBtn onClick={onClearAll}    icon={Ban}          label="Bloquear todas" tone="#B91C1C" />

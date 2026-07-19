@@ -58,7 +58,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
             {onDelete && !confirmDelete && (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
+                className="min-w-10 min-h-10 flex items-center justify-center rounded-lg transition-colors duration-150 cursor-pointer"
                 style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
@@ -73,14 +73,14 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
                 <button
                   onClick={handleDeleteConfirmed}
                   disabled={deleting}
-                  className="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                  className="px-3 min-h-10 flex items-center justify-center rounded-lg text-xs font-semibold cursor-pointer transition-colors"
                   style={{ background: "#B91C1C", color: "#FFFFFF", border: "none", opacity: deleting ? 0.6 : 1 }}
                 >
                   {deleting ? "Excluindo…" : "Confirmar exclusão"}
                 </button>
                 <button
                   onClick={() => setConfirmDelete(false)}
-                  className="p-1.5 rounded-lg text-xs cursor-pointer transition-colors"
+                  className="px-3 min-h-10 flex items-center justify-center rounded-lg text-xs cursor-pointer transition-colors"
                   style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -91,7 +91,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
             )}
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer shrink-0"
+              className="min-w-10 min-h-10 flex items-center justify-center rounded-lg transition-colors duration-150 cursor-pointer shrink-0"
               style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}

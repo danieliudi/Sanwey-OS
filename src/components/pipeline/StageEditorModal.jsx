@@ -151,7 +151,8 @@ export function StageEditorModal({
           Alterações afetam o Kanban e relatórios imediatamente. Não dá pra remover etapas com leads ativos.
         </div>
 
-        {/* Header row */}
+        {/* Header row + lista compartilham scroll horizontal em telas estreitas (colunas fixas em px somam 374px+) */}
+        <div className="overflow-x-auto flex-1 flex flex-col min-h-0">
         <div
           className="px-4 py-2 border-b grid items-center gap-2 text-[10px] font-bold uppercase"
           style={{
@@ -159,6 +160,7 @@ export function StageEditorModal({
             color: "var(--text-dim)",
             letterSpacing: "0.06em",
             gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
+            minWidth: 620,
           }}
         >
           <span />
@@ -172,7 +174,7 @@ export function StageEditorModal({
         </div>
 
         {/* Lista de etapas */}
-        <div className="overflow-y-auto flex-1 p-2 space-y-1.5">
+        <div className="overflow-y-auto flex-1 p-2 space-y-1.5" style={{ minWidth: 620 }}>
           {draft.map((stage, idx) => {
             const count = countsByStage[stage.id] || 0;
             const isTerminal = !!stage.terminal;
@@ -189,6 +191,7 @@ export function StageEditorModal({
                   background: isTerminal ? "var(--surface)" : "#FFFFFF",
                   opacity: dragIdx != null && dragIdx !== idx ? 0.7 : 1,
                   gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
+                  minWidth: 620,
                 }}
               >
                 {/* Grip */}
@@ -304,6 +307,7 @@ export function StageEditorModal({
             <Plus size={13} />
             Adicionar etapa
           </button>
+        </div>
         </div>
 
         {/* Footer */}

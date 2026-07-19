@@ -40,7 +40,7 @@ export function CRMViagensView({ currentUser, leads, users, pushNotification }) 
   return (
     <div className="flex flex-col gap-4">
       {tabs.length > 1 && (
-        <div style={{ display: "flex", gap: 4, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: 3, alignSelf: "flex-start" }}>
+        <div className="max-w-full overflow-x-auto" style={{ display: "flex", gap: 4, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: 3, alignSelf: "flex-start" }}>
           {tabs.map((t) => {
             const active = t.id === activeTab;
             const Icon = t.icon;
@@ -49,6 +49,7 @@ export function CRMViagensView({ currentUser, leads, users, pushNotification }) 
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
+                className="shrink-0"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -62,6 +63,7 @@ export function CRMViagensView({ currentUser, leads, users, pushNotification }) 
                   fontWeight: 700,
                   cursor: "pointer",
                   boxShadow: active ? "var(--shadow-card)" : "none",
+                  whiteSpace: "nowrap",
                 }}
               >
                 <Icon size={13} /> {t.label}

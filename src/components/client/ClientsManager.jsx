@@ -248,89 +248,174 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                {COLS.map((col, i) => (
-                  <th key={i} className={col.numeric ? "text-right font-bold uppercase" : "text-left font-bold uppercase"}
-                    onClick={() => toggleSort(col.key)}
-                    style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--text-dim)", padding: "10px 12px", borderBottom: "1px solid #E5E7EB", cursor: col.key ? "pointer" : "default", userSelect: "none", whiteSpace: "nowrap" }}>
-                    {col.label}
-                    {col.key && sortCol === col.key && (
-                      <span style={{ marginLeft: 4 }}>{sortDir === "asc" ? "▲" : "▼"}</span>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {paged.map(c => {
-                const stats = statsByClient.get(c.id);
-                const dealCount = dealsByClient.get(c.id)?.length || 0;
-                return (
-                <tr key={c.id} style={{ borderBottom: "1px solid #F1F1F1" }}>
-                  <td style={{ padding: "12px", fontSize: 13 }}>
-                    {dealCount > 0 ? (
-                      <button onClick={() => setHistoryClient(c)}
-                        className="font-semibold text-left inline-flex items-center gap-1"
-                        style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                        {c.name}
-                        <History size={12} />
-                      </button>
-                    ) : (
-                      <span className="font-semibold" style={{ color: "var(--text)" }}>{c.name}</span>
-                    )}
-                  </td>
-                  <td style={{ padding: "12px" }}><CategoryTag value={c.category} /></td>
-                  <td style={{ padding: "12px", fontSize: 13, color: "var(--text)" }}>
-                    {[c.city, c.state].filter(Boolean).join(" / ") || <span style={{ color: "#9CA3AF" }}>—</span>}
-                  </td>
-                  <td style={{ padding: "12px", fontSize: 12, fontFamily: "monospace", color: "var(--text-dim)" }}>
-                    {c.cnpj || "—"}
-                  </td>
-                  <td style={{ padding: "12px" }}>
-                    <div className="flex flex-wrap gap-1">
-                      {COMPANY_IDS.map(id => {
-                        const co = COMPANIES[id];
-                        const won = stats?.companies.has(id);
-                        return (
-                          <span key={id} title={won ? `Já vende para ${co.name}` : `Oportunidade de cross-sell em ${co.name}`}
-                            className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                            style={won
-                              ? { background: co.primary + "1A", color: co.primary }
-                              : { background: "#F3F4F6", color: "#9CA3AF" }}>
-                            {co.short}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td style={{ padding: "12px", fontSize: 12, color: "var(--text-dim)", maxWidth: 180 }}>
-                    {stats?.products.length ? stats.products.join(", ") : "—"}
-                  </td>
-                  <td style={{ padding: "12px", fontSize: 13, color: "var(--text-dim)", whiteSpace: "nowrap" }}>
-                    {stats?.lastOrder ? formatDateBR(stats.lastOrder) : "—"}
-                  </td>
-                  <td style={{ padding: "12px", fontSize: 13, color: "var(--text)", whiteSpace: "nowrap", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                    {stats?.avgTicket ? formatBRL(stats.avgTicket) : "—"}
-                  </td>
-                  <td style={{ padding: "12px", textAlign: "right", whiteSpace: "nowrap" }}>
-                    <button onClick={() => openEdit(c)} title="Editar"
-                      className="p-1.5 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}>
-                      <Pencil size={14} />
-                    </button>
-                    {canDelete && (
-                      <button onClick={() => setConfirmId(c.id)} title="Excluir"
-                        className="p-1.5 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626" }}>
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </td>
+        <>
+          {/* Tabela — só a partir de md; abaixo disso a tabela de 9 colunas
+              não cabe e a coluna de Ações fica fora da tela (achado de auditoria). */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full" style={{ borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  {COLS.map((col, i) => (
+                    <th key={i} className={col.numeric ? "text-right font-bold uppercase" : "text-left font-bold uppercase"}
+                      onClick={() => toggleSort(col.key)}
+                      style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--text-dim)", padding: "10px 12px", borderBottom: "1px solid #E5E7EB", cursor: col.key ? "pointer" : "default", userSelect: "none", whiteSpace: "nowrap" }}>
+                      {col.label}
+                      {col.key && sortCol === col.key && (
+                        <span style={{ marginLeft: 4 }}>{sortDir === "asc" ? "▲" : "▼"}</span>
+                      )}
+                    </th>
+                  ))}
                 </tr>
-              );})}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paged.map(c => {
+                  const stats = statsByClient.get(c.id);
+                  const dealCount = dealsByClient.get(c.id)?.length || 0;
+                  return (
+                  <tr key={c.id} style={{ borderBottom: "1px solid #F1F1F1" }}>
+                    <td style={{ padding: "12px", fontSize: 13 }}>
+                      {dealCount > 0 ? (
+                        <button onClick={() => setHistoryClient(c)}
+                          className="font-semibold text-left inline-flex items-center gap-1"
+                          style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                          {c.name}
+                          <History size={12} />
+                        </button>
+                      ) : (
+                        <span className="font-semibold" style={{ color: "var(--text)" }}>{c.name}</span>
+                      )}
+                    </td>
+                    <td style={{ padding: "12px" }}><CategoryTag value={c.category} /></td>
+                    <td style={{ padding: "12px", fontSize: 13, color: "var(--text)" }}>
+                      {[c.city, c.state].filter(Boolean).join(" / ") || <span style={{ color: "#9CA3AF" }}>—</span>}
+                    </td>
+                    <td style={{ padding: "12px", fontSize: 12, fontFamily: "monospace", color: "var(--text-dim)" }}>
+                      {c.cnpj || "—"}
+                    </td>
+                    <td style={{ padding: "12px" }}>
+                      <div className="flex flex-wrap gap-1">
+                        {COMPANY_IDS.map(id => {
+                          const co = COMPANIES[id];
+                          const won = stats?.companies.has(id);
+                          return (
+                            <span key={id} title={won ? `Já vende para ${co.name}` : `Oportunidade de cross-sell em ${co.name}`}
+                              className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                              style={won
+                                ? { background: co.primary + "1A", color: co.primary }
+                                : { background: "#F3F4F6", color: "#9CA3AF" }}>
+                              {co.short}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px", fontSize: 12, color: "var(--text-dim)", maxWidth: 180 }}>
+                      {stats?.products.length ? stats.products.join(", ") : "—"}
+                    </td>
+                    <td style={{ padding: "12px", fontSize: 13, color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                      {stats?.lastOrder ? formatDateBR(stats.lastOrder) : "—"}
+                    </td>
+                    <td style={{ padding: "12px", fontSize: 13, color: "var(--text)", whiteSpace: "nowrap", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                      {stats?.avgTicket ? formatBRL(stats.avgTicket) : "—"}
+                    </td>
+                    <td style={{ padding: "12px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <button onClick={() => openEdit(c)} title="Editar"
+                        className="p-1.5 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}>
+                        <Pencil size={14} />
+                      </button>
+                      {canDelete && (
+                        <button onClick={() => setConfirmId(c.id)} title="Excluir"
+                          className="p-1.5 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626" }}>
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );})}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Cards — abaixo de md, substitui a tabela (achado de auditoria:
+              9 colunas não cabem em ~375-414px e a coluna de Ações ficava fora da tela). */}
+          <div className="md:hidden space-y-2.5">
+            {paged.map(c => {
+              const stats = statsByClient.get(c.id);
+              const dealCount = dealsByClient.get(c.id)?.length || 0;
+              return (
+                <div key={c.id} className="rounded-lg border p-3" style={{ borderColor: "#E5E7EB" }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      {dealCount > 0 ? (
+                        <button onClick={() => setHistoryClient(c)}
+                          className="font-semibold text-left inline-flex items-center gap-1"
+                          style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 14 }}>
+                          {c.name}
+                          <History size={12} />
+                        </button>
+                      ) : (
+                        <div className="font-semibold" style={{ color: "var(--text)", fontSize: 14 }}>{c.name}</div>
+                      )}
+                      <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
+                        {[c.city, c.state].filter(Boolean).join(" / ") || "—"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button onClick={() => openEdit(c)} title="Editar"
+                        className="p-2 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}>
+                        <Pencil size={16} />
+                      </button>
+                      {canDelete && (
+                        <button onClick={() => setConfirmId(c.id)} title="Excluir"
+                          className="p-2 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626" }}>
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center flex-wrap gap-1.5 mt-2">
+                    <CategoryTag value={c.category} />
+                    {c.cnpj && (
+                      <span style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-dim)" }}>{c.cnpj}</span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {COMPANY_IDS.map(id => {
+                      const co = COMPANIES[id];
+                      const won = stats?.companies.has(id);
+                      return (
+                        <span key={id} title={won ? `Já vende para ${co.name}` : `Oportunidade de cross-sell em ${co.name}`}
+                          className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
+                          style={won
+                            ? { background: co.primary + "1A", color: co.primary }
+                            : { background: "#F3F4F6", color: "#9CA3AF" }}>
+                          {co.short}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  {stats?.products.length ? (
+                    <div className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
+                      {stats.products.join(", ")}
+                    </div>
+                  ) : null}
+
+                  {stats && (
+                    <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: "1px solid #F1F1F1", fontSize: 12 }}>
+                      <span style={{ color: "var(--text-dim)" }}>{stats.lastOrder ? formatDateBR(stats.lastOrder) : "—"}</span>
+                      <span style={{ color: "var(--text)", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+                        {stats.avgTicket ? formatBRL(stats.avgTicket) : "—"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
           {/* Contador + paginação — antes a lista renderizava todas as linhas
               de uma vez. Achado da 2ª auditoria. */}
           <div className="flex items-center justify-between flex-wrap gap-2" style={{ padding: "10px 12px", fontSize: 12, color: "var(--text-dim)" }}>
@@ -351,7 +436,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
               </div>
             )}
           </div>
-        </div>
+        </>
       )}
 
       {/* Create / edit modal */}

@@ -731,7 +731,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
             >
               <Pencil size={13} />
-              Editar etapas
+              <span className="hidden sm:inline">Editar etapas</span>
             </button>
           )}
           {isManager && (
@@ -1196,7 +1196,89 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border)" }}>
+    <>
+    {/* Mobile: cards empilhados (abaixo de md a tabela de 8 colunas cortava
+        Responsável/Última mov. pra fora da tela) */}
+    <div className="md:hidden space-y-2">
+      {sorted.map(lead => {
+        const stage = stageMap[lead.stage];
+        const resolvedOwners = getLeadOwnerIds(lead).map(id => users?.get?.(id)).filter(Boolean);
+        const companyInfo = isGroupView ? COMPANIES[lead.companyId] : null;
+        return (
+          <div
+            key={lead.id}
+            onClick={() => onLeadClick?.(lead)}
+            className="rounded-xl border p-3 cursor-pointer"
+            style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                {companyInfo && (
+                  <span
+                    style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                      background: companyInfo.primary, color: "#FFF",
+                      fontSize: 9, fontWeight: 800,
+                    }}
+                  >
+                    {companyInfo.short?.[0] || "?"}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{lead.company}</div>
+                  {stage && (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
+                      <span style={{ color: stage.color, fontWeight: 600, fontSize: 11 }}>{stage.name}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-semibold text-sm" style={{ color: lead.value > 0 ? "#15803D" : "var(--text-dim)" }}>
+                  {lead.value > 0 ? `R$ ${formatK(lead.value)}` : "—"}
+                </span>
+                {onStarToggle && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onStarToggle(lead.id); }}
+                    style={{ display: "flex", background: "transparent", border: "none", cursor: "pointer", padding: 2 }}
+                    title={lead.starred ? "Remover dos favoritos" : "Marcar como favorito"}
+                  >
+                    <Star size={13} fill={lead.starred ? "#F59E0B" : "none"} color={lead.starred ? "#F59E0B" : "var(--text-dim)"} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2 mt-2 text-xs" style={{ color: "var(--text-dim)" }}>
+              <div className="flex items-center gap-2 min-w-0">
+                {lead.fitScore > 0 && (
+                  <span
+                    style={{
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                      fontWeight: 700,
+                      background: lead.fitScore >= 80 ? "#DCFCE7" : lead.fitScore >= 50 ? "#FEF3C7" : "#FEE2E2",
+                      color: lead.fitScore >= 80 ? "#15803D" : lead.fitScore >= 50 ? "#B45309" : "#B91C1C",
+                    }}
+                  >
+                    {lead.fitScore}
+                  </span>
+                )}
+                <span className="truncate">{lead.sector || "—"}</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {resolvedOwners.length > 0 && <AvatarStack users={resolvedOwners} size={18} max={2} />}
+                <span>{fmt(lead.stageChangedAt || lead.createdAt)}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    {/* md+: tabela completa */}
+    <div className="hidden md:block overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border)" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -1344,6 +1426,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -1362,7 +1445,7 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
     >
       <Icon size={13} />
-      {label}
+      <span className="hidden sm:inline">{label}</span>
     </button>
   );
 }
