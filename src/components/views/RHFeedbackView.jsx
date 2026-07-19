@@ -18,6 +18,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
@@ -1405,8 +1406,30 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           onPillClick={(f) => setDrawerFeedbackId(f.id)}
         />
       ) : (
-        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
-          <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
+        <>
+          <RHMobileKanbanAccordion
+            stages={stages}
+            itemsByStage={feedbackByStage}
+            renderCard={(f) => (
+              <RHKanbanCard
+                key={f.id}
+                id={f.id}
+                stage={f.status}
+                stages={stages}
+                onClick={() => setDrawerFeedbackId(f.id)}
+                onDragStart={canWrite ? handleCardDragStart : undefined}
+                onDragEnd={canWrite ? handleCardDragEnd : undefined}
+                onMoveToStage={canWrite ? handleStageChange : undefined}
+                onDeleteCard={canWrite ? deleteFeedback : undefined}
+                agingDays={daysInStage(f.status_changed_at)}
+                completeness={getFeedbackCompleteness?.(f)}
+              >
+                <FeedbackCardBody feedback={f} colaborador={colaboradoresById.get(f.user_id)} />
+              </RHKanbanCard>
+            )}
+            emptyLabel="Nada aqui"
+          />
+          <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="hidden lg:flex">
             {stages.map((stage) => (
               <FeedbackKanbanColumn
                 key={stage.id}
@@ -1429,30 +1452,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
               />
             ))}
           </div>
-          <div className="md:hidden flex flex-col gap-3">
-            {stages.map((stage) => (
-              <FeedbackKanbanColumn
-                key={stage.id}
-                stage={stage}
-                stages={stages}
-                feedbackList={feedbackByStage[stage.stageKey] || []}
-                colaboradoresById={colaboradoresById}
-                onCardClick={(f) => setDrawerFeedbackId(f.id)}
-                onDragStart={handleCardDragStart}
-                onDragEnd={handleCardDragEnd}
-                onMoveToStage={handleStageChange}
-                onDeleteFeedback={canWrite ? deleteFeedback : undefined}
-                isDragOver={dragOverStageKey === stage.stageKey}
-                onColumnDragOver={handleColumnDragOver}
-                onColumnDragLeave={handleColumnDragLeave}
-                onColumnDrop={handleColumnDrop}
-                canWrite={canWrite}
-                onEditFields={setFieldEditorStage}
-                getCompleteness={getFeedbackCompleteness}
-              />
-            ))}
-          </div>
-        </div>
+        </>
       )}
 
       {drawerFeedback && (

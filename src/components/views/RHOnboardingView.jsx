@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ClipboardCheck, Plus, X, Check, Trash2,
   Briefcase, Pencil, Settings2, AlertCircle, Users,
-  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { RH_CONTRACT_TYPES } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -24,6 +24,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
@@ -202,20 +203,19 @@ function OnboardingKanbanColumn({
   onCardClick, onDragStart, onDragEnd, onMoveToStage,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, onAddColaborador,
-  isMobile, collapsed, onToggleCollapse,
 }) {
   return (
     <div
       onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
-      className={`flex flex-col rounded-xl border transition-all duration-150 overflow-hidden ${isMobile ? "w-full" : ""}`}
+      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
       style={{
-        ...(isMobile ? {} : { width: 272, minWidth: 272 }),
+        width: 272, minWidth: 272,
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        maxHeight: isMobile ? (collapsed ? "none" : "60vh") : "calc(100vh - 260px)",
+        maxHeight: "calc(100vh - 260px)",
       }}
     >
       {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
@@ -255,45 +255,34 @@ function OnboardingKanbanColumn({
               <Settings2 size={13} />
             </button>
           )}
-          {isMobile && (
-            <button
-              onClick={onToggleCollapse}
-              title={collapsed ? "Expandir etapa" : "Recolher etapa"}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}
-            >
-              <ChevronDown size={14} style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }} />
-            </button>
-          )}
         </div>
       </div>
-      {!(isMobile && collapsed) && (
-        <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-          {colaboradoresList.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
-          ) : (
-            colaboradoresList.map((c) => (
-              <RHKanbanCard
-                key={c.id}
-                id={c.id}
-                stage={c.onboardingStage}
-                stages={stages}
-                onClick={() => onCardClick(c)}
-                onDragStart={canWrite ? onDragStart : undefined}
-                onDragEnd={canWrite ? onDragEnd : undefined}
-                onMoveToStage={canWrite ? onMoveToStage : undefined}
-                agingDays={daysInStage(c.onboardingStageChangedAt)}
-                completeness={getCompleteness?.(c)}
-              >
-                <OnboardingCardBody
-                  colaborador={c}
-                  tarefas={tarefasByColaborador[c.id] || []}
-                  vagaTitle={vagasById.get(c.vagaId)?.title}
-                />
-              </RHKanbanCard>
-            ))
-          )}
-        </div>
-      )}
+      <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        {colaboradoresList.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
+        ) : (
+          colaboradoresList.map((c) => (
+            <RHKanbanCard
+              key={c.id}
+              id={c.id}
+              stage={c.onboardingStage}
+              stages={stages}
+              onClick={() => onCardClick(c)}
+              onDragStart={canWrite ? onDragStart : undefined}
+              onDragEnd={canWrite ? onDragEnd : undefined}
+              onMoveToStage={canWrite ? onMoveToStage : undefined}
+              agingDays={daysInStage(c.onboardingStageChangedAt)}
+              completeness={getCompleteness?.(c)}
+            >
+              <OnboardingCardBody
+                colaborador={c}
+                tarefas={tarefasByColaborador[c.id] || []}
+                vagaTitle={vagasById.get(c.vagaId)?.title}
+              />
+            </RHKanbanCard>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -995,8 +984,6 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const onboardingStageFields = useRHStageFields("onboarding");
   const { users } = useProfiles();
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
-  const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["documentacao"]));
-  const toggleMobileStage = (stageKey) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(stageKey) ? n.delete(stageKey) : n.add(stageKey); return n; });
   const [novaTemplateOpen, setNovaTemplateOpen] = useState(false);
   const [bulkTarefaOpen, setBulkTarefaOpen] = useState(false);
   const [addColaboradorStage, setAddColaboradorStage] = useState(null);
@@ -1256,8 +1243,35 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           onPillClick={(c) => setDrawerColaboradorId(c.id)}
         />
       ) : (
-        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
-          <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
+        <>
+          <RHMobileKanbanAccordion
+            stages={stages}
+            itemsByStage={colaboradoresByStage}
+            renderCard={(c) => (
+              <RHKanbanCard
+                key={c.id}
+                id={c.id}
+                stage={c.onboardingStage}
+                stages={stages}
+                onClick={() => setDrawerColaboradorId(c.id)}
+                onDragStart={canWrite ? handleCardDragStart : undefined}
+                onDragEnd={canWrite ? handleCardDragEnd : undefined}
+                onMoveToStage={canWrite ? handleStageChange : undefined}
+                agingDays={daysInStage(c.onboardingStageChangedAt)}
+                completeness={getColaboradorCompleteness?.(c)}
+              >
+                <OnboardingCardBody
+                  colaborador={c}
+                  tarefas={tarefasByColaborador[c.id] || []}
+                  vagaTitle={vagasById.get(c.vagaId)?.title}
+                />
+              </RHKanbanCard>
+            )}
+            onAdd={canWrite ? (stageKey) => setAddColaboradorStage(stageKey) : undefined}
+            addLabel="Adicionar colaborador"
+            emptyLabel="Ninguém aqui"
+          />
+          <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="hidden lg:flex">
             {stages.map((stage) => (
               <OnboardingKanbanColumn
                 key={stage.id}
@@ -1281,34 +1295,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
               />
             ))}
           </div>
-          <div className="md:hidden flex flex-col gap-3">
-            {stages.map((stage) => (
-              <OnboardingKanbanColumn
-                key={stage.id}
-                stage={stage}
-                stages={stages}
-                colaboradoresList={colaboradoresByStage[stage.stageKey] || []}
-                tarefasByColaborador={tarefasByColaborador}
-                vagasById={vagasById}
-                onCardClick={(c) => setDrawerColaboradorId(c.id)}
-                onDragStart={handleCardDragStart}
-                onDragEnd={handleCardDragEnd}
-                onMoveToStage={handleStageChange}
-                isDragOver={dragOverStageKey === stage.stageKey}
-                onColumnDragOver={handleColumnDragOver}
-                onColumnDragLeave={handleColumnDragLeave}
-                onColumnDrop={handleColumnDrop}
-                canWrite={canWrite}
-                onEditFields={setFieldEditorStage}
-                getCompleteness={getColaboradorCompleteness}
-                onAddColaborador={() => setAddColaboradorStage(stage.stageKey)}
-                isMobile
-                collapsed={!expandedMobileStages.has(stage.stageKey)}
-                onToggleCollapse={() => toggleMobileStage(stage.stageKey)}
-              />
-            ))}
-          </div>
-        </div>
+        </>
       )}
 
       {drawerColaborador && (

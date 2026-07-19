@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
-  ChevronDown,
   ChevronRight,
   ChevronLeft,
   Plus,
@@ -51,6 +50,7 @@ import { useProfiles } from "../../hooks/use-profiles";
 import { useAI } from "../../hooks/use-ai";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -980,15 +980,14 @@ function VagaKanbanColumn({
   onMoveToStage, onDeleteVaga, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
   getCompleteness, onAddVaga, usersById,
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
     <div
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden w-full md:w-[272px] md:min-w-[272px]"
+      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
       style={{
+        width: 272, minWidth: 272,
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
@@ -1012,13 +1011,6 @@ function VagaKanbanColumn({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="md:hidden"
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
-          >
-            <ChevronDown size={14} style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }} />
-          </button>
           {canWrite && (
             <button
               onClick={onAddVaga}
@@ -1039,33 +1031,31 @@ function VagaKanbanColumn({
           )}
         </div>
       </div>
-      {!collapsed && (
-        <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-          {vagasList.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
-              {isDragOver ? "Soltar aqui" : "Nenhuma vaga"}
-            </div>
-          ) : (
-            vagasList.map((v) => (
-              <RHKanbanCard
-                key={v.id}
-                id={v.id}
-                stage={v.stage}
-                stages={stages}
-                onClick={() => onCardClick(v)}
-                onDragStart={canWrite ? onDragStart : undefined}
-                onDragEnd={canWrite ? onDragEnd : undefined}
-                onMoveToStage={canWrite ? onMoveToStage : undefined}
-                onDeleteCard={canWrite ? onDeleteVaga : undefined}
-                agingDays={daysInStage(v.stage_changed_at)}
-                completeness={getCompleteness?.(v)}
-              >
-                <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
-              </RHKanbanCard>
-            ))
-          )}
-        </div>
-      )}
+      <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        {vagasList.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
+            {isDragOver ? "Soltar aqui" : "Nenhuma vaga"}
+          </div>
+        ) : (
+          vagasList.map((v) => (
+            <RHKanbanCard
+              key={v.id}
+              id={v.id}
+              stage={v.stage}
+              stages={stages}
+              onClick={() => onCardClick(v)}
+              onDragStart={canWrite ? onDragStart : undefined}
+              onDragEnd={canWrite ? onDragEnd : undefined}
+              onMoveToStage={canWrite ? onMoveToStage : undefined}
+              onDeleteCard={canWrite ? onDeleteVaga : undefined}
+              agingDays={daysInStage(v.stage_changed_at)}
+              completeness={getCompleteness?.(v)}
+            >
+              <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
+            </RHKanbanCard>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -2416,8 +2406,6 @@ function KanbanColumn({
   onMoveToStage, onDeleteCandidato, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
   getCompleteness,
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
     <div
       onDragOver={onDragOver}
@@ -2449,13 +2437,6 @@ function KanbanColumn({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="md:hidden"
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
-          >
-            <ChevronDown size={14} style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }} />
-          </button>
           {canWrite && (
             <button
               onClick={onAddCandidato}
@@ -2478,33 +2459,31 @@ function KanbanColumn({
       </div>
 
       {/* Cards */}
-      {!collapsed && (
-        <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-          {candidatos.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
-              {isDragOver ? "Soltar aqui" : "Nenhum candidato"}
-            </div>
-          ) : (
-            candidatos.map((c) => (
-              <RHKanbanCard
-                key={c.id}
-                id={c.id}
-                stage={c.stage}
-                stages={stages}
-                onClick={() => onCardClick(c)}
-                onDragStart={canWrite ? onDragStart : undefined}
-                onDragEnd={canWrite ? onDragEnd : undefined}
-                onMoveToStage={canWrite ? onMoveToStage : undefined}
-                onDeleteCard={canWrite ? onDeleteCandidato : undefined}
-                agingDays={daysInStage(c.stage_changed_at)}
-                completeness={getCompleteness?.(c)}
-              >
-                <CandidatoCardBody candidato={c} vagas={vagas} />
-              </RHKanbanCard>
-            ))
-          )}
-        </div>
-      )}
+      <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        {candidatos.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
+            {isDragOver ? "Soltar aqui" : "Nenhum candidato"}
+          </div>
+        ) : (
+          candidatos.map((c) => (
+            <RHKanbanCard
+              key={c.id}
+              id={c.id}
+              stage={c.stage}
+              stages={stages}
+              onClick={() => onCardClick(c)}
+              onDragStart={canWrite ? onDragStart : undefined}
+              onDragEnd={canWrite ? onDragEnd : undefined}
+              onMoveToStage={canWrite ? onMoveToStage : undefined}
+              onDeleteCard={canWrite ? onDeleteCandidato : undefined}
+              agingDays={daysInStage(c.stage_changed_at)}
+              completeness={getCompleteness?.(c)}
+            >
+              <CandidatoCardBody candidato={c} vagas={vagas} />
+            </RHKanbanCard>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -3123,8 +3102,32 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
             onPillClick={(v) => setVagaDrawerId(v.id)}
           />
         ) : (
-          <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
-            <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
+          <>
+            <RHMobileKanbanAccordion
+              stages={vagaStages}
+              itemsByStage={vagasByStage}
+              renderCard={(v) => (
+                <RHKanbanCard
+                  key={v.id}
+                  id={v.id}
+                  stage={v.stage}
+                  stages={vagaStages}
+                  onClick={() => setVagaDrawerId(v.id)}
+                  onDragStart={canWrite ? handleVagaDragStart : undefined}
+                  onDragEnd={canWrite ? handleVagaDragEnd : undefined}
+                  onMoveToStage={canWrite ? attemptVagaStageChange : undefined}
+                  onDeleteCard={canWrite ? (id) => deleteVaga(id) : undefined}
+                  agingDays={daysInStage(v.stage_changed_at)}
+                  completeness={getVagaCompleteness?.(v)}
+                >
+                  <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
+                </RHKanbanCard>
+              )}
+              onAdd={canWrite ? (stageKey) => setAddVagaStage(stageKey) : undefined}
+              addLabel="Nova vaga"
+              emptyLabel="Nenhuma vaga"
+            />
+            <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="hidden lg:flex">
               {vagaStages.map((stage) => (
                 <VagaKanbanColumn
                   key={stage.stageKey}
@@ -3149,32 +3152,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                 />
               ))}
             </div>
-            <div className="md:hidden flex flex-col gap-3">
-              {vagaStages.map((stage) => (
-                <VagaKanbanColumn
-                  key={stage.stageKey}
-                  stage={stage}
-                  stages={vagaStages}
-                  vagasList={vagasByStage[stage.stageKey] || []}
-                  candidatosByVaga={candidatosByVaga}
-                  canWrite={canWrite}
-                  onCardClick={(v) => setVagaDrawerId(v.id)}
-                  onMoveToStage={attemptVagaStageChange}
-                  onDeleteVaga={(id) => deleteVaga(id)}
-                  onDragStart={handleVagaDragStart}
-                  onDragEnd={handleVagaDragEnd}
-                  isDragOver={dragOverVagaStage === stage.stageKey}
-                  onDragOver={(e) => handleVagaDragOver(e, stage.stageKey)}
-                  onDragLeave={handleVagaDragLeave}
-                  onDrop={() => handleVagaDrop(stage.stageKey)}
-                  onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
-                  getCompleteness={getVagaCompleteness}
-                  onAddVaga={() => setAddVagaStage(stage.stageKey)}
-                  usersById={usersById}
-                />
-              ))}
-            </div>
-          </div>
+          </>
         )
       ) : (
         /* ═══ Kanban de CANDIDATOS (existente) ═══ */
@@ -3312,8 +3290,32 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
               onPillClick={(c) => setSelectedCandidatoId(c.id)}
             />
           ) : (
-            <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="flex-col md:flex-row">
-              <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
+            <>
+              <RHMobileKanbanAccordion
+                stages={candStages}
+                itemsByStage={candByStage}
+                renderCard={(c) => (
+                  <RHKanbanCard
+                    key={c.id}
+                    id={c.id}
+                    stage={c.stage}
+                    stages={candStages}
+                    onClick={() => setSelectedCandidatoId(c.id)}
+                    onDragStart={canWrite ? handleCandDragStart : undefined}
+                    onDragEnd={canWrite ? handleCandDragEnd : undefined}
+                    onMoveToStage={canWrite ? attemptCandStageChange : undefined}
+                    onDeleteCard={canWrite ? (id) => deleteAplicacao(id) : undefined}
+                    agingDays={daysInStage(c.stage_changed_at)}
+                    completeness={getCandCompleteness?.(c)}
+                  >
+                    <CandidatoCardBody candidato={c} vagas={vagas} />
+                  </RHKanbanCard>
+                )}
+                onAdd={canWrite ? (stageKey) => setAddCandidatoStage(stageKey) : undefined}
+                addLabel="Novo candidato"
+                emptyLabel="Nenhum candidato"
+              />
+              <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="hidden lg:flex">
                 {candStages.map((stage) => (
                   <KanbanColumn
                     key={stage.stageKey}
@@ -3337,32 +3339,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                   />
                 ))}
               </div>
-              {/* Mobile: vertical */}
-              <div className="md:hidden flex flex-col gap-3">
-                {candStages.map((stage) => (
-                  <KanbanColumn
-                    key={stage.stageKey}
-                    stage={stage}
-                    stages={candStages}
-                    candidatos={candByStage[stage.stageKey] || []}
-                    vagas={vagas}
-                    canWrite={canWrite}
-                    onCardClick={(c) => setSelectedCandidatoId(c.id)}
-                    onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
-                    onMoveToStage={attemptCandStageChange}
-                    onDeleteCandidato={(id) => deleteAplicacao(id)}
-                    onDragStart={handleCandDragStart}
-                    onDragEnd={handleCandDragEnd}
-                    isDragOver={dragOverCandStage === stage.stageKey}
-                    onDragOver={(e) => handleCandDragOver(e, stage.stageKey)}
-                    onDragLeave={handleCandDragLeave}
-                    onDrop={() => handleCandDrop(stage.stageKey)}
-                    onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
-                    getCompleteness={getCandCompleteness}
-                  />
-                ))}
-              </div>
-            </div>
+            </>
           )}
         </>
       )}

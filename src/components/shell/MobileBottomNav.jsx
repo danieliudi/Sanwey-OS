@@ -1,7 +1,19 @@
 import React, { useState, useMemo } from "react";
 import {
-  Menu as MenuIcon, Settings as SettingsIcon, LogOut,
+  Menu as MenuIcon, Settings as SettingsIcon, LogOut, ChevronDown,
 } from "lucide-react";
+
+// Mesma chave do Sidebar (versão desktop) — grupo recolhido num lugar já
+// aparece recolhido no outro, em vez de cada versão guardar seu próprio
+// estado divergente.
+const COLLAPSED_GROUPS_KEY = "sidebar_collapsed_groups";
+function loadCollapsedGroups() {
+  try { return JSON.parse(localStorage.getItem(COLLAPSED_GROUPS_KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveCollapsedGroups(state) {
+  try { localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify(state)); } catch {}
+}
 
 // Guarda só os IDS por cargo — label/ícone vêm por lookup do navGroups
 // (mesma fonte do Sidebar/menu hambúrguer), nunca redeclarados aqui. Antes
@@ -61,6 +73,15 @@ function getRoleTabs(roles, navGroups) {
 
 /* ── Fullscreen slide-up menu overlay ────────────────────────── */
 function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, onLogout, onClose }) {
+  const [collapsed, setCollapsed] = useState(loadCollapsedGroups);
+  const toggleGroup = (label) => {
+    setCollapsed(prev => {
+      const next = { ...prev, [label]: !prev[label] };
+      saveCollapsedGroups(next);
+      return next;
+    });
+  };
+
   return (
     <>
       <div
@@ -82,15 +103,30 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
           <div style={{ width: 36, height: 4, background: "var(--border-strong)", borderRadius: 2 }} />
         </div>
 
-        {/* Nav groups */}
-        {(navGroups || []).map((group, gi) => (
+        {/* Nav groups — colapsáveis por departamento, igual à Sidebar desktop */}
+        {(navGroups || []).map((group, gi) => {
+          const isCollapsed = group.label ? !!collapsed[group.label] : false;
+          return (
           <div key={gi}>
             {group.label && (
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.08em", padding: "12px 20px 4px" }}>
-                {group.label}
-              </div>
+              <button
+                onClick={() => toggleGroup(group.label)}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "12px 20px 4px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  {group.label}
+                </span>
+                <ChevronDown
+                  size={14}
+                  strokeWidth={2.5}
+                  style={{ color: "var(--text-faint)", transition: "transform 0.2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+                />
+              </button>
             )}
-            {group.items.map(item => {
+            {!isCollapsed && group.items.map(item => {
               const Icon = item.icon;
               const active = section === item.id;
               return (
@@ -116,7 +152,8 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
               );
             })}
           </div>
-        ))}
+          );
+        })}
 
         <div style={{ borderTop: "1px solid var(--surface-alt)", margin: "4px 0" }} />
 
