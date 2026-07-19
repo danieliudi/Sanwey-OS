@@ -584,7 +584,7 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
     >
       <Icon size={13} />
-      {label}
+      <span className="hidden sm:inline">{label}</span>
     </button>
   );
 }

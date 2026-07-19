@@ -980,14 +980,15 @@ function VagaKanbanColumn({
   onMoveToStage, onDeleteVaga, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
   getCompleteness, onAddVaga, usersById,
 }) {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <div
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden w-full md:w-[272px] md:min-w-[272px]"
       style={{
-        width: 272, minWidth: 272,
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
@@ -1011,6 +1012,13 @@ function VagaKanbanColumn({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="md:hidden"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
+          >
+            <ChevronDown size={14} style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s" }} />
+          </button>
           {canWrite && (
             <button
               onClick={onAddVaga}
@@ -1031,31 +1039,33 @@ function VagaKanbanColumn({
           )}
         </div>
       </div>
-      <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-        {vagasList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
-            {isDragOver ? "Soltar aqui" : "Nenhuma vaga"}
-          </div>
-        ) : (
-          vagasList.map((v) => (
-            <RHKanbanCard
-              key={v.id}
-              id={v.id}
-              stage={v.stage}
-              stages={stages}
-              onClick={() => onCardClick(v)}
-              onDragStart={canWrite ? onDragStart : undefined}
-              onDragEnd={canWrite ? onDragEnd : undefined}
-              onMoveToStage={canWrite ? onMoveToStage : undefined}
-              onDeleteCard={canWrite ? onDeleteVaga : undefined}
-              agingDays={daysInStage(v.stage_changed_at)}
-              completeness={getCompleteness?.(v)}
-            >
-              <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
-            </RHKanbanCard>
-          ))
-        )}
-      </div>
+      {!collapsed && (
+        <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+          {vagasList.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
+              {isDragOver ? "Soltar aqui" : "Nenhuma vaga"}
+            </div>
+          ) : (
+            vagasList.map((v) => (
+              <RHKanbanCard
+                key={v.id}
+                id={v.id}
+                stage={v.stage}
+                stages={stages}
+                onClick={() => onCardClick(v)}
+                onDragStart={canWrite ? onDragStart : undefined}
+                onDragEnd={canWrite ? onDragEnd : undefined}
+                onMoveToStage={canWrite ? onMoveToStage : undefined}
+                onDeleteCard={canWrite ? onDeleteVaga : undefined}
+                agingDays={daysInStage(v.stage_changed_at)}
+                completeness={getCompleteness?.(v)}
+              >
+                <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
+              </RHKanbanCard>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1446,8 +1456,8 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
 
 function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-      <table className="w-full border-collapse">
+    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full min-w-[720px] border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
             {["Vaga", "Cargo / Departamento", "Prioridade", "Etapa", "Candidatos", "Prazo"].map(h => (
@@ -2505,8 +2515,8 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
   const allSelected = selectable && candidatos.length > 0 && candidatos.every((c) => selectedIds?.has(c.id));
   const baseCols = 6;
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-      <table className="w-full border-collapse">
+    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full min-w-[720px] border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
             {selectable && (

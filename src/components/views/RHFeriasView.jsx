@@ -335,11 +335,11 @@ function FeriasCardBody({ req, canWrite, onAprovar, onRecusar, busy }) {
         </div>
       )}
       {canWrite && req.status === "pendente" && (
-        <div style={{ display: "flex", gap: 6, marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => onAprovar(req)} disabled={busy} style={{ flex: 1, background: "#DCFCE7", color: "var(--success)", border: "1px solid #BBF7D0", borderRadius: 7, padding: "4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => onAprovar(req)} disabled={busy} style={{ flex: 1, background: "#DCFCE7", color: "var(--success)", border: "1px solid #BBF7D0", borderRadius: 7, padding: "9px 4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
             <Check size={11} style={{ verticalAlign: -1 }} /> Aprovar
           </button>
-          <button onClick={() => onRecusar(req)} disabled={busy} style={{ flex: 1, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA", borderRadius: 7, padding: "4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+          <button onClick={() => onRecusar(req)} disabled={busy} style={{ flex: 1, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA", borderRadius: 7, padding: "9px 4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
             <X size={11} style={{ verticalAlign: -1 }} /> Recusar
           </button>
         </div>
@@ -608,7 +608,7 @@ function FeriasDrawer({
 
 function FeriasTableView({ requests, stages, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>

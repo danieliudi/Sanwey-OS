@@ -668,10 +668,10 @@ export function SettingsView({
                       <button
                         onClick={() => fileRef.current?.click()}
                         title="Alterar foto"
-                        className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center"
+                        className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center"
                         style={{ background: "var(--color-industria)", color: "#FFF", border: "2px solid #FFF", cursor: "pointer" }}
                       >
-                        <Camera size={11} />
+                        <Camera size={13} />
                       </button>
                       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
                     </div>

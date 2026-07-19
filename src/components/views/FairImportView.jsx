@@ -472,32 +472,35 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           )}
 
           <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-            {/* Table header */}
-            <div className="grid text-[10px] uppercase font-bold tracking-widest px-3 py-2 border-b"
-              style={{ gridTemplateColumns: "32px 1fr 120px 140px 160px 100px 32px", background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text-dim)", letterSpacing: "0.12em" }}>
-              <span></span>
-              <span>Empresa / Contato</span>
-              <span>Cidade/UF</span>
-              <span>Empresa CRM</span>
-              <span>Vendedor</span>
-              <span>Capturado por</span>
-              <span></span>
-            </div>
+            {/* Horizontal scroll instead of clipping selects on narrow screens */}
+            <div className="overflow-x-auto">
+              {/* Table header */}
+              <div className="grid text-[10px] uppercase font-bold tracking-widest px-3 py-2 border-b min-w-[584px]"
+                style={{ gridTemplateColumns: "32px 1fr 120px 140px 160px 100px 32px", background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text-dim)", letterSpacing: "0.12em" }}>
+                <span></span>
+                <span>Empresa / Contato</span>
+                <span>Cidade/UF</span>
+                <span>Empresa CRM</span>
+                <span>Vendedor</span>
+                <span>Capturado por</span>
+                <span></span>
+              </div>
 
-            {/* Rows */}
-            <div className="divide-y" style={{ divideColor: "#EFEFEF" }}>
-              {rows.map(row => (
-                <ImportRow
-                  key={row._importId}
-                  row={row}
-                  sellerOptions={sellerOptions}
-                  companyOptions={COMPANY_OPTIONS}
-                  expanded={expandedRow === row._importId}
-                  onToggleExpand={() => setExpandedRow(expandedRow === row._importId ? null : row._importId)}
-                  onToggleSelect={() => toggleSelect(row._importId)}
-                  onUpdate={(patch) => updateRow(row._importId, patch)}
-                />
-              ))}
+              {/* Rows */}
+              <div className="divide-y min-w-[584px]" style={{ divideColor: "#EFEFEF" }}>
+                {rows.map(row => (
+                  <ImportRow
+                    key={row._importId}
+                    row={row}
+                    sellerOptions={sellerOptions}
+                    companyOptions={COMPANY_OPTIONS}
+                    expanded={expandedRow === row._importId}
+                    onToggleExpand={() => setExpandedRow(expandedRow === row._importId ? null : row._importId)}
+                    onToggleSelect={() => toggleSelect(row._importId)}
+                    onUpdate={(patch) => updateRow(row._importId, patch)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 

@@ -200,7 +200,7 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser }
 
       {/* Module filter tabs */}
       {automations.length > 0 && (
-        <div className="flex gap-1 border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="flex gap-1 border-b overflow-x-auto" style={{ borderColor: "var(--border)", scrollbarWidth: "none" }}>
           {[
             { id: "all",       label: `Todas (${automations.length})` },
             { id: "crm",       label: `CRM (${stats.byModule?.crm || 0})` },
@@ -210,7 +210,7 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser }
             <button
               key={t.id}
               onClick={() => setModuleTab(t.id)}
-              className="px-3 py-2 text-xs font-medium border-b-2 transition-colors"
+              className="px-3 py-2 text-xs font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap"
               style={{
                 borderBottomColor: moduleTab === t.id ? "var(--accent)" : "transparent",
                 color:             moduleTab === t.id ? "var(--accent)" : "var(--text-dim)",

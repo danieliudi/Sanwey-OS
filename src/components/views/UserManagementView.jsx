@@ -340,7 +340,7 @@ export function UserManagementView({
       </div>
 
       {/* ── Summary stat cards ── */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatMini label="Total" value={totalUsers} />
         <StatMini label="Gerentes" value={managerCount} accent="var(--color-industria)" />
         <StatMini label="Vendedores" value={sellerCount} />

@@ -204,7 +204,7 @@ export default function LeadCaptureForm() {
           />
         </Field>
 
-        <Field label="Telefone" hint="Celular ou telefone fixo" required>
+        <Field label="Telefone" hint="Celular ou telefone fixo" required forId="phone-input">
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{
               display: "flex", alignItems: "center", gap: 6,
@@ -214,6 +214,7 @@ export default function LeadCaptureForm() {
               🇧🇷 +55
             </div>
             <input
+              id="phone-input"
               type="tel"
               value={form.phone}
               onChange={e => set("phone", formatPhone(e.target.value))}
@@ -259,7 +260,7 @@ export default function LeadCaptureForm() {
                   type="button"
                   onClick={() => set("priority", selected ? "" : p)}
                   style={{
-                    padding: "6px 14px", borderRadius: 999,
+                    padding: "11px 14px", borderRadius: 999, minHeight: 40,
                     border: `1px solid ${selected ? color : "#D1D5DB"}`,
                     background: selected ? color + "14" : "#FFFFFF",
                     color: selected ? color : "#5c5f60",
@@ -273,9 +274,10 @@ export default function LeadCaptureForm() {
           </div>
         </Field>
 
-        <Field label="Preferência de retorno por telefone" hint="Caso queira, indique quando podemos ligar">
+        <Field label="Preferência de retorno por telefone" hint="Caso queira, indique quando podemos ligar" forId="callback-date-input">
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <input
+              id="callback-date-input"
               type="date"
               value={form.callbackDate}
               onChange={e => set("callbackDate", e.target.value)}
@@ -362,13 +364,16 @@ const input = {
 // alvo maior e mais natural pro toque é o próprio texto, não a caixinha
 // do input. Achado da auditoria de fricção de 18/07.
 const LABELABLE_TYPES = new Set(["input", "select", "textarea"]);
-function Field({ label, hint, required, children }) {
+function Field({ label, hint, required, forId, children }) {
   const id = `f-${label.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
   const labelable = React.isValidElement(children) && LABELABLE_TYPES.has(children.type);
   const child = labelable ? React.cloneElement(children, { id: children.props.id || id }) : children;
+  // forId: para Field cujo children é um contêiner composto (ex.: div com prefixo + input),
+  // conecta o label manualmente ao id real do input em vez de depender de LABELABLE_TYPES.
+  const htmlFor = forId || (labelable ? id : undefined);
   return (
     <div>
-      <label htmlFor={labelable ? id : undefined} style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 2 }}>
+      <label htmlFor={htmlFor} style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 2 }}>
         {required && <span style={{ color: "#C7212B", marginRight: 4 }}>*</span>}
         {label}
       </label>

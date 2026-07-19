@@ -153,161 +153,161 @@ export function StageEditorModal({
 
         {/* Header row + lista compartilham scroll horizontal em telas estreitas (colunas fixas em px somam 374px+) */}
         <div className="overflow-x-auto flex-1 flex flex-col min-h-0">
-        <div
-          className="px-4 py-2 border-b grid items-center gap-2 text-[10px] font-bold uppercase"
-          style={{
-            borderColor: "#E5E7EB",
-            color: "var(--text-dim)",
-            letterSpacing: "0.06em",
-            gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
-            minWidth: 620,
-          }}
-        >
-          <span />
-          <span>Código</span>
-          <span>Nome</span>
-          <span className="text-right">Prob.</span>
-          <span className="text-right">SLA (dias)</span>
-          <span>Cor</span>
-          <span className="text-right">Leads</span>
-          <span />
-        </div>
+          <div
+            className="px-4 py-2 border-b grid items-center gap-2 text-[10px] font-bold uppercase"
+            style={{
+              borderColor: "#E5E7EB",
+              color: "var(--text-dim)",
+              letterSpacing: "0.06em",
+              gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
+              minWidth: 620,
+            }}
+          >
+            <span />
+            <span>Código</span>
+            <span>Nome</span>
+            <span className="text-right">Prob.</span>
+            <span className="text-right">SLA (dias)</span>
+            <span>Cor</span>
+            <span className="text-right">Leads</span>
+            <span />
+          </div>
 
-        {/* Lista de etapas */}
-        <div className="overflow-y-auto flex-1 p-2 space-y-1.5" style={{ minWidth: 620 }}>
-          {draft.map((stage, idx) => {
-            const count = countsByStage[stage.id] || 0;
-            const isTerminal = !!stage.terminal;
-            return (
-              <div
-                key={stage.id}
-                draggable={!isTerminal}
-                onDragStart={() => handleDragStart(idx)}
-                onDragOver={handleDragOver}
-                onDrop={() => handleDrop(idx)}
-                className="rounded-lg border p-2 grid items-center gap-2"
-                style={{
-                  borderColor: dragIdx === idx ? accent : "#E5E7EB",
-                  background: isTerminal ? "var(--surface)" : "#FFFFFF",
-                  opacity: dragIdx != null && dragIdx !== idx ? 0.7 : 1,
-                  gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
-                  minWidth: 620,
-                }}
-              >
-                {/* Grip */}
-                <span
-                  className="shrink-0"
-                  style={{ color: isTerminal ? "#D1D5DB" : "var(--text-dim)", cursor: isTerminal ? "not-allowed" : "grab" }}
-                  title={isTerminal ? "Terminal não reordena" : "Arraste pra reordenar"}
+          {/* Lista de etapas */}
+          <div className="overflow-y-auto flex-1 p-2 space-y-1.5" style={{ minWidth: 620 }}>
+            {draft.map((stage, idx) => {
+              const count = countsByStage[stage.id] || 0;
+              const isTerminal = !!stage.terminal;
+              return (
+                <div
+                  key={stage.id}
+                  draggable={!isTerminal}
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={handleDragOver}
+                  onDrop={() => handleDrop(idx)}
+                  className="rounded-lg border p-2 grid items-center gap-2"
+                  style={{
+                    borderColor: dragIdx === idx ? accent : "#E5E7EB",
+                    background: isTerminal ? "var(--surface)" : "#FFFFFF",
+                    opacity: dragIdx != null && dragIdx !== idx ? 0.7 : 1,
+                    gridTemplateColumns: "16px 48px 1fr 90px 90px 32px 70px 28px",
+                    minWidth: 620,
+                  }}
                 >
-                  <GripVertical size={16} />
-                </span>
+                  {/* Grip */}
+                  <span
+                    className="shrink-0"
+                    style={{ color: isTerminal ? "#D1D5DB" : "var(--text-dim)", cursor: isTerminal ? "not-allowed" : "grab" }}
+                    title={isTerminal ? "Terminal não reordena" : "Arraste pra reordenar"}
+                  >
+                    <GripVertical size={16} />
+                  </span>
 
-                {/* Código */}
-                <input
-                  value={stage.code || ""}
-                  onChange={e => patch(idx, { code: e.target.value.toUpperCase().slice(0, 2) })}
-                  className="w-full text-center font-bold rounded border px-1 py-1 text-sm"
-                  style={{ borderColor: "#E5E7EB", color: stage.color, background: "#FFFFFF" }}
-                  maxLength={2}
-                />
-
-                {/* Nome */}
-                <input
-                  value={stage.name}
-                  onChange={e => patch(idx, { name: e.target.value })}
-                  className="w-full rounded border px-2 py-1 text-sm"
-                  style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
-                />
-
-                {/* Probabilidade */}
-                <div className="flex items-center justify-end gap-1">
+                  {/* Código */}
                   <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={stage.probability ?? ""}
-                    onChange={e => patch(idx, { probability: e.target.value === "" ? null : Number(e.target.value) })}
-                    className="w-14 rounded border px-1 py-1 text-xs text-right"
+                    value={stage.code || ""}
+                    onChange={e => patch(idx, { code: e.target.value.toUpperCase().slice(0, 2) })}
+                    className="w-full text-center font-bold rounded border px-1 py-1 text-sm"
+                    style={{ borderColor: "#E5E7EB", color: stage.color, background: "#FFFFFF" }}
+                    maxLength={2}
+                  />
+
+                  {/* Nome */}
+                  <input
+                    value={stage.name}
+                    onChange={e => patch(idx, { name: e.target.value })}
+                    className="w-full rounded border px-2 py-1 text-sm"
                     style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
                   />
-                  <span className="text-xs" style={{ color: "var(--text-dim)" }}>%</span>
-                </div>
 
-                {/* SLA */}
-                <div className="flex items-center justify-end gap-1">
+                  {/* Probabilidade */}
+                  <div className="flex items-center justify-end gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={stage.probability ?? ""}
+                      onChange={e => patch(idx, { probability: e.target.value === "" ? null : Number(e.target.value) })}
+                      className="w-14 rounded border px-1 py-1 text-xs text-right"
+                      style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
+                    />
+                    <span className="text-xs" style={{ color: "var(--text-dim)" }}>%</span>
+                  </div>
+
+                  {/* SLA */}
+                  <div className="flex items-center justify-end gap-1">
+                    {isTerminal ? (
+                      <span className="text-xs italic" style={{ color: "var(--text-dim)" }}>—</span>
+                    ) : (
+                      <>
+                        <input
+                          type="number"
+                          min={0}
+                          value={stage.slaDays ?? ""}
+                          onChange={e => patch(idx, { slaDays: e.target.value === "" ? null : Number(e.target.value) })}
+                          className="w-14 rounded border px-1 py-1 text-xs text-right"
+                          style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
+                          title="Dias máximos esperados na etapa antes de virar 'parado'"
+                        />
+                        <span className="text-xs" style={{ color: "var(--text-dim)" }}>d</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Cor */}
+                  <ColorPicker value={stage.color} onChange={c => patch(idx, { color: c })} />
+
+                  {/* Contagem + badge terminal */}
+                  <div className="flex flex-col items-end gap-0.5 shrink-0">
+                    {isTerminal && (
+                      <span
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: stage.won ? "#E8F2EC" : "#FEF2F2",
+                          color: stage.won ? "#1A6E35" : "#B91C1C",
+                        }}
+                      >
+                        {stage.won ? "Ganho" : "Perdido"}
+                      </span>
+                    )}
+                    {count > 0 && (
+                      <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                        {count}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Delete */}
                   {isTerminal ? (
-                    <span className="text-xs italic" style={{ color: "var(--text-dim)" }}>—</span>
+                    <span />
                   ) : (
-                    <>
-                      <input
-                        type="number"
-                        min={0}
-                        value={stage.slaDays ?? ""}
-                        onChange={e => patch(idx, { slaDays: e.target.value === "" ? null : Number(e.target.value) })}
-                        className="w-14 rounded border px-1 py-1 text-xs text-right"
-                        style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF" }}
-                        title="Dias máximos esperados na etapa antes de virar 'parado'"
-                      />
-                      <span className="text-xs" style={{ color: "var(--text-dim)" }}>d</span>
-                    </>
-                  )}
-                </div>
-
-                {/* Cor */}
-                <ColorPicker value={stage.color} onChange={c => patch(idx, { color: c })} />
-
-                {/* Contagem + badge terminal */}
-                <div className="flex flex-col items-end gap-0.5 shrink-0">
-                  {isTerminal && (
-                    <span
-                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{
-                        background: stage.won ? "#E8F2EC" : "#FEF2F2",
-                        color: stage.won ? "#1A6E35" : "#B91C1C",
-                      }}
+                    <button
+                      onClick={() => handleDelete(idx)}
+                      className="p-1 rounded cursor-pointer"
+                      style={{ color: count > 0 ? "#D1D5DB" : "var(--text-dim)" }}
+                      title={count > 0 ? `Não dá pra remover: ${count} lead${count !== 1 ? "s" : ""} aqui` : "Remover etapa"}
+                      onMouseEnter={e => { if (count === 0) { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.background = "#FEF2F2"; } }}
+                      onMouseLeave={e => { e.currentTarget.style.color = count > 0 ? "#D1D5DB" : "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
                     >
-                      {stage.won ? "Ganho" : "Perdido"}
-                    </span>
-                  )}
-                  {count > 0 && (
-                    <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
-                      {count}
-                    </span>
+                      <Trash2 size={13} />
+                    </button>
                   )}
                 </div>
+              );
+            })}
 
-                {/* Delete */}
-                {isTerminal ? (
-                  <span />
-                ) : (
-                  <button
-                    onClick={() => handleDelete(idx)}
-                    className="p-1 rounded cursor-pointer"
-                    style={{ color: count > 0 ? "#D1D5DB" : "var(--text-dim)" }}
-                    title={count > 0 ? `Não dá pra remover: ${count} lead${count !== 1 ? "s" : ""} aqui` : "Remover etapa"}
-                    onMouseEnter={e => { if (count === 0) { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.background = "#FEF2F2"; } }}
-                    onMouseLeave={e => { e.currentTarget.style.color = count > 0 ? "#D1D5DB" : "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-
-          {/* Adicionar etapa */}
-          <button
-            onClick={handleAdd}
-            className="w-full flex items-center justify-center gap-1.5 p-2.5 text-xs font-semibold rounded-lg border-2 border-dashed cursor-pointer"
-            style={{ borderColor: "#D1D5DB", color: "var(--text-dim)", background: "var(--surface)" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; e.currentTarget.style.background = accent + "08"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "var(--surface)"; }}
-          >
-            <Plus size={13} />
-            Adicionar etapa
-          </button>
-        </div>
+            {/* Adicionar etapa */}
+            <button
+              onClick={handleAdd}
+              className="w-full flex items-center justify-center gap-1.5 p-2.5 text-xs font-semibold rounded-lg border-2 border-dashed cursor-pointer"
+              style={{ borderColor: "#D1D5DB", color: "var(--text-dim)", background: "var(--surface)" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; e.currentTarget.style.background = accent + "08"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#D1D5DB"; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "var(--surface)"; }}
+            >
+              <Plus size={13} />
+              Adicionar etapa
+            </button>
+          </div>
         </div>
 
         {/* Footer */}

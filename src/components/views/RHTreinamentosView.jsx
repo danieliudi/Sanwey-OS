@@ -805,7 +805,7 @@ function AtribuicaoDrawer({
 
 function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -1079,29 +1079,55 @@ function TreinamentoBoardModal({
               onPillClick={(a) => setDrawerId(a.id)}
             />
           ) : (
-            <div style={{ display: "flex", gap: 12 }}>
-              {stages.map((stage) => (
-                <TreinamentoBoardColumn
-                  key={stage.id}
-                  stage={stage}
-                  stages={stages}
-                  atribList={byStage[stage.stageKey] || []}
-                  colaboradoresById={colaboradoresById}
-                  onCardClick={(a) => setDrawerId(a.id)}
-                  onDragStart={setDraggedId}
-                  onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
-                  onMoveToStage={handleMove}
-                  onDeleteAtribuicao={canWrite ? onDelete : undefined}
-                  isDragOver={dragOverStageKey === stage.stageKey}
-                  onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
-                  onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
-                  onColumnDrop={handleDrop}
-                  canWrite={canWrite}
-                  onEditFields={setFieldEditorStage}
-                  getCompleteness={getCompleteness}
-                />
-              ))}
-            </div>
+            <>
+              {/* desktop: colunas lado a lado — mobile empilha abaixo (padrão RHFeriasView/RHFeedbackView) */}
+              <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
+                {stages.map((stage) => (
+                  <TreinamentoBoardColumn
+                    key={stage.id}
+                    stage={stage}
+                    stages={stages}
+                    atribList={byStage[stage.stageKey] || []}
+                    colaboradoresById={colaboradoresById}
+                    onCardClick={(a) => setDrawerId(a.id)}
+                    onDragStart={setDraggedId}
+                    onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
+                    onMoveToStage={handleMove}
+                    onDeleteAtribuicao={canWrite ? onDelete : undefined}
+                    isDragOver={dragOverStageKey === stage.stageKey}
+                    onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
+                    onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
+                    onColumnDrop={handleDrop}
+                    canWrite={canWrite}
+                    onEditFields={setFieldEditorStage}
+                    getCompleteness={getCompleteness}
+                  />
+                ))}
+              </div>
+              <div className="md:hidden flex flex-col gap-3">
+                {stages.map((stage) => (
+                  <TreinamentoBoardColumn
+                    key={stage.id}
+                    stage={stage}
+                    stages={stages}
+                    atribList={byStage[stage.stageKey] || []}
+                    colaboradoresById={colaboradoresById}
+                    onCardClick={(a) => setDrawerId(a.id)}
+                    onDragStart={setDraggedId}
+                    onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
+                    onMoveToStage={handleMove}
+                    onDeleteAtribuicao={canWrite ? onDelete : undefined}
+                    isDragOver={dragOverStageKey === stage.stageKey}
+                    onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
+                    onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
+                    onColumnDrop={handleDrop}
+                    canWrite={canWrite}
+                    onEditFields={setFieldEditorStage}
+                    getCompleteness={getCompleteness}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -1249,7 +1275,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
                 const vencidos = atribs.filter(a => a.status === "vencido").length;
                 return (
                   <div key={t.id} style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--surface-alt)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--surface-alt)", flexWrap: "wrap" }}>
                       <button onClick={() => toggleExpand(t.id)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexShrink: 0 }}>
                         {expanded.has(t.id) ? <ChevronDown size={14} color={"var(--text-dim)"} /> : <ChevronRight size={14} color={"var(--text-dim)"} />}
                       </button>

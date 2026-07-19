@@ -109,9 +109,9 @@ function FilaSessao({ sessao, fila, canWrite, onChamar, onSetStatus, origin }) {
                 <span style={{ flex: 1, fontSize: 13, color: "var(--text)", minWidth: 0 }}>{f.nome}{f.frente ? <span style={{ color: "var(--text-dim)", fontSize: 11 }}> · {RH_FRENTE_LABELS[f.frente] || f.frente}</span> : null}</span>
                 <span style={{ fontSize: 10, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 99, padding: "2px 9px", flexShrink: 0 }}>{st.label}</span>
                 {canWrite && (f.status === "na_fila" || f.status === "chamado") && (
-                  <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                    <button onClick={() => onSetStatus(f.id, "atendido")} title="Atendido" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--success)", display: "flex", padding: 3 }}><Check size={15} /></button>
-                    <button onClick={() => onSetStatus(f.id, "faltou")} title="Faltou" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", display: "flex", padding: 3 }}><UserX size={15} /></button>
+                  <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+                    <button onClick={() => onSetStatus(f.id, "atendido")} title="Atendido" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--success)", display: "flex", alignItems: "center", justifyContent: "center", padding: 10, minWidth: 40, minHeight: 40 }}><Check size={15} /></button>
+                    <button onClick={() => onSetStatus(f.id, "faltou")} title="Faltou" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", display: "flex", alignItems: "center", justifyContent: "center", padding: 10, minWidth: 40, minHeight: 40 }}><UserX size={15} /></button>
                   </div>
                 )}
               </div>

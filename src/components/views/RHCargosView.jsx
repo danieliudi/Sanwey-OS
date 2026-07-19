@@ -188,7 +188,7 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
                 <CurrencyInput required value={salaryMax} onChange={setSalaryMax} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 10 }}>
               <div>
                 <label style={labelSt}>Jornada *</label>
                 <input required type="text" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Ex: 44h semanais" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
@@ -200,10 +200,10 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
                   Trabalha em turnos?
                 </label>
                 {temTurno && (
-                  <div className="flex items-center gap-1.5">
-                    <input required type="time" value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
+                    <input required type="time" value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="w-full sm:flex-1 sm:w-auto text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
                     <span style={{ fontSize: 12, color: "var(--text-dim)" }}>às</span>
-                    <input required type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
+                    <input required type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="w-full sm:flex-1 sm:w-auto text-sm rounded-xl border px-2 py-2 outline-none" style={inputSt} />
                   </div>
                 )}
               </div>

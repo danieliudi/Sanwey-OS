@@ -500,7 +500,7 @@ function BulkDocumentUploadModal({ colaboradores, currentUser, onClose }) {
                   <div
                     key={row.id}
                     style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10,
+                      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, flexWrap: "wrap",
                       border: "1px solid var(--border)",
                       background: row.status === "aprovado" ? "var(--success-bg)" : row.status === "rejeitado" ? "var(--surface-alt)" : "var(--surface)",
                       opacity: row.status === "rejeitado" ? 0.55 : 1,
@@ -524,7 +524,7 @@ function BulkDocumentUploadModal({ colaboradores, currentUser, onClose }) {
                         <select
                           value={row.manualId}
                           onChange={(e) => setManual(row.id, e.target.value)}
-                          style={{ fontSize: 12, padding: "6px 8px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", maxWidth: 180 }}
+                          style={{ fontSize: 12, padding: "6px 8px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", minWidth: 0, flex: "1 1 120px" }}
                         >
                           <option value="">Selecione o colaborador…</option>
                           {sortedColaboradores.map((c) => (

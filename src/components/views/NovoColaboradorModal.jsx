@@ -326,8 +326,13 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
             )}
           </div>
 
+          <style>{`
+            @media (max-width: 640px) {
+              .ncm-responsive-grid { grid-template-columns: 1fr !important; }
+            }
+          `}</style>
           <div className="flex flex-col gap-3">
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
+            <div className="ncm-responsive-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Nome completo *</label>
                 <input ref={registerField("fullName")} type="text" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} className={inputCls} style={fieldSt("fullName")} onFocus={focusBlue} onBlur={blurGray} autoFocus />
@@ -342,7 +347,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+            <div className="ncm-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Nascimento *</label>
                 <input ref={registerField("birthDate")} type="date" value={form.birthDate} onChange={(e) => set("birthDate", e.target.value)} className={inputCls} style={fieldSt("birthDate")} onFocus={focusBlue} onBlur={blurGray} />
@@ -358,7 +363,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
             </div>
 
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>Endereço</div>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
+            <div className="ncm-responsive-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Rua *</label>
                 <input ref={registerField("addressStreet")} type="text" value={form.addressStreet} onChange={(e) => set("addressStreet", e.target.value)} className={inputCls} style={fieldSt("addressStreet")} onFocus={focusBlue} onBlur={blurGray} />
@@ -372,7 +377,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
                 <input ref={registerField("addressZip")} type="text" value={form.addressZip} onChange={(e) => set("addressZip", e.target.value)} className={inputCls} style={fieldSt("addressZip")} onFocus={focusBlue} onBlur={blurGray} />
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+            <div className="ncm-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Bairro *</label>
                 <input ref={registerField("addressNeighborhood")} type="text" value={form.addressNeighborhood} onChange={(e) => set("addressNeighborhood", e.target.value)} className={inputCls} style={fieldSt("addressNeighborhood")} onFocus={focusBlue} onBlur={blurGray} />
@@ -391,7 +396,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
             </div>
 
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>Dados profissionais</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="ncm-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Cargo *</label>
                 <input ref={registerField("jobTitle")} type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} placeholder="Ex: Operador de produção" className={inputCls} style={fieldSt("jobTitle")} onFocus={focusBlue} onBlur={blurGray} />

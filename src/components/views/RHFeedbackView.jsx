@@ -944,7 +944,7 @@ function FeedbackDrawer({
 
 function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>

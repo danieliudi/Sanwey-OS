@@ -366,7 +366,7 @@ function CategoryDonut({ expenses }) {
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-      <div style={{ width: 120, height: 120, flexShrink: 0 }}>
+      <div style={{ width: 120, height: 120, minWidth: 72 }}>
         <ResponsiveContainer>
           <PieChart>
             <Pie data={data} dataKey="value" innerRadius={36} outerRadius={57}
@@ -731,8 +731,7 @@ export function MarketingDashboardView({ user }) {
       {!isAgencia && (
         <>
           <SectionLabel>Análise financeira</SectionLabel>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,3fr) minmax(0,2fr)",
-                        gap: 10, marginBottom: 10 }}>
+          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr]" style={{ gap: 10, marginBottom: 10 }}>
             <Panel title="Burn rate" subtitle="Gasto mensal · últimos 6 meses">
               <BurnRateChart expenses={fExpenses} primaryColor={primaryColor} />
             </Panel>
