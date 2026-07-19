@@ -615,7 +615,7 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
               )}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
                 <label style={LABEL_ST}>Categoria *</label>
                 <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className={INPUT_CLS} style={INPUT_ST}>

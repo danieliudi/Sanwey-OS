@@ -47,8 +47,9 @@ const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textT
 
 const errorBannerSt = { background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 };
 
-function btnStyle(kind, disabled) {
-  const base = { display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 700, border: "none", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1 };
+function btnStyle(kind, disabled, big) {
+  // big=true: alvo de toque ~40px pra ações de decisão de reembolso no celular
+  const base = { display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 8, padding: big ? "10px 14px" : "5px 10px", fontSize: big ? 13 : 11, fontWeight: 700, border: "none", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1, minHeight: big ? 40 : undefined };
   if (kind === "primary") return { ...base, background: "var(--accent)", color: "#FFF" };
   if (kind === "danger")  return { ...base, background: "var(--danger)", color: "#FFF" };
   return { ...base, background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border)" };
@@ -83,13 +84,62 @@ function Desfecho({ registro }) {
   return <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Aguardando visita</div>;
 }
 
+function VisitaCardMobile({ registro: r, showVendedorCol, nomePorId, today }) {
+  const atrasado = isAtrasado(r, today);
+  const destaque = atrasado || r.status === "nao_realizado";
+  const badge = STATUS_VISITA[r.status] || STATUS_VISITA.planejado;
+  return (
+    <div
+      style={{
+        border: "1px solid var(--border)",
+        borderRadius: 10,
+        padding: 12,
+        background: destaque ? "#FEF2F2" : "transparent",
+        borderLeft: destaque ? "3px solid var(--danger)" : "3px solid transparent",
+      }}
+    >
+      {showVendedorCol && (
+        <div style={{ marginBottom: 8 }}>
+          <span style={labelSt}>Vendedor</span>
+          <div style={{ fontSize: 12, color: "var(--text)", fontWeight: 600 }}>{nomePorId.get(r.vendedor_id) || "—"}</div>
+        </div>
+      )}
+      <div style={{ marginBottom: 8 }}>
+        <span style={labelSt}>Destino planejado</span>
+        <div style={{ fontSize: 12, color: "var(--text)" }}>{r.destino_planejado || "—"}</div>
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <span style={labelSt}>Data planejada</span>
+        <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
+          {formatDateBR(r.data_planejada)}
+          {atrasado && <span style={{ fontSize: 10, color: "var(--danger)", fontWeight: 700, marginLeft: 6 }}>Atrasado</span>}
+        </div>
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <span style={labelSt}>Status</span>
+        <div><Badge variant={badge.variant}>{badge.label}</Badge></div>
+      </div>
+      <div>
+        <span style={labelSt}>Desfecho</span>
+        <Desfecho registro={r} />
+      </div>
+    </div>
+  );
+}
+
 function VisitasTable({ registros, showVendedorCol, nomePorId, today }) {
   const gridCols = showVendedorCol
     ? "130px 130px 90px minmax(130px,1fr) 110px minmax(180px,1.3fr)"
     : "130px 90px minmax(130px,1fr) 110px minmax(180px,1.3fr)";
 
   return (
-    <div style={{ overflowX: "auto" }}>
+    <>
+      <div className="flex flex-col md:hidden" style={{ gap: 8 }}>
+        {registros.map((r) => (
+          <VisitaCardMobile key={r.id} registro={r} showVendedorCol={showVendedorCol} nomePorId={nomePorId} today={today} />
+        ))}
+      </div>
+      <div className="hidden md:block" style={{ overflowX: "auto" }}>
       <div style={{ minWidth: 760 }}>
         <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: 10, padding: "0 10px 8px", borderBottom: "1px solid var(--border)" }}>
           {showVendedorCol && <div style={thSt}>Vendedor</div>}
@@ -131,7 +181,8 @@ function VisitasTable({ registros, showVendedorCol, nomePorId, today }) {
           );
         })}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -171,16 +222,16 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
         )}
         {despesa.status_reembolso === "pendente" && !isRejecting && (
           <>
-            <button onClick={onAprovar} disabled={deciding} style={btnStyle("primary", deciding)}>
+            <button onClick={onAprovar} disabled={deciding} style={btnStyle("primary", deciding, true)}>
               <Check size={12} /> Aprovar
             </button>
-            <button onClick={onRejeitarClick} disabled={deciding} style={btnStyle("danger", deciding)}>
+            <button onClick={onRejeitarClick} disabled={deciding} style={btnStyle("danger", deciding, true)}>
               <X size={12} /> Rejeitar
             </button>
           </>
         )}
         {despesa.status_reembolso === "aprovado" && (
-          <button onClick={onMarcarPago} disabled={deciding} style={btnStyle("primary", deciding)}>
+          <button onClick={onMarcarPago} disabled={deciding} style={btnStyle("primary", deciding, true)}>
             Marcar como pago
           </button>
         )}
@@ -197,10 +248,10 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
             autoFocus
           />
           <div className="flex" style={{ gap: 8, marginTop: 8 }}>
-            <button onClick={onConfirmarRejeicao} disabled={!rejectObs.trim() || deciding} style={btnStyle("danger", !rejectObs.trim() || deciding)}>
+            <button onClick={onConfirmarRejeicao} disabled={!rejectObs.trim() || deciding} style={btnStyle("danger", !rejectObs.trim() || deciding, true)}>
               Confirmar rejeição
             </button>
-            <button onClick={onCancelarRejeicao} style={btnStyle("ghost", false)}>Cancelar</button>
+            <button onClick={onCancelarRejeicao} style={btnStyle("ghost", false, true)}>Cancelar</button>
           </div>
         </div>
       )}

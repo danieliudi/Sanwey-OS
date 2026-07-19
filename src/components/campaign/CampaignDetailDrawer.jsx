@@ -1480,7 +1480,7 @@ export function CampaignDetailDrawer({
             )}
           </div>
           <div className="flex border-t" style={{ borderColor: "var(--border)" }}>
-            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }].map(t => (
+            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }, { id: "mover", label: "MOVER" }].map(t => (
               <button
                 key={t.id}
                 onClick={() => setMobileTab(t.id)}
@@ -1689,8 +1689,11 @@ export function CampaignDetailDrawer({
           </main>
 
           {/* ── RIGHT sidebar ── */}
+          {/* Abaixo de lg vira a 3ª aba mobile ("MOVER"), em vez de ficar
+              escondida sem substituto — StageNavigator + CommentsPanel
+              precisam existir em algum lugar acessível no celular. */}
           <aside
-            className="hidden lg:flex lg:flex-col w-full lg:w-[300px] shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4"
+            className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4 flex flex-col${mobileTab !== "mover" ? " hidden lg:flex" : ""}`}
             style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
           >
             {canWrite && (
@@ -1720,7 +1723,7 @@ export function CampaignDetailDrawer({
             {/* AI move link */}
             <div className="border-t pt-3 space-y-2" style={{ borderColor: "var(--border)" }}>
               <button
-                onClick={() => setSideTab("ia")}
+                onClick={() => { setSideTab("ia"); setMobileTab("info"); }}
                 className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
                 style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0, textAlign: "left" }}
                 onMouseEnter={e => { e.currentTarget.style.color = PURPLE; }}
