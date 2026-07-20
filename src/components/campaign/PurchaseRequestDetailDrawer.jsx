@@ -20,6 +20,7 @@ const BUCKET = "marketing-attachments";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
+  cotacao:           "#CA8A04",
   aprovado:          "#2563EB",
   pedido_fornecedor: "#7C3AED",
   entrega_parcial:   "#0891B2",
@@ -27,6 +28,23 @@ const STAGE_COLORS = {
   pago:              "#15803D",
   rejeitado:         "#DC2626",
 };
+
+// Ordem linear da esteira, pra saber quais blocos de campo por etapa já
+// "foram alcançados" (e continuam visíveis/preenchíveis dali em diante,
+// mesmo que a etapa atual seja mais adiante) — "rejeitado" fica de fora
+// de propósito, tratado sempre como caso à parte.
+const STAGE_ORDER = ["solicitado", "cotacao", "aprovado", "pedido_fornecedor", "entrega_parcial", "entregue", "pago"];
+
+// Até 3 fornecedores candidatos na Cotação — sempre 3 linhas na edição
+// (vazias viram "sem candidato" ao salvar), pedido do usuário.
+function normalizeQuoteRows(options) {
+  const rows = (Array.isArray(options) ? options : []).slice(0, 3).map(o => ({
+    supplierId: o?.supplierId || "",
+    value: o?.value != null ? String(o.value) : "",
+  }));
+  while (rows.length < 3) rows.push({ supplierId: "", value: "" });
+  return rows;
+}
 
 const inputBase = {
   width: "100%", fontSize: 13, borderRadius: 8,
@@ -70,7 +88,6 @@ export function PurchaseRequestDetailDrawer({
   // current_user_has_role('gerente_marketing').
   const currentUserRoles = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
   const canApprove = currentUserRoles.includes("admin") || currentUserRoles.includes("gerente_marketing");
-  const canEditFields = purchase.stage !== "solicitado" && purchase.stage !== PURCHASE_REJECTED_STAGE;
   const marketingUsers = useMemo(
     () => (users || []).filter(u => {
       const r = u.roles?.length ? u.roles : (u.role ? [u.role] : []);
@@ -115,9 +132,23 @@ export function PurchaseRequestDetailDrawer({
   const [unitPrice,     setUnitPrice]     = useState(purchase.unitPrice ?? "");
   const [totalValue,    setTotalValue]    = useState(purchase.totalValue ?? "");
   const [responsibleIds, setResponsibleIds] = useState(purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []));
-  const [dueDate,       setDueDate]       = useState(purchase.dueDate ? purchase.dueDate.slice(0, 10) : "");
   const [invoiceDate,   setInvoiceDate]   = useState(purchase.invoiceDate ? purchase.invoiceDate.slice(0, 10) : "");
   const totalOverriddenRef = useRef(false);
+
+  // Campos por etapa (pedido do usuário) — todos gravados junto com o resto
+  // de "Execução da compra" no mesmo "Salvar alterações", pra persistir
+  // sem precisar preencher de novo ao trocar de etapa.
+  const [paymentTerms,         setPaymentTerms]         = useState(purchase.paymentTerms || "");
+  const [supplierOrderCode,    setSupplierOrderCode]    = useState(purchase.supplierOrderCode || "");
+  const [deliveryDeadline,     setDeliveryDeadline]     = useState(purchase.deliveryDeadline ? purchase.deliveryDeadline.slice(0, 10) : "");
+  const [partialDeliveredQty,  setPartialDeliveredQty]  = useState(purchase.partialDeliveredQty ?? "");
+  const [partialRemainingQty,  setPartialRemainingQty]  = useState(purchase.partialRemainingQty ?? "");
+  const [partialNewDeadline,   setPartialNewDeadline]   = useState(purchase.partialNewDeadline ? purchase.partialNewDeadline.slice(0, 10) : "");
+  const [partialNotes,         setPartialNotes]         = useState(purchase.partialNotes || "");
+  const [invoiceNumber,        setInvoiceNumber]        = useState(purchase.invoiceNumber || "");
+  const [paymentControlNumber, setPaymentControlNumber] = useState(purchase.paymentControlNumber || "");
+  const [deliveredAt,          setDeliveredAt]          = useState(purchase.deliveredAt ? purchase.deliveredAt.slice(0, 10) : "");
+  const [receivedBy,           setReceivedBy]           = useState(purchase.receivedBy || "");
 
   const [saving,      setSaving]      = useState(false);
   const [saveStatus,  setSaveStatus]  = useState(null); // "saved" | "error" | null
@@ -127,6 +158,13 @@ export function PurchaseRequestDetailDrawer({
   const [uploadError,  setUploadError]  = useState(null);
   const [invoiceUrl,   setInvoiceUrl]   = useState(purchase.invoiceUrl || null);
   const [viewingInvoice, setViewingInvoice] = useState(false);
+
+  // Cotação de até 3 fornecedores (nova etapa "Cotação") — edição enquanto
+  // a solicitação está nessa etapa; depois vira recapitulação read-only.
+  const [quoteRows,    setQuoteRows]    = useState(() => normalizeQuoteRows(purchase.quoteOptions));
+  const [savingQuotes, setSavingQuotes] = useState(false);
+  const [quotesError,  setQuotesError]  = useState(null);
+  const [winnerSupplierId, setWinnerSupplierId] = useState("");
 
   const [approveResponsible, setApproveResponsible] = useState(purchase.responsibleId || currentUser?.id || "");
   const [showReject,   setShowReject]   = useState(false);
@@ -143,14 +181,27 @@ export function PurchaseRequestDetailDrawer({
     setUnitPrice(purchase.unitPrice ?? "");
     setTotalValue(purchase.totalValue ?? "");
     setResponsibleIds(purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []));
-    setDueDate(purchase.dueDate ? purchase.dueDate.slice(0, 10) : "");
     setInvoiceDate(purchase.invoiceDate ? purchase.invoiceDate.slice(0, 10) : "");
     setInvoiceUrl(purchase.invoiceUrl || null);
+    setPaymentTerms(purchase.paymentTerms || "");
+    setSupplierOrderCode(purchase.supplierOrderCode || "");
+    setDeliveryDeadline(purchase.deliveryDeadline ? purchase.deliveryDeadline.slice(0, 10) : "");
+    setPartialDeliveredQty(purchase.partialDeliveredQty ?? "");
+    setPartialRemainingQty(purchase.partialRemainingQty ?? "");
+    setPartialNewDeadline(purchase.partialNewDeadline ? purchase.partialNewDeadline.slice(0, 10) : "");
+    setPartialNotes(purchase.partialNotes || "");
+    setInvoiceNumber(purchase.invoiceNumber || "");
+    setPaymentControlNumber(purchase.paymentControlNumber || "");
+    setDeliveredAt(purchase.deliveredAt ? purchase.deliveredAt.slice(0, 10) : "");
+    setReceivedBy(purchase.receivedBy || "");
+    setQuoteRows(normalizeQuoteRows(purchase.quoteOptions));
+    setWinnerSupplierId("");
     setApproveResponsible(purchase.responsibleId || currentUser?.id || "");
     totalOverriddenRef.current = false;
     setSaveStatus(null);
     setActionError(null);
     setUploadError(null);
+    setQuotesError(null);
   }, [purchase.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Comparação "valor pago no ano passado" — assim que fornecedor + item
@@ -201,8 +252,18 @@ export function PurchaseRequestDetailDrawer({
         totalValue:    totalValue === "" ? null : Number(totalValue),
         responsibleId: responsibleIds[0] || null,
         responsibleIds,
-        dueDate:       dueDate || null,
         invoiceDate:   invoiceDate || null,
+        paymentTerms:         paymentTerms || null,
+        supplierOrderCode:    supplierOrderCode || null,
+        deliveryDeadline:     deliveryDeadline || null,
+        partialDeliveredQty:  partialDeliveredQty === "" ? null : Number(partialDeliveredQty),
+        partialRemainingQty:  partialRemainingQty === "" ? null : Number(partialRemainingQty),
+        partialNewDeadline:   partialNewDeadline || null,
+        partialNotes:         partialNotes || null,
+        invoiceNumber:        invoiceNumber || null,
+        paymentControlNumber: paymentControlNumber || null,
+        deliveredAt:          deliveredAt || null,
+        receivedBy:           receivedBy || null,
       });
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus(null), 2500);
@@ -211,6 +272,25 @@ export function PurchaseRequestDetailDrawer({
       setSaveError(err.message || "Erro ao salvar.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updateQuoteRow = (idx, key, value) => {
+    setQuoteRows(prev => prev.map((row, i) => i === idx ? { ...row, [key]: value } : row));
+  };
+
+  const handleSaveQuotes = async () => {
+    setSavingQuotes(true);
+    setQuotesError(null);
+    try {
+      const cleaned = quoteRows
+        .filter(r => r.supplierId)
+        .map(r => ({ supplierId: r.supplierId, value: r.value === "" ? null : Number(r.value) }));
+      await onUpdate(purchase.id, { quoteOptions: cleaned });
+    } catch (err) {
+      setQuotesError(err.message || "Erro ao salvar cotações.");
+    } finally {
+      setSavingQuotes(false);
     }
   };
 
@@ -250,7 +330,7 @@ export function PurchaseRequestDetailDrawer({
     setActionLoading(true);
     setActionError(null);
     try {
-      await approvePurchase(purchase.id, approveResponsible || null);
+      await approvePurchase(purchase.id, approveResponsible || null, purchase.stage === "cotacao" ? (winnerSupplierId || null) : null);
       onClose();
       onStageMoved?.(purchase.id);
     } catch (err) {
@@ -312,15 +392,31 @@ export function PurchaseRequestDetailDrawer({
   const supplier = suppliers.find(s => s.id === purchase.supplierId);
   const stageInfo = PURCHASE_STAGES.find(s => s.id === purchase.stage);
   const stageColor = STAGE_COLORS[purchase.stage] || "var(--text-dim)";
+  const isRejected = purchase.stage === PURCHASE_REJECTED_STAGE;
+  const isSolicitado = purchase.stage === "solicitado";
+  const isCotacao = purchase.stage === "cotacao";
+  // "Pendente de decisão" agora cobre Solicitado E Cotação — aprovar/rejeitar
+  // (RPC) aceita as duas como etapa de origem (ver marketing_purchase_requests_
+  // guard_approval / approve_purchase_request no banco).
+  const isPending = isSolicitado || isCotacao;
+  // Campos de execução só liberam depois da decisão (não faz sentido
+  // preencher fornecedor/valor antes de ter cotação aprovada).
+  const canEditFields = !isSolicitado && !isCotacao && !isRejected;
+  const stageIdx = STAGE_ORDER.indexOf(purchase.stage);
+  const reachedPedido        = stageIdx >= STAGE_ORDER.indexOf("pedido_fornecedor");
+  const reachedEntregaParcial = stageIdx >= STAGE_ORDER.indexOf("entrega_parcial");
+  const reachedEntregue      = stageIdx >= STAGE_ORDER.indexOf("entregue");
   // "Pago" só entra na lista de mover quando já tem nota fiscal — em vez de
   // mostrar desabilitado com tooltip, a seção "Nota fiscal" abaixo já deixa
   // claro o que falta; StageNavigator (compartilhado com o resto da
   // plataforma) não tem um estado "bloqueado" por item, só a lista toda.
+  // Solicitado/Cotação ficam fora daqui — a transição pra elas/delas é
+  // tratada à parte (mover pra Cotação, e Aprovar/Rejeitar com escolha de
+  // fornecedor vencedor), não como um alvo livre do navegador de etapas.
   const movableStages = PURCHASE_STAGES
-    .filter(s => s.id !== "solicitado" && s.id !== purchase.stage && (s.id !== "pago" || invoiceUrl))
+    .filter(s => s.id !== "solicitado" && s.id !== "cotacao" && s.id !== purchase.stage && (s.id !== "pago" || invoiceUrl))
     .map(s => ({ ...s, color: STAGE_COLORS[s.id] || "var(--text-dim)" }));
-  const isRejected = purchase.stage === PURCHASE_REJECTED_STAGE;
-  const isPending = purchase.stage === "solicitado";
+  const quoteOptions = Array.isArray(purchase.quoteOptions) ? purchase.quoteOptions : [];
 
   const currentTotal = totalValue === "" ? null : Number(totalValue);
   const priceDiff = lastPrice && currentTotal != null ? currentTotal - Number(lastPrice.total_value) : null;
@@ -414,7 +510,57 @@ export function PurchaseRequestDetailDrawer({
 
   const center = (
     <>
-      {/* Editable fields — habilitados só após a aprovação */}
+      {/* Cotação de fornecedores — editável na etapa "Cotação"; recapitulação
+          read-only depois (mostra o vencedor destacado). Aposenta o fluxo
+          antigo de marketing_supplier_quotes/e-mail formal. */}
+      {!isRejected && !isSolicitado && (isCotacao || quoteOptions.length > 0) && (
+        <div>
+          <SectionLabel>Cotação de fornecedores</SectionLabel>
+          {isCotacao ? (
+            <>
+              {quoteRows.map((row, idx) => (
+                <div key={idx} className="grid grid-cols-2 gap-3 mb-2">
+                  <FieldRow label={`Fornecedor ${idx + 1}`}>
+                    <select value={row.supplierId} onChange={e => updateQuoteRow(idx, "supplierId", e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
+                      <option value="">Selecione…</option>
+                      {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </FieldRow>
+                  <FieldRow label="Valor">
+                    <CurrencyInput value={row.value} onChange={v => updateQuoteRow(idx, "value", v)} style={inputBase} />
+                  </FieldRow>
+                </div>
+              ))}
+              {quotesError && (
+                <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{quotesError}</div>
+              )}
+              <button onClick={handleSaveQuotes} disabled={savingQuotes}
+                className="px-4 py-2 rounded-lg text-sm font-semibold"
+                style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: savingQuotes ? "default" : "pointer", opacity: savingQuotes ? 0.6 : 1 }}>
+                {savingQuotes ? "Salvando…" : "Salvar cotações"}
+              </button>
+            </>
+          ) : (
+            <div className="space-y-1.5">
+              {quoteOptions.map((q, idx) => {
+                const s = suppliers.find(sup => sup.id === q.supplierId);
+                const won = q.supplierId && q.supplierId === purchase.supplierId;
+                return (
+                  <div key={idx} className="flex items-center justify-between text-xs px-3 py-2 rounded-lg"
+                    style={won ? { background: "#DCFCE7", color: "#15803D", fontWeight: 700 } : { background: "var(--surface-alt)", color: "var(--text)" }}>
+                    <span>{s?.name || "—"}{won ? " · vencedor" : ""}</span>
+                    <span>{q.value != null ? formatBRL(Number(q.value)) : "—"}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Execução da compra — habilita depois da aprovação; campos por etapa
+          (Pedido ao Fornecedor / Entrega Parcial / Entregue) somam-se aqui
+          conforme a solicitação avança, sem apagar o que já foi preenchido. */}
       {!isRejected && (
         <div>
           <div className="flex items-center gap-2 mb-2.5">
@@ -456,19 +602,73 @@ export function PurchaseRequestDetailDrawer({
               <FieldRow label="Valor total">
                 <CurrencyInput value={totalValue} onChange={handleTotalValueChange} style={inputBase} />
               </FieldRow>
-              <FieldRow label="Prazo">
-                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputBase} />
-              </FieldRow>
-              <FieldRow label="Data da nota fiscal">
-                <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} style={inputBase} />
+              <FieldRow label="Prazo de pagamento">
+                <input type="text" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} placeholder="Ex: 30 dias após entrega" style={inputBase} />
               </FieldRow>
             </div>
 
+            {reachedPedido && (
+              <>
+                <div className="mt-3 mb-2"><SectionLabel>Pedido ao fornecedor</SectionLabel></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FieldRow label="Código de pedido do fornecedor">
+                    <input type="text" value={supplierOrderCode} onChange={e => setSupplierOrderCode(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                  <FieldRow label="Prazo de entrega">
+                    <input type="date" value={deliveryDeadline} onChange={e => setDeliveryDeadline(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                </div>
+              </>
+            )}
+
+            {reachedEntregaParcial && (
+              <>
+                <div className="mt-3 mb-2"><SectionLabel>Entrega parcial</SectionLabel></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FieldRow label="Quantidade entregue">
+                    <input type="number" min="0" value={partialDeliveredQty} onChange={e => setPartialDeliveredQty(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                  <FieldRow label="Quanto falta entregar">
+                    <input type="number" min="0" value={partialRemainingQty} onChange={e => setPartialRemainingQty(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                  <FieldRow label="Novo prazo de entrega (restante)">
+                    <input type="date" value={partialNewDeadline} onChange={e => setPartialNewDeadline(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                </div>
+                <FieldRow label="Detalhes extras">
+                  <textarea value={partialNotes} onChange={e => setPartialNotes(e.target.value)} rows={2} style={{ ...inputBase, resize: "vertical" }} />
+                </FieldRow>
+              </>
+            )}
+
+            {reachedEntregue && (
+              <>
+                <div className="mt-3 mb-2"><SectionLabel>Entrega</SectionLabel></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FieldRow label="Número da nota fiscal">
+                    <input type="text" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                  <FieldRow label="Data da nota fiscal">
+                    <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                  <FieldRow label="Número da CP (controle de pagamento)">
+                    <input type="text" value={paymentControlNumber} onChange={e => setPaymentControlNumber(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                  <FieldRow label="Data da entrega">
+                    <input type="date" value={deliveredAt} onChange={e => setDeliveredAt(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                  <FieldRow label="Quem recebeu">
+                    <input type="text" value={receivedBy} onChange={e => setReceivedBy(e.target.value)} style={inputBase} />
+                  </FieldRow>
+                </div>
+              </>
+            )}
+
             {saveError && (
-              <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{saveError}</div>
+              <div className="text-xs px-3 py-2 rounded-lg mb-2 mt-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{saveError}</div>
             )}
             <button onClick={handleSaveFields} disabled={saving}
-              className="px-4 py-2 rounded-lg text-sm font-semibold"
+              className="px-4 py-2 rounded-lg text-sm font-semibold mt-2"
               style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Salvar alterações"}
             </button>
@@ -476,8 +676,10 @@ export function PurchaseRequestDetailDrawer({
         </div>
       )}
 
-      {/* Nota fiscal */}
-      {!isRejected && (
+      {/* Nota fiscal — só a partir de "Entregue" (antes disso ainda não há
+          o que anexar; os campos de identificação da NF ficam no bloco
+          "Entrega" acima). */}
+      {!isRejected && reachedEntregue && (
         <div>
           <SectionLabel>Nota fiscal</SectionLabel>
           {invoiceUrl ? (
@@ -513,12 +715,46 @@ export function PurchaseRequestDetailDrawer({
     </>
   );
 
+  const canApproveNow = isCotacao ? (quoteOptions.length === 0 || Boolean(winnerSupplierId)) : true;
+
   const right = (
     <>
-      {/* Aprovar/Rejeitar — só em "solicitado" e só gerente_marketing/admin */}
+      {/* Mover pra Cotação — livre pra qualquer marketing, não exige
+          gerente_marketing/admin (só aprovar/rejeitar exige). */}
+      {isSolicitado && (
+        <div>
+          <SectionLabel>Mover para etapa</SectionLabel>
+          <StageNavigator
+            targets={[{ id: "cotacao", name: "Cotação", color: STAGE_COLORS.cotacao }]}
+            onMove={handleMoveStage}
+            getKey={s => s.id}
+          />
+        </div>
+      )}
+
+      {/* Aprovar/Rejeitar — em "solicitado" ou "cotacao", só
+          gerente_marketing/admin. Na Cotação, escolhe-se o fornecedor
+          vencedor (se houver cotações salvas) antes de aprovar. */}
       {isPending && canApprove && (
         <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
-          <SectionLabel>Aprovar solicitação</SectionLabel>
+          <SectionLabel>{isCotacao ? "Aprovar solicitação" : "Decisão"}</SectionLabel>
+
+          {isCotacao && quoteOptions.length > 0 && (
+            <FieldRow label="Fornecedor vencedor">
+              <select value={winnerSupplierId} onChange={e => setWinnerSupplierId(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
+                <option value="">Selecione…</option>
+                {quoteOptions.filter(q => q.supplierId).map(q => {
+                  const s = suppliers.find(sup => sup.id === q.supplierId);
+                  return (
+                    <option key={q.supplierId} value={q.supplierId}>
+                      {s?.name || q.supplierId}{q.value != null ? ` — ${formatBRL(Number(q.value))}` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            </FieldRow>
+          )}
+
           <FieldRow label="Responsável pela execução">
             <select value={approveResponsible} onChange={e => setApproveResponsible(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
               <option value="">Selecione um responsável (opcional)</option>
@@ -532,12 +768,14 @@ export function PurchaseRequestDetailDrawer({
 
           {!showReject ? (
             <div className="flex items-center gap-2">
-              <button onClick={handleApprove} disabled={actionLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                style={{ background: "#DCFCE7", color: "#15803D", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
-                <CheckCircle2 size={13} />
-                {actionLoading ? "Aprovando…" : "Aprovar"}
-              </button>
+              {isCotacao && (
+                <button onClick={handleApprove} disabled={actionLoading || !canApproveNow}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: "#DCFCE7", color: "#15803D", border: "none", cursor: (actionLoading || !canApproveNow) ? "default" : "pointer", opacity: (actionLoading || !canApproveNow) ? 0.6 : 1 }}>
+                  <CheckCircle2 size={13} />
+                  {actionLoading ? "Aprovando…" : "Aprovar"}
+                </button>
+              )}
               <button onClick={() => setShowReject(true)} disabled={actionLoading}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
                 style={{ background: "#FEE2E2", color: "#DC2626", border: "none", cursor: actionLoading ? "default" : "pointer" }}>

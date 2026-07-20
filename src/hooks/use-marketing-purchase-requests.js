@@ -5,6 +5,7 @@ const TABLE = "marketing_purchase_requests";
 
 export const PURCHASE_STAGES = [
   { id: "solicitado",         name: "Solicitado" },
+  { id: "cotacao",            name: "Cotação" },
   { id: "aprovado",           name: "Aprovado" },
   { id: "pedido_fornecedor",  name: "Pedido ao Fornecedor" },
   { id: "entrega_parcial",    name: "Entrega Parcial" },
@@ -46,6 +47,19 @@ function rowToPurchase(r) {
     createdBy:       r.created_by ?? null,
     createdAt:        r.created_at,
     updatedAt:        r.updated_at,
+    // Redesign da etapa "Cotação" + campos por etapa (item do usuário).
+    quoteOptions:            Array.isArray(r.quote_options) ? r.quote_options : [],
+    paymentTerms:            r.payment_terms ?? null,
+    supplierOrderCode:       r.supplier_order_code ?? null,
+    deliveryDeadline:        r.delivery_deadline ?? null,
+    partialDeliveredQty:     r.partial_delivered_qty != null ? Number(r.partial_delivered_qty) : null,
+    partialRemainingQty:     r.partial_remaining_qty != null ? Number(r.partial_remaining_qty) : null,
+    partialNewDeadline:      r.partial_new_deadline ?? null,
+    partialNotes:            r.partial_notes ?? null,
+    invoiceNumber:           r.invoice_number ?? null,
+    paymentControlNumber:    r.payment_control_number ?? null,
+    deliveredAt:             r.delivered_at ?? null,
+    receivedBy:              r.received_by ?? null,
   };
 }
 
@@ -72,6 +86,18 @@ function purchaseToRow(p) {
   if (p.invoiceUrl !== undefined)     row.invoice_url = p.invoiceUrl || null;
   if (p.companyIds !== undefined)     row.company_ids = p.companyIds || [];
   if (p.notes !== undefined)          row.notes = p.notes || [];
+  if (p.quoteOptions !== undefined)         row.quote_options = p.quoteOptions || [];
+  if (p.paymentTerms !== undefined)         row.payment_terms = p.paymentTerms || null;
+  if (p.supplierOrderCode !== undefined)    row.supplier_order_code = p.supplierOrderCode || null;
+  if (p.deliveryDeadline !== undefined)     row.delivery_deadline = p.deliveryDeadline || null;
+  if (p.partialDeliveredQty !== undefined)  row.partial_delivered_qty = p.partialDeliveredQty === "" ? null : p.partialDeliveredQty;
+  if (p.partialRemainingQty !== undefined)  row.partial_remaining_qty = p.partialRemainingQty === "" ? null : p.partialRemainingQty;
+  if (p.partialNewDeadline !== undefined)   row.partial_new_deadline = p.partialNewDeadline || null;
+  if (p.partialNotes !== undefined)         row.partial_notes = p.partialNotes || null;
+  if (p.invoiceNumber !== undefined)        row.invoice_number = p.invoiceNumber || null;
+  if (p.paymentControlNumber !== undefined) row.payment_control_number = p.paymentControlNumber || null;
+  if (p.deliveredAt !== undefined)          row.delivered_at = p.deliveredAt || null;
+  if (p.receivedBy !== undefined)           row.received_by = p.receivedBy || null;
   return row;
 }
 
@@ -152,9 +178,13 @@ export function useMarketingPurchaseRequests({ enabled = true } = {}) {
 
   // Aprovação/rejeição passam pela RPC (gate de gerente_marketing/admin
   // aplicado no servidor, ver approve_purchase_request/reject_purchase_request).
-  const approvePurchase = useCallback(async (id, responsibleId) => {
+  const approvePurchase = useCallback(async (id, responsibleId, supplierId) => {
     if (!isSupabaseConfigured) return;
-    const { data, error: err } = await supabase.rpc("approve_purchase_request", { p_id: id, p_responsible_id: responsibleId || null });
+    const { data, error: err } = await supabase.rpc("approve_purchase_request", {
+      p_id: id,
+      p_responsible_id: responsibleId || null,
+      p_supplier_id: supplierId || null,
+    });
     if (err) throw err;
     const row = rowToPurchase(data);
     setPurchases(prev => prev.map(p => p.id === id ? row : p));

@@ -17,6 +17,7 @@ import { MoveStageMenu } from "../shared/MoveStageMenu";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
+  cotacao:           "#CA8A04",
   aprovado:          "#2563EB",
   pedido_fornecedor: "#7C3AED",
   entrega_parcial:   "#0891B2",
@@ -99,12 +100,15 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
   const responsibleIds = purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []);
   const resolvedResponsible = responsibleIds.map(id => users?.find(u => u.id === id)).filter(Boolean);
   const firstResponsible = resolvedResponsible[0];
-  // Solicitado só avança pra Aprovado (via approvePurchase — mantém
-  // approved_by/approved_at corretos); pular direto pras etapas seguintes
-  // no menu deixaria a aprovação sem responsável registrado. As demais
+  // Solicitado só avança pra Cotação (comparação de fornecedores); Cotação
+  // só avança pra Aprovado (via approvePurchase — mantém approved_by/
+  // approved_at corretos, e o vencedor é escolhido no drawer). Pular etapas
+  // no menu deixaria a aprovação sem essa decisão registrada. As demais
   // etapas avançam livremente entre si; "pago" (terminal) só por
   // arrastar/drawer, não aparece no menu — mesmo padrão de Entregas/Vagas.
   const moveTargets = purchase.stage === "solicitado"
+    ? (stages || PURCHASE_STAGES).filter(s => s.id === "cotacao")
+    : purchase.stage === "cotacao"
     ? (stages || PURCHASE_STAGES).filter(s => s.id === "aprovado")
     : (stages || PURCHASE_STAGES).filter(s => s.id !== purchase.stage && !s.terminal);
   return (
@@ -563,9 +567,11 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
 
   const handleCreate = useCallback(async (purchase) => { await createPurchase(purchase); }, [createPurchase]);
 
-  // "Solicitado" só avança pra "Aprovado" via approvePurchase (RPC) — grava
-  // approved_by/approved_at, o que um updatePurchase direto não faz. As
-  // demais etapas usam updatePurchase normal; "pago" exige nota fiscal
+  // "Solicitado" só avança pra "Cotação" (comparar fornecedores, plain
+  // update); "Cotação" só avança pra "Aprovado" via approvePurchase (RPC) —
+  // grava approved_by/approved_at, o que um updatePurchase direto não faz
+  // (o vencedor da cotação normalmente é escolhido no drawer, não aqui).
+  // As demais etapas usam updatePurchase normal; "pago" exige nota fiscal
   // (trigger no banco), erro vira mensagem em vez de falhar silencioso.
   const attemptStageChange = useCallback(async (id, toStage) => {
     const purchase = purchasesRef.current.find(p => p.id === id);
@@ -573,6 +579,12 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
     setStageError(null);
     try {
       if (purchase.stage === "solicitado") {
+        if (toStage !== "cotacao") {
+          setStageError(`Não dá pra mover "${purchase.itemName}" direto pra essa etapa — passe por Cotação primeiro.`);
+          return;
+        }
+        await updatePurchase(id, { stage: toStage });
+      } else if (purchase.stage === "cotacao") {
         if (toStage !== "aprovado") {
           setStageError(`Não dá pra mover "${purchase.itemName}" direto pra essa etapa — aprove a solicitação primeiro.`);
           return;
