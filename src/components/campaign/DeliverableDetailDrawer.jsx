@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  X, ArrowRight, Trash2, Star,
+  X, Trash2,
   FileText, Activity, Paperclip, CheckSquare,
   Sparkles,
   Upload, File, FileImage, Download, Plus,
@@ -24,6 +24,7 @@ import { getMentionableUsers }        from "../../utils/mentionable-users";
 import { AssigneeMultiSelect }        from "../shared/AssigneeMultiSelect";
 import { EditableProtocolNumber }     from "../shared/EditableProtocolNumber";
 import { StageNavigator }             from "../shared/StageNavigator";
+import { SplitPanelDrawer }           from "../shared/SplitPanelDrawer";
 
 /* ── Priority helpers ───────────────────────────────────────── */
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -657,11 +658,8 @@ function seedStageFieldValues(it) {
 /* ── Main component ─────────────────────────────────────────── */
 export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, users = [], canWrite, userId, currentUser, notifyMentions }) {
   const [sideTab,      setSideTab]     = useState("form");
-  const [mobileTab,    setMobileTab]   = useState("info");
   const [fieldValues,  setFieldValues] = useState(() => seedStageFieldValues(item));
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | null
-  const [confirmDel,   setConfirmDel]  = useState(false);
-  const [deleting,     setDeleting]    = useState(false);
   const [moveError,    setMoveError]   = useState(null);
 
   // Campos customizados configurados pelo admin via "Editar campos desta
@@ -774,20 +772,10 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     fieldValuesRef.current = seeded;
     setSaveStatus(null);
     setSideTab("form");
-    setMobileTab("info");
     if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
   }, [item.id, item.stage]);
 
-  useEffect(() => {
-    const h = e => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
-
   const stageInfo  = DELIVERABLE_STAGES.find(s => s.id === item.stage);
-  const stageOrder = DELIVERABLE_STAGES.map(s => s.id);
-  const currentIdx = stageOrder.indexOf(item.stage);
-  const nextStages = DELIVERABLE_STAGES.slice(currentIdx + 1);
   const fields     = STAGE_FIELDS[item.stage] || [];
 
   const priorityColor = PRIORITY_COLORS[item.priority] || NEUTRAL.slate;
@@ -864,12 +852,6 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
   };
 
-  const handleDelete = async () => {
-    setDeleting(true);
-    try { await onDelete(item.id); onClose(); }
-    finally { setDeleting(false); }
-  };
-
   // ── Left tab content ──────────────────────────────────────────────────────
   function LeftTabContent() {
     if (sideTab === "form") {
@@ -932,320 +914,178 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     return null;
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-40 flex lg:items-center lg:justify-center lg:p-6"
-      style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-6xl lg:rounded-2xl lg:max-h-[92vh]"
-        style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)", overflow: "hidden", height: "100%" }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Mobile header */}
-        <div className="lg:hidden sticky top-0 z-10 flex flex-col shrink-0" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
-          <div className="flex items-center justify-between px-4 py-3">
-            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
-              <X size={20} />
-            </button>
-            <div className="flex-1 mx-3 text-center min-w-0">
-              <div className="font-bold text-sm truncate" style={{ color: "var(--text)" }}>{item.title}</div>
-              {stageInfo && <div className="text-xs font-semibold" style={{ color: stageInfo.color }}>{stageInfo.name}</div>}
-            </div>
-            {item.priority && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: priorityColor, background: priorityColor + "18", border: `1px solid ${priorityColor}40`, borderRadius: 4, padding: "2px 8px" }}>
-                {priorityLabel}
-              </span>
-            )}
-          </div>
-          <div className="flex border-t" style={{ borderColor: "#E5E7EB" }}>
-            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }, { id: "mover", label: "MOVER" }].map(t => (
-              <button
-                key={t.id}
-                onClick={() => setMobileTab(t.id)}
-                className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
-                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "var(--accent)" : "transparent"}`, color: mobileTab === t.id ? "var(--accent)" : "var(--text-dim)" }}
-              >
-                {t.label}
-              </button>
-            ))}
+  const header = (
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+        {stageInfo && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: stageInfo.color + "22", color: stageInfo.color, border: `1px solid ${stageInfo.color}44` }}>
+            {stageInfo.name}
+          </span>
+        )}
+        {item.priority && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: priorityColor + "18", color: priorityColor, border: `1px solid ${priorityColor}40` }}>
+            {priorityLabel}
+          </span>
+        )}
+        {companyLabels && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}>
+            {companyLabels}
+          </span>
+        )}
+      </div>
+      <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
+        {item.title}
+      </h2>
+    </div>
+  );
+
+  const left = (
+    <>
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Prazo</div>
+          <div className="text-xs font-bold mt-0.5" style={{ color: item.deadline && new Date(item.deadline) < new Date() ? "#DC2626" : "var(--text)" }}>
+            {item.deadline ? formatDateBR(item.deadline) : "—"}
           </div>
         </div>
-
-        {/* Desktop header */}
-        <div
-          className="hidden lg:flex sticky top-0 z-10 px-5 py-3.5 border-b items-center justify-between shrink-0"
-          style={{ background: "rgba(255,255,255,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            {stageInfo && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: stageInfo.color + "22", color: stageInfo.color, border: `1px solid ${stageInfo.color}44` }}>
-                {stageInfo.name}
-              </span>
-            )}
-            {item.priority && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: priorityColor + "18", color: priorityColor, border: `1px solid ${priorityColor}40` }}>
-                {priorityLabel}
-              </span>
-            )}
-            {companyLabels && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid #E5E7EB" }}>
-                {companyLabels}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            {canWrite && (
-              <button
-                onClick={() => setConfirmDel(v => !v)}
-                title="Excluir entrega"
-                className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                style={{ color: "var(--text-dim)", background: "none", border: "none" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: "var(--text-dim)", background: "none", border: "none" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-            >
-              <X size={18} />
-            </button>
+        <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+          <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Etapa</div>
+          <div className="text-xs font-bold mt-0.5 truncate" style={{ color: stageInfo?.color || "var(--text)" }}>
+            {stageInfo?.name || "—"}
           </div>
         </div>
-
-        {/* Confirm delete bar */}
-        {confirmDel && canWrite && (
-          <div className="shrink-0 px-5 py-2.5 flex items-center gap-3 border-b" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>
-            <span className="text-xs font-semibold flex-1" style={{ color: "#B91C1C" }}>Confirmar exclusão desta entrega?</span>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-3 py-1.5 text-xs font-semibold rounded-xl"
-              style={{ background: "#DC2626", color: "#FFF", border: "none", cursor: "pointer" }}
-            >
-              {deleting ? "Excluindo…" : "Sim, excluir"}
-            </button>
-            <button
-              onClick={() => setConfirmDel(false)}
-              className="px-3 py-1.5 text-xs rounded-xl border"
-              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFF", cursor: "pointer" }}
-            >
-              Cancelar
-            </button>
+        {item.department && (
+          <div className="col-span-2 rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Departamento</div>
+            <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>{item.department}</div>
           </div>
         )}
-
-        {/* ── BODY ── */}
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-
-          {/* ── LEFT sidebar ── */}
-          <aside
-            className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-b lg:border-b-0 lg:border-r p-5 space-y-4${mobileTab !== "info" ? " hidden lg:flex lg:flex-col" : ""}`}
-            style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}
-          >
-            {/* Item header */}
-            <div>
-              <h2 className="font-bold mb-1" style={{ fontSize: 17, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
-                {item.title}
-              </h2>
-              {companyLabels && <div className="text-xs" style={{ color: "var(--text-dim)" }}>{companyLabels}</div>}
-            </div>
-
-            {/* Company + priority pills */}
-            <div className="flex flex-wrap gap-1.5">
-              {(item.companyIds || []).map(id => {
-                const co = COMPANIES[id];
-                if (!co) return null;
-                return (
-                  <span key={id} className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ background: co.primary + "18", color: co.primary, border: `1px solid ${co.primary}30` }}>
-                    {co.short}
-                  </span>
-                );
-              })}
-              {item.priority && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                  style={{ background: priorityColor + "18", color: priorityColor, border: `1px solid ${priorityColor}40` }}>
-                  {priorityLabel}
-                </span>
-              )}
-            </div>
-
-            {/* Stats grid */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Prazo</div>
-                <div className="text-xs font-bold mt-0.5" style={{ color: item.deadline && new Date(item.deadline) < new Date() ? "#DC2626" : "var(--text)" }}>
-                  {item.deadline ? formatDateBR(item.deadline) : "—"}
-                </div>
-              </div>
-              <div className="rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Etapa</div>
-                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: stageInfo?.color || "var(--text)" }}>
-                  {stageInfo?.name || "—"}
-                </div>
-              </div>
-              {item.department && (
-                <div className="col-span-2 rounded-lg p-2" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
-                  <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Departamento</div>
-                  <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>{item.department}</div>
-                </div>
-              )}
-            </div>
-
-            {/* ── Pill SideTabs ── */}
-            <div className="pt-1 border-t" style={{ borderColor: "#E5E7EB" }}>
-              <SideTabs activeId={sideTab} onChange={setSideTab} />
-            </div>
-
-            {/* ── Tab content ── */}
-            <div className="flex-1">
-              <LeftTabContent />
-            </div>
-          </aside>
-
-          {/* ── CENTER: stage bar + stage fields ── */}
-          <main
-            className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-5${mobileTab !== "stage" ? " hidden lg:block" : ""}`}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-                <SectionLabel>Fase atual</SectionLabel>
-                {stageInfo && (
-                  <span style={{ fontSize: 11, fontWeight: 600, color: stageInfo.color, background: stageInfo.color + "18", border: `1px solid ${stageInfo.color}40`, borderRadius: 5, padding: "2px 8px", marginTop: -14 }}>
-                    {stageInfo.name}
-                  </span>
-                )}
-                {saveStatus && (
-                  <span
-                    style={{
-                      fontSize: 10, marginTop: -14, marginLeft: "auto",
-                      color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
-                      fontWeight: saveStatus === "error" ? 700 : 400,
-                    }}
-                  >
-                    {saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "✗ Falha ao salvar — tente de novo" : "✓ Salvo"}
-                  </span>
-                )}
-              </div>
-              {fields.length === 0
-                ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
-                : fields.map(field => (
-                  <FieldRow key={field.key} label={field.label} required={field.required} hint={field.hint}>
-                    <StageFieldInput field={field} value={fieldValues[field.key]} onChange={val => handleFieldChange(field.key, val)} canWrite={canWrite} users={users} />
-                  </FieldRow>
-                ))
-              }
-
-              {/* Campos adicionais configurados via "Editar campos desta
-                  etapa" (rh_pipeline_stage_fields) — além do formulário fixo
-                  acima, que continua intacto. */}
-              {visibleCustomDefs.length > 0 && (
-                <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #E5E7EB" }}>
-                  <SectionLabel>Campos adicionais da etapa</SectionLabel>
-                  {visibleCustomDefs.map(f => (
-                    <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
-                      {canWrite ? (
-                        <RHStageFieldInput
-                          field={f}
-                          value={getCustomValue(f.fieldKey)}
-                          onChange={val => handleCustomChange(f.fieldKey, val)}
-                          users={users}
-                        />
-                      ) : (
-                        <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
-                      )}
-                    </FieldRow>
-                  ))}
-                </div>
-              )}
-            </div>
-          </main>
-
-          {/* ── RIGHT sidebar ── */}
-          {/* Abaixo de lg vira a 3ª aba mobile ("MOVER"), em vez de ficar
-              escondida sem substituto — StageNavigator + CommentsPanel
-              precisam existir em algum lugar acessível no celular. */}
-          <aside
-            className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4 flex flex-col${mobileTab !== "mover" ? " hidden lg:flex" : ""}`}
-            style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}
-          >
-            <div>
-              <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-                Mover entrega para fase
-              </div>
-              {moveError && (
-                <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
-                  <AlertCircle size={12} className="shrink-0 mt-0.5" />
-                  {moveError}
-                </div>
-              )}
-              {canWrite && (
-                <StageNavigator
-                  targets={DELIVERABLE_STAGES.filter(s => s.id !== item.stage)}
-                  onMove={handleMoveStage}
-                  getKey={(s) => s.id}
-                />
-              )}
-            </div>
-
-            {/* Comentários — sempre visíveis na lateral direita, abaixo da
-                movimentação de card (não mais escondidos atrás de uma aba). */}
-            <div className="pt-4 border-t" style={{ borderColor: "#E5E7EB" }}>
-              <CommentsPanel
-                comments={comments}
-                currentUser={currentUser}
-                mentionableUsers={mentionableUsers}
-                onAddComment={onAddComment}
-              />
-            </div>
-
-            {/* AI move link */}
-            <div className="border-t pt-3" style={{ borderColor: "#E5E7EB" }}>
-              <button
-                onClick={() => { setSideTab("ia"); setMobileTab("info"); }}
-                className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
-                style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0, textAlign: "left" }}
-                onMouseEnter={e => { e.currentTarget.style.color = PURPLE; }}
-                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
-              >
-                <Sparkles size={12} />
-                Mover cards com IA
-              </button>
-            </div>
-          </aside>
-        </div>
-
-        {/* Mobile sticky footer */}
-        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
-          {nextStages.length > 0 && canWrite ? (
-            <button
-              onClick={() => handleMoveStage(nextStages[0].id)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm cursor-pointer"
-              style={{ background: nextStages[0].color, color: "#FFFFFF", border: "none" }}
-            >
-              Avançar para {nextStages[0].name}
-              <ArrowRight size={16} />
-            </button>
-          ) : (
-            <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
-              {currentIdx >= DELIVERABLE_STAGES.length - 1 ? "Entrega concluída" : "Fase atual"}
-            </div>
-          )}
-        </div>
       </div>
+
+      {/* ── Pill SideTabs ── */}
+      <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
+        <SideTabs activeId={sideTab} onChange={setSideTab} />
+      </div>
+
+      {/* ── Tab content ── */}
+      <div>
+        <LeftTabContent />
+      </div>
+    </>
+  );
+
+  const center = (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+        <SectionLabel>Fase atual</SectionLabel>
+        {stageInfo && (
+          <span style={{ fontSize: 11, fontWeight: 600, color: stageInfo.color, background: stageInfo.color + "18", border: `1px solid ${stageInfo.color}40`, borderRadius: 5, padding: "2px 8px", marginTop: -14 }}>
+            {stageInfo.name}
+          </span>
+        )}
+        {saveStatus && (
+          <span
+            style={{
+              fontSize: 10, marginTop: -14, marginLeft: "auto",
+              color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
+              fontWeight: saveStatus === "error" ? 700 : 400,
+            }}
+          >
+            {saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "✗ Falha ao salvar — tente de novo" : "✓ Salvo"}
+          </span>
+        )}
+      </div>
+      {fields.length === 0
+        ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
+        : fields.map(field => (
+          <FieldRow key={field.key} label={field.label} required={field.required} hint={field.hint}>
+            <StageFieldInput field={field} value={fieldValues[field.key]} onChange={val => handleFieldChange(field.key, val)} canWrite={canWrite} users={users} />
+          </FieldRow>
+        ))
+      }
+
+      {/* Campos adicionais configurados via "Editar campos desta
+          etapa" (rh_pipeline_stage_fields) — além do formulário fixo
+          acima, que continua intacto. */}
+      {visibleCustomDefs.length > 0 && (
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+          <SectionLabel>Campos adicionais da etapa</SectionLabel>
+          {visibleCustomDefs.map(f => (
+            <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
+              {canWrite ? (
+                <RHStageFieldInput
+                  field={f}
+                  value={getCustomValue(f.fieldKey)}
+                  onChange={val => handleCustomChange(f.fieldKey, val)}
+                  users={users}
+                />
+              ) : (
+                <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
+              )}
+            </FieldRow>
+          ))}
+        </div>
+      )}
     </div>
+  );
+
+  const right = (
+    <>
+      <div>
+        <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
+          Mover entrega para fase
+        </div>
+        {moveError && (
+          <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+            <AlertCircle size={12} className="shrink-0 mt-0.5" />
+            {moveError}
+          </div>
+        )}
+        {canWrite && (
+          <StageNavigator
+            targets={DELIVERABLE_STAGES.filter(s => s.id !== item.stage)}
+            onMove={handleMoveStage}
+            getKey={(s) => s.id}
+          />
+        )}
+      </div>
+
+      <CommentsPanel
+        comments={comments}
+        currentUser={currentUser}
+        mentionableUsers={mentionableUsers}
+        onAddComment={onAddComment}
+      />
+
+      {/* AI move link */}
+      <div className="border-t pt-3" style={{ borderColor: "var(--border)" }}>
+        <button
+          onClick={() => setSideTab("ia")}
+          className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
+          style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0, textAlign: "left" }}
+          onMouseEnter={e => { e.currentTarget.style.color = PURPLE; }}
+          onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+        >
+          <Sparkles size={12} />
+          Mover cards com IA
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+      onDelete={canWrite && onDelete ? () => onDelete(item.id) : undefined}
+      deleteLabel="Excluir entrega"
+    />
   );
 }

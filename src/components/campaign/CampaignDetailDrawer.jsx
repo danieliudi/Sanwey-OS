@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
-  ArrowRight, Sparkles,
+  Sparkles,
   RotateCcw, Copy, Loader2, AlertCircle, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -17,6 +17,7 @@ import { getMentionableUsers } from "../../utils/mentionable-users";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
 import { StageNavigator } from "../shared/StageNavigator";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
@@ -1121,9 +1122,6 @@ export function CampaignDetailDrawer({
   const effectiveStages = stages?.length ? stages : MARKETING_STAGES;
   const [sideTab, setSideTab]           = useState("form");
   const [draft, setDraft]               = useState({});
-  const [mobileTab, setMobileTab]       = useState("info");
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting]         = useState(false);
   const saveTimeout  = useRef(null);
   const pendingPatch = useRef({});
 
@@ -1140,16 +1138,9 @@ export function CampaignDetailDrawer({
 
   useEffect(() => {
     setDraft({});
-    setMobileTab("info");
     setSideTab("form");
     pendingPatch.current = {};
   }, [campaign?.id]);
-
-  useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") onClose?.(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
 
   const get = (field) => field in draft ? draft[field] : campaign[field];
 
@@ -1166,22 +1157,8 @@ export function CampaignDetailDrawer({
     }, 600);
   }, [campaign?.id, onUpdate, isAgencia]);
 
-  const handleDelete = async () => {
-    setDeleting(true);
-    try { await onDelete?.(campaign.id); onClose?.(); }
-    finally { setDeleting(false); }
-  };
-
   const stageIdx = effectiveStages.findIndex(s => s.id === get("stage"));
   const stage    = effectiveStages[stageIdx] || null;
-
-  const stageNav = useMemo(() => {
-    if (stageIdx < 0) return { prev: null, next: null };
-    return {
-      prev: stageIdx > 0 ? effectiveStages[stageIdx - 1] : null,
-      next: stageIdx < effectiveStages.length - 1 ? effectiveStages[stageIdx + 1] : null,
-    };
-  }, [stageIdx, effectiveStages]);
 
   const moveToStage = useCallback((toStageId) => {
     if (!campaign || !toStageId) return;
@@ -1446,313 +1423,193 @@ export function CampaignDetailDrawer({
     return null;
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-40 flex lg:items-center lg:justify-center lg:p-6"
-      style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-6xl lg:rounded-2xl lg:max-h-[92vh]"
-        style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)", overflow: "hidden", height: "100%" }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Mobile header */}
-        <div className="lg:hidden sticky top-0 z-10 flex flex-col shrink-0" style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
-          <div className="flex items-center justify-between px-4 py-3">
-            <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
-              <X size={20} />
-            </button>
-            <div className="flex-1 mx-3 text-center min-w-0">
-              <div className="font-bold text-sm truncate" style={{ color: "var(--text)" }}>{get("name")}</div>
-              {stage && <div className="text-xs font-semibold" style={{ color: stage.color }}>{stage.name}</div>}
-            </div>
-            {canWrite && (
-              <button
-                onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
-                className="p-1.5 rounded-lg"
-                style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "var(--text-faint)" }}
-              >
-                <Star size={16} fill={campaign.starred ? "#F59E0B" : "none"} />
-              </button>
-            )}
-          </div>
-          <div className="flex border-t" style={{ borderColor: "var(--border)" }}>
-            {[{ id: "info", label: "INFORMAÇÕES" }, { id: "stage", label: "FASE ATUAL" }, { id: "mover", label: "MOVER" }].map(t => (
-              <button
-                key={t.id}
-                onClick={() => setMobileTab(t.id)}
-                className="flex-1 py-2.5 text-xs font-bold tracking-wider cursor-pointer"
-                style={{ background: "none", border: "none", borderBottom: `2px solid ${mobileTab === t.id ? "var(--accent)" : "transparent"}`, color: mobileTab === t.id ? "var(--accent)" : "var(--text-dim)" }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Desktop header */}
-        <div
-          className="hidden lg:flex sticky top-0 z-10 px-5 py-3.5 border-b items-center justify-between shrink-0"
-          style={{ background: "rgba(255,255,255,0.97)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            {stage && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: stage.color + "22", color: stage.color, border: `1px solid ${stage.color}44` }}>
-                {stage.name}
-              </span>
-            )}
-            {get("channel") && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}>
-                {get("channel")}
-              </span>
-            )}
-            {isAgencia && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }}>
-                Visitante
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            {canWrite && !isAgencia && (
-              <button
-                onClick={() => setConfirmDelete(v => !v)}
-                title="Excluir campanha"
-                className="p-1.5 rounded-lg transition-colors cursor-pointer"
-                style={{ color: "var(--text-dim)", background: "none", border: "none" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "var(--danger)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
-            {canWrite && (
-              <button
-                onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
-                className="p-1.5 rounded-lg"
-                style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "var(--text-faint)" }}
-              >
-                <Star size={16} fill={campaign.starred ? "#F59E0B" : "none"} />
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ color: "var(--text-dim)", background: "none", border: "none" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* Confirm delete bar */}
-        {confirmDelete && canWrite && !isAgencia && (
-          <div className="shrink-0 px-5 py-2.5 flex items-center gap-3 border-b" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>
-            <span className="text-xs font-semibold flex-1" style={{ color: "var(--danger)" }}>Confirmar exclusão desta campanha?</span>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-3 py-1.5 text-xs font-semibold rounded-xl"
-              style={{ background: "var(--danger)", color: "#FFF", border: "none", cursor: "pointer" }}
-            >
-              {deleting ? "Excluindo…" : "Sim, excluir"}
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="px-3 py-1.5 text-xs rounded-xl border"
-              style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
-            >
-              Cancelar
-            </button>
-          </div>
+  const header = (
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+        {stage && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: stage.color + "22", color: stage.color, border: `1px solid ${stage.color}44` }}>
+            {stage.name}
+          </span>
         )}
-
-        {/* ── BODY: 3 columns ── */}
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-
-          {/* ── LEFT sidebar ── */}
-          <aside
-            className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto overflow-x-hidden border-b lg:border-b-0 lg:border-r p-5 space-y-4 pb-4 lg:pb-5${mobileTab !== "info" ? " hidden lg:flex lg:flex-col" : ""}`}
-            style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
+        {get("channel") && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}>
+            {get("channel")}
+          </span>
+        )}
+        {isAgencia && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }}>
+            Visitante
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
+          {get("name")}
+        </h2>
+        {canWrite && (
+          <button
+            onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
+            className="p-1 rounded-lg shrink-0"
+            style={{ background: "none", border: "none", cursor: "pointer", color: campaign.starred ? "#F59E0B" : "var(--text-faint)" }}
+            title={campaign.starred ? "Remover destaque" : "Destacar campanha"}
           >
-            {/* Campaign name + company pills */}
-            <div>
-              <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.02em", wordBreak: "break-word", marginBottom: 8 }}>
-                {get("name")}
-              </h2>
-              {(get("companyIds") || []).length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {(get("companyIds") || []).map(id => {
-                    const co = COMPANIES[id];
-                    if (!co) return null;
-                    return (
-                      <span key={id} className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                        style={{ background: co.primary + "18", color: co.primary, border: `1px solid ${co.primary}30` }}>
-                        {co.short}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* ── Pill SideTabs ── */}
-            <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
-              <SideTabs activeId={sideTab} onChange={setSideTab} />
-            </div>
-
-            {/* ── Tab content ── */}
-            <div className="flex-1">
-              {LeftTabContent()}
-            </div>
-          </aside>
-
-          {/* ── CENTER content ── */}
-          <main
-            className={`flex-1 min-h-0 overflow-y-auto p-5 space-y-4${mobileTab !== "stage" ? " hidden lg:block" : ""}`}
-          >
-            <div className="space-y-4">
-              {/* Stage-specific fields */}
-              {stage?.id === "briefing" && (
-                <BriefingFields
-                  getCf={getCf}
-                  setCf={setCf}
-                  users={users}
-                  disabled={!canWrite || isAgencia}
-                  onOpenAttachments={() => setSideTab("attachments")}
-                />
-              )}
-              {stage?.id === "aprovacao" && (
-                <AprovacaoFields
-                  getCf={getCf}
-                  setCf={setCf}
-                  users={users}
-                  disabled={!canWrite || isAgencia}
-                />
-              )}
-              {stage?.id === "producao" && (
-                <ProducaoFields
-                  getCf={getCf}
-                  setCf={setCf}
-                  users={users}
-                  disabled={!canWrite || isAgencia}
-                />
-              )}
-              {stage?.id === "revisao" && (
-                <RevisaoFields
-                  getCf={getCf}
-                  setCf={setCf}
-                  users={users}
-                  disabled={!canWrite || isAgencia}
-                />
-              )}
-
-              {/* Campos adicionais configurados via "Editar campos desta
-                  etapa" (rh_pipeline_stage_fields) — além dos campos fixos
-                  acima, que continuam intactos. */}
-              {visibleCustomDefs.length > 0 && (
-                <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
-                  <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
-                    Campos adicionais da etapa
-                  </div>
-                  {visibleCustomDefs.map(f => (
-                    <div key={f.id}>
-                      <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-                        {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
-                        {f.label}
-                      </div>
-                      {f.helpText && (
-                        <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>{f.helpText}</div>
-                      )}
-                      {(!canWrite || isAgencia) ? (
-                        <ReadValue value={formatCustomFieldValue(getCf(f.fieldKey))} />
-                      ) : (
-                        <RHStageFieldInput
-                          field={f}
-                          value={getCf(f.fieldKey)}
-                          onChange={val => setCf(f.fieldKey, val)}
-                          users={users}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </main>
-
-          {/* ── RIGHT sidebar ── */}
-          {/* Abaixo de lg vira a 3ª aba mobile ("MOVER"), em vez de ficar
-              escondida sem substituto — StageNavigator + CommentsPanel
-              precisam existir em algum lugar acessível no celular. */}
-          <aside
-            className={`w-full lg:w-[300px] flex-1 min-h-0 lg:flex-none lg:shrink-0 overflow-y-auto border-t lg:border-t-0 lg:border-l p-5 gap-4 flex flex-col${mobileTab !== "mover" ? " hidden lg:flex" : ""}`}
-            style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
-          >
-            {canWrite && (
-              <div>
-                <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-                  Mover campanha para etapa
-                </div>
-                <StageNavigator
-                  targets={effectiveStages.filter(s => s.id !== stage?.id)}
-                  onMove={moveToStage}
-                  getKey={(s) => s.id}
-                />
-              </div>
-            )}
-
-            {/* Comentários — sempre visíveis na lateral direita, abaixo da
-                movimentação de card (não mais escondidos atrás de uma aba). */}
-            <div className="mt-1 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-              <CommentsPanel
-                comments={comments}
-                currentUser={currentUser}
-                mentionableUsers={mentionableUsers}
-                onAddComment={onAddComment}
-              />
-            </div>
-
-            {/* AI move link */}
-            <div className="border-t pt-3 space-y-2" style={{ borderColor: "var(--border)" }}>
-              <button
-                onClick={() => { setSideTab("ia"); setMobileTab("info"); }}
-                className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
-                style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0, textAlign: "left" }}
-                onMouseEnter={e => { e.currentTarget.style.color = PURPLE; }}
-                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
-              >
-                <Sparkles size={12} />
-                Mover cards com IA
-              </button>
-            </div>
-          </aside>
-        </div>
-
-        {/* Mobile sticky footer — Avançar CTA */}
-        <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-          {stageNav.next ? (
-            <button
-              onClick={() => canWrite && moveToStage(stageNav.next.id)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm cursor-pointer"
-              style={{ background: stageNav.next.color, color: "#FFFFFF", border: "none" }}
-            >
-              Avançar para {stageNav.next.name}
-            </button>
-          ) : (
-            <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
-              {stage?.terminal ? "Campanha encerrada" : "Última etapa"}
-            </div>
-          )}
-        </div>
+            <Star size={16} fill={campaign.starred ? "#F59E0B" : "none"} />
+          </button>
+        )}
       </div>
     </div>
+  );
+
+  const left = (
+    <>
+      {(get("companyIds") || []).length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {(get("companyIds") || []).map(id => {
+            const co = COMPANIES[id];
+            if (!co) return null;
+            return (
+              <span key={id} className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                style={{ background: co.primary + "18", color: co.primary, border: `1px solid ${co.primary}30` }}>
+                {co.short}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Pill SideTabs ── */}
+      <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
+        <SideTabs activeId={sideTab} onChange={setSideTab} />
+      </div>
+
+      {/* ── Tab content ── */}
+      <div>
+        {LeftTabContent()}
+      </div>
+    </>
+  );
+
+  const center = (
+    <>
+      {/* Stage-specific fields */}
+      {stage?.id === "briefing" && (
+        <BriefingFields
+          getCf={getCf}
+          setCf={setCf}
+          users={users}
+          disabled={!canWrite || isAgencia}
+          onOpenAttachments={() => setSideTab("arquivos")}
+        />
+      )}
+      {stage?.id === "aprovacao" && (
+        <AprovacaoFields
+          getCf={getCf}
+          setCf={setCf}
+          users={users}
+          disabled={!canWrite || isAgencia}
+        />
+      )}
+      {stage?.id === "producao" && (
+        <ProducaoFields
+          getCf={getCf}
+          setCf={setCf}
+          users={users}
+          disabled={!canWrite || isAgencia}
+        />
+      )}
+      {stage?.id === "revisao" && (
+        <RevisaoFields
+          getCf={getCf}
+          setCf={setCf}
+          users={users}
+          disabled={!canWrite || isAgencia}
+        />
+      )}
+
+      {/* Campos adicionais configurados via "Editar campos desta
+          etapa" (rh_pipeline_stage_fields) — além dos campos fixos
+          acima, que continuam intactos. */}
+      {visibleCustomDefs.length > 0 && (
+        <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
+          <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+            Campos adicionais da etapa
+          </div>
+          {visibleCustomDefs.map(f => (
+            <div key={f.id}>
+              <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+                {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
+                {f.label}
+              </div>
+              {f.helpText && (
+                <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>{f.helpText}</div>
+              )}
+              {(!canWrite || isAgencia) ? (
+                <ReadValue value={formatCustomFieldValue(getCf(f.fieldKey))} />
+              ) : (
+                <RHStageFieldInput
+                  field={f}
+                  value={getCf(f.fieldKey)}
+                  onChange={val => setCf(f.fieldKey, val)}
+                  users={users}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  const right = (
+    <>
+      {canWrite && (
+        <div>
+          <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
+            Mover campanha para etapa
+          </div>
+          <StageNavigator
+            targets={effectiveStages.filter(s => s.id !== stage?.id)}
+            onMove={moveToStage}
+            getKey={(s) => s.id}
+          />
+        </div>
+      )}
+
+      <CommentsPanel
+        comments={comments}
+        currentUser={currentUser}
+        mentionableUsers={mentionableUsers}
+        onAddComment={onAddComment}
+      />
+
+      {/* AI move link */}
+      <div className="border-t pt-3" style={{ borderColor: "var(--border)" }}>
+        <button
+          onClick={() => setSideTab("ia")}
+          className="flex items-center gap-1.5 text-xs w-full cursor-pointer"
+          style={{ background: "none", border: "none", color: "var(--text-dim)", padding: 0, textAlign: "left" }}
+          onMouseEnter={e => { e.currentTarget.style.color = PURPLE; }}
+          onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+        >
+          <Sparkles size={12} />
+          Mover cards com IA
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+      onDelete={canWrite && !isAgencia && onDelete ? () => onDelete(campaign.id) : undefined}
+      deleteLabel="Excluir campanha"
+    />
   );
 }
