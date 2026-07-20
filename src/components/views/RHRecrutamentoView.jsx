@@ -31,7 +31,10 @@ import {
 import {
   RH_DEPARTMENTS,
   RH_CONTRACT_TYPES,
+  RH_ESCALA_TYPES,
 } from "../../constants/rh-config";
+import { RHJornadaEditor, formatScheduleBlocks } from "../rh-pipeline/RHJornadaEditor";
+import { RHBenefitsPicker } from "../rh-pipeline/RHBenefitsPicker";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { formatBRL } from "../../utils/currency";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
@@ -462,98 +465,9 @@ function StarRating({ value = 0, max = 5, onChange }) {
   );
 }
 
-// ── Editor de benefícios (chips clicáveis: adicionar, remover, renomear) ───────
-
-function BenefitsEditor({ value, onChange }) {
-  const [draft, setDraft] = useState("");
-  const [editingIdx, setEditingIdx] = useState(null);
-  const [editText, setEditText] = useState("");
-
-  const addBenefit = () => {
-    const t = draft.trim();
-    if (!t) return;
-    if (!value.includes(t)) onChange([...value, t]);
-    setDraft("");
-  };
-
-  const removeBenefit = (idx) => onChange(value.filter((_, i) => i !== idx));
-
-  const startEdit = (idx) => { setEditingIdx(idx); setEditText(value[idx]); };
-
-  const commitEdit = () => {
-    const t = editText.trim();
-    if (t) onChange(value.map((b, i) => (i === editingIdx ? t : b)));
-    else removeBenefit(editingIdx);
-    setEditingIdx(null);
-  };
-
-  const chipSt = { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 500, color: "var(--text)", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 999, padding: "4px 6px 4px 12px" };
-
-  return (
-    <div>
-      {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {value.map((b, idx) => (
-            editingIdx === idx ? (
-              <input
-                key={idx}
-                autoFocus
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                onBlur={commitEdit}
-                onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingIdx(null); }}
-                className="text-xs rounded-full border px-3 py-1 outline-none"
-                style={{ borderColor: "var(--accent)", color: "var(--text)", background: "var(--surface)", width: `${Math.max(60, editText.length * 7 + 28)}px` }}
-              />
-            ) : (
-              <span key={idx} style={chipSt}>
-                <button
-                  type="button"
-                  onClick={() => startEdit(idx)}
-                  title="Clique para renomear"
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", font: "inherit", padding: 0 }}
-                >
-                  {b}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeBenefit(idx)}
-                  title="Remover"
-                  style={{ background: "var(--surface)", border: "none", borderRadius: "50%", width: 15, height: 15, cursor: "pointer", color: "var(--text-dim)", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: 0 }}
-                >
-                  <X size={10} />
-                </button>
-              </span>
-            )
-          ))}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addBenefit(); } }}
-          placeholder="Ex: VT, VR, Plano de saúde…"
-          className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
-          style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
-        />
-        <button
-          type="button"
-          onClick={addBenefit}
-          title="Adicionar benefício"
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 36, borderRadius: 10, border: "1px solid var(--border-strong)", background: "var(--surface-alt)", color: "var(--text)", cursor: "pointer" }}
-        >
-          <Plus size={15} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ── Nova Vaga Modal ───────────────────────────────────────────────────────────
 
-function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, stageId, users }) {
+function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, stageId, users, userId }) {
   const targetStage = stageId || initialData?.stage;
   const vagaStageFields = useRHStageFields("vagas");
   const [customValues, setCustomValues] = useState(initialData?.custom_fields || {});
@@ -567,8 +481,8 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
   const [salaryMin, setSalaryMin]   = useState(initialData?.salary_min != null ? String(initialData.salary_min) : "");
   const [salaryMax, setSalaryMax]   = useState(initialData?.salary_max != null ? String(initialData.salary_max) : "");
   const [benefits, setBenefits]     = useState(initialData?.benefits || []);
-  const [schedule, setSchedule]     = useState(initialData?.schedule || "");
-  const [shift, setShift]           = useState(initialData?.shift || "");
+  const [scheduleBlocks, setScheduleBlocks] = useState(initialData?.schedule_blocks || []);
+  const [escala, setEscala]         = useState(initialData?.escala || "");
   const [deadline, setDeadline]     = useState(initialData?.hiring_deadline ? initialData.hiring_deadline.slice(0, 10) : "");
   const [priority, setPriority]     = useState(initialData?.priority || "media");
   const [desc, setDesc]             = useState(initialData?.description || "");
@@ -595,9 +509,9 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
       setContractType("");
       setSalaryMin("");
       setSalaryMax("");
-      setBenefits("");
-      setSchedule("");
-      setShift("");
+      setBenefits([]);
+      setScheduleBlocks([]);
+      setEscala("");
       return;
     }
     setJobTitle(cargo.name || "");
@@ -606,8 +520,8 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
     setSalaryMin(cargo.salary_min != null ? String(cargo.salary_min) : "");
     setSalaryMax(cargo.salary_max != null ? String(cargo.salary_max) : "");
     setBenefits(cargo.benefits || []);
-    setSchedule(cargo.schedule || "");
-    setShift(cargo.shift || "");
+    setScheduleBlocks(cargo.schedule_blocks || []);
+    setEscala(cargo.escala || "");
   };
 
   const handleSubmit = async (e) => {
@@ -633,8 +547,8 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
         salary_min: salaryMin !== "" ? Number(salaryMin) : null,
         salary_max: salaryMax !== "" ? Number(salaryMax) : null,
         benefits,
-        schedule: schedule.trim() || null,
-        shift: shift.trim() || null,
+        schedule_blocks: scheduleBlocks,
+        escala: escala || null,
         hiring_deadline: deadline || null,
         priority,
         description: desc.trim() || null,
@@ -747,22 +661,27 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
                 <CurrencyInput value={salaryMax} onChange={setSalaryMax} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
               <div>
-                <label style={labelSt}>Jornada</label>
-                <input type="text" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Ex: 44h semanais, seg-sex" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
-              </div>
-              <div>
-                <label style={labelSt}>Escala</label>
-                <input type="text" value={shift} onChange={(e) => setShift(e.target.value)} placeholder="Ex: 12x36, comercial" className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
-              </div>
-              <div>
                 <label style={labelSt}>Prazo para contratação</label>
                 <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={inputCls} style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
               </div>
             </div>
 
             <div>
+              <label style={labelSt}>Jornada</label>
+              <RHJornadaEditor value={scheduleBlocks} onChange={setScheduleBlocks} />
+            </div>
+
+            <div>
+              <label style={labelSt}>Escala</label>
+              <select value={escala} onChange={(e) => setEscala(e.target.value)} className={inputCls} style={inputSt}>
+                <option value="">Selecionar padrão de escala</option>
+                {RH_ESCALA_TYPES.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+              </select>
+            </div>
+
+            <div>
               <label style={labelSt}>Benefícios</label>
-              <BenefitsEditor value={benefits} onChange={setBenefits} />
+              <RHBenefitsPicker value={benefits} onChange={setBenefits} userId={userId} />
             </div>
 
             <div>
@@ -833,15 +752,15 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
 
 // ── Gerenciar Cargos Modal ────────────────────────────────────────────────────
 
-function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
+function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose, userId }) {
   const [name, setName]           = useState("");
   const [dept, setDept]           = useState("");
   const [contractType, setContractType] = useState("");
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
   const [benefits, setBenefits]   = useState([]);
-  const [schedule, setSchedule]   = useState("");
-  const [shift, setShift]         = useState("");
+  const [scheduleBlocks, setScheduleBlocks] = useState([]);
+  const [escala, setEscala]       = useState("");
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState(null);
 
@@ -850,7 +769,7 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
   const inputCls = "w-full text-sm rounded-lg border px-2.5 py-1.5 outline-none";
 
   const reset = () => {
-    setName(""); setDept(""); setContractType(""); setSalaryMin(""); setSalaryMax(""); setBenefits([]); setSchedule(""); setShift("");
+    setName(""); setDept(""); setContractType(""); setSalaryMin(""); setSalaryMax(""); setBenefits([]); setScheduleBlocks([]); setEscala("");
   };
 
   const handleAdd = async () => {
@@ -865,8 +784,8 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
         salary_min: salaryMin !== "" ? Number(salaryMin) : null,
         salary_max: salaryMax !== "" ? Number(salaryMax) : null,
         benefits,
-        schedule: schedule.trim() || null,
-        shift: shift.trim() || null,
+        schedule_blocks: scheduleBlocks,
+        escala: escala || null,
       });
       reset();
     } catch (err) {
@@ -919,12 +838,18 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose }) {
               </select>
               <CurrencyInput value={salaryMin} onChange={setSalaryMin} placeholder="Mín." className={inputCls} style={inputSt} />
               <CurrencyInput value={salaryMax} onChange={setSalaryMax} placeholder="Máx." className={inputCls} style={inputSt} />
-              <input type="text" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Jornada" className={inputCls} style={inputSt} />
-              <input type="text" value={shift} onChange={(e) => setShift(e.target.value)} placeholder="Escala" className={inputCls} style={inputSt} />
+              <select value={escala} onChange={(e) => setEscala(e.target.value)} className={inputCls} style={inputSt}>
+                <option value="">Escala</option>
+                {RH_ESCALA_TYPES.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelSt}>Jornada</label>
+              <RHJornadaEditor value={scheduleBlocks} onChange={setScheduleBlocks} />
             </div>
             <div>
               <label style={labelSt}>Benefícios</label>
-              <BenefitsEditor value={benefits} onChange={setBenefits} />
+              <RHBenefitsPicker value={benefits} onChange={setBenefits} userId={userId} />
             </div>
           </div>
 
@@ -1132,8 +1057,8 @@ function VagaDrawer({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {[
           { label: "Tipo de contrato", value: RH_CONTRACT_TYPES.find((c) => c.id === vaga.contract_type)?.label || "—" },
-          { label: "Jornada", value: vaga.schedule || "—" },
-          { label: "Escala", value: vaga.shift || "—" },
+          { label: "Jornada", value: formatScheduleBlocks(vaga.schedule_blocks) || vaga.schedule || "—" },
+          { label: "Escala", value: RH_ESCALA_TYPES.find((e) => e.id === vaga.escala)?.label || vaga.shift || "—" },
           { label: "Prazo para contratação", value: fmt(vaga.hiring_deadline) },
           { label: "Faixa salarial", value: fmtSalaryRange(vaga.salary_min, vaga.salary_max) },
           { label: "Candidatos", value: String(candidatosCount) },
@@ -3352,6 +3277,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           onManageCargos={() => setCargosManagerOpen(true)}
           onClose={() => setQuickAddVaga(false)}
           users={profileUsers}
+          userId={user?.id}
         />
       )}
 
@@ -3363,6 +3289,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           onManageCargos={() => setCargosManagerOpen(true)}
           onClose={() => setAddVagaStage(null)}
           users={profileUsers}
+          userId={user?.id}
         />
       )}
 
@@ -3374,6 +3301,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           onManageCargos={() => setCargosManagerOpen(true)}
           onClose={() => setEditingVaga(null)}
           users={profileUsers}
+          userId={user?.id}
         />
       )}
 
@@ -3383,6 +3311,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           onCreate={createCargo}
           onDelete={deleteCargo}
           onClose={() => setCargosManagerOpen(false)}
+          userId={user?.id}
         />
       )}
 

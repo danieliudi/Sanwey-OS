@@ -73,6 +73,20 @@ export function useRHBeneficios({ userId, enabled = true } = {}) {
     return rowToCatalogo(data);
   }, [userId]);
 
+  // Exclui de fato se nenhum colaborador já tiver esse benefício vinculado;
+  // se tiver (violação de FK, código 23503), desativa em vez de apagar —
+  // preserva o histórico de quem já solicitou/tem aprovado esse benefício.
+  const deleteCatalogoItem = useCallback(async (id) => {
+    const { error } = await supabase.from("rh_beneficios_catalogo").delete().eq("id", id);
+    if (!error) return { deactivated: false };
+    if (error.code === "23503") {
+      const { error: updErr } = await supabase.from("rh_beneficios_catalogo").update({ is_active: false }).eq("id", id);
+      if (updErr) throw new Error(updErr.message);
+      return { deactivated: true };
+    }
+    throw new Error(error.message);
+  }, []);
+
   // Solicita um benefício do catálogo pra um colaborador — status inicial
   // "solicitado"; RH aprova depois (updateColaboradorBeneficio).
   const solicitarBeneficio = useCallback(async (colaboradorId, beneficioCatalogoId, valor = null) => {
@@ -106,7 +120,7 @@ export function useRHBeneficios({ userId, enabled = true } = {}) {
 
   return {
     catalogo, colaboradorBeneficios, loading,
-    createCatalogoItem, solicitarBeneficio, aprovarBeneficio, updateColaboradorBeneficio,
+    createCatalogoItem, deleteCatalogoItem, solicitarBeneficio, aprovarBeneficio, updateColaboradorBeneficio,
     refetch: fetchAll,
   };
 }

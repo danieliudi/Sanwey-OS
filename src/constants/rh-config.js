@@ -21,6 +21,43 @@ export const RH_DEPARTMENTS = [
 // turno só de quem realmente trabalha em escala.
 export const RH_OPERATIONAL_DEPARTMENTS = ["Operações", "Logística", "Produção", "Qualidade"];
 
+// Dias da semana pra blocos de jornada (RHJornadaEditor) — mesma chave usada
+// nos dois lugares que descrevem cargo (Cargos & Salários e Vagas), pra
+// jornadas com horário diferente por dia (ex.: sexta encurtada por
+// compensação de sábado) virarem dado estruturado em vez de texto livre.
+export const RH_WEEKDAYS = [
+  { id: "seg", label: "Seg" },
+  { id: "ter", label: "Ter" },
+  { id: "qua", label: "Qua" },
+  { id: "qui", label: "Qui" },
+  { id: "sex", label: "Sex" },
+  { id: "sab", label: "Sáb" },
+  { id: "dom", label: "Dom" },
+];
+
+// Padrão de escala (trabalho/descanso) — conjunto fechado pra virar select em
+// vez de texto livre ("12x36", "comercial" digitados de formas diferentes
+// por cada pessoa atrapalhavam a coleta de dado). Achado do usuário 20/07.
+export const RH_ESCALA_TYPES = [
+  { id: "5x2",           label: "5x2 (seg-sex, folga fim de semana)" },
+  { id: "6x1",            label: "6x1 (6 dias trabalhados, 1 de folga)" },
+  { id: "12x36",          label: "12x36" },
+  { id: "turno_fixo",     label: "Turno fixo" },
+  { id: "administrativo", label: "Administrativo (sem escala)" },
+];
+
+// Tipo de benefício no catálogo (rh_beneficios_catalogo.tipo) — bate com o
+// CHECK da coluna. "outro" cobre o que não se encaixa nos genéricos já
+// semeados (VT/VR/VA/Wellhub/convênio médico).
+export const RH_BENEFICIO_TIPOS = [
+  { id: "vt",              label: "Vale-transporte" },
+  { id: "vr",              label: "Vale-refeição" },
+  { id: "va",              label: "Vale-alimentação" },
+  { id: "wellhub",         label: "Wellhub (Gympass)" },
+  { id: "convenio_medico", label: "Convênio médico" },
+  { id: "outro",           label: "Outro" },
+];
+
 export const RH_CONTRACT_TYPES = [
   { id: "clt",        label: "CLT" },
   { id: "pj",         label: "PJ" },

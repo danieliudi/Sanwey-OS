@@ -192,7 +192,7 @@ Estruture EXATAMENTE assim, com estes títulos em negrito markdown:
 **Cargo:** ${cargo?.name || "—"}
 **Departamento:** ${cargo?.department || "—"}
 **Tipo de contrato:** ${cargo?.contract_type || "—"}
-**Jornada:** ${cargo?.schedule || "—"}${cargo?.shift ? ` · turno ${cargo.shift}` : ""}
+**Jornada:** ${cargo?.schedule || "—"}${cargo?.shift ? ` · turno ${cargo.shift}` : ""}${cargo?.escala ? ` · escala ${cargo.escala}` : ""}
 **Faixa salarial (só contexto, não citar):** ${faixa}
 ${benefits.length ? `**Benefícios:** ${benefits.join(", ")}` : ""}`,
     },

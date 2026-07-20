@@ -9,11 +9,13 @@ import { useRHMovimentacoes } from "../../hooks/use-rh-movimentacoes";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useAI } from "../../hooks/use-ai";
 import { cargoDescriptionPrompt } from "../../constants/ai-prompts";
-import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_OPERATIONAL_DEPARTMENTS } from "../../constants/rh-config";
+import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_OPERATIONAL_DEPARTMENTS, RH_ESCALA_TYPES } from "../../constants/rh-config";
 import { formatBRL } from "../../utils/currency";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { RHJornadaEditor, formatScheduleBlocks } from "../rh-pipeline/RHJornadaEditor";
+import { RHBenefitsPicker } from "../rh-pipeline/RHBenefitsPicker";
 
 const TIPO_MOV = [
   { id: "promocao", label: "Promoção" },
@@ -60,7 +62,9 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
   const [contractType, setContractType] = useState(initialData?.contract_type || "");
   const [salaryMin, setSalaryMin]     = useState(initialData?.salary_min ?? "");
   const [salaryMax, setSalaryMax]     = useState(initialData?.salary_max ?? "");
-  const [schedule, setSchedule]       = useState(initialData?.schedule || "");
+  const [scheduleBlocks, setScheduleBlocks] = useState(initialData?.schedule_blocks || []);
+  const [escala, setEscala]           = useState(initialData?.escala || "");
+  const [benefits, setBenefits]       = useState(initialData?.benefits || []);
   const initialShift = useMemo(() => parseShiftRange(initialData?.shift), [initialData]);
   const [shiftStart, setShiftStart]   = useState(initialShift.start);
   const [shiftEnd, setShiftEnd]       = useState(initialShift.end);
@@ -97,7 +101,10 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
         name: name.trim(), department, contract_type: contractType,
         salary_min: salaryMin !== "" ? Number(salaryMin) : null,
         salary_max: salaryMax !== "" ? Number(salaryMax) : null,
-        schedule, shift, benefits: initialData?.benefits || [],
+        schedule: formatScheduleBlocks(scheduleBlocks) || "",
+        shift,
+        escala: RH_ESCALA_TYPES.find((e) => e.id === escala)?.label || "",
+        benefits,
       };
       const out = await complete(cargoDescriptionPrompt(cargoCtx), { maxTokens: 900 });
       setDescription((out || "").trim());
@@ -115,7 +122,7 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
     if (!contractType) { setError("Tipo de contrato é obrigatório."); return; }
     if (salaryMin === "" || salaryMax === "") { setError("Informe a faixa salarial completa (mínimo e máximo)."); return; }
     if (Number(salaryMin) > Number(salaryMax)) { setError("O salário mínimo não pode ser maior que o máximo."); return; }
-    if (!schedule.trim()) { setError("Jornada é obrigatória."); return; }
+    if (!scheduleBlocks.some((b) => b.days?.length > 0 && b.start && b.end)) { setError("Informe ao menos um período de jornada completo (dias + horário)."); return; }
     if (temTurno && (!shiftStart || !shiftEnd)) { setError("Informe o horário completo do turno (início e fim)."); return; }
     if (!description.trim()) { setError("Descrição do cargo é obrigatória — preencha à mão ou gere com IA."); return; }
     setSaving(true);
@@ -127,8 +134,10 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
         contract_type: contractType || null,
         salary_min: salaryMin !== "" ? Number(salaryMin) : null,
         salary_max: salaryMax !== "" ? Number(salaryMax) : null,
-        schedule: schedule.trim() || null,
+        schedule_blocks: scheduleBlocks,
+        escala: escala || null,
         shift: temTurno ? (shift.trim() || null) : null,
+        benefits,
         description: description.trim() || null,
       });
       onClose();
@@ -188,10 +197,18 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
                 <CurrencyInput required value={salaryMax} onChange={setSalaryMax} className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
               </div>
             </div>
+            <div>
+              <label style={labelSt}>Jornada *</label>
+              <RHJornadaEditor value={scheduleBlocks} onChange={setScheduleBlocks} />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 10 }}>
               <div>
-                <label style={labelSt}>Jornada *</label>
-                <input required type="text" value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="Ex: 44h semanais" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
+                <label style={labelSt}>Escala</label>
+                <select value={escala} onChange={(e) => setEscala(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                  <option value="">Selecionar padrão de escala</option>
+                  {RH_ESCALA_TYPES.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+                </select>
               </div>
               <div>
                 <label style={labelSt}>Turno</label>
@@ -207,6 +224,11 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
                   </div>
                 )}
               </div>
+            </div>
+
+            <div>
+              <label style={labelSt}>Benefícios</label>
+              <RHBenefitsPicker value={benefits} onChange={setBenefits} userId={currentUser?.id} />
             </div>
 
             <div>
