@@ -3,6 +3,7 @@ import { LogOut, ChevronDown } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 
 const STORAGE_KEY = "sidebar_collapsed_groups";
+const ORDER_KEY = "sidebar_item_order";
 
 function loadCollapsed() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }
@@ -10,6 +11,25 @@ function loadCollapsed() {
 }
 function saveCollapsed(state) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
+
+function loadOrder() {
+  try { return JSON.parse(localStorage.getItem(ORDER_KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveOrder(state) {
+  try { localStorage.setItem(ORDER_KEY, JSON.stringify(state)); } catch {}
+}
+
+// Reordenação por segurar-e-arrastar o ícone (não o item inteiro, pra um
+// clique normal em qualquer parte da linha continuar navegando na hora,
+// sem gesto/threshold nenhum) — ordem por grupo, persistida no navegador.
+function applySavedOrder(items, savedIds) {
+  if (!savedIds?.length) return items;
+  const byId = new Map(items.map(it => [it.id, it]));
+  const ordered = savedIds.map(id => byId.get(id)).filter(Boolean);
+  const missing = items.filter(it => !savedIds.includes(it.id));
+  return [...ordered, ...missing];
 }
 
 function useIsMobile() {
@@ -51,6 +71,9 @@ const ROLE_LABEL = {
 export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout, mobileOpen, onMobileClose, onNewLead }) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(loadCollapsed);
+  const [order, setOrder] = useState(loadOrder);
+  const [draggedId, setDraggedId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
 
   const handleNavClick = (itemId) => {
     onSectionChange(itemId);
@@ -61,6 +84,28 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
     setCollapsed(prev => {
       const next = { ...prev, [label]: !prev[label] };
       saveCollapsed(next);
+      return next;
+    });
+  };
+
+  const orderedItems = (group) => applySavedOrder(group.items, order[group.label || "__default"]);
+
+  const handleItemDrop = (group, targetId) => {
+    setDragOverId(null);
+    const sourceId = draggedId;
+    setDraggedId(null);
+    if (!sourceId || sourceId === targetId) return;
+    const groupKey = group.label || "__default";
+    const currentIds = orderedItems(group).map(it => it.id);
+    const from = currentIds.indexOf(sourceId);
+    const to = currentIds.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+    const nextIds = [...currentIds];
+    nextIds.splice(from, 1);
+    nextIds.splice(to, 0, sourceId);
+    setOrder(prev => {
+      const next = { ...prev, [groupKey]: nextIds };
+      saveOrder(next);
       return next;
     });
   };
@@ -180,13 +225,18 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                     />
                   </button>
                 )}
-                {!isCollapsed && group.items.map((item) => (
+                {!isCollapsed && orderedItems(group).map((item) => (
                   <NavItem
                     key={item.id}
                     icon={item.icon}
                     label={item.label}
                     active={section === item.id}
                     onClick={() => handleNavClick(item.id)}
+                    isDragOver={dragOverId === item.id}
+                    onIconDragStart={() => setDraggedId(item.id)}
+                    onIconDragEnd={() => { setDraggedId(null); setDragOverId(null); }}
+                    onRowDragOver={(e) => { if (draggedId) { e.preventDefault(); setDragOverId(item.id); } }}
+                    onRowDrop={(e) => { e.preventDefault(); handleItemDrop(group, item.id); }}
                   />
                 ))}
               </div>
@@ -281,13 +331,19 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
   );
 }
 
-function NavItem({ icon: Icon, label, active, onClick }) {
+// Segurar o ícone e arrastar reordena o item dentro do grupo — só o ícone
+// é `draggable`, então um clique normal em qualquer outro ponto da linha
+// (inclusive no próprio ícone sem mover) continua navegando na hora, sem
+// nenhum gesto/atraso extra atrapalhando.
+function NavItem({ icon: Icon, label, active, onClick, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onDragOver={onRowDragOver}
+      onDrop={onRowDrop}
       style={{
         width: "calc(100% - 16px)",
         margin: "0 8px",
@@ -302,7 +358,7 @@ function NavItem({ icon: Icon, label, active, onClick }) {
         color: active ? "var(--text)" : hovered ? "var(--text)" : "var(--text-dim)",
         background: active ? "var(--surface)" : hovered ? "var(--border)" : "transparent",
         border: "none",
-        boxShadow: active ? "var(--shadow-card)" : "none",
+        boxShadow: isDragOver ? "inset 0 2px 0 0 var(--accent)" : active ? "var(--shadow-card)" : "none",
         cursor: "pointer",
         textAlign: "left",
         whiteSpace: "nowrap",
@@ -310,7 +366,18 @@ function NavItem({ icon: Icon, label, active, onClick }) {
         borderRadius: "var(--radius-sm)",
       }}
     >
-      {Icon && <Icon size={15} strokeWidth={2} style={{ flexShrink: 0, opacity: 0.85 }} />}
+      {Icon && (
+        <span
+          draggable
+          onDragStart={(e) => { e.stopPropagation(); onIconDragStart?.(); }}
+          onDragEnd={(e) => { e.stopPropagation(); onIconDragEnd?.(); }}
+          onMouseDown={(e) => e.stopPropagation()}
+          title="Arraste para reordenar"
+          style={{ display: "flex", flexShrink: 0, cursor: "grab" }}
+        >
+          <Icon size={15} strokeWidth={2} style={{ opacity: 0.85 }} />
+        </span>
+      )}
       <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
     </button>
   );
