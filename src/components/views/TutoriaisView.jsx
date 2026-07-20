@@ -345,6 +345,27 @@ export function TutoriaisView({ currentUser, onNavigate }) {
       {/* Tab: Tutoriais */}
       {activeTab === "tutoriais" && (
         <div className="space-y-6">
+          <div
+            className="rounded-xl border p-5"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
+          >
+            <h2 className="font-semibold mb-3 flex items-center gap-2" style={{ fontSize: 15, color: "var(--text)" }}>
+              <Search size={15} style={{ color: "var(--text-dim)" }} />
+              Atalhos de teclado
+            </h2>
+            <div className="flex items-center gap-3">
+              <span
+                className="select-none rounded-sm flex items-center justify-center"
+                style={{ padding: "2px 8px", background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border-strong)", fontSize: 12, fontWeight: 600 }}
+              >
+                ⌘K / Ctrl K
+              </span>
+              <span className="text-sm" style={{ color: "var(--text-dim)" }}>
+                Abre a busca global (leads, campanhas, funcionários) de qualquer tela.
+              </span>
+            </div>
+          </div>
+
           <div>
             <h2 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
               Vídeos tutoriais

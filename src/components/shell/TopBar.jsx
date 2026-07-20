@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Search, Moon, Sun } from "lucide-react";
+import { Search, Moon, Sun, LifeBuoy } from "lucide-react";
 import { NotificationCenter } from "./NotificationCenter";
 
 // Achado da 2ª auditoria: o badge do atalho de busca mostrava só um ícone
@@ -148,7 +148,7 @@ export function TopBar({
             style={{ width: 40, height: 40, background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer", borderRadius: "var(--radius-sm)", display: "flex", alignItems: "center", justifyContent: "center" }}
             aria-label="Buscar"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>search</span>
+            <Search size={20} strokeWidth={2} />
           </button>
         )}
 
@@ -159,7 +159,7 @@ export function TopBar({
             style={{ width: 40, height: 40, background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer", borderRadius: "var(--radius-sm)", display: "flex", alignItems: "center", justifyContent: "center" }}
             aria-label="Ajuda"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 22 }}>help</span>
+            <LifeBuoy size={20} strokeWidth={2} />
           </button>
         )}
 

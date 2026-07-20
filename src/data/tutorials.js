@@ -136,7 +136,7 @@ VIDEO_TUTORIALS.marketing = [
 VIDEO_TUTORIALS.gerente_marketing = [
   ...VIDEO_TUTORIALS.marketing,
   { id: "v-gm1", title: "Dashboard de Marketing", description: "Visão Geral", duration: null, url: null,
-    quickStart: { icon: "📊", steps: ["Acesse 'Visão Geral' em Marketing para ver KPIs consolidados", "Acompanhe campanhas ativas, budget total e performance média", "Use o calendário para visualizar campanhas por data de lançamento"] } },
+    quickStart: { icon: "📊", steps: ["Acesse 'Visão Geral' em Marketing para ver KPIs consolidados", "Acompanhe campanhas ativas, orçamento total e performance média", "Use o calendário para visualizar campanhas por data de lançamento"] } },
   { id: "v-gm2", title: "Automações de Marketing", description: "Automações", duration: null, url: null,
     quickStart: { icon: "⚡", steps: ["Acesse 'Automações' para criar regras específicas do módulo de Marketing", "Ative templates prontos: 'Campanha ao vivo' notifica a equipe automaticamente", "Defina alertas de SLA para campanhas paradas em Produção por mais de 10 dias"] } },
 ];
