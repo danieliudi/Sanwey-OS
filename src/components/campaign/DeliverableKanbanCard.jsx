@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Clock, Star } from "lucide-react";
+import { Clock, Star, MessageCircle } from "lucide-react";
 import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
@@ -29,7 +29,7 @@ function agingStyle(days, sla) {
 
 function DeliverableKanbanCardImpl({
   item, users, onClick, onDragStart, onDragEnd,
-  stages, onMoveToStage, onDeleteCard, canWrite, onToggleStar, completeness,
+  stages, onMoveToStage, onDeleteCard, canWrite, onToggleStar, completeness, unread,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
@@ -87,6 +87,15 @@ function DeliverableKanbanCardImpl({
           {item.requestNumber ? `${item.requestNumber} ${item.title}` : item.title}
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+          {unread && (
+            <span
+              title="Comentário novo"
+              className="inline-flex items-center justify-center rounded-full"
+              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
+            >
+              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
+            </span>
+          )}
           {ageStyle && daysInStage !== null && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"

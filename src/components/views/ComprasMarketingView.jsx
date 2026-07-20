@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ShoppingCart, Plus, LayoutGrid, List, CalendarDays as CalendarIcon,
-  ChevronLeft, ChevronRight, Copy, X, XCircle, Check,
+  ChevronLeft, ChevronRight, Copy, X, XCircle, Check, MessageCircle,
 } from "lucide-react";
 import { useMarketingPurchaseRequests, PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-marketing-purchase-requests";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
@@ -14,6 +14,8 @@ import { formatDateBR, parseDateInput } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadNotesComment } from "../../lib/comment-badge";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
@@ -95,7 +97,7 @@ function CopyLinkButton() {
 }
 
 /* ── Kanban card ──────────────────────────────────────────────────────── */
-function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onDragStart, onDragEnd, stages, onMoveToStage }) {
+function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onDragStart, onDragEnd, stages, onMoveToStage, unread }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const responsibleIds = purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []);
   const resolvedResponsible = responsibleIds.map(id => users?.find(u => u.id === id)).filter(Boolean);
@@ -127,6 +129,15 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
           <span className="font-mono font-bold text-xs" style={{ color: "var(--accent)" }}>{purchase.requestNumber}</span>
         )}
         <div className="flex items-center gap-1.5 ml-auto" onClick={e => e.stopPropagation()}>
+          {unread && (
+            <span
+              title="Comentário novo"
+              className="inline-flex items-center justify-center rounded-full"
+              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
+            >
+              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
+            </span>
+          )}
           {purchase.totalValue != null && (
             <span className="text-xs font-bold" style={{ color: "var(--text)" }}>{formatK(purchase.totalValue)}</span>
           )}
@@ -284,7 +295,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
 }
 
 /* ── Kanban view ──────────────────────────────────────────────────────── */
-function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop }) {
+function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop, getUnread }) {
   return (
     <div className="hidden lg:block relative">
       <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
@@ -324,6 +335,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
                         onDragStart={onDragStart}
                         onDragEnd={onDragEnd}
                         onMoveToStage={onMoveToStage}
+                        unread={getUnread?.(p)}
                       />
                     ))
                   )}
@@ -337,7 +349,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
   );
 }
 
-function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick, onMoveToStage }) {
+function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick, onMoveToStage, getUnread }) {
   const [expanded, setExpanded] = useState(() => new Set(["solicitado"]));
   const toggle = (id) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   return (
@@ -358,7 +370,7 @@ function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick,
                 {items.length === 0
                   ? <div className="text-center py-3 text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma solicitação</div>
                   : items.map(p => (
-                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} users={users} onClick={onCardClick} onMoveToStage={onMoveToStage} />
+                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} users={users} onClick={onCardClick} onMoveToStage={onMoveToStage} unread={getUnread?.(p)} />
                   ))}
               </div>
             )}
@@ -559,6 +571,10 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
     return purchases.find(p => p.id === selected.id) || selected;
   }, [purchases, selected]);
 
+  const { viewedAt: purchaseViewedAt, markViewed: markPurchaseViewed } = useRecordViews("purchase_requests", user?.id);
+  const getPurchaseUnread = useCallback((p) => hasUnreadNotesComment(p, purchaseViewedAt, user?.id), [purchaseViewedAt, user?.id]);
+  useEffect(() => { if (selected?.id) markPurchaseViewed(selected.id); }, [selected?.id]);
+
   // Fecha o drawer ao mover de etapa e reabre pouco depois já com a etapa
   // nova — mesmo padrão de EntregasView/MarketingView (reopenAfterMove).
   const reopenAfterStageMove = useCallback((id) => {
@@ -696,7 +712,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
         <EmptyState icon={ShoppingCart} title="Nenhuma solicitação de compra" description="Solicitações enviadas pelo link público ou criadas internamente aparecerão aqui." />
       ) : viewMode === "kanban" ? (
         <>
-          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} />
+          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} getUnread={getPurchaseUnread} />
           <KanbanBoard
             purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected}
             onDragStart={handleDragStart}
@@ -706,6 +722,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
             onColumnDragOver={handleColumnDragOver}
             onColumnDragLeave={handleColumnDragLeave}
             onColumnDrop={handleColumnDrop}
+            getUnread={getPurchaseUnread}
           />
         </>
       ) : viewMode === "table" ? (

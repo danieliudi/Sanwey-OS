@@ -44,6 +44,7 @@ import { useTermsAcceptance } from "./hooks/use-terms-acceptance";
 import { Sidebar } from "./components/shell/Sidebar";
 import { TopBar } from "./components/shell/TopBar";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
+import { useRecordViews } from "./hooks/use-record-views";
 import { reopenAfterMove } from "./utils/reopen-after-move";
 import { SignalDetailDrawer } from "./components/lead/SignalDetailDrawer";
 import { ImportModal } from "./components/lead/ImportModal";
@@ -293,6 +294,9 @@ export default function App() {
   // useState declarado depois de ser referenciado ali é TDZ real ("Cannot
   // access before initialization" em toda renderização).
   const [selectedLead, setSelectedLead] = useState(null);
+
+  const { markViewed: markLeadViewed } = useRecordViews("leads", currentUser?.id);
+  useEffect(() => { if (selectedLead?.id) markLeadViewed(selectedLead.id); }, [selectedLead?.id]);
 
   // Avisa o time de Marketing quando chega uma solicitação nova pelo
   // formulário público — antes só aparecia se alguém abrisse a aba

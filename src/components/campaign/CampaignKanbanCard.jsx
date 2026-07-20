@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Clock, Star, AlertTriangle, TrendingUp, Check, X as XIcon } from "lucide-react";
+import { Clock, Star, AlertTriangle, TrendingUp, Check, X as XIcon, MessageCircle } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { CHANNEL_COLORS, MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { formatK } from "../../utils/currency";
@@ -30,7 +30,7 @@ function slaStyle(daysInStage, sla) {
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
-function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness }) {
+function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -98,6 +98,15 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
           {campaign.name}
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {unread && (
+            <span
+              title="Comentário novo"
+              className="inline-flex items-center justify-center rounded-full"
+              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
+            >
+              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
+            </span>
+          )}
           {isUrgent && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"

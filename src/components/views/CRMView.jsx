@@ -24,6 +24,8 @@ import { formatK } from "../../utils/currency";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
 import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadLeadComment } from "../../lib/comment-badge";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 
@@ -602,6 +604,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     return getFieldCompleteness(fields, lead.customFields || {});
   }, [stageFields]);
 
+  const { viewedAt: leadViewedAt } = useRecordViews("leads", user?.id);
+  const getLeadUnread = useCallback((lead) => hasUnreadLeadComment(lead, leadViewedAt, user?.id), [leadViewedAt, user?.id]);
+
   const handleDrop = useCallback((stageId, companyId) => {
     if (draggedLead && draggedLead.stage !== stageId) {
       if (pipelineTransitions) {
@@ -847,6 +852,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         onMoveToStage={attemptStageChange}
                         onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
                         completeness={getLeadCompleteness(lead)}
+                        unread={getLeadUnread(lead)}
                       />
                     ))
                   )}
@@ -999,6 +1005,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         onMoveToStage={attemptStageChange}
                         onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
                         completeness={getLeadCompleteness(lead)}
+                        unread={getLeadUnread(lead)}
                       />
                     ))
                   )}

@@ -24,6 +24,8 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { DeliverableDetailDrawer, STAGE_FIELDS } from "../campaign/DeliverableDetailDrawer";
 import { AvatarStack } from "../shared/AvatarStack";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadNotesComment } from "../../lib/comment-badge";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -736,6 +738,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     return getFieldCompleteness(fields, item.customFields || {});
   }, [stageFields]);
 
+  const { viewedAt: itemViewedAt, markViewed: markItemViewed } = useRecordViews("deliverables", user?.id);
+  const getItemUnread = useCallback((item) => hasUnreadNotesComment(item, itemViewedAt, user?.id), [itemViewedAt, user?.id]);
+  useEffect(() => { if (selected?.id) markItemViewed(selected.id); }, [selected?.id]);
+
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedItem || !canWrite) return;
     if (draggedItem.stage !== toStage) await attemptStageChange(draggedItem.id, toStage);
@@ -965,6 +971,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                           onDeleteCard={canWrite ? handleDelete : null}
                           onToggleStar={canWrite ? toggleStar : null}
                           completeness={getItemCompleteness(item)}
+                          unread={getItemUnread(item)}
                         />
                       ))
                     )}
@@ -1068,6 +1075,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                             onDeleteCard={canWrite ? handleDelete : null}
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
+                            unread={getItemUnread(item)}
                           />
                         ))
                       )}

@@ -1,5 +1,5 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Clock, Check, X as XIcon } from "lucide-react";
+import { Clock, Check, X as XIcon, MessageCircle } from "lucide-react";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { CompanyTag } from "../ui/CompanyTag";
@@ -28,7 +28,7 @@ function agingStyle(days, slaDays) {
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
-function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness }) {
+function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -95,6 +95,15 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
           <span className="line-clamp-2">{lead.company}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {unread && (
+            <span
+              title="Comentário novo"
+              className="inline-flex items-center justify-center rounded-full"
+              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
+            >
+              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
+            </span>
+          )}
           {ageStyle && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"

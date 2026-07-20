@@ -25,6 +25,8 @@ import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadNotesComment } from "../../lib/comment-badge";
 
 // FASE 5: mais de um responsável por campanha — resolve owner_ids (com
 // fallback pro owner escalar em campanhas legadas), mesmo padrão de
@@ -813,6 +815,10 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     return getFieldCompleteness(fields, campaign.customFields || {});
   }, [stageFields]);
 
+  const { viewedAt: campaignViewedAt, markViewed: markCampaignViewed } = useRecordViews("campaigns", user?.id);
+  const getCampaignUnread = useCallback((campaign) => hasUnreadNotesComment(campaign, campaignViewedAt, user?.id), [campaignViewedAt, user?.id]);
+  useEffect(() => { if (selected?.id) markCampaignViewed(selected.id); }, [selected?.id]);
+
   const handleDrop = useCallback(async (toStage) => {
     if (!draggedCampaign || !canWrite) return;
     if (draggedCampaign.stage !== toStage) {
@@ -1102,6 +1108,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           onMoveToStage={attemptStageChange}
                           onDeleteCard={canWrite ? handleDelete : undefined}
                           completeness={getCampaignCompleteness(c)}
+                          unread={getCampaignUnread(c)}
                         />
                       ))
                     )}
@@ -1245,6 +1252,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                             onMoveToStage={attemptStageChange}
                             onDeleteCard={canWrite ? handleDelete : undefined}
                             completeness={getCampaignCompleteness(c)}
+                            unread={getCampaignUnread(c)}
                           />
                         ))
                       )}
