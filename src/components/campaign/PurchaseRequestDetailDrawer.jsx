@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  X, CheckCircle2, XCircle, ArrowRight, Upload, FileText,
+  CheckCircle2, XCircle, Upload, FileText,
   TrendingUp, TrendingDown, AlertCircle, ExternalLink, Loader2,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -13,6 +13,8 @@ import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { StageNavigator } from "../shared/StageNavigator";
 
 const BUCKET = "marketing-attachments";
 
@@ -310,322 +312,293 @@ export function PurchaseRequestDetailDrawer({
   const supplier = suppliers.find(s => s.id === purchase.supplierId);
   const stageInfo = PURCHASE_STAGES.find(s => s.id === purchase.stage);
   const stageColor = STAGE_COLORS[purchase.stage] || "var(--text-dim)";
-  const movableStages = PURCHASE_STAGES.filter(s => s.id !== "solicitado" && s.id !== purchase.stage);
+  // "Pago" só entra na lista de mover quando já tem nota fiscal — em vez de
+  // mostrar desabilitado com tooltip, a seção "Nota fiscal" abaixo já deixa
+  // claro o que falta; StageNavigator (compartilhado com o resto da
+  // plataforma) não tem um estado "bloqueado" por item, só a lista toda.
+  const movableStages = PURCHASE_STAGES
+    .filter(s => s.id !== "solicitado" && s.id !== purchase.stage && (s.id !== "pago" || invoiceUrl))
+    .map(s => ({ ...s, color: STAGE_COLORS[s.id] || "var(--text-dim)" }));
   const isRejected = purchase.stage === PURCHASE_REJECTED_STAGE;
   const isPending = purchase.stage === "solicitado";
 
   const currentTotal = totalValue === "" ? null : Number(totalValue);
   const priceDiff = lastPrice && currentTotal != null ? currentTotal - Number(lastPrice.total_value) : null;
 
-  return (
-    <div
-      className="fixed inset-0 z-40 flex lg:items-center lg:justify-center lg:p-6"
-      style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-    >
-      <div
-        className="w-full flex-1 flex flex-col lg:flex-none lg:max-w-2xl lg:rounded-2xl lg:max-h-[92vh]"
-        style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)", overflow: "hidden", height: "100%" }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="sticky top-0 z-10 px-5 py-4 border-b flex items-start justify-between gap-3"
-          style={{ background: "rgba(255,255,255,0.97)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}
-        >
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1.5">
-              {purchase.requestNumber && (
-                <span className="font-mono font-bold text-sm" style={{ color: "var(--accent)" }}>
-                  {purchase.requestNumber}
-                </span>
-              )}
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: stageColor + "18", color: stageColor, border: `1px solid ${stageColor}40` }}>
-                {stageInfo?.name || purchase.stage}
-              </span>
-            </div>
-            <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
-              {purchase.itemName}
-            </h2>
+  const header = (
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+        {purchase.requestNumber && (
+          <span className="font-mono font-bold text-sm" style={{ color: "var(--accent)" }}>
+            {purchase.requestNumber}
+          </span>
+        )}
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+          style={{ background: stageColor + "18", color: stageColor, border: `1px solid ${stageColor}40` }}>
+          {stageInfo?.name || purchase.stage}
+        </span>
+      </div>
+      <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
+        {purchase.itemName}
+      </h2>
+    </div>
+  );
+
+  const left = (
+    <>
+      {isRejected && (
+        <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>
+          <XCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <div className="font-semibold text-sm">Solicitação rejeitada</div>
+            {purchase.rejectedReason && <div className="text-xs mt-0.5">{purchase.rejectedReason}</div>}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
-            style={{ color: "var(--text-dim)", background: "none", border: "none" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-          >
-            <X size={18} />
-          </button>
         </div>
+      )}
 
-        {/* Body */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
-          {isRejected && (
-            <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>
-              <XCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
-              <div>
-                <div className="font-semibold text-sm">Solicitação rejeitada</div>
-                {purchase.rejectedReason && <div className="text-xs mt-0.5">{purchase.rejectedReason}</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Read-only info grid */}
-          <div>
-            <SectionLabel>Solicitação</SectionLabel>
-            <div className="grid grid-cols-2 gap-3">
-              <FieldRow label="Solicitante"><ReadValue value={purchase.requesterName} /></FieldRow>
-              <FieldRow label="Prazo desejado"><ReadValue value={purchase.dueDate ? formatDateBR(purchase.dueDate) : null} /></FieldRow>
-              <FieldRow label="E-mail"><ReadValue value={purchase.requesterEmail} /></FieldRow>
-              <FieldRow label="Telefone"><ReadValue value={purchase.requesterPhone} /></FieldRow>
-            </div>
-            {purchase.description && (
-              <FieldRow label="Descrição">
-                <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{purchase.description}</div>
-              </FieldRow>
-            )}
-            <div className="flex items-center gap-3 flex-wrap">
-              {(purchase.companyIds || []).map(id => {
-                const color = MARKETING_UNIT_COLORS[id] || "#6B7280";
-                return (
-                  <span key={id} className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ background: color + "18", color, border: `1px solid ${color}30` }}>
-                    {MARKETING_UNIT_LABELS[id] || id}
-                  </span>
-                );
-              })}
-              <span className="text-xs" style={{ color: "var(--text-dim)" }}>
-                Criado em {purchase.createdAt ? new Date(purchase.createdAt).toLocaleDateString("pt-BR") : "—"}
+      <div>
+        <SectionLabel>Solicitação</SectionLabel>
+        <FieldRow label="Solicitante"><ReadValue value={purchase.requesterName} /></FieldRow>
+        <FieldRow label="Prazo desejado"><ReadValue value={purchase.dueDate ? formatDateBR(purchase.dueDate) : null} /></FieldRow>
+        <FieldRow label="E-mail"><ReadValue value={purchase.requesterEmail} /></FieldRow>
+        <FieldRow label="Telefone"><ReadValue value={purchase.requesterPhone} /></FieldRow>
+        {purchase.description && (
+          <FieldRow label="Descrição">
+            <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{purchase.description}</div>
+          </FieldRow>
+        )}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {(purchase.companyIds || []).map(id => {
+            const color = MARKETING_UNIT_COLORS[id] || "#6B7280";
+            return (
+              <span key={id} className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                style={{ background: color + "18", color, border: `1px solid ${color}30` }}>
+                {MARKETING_UNIT_LABELS[id] || id}
               </span>
-            </div>
-          </div>
-
-          {/* Approve / reject — só em "solicitado" e só gerente_marketing/admin */}
-          {isPending && canApprove && (
-            <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
-              <SectionLabel>Aprovar solicitação</SectionLabel>
-              <FieldRow label="Responsável pela execução">
-                <select value={approveResponsible} onChange={e => setApproveResponsible(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
-                  <option value="">Selecione um responsável (opcional)</option>
-                  {marketingUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
-              </FieldRow>
-
-              {actionError && (
-                <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{actionError}</div>
-              )}
-
-              {!showReject ? (
-                <div className="flex items-center gap-2">
-                  <button onClick={handleApprove} disabled={actionLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                    style={{ background: "#DCFCE7", color: "#15803D", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
-                    <CheckCircle2 size={13} />
-                    {actionLoading ? "Aprovando…" : "Aprovar"}
-                  </button>
-                  <button onClick={() => setShowReject(true)} disabled={actionLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                    style={{ background: "#FEE2E2", color: "#DC2626", border: "none", cursor: actionLoading ? "default" : "pointer" }}>
-                    <XCircle size={13} />
-                    Rejeitar
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <textarea
-                    value={rejectReason}
-                    onChange={e => setRejectReason(e.target.value)}
-                    rows={2}
-                    placeholder="Motivo da rejeição (opcional)…"
-                    style={{ ...inputBase, resize: "none" }}
-                  />
-                  <div className="flex items-center gap-2">
-                    <button onClick={handleReject} disabled={actionLoading}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                      style={{ background: "#DC2626", color: "#FFF", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
-                      {actionLoading ? "Rejeitando…" : "Confirmar rejeição"}
-                    </button>
-                    <button onClick={() => { setShowReject(false); setRejectReason(""); }} disabled={actionLoading}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold border"
-                      style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", cursor: "pointer" }}>
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Comparação com última compra paga */}
-          {supplierId && (
-            <div className="rounded-xl border p-4" style={{ borderColor: "#BFDBFE", background: "#EFF6FF" }}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <TrendingUp size={13} style={{ color: "#1D4ED8" }} />
-                <span className="text-xs font-bold" style={{ color: "#1D4ED8" }}>Comparar com ano passado</span>
-              </div>
-              {lastPrice ? (
-                <div className="text-xs" style={{ color: "#1E3A8A", lineHeight: 1.6 }}>
-                  Última compra paga a este fornecedor: <strong>{formatBRL(Number(lastPrice.total_value))}</strong> em{" "}
-                  {formatDateBR(lastPrice.paid_at)} (protocolo {lastPrice.request_number})
-                  {priceDiff != null && (
-                    <div className="flex items-center gap-1 mt-1 font-semibold" style={{ color: priceDiff > 0 ? "#DC2626" : priceDiff < 0 ? "#16A34A" : "#1E3A8A" }}>
-                      {priceDiff > 0 ? <TrendingUp size={12} /> : priceDiff < 0 ? <TrendingDown size={12} /> : null}
-                      {priceDiff === 0
-                        ? "Mesmo valor da última compra"
-                        : `Valor atual está ${priceDiff > 0 ? "acima" : "abaixo"} em ${formatBRL(Math.abs(priceDiff))} em relação à última compra`}
-                    </div>
-                  )}
-                </div>
-              ) : lastPriceError ? (
-                <div className="text-xs" style={{ color: "#1E3A8A" }}>{lastPriceError}</div>
-              ) : (
-                <div className="text-xs" style={{ color: "#1E3A8A" }}>Nenhuma compra paga anterior encontrada para este fornecedor e item.</div>
-              )}
-            </div>
-          )}
-
-          {/* Editable fields — habilitados só após a aprovação */}
-          {!isRejected && (
-            <div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <SectionLabel>Execução da compra</SectionLabel>
-                {saveStatus && (
-                  <span style={{ fontSize: 10, marginTop: -10, color: saveStatus === "saved" ? "#16A34A" : "#DC2626", fontWeight: 700 }}>
-                    {saveStatus === "saved" ? "✓ Salvo" : "✗ Falha ao salvar"}
-                  </span>
-                )}
-              </div>
-              {!canEditFields && (
-                <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
-                  Disponível após a aprovação da solicitação.
-                </div>
-              )}
-              <fieldset disabled={!canEditFields} style={{ border: "none", padding: 0, margin: 0, opacity: canEditFields ? 1 : 0.55 }}>
-                <div className="grid grid-cols-2 gap-3">
-                  <FieldRow label="Fornecedor">
-                    <select value={supplierId} onChange={e => setSupplierId(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
-                      <option value="">Selecione um fornecedor</option>
-                      {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </FieldRow>
-                  <FieldRow label="Responsável">
-                    <AssigneeMultiSelect
-                      value={responsibleIds}
-                      onChange={setResponsibleIds}
-                      options={marketingUsers}
-                      placeholder="Selecione responsáveis…"
-                      disabled={!canEditFields}
-                    />
-                  </FieldRow>
-                  <FieldRow label="Quantidade">
-                    <input type="number" min="0" value={quantity} onChange={e => handleQuantityChange(e.target.value)} style={inputBase} />
-                  </FieldRow>
-                  <FieldRow label="Preço unitário">
-                    <CurrencyInput value={unitPrice} onChange={handleUnitPriceChange} style={inputBase} />
-                  </FieldRow>
-                  <FieldRow label="Valor total">
-                    <CurrencyInput value={totalValue} onChange={handleTotalValueChange} style={inputBase} />
-                  </FieldRow>
-                  <FieldRow label="Prazo">
-                    <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputBase} />
-                  </FieldRow>
-                  <FieldRow label="Data da nota fiscal">
-                    <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} style={inputBase} />
-                  </FieldRow>
-                </div>
-
-                {saveError && (
-                  <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{saveError}</div>
-                )}
-                <button onClick={handleSaveFields} disabled={saving}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold"
-                  style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
-                  {saving ? "Salvando…" : "Salvar alterações"}
-                </button>
-              </fieldset>
-            </div>
-          )}
-
-          {/* Nota fiscal */}
-          {!isRejected && (
-            <div>
-              <SectionLabel>Nota fiscal</SectionLabel>
-              {invoiceUrl ? (
-                <div className="flex items-center gap-2 mb-2">
-                  <button onClick={handleViewInvoice} disabled={viewingInvoice}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border"
-                    style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", cursor: "pointer" }}>
-                    <FileText size={12} />
-                    Ver nota fiscal
-                    <ExternalLink size={11} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEF3C7", color: "#92400E" }}>
-                  <AlertCircle size={12} />
-                  Anexe a nota fiscal para poder marcar como pago.
-                </div>
-              )}
-              <label
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border cursor-pointer w-fit"
-                style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
-              >
-                {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                {uploading ? "Enviando…" : invoiceUrl ? "Substituir nota fiscal" : "Anexar nota fiscal"}
-                <input type="file" accept=".pdf,.png,.jpg,.jpeg" style={{ display: "none" }}
-                  onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadInvoice(f); e.target.value = ""; }} />
-              </label>
-              {uploadError && (
-                <div className="text-xs px-3 py-2 rounded-lg mt-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{uploadError}</div>
-              )}
-            </div>
-          )}
-
-          {/* Stage mover */}
-          {!isRejected && !isPending && movableStages.length > 0 && (
-            <div>
-              <SectionLabel>Mover para etapa</SectionLabel>
-              {actionError && (
-                <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{actionError}</div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {movableStages.map(s => {
-                  const color = STAGE_COLORS[s.id] || "var(--text-dim)";
-                  const blocked = s.id === "pago" && !invoiceUrl;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => handleMoveStage(s.id)}
-                      disabled={blocked}
-                      title={blocked ? "Anexe a nota fiscal para poder marcar como pago." : undefined}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                      style={{ background: color + "14", color, border: `1px solid ${color}30`, cursor: blocked ? "not-allowed" : "pointer", opacity: blocked ? 0.5 : 1 }}
-                    >
-                      {s.name}
-                      <ArrowRight size={11} />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Comentários — sempre visível, em qualquer etapa (inclusive rejeitado) */}
-          <div>
-            <CommentsPanel
-              comments={comments}
-              currentUser={currentUser}
-              mentionableUsers={mentionableUsers}
-              onAddComment={handleAddComment}
-            />
-          </div>
+            );
+          })}
+        </div>
+        <div className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
+          Criado em {purchase.createdAt ? new Date(purchase.createdAt).toLocaleDateString("pt-BR") : "—"}
         </div>
       </div>
-    </div>
+
+      {supplierId && (
+        <div className="rounded-xl border p-4" style={{ borderColor: "#BFDBFE", background: "#EFF6FF" }}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <TrendingUp size={13} style={{ color: "#1D4ED8" }} />
+            <span className="text-xs font-bold" style={{ color: "#1D4ED8" }}>Comparar com ano passado</span>
+          </div>
+          {lastPrice ? (
+            <div className="text-xs" style={{ color: "#1E3A8A", lineHeight: 1.6 }}>
+              Última compra paga a este fornecedor: <strong>{formatBRL(Number(lastPrice.total_value))}</strong> em{" "}
+              {formatDateBR(lastPrice.paid_at)} (protocolo {lastPrice.request_number})
+              {priceDiff != null && (
+                <div className="flex items-center gap-1 mt-1 font-semibold" style={{ color: priceDiff > 0 ? "#DC2626" : priceDiff < 0 ? "#16A34A" : "#1E3A8A" }}>
+                  {priceDiff > 0 ? <TrendingUp size={12} /> : priceDiff < 0 ? <TrendingDown size={12} /> : null}
+                  {priceDiff === 0
+                    ? "Mesmo valor da última compra"
+                    : `Valor atual está ${priceDiff > 0 ? "acima" : "abaixo"} em ${formatBRL(Math.abs(priceDiff))} em relação à última compra`}
+                </div>
+              )}
+            </div>
+          ) : lastPriceError ? (
+            <div className="text-xs" style={{ color: "#1E3A8A" }}>{lastPriceError}</div>
+          ) : (
+            <div className="text-xs" style={{ color: "#1E3A8A" }}>Nenhuma compra paga anterior encontrada para este fornecedor e item.</div>
+          )}
+        </div>
+      )}
+    </>
+  );
+
+  const center = (
+    <>
+      {/* Editable fields — habilitados só após a aprovação */}
+      {!isRejected && (
+        <div>
+          <div className="flex items-center gap-2 mb-2.5">
+            <SectionLabel>Execução da compra</SectionLabel>
+            {saveStatus && (
+              <span style={{ fontSize: 10, marginTop: -10, color: saveStatus === "saved" ? "#16A34A" : "#DC2626", fontWeight: 700 }}>
+                {saveStatus === "saved" ? "✓ Salvo" : "✗ Falha ao salvar"}
+              </span>
+            )}
+          </div>
+          {!canEditFields && (
+            <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+              Disponível após a aprovação da solicitação.
+            </div>
+          )}
+          <fieldset disabled={!canEditFields} style={{ border: "none", padding: 0, margin: 0, opacity: canEditFields ? 1 : 0.55 }}>
+            <div className="grid grid-cols-2 gap-3">
+              <FieldRow label="Fornecedor">
+                <select value={supplierId} onChange={e => setSupplierId(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
+                  <option value="">Selecione um fornecedor</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </FieldRow>
+              <FieldRow label="Responsável">
+                <AssigneeMultiSelect
+                  value={responsibleIds}
+                  onChange={setResponsibleIds}
+                  options={marketingUsers}
+                  placeholder="Selecione responsáveis…"
+                  disabled={!canEditFields}
+                />
+              </FieldRow>
+              <FieldRow label="Quantidade">
+                <input type="number" min="0" value={quantity} onChange={e => handleQuantityChange(e.target.value)} style={inputBase} />
+              </FieldRow>
+              <FieldRow label="Preço unitário">
+                <CurrencyInput value={unitPrice} onChange={handleUnitPriceChange} style={inputBase} />
+              </FieldRow>
+              <FieldRow label="Valor total">
+                <CurrencyInput value={totalValue} onChange={handleTotalValueChange} style={inputBase} />
+              </FieldRow>
+              <FieldRow label="Prazo">
+                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputBase} />
+              </FieldRow>
+              <FieldRow label="Data da nota fiscal">
+                <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} style={inputBase} />
+              </FieldRow>
+            </div>
+
+            {saveError && (
+              <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{saveError}</div>
+            )}
+            <button onClick={handleSaveFields} disabled={saving}
+              className="px-4 py-2 rounded-lg text-sm font-semibold"
+              style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+              {saving ? "Salvando…" : "Salvar alterações"}
+            </button>
+          </fieldset>
+        </div>
+      )}
+
+      {/* Nota fiscal */}
+      {!isRejected && (
+        <div>
+          <SectionLabel>Nota fiscal</SectionLabel>
+          {invoiceUrl ? (
+            <div className="flex items-center gap-2 mb-2">
+              <button onClick={handleViewInvoice} disabled={viewingInvoice}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border"
+                style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", cursor: "pointer" }}>
+                <FileText size={12} />
+                Ver nota fiscal
+                <ExternalLink size={11} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEF3C7", color: "#92400E" }}>
+              <AlertCircle size={12} />
+              Anexe a nota fiscal para poder marcar como pago.
+            </div>
+          )}
+          <label
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border cursor-pointer w-fit"
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
+          >
+            {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+            {uploading ? "Enviando…" : invoiceUrl ? "Substituir nota fiscal" : "Anexar nota fiscal"}
+            <input type="file" accept=".pdf,.png,.jpg,.jpeg" style={{ display: "none" }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadInvoice(f); e.target.value = ""; }} />
+          </label>
+          {uploadError && (
+            <div className="text-xs px-3 py-2 rounded-lg mt-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{uploadError}</div>
+          )}
+        </div>
+      )}
+    </>
+  );
+
+  const right = (
+    <>
+      {/* Aprovar/Rejeitar — só em "solicitado" e só gerente_marketing/admin */}
+      {isPending && canApprove && (
+        <div className="rounded-xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
+          <SectionLabel>Aprovar solicitação</SectionLabel>
+          <FieldRow label="Responsável pela execução">
+            <select value={approveResponsible} onChange={e => setApproveResponsible(e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
+              <option value="">Selecione um responsável (opcional)</option>
+              {marketingUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </FieldRow>
+
+          {actionError && (
+            <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{actionError}</div>
+          )}
+
+          {!showReject ? (
+            <div className="flex items-center gap-2">
+              <button onClick={handleApprove} disabled={actionLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{ background: "#DCFCE7", color: "#15803D", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
+                <CheckCircle2 size={13} />
+                {actionLoading ? "Aprovando…" : "Aprovar"}
+              </button>
+              <button onClick={() => setShowReject(true)} disabled={actionLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{ background: "#FEE2E2", color: "#DC2626", border: "none", cursor: actionLoading ? "default" : "pointer" }}>
+                <XCircle size={13} />
+                Rejeitar
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                rows={2}
+                placeholder="Motivo da rejeição (opcional)…"
+                style={{ ...inputBase, resize: "none" }}
+              />
+              <div className="flex items-center gap-2">
+                <button onClick={handleReject} disabled={actionLoading}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: "#DC2626", color: "#FFF", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
+                  {actionLoading ? "Rejeitando…" : "Confirmar rejeição"}
+                </button>
+                <button onClick={() => { setShowReject(false); setRejectReason(""); }} disabled={actionLoading}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border"
+                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", cursor: "pointer" }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isPending && actionError && (
+        <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{actionError}</div>
+      )}
+
+      {!isRejected && !isPending && movableStages.length > 0 && (
+        <div>
+          <SectionLabel>Mover para etapa</SectionLabel>
+          <StageNavigator targets={movableStages} onMove={handleMoveStage} getKey={s => s.id} />
+        </div>
+      )}
+
+      <CommentsPanel
+        comments={comments}
+        currentUser={currentUser}
+        mentionableUsers={mentionableUsers}
+        onAddComment={handleAddComment}
+      />
+    </>
+  );
+
+  return (
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+    />
   );
 }
 
