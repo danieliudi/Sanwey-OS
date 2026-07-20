@@ -16,6 +16,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
@@ -1080,31 +1081,29 @@ function TreinamentoBoardModal({
             />
           ) : (
             <>
-              {/* desktop: colunas lado a lado — mobile empilha abaixo (padrão RHFeriasView/RHFeedbackView) */}
-              <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
-                {stages.map((stage) => (
-                  <TreinamentoBoardColumn
-                    key={stage.id}
-                    stage={stage}
+              <RHMobileKanbanAccordion
+                stages={stages}
+                itemsByStage={byStage}
+                renderCard={(a) => (
+                  <RHKanbanCard
+                    key={a.id}
+                    id={a.id}
+                    stage={a.status}
                     stages={stages}
-                    atribList={byStage[stage.stageKey] || []}
-                    colaboradoresById={colaboradoresById}
-                    onCardClick={(a) => setDrawerId(a.id)}
-                    onDragStart={setDraggedId}
-                    onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
-                    onMoveToStage={handleMove}
-                    onDeleteAtribuicao={canWrite ? onDelete : undefined}
-                    isDragOver={dragOverStageKey === stage.stageKey}
-                    onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
-                    onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
-                    onColumnDrop={handleDrop}
-                    canWrite={canWrite}
-                    onEditFields={setFieldEditorStage}
-                    getCompleteness={getCompleteness}
-                  />
-                ))}
-              </div>
-              <div className="md:hidden flex flex-col gap-3">
+                    onClick={() => setDrawerId(a.id)}
+                    onDragStart={canWrite ? setDraggedId : undefined}
+                    onDragEnd={canWrite ? () => { setDraggedId(null); setDragOverStageKey(null); } : undefined}
+                    onMoveToStage={canWrite ? handleMove : undefined}
+                    onDeleteCard={canWrite ? onDelete : undefined}
+                    agingDays={daysInStage(a.status_changed_at)}
+                    completeness={getCompleteness?.(a)}
+                  >
+                    <AtribuicaoCardBody atribuicao={a} colaborador={colaboradoresById.get(a.colaborador_id)} />
+                  </RHKanbanCard>
+                )}
+                emptyLabel="Ninguém aqui"
+              />
+              <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16 }} className="hidden lg:flex">
                 {stages.map((stage) => (
                   <TreinamentoBoardColumn
                     key={stage.id}

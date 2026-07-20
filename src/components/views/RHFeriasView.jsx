@@ -13,6 +13,7 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
+import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
@@ -995,8 +996,30 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       ) : viewMode === "calendar" ? (
         <FeriasCalendarView requests={filtered} stages={stages} onPillClick={(r) => setDrawerReqId(r.id)} />
       ) : (
-        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 16 }} className="flex-col md:flex-row">
-          <div style={{ gap: 12, flexShrink: 0 }} className="hidden md:flex">
+        <>
+          <RHMobileKanbanAccordion
+            stages={stages}
+            itemsByStage={reqByStage}
+            renderCard={(req) => (
+              <RHKanbanCard
+                key={req.id}
+                id={req.id}
+                stage={req.status}
+                stages={stages}
+                onClick={() => setDrawerReqId(req.id)}
+                onDragStart={canWrite ? setDraggedId : undefined}
+                onDragEnd={canWrite ? () => { setDraggedId(null); setDragOverStageKey(null); } : undefined}
+                onMoveToStage={canWrite ? handleMoveToStage : undefined}
+                onDeleteCard={canWrite ? deleteRequest : undefined}
+                agingDays={daysInStage(req.status_changed_at)}
+                completeness={getReqCompleteness?.(req)}
+              >
+                <FeriasCardBody req={req} canWrite={canWrite} onAprovar={handleAprovar} onRecusar={handleRecusar} busy={busyId === req.id} />
+              </RHKanbanCard>
+            )}
+            emptyLabel="Nada aqui"
+          />
+          <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16 }} className="hidden lg:flex">
             {stages.map((stage) => (
               <FeriasKanbanColumn
                 key={stage.id}
@@ -1021,32 +1044,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
               />
             ))}
           </div>
-          <div className="md:hidden flex flex-col gap-3">
-            {stages.map((stage) => (
-              <FeriasKanbanColumn
-                key={stage.id}
-                stage={stage}
-                stages={stages}
-                reqList={reqByStage[stage.stageKey] || []}
-                onCardClick={(r) => setDrawerReqId(r.id)}
-                onDragStart={setDraggedId}
-                onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
-                onMoveToStage={handleMoveToStage}
-                onDeleteRequest={canWrite ? deleteRequest : undefined}
-                isDragOver={dragOverStageKey === stage.stageKey}
-                onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
-                onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
-                onColumnDrop={handleColumnDrop}
-                canWrite={canWrite}
-                onEditFields={setFieldEditorStage}
-                getCompleteness={getReqCompleteness}
-                onAprovar={handleAprovar}
-                onRecusar={handleRecusar}
-                busyId={busyId}
-              />
-            ))}
-          </div>
-        </div>
+        </>
       )}
 
       {showSolicitar && <SolicitarFeriasModal currentUser={currentUser} onSave={createRequest} onClose={() => setShowSolicitar(false)} />}
