@@ -11,6 +11,8 @@ import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { usePipelines } from "./hooks/use-pipelines";
 import { ROUTES, sectionFromPath } from "./constants/routes";
+import { useModuleOverrides } from "./hooks/use-module-overrides";
+import { effectiveModules, ALL_MODULE_IDS } from "./utils/module-access";
 import { generateMarketSignals } from "./data/generate-signals";
 import { usePersistentState } from "./hooks/use-persistent-state";
 import { useCrossReferrals } from "./hooks/use-cross-referrals";
@@ -125,6 +127,18 @@ export default function App() {
   const currentUserRoles  = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
   const hasAnyRole = (roles) => roles.some(r => currentUserRoles.includes(r));
   const rolesSubsetOf = (roles) => currentUserRoles.length > 0 && currentUserRoles.every(r => roles.includes(r));
+
+  // Acesso por módulo (Configurações → Usuários → "Acesso por módulo") —
+  // complementa os cargos: sem override nenhum, `allowedModules` é
+  // exatamente o padrão do cargo (mesmas regras hoje embutidas no navGroups
+  // abaixo, extraídas pra utils/module-access.js). Controla o que aparece
+  // no menu e trava o acesso direto por URL (ver guard mais abaixo) — ainda
+  // não é enforcement de RLS tabela a tabela (ver comentário na migration).
+  const { overrides: myModuleOverrides } = useModuleOverrides({ userId: currentUser?.id, enabled: Boolean(currentUser) });
+  const allowedModules = useMemo(
+    () => effectiveModules(currentUserRoles, myModuleOverrides),
+    [currentUserRoles, myModuleOverrides]
+  );
 
   const isManagerRole      = hasAnyRole(["gerente", "admin"]);
   // isMarketingUser: can access marketing routes (includes admin for RLS/access)
@@ -936,8 +950,15 @@ export default function App() {
         { id: "tutorials", label: "Ajuda & Tutoriais", icon: LifeBuoy },
       ],
     });
-    return groups;
-  }, [isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly]);
+
+    // Acesso por módulo: só filtra itens que de fato fazem parte do
+    // registro de módulos (dashboard/tutorials/settings/automations ficam
+    // de fora — controlados só por cargo, como sempre). Grupo que fica
+    // vazio depois do filtro some do menu.
+    return groups
+      .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
+      .filter(g => g.items.length > 0);
+  }, [isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, allowedModules]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1015,8 +1036,15 @@ export default function App() {
     if (isPortalOnly && section !== "meu-rh") {
       setSection("meu-rh");
     }
+    // Acesso por módulo: revogação por override direto na URL (o item já
+    // some do menu acima, isso cobre quem digita a rota ou tinha aba
+    // aberta antes da revogação). Agência/Portal ficam de fora — shell de
+    // navegação fixo, não passa pelo registro de módulos.
+    if (!isAgencia && !isPortalOnly && ALL_MODULE_IDS.includes(section) && !allowedModules.has(section)) {
+      setSection("dashboard");
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section]);
+  }, [currentUser, isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section, allowedModules]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (

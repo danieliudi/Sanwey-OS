@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
   UserPlus, User, Mail, Check, Save, Edit3, Trash2, Info, Loader2, Send, X,
-  Search, Users, Building2, MoreVertical,
+  Search, Users, Building2, MoreVertical, RotateCcw,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
+import { useModuleOverrides } from "../../hooks/use-module-overrides";
+import { MODULE_GROUPS, defaultModulesForRoles, effectiveModules, computeRoleFlags } from "../../utils/module-access";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
@@ -115,6 +117,41 @@ export function UserManagementView({
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState(null);
+
+  // Acesso por módulo (complementar aos cargos) — só existe pra usuário já
+  // criado (precisa de um user_id real). Os cargos no form (já editáveis
+  // acima) decidem o padrão em tempo real, antes mesmo de salvar — assim o
+  // admin vê o efeito de trocar o cargo no "Acesso por módulo" na hora.
+  // Só admin gerencia overrides (mesma regra da RLS em
+  // profile_module_overrides) — gerente Comercial acessa esta tela, mas não
+  // deve ver/editar acesso por módulo de outra pessoa.
+  const editingExistingUser = editing !== null && editing !== "new" && isAdmin;
+  const { overrides: moduleOverrides, setOverride: setModuleOverride, clearOverride: clearModuleOverride } =
+    useModuleOverrides({ userId: editingExistingUser ? form.id : null, enabled: editingExistingUser });
+  const formRoles = useMemo(() => [form.role, ...(form.additionalRoles || [])], [form.role, form.additionalRoles]);
+  const formRoleFlags = useMemo(() => computeRoleFlags(formRoles), [formRoles]);
+  const formAllowedModules = useMemo(() => effectiveModules(formRoles, moduleOverrides), [formRoles, moduleOverrides]);
+  const formDefaultModules = useMemo(() => defaultModulesForRoles(formRoles), [formRoles]);
+  const moduleOverrideMap = useMemo(() => new Map(moduleOverrides.map(o => [o.moduleId, o.allow])), [moduleOverrides]);
+  const [savingModuleId, setSavingModuleId] = useState(null);
+
+  const toggleModule = useCallback(async (moduleId) => {
+    setSavingModuleId(moduleId);
+    try {
+      await setModuleOverride(moduleId, !formAllowedModules.has(moduleId));
+    } finally {
+      setSavingModuleId(null);
+    }
+  }, [setModuleOverride, formAllowedModules]);
+
+  const resetModule = useCallback(async (moduleId) => {
+    setSavingModuleId(moduleId);
+    try {
+      await clearModuleOverride(moduleId);
+    } finally {
+      setSavingModuleId(null);
+    }
+  }, [clearModuleOverride]);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState(EMPTY_INVITE);
@@ -695,6 +732,66 @@ export function UserManagementView({
               <div className="text-[11px] mt-1.5" style={{ color: "var(--text-dim)" }}>
                 Restringe o acesso deste login às campanhas/entregas do fornecedor selecionado. Deixe em branco enquanto houver apenas uma agência cadastrada.
               </div>
+            </div>
+          )}
+          {editingExistingUser && (
+            <div>
+              <FieldLabel>
+                Acesso por módulo <span style={{ textTransform: "none", fontWeight: 400 }}>(exceções ao cargo — sem marcar nada aqui, vale o padrão do cargo)</span>
+              </FieldLabel>
+              {formRoleFlags.isAgencia || formRoleFlags.isPortalOnly ? (
+                <div className="text-xs p-3 rounded-xl" style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
+                  Não se aplica a Agência/Portal — esses cargos têm navegação fixa própria, sem controle por módulo.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {MODULE_GROUPS.map(group => (
+                    <div key={group.label}>
+                      <div className="text-[10px] uppercase font-bold tracking-widest mb-1.5" style={{ color: "var(--text-dim)", letterSpacing: "0.1em" }}>
+                        {group.label}
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {group.modules.map(m => {
+                          const checked = formAllowedModules.has(m.id);
+                          const isDefault = formDefaultModules.has(m.id);
+                          const hasOverride = moduleOverrideMap.has(m.id);
+                          const busy = savingModuleId === m.id;
+                          return (
+                            <div key={m.id} className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => toggleModule(m.id)}
+                                disabled={busy}
+                                className="flex-1 p-2 rounded-lg border flex items-center gap-2 transition-all text-left"
+                                style={{ background: checked ? "#EEF2FF" : "var(--surface)", borderColor: checked ? "#6366F1" : "var(--border)", opacity: busy ? 0.6 : 1 }}
+                              >
+                                <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all"
+                                  style={{ background: checked ? "#6366F1" : "transparent", borderColor: checked ? "#6366F1" : "var(--border-strong)" }}
+                                >
+                                  {checked && <Check size={11} color="#FFFFFF" />}
+                                </div>
+                                <span className="text-xs font-semibold leading-tight flex-1" style={{ color: checked ? "#3730A3" : "var(--text)" }}>{m.label}</span>
+                              </button>
+                              {hasOverride && (
+                                <button
+                                  type="button"
+                                  onClick={() => resetModule(m.id)}
+                                  disabled={busy}
+                                  title={`Personalizado (padrão do cargo: ${isDefault ? "concede" : "não concede"}) — clique pra restaurar o padrão`}
+                                  className="flex items-center justify-center rounded-lg shrink-0"
+                                  style={{ width: 26, height: 26, background: "var(--amber-bg)", color: "#92400E", border: "none", cursor: busy ? "default" : "pointer" }}
+                                >
+                                  <RotateCcw size={11} />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {modalError && (
