@@ -22,6 +22,7 @@ function rowToRequest(r) {
     approvedAt:      r.approved_at ?? null,
     approvedBy:      r.approved_by ?? null,
     deliverableId:   r.deliverable_id ?? null,
+    emailError:      r.email_error ?? null,
     isDemo:          r.is_demo ?? false,
     createdAt:       r.created_at ?? null,
     updatedAt:       r.updated_at ?? null,
@@ -144,6 +145,25 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     setRequests(prev => prev.filter(r => r.id !== id));
   }, [canWrite]);
 
+  // Avisa o solicitante por e-mail (aprovado/rejeitado) via edge function —
+  // nunca lança: falha de e-mail não pode desfazer uma aprovação/rejeição já
+  // gravada. O erro fica em email_error (lido de volta do banco) pra tela
+  // oferecer "tentar de novo" sem precisar re-aprovar/rejeitar.
+  const sendStatusEmail = useCallback(async (id) => {
+    try {
+      const { data, error: err } = await supabase.functions.invoke("send-request-status-email", {
+        body: { request_id: id },
+      });
+      const emailError = err ? (err.message || String(err)) : (data?.error || null);
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, emailError } : r));
+      return { ok: !emailError, error: emailError };
+    } catch (e) {
+      const emailError = e?.message || String(e);
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, emailError } : r));
+      return { ok: false, error: emailError };
+    }
+  }, []);
+
   // Cria a entrega e aprova a solicitação numa única transação no banco
   // (RPC approve_marketing_request) — substitui o antigo par
   // createDeliverable + approveRequest, que fazia 2 escritas separadas com
@@ -161,8 +181,9 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
         ? { ...r, status: "aprovado", approvedAt: now, approvedBy: userId ?? null, deliverableId: data ?? null }
         : r
     ));
-    return data;
-  }, [canWrite, userId]);
+    const emailResult = await sendStatusEmail(id);
+    return { deliverableId: data, ...emailResult };
+  }, [canWrite, userId, sendStatusEmail]);
 
   const rejectRequest = useCallback(async (id, reason) => {
     if (!isSupabaseConfigured || !canWrite) return;
@@ -175,7 +196,8 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     setRequests(prev => prev.map(r =>
       r.id === id ? { ...r, status: "rejeitado", rejectionReason: reason ?? null } : r
     ));
-  }, [canWrite]);
+    return sendStatusEmail(id);
+  }, [canWrite, sendStatusEmail]);
 
   const loadDemoRequests = useCallback(async (demoRequests) => {
     if (!isSupabaseConfigured) return;
@@ -203,6 +225,7 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     deleteRequest,
     approveAndCreateDeliverable,
     rejectRequest,
+    sendStatusEmail,
     loadDemoRequests,
     clearDemoRequests,
     refetch: fetchAll,

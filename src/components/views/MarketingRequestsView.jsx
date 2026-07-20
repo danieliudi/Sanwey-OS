@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Inbox, CheckCircle2, XCircle, Clock, Filter, Plus, ChevronDown,
   CalendarDays, Building2, Tag, AlertCircle, ExternalLink, Copy, Check,
+  RefreshCw,
 } from "lucide-react";
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -148,7 +149,7 @@ function ApproveModal({ request, onConfirm, onClose }) {
 }
 
 /* ── Request Card ─────────────────────────────────────────────────── */
-function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNumber }) {
+function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNumber, onResendEmail, sendingEmail }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -235,6 +236,17 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
             Entrega criada
           </span>
         )}
+
+        {canWrite && request.status !== "pendente" && request.emailError && (
+          <button
+            onClick={() => onResendEmail(request)}
+            disabled={sendingEmail}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
+            style={{ background: "#FEF3C7", color: "#D97706" }}
+          >
+            <RefreshCw size={13} /> {sendingEmail ? "Enviando…" : "Tentar enviar e-mail de novo"}
+          </button>
+        )}
       </div>
 
       {/* Expandable description */}
@@ -262,6 +274,12 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
       {request.status === "rejeitado" && request.rejectionReason && (
         <div className="mt-2 text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>
           <strong>Motivo:</strong> {request.rejectionReason}
+        </div>
+      )}
+
+      {request.status !== "pendente" && request.emailError && (
+        <div className="mt-2 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5" style={{ background: "#FEF3C7", color: "#92400E" }}>
+          <AlertCircle size={12} /> Falha ao avisar o solicitante por e-mail: {request.emailError}
         </div>
       )}
 
@@ -306,13 +324,14 @@ function CopyLinkButton() {
 export function MarketingRequestsView({ user, users }) {
   const {
     requests, loading, error, canWrite,
-    approveAndCreateDeliverable, rejectRequest, updateRequest,
+    approveAndCreateDeliverable, rejectRequest, sendStatusEmail, updateRequest,
   } = useMarketingRequests({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const [statusFilter, setStatusFilter]   = useState("pendente");
   const [approvingReq, setApprovingReq]   = useState(null);
   const [rejectingReq, setRejectingReq]   = useState(null);
   const [actionError,  setActionError]    = useState(null);
+  const [sendingEmailId, setSendingEmailId] = useState(null);
 
   const filtered = useMemo(() => {
     if (statusFilter === "all") return requests;
@@ -332,8 +351,11 @@ export function MarketingRequestsView({ user, users }) {
       // Cria a entrega em Entregas e marca a solicitação como aprovada numa
       // única transação no banco (approve_marketing_request) — antes eram 2
       // escritas separadas do cliente, com risco de deliverable órfão se a
-      // 2ª falhasse (achado da auditoria completa).
-      await approveAndCreateDeliverable(approvingReq.id, notes);
+      // 2ª falhasse (achado da auditoria completa). Em seguida avisa o
+      // solicitante por e-mail — falha no envio não desfaz a aprovação, só
+      // fica visível no card com opção de tentar de novo.
+      const res = await approveAndCreateDeliverable(approvingReq.id, notes);
+      if (res?.error) setActionError(`Solicitação aprovada, mas o e-mail não pôde ser enviado: ${res.error}`);
     } catch (e) {
       setActionError(e.message || "Erro ao aprovar solicitação.");
     } finally {
@@ -345,11 +367,23 @@ export function MarketingRequestsView({ user, users }) {
     if (!rejectingReq) return;
     setActionError(null);
     try {
-      await rejectRequest(rejectingReq.id, reason);
+      const res = await rejectRequest(rejectingReq.id, reason);
+      if (res?.error) setActionError(`Solicitação rejeitada, mas o e-mail não pôde ser enviado: ${res.error}`);
     } catch (e) {
       setActionError(e.message || "Erro ao rejeitar solicitação.");
     } finally {
       setRejectingReq(null);
+    }
+  };
+
+  const handleResendEmail = async (request) => {
+    setActionError(null);
+    setSendingEmailId(request.id);
+    try {
+      const res = await sendStatusEmail(request.id);
+      if (!res.ok) setActionError(`Falha ao enviar e-mail: ${res.error}`);
+    } finally {
+      setSendingEmailId(null);
     }
   };
 
@@ -442,6 +476,8 @@ export function MarketingRequestsView({ user, users }) {
               onApprove={(r) => { setActionError(null); setApprovingReq(r); }}
               onReject={(r)  => { setActionError(null); setRejectingReq(r); }}
               onUpdateRequestNumber={(id, next) => updateRequest(id, { requestNumber: next })}
+              onResendEmail={handleResendEmail}
+              sendingEmail={sendingEmailId === req.id}
             />
           ))}
         </div>
