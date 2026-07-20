@@ -988,6 +988,89 @@ function VagaKanbanColumn({
   );
 }
 
+// ── Formulário fixo por etapa (pedido do usuário — mesmo espírito do
+// BriefingFields/AprovacaoFields/etc. do CampaignDetailDrawer, só que aqui
+// usando o RHStageFieldInput já existente e gravando no mesmo custom_fields
+// jsonb dos campos configuráveis pelo admin — sem migration nova). Proposta
+// inicial de campos por etapa; ajustar conforme feedback.
+const VAGA_STAGE_FIELDS = {
+  rascunho: [
+    { fieldKey: "aprovacao_interna",         fieldType: "radio",     label: "Aprovação interna necessária?", options: ["Sim", "Não"] },
+    { fieldKey: "data_prevista_publicacao",  fieldType: "date",      label: "Data prevista de publicação" },
+    { fieldKey: "observacoes_rascunho",      fieldType: "textarea",  label: "Observações", placeholder: "Notas sobre a abertura da vaga…" },
+  ],
+  publicada: [
+    { fieldKey: "canais_divulgacao", fieldType: "multicheck", label: "Canais de divulgação", options: ["LinkedIn", "Gupy", "Site da empresa", "Indicação interna", "Outro"] },
+    { fieldKey: "data_publicacao",   fieldType: "date",       label: "Data de publicação" },
+    { fieldKey: "meta_candidatos",   fieldType: "number",     label: "Meta de candidatos", placeholder: "Ex: 15" },
+  ],
+  em_triagem: [
+    { fieldKey: "responsavel_triagem", fieldType: "user",  label: "Responsável pela triagem" },
+    { fieldKey: "prazo_triagem",       fieldType: "date",  label: "Prazo para concluir a triagem" },
+    { fieldKey: "status_triagem",      fieldType: "radio", label: "Status da triagem", options: ["Em andamento", "Concluída"] },
+  ],
+  encerrada: [
+    { fieldKey: "motivo_encerramento", fieldType: "select", label: "Motivo do encerramento", options: ["Vaga preenchida", "Cancelada", "Sem candidatos aptos", "Outro"] },
+    { fieldKey: "data_encerramento",   fieldType: "date",   label: "Data de encerramento" },
+  ],
+};
+
+const CANDIDATO_STAGE_FIELDS = {
+  triagem: [
+    { fieldKey: "curriculo_avaliado", fieldType: "radio",  label: "Currículo avaliado?", options: ["Sim", "Não"] },
+    { fieldKey: "nota_triagem",       fieldType: "number", label: "Nota da triagem (0–10)", placeholder: "0–10" },
+  ],
+  entrevista1: [
+    { fieldKey: "data_entrevista_rh",     fieldType: "date",     label: "Data da entrevista" },
+    { fieldKey: "entrevistador_rh",       fieldType: "user",     label: "Entrevistador" },
+    { fieldKey: "parecer_entrevista_rh",  fieldType: "select",   label: "Parecer", options: ["Aprovado", "Reprovado", "Aguardando"] },
+    { fieldKey: "obs_entrevista_rh",      fieldType: "textarea", label: "Observações" },
+  ],
+  entrevista2: [
+    { fieldKey: "data_entrevista_gestor",    fieldType: "date",     label: "Data da entrevista" },
+    { fieldKey: "entrevistador_gestor",      fieldType: "text",    label: "Gestor entrevistador" },
+    { fieldKey: "parecer_entrevista_gestor", fieldType: "select",  label: "Parecer", options: ["Aprovado", "Reprovado", "Aguardando"] },
+    { fieldKey: "obs_entrevista_gestor",     fieldType: "textarea", label: "Observações" },
+  ],
+  tecnico: [
+    { fieldKey: "tipo_teste_tecnico",      fieldType: "text",  label: "Tipo de teste" },
+    { fieldKey: "resultado_teste_tecnico", fieldType: "text",  label: "Resultado / nota" },
+    { fieldKey: "aprovado_teste_tecnico",  fieldType: "radio", label: "Aprovado no teste?", options: ["Sim", "Não"] },
+  ],
+  proposta: [
+    { fieldKey: "salario_proposto",      fieldType: "currency", label: "Salário proposto" },
+    { fieldKey: "data_envio_proposta",   fieldType: "date",     label: "Data de envio da proposta" },
+    { fieldKey: "status_proposta",       fieldType: "select",   label: "Status da proposta", options: ["Aguardando resposta", "Aceita", "Recusada", "Negociando"] },
+  ],
+  // "aprovado" e "reprovado" são terminais: aprovado segue pro fluxo de
+  // contratação já existente (handleSaveHired); reprovado já captura motivo
+  // no próprio fluxo de reprovação (motivoReprovacao), sem duplicar aqui.
+};
+
+function StageFixedFields({ fields, values, onChange, users }) {
+  if (!fields || fields.length === 0) return null;
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8, display: "block" }}>
+        Formulário da etapa
+      </div>
+      <div className="flex flex-col gap-3">
+        {fields.map((field) => (
+          <div key={field.fieldKey}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>{field.label}</div>
+            <RHStageFieldInput
+              field={field}
+              value={values?.[field.fieldKey]}
+              onChange={(val) => onChange(field.fieldKey, val)}
+              users={users}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Vaga Drawer ───────────────────────────────────────────────────────────────
 
 function VagaDrawer({
@@ -1095,6 +1178,13 @@ function VagaDrawer({
 
   const center = (
     <>
+      <StageFixedFields
+        fields={VAGA_STAGE_FIELDS[vaga.stage]}
+        values={vaga.custom_fields}
+        onChange={onCustomFieldChange}
+        users={users}
+      />
+
       {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
       {visibleCustomFields.length > 0 && (
         <div>
@@ -1849,6 +1939,13 @@ function CandidatoDrawer({
 
   const center = (
     <>
+      <StageFixedFields
+        fields={CANDIDATO_STAGE_FIELDS[candidato.stage]}
+        values={candidato.customFields}
+        onChange={onCustomFieldChange}
+        users={users}
+      />
+
       {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
       {visibleCustomFields.length > 0 && (
         <div>
