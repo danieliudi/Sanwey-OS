@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
   Filter, CalendarDays, LayoutGrid, List, Pencil, Settings2, AlertCircle,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
@@ -16,13 +17,12 @@ import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
 } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
-import { formatDateBR, localDateInputToISOString } from "../../utils/date";
+import { formatDateBR, localDateInputToISOString, parseDateInput } from "../../utils/date";
 import { useUsersById }  from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { DeliverableDetailDrawer, STAGE_FIELDS } from "../campaign/DeliverableDetailDrawer";
-import { EmptyState } from "../ui/EmptyState";
 import { AvatarStack } from "../shared/AvatarStack";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -463,6 +463,172 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/* ── Calendário ───────────────────────────────────────────────── */
+
+const CAL_MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const CAL_DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const CAL_MAX_VISIBLE = 3;
+
+function calStartOfDay(d) {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+function calAddDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+function calDayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Entregas têm um prazo de um dia só (sem intervalo), diferente do
+// CampaignCalendar (campanhas com launchDate/endDate) — por isso um grid
+// próprio e mais simples, em vez de reaproveitar aquele componente.
+function DeliverableCalendarView({ deliverables, stages, onSelect }) {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const today = useMemo(() => calStartOfDay(new Date()), []);
+
+  const prevMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  const goToday   = () => { const n = new Date(); setCurrentMonth(new Date(n.getFullYear(), n.getMonth(), 1)); };
+
+  const weeks = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay  = new Date(year, month + 1, 0);
+    const gridStart = new Date(firstDay);
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+    const weeksArr = [];
+    let curr = new Date(gridStart);
+    while (curr <= lastDay || weeksArr.length < 4) {
+      const week = [];
+      for (let i = 0; i < 7; i++) { week.push(new Date(curr)); curr = calAddDays(curr, 1); }
+      weeksArr.push(week);
+      if (weeksArr.length >= 6) break;
+    }
+    return weeksArr;
+  }, [currentMonth]);
+
+  const { byDay, noDeadlineCount } = useMemo(() => {
+    const map = new Map();
+    let noDeadline = 0;
+    deliverables.forEach(item => {
+      if (!item.deadline) { noDeadline++; return; }
+      const key = calDayKey(calStartOfDay(parseDateInput(item.deadline)));
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(item);
+    });
+    return { byDay: map, noDeadlineCount: noDeadline };
+  }, [deliverables]);
+
+  const currentMonthNum = currentMonth.getMonth();
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="font-bold" style={{ fontSize: 20, color: "var(--text)", letterSpacing: "-0.01em" }}>
+            {CAL_MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+          </h2>
+          <button onClick={goToday} className="text-xs px-2.5 py-1 rounded-lg border font-medium"
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}>
+            Hoje
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={prevMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={nextMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+        <div className="grid grid-cols-7" style={{ borderBottom: "1px solid var(--border)" }}>
+          {CAL_DAY_SHORT.map((d, i) => (
+            <div key={d} className="text-center py-2 text-xs font-semibold" style={{ color: "var(--text-dim)", borderRight: i < 6 ? "1px solid var(--border)" : "none" }}>
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7" style={{ borderBottom: wi < weeks.length - 1 ? "1px solid var(--border)" : "none" }}>
+            {week.map((day, di) => {
+              const isCurrentMonth = day.getMonth() === currentMonthNum;
+              const isToday = day.getTime() === today.getTime();
+              const isWeekend = di === 0 || di === 6;
+              const items = byDay.get(calDayKey(day)) || [];
+              const visible = items.slice(0, CAL_MAX_VISIBLE);
+              const overflow = items.length - visible.length;
+              return (
+                <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
+                  <div className="flex justify-center mb-1">
+                    <span className="flex items-center justify-center text-xs font-semibold select-none"
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      {day.getDate()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {visible.map(item => {
+                      const stage = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
+                      const color = stage?.color || "var(--text-dim)";
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => onSelect(item)}
+                          title={item.title}
+                          className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                        >
+                          {item.requestNumber ? `${item.requestNumber} ` : ""}{item.title}
+                        </button>
+                      );
+                    })}
+                    {overflow > 0 && (
+                      <span style={{ fontSize: 10, color: "var(--text-dim)", paddingLeft: 4 }}>+{overflow} mais</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
+        <span className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>Etapas:</span>
+        {(stages || DELIVERABLE_STAGES).map(s => (
+          <div key={s.id} className="flex items-center gap-1.5">
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
+            <span className="text-xs" style={{ color: "var(--text-dim)" }}>{s.name}</span>
+          </div>
+        ))}
+      </div>
+
+      {noDeadlineCount > 0 && (
+        <p className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
+          {noDeadlineCount} entrega{noDeadlineCount > 1 ? "s" : ""} sem prazo definido não {noDeadlineCount > 1 ? "aparecem" : "aparece"} nesta visão — confira na Tabela ou no Kanban.
+        </p>
+      )}
     </div>
   );
 }
@@ -925,10 +1091,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       )}
 
       {!loading && !loadingStages && viewMode === "calendar" && (
-        <EmptyState
-          icon={CalendarDays}
-          title="Vista de calendário em breve"
-          description="As entregas serão exibidas por prazo nesta visão."
+        <DeliverableCalendarView
+          deliverables={filtered}
+          stages={kanbanStages}
+          onSelect={setSelected}
         />
       )}
 
