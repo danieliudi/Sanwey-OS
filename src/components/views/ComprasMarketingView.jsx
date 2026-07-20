@@ -13,6 +13,7 @@ import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR, parseDateInput } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MoveStageMenu } from "../shared/MoveStageMenu";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
@@ -93,13 +94,25 @@ function CopyLinkButton() {
 }
 
 /* ── Kanban card ──────────────────────────────────────────────────────── */
-function PurchaseKanbanCard({ purchase, supplier, users, onClick }) {
+function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onDragStart, onDragEnd, stages, onMoveToStage }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const responsibleIds = purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []);
   const resolvedResponsible = responsibleIds.map(id => users?.find(u => u.id === id)).filter(Boolean);
   const firstResponsible = resolvedResponsible[0];
+  // Solicitado só avança pra Aprovado (via approvePurchase — mantém
+  // approved_by/approved_at corretos); pular direto pras etapas seguintes
+  // no menu deixaria a aprovação sem responsável registrado. As demais
+  // etapas avançam livremente entre si; "pago" (terminal) só por
+  // arrastar/drawer, não aparece no menu — mesmo padrão de Entregas/Vagas.
+  const moveTargets = purchase.stage === "solicitado"
+    ? (stages || PURCHASE_STAGES).filter(s => s.id === "aprovado")
+    : (stages || PURCHASE_STAGES).filter(s => s.id !== purchase.stage && !s.terminal);
   return (
     <div
-      onClick={() => onClick(purchase)}
+      draggable={draggable}
+      onDragStart={() => draggable && onDragStart?.(purchase)}
+      onDragEnd={() => onDragEnd?.()}
+      onClick={() => { if (!menuOpen) onClick(purchase); }}
       className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" }}
       onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow-pop)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
@@ -109,9 +122,18 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick }) {
         {purchase.requestNumber && (
           <span className="font-mono font-bold text-xs" style={{ color: "var(--accent)" }}>{purchase.requestNumber}</span>
         )}
-        {purchase.totalValue != null && (
-          <span className="text-xs font-bold" style={{ color: "var(--text)" }}>{formatK(purchase.totalValue)}</span>
-        )}
+        <div className="flex items-center gap-1.5 ml-auto" onClick={e => e.stopPropagation()}>
+          {purchase.totalValue != null && (
+            <span className="text-xs font-bold" style={{ color: "var(--text)" }}>{formatK(purchase.totalValue)}</span>
+          )}
+          {onMoveToStage && moveTargets.length > 0 && (
+            <MoveStageMenu
+              targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: STAGE_COLORS[s.id] }))}
+              onMove={(key) => onMoveToStage(purchase.id, key)}
+              onOpenChange={setMenuOpen}
+            />
+          )}
+        </div>
       </div>
       <div className="font-semibold text-[13px] leading-snug mb-2" style={{ color: "var(--text)" }}>
         {purchase.itemName}
@@ -274,7 +296,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
 }
 
 /* ── Kanban view ──────────────────────────────────────────────────────── */
-function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick }) {
+function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop }) {
   return (
     <div className="hidden lg:block relative">
       <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
@@ -282,10 +304,14 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick }
           {PURCHASE_STAGES.map(stage => {
             const color = STAGE_COLORS[stage.id] || "var(--text-dim)";
             const items = purchases.filter(p => p.stage === stage.id);
+            const isOver = dragOverStage === stage.id;
             return (
               <div key={stage.id}
-                className="flex flex-col rounded-xl border overflow-hidden"
-                style={{ width: 252, minWidth: 252, background: "var(--surface-alt)", borderColor: "var(--border)", minHeight: 420, flexShrink: 0 }}>
+                onDragOver={e => onColumnDragOver(e, stage.id)}
+                onDragLeave={onColumnDragLeave}
+                onDrop={() => onColumnDrop(stage.id)}
+                className="flex flex-col rounded-xl border overflow-hidden transition-all duration-150"
+                style={{ width: 252, minWidth: 252, background: "var(--surface-alt)", borderColor: isOver ? color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${color}30` : "none", minHeight: 420, flexShrink: 0 }}>
                 <div style={{ height: 6, background: color, flexShrink: 0 }} />
                 <div className="px-3.5 pt-3 pb-2.5" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
                   <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
@@ -296,7 +322,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick }
                 <div className="px-2 pt-2 pb-2 flex-1 overflow-y-auto" style={{ maxHeight: "62vh", display: "flex", flexDirection: "column", gap: 6 }}>
                   {items.length === 0 ? (
                     <div className="text-center py-8 text-xs" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
-                      Nenhuma solicitação
+                      {isOver ? "Soltar aqui" : "Nenhuma solicitação"}
                     </div>
                   ) : (
                     items.map(p => (
@@ -306,6 +332,10 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick }
                         supplier={suppliersById.get(p.supplierId)}
                         users={users}
                         onClick={onCardClick}
+                        draggable
+                        onDragStart={onDragStart}
+                        onDragEnd={onDragEnd}
+                        onMoveToStage={onMoveToStage}
                       />
                     ))
                   )}
@@ -319,7 +349,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick }
   );
 }
 
-function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick }) {
+function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick, onMoveToStage }) {
   const [expanded, setExpanded] = useState(() => new Set(["solicitado"]));
   const toggle = (id) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   return (
@@ -340,7 +370,7 @@ function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick 
                 {items.length === 0
                   ? <div className="text-center py-3 text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma solicitação</div>
                   : items.map(p => (
-                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} users={users} onClick={onCardClick} />
+                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} users={users} onClick={onCardClick} onMoveToStage={onMoveToStage} />
                   ))}
               </div>
             )}
@@ -523,6 +553,9 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
   const [showCreate, setShowCreate] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverStage, setDragOverStage] = useState(null);
+  const [stageError, setStageError] = useState(null);
 
   const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
   const suppliersById = useMemo(() => new Map((suppliers || []).map(s => [s.id, s])), [suppliers]);
@@ -545,6 +578,41 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
   }, []);
 
   const handleCreate = useCallback(async (purchase) => { await createPurchase(purchase); }, [createPurchase]);
+
+  // "Solicitado" só avança pra "Aprovado" via approvePurchase (RPC) — grava
+  // approved_by/approved_at, o que um updatePurchase direto não faz. As
+  // demais etapas usam updatePurchase normal; "pago" exige nota fiscal
+  // (trigger no banco), erro vira mensagem em vez de falhar silencioso.
+  const attemptStageChange = useCallback(async (id, toStage) => {
+    const purchase = purchasesRef.current.find(p => p.id === id);
+    if (!purchase || purchase.stage === toStage) return;
+    setStageError(null);
+    try {
+      if (purchase.stage === "solicitado") {
+        if (toStage !== "aprovado") {
+          setStageError(`Não dá pra mover "${purchase.itemName}" direto pra essa etapa — aprove a solicitação primeiro.`);
+          return;
+        }
+        await approvePurchase(id, user?.id || null);
+      } else {
+        await updatePurchase(id, { stage: toStage });
+      }
+    } catch (err) {
+      setStageError(err?.message || `Não foi possível mover "${purchase.itemName}".`);
+    }
+  }, [approvePurchase, updatePurchase, user?.id]);
+
+  const handleDragStart = useCallback((item) => setDraggedItem(item), []);
+  const handleDragEnd   = useCallback(() => setDraggedItem(null), []);
+  const handleColumnDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
+  const handleColumnDragLeave = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }, []);
+  const handleColumnDrop = useCallback(async (toStage) => {
+    setDragOverStage(null);
+    if (!draggedItem) return;
+    const item = draggedItem;
+    setDraggedItem(null);
+    if (item.stage !== toStage) await attemptStageChange(item.id, toStage);
+  }, [draggedItem, attemptStageChange]);
 
   return (
     <div>
@@ -622,14 +690,27 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
         <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{error}</div>
       )}
 
+      {stageError && (
+        <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "#FEF3C7", color: "#92400E" }}>{stageError}</div>
+      )}
+
       {loading ? (
         <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando solicitações…</div>
       ) : visiblePurchases.length === 0 ? (
         <EmptyState icon={ShoppingCart} title="Nenhuma solicitação de compra" description="Solicitações enviadas pelo link público ou criadas internamente aparecerão aqui." />
       ) : viewMode === "kanban" ? (
         <>
-          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} />
-          <KanbanBoard purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} />
+          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} />
+          <KanbanBoard
+            purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onMoveToStage={attemptStageChange}
+            dragOverStage={dragOverStage}
+            onColumnDragOver={handleColumnDragOver}
+            onColumnDragLeave={handleColumnDragLeave}
+            onColumnDrop={handleColumnDrop}
+          />
         </>
       ) : viewMode === "table" ? (
         <TableView purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} onRowClick={setSelected} />
