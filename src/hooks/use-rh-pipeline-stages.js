@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const TABLE = "rh_pipeline_stages";
@@ -125,8 +125,18 @@ export function useRHPipelineStages(domain) {
     ));
   }, []);
 
+  // Memoizado — sem isso, cada render devolvia um array novo (mesmo com o
+  // mesmo conteúdo), e qualquer useEffect com `stages` na dependência (ex:
+  // RHStageEditorModal semeando o rascunho local) disparava de novo a cada
+  // render e apagava o que acabou de ser adicionado localmente. Era por
+  // isso que "+ Adicionar etapa" parecia não fazer nada.
+  const sortedStages = useMemo(
+    () => [...stages].sort((a, b) => a.orderIdx - b.orderIdx),
+    [stages]
+  );
+
   return {
-    stages: [...stages].sort((a, b) => a.orderIdx - b.orderIdx),
+    stages: sortedStages,
     loading,
     error,
     addStage,

@@ -200,7 +200,7 @@ function OnboardingCardBody({ colaborador, tarefas, vagaTitle }) {
 
 function OnboardingKanbanColumn({
   stage, stages, colaboradoresList, tarefasByColaborador, vagasById,
-  onCardClick, onDragStart, onDragEnd, onMoveToStage,
+  onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, onAddColaborador,
 }) {
@@ -215,7 +215,11 @@ function OnboardingKanbanColumn({
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        maxHeight: "calc(100vh - 260px)",
+        // Altura fixa (não máxima) — senão a coluna encolhia pro tamanho do
+        // conteúdo quando tinha poucos cards, e a barra de scroll horizontal
+        // (que fica logo abaixo das colunas) subia junto em vez de ficar
+        // sempre no rodapé da tela.
+        height: "calc(100vh - 260px)",
       }}
     >
       {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
@@ -271,6 +275,7 @@ function OnboardingKanbanColumn({
               onDragStart={canWrite ? onDragStart : undefined}
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
+              onDeleteCard={canWrite ? onDeleteCard : undefined}
               agingDays={daysInStage(c.onboardingStageChangedAt)}
               completeness={getCompleteness?.(c)}
             >
@@ -975,7 +980,7 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
 
 export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentions }) {
   const { templates, tarefas, loading: loadingTarefas, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, deleteTarefa } = useRHOnboarding({ userId: currentUser?.id });
-  const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador, createColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador, createColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
@@ -1059,6 +1064,16 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
       setDrawerColaboradorId(null);
       reopenAfterMove(setDrawerColaboradorId, id);
     }
+  };
+
+  // Excluir card no menu "…" do Kanban — apaga o colaborador por completo
+  // (rh_colaboradores é o cadastro mestre, compartilhado com Treinamentos/
+  // Avaliação/Férias), mesmo padrão de confirmação inline do MoveStageMenu
+  // usado nos outros domínios de RH. Fecha o drawer se estava aberto nesse
+  // colaborador.
+  const handleDeleteColaborador = async (id) => {
+    await deleteColaborador(id);
+    if (drawerColaboradorId === id) setDrawerColaboradorId(null);
   };
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
@@ -1257,6 +1272,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
                 onDragStart={canWrite ? handleCardDragStart : undefined}
                 onDragEnd={canWrite ? handleCardDragEnd : undefined}
                 onMoveToStage={canWrite ? handleStageChange : undefined}
+                onDeleteCard={canWrite ? handleDeleteColaborador : undefined}
                 agingDays={daysInStage(c.onboardingStageChangedAt)}
                 completeness={getColaboradorCompleteness?.(c)}
               >
@@ -1284,6 +1300,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
                 onDragStart={handleCardDragStart}
                 onDragEnd={handleCardDragEnd}
                 onMoveToStage={handleStageChange}
+                onDeleteCard={handleDeleteColaborador}
                 isDragOver={dragOverStageKey === stage.stageKey}
                 onColumnDragOver={handleColumnDragOver}
                 onColumnDragLeave={handleColumnDragLeave}

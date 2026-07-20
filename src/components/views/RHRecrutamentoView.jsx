@@ -916,7 +916,10 @@ function VagaKanbanColumn({
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        maxHeight: "calc(100vh - 260px)",
+        // Altura fixa (não máxima) — senão a barra de scroll horizontal
+        // subia junto com colunas de poucos cards em vez de ficar sempre
+        // no rodapé da tela.
+        height: "calc(100vh - 260px)",
       }}
     >
       {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
@@ -2342,7 +2345,10 @@ function KanbanColumn({
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        maxHeight: "calc(100vh - 220px)",
+        // Altura fixa (não máxima) — senão a barra de scroll horizontal
+        // subia junto com colunas de poucos cards em vez de ficar sempre
+        // no rodapé da tela.
+        height: "calc(100vh - 220px)",
       }}
     >
       {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de

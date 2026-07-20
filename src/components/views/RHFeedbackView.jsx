@@ -658,7 +658,10 @@ function FeedbackKanbanColumn({
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        maxHeight: "calc(100vh - 260px)",
+        // Altura fixa (não máxima) — senão a barra de scroll horizontal
+        // subia junto com colunas de poucos cards em vez de ficar sempre
+        // no rodapé da tela.
+        height: "calc(100vh - 260px)",
       }}
     >
       <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
