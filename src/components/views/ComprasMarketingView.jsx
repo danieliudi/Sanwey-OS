@@ -166,8 +166,6 @@ function CreateModal({ currentUser, onCreate, onClose }) {
     itemName:       "",
     description:    "",
     requesterName:  currentUser?.name || "",
-    requesterEmail: currentUser?.email || "",
-    requesterPhone: "",
     dueDate:        "",
     companyIds:     currentUser?.companies?.length > 0 ? [currentUser.companies[0]] : [],
   });
@@ -203,8 +201,6 @@ function CreateModal({ currentUser, onCreate, onClose }) {
         itemName:       form.itemName.trim(),
         description:    form.description.trim() || null,
         requesterName:  form.requesterName.trim(),
-        requesterEmail: form.requesterEmail.trim() || null,
-        requesterPhone: form.requesterPhone.trim() || null,
         dueDate:        form.dueDate || null,
         companyIds:     form.companyIds,
         stage:          "solicitado",
@@ -249,18 +245,6 @@ function CreateModal({ currentUser, onCreate, onClose }) {
             <div>
               <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Prazo desejado</label>
               <input type="date" value={form.dueDate} onChange={e => set("dueDate", e.target.value)}
-                className="w-full text-sm rounded-lg px-3 py-2 border" style={{ background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text)" }} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>E-mail</label>
-              <input type="email" value={form.requesterEmail} onChange={e => set("requesterEmail", e.target.value)}
-                className="w-full text-sm rounded-lg px-3 py-2 border" style={{ background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text)" }} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Telefone</label>
-              <input value={form.requesterPhone} onChange={e => set("requesterPhone", e.target.value)}
                 className="w-full text-sm rounded-lg px-3 py-2 border" style={{ background: "var(--surface-alt)", borderColor: "var(--border)", color: "var(--text)" }} />
             </div>
           </div>

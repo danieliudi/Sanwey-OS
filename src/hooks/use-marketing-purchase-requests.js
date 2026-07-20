@@ -123,7 +123,12 @@ export function useMarketingPurchaseRequests({ enabled = true } = {}) {
     const row = purchaseToRow(purchase);
     const { data, error: err } = await supabase.from(TABLE).insert(row).select().single();
     if (err) throw err;
-    return rowToPurchase(data);
+    const created = rowToPurchase(data);
+    // Update otimista — não depender só do realtime (a publicação do banco
+    // não tinha essa tabela até agora, então o card só aparecia com refresh
+    // manual; ver migration enable_realtime_publication_all_tables).
+    setPurchases(prev => prev.some(p => p.id === created.id) ? prev : [created, ...prev]);
+    return created;
   }, []);
 
   const updatePurchase = useCallback(async (id, patch) => {

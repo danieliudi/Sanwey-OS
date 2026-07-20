@@ -70,8 +70,6 @@ export default function PurchaseRequestForm() {
     itemName:       "",
     description:    "",
     requesterName:  "",
-    requesterEmail: "",
-    requesterPhone: "",
     dueDate:        "",
     companyIds:     [],
   });
@@ -128,8 +126,6 @@ export default function PurchaseRequestForm() {
         item_name:        form.itemName.trim(),
         description:      form.description.trim() || null,
         requester_name:   form.requesterName.trim(),
-        requester_email:  form.requesterEmail.trim() || null,
-        requester_phone:  form.requesterPhone.trim() || null,
         due_date:         form.dueDate || null,
         company_ids:      form.companyIds.length > 0 ? form.companyIds : MARKETING_UNIT_IDS,
         stage:            "solicitado",
@@ -205,34 +201,13 @@ export default function PurchaseRequestForm() {
         </header>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Quem solicita */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <Field label="Seu nome" required>
-              <input
-                type="text"
-                value={form.requesterName}
-                onChange={e => set("requesterName", e.target.value)}
-                placeholder="Nome completo"
-                style={input}
-              />
-            </Field>
-            <Field label="Seu e-mail">
-              <input
-                type="email"
-                value={form.requesterEmail}
-                onChange={e => set("requesterEmail", e.target.value)}
-                placeholder="email@empresa.com"
-                style={input}
-              />
-            </Field>
-          </div>
-
-          <Field label="Seu telefone">
+          {/* Quem solicita — processo interno, nome já basta pra identificar */}
+          <Field label="Seu nome" required>
             <input
-              type="tel"
-              value={form.requesterPhone}
-              onChange={e => set("requesterPhone", e.target.value)}
-              placeholder="(00) 00000-0000"
+              type="text"
+              value={form.requesterName}
+              onChange={e => set("requesterName", e.target.value)}
+              placeholder="Nome completo"
               style={input}
             />
           </Field>
