@@ -20,6 +20,8 @@ import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion"
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
@@ -539,7 +541,7 @@ function TreinamentoBoardColumn({
   stage, stages, atribList, colaboradoresById,
   onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteAtribuicao,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields, getCompleteness,
+  canWrite, onEditFields, getCompleteness, getUnread,
 }) {
   return (
     <div
@@ -578,6 +580,7 @@ function TreinamentoBoardColumn({
               onDeleteCard={canWrite ? onDeleteAtribuicao : undefined}
               agingDays={daysInStage(a.status_changed_at)}
               completeness={getCompleteness?.(a)}
+              unread={getUnread?.(a)}
             >
               <AtribuicaoCardBody atribuicao={a} colaborador={colaboradoresById.get(a.colaborador_id)} />
             </RHKanbanCard>
@@ -590,7 +593,7 @@ function TreinamentoBoardColumn({
 
 function AtribuicaoDrawer({
   atribuicao, treinamento, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, moveError, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onClose, notifyMentions, onDelete, onEditFields,
+  onStageChange, moveError, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onUpdateActivity, onClose, notifyMentions, onDelete, onEditFields,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -749,6 +752,7 @@ function AtribuicaoDrawer({
       <RHDetailComments
         activities={atribuicao.activities || []}
         onAddActivity={onAddActivity}
+        onUpdateActivity={onUpdateActivity ? (activityId, patch) => onUpdateActivity(atribuicao.id, activityId, patch) : undefined}
         currentUser={currentUser}
         users={users}
         notifyMentions={notifyMentions}
@@ -970,7 +974,7 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
 
 function TreinamentoBoardModal({
   treinamento, atribuicoes, colaboradoresById, canWrite, currentUser, users,
-  onChangeStage, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onClose, notifyMentions, onDelete,
+  onChangeStage, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onUpdateActivity, onClose, notifyMentions, onDelete,
 }) {
   const { stages, loading: loadingStages } = useRHPipelineStages("treinamentos");
   const stageFields = useRHStageFields("treinamentos");
@@ -982,6 +986,8 @@ function TreinamentoBoardModal({
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
   const [moveError, setMoveError] = useState(null);
 
+  const { viewedAt, markViewed } = useRecordViews("rh_treinamentos", currentUser?.id);
+
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape" && !drawerId) onClose(); };
     document.addEventListener("keydown", h);
@@ -990,6 +996,7 @@ function TreinamentoBoardModal({
 
   useEffect(() => {
     setMoveError(null);
+    if (drawerId) markViewed(drawerId);
   }, [drawerId]);
 
   const byStage = useMemo(() => {
@@ -1097,6 +1104,7 @@ function TreinamentoBoardModal({
                     onDeleteCard={canWrite ? onDelete : undefined}
                     agingDays={daysInStage(a.status_changed_at)}
                     completeness={getCompleteness?.(a)}
+                    unread={hasUnreadRHComment(a, viewedAt, currentUser?.id)}
                   >
                     <AtribuicaoCardBody atribuicao={a} colaborador={colaboradoresById.get(a.colaborador_id)} />
                   </RHKanbanCard>
@@ -1123,6 +1131,7 @@ function TreinamentoBoardModal({
                     canWrite={canWrite}
                     onEditFields={setFieldEditorStage}
                     getCompleteness={getCompleteness}
+                    getUnread={(a) => hasUnreadRHComment(a, viewedAt, currentUser?.id)}
                   />
                 ))}
               </div>
@@ -1146,6 +1155,7 @@ function TreinamentoBoardModal({
           onUpdateCertificado={(url) => onUpdateCertificado(drawerAtrib.id, url)}
           onReciclar={() => onReciclar(drawerAtrib.id)}
           onAddActivity={(entry) => onAddActivity(drawerAtrib.id, entry)}
+          onUpdateActivity={onUpdateActivity ? (activityId, patch) => onUpdateActivity(drawerAtrib.id, activityId, patch) : undefined}
           onClose={() => setDrawerId(null)}
           notifyMentions={notifyMentions}
           onDelete={onDelete}
@@ -1183,7 +1193,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
   const {
     treinamentos, atribuicoes, loading: loadingTreinamentos, createTreinamento, updateTreinamento,
     assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado,
-    updateAtribuicaoCustomFields, deleteAtribuicao, addAtribuicaoActivity,
+    updateAtribuicaoCustomFields, deleteAtribuicao, addAtribuicaoActivity, updateAtribuicaoActivity,
   } = useRHTreinamentos({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
@@ -1422,6 +1432,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           onUpdateCertificado={updateAtribuicaoCertificado}
           onReciclar={reciclarAtribuicao}
           onAddActivity={addAtribuicaoActivity}
+          onUpdateActivity={updateAtribuicaoActivity}
           onClose={() => setBoardTreinamento(null)}
           notifyMentions={notifyMentions}
           onDelete={deleteAtribuicao}

@@ -58,6 +58,8 @@ import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { EmptyState } from "../ui/EmptyState";
@@ -903,7 +905,7 @@ function VagaCard({ vaga, candidatosCount, usersById }) {
 function VagaKanbanColumn({
   stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
   onMoveToStage, onDeleteVaga, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
-  getCompleteness, onAddVaga, usersById,
+  getCompleteness, getUnread, onAddVaga, usersById,
 }) {
   return (
     <div
@@ -978,6 +980,7 @@ function VagaKanbanColumn({
               onDeleteCard={canWrite ? onDeleteVaga : undefined}
               agingDays={daysInStage(v.stage_changed_at)}
               completeness={getCompleteness?.(v)}
+              unread={getUnread?.(v)}
             >
               <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
             </RHKanbanCard>
@@ -1075,7 +1078,7 @@ function StageFixedFields({ fields, values, onChange, users }) {
 
 function VagaDrawer({
   vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onCopyLink, onClose, onVerCandidatos, copiedSlug,
-  customFields, onCustomFieldChange, onAddActivity, currentUser, users, moveError, notifyMentions, onUpdateResponsibles,
+  customFields, onCustomFieldChange, onAddActivity, onUpdateActivity, currentUser, users, moveError, notifyMentions, onUpdateResponsibles,
   onDelete, onEditFields,
 }) {
   useEffect(() => {
@@ -1335,6 +1338,7 @@ function VagaDrawer({
       <RHDetailComments
         activities={vaga.activities || []}
         onAddActivity={onAddActivity}
+        onUpdateActivity={onUpdateActivity ? (activityId, patch) => onUpdateActivity(vaga.id, activityId, patch) : undefined}
         currentUser={currentUser}
         users={users}
         notifyMentions={notifyMentions}
@@ -1777,7 +1781,7 @@ function NovoCandidatoModal({ defaultStage, defaultVagaId, vagas, stages, onSave
 
 function CandidatoDrawer({
   candidato, vagas, stages, canWrite, onStageChange, onStageMoved, onAddNote, onRatingChange, onClose, onHire,
-  customFields, onCustomFieldChange, onAddActivity, currentUser, users, notifyMentions, onDelete, onEditFields,
+  customFields, onCustomFieldChange, onAddActivity, onUpdateActivity, currentUser, users, notifyMentions, onDelete, onEditFields,
 }) {
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
@@ -2168,6 +2172,7 @@ function CandidatoDrawer({
       <RHDetailComments
         activities={candidato.activities || []}
         onAddActivity={onAddActivity}
+        onUpdateActivity={onUpdateActivity ? (activityId, patch) => onUpdateActivity(candidato.id, activityId, patch) : undefined}
         currentUser={currentUser}
         users={users}
         notifyMentions={notifyMentions}
@@ -2429,7 +2434,7 @@ function CandidatoCardBody({ candidato: c, vagas }) {
 function KanbanColumn({
   stage, stages, candidatos, vagas, canWrite, onCardClick, onAddCandidato,
   onMoveToStage, onDeleteCandidato, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
-  getCompleteness,
+  getCompleteness, getUnread,
 }) {
   return (
     <div
@@ -2506,6 +2511,7 @@ function KanbanColumn({
               onDeleteCard={canWrite ? onDeleteCandidato : undefined}
               agingDays={daysInStage(c.stage_changed_at)}
               completeness={getCompleteness?.(c)}
+              unread={getUnread?.(c)}
             >
               <CandidatoCardBody candidato={c} vagas={vagas} />
             </RHKanbanCard>
@@ -2738,6 +2744,11 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const [triagemOpen, setTriagemOpen]       = useState(false);
   const [hiringCandidato, setHiringCandidato] = useState(null);
 
+  const { viewedAt: vagaViewedAt, markViewed: markVagaViewed } = useRecordViews("rh_vagas", user?.id);
+  const { viewedAt: candViewedAt, markViewed: markCandViewed } = useRecordViews("rh_candidatos", user?.id);
+  useEffect(() => { if (vagaDrawerId) markVagaViewed(vagaDrawerId); }, [vagaDrawerId]);
+  useEffect(() => { if (selectedCandidatoId) markCandViewed(selectedCandidatoId); }, [selectedCandidatoId]);
+
   // ── Reprovação em massa (Áudio 8): seleção múltipla na tabela de candidatos ──
   const [selectedCandIds, setSelectedCandIds] = useState(() => new Set());
   const [bulkReprovarOpen, setBulkReprovarOpen] = useState(false);
@@ -2947,6 +2958,11 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     const activities = [...(vaga?.activities || []), { id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...entry }];
     await updateVaga(vagaId, { activities });
   };
+  const handleVagaUpdateActivity = async (vagaId, activityId, patch) => {
+    const vaga = vagas.find((v) => v.id === vagaId);
+    const activities = (vaga?.activities || []).map((a) => (a.id === activityId ? { ...a, ...patch } : a));
+    await updateVaga(vagaId, { activities });
+  };
   const handleAplicacaoCustomFieldChange = async (aplicacaoId, fieldKey, value) => {
     const candidato = candidatos.find((c) => c.id === aplicacaoId);
     const custom_fields = { ...(candidato?.customFields || {}), [fieldKey]: value };
@@ -2955,6 +2971,11 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const handleAplicacaoAddActivity = async (aplicacaoId, entry) => {
     const candidato = candidatos.find((c) => c.id === aplicacaoId);
     const activities = [...(candidato?.activities || []), { id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...entry }];
+    await updateAplicacao(aplicacaoId, { activities });
+  };
+  const handleAplicacaoUpdateActivity = async (aplicacaoId, activityId, patch) => {
+    const candidato = candidatos.find((c) => c.id === aplicacaoId);
+    const activities = (candidato?.activities || []).map((a) => (a.id === activityId ? { ...a, ...patch } : a));
     await updateAplicacao(aplicacaoId, { activities });
   };
 
@@ -3147,6 +3168,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                   onDeleteCard={canWrite ? (id) => deleteVaga(id) : undefined}
                   agingDays={daysInStage(v.stage_changed_at)}
                   completeness={getVagaCompleteness?.(v)}
+                  unread={hasUnreadRHComment(v, vagaViewedAt, user?.id)}
                 >
                   <VagaCard vaga={v} candidatosCount={candidatosByVaga[v.id] || 0} usersById={usersById} />
                 </RHKanbanCard>
@@ -3175,6 +3197,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                   onDrop={() => handleVagaDrop(stage.stageKey)}
                   onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
                   getCompleteness={getVagaCompleteness}
+                  getUnread={(v) => hasUnreadRHComment(v, vagaViewedAt, user?.id)}
                   onAddVaga={() => setAddVagaStage(stage.stageKey)}
                   usersById={usersById}
                 />
@@ -3335,6 +3358,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                     onDeleteCard={canWrite ? (id) => deleteAplicacao(id) : undefined}
                     agingDays={daysInStage(c.stage_changed_at)}
                     completeness={getCandCompleteness?.(c)}
+                    unread={hasUnreadRHComment(c, candViewedAt, user?.id)}
                   >
                     <CandidatoCardBody candidato={c} vagas={vagas} />
                   </RHKanbanCard>
@@ -3364,6 +3388,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                     onDrop={() => handleCandDrop(stage.stageKey)}
                     onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
                     getCompleteness={getCandCompleteness}
+                    getUnread={(c) => hasUnreadRHComment(c, candViewedAt, user?.id)}
                   />
                 ))}
               </div>
@@ -3434,6 +3459,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           customFields={vagaStageFields.getFields(vagaEmDrawer.stage)}
           onCustomFieldChange={(fieldKey, value) => handleVagaCustomFieldChange(vagaEmDrawer.id, fieldKey, value)}
           onAddActivity={(entry) => handleVagaAddActivity(vagaEmDrawer.id, entry)}
+          onUpdateActivity={handleVagaUpdateActivity}
           currentUser={user}
           users={profileUsers}
           notifyMentions={notifyMentions}
@@ -3470,6 +3496,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           customFields={candStageFields.getFields(selectedCandidato.stage)}
           onCustomFieldChange={(fieldKey, value) => handleAplicacaoCustomFieldChange(selectedCandidato.id, fieldKey, value)}
           onAddActivity={(entry) => handleAplicacaoAddActivity(selectedCandidato.id, entry)}
+          onUpdateActivity={handleAplicacaoUpdateActivity}
           currentUser={user}
           users={profileUsers}
           notifyMentions={notifyMentions}

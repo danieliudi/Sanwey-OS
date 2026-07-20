@@ -17,6 +17,8 @@ import { useRHFeedback } from "../../hooks/use-rh-feedback";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useProfiles } from "../../hooks/use-profiles";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { nextPendingCycle } from "../../utils/rh-feedback-cycles";
 import { parseDateInput } from "../../utils/date";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
@@ -202,7 +204,7 @@ function OnboardingKanbanColumn({
   stage, stages, colaboradoresList, tarefasByColaborador, vagasById,
   onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields, getCompleteness, onAddColaborador,
+  canWrite, onEditFields, getCompleteness, getUnread, onAddColaborador,
 }) {
   return (
     <div
@@ -278,6 +280,7 @@ function OnboardingKanbanColumn({
               onDeleteCard={canWrite ? onDeleteCard : undefined}
               agingDays={daysInStage(c.onboardingStageChangedAt)}
               completeness={getCompleteness?.(c)}
+              unread={getUnread?.(c)}
             >
               <OnboardingCardBody
                 colaborador={c}
@@ -297,7 +300,7 @@ function OnboardingKanbanColumn({
 function OnboardingDrawer({
   colaborador, tarefas, templates, vagaTitle, canWrite, stages, users, currentUser,
   onStageChange, moveError, onStatusChange, onDeleteTarefa, onApplyTemplate, onAddTask, onClose,
-  onUpdateCustomFields, onAddActivity, notifyMentions,
+  onUpdateCustomFields, onAddActivity, onUpdateActivity, notifyMentions,
 }) {
   const [templateId, setTemplateId] = useState("");
   const [novaTarefa, setNovaTarefa] = useState("");
@@ -537,6 +540,7 @@ function OnboardingDrawer({
       <RHDetailComments
         activities={colaborador.activities || []}
         onAddActivity={onAddActivity}
+        onUpdateActivity={onUpdateActivity ? (activityId, patch) => onUpdateActivity(colaborador.id, activityId, patch) : undefined}
         currentUser={currentUser}
         users={users}
         notifyMentions={notifyMentions}
@@ -999,8 +1003,11 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
   const [moveError, setMoveError] = useState(null);
 
+  const { viewedAt, markViewed } = useRecordViews("rh_onboarding", currentUser?.id);
+
   useEffect(() => {
     setMoveError(null);
+    if (drawerColaboradorId) markViewed(drawerColaboradorId);
   }, [drawerColaboradorId]);
 
   // Ao entrar em "Integração", atribui sozinho os treinamentos obrigatórios
@@ -1108,6 +1115,13 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
     const colaborador = colaboradores.find((c) => c.id === colaboradorId);
     if (!colaborador) return;
     const nextActivities = [...(colaborador.activities || []), entry];
+    await updateColaborador(colaboradorId, { activities: nextActivities });
+  }, [colaboradores, updateColaborador]);
+
+  const handleUpdateActivity = useCallback(async (colaboradorId, activityId, patch) => {
+    const colaborador = colaboradores.find((c) => c.id === colaboradorId);
+    if (!colaborador) return;
+    const nextActivities = (colaborador.activities || []).map((a) => (a.id === activityId ? { ...a, ...patch } : a));
     await updateColaborador(colaboradorId, { activities: nextActivities });
   }, [colaboradores, updateColaborador]);
 
@@ -1275,6 +1289,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
                 onDeleteCard={canWrite ? handleDeleteColaborador : undefined}
                 agingDays={daysInStage(c.onboardingStageChangedAt)}
                 completeness={getColaboradorCompleteness?.(c)}
+                unread={hasUnreadRHComment(c, viewedAt, currentUser?.id)}
               >
                 <OnboardingCardBody
                   colaborador={c}
@@ -1308,6 +1323,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
                 canWrite={canWrite}
                 onEditFields={setFieldEditorStage}
                 getCompleteness={getColaboradorCompleteness}
+                getUnread={(c) => hasUnreadRHComment(c, viewedAt, currentUser?.id)}
                 onAddColaborador={() => setAddColaboradorStage(stage.stageKey)}
               />
             ))}
@@ -1335,6 +1351,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           onClose={() => setDrawerColaboradorId(null)}
           onUpdateCustomFields={(merged) => updateColaborador(drawerColaborador.id, { customFields: merged })}
           onAddActivity={(entry) => handleAddActivity(drawerColaborador.id, entry)}
+          onUpdateActivity={handleUpdateActivity}
         />
       )}
 

@@ -1200,7 +1200,7 @@ export function CampaignDetailDrawer({
     const resolveMentionNames = (ids) => (ids || [])
       .map(id => (users || []).find(u => u.id === id)?.name)
       .filter(Boolean);
-    return [...notes].reverse().map((n, i) => {
+    return [...notes].filter(n => !n.deletedAt).reverse().map((n, i) => {
       const author = n.authorId ? (users || []).find(u => u.id === n.authorId) : null;
       return {
         id: n.id || `note-${i}-${n.createdAt || ""}`,
@@ -1212,9 +1212,16 @@ export function CampaignDetailDrawer({
         text: n.text,
         mentionedNames: resolveMentionNames(n.mentionedIds),
         createdAt: n.createdAt,
+        editedAt: n.editedAt || null,
       };
     });
   }, [campaign?.notes, users]);
+
+  const onUpdateComment = useCallback(async (id, patch) => {
+    if (!campaign) return;
+    const updatedNotes = (campaign.notes || []).map(n => (n.id === id ? { ...n, ...patch } : n));
+    await onUpdate?.(campaign.id, { notes: updatedNotes });
+  }, [campaign, onUpdate]);
 
   const onAddComment = useCallback(async (text, mentionedIds) => {
     if (!campaign) return;
@@ -1583,6 +1590,7 @@ export function CampaignDetailDrawer({
         currentUser={currentUser}
         mentionableUsers={mentionableUsers}
         onAddComment={onAddComment}
+        onUpdateComment={onUpdateComment}
       />
 
       {/* AI move link */}

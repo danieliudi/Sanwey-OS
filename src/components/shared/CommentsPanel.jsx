@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Send, AtSign, MessageCircle } from "lucide-react";
+import { Send, AtSign, MessageCircle, Pencil, Trash2, Check, X } from "lucide-react";
 
 // Painel de comentários unificado (FASE 4) — usado em todo drawer/modal da
 // plataforma que precise de comentários: mesmo formato de comentário em
@@ -54,12 +54,15 @@ function renderTextWithMentions(text, mentionedNames = []) {
   );
 }
 
-export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [], onAddComment, disabled = false }) {
+export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [], onAddComment, onUpdateComment, disabled = false }) {
   const [draft, setDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [mentionQuery, setMentionQuery] = useState(null); // string | null — texto após o "@" atual
   const [mentionStart, setMentionStart] = useState(null);
   const [pickedMentions, setPickedMentions] = useState([]); // [{id, name}]
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
   const textareaRef = useRef(null);
   const feedRef = useRef(null);
 
@@ -142,6 +145,34 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
     }
   };
 
+  const startEdit = (c) => {
+    setConfirmingDeleteId(null);
+    setEditingId(c.id);
+    setEditDraft(c.text);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditDraft("");
+  };
+
+  const saveEdit = async (c) => {
+    const text = editDraft.trim();
+    if (!text || !onUpdateComment) return;
+    if (text === c.text) {
+      cancelEdit();
+      return;
+    }
+    await onUpdateComment(c.id, { text, editedAt: new Date().toISOString() });
+    cancelEdit();
+  };
+
+  const handleDelete = async (c) => {
+    if (!onUpdateComment) return;
+    await onUpdateComment(c.id, { deletedAt: new Date().toISOString() });
+    setConfirmingDeleteId(null);
+  };
+
   return (
     <div className="flex flex-col" style={{ minHeight: 0 }}>
       <div className="flex items-center gap-1.5 mb-2.5 shrink-0">
@@ -166,8 +197,11 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
         ) : (
           chronological.map((c) => {
             const isOwn = !!currentUser && c.authorId === currentUser.id;
+            const canEdit = isOwn && !!c.id && !!onUpdateComment;
+            const isEditing = editingId === c.id;
+            const isConfirmingDelete = confirmingDeleteId === c.id;
             return (
-              <div key={c.id} className={`flex items-end gap-2${isOwn ? " flex-row-reverse justify-end" : ""}`}>
+              <div key={c.id} className={`group flex items-end gap-2${isOwn ? " flex-row-reverse justify-end" : ""}`}>
                 {!isOwn && <Avatar name={c.authorName} avatarBg={c.avatarBg} avatarUrl={c.avatarUrl} initials={c.initials} size={26} />}
                 <div className="flex flex-col min-w-0" style={{ maxWidth: "84%", alignItems: isOwn ? "flex-end" : "flex-start" }}>
                   {!isOwn && (
@@ -175,26 +209,102 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
                       {c.authorName || "Sistema"}
                     </span>
                   )}
-                  <div
-                    className="rounded-2xl px-3 py-2 text-xs"
-                    style={{
-                      // Tingido (não sólido) mesmo pra "minhas" mensagens — um
-                      // fundo sólido var(--accent) com texto branco fica
-                      // ilegível no dark mode, onde --accent vira quase-branco.
-                      // color-mix sobre var(--surface) garante contraste com
-                      // var(--text) nos dois temas.
-                      background: isOwn ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "var(--surface-alt)",
-                      color: "var(--text)",
-                      lineHeight: 1.5,
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      borderBottomRightRadius: isOwn ? 4 : 16,
-                      borderBottomLeftRadius: isOwn ? 16 : 4,
-                    }}
-                  >
-                    {renderTextWithMentions(c.text, (c.mentionedNames || []))}
-                  </div>
-                  <span className="text-[10px] mt-0.5 px-1" style={{ color: "var(--text-faint)" }}>{timeAgo(c.createdAt)}</span>
+                  {isEditing ? (
+                    <div className="flex flex-col gap-1.5" style={{ width: "100%", minWidth: 200 }}>
+                      <textarea
+                        autoFocus
+                        value={editDraft}
+                        onChange={(e) => setEditDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(c); }
+                          else if (e.key === "Escape") cancelEdit();
+                        }}
+                        rows={2}
+                        className="text-xs rounded-xl border px-3 py-2 outline-none resize-none"
+                        style={{ borderColor: "var(--accent)", background: "var(--surface-alt)", color: "var(--text)", lineHeight: 1.4 }}
+                      />
+                      <div className="flex items-center gap-1.5 px-1" style={{ justifyContent: isOwn ? "flex-end" : "flex-start" }}>
+                        <button
+                          onClick={() => saveEdit(c)}
+                          disabled={!editDraft.trim()}
+                          className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold"
+                          style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: "pointer", opacity: editDraft.trim() ? 1 : 0.5 }}
+                        >
+                          <Check size={11} /> Salvar
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium"
+                          style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)", cursor: "pointer" }}
+                        >
+                          <X size={11} /> Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={`flex items-center gap-1${isOwn ? " flex-row-reverse" : ""}`}>
+                      <div
+                        className="rounded-2xl px-3 py-2 text-xs"
+                        style={{
+                          // Tingido (não sólido) mesmo pra "minhas" mensagens — um
+                          // fundo sólido var(--accent) com texto branco fica
+                          // ilegível no dark mode, onde --accent vira quase-branco.
+                          // color-mix sobre var(--surface) garante contraste com
+                          // var(--text) nos dois temas.
+                          background: isOwn ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "var(--surface-alt)",
+                          color: "var(--text)",
+                          lineHeight: 1.5,
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          borderBottomRightRadius: isOwn ? 4 : 16,
+                          borderBottomLeftRadius: isOwn ? 16 : 4,
+                        }}
+                      >
+                        {renderTextWithMentions(c.text, (c.mentionedNames || []))}
+                      </div>
+                      {canEdit && !isConfirmingDelete && (
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          <button
+                            onClick={() => startEdit(c)}
+                            title="Editar comentário"
+                            className="flex items-center justify-center rounded-full"
+                            style={{ width: 22, height: 22, background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer" }}
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            onClick={() => setConfirmingDeleteId(c.id)}
+                            title="Excluir comentário"
+                            className="flex items-center justify-center rounded-full"
+                            style={{ width: 22, height: 22, background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer" }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
+                      {isConfirmingDelete && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleDelete(c)}
+                            className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+                            style={{ background: "var(--danger)", color: "#FFF", border: "none", cursor: "pointer" }}
+                          >
+                            Excluir?
+                          </button>
+                          <button
+                            onClick={() => setConfirmingDeleteId(null)}
+                            className="flex items-center justify-center rounded-full"
+                            style={{ width: 20, height: 20, background: "none", border: "1px solid var(--border)", color: "var(--text-faint)", cursor: "pointer" }}
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <span className="text-[10px] mt-0.5 px-1" style={{ color: "var(--text-faint)" }}>
+                    {timeAgo(c.createdAt)}{c.editedAt ? " · (editado)" : ""}
+                  </span>
                 </div>
               </div>
             );

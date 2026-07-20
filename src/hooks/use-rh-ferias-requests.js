@@ -72,5 +72,15 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
     setRequests(prev => prev.map(r => r.id === id ? { ...r, activities: nextActivities } : r));
   }, [requests]);
 
-  return { requests, loading, createRequest, changeStatus, updateCustomFields, deleteRequest, addActivity, refetch: fetchAll };
+  const updateActivity = useCallback(async (id, activityId, patch) => {
+    const current = requests.find(r => r.id === id);
+    if (!current) return;
+    const nextActivities = (Array.isArray(current.activities) ? current.activities : [])
+      .map(a => (a.id === activityId ? { ...a, ...patch } : a));
+    const { error } = await supabase.from(TABLE).update({ activities: nextActivities }).eq("id", id);
+    if (error) throw new Error(error.message);
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, activities: nextActivities } : r));
+  }, [requests]);
+
+  return { requests, loading, createRequest, changeStatus, updateCustomFields, deleteRequest, addActivity, updateActivity, refetch: fetchAll };
 }

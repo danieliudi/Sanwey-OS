@@ -544,7 +544,7 @@ function RHStageHistoryPanel({ domain, recordId, stages, currentUser, users }) {
 // (painel de comentários) — os dois consomem o mesmo `activities`/
 // `onAddActivity`, só que renderizados em colunas diferentes do drawer
 // agora (abas no centro, comentários sempre visíveis na lateral direita).
-function useRHActivityComments({ activities = [], onAddActivity, currentUser, users = [], notifyMentions, mentionLink, mentionContextLabel }) {
+function useRHActivityComments({ activities = [], onAddActivity, onUpdateActivity, currentUser, users = [], notifyMentions, mentionLink, mentionContextLabel }) {
   // Normaliza o array genérico `activities` (jsonb, compartilhado com a aba
   // Atividades) pro formato que o CommentsPanel compartilhado espera —
   // resolvendo autor/avatar reais via `users` em vez do antigo placeholder
@@ -552,7 +552,7 @@ function useRHActivityComments({ activities = [], onAddActivity, currentUser, us
   // da FASE 4; entradas antigas caem no default [] (sem menção pra realçar).
   const comments = useMemo(() => {
     return (activities || [])
-      .filter(a => a.type === "comment" || a.type === "note")
+      .filter(a => (a.type === "comment" || a.type === "note") && !a.deletedAt)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .map(a => {
         const isCurrentUser = currentUser && a.createdBy === currentUser.id;
@@ -570,6 +570,7 @@ function useRHActivityComments({ activities = [], onAddActivity, currentUser, us
           text: a.body,
           mentionedNames,
           createdAt: a.createdAt,
+          editedAt: a.editedAt || null,
         };
       });
   }, [activities, currentUser, users]);
@@ -577,6 +578,7 @@ function useRHActivityComments({ activities = [], onAddActivity, currentUser, us
   const handleAddComment = useCallback(async (text, mentionedIds) => {
     if (!onAddActivity) return;
     await onAddActivity({
+      id: crypto.randomUUID(),
       type: "comment",
       body: text,
       createdBy: currentUser?.id || null,
@@ -592,7 +594,13 @@ function useRHActivityComments({ activities = [], onAddActivity, currentUser, us
     }
   }, [onAddActivity, currentUser, notifyMentions, mentionLink, mentionContextLabel]);
 
-  return { comments, handleAddComment };
+  const handleUpdateComment = useCallback(async (activityId, patch) => {
+    if (!onUpdateActivity) return;
+    const { text, ...rest } = patch;
+    await onUpdateActivity(activityId, text !== undefined ? { body: text, ...rest } : rest);
+  }, [onUpdateActivity]);
+
+  return { comments, handleAddComment, handleUpdateComment };
 }
 
 // Comentários — sempre visíveis na lateral direita, junto com a
@@ -601,15 +609,15 @@ function useRHActivityComments({ activities = [], onAddActivity, currentUser, us
 // que agora ficam no centro, igual Lead/Campanha) desde a unificação
 // visual com a referência do Pipefy.
 export function RHDetailComments({
-  activities = [], onAddActivity, currentUser,
+  activities = [], onAddActivity, onUpdateActivity, currentUser,
   users = [], mentionableUsers, notifyMentions, mentionLink, mentionContextLabel,
 }) {
   const effectiveMentionableUsers = useMemo(
     () => mentionableUsers || getMentionableUsers(users, { domain: "rh" }),
     [mentionableUsers, users]
   );
-  const { comments, handleAddComment } = useRHActivityComments({
-    activities, onAddActivity, currentUser, users, notifyMentions, mentionLink, mentionContextLabel,
+  const { comments, handleAddComment, handleUpdateComment } = useRHActivityComments({
+    activities, onAddActivity, onUpdateActivity, currentUser, users, notifyMentions, mentionLink, mentionContextLabel,
   });
 
   return (
@@ -618,6 +626,7 @@ export function RHDetailComments({
       currentUser={currentUser}
       mentionableUsers={effectiveMentionableUsers}
       onAddComment={handleAddComment}
+      onUpdateComment={onUpdateActivity ? handleUpdateComment : undefined}
       disabled={!onAddActivity}
     />
   );

@@ -162,6 +162,16 @@ export function useRHTreinamentos({ userId } = {}) {
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, activities: nextActivities } : a));
   }, [atribuicoes]);
 
+  const updateAtribuicaoActivity = useCallback(async (atribuicaoId, activityId, patch) => {
+    const current = atribuicoes.find(a => a.id === atribuicaoId);
+    if (!current) return;
+    const nextActivities = (Array.isArray(current.activities) ? current.activities : [])
+      .map(a => (a.id === activityId ? { ...a, ...patch } : a));
+    const { error } = await supabase.from("rh_treinamento_atribuicoes").update({ activities: nextActivities }).eq("id", atribuicaoId);
+    if (error) throw new Error(error.message);
+    setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, activities: nextActivities } : a));
+  }, [atribuicoes]);
+
   const deleteAtribuicao = useCallback(async (atribuicaoId) => {
     const { error } = await supabase.from("rh_treinamento_atribuicoes").delete().eq("id", atribuicaoId);
     if (error) throw new Error(error.message);
@@ -188,6 +198,7 @@ export function useRHTreinamentos({ userId } = {}) {
     updateAtribuicaoCustomFields,
     deleteAtribuicao,
     addAtribuicaoActivity,
+    updateAtribuicaoActivity,
     refetch: fetchAll,
-  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado, updateAtribuicaoCustomFields, deleteAtribuicao, addAtribuicaoActivity, fetchAll]);
+  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado, updateAtribuicaoCustomFields, deleteAtribuicao, addAtribuicaoActivity, updateAtribuicaoActivity, fetchAll]);
 }

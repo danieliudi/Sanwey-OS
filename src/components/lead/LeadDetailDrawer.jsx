@@ -282,7 +282,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
       .map(id => (users || []).find(u => u.id === id)?.name)
       .filter(Boolean);
     const merged = [
-      ...notes.map((n, i) => {
+      ...notes.filter(n => !n.deletedAt).map((n, i) => {
         const author = n.userId ? (users || []).find(u => u.id === n.userId) : null;
         return {
           id: n.id || `note-${i}-${n.createdAt || ""}`,
@@ -294,9 +294,10 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           text: n.text || n.body,
           mentionedNames: resolveMentionNames(n.mentionedIds),
           createdAt: n.createdAt,
+          editedAt: n.editedAt || null,
         };
       }),
-      ...activityComments.map((c, i) => {
+      ...activityComments.filter(c => !c.deletedAt).map((c, i) => {
         const author = c.userId ? (users || []).find(u => u.id === c.userId) : null;
         return {
           id: c.id || `act-${i}-${c.timestamp || c.createdAt || ""}`,
@@ -308,15 +309,47 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           text: c.body,
           mentionedNames: resolveMentionNames(c.mentionedIds),
           createdAt: c.timestamp || c.createdAt,
+          editedAt: c.editedAt || null,
         };
       }),
     ];
     return merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [lead, users]);
 
+  const onUpdateComment = useCallback(async (id, patch) => {
+    if (!lead || !onUpdate) return;
+    const notes = Array.isArray(lead.notes) ? lead.notes : [];
+    const activities = Array.isArray(lead.activities) ? lead.activities : [];
+    const noteIdx = notes.findIndex(n => n.id === id);
+    if (noteIdx !== -1) {
+      const entry = notes[noteIdx];
+      const bodyKey = entry.text !== undefined ? "text" : "body";
+      const nextEntry = { ...entry };
+      if ("text" in patch) nextEntry[bodyKey] = patch.text;
+      if ("editedAt" in patch) nextEntry.editedAt = patch.editedAt;
+      if ("deletedAt" in patch) nextEntry.deletedAt = patch.deletedAt;
+      const updatedNotes = [...notes];
+      updatedNotes[noteIdx] = nextEntry;
+      await onUpdate(lead.id, { notes: updatedNotes });
+      return;
+    }
+    const actIdx = activities.findIndex(a => a.id === id);
+    if (actIdx !== -1) {
+      const entry = activities[actIdx];
+      const nextEntry = { ...entry };
+      if ("text" in patch) nextEntry.body = patch.text;
+      if ("editedAt" in patch) nextEntry.editedAt = patch.editedAt;
+      if ("deletedAt" in patch) nextEntry.deletedAt = patch.deletedAt;
+      const updatedActivities = [...activities];
+      updatedActivities[actIdx] = nextEntry;
+      await onUpdate(lead.id, { activities: updatedActivities });
+    }
+  }, [lead, onUpdate]);
+
   const handleAddComment = useCallback(async (text, mentionedIds) => {
     if (!lead || !onAddActivity) return;
     await onAddActivity(lead.id, {
+      id: crypto.randomUUID(),
       type: "comment",
       userId: currentUser?.id || null,
       userName: currentUser?.name || null,
@@ -1282,6 +1315,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 currentUser={currentUser}
                 mentionableUsers={mentionableUsers}
                 onAddComment={handleAddComment}
+                onUpdateComment={onUpdateComment}
                 isManager={isManager}
                 onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
                 onGoToIA={() => { setSideTab("ia"); setMobileTab("info"); }}
@@ -1302,6 +1336,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               currentUser={currentUser}
               mentionableUsers={mentionableUsers}
               onAddComment={handleAddComment}
+              onUpdateComment={onUpdateComment}
               isManager={isManager}
               onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
               onGoToIA={() => setSideTab("ia")}
@@ -1435,7 +1470,7 @@ function SideTabs({ activeTab, onChange }) {
 // etapa livremente e sem acesso a comentários/@menção). ──────────────
 function MoveAndCommentsPanel({
   moveError, stageTargets, onMove,
-  commentsFeed, currentUser, mentionableUsers, onAddComment,
+  commentsFeed, currentUser, mentionableUsers, onAddComment, onUpdateComment,
   isManager, onNavigateToPipelineBuilder, onGoToIA,
 }) {
   return (
@@ -1461,6 +1496,7 @@ function MoveAndCommentsPanel({
           currentUser={currentUser}
           mentionableUsers={mentionableUsers}
           onAddComment={onAddComment}
+          onUpdateComment={onUpdateComment}
         />
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2, XCircle, Upload, FileText,
   TrendingUp, TrendingDown, AlertCircle, ExternalLink, Loader2,
@@ -108,7 +108,7 @@ export function PurchaseRequestDetailDrawer({
   // aceitando tanto o formato antigo ({text, createdAt}, sem autor) quanto o
   // novo ({authorId, authorName, text, mentionedIds, createdAt}).
   const comments = useMemo(
-    () => (purchase.notes || []).map((n, idx) => {
+    () => (purchase.notes || []).filter(n => !n.deletedAt).map((n, idx) => {
       const author = users.find(u => u.id === n.authorId);
       return {
         id: n.id || `note-${idx}`,
@@ -122,10 +122,16 @@ export function PurchaseRequestDetailDrawer({
           ? n.mentionedIds.map(id => users.find(u => u.id === id)?.name).filter(Boolean)
           : [],
         createdAt: n.createdAt,
+        editedAt: n.editedAt || null,
       };
     }),
     [purchase.notes, users]
   );
+
+  const onUpdateComment = useCallback(async (id, patch) => {
+    const updatedNotes = (purchase.notes || []).map(n => (n.id === id ? { ...n, ...patch } : n));
+    await onUpdate(purchase.id, { notes: updatedNotes });
+  }, [purchase, onUpdate]);
 
   const [supplierId,    setSupplierId]    = useState(purchase.supplierId || "");
   const [quantity,      setQuantity]      = useState(purchase.quantity ?? "");
@@ -825,6 +831,7 @@ export function PurchaseRequestDetailDrawer({
         currentUser={currentUser}
         mentionableUsers={mentionableUsers}
         onAddComment={handleAddComment}
+        onUpdateComment={onUpdateComment}
       />
     </>
   );

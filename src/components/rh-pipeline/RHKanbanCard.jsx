@@ -1,5 +1,5 @@
 import React, { memo, useRef, useState } from "react";
-import { Clock, Check, X as XIcon } from "lucide-react";
+import { Clock, Check, X as XIcon, MessageCircle } from "lucide-react";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 
@@ -20,7 +20,7 @@ function stageKeyOf(s) {
   return s?.stageKey ?? s?.id;
 }
 
-function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, agingDays, completeness, children }) {
+function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, agingDays, completeness, unread, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -73,6 +73,15 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {unread && (
+            <span
+              title="Comentário novo"
+              className="inline-flex items-center justify-center rounded-full"
+              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
+            >
+              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
+            </span>
+          )}
           {ageStyle && (
             <span
               className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"

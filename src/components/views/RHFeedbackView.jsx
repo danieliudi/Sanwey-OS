@@ -22,6 +22,8 @@ import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion"
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
@@ -645,7 +647,7 @@ function FeedbackKanbanColumn({
   stage, stages, feedbackList, colaboradoresById,
   onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteFeedback,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields, getCompleteness,
+  canWrite, onEditFields, getCompleteness, getUnread,
 }) {
   return (
     <div
@@ -699,6 +701,7 @@ function FeedbackKanbanColumn({
               onDeleteCard={canWrite ? onDeleteFeedback : undefined}
               agingDays={daysInStage(f.status_changed_at)}
               completeness={getCompleteness?.(f)}
+              unread={getUnread?.(f)}
             >
               <FeedbackCardBody feedback={f} colaborador={colaboradoresById.get(f.user_id)} />
             </RHKanbanCard>
@@ -713,7 +716,7 @@ function FeedbackKanbanColumn({
 
 function FeedbackDrawer({
   feedback, colaborador, canWrite, stages, users, currentUser,
-  onStageChange, moveError, onComplete, onUpdateCustomFields, onUpdateEvaluators, onAddActivity, onShowHistorico, onClose, notifyMentions, onDelete, onEditFields,
+  onStageChange, moveError, onComplete, onUpdateCustomFields, onUpdateEvaluators, onAddActivity, onUpdateActivity, onShowHistorico, onClose, notifyMentions, onDelete, onEditFields,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -904,6 +907,7 @@ function FeedbackDrawer({
       <RHDetailComments
         activities={feedback.activities || []}
         onAddActivity={onAddActivity}
+        onUpdateActivity={onUpdateActivity ? (activityId, patch) => onUpdateActivity(feedback.id, activityId, patch) : undefined}
         currentUser={currentUser}
         users={users}
         notifyMentions={notifyMentions}
@@ -1110,7 +1114,7 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
 export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions }) {
   const {
     feedbacks, loading: loadingFeedbacks, createFeedback, createPendingCycle, completeFeedback,
-    submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, deleteFeedback, addFeedbackActivity,
+    submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, deleteFeedback, addFeedbackActivity, updateFeedbackActivity,
   } = useRHFeedback({ userId: currentUser?.id });
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
@@ -1131,6 +1135,9 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const [dragOverStageKey, setDragOverStageKey]   = useState(null);
   const [moveError, setMoveError]                 = useState(null);
   const reconciledRef = useRef(false);
+
+  const { viewedAt, markViewed } = useRecordViews("rh_feedback", currentUser?.id);
+  useEffect(() => { if (drawerFeedbackId) markViewed(drawerFeedbackId); }, [drawerFeedbackId]);
 
   useEffect(() => {
     setMoveError(null);
@@ -1426,6 +1433,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                 onDeleteCard={canWrite ? deleteFeedback : undefined}
                 agingDays={daysInStage(f.status_changed_at)}
                 completeness={getFeedbackCompleteness?.(f)}
+                unread={hasUnreadRHComment(f, viewedAt, currentUser?.id)}
               >
                 <FeedbackCardBody feedback={f} colaborador={colaboradoresById.get(f.user_id)} />
               </RHKanbanCard>
@@ -1452,6 +1460,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                 canWrite={canWrite}
                 onEditFields={setFieldEditorStage}
                 getCompleteness={getFeedbackCompleteness}
+                getUnread={(f) => hasUnreadRHComment(f, viewedAt, currentUser?.id)}
               />
             ))}
           </div>
@@ -1472,6 +1481,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           onUpdateCustomFields={(merged) => updateFeedbackCustomFields(drawerFeedback.id, merged)}
           onUpdateEvaluators={(ids) => updateFeedbackEvaluators(drawerFeedback.id, ids)}
           onAddActivity={(entry) => addFeedbackActivity(drawerFeedback.id, entry)}
+          onUpdateActivity={(activityId, patch) => updateFeedbackActivity(drawerFeedback.id, activityId, patch)}
           onShowHistorico={(colaboradorId) => { setHistoricoColaboradorId(colaboradorId); setDrawerFeedbackId(null); }}
           onClose={() => setDrawerFeedbackId(null)}
           notifyMentions={notifyMentions}

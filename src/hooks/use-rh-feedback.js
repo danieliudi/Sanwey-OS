@@ -164,6 +164,16 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, activities: nextActivities } : f));
   }, [feedbacks]);
 
+  const updateFeedbackActivity = useCallback(async (id, activityId, patch) => {
+    const current = feedbacks.find(f => f.id === id);
+    if (!current) return;
+    const nextActivities = (Array.isArray(current.activities) ? current.activities : [])
+      .map(a => (a.id === activityId ? { ...a, ...patch } : a));
+    const { error } = await supabase.from("rh_avaliacoes").update({ activities: nextActivities }).eq("id", id);
+    if (error) throw new Error(error.message);
+    setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, activities: nextActivities } : f));
+  }, [feedbacks]);
+
   return useMemo(() => ({
     feedbacks,
     loading,
@@ -176,6 +186,7 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     updateFeedbackEvaluators,
     deleteFeedback,
     addFeedbackActivity,
+    updateFeedbackActivity,
     refetch: fetchAll,
-  }), [feedbacks, loading, createFeedback, createPendingCycle, completeFeedback, submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, deleteFeedback, addFeedbackActivity, fetchAll]);
+  }), [feedbacks, loading, createFeedback, createPendingCycle, completeFeedback, submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, deleteFeedback, addFeedbackActivity, updateFeedbackActivity, fetchAll]);
 }

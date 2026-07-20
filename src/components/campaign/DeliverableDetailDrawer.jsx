@@ -722,7 +722,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     const resolveMentionNames = (ids) => (ids || [])
       .map(id => (users || []).find(u => u.id === id)?.name)
       .filter(Boolean);
-    return [...notes].reverse().map((n, i) => {
+    return [...notes].filter(n => !n.deletedAt).reverse().map((n, i) => {
       const author = n.authorId ? (users || []).find(u => u.id === n.authorId) : null;
       return {
         id: n.id || `note-${i}-${n.createdAt || ""}`,
@@ -734,9 +734,16 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
         text: n.text,
         mentionedNames: resolveMentionNames(n.mentionedIds),
         createdAt: n.createdAt,
+        editedAt: n.editedAt || null,
       };
     });
   }, [item?.notes, users]);
+
+  const onUpdateComment = useCallback(async (id, patch) => {
+    if (!item) return;
+    const updatedNotes = (item.notes || []).map(n => (n.id === id ? { ...n, ...patch } : n));
+    await onUpdate(item.id, { notes: updatedNotes });
+  }, [item, onUpdate]);
 
   const onAddComment = useCallback(async (text, mentionedIds) => {
     if (!item) return;
@@ -1058,6 +1065,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
         comments={comments}
         currentUser={currentUser}
         mentionableUsers={mentionableUsers}
+        onUpdateComment={onUpdateComment}
         onAddComment={onAddComment}
       />
 

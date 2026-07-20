@@ -17,6 +17,8 @@ import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion"
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { useRecordViews } from "../../hooks/use-record-views";
+import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
@@ -352,7 +354,7 @@ function FeriasCardBody({ req, canWrite, onAprovar, onRecusar, busy }) {
 function FeriasKanbanColumn({
   stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteRequest,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields, getCompleteness, onAprovar, onRecusar, busyId,
+  canWrite, onEditFields, getCompleteness, getUnread, onAprovar, onRecusar, busyId,
 }) {
   return (
     <div
@@ -393,6 +395,7 @@ function FeriasKanbanColumn({
               onDeleteCard={canWrite ? onDeleteRequest : undefined}
               agingDays={daysInStage(req.status_changed_at)}
               completeness={getCompleteness?.(req)}
+              unread={getUnread?.(req)}
             >
               <FeriasCardBody req={req} canWrite={canWrite} onAprovar={onAprovar} onRecusar={onRecusar} busy={busyId === req.id} />
             </RHKanbanCard>
@@ -407,7 +410,7 @@ function FeriasKanbanColumn({
 
 function FeriasDrawer({
   req, canWrite, stages, users, currentUser,
-  onAprovar, onRecusar, onMoveToStage, onUpdateCustomFields, onAddActivity, onClose, onMoved, busy, notifyMentions, onDelete, onEditFields,
+  onAprovar, onRecusar, onMoveToStage, onUpdateCustomFields, onAddActivity, onUpdateActivity, onClose, onMoved, busy, notifyMentions, onDelete, onEditFields,
 }) {
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -565,6 +568,7 @@ function FeriasDrawer({
       <RHDetailComments
         activities={req.activities || []}
         onAddActivity={onAddActivity}
+        onUpdateActivity={onUpdateActivity ? (activityId, patch) => onUpdateActivity(req.id, activityId, patch) : undefined}
         currentUser={currentUser}
         users={users}
         notifyMentions={notifyMentions}
@@ -763,7 +767,7 @@ function FeriasCalendarView({ requests, stages, onPillClick }) {
 // ── Main View ─────────────────────────────────────────────────────────────────
 
 export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions }) {
-  const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, deleteRequest, addActivity } = useRHFeriasRequests({});
+  const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, deleteRequest, addActivity, updateActivity } = useRHFeriasRequests({});
   const { stages, loading: loadingStages } = useRHPipelineStages("ferias");
   const feriasStageFields = useRHStageFields("ferias");
 
@@ -777,6 +781,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
   const [draggedId, setDraggedId]         = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
+
+  const { viewedAt, markViewed } = useRecordViews("rh_ferias", currentUser?.id);
+  useEffect(() => { if (drawerReqId) markViewed(drawerReqId); }, [drawerReqId]);
 
   const loading = loadingRequests || loadingStages;
 
@@ -1013,6 +1020,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                 onDeleteCard={canWrite ? deleteRequest : undefined}
                 agingDays={daysInStage(req.status_changed_at)}
                 completeness={getReqCompleteness?.(req)}
+                unread={hasUnreadRHComment(req, viewedAt, currentUser?.id)}
               >
                 <FeriasCardBody req={req} canWrite={canWrite} onAprovar={handleAprovar} onRecusar={handleRecusar} busy={busyId === req.id} />
               </RHKanbanCard>
@@ -1038,6 +1046,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                 canWrite={canWrite}
                 onEditFields={setFieldEditorStage}
                 getCompleteness={getReqCompleteness}
+                getUnread={(r) => hasUnreadRHComment(r, viewedAt, currentUser?.id)}
                 onAprovar={handleAprovar}
                 onRecusar={handleRecusar}
                 busyId={busyId}
@@ -1061,6 +1070,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
           onMoveToStage={handleMoveToStageGeneric}
           onUpdateCustomFields={(merged) => updateCustomFields(drawerReq.id, merged)}
           onAddActivity={(entry) => addActivity(drawerReq.id, entry)}
+          onUpdateActivity={(activityId, patch) => updateActivity(drawerReq.id, activityId, patch)}
           onClose={() => setDrawerReqId(null)}
           onMoved={(id) => { setDrawerReqId(null); reopenAfterMove(setDrawerReqId, id); }}
           busy={busyId === drawerReq.id}
