@@ -84,7 +84,7 @@ function DeliverableKanbanCardImpl({
           Kanban; antes ficava dividido entre topo e rodapé do card. */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="font-semibold text-[13px] leading-snug min-w-0 flex-1" style={{ color: "var(--text)" }}>
-          {item.title}
+          {item.requestNumber ? `${item.requestNumber} ${item.title}` : item.title}
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
           {ageStyle && daysInStage !== null && (
