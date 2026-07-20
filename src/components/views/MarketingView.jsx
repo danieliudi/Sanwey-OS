@@ -1031,7 +1031,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           onCreatePersonalEvent={createPersonalEvent}
           onUpdatePersonalEvent={updatePersonalEvent}
           onDeletePersonalEvent={deletePersonalEvent}
-          canWrite={canWrite || user?.role !== "agencia"}
+          canWrite={canWrite || userRoleList.some(r => r !== "agencia")}
           calendarToken={user?.calendarToken ?? null}
           supabaseUrl={import.meta.env.VITE_SUPABASE_URL ?? null}
           stages={kanbanStages}
