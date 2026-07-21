@@ -66,6 +66,8 @@ import { EmptyState } from "../ui/EmptyState";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { useAvailableHeight } from "../../hooks/use-available-height";
+import { KanbanFab } from "../shared/KanbanFab";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -905,7 +907,7 @@ function VagaCard({ vaga, candidatosCount, usersById }) {
 function VagaKanbanColumn({
   stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
   onMoveToStage, onDeleteVaga, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
-  getCompleteness, getUnread, onAddVaga, usersById,
+  getCompleteness, getUnread, onAddVaga, usersById, boardHeight,
 }) {
   return (
     <div
@@ -918,10 +920,7 @@ function VagaKanbanColumn({
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        // Altura fixa (não máxima) — senão a barra de scroll horizontal
-        // subia junto com colunas de poucos cards em vez de ficar sempre
-        // no rodapé da tela.
-        height: "calc(100vh - 260px)",
+        height: boardHeight,
       }}
     >
       {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
@@ -2434,7 +2433,7 @@ function CandidatoCardBody({ candidato: c, vagas }) {
 function KanbanColumn({
   stage, stages, candidatos, vagas, canWrite, onCardClick, onAddCandidato,
   onMoveToStage, onDeleteCandidato, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
-  getCompleteness, getUnread,
+  getCompleteness, getUnread, boardHeight,
 }) {
   return (
     <div
@@ -2447,10 +2446,7 @@ function KanbanColumn({
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        // Altura fixa (não máxima) — senão a barra de scroll horizontal
-        // subia junto com colunas de poucos cards em vez de ficar sempre
-        // no rodapé da tela.
-        height: "calc(100vh - 220px)",
+        height: boardHeight,
       }}
     >
       {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
@@ -2743,6 +2739,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const [copiedSlug, setCopiedSlug]         = useState(null);
   const [triagemOpen, setTriagemOpen]       = useState(false);
   const [hiringCandidato, setHiringCandidato] = useState(null);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, boardMode]);
 
   const { viewedAt: vagaViewedAt, markViewed: markVagaViewed } = useRecordViews("rh_vagas", user?.id);
   const { viewedAt: candViewedAt, markViewed: markCandViewed } = useRecordViews("rh_candidatos", user?.id);
@@ -3175,7 +3172,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
               addLabel="Nova vaga"
               emptyLabel="Nenhuma vaga"
             />
-            <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="hidden lg:flex">
+            <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
               {vagaStages.map((stage) => (
                 <VagaKanbanColumn
                   key={stage.stageKey}
@@ -3198,9 +3195,11 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                   getUnread={(v) => hasUnreadRHComment(v, vagaViewedAt, user?.id)}
                   onAddVaga={() => setAddVagaStage(stage.stageKey)}
                   usersById={usersById}
+                  boardHeight={boardHeight}
                 />
               ))}
             </div>
+            {canWrite && <KanbanFab label="Nova vaga" onClick={() => setQuickAddVaga(true)} />}
           </>
         )
       ) : (
@@ -3365,7 +3364,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                 addLabel="Novo candidato"
                 emptyLabel="Nenhum candidato"
               />
-              <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="hidden lg:flex">
+              <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
                 {candStages.map((stage) => (
                   <KanbanColumn
                     key={stage.stageKey}
@@ -3387,9 +3386,11 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                     onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
                     getCompleteness={getCandCompleteness}
                     getUnread={(c) => hasUnreadRHComment(c, candViewedAt, user?.id)}
+                    boardHeight={boardHeight}
                   />
                 ))}
               </div>
+              {canWrite && <KanbanFab label="Novo candidato" onClick={() => setAddCandidatoStage(candStages[0]?.stageKey || null)} />}
             </>
           )}
         </>
