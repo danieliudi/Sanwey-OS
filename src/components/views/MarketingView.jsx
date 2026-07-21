@@ -18,6 +18,8 @@ import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
+import { useAvailableHeight } from "../../hooks/use-available-height";
+import { KanbanFab } from "../shared/KanbanFab";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -680,6 +682,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const stageFields = useRHStageFields("marketing");
+  const [boardRef, boardHeight] = useAvailableHeight(16);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing"), editáveis via
   // RHStageEditorModal — mesmo padrão do RHOnboardingView. Normalizamos pro
@@ -980,6 +983,10 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         </div>
       </div>
 
+      {viewMode === "kanban" && canWrite && (
+        <KanbanFab label="Nova campanha" onClick={() => setQuickAddStage("briefing")} />
+      )}
+
       {/* KPI bar */}
       {viewMode === "kanban" && <KpiBar campaigns={filteredCampaigns} />}
 
@@ -1135,9 +1142,9 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
             className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
             style={{ background: "linear-gradient(to left, var(--bg) 0%, transparent 100%)" }}
           />
-          <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
+          <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
             <div
-              className="flex gap-3"
+              className="flex gap-3 h-full"
               style={{ minWidth: `${kanbanStages.length * 284}px` }}
             >
               {kanbanStages.map(stage => {
@@ -1159,7 +1166,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       background: isOver ? "var(--surface-alt)" : "var(--surface-alt)",
                       borderColor: isOver ? stage.color + "70" : "var(--border)",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-                      minHeight: 480,
+                      height: "100%",
                       flexShrink: 0,
                     }}
                   >
@@ -1218,7 +1225,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                     {/* Cards */}
                     <div
                       className="px-2 pb-1 flex-1 overflow-y-auto"
-                      style={{ maxHeight: "62vh", minHeight: 80, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6 }}
+                      style={{ minHeight: 0, paddingTop: 8, display: "flex", flexDirection: "column", gap: 6 }}
                     >
                       {stageCampaigns.length === 0 ? (
                         <div

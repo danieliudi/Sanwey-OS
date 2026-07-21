@@ -26,6 +26,8 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadLeadComment } from "../../lib/comment-badge";
+import { useAvailableHeight } from "../../hooks/use-available-height";
+import { KanbanFab } from "../shared/KanbanFab";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 
@@ -453,6 +455,10 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
   const isConsultor = userRoleList.includes("consultor");
+  // Altura disponível até o rodapé da janela, medida ao vivo a partir do
+  // topo do board — pra barra de scroll horizontal do Kanban nunca ficar
+  // abaixo da dobra, em qualquer tamanho de janela (ver use-available-height.js).
+  const [boardRef, boardHeight] = useAvailableHeight(16);
 
   // Mesma regra de permissão do botão de excluir dentro do LeadDetailDrawer
   // (canDelete) — reaproveitada aqui pro atalho de excluir direto no "..."
@@ -792,6 +798,16 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         </div>
       </div>
 
+      {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
+        <KanbanFab
+          label="Nova oportunidade"
+          onClick={() => {
+            const firstStage = stages.find(s => !s.terminal);
+            if (firstStage) setCreateModalStage({ stageId: firstStage.id, stage: firstStage, companyId: isGroupView ? firstValidCompany : activeCompany });
+          }}
+        />
+      )}
+
       {viewMode === "calendar" ? (
         <PipelineCalendarView
           leads={starredOnly ? leads.filter(l => l.starred) : leads}
@@ -882,9 +898,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)",
           }}
         />
-      <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
+      <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
         <div
-          className="flex gap-3"
+          className="flex gap-3 h-full"
           style={{ minWidth: `${stages.length * 284}px` }}
         >
           {stages.map(stage => {
@@ -906,6 +922,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 style={{
                   width: 272,
                   minWidth: 272,
+                  height: "100%",
                   background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "var(--surface-alt)" : "var(--surface-alt)",
                   borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "70" : isOver && !canAccept ? "#FECACA" : "var(--border)",
                   boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
@@ -971,7 +988,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 {/* Cards */}
                 <div
                   className="px-2 pt-2 pb-1 flex-1 overflow-y-auto"
-                  style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: "62vh", minHeight: 80 }}
+                  style={{ display: "flex", flexDirection: "column", gap: 6, minHeight: 0 }}
                 >
                   {bucket.leads.length === 0 ? (
                     <div

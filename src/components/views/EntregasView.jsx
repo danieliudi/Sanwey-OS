@@ -26,6 +26,8 @@ import { DeliverableDetailDrawer, STAGE_FIELDS } from "../campaign/DeliverableDe
 import { AvatarStack } from "../shared/AvatarStack";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
+import { useAvailableHeight } from "../../hooks/use-available-height";
+import { KanbanFab } from "../shared/KanbanFab";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -647,6 +649,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
   const campaignsById = useMemo(() => new Map(campaigns.map(c => [c.id, c])), [campaigns]);
   const stageFields = useRHStageFields("marketing_deliverables");
+  const [boardRef, boardHeight] = useAvailableHeight(16);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables"),
   // editáveis via RHStageEditorModal — mesmo padrão do RHOnboardingView.
@@ -852,6 +855,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         </div>
       </div>
 
+      {canWrite && viewMode === "kanban" && (
+        <KanbanFab label="Nova entrega" onClick={() => setQuickAddStage("solicitacao")} />
+      )}
+
       {/* Filter toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <button
@@ -996,8 +1003,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         <div className="hidden lg:block relative">
           <div className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
             style={{ background: "linear-gradient(to left, var(--bg) 0%, transparent 100%)" }} />
-          <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
-            <div className="flex gap-3" style={{ minWidth: `${kanbanStages.length * 284}px` }}>
+          <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
+            <div className="flex gap-3 h-full" style={{ minWidth: `${kanbanStages.length * 284}px` }}>
               {kanbanStages.map(stage => {
                 const stageItems = filtered.filter(d => d.stage === stage.id);
                 const isOver     = dragOverStage === stage.id;
@@ -1008,7 +1015,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", minHeight: 480, flexShrink: 0 }}>
+                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "100%", flexShrink: 0 }}>
                     <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
                     <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
                       style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
@@ -1042,7 +1049,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                       )}
                     </div>
 
-                    <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ maxHeight: "62vh", minHeight: 80, display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       {stageItems.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 mx-1 rounded-lg border-2 border-dashed text-xs gap-1"
                           style={{ borderColor: isOver ? stage.color + "40" : "var(--border)", color: "var(--text-dim)" }}>
