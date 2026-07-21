@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, CheckCircle2, AlertCircle, Lock } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Lock, UserCheck } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
 
@@ -64,13 +64,15 @@ export default function PesquisaPublicaForm() {
   if (!pesquisa) {
     return <Shell><h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Pesquisa indisponível</h1><p style={{ color: "#5c5f60", fontSize: 14 }}>Este link não corresponde a nenhuma pesquisa aberta no momento — pode ter sido encerrada. Se você recebeu este link recentemente, avise o RH pra conferir.</p></Shell>;
   }
+  const identificada = pesquisa?.modo === "identificada";
+
   if (done) {
     return (
       <Shell>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, textAlign: "center" }}>
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: ACCENT + "1A", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle2 size={28} color={ACCENT} /></div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#201a1a", margin: 0 }}>Resposta enviada!</h1>
-          <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 360, margin: 0 }}>Obrigado por participar. Sua resposta é anônima.</p>
+          <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 360, margin: 0 }}>Obrigado por participar.{identificada ? "" : " Sua resposta é anônima."}</p>
         </div>
       </Shell>
     );
@@ -81,9 +83,15 @@ export default function PesquisaPublicaForm() {
       <header style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#201a1a", margin: "0 0 6px", letterSpacing: "-0.02em" }}>{pesquisa.titulo}</h1>
         {pesquisa.descricao && <p style={{ color: "#5c5f60", fontSize: 14, margin: "0 0 8px", lineHeight: 1.55 }}>{pesquisa.descricao}</p>}
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#16A34A", fontWeight: 600 }}>
-          <Lock size={12} /> Suas respostas são anônimas
-        </div>
+        {identificada ? (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#5c5f60", fontWeight: 600 }}>
+            <UserCheck size={12} /> Sua resposta fica associada ao seu perfil — é preciso estar logado na plataforma.
+          </div>
+        ) : (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#16A34A", fontWeight: 600 }}>
+            <Lock size={12} /> Suas respostas são anônimas
+          </div>
+        )}
       </header>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>

@@ -50,6 +50,9 @@ export function useRHComunicacao({ userId } = {}) {
       perguntas: data.perguntas || [],
       abre_em: data.abreEm || null,
       fecha_em: data.fechaEm || null,
+      modo: data.modo || "anonima",
+      scope_type: data.scopeType || "todos",
+      scope_value: data.scopeType && data.scopeType !== "todos" ? data.scopeValue : null,
       created_by: userId,
     };
     const { data: nova, error } = await supabase.from("rh_pesquisas").insert(row).select().single();
@@ -57,6 +60,14 @@ export function useRHComunicacao({ userId } = {}) {
     setPesquisas(prev => [nova, ...prev]);
     return nova;
   }, [userId]);
+
+  // Notifica os colaboradores do escopo — só faz sentido pra pesquisas
+  // "identificada" (a RPC recusa pra "anonima").
+  const enviarPesquisaNotificacao = useCallback(async (pesquisaId) => {
+    const { data, error } = await supabase.rpc("enviar_pesquisa_notificacao", { p_pesquisa_id: pesquisaId });
+    if (error) throw new Error(error.message);
+    return data ?? 0;
+  }, []);
 
   const setPesquisaStatus = useCallback(async (id, status) => {
     const { error } = await supabase.from("rh_pesquisas").update({ status }).eq("id", id);
@@ -80,7 +91,7 @@ export function useRHComunicacao({ userId } = {}) {
 
   return useMemo(() => ({
     pesquisas, loading,
-    enviarComunicado, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas,
+    enviarComunicado, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao,
     refetch: fetchAll,
-  }), [pesquisas, loading, enviarComunicado, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, fetchAll]);
+  }), [pesquisas, loading, enviarComunicado, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao, fetchAll]);
 }

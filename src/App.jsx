@@ -625,6 +625,10 @@ export default function App() {
     rh_movimentacoes: "rh-cargos",
   };
   const handleNotificationNavigate = useCallback((link) => {
+    // Pesquisas identificadas (RH2-7): a página de resposta vive fora do
+    // shell autenticado (/pesquisa/:id, montada direto no main.jsx), então
+    // não tem "módulo" pra mapear pra uma seção — navega pra URL crua.
+    if (link?.url) { navigate(link.url); return; }
     if (!link?.module) return;
     if (link.module === "leads") {
       const lead = leads.find(l => l.id === link.id);
@@ -634,7 +638,7 @@ export default function App() {
     }
     const target = NOTIFICATION_LINK_SECTIONS[link.module];
     if (target) setSection(target);
-  }, [leads, setSelectedLead, setSection]);
+  }, [leads, setSelectedLead, setSection, navigate]);
 
   // Mantém o drawer em sync quando o lead aberto muda via realtime
   // (outra sessão editou) ou via update otimista local.

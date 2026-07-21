@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Megaphone, Plus, X, Send, ClipboardList, BarChart3, Trash2, Check,
-  Loader2, Lock, AlertTriangle,
+  Loader2, Lock, AlertTriangle, Search, UserCheck, BellRing,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHComunicacao } from "../../hooks/use-rh-comunicacao";
@@ -128,6 +128,9 @@ function NovaPesquisaModal({ onSave, onClose }) {
   const [descricao, setDescricao] = useState("");
   const [fechaEm, setFechaEm] = useState("");
   const [perguntas, setPerguntas] = useState([{ label: "", tipo: "escala" }]);
+  const [modo, setModo] = useState("anonima"); // "anonima" | "identificada"
+  const [scopeType, setScopeType] = useState("todos");
+  const [scopeValue, setScopeValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -145,6 +148,7 @@ function NovaPesquisaModal({ onSave, onClose }) {
     const valid = perguntas.filter((q) => q.label.trim());
     if (!titulo.trim()) { setError("Título obrigatório."); return; }
     if (valid.length === 0) { setError("Adicione ao menos uma pergunta."); return; }
+    if (modo === "identificada" && scopeType !== "todos" && !scopeValue) { setError("Escolha a frente/departamento."); return; }
     setSaving(true); setError(null);
     try {
       await onSave({
@@ -152,6 +156,9 @@ function NovaPesquisaModal({ onSave, onClose }) {
         descricao: descricao.trim() || null,
         fechaEm: fechaEm || null,
         perguntas: valid.map((q, idx) => ({ key: `q${idx + 1}`, label: q.label.trim(), tipo: q.tipo })),
+        modo,
+        scopeType: modo === "identificada" ? scopeType : "todos",
+        scopeValue: modo === "identificada" && scopeType !== "todos" ? scopeValue : null,
       });
       onClose();
     } catch (e) {
@@ -165,7 +172,7 @@ function NovaPesquisaModal({ onSave, onClose }) {
     <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
       <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 520, boxShadow: "var(--shadow-pop)", maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova pesquisa anônima</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova pesquisa</div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
         </div>
         <div style={{ padding: "20px 24px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -177,6 +184,46 @@ function NovaPesquisaModal({ onSave, onClose }) {
             <label style={labelSt}>Descrição</label>
             <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={inputSt} />
           </div>
+          <div>
+            <label style={labelSt}>Modo</label>
+            <div className="grid grid-cols-2" style={{ gap: 8 }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 2, cursor: "pointer", borderRadius: 10, padding: "10px 12px", border: `1px solid ${modo === "anonima" ? "var(--accent)" : "var(--border)"}`, background: modo === "anonima" ? "var(--accent-bg, #EFF6FF)" : "var(--surface-alt)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
+                  <input type="radio" checked={modo === "anonima"} onChange={() => setModo("anonima")} /> <Lock size={12} /> Anônima
+                </span>
+                <span style={{ fontSize: 11, color: "var(--text-dim)" }}>Via QR/link — respostas nunca identificadas.</span>
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: 2, cursor: "pointer", borderRadius: 10, padding: "10px 12px", border: `1px solid ${modo === "identificada" ? "var(--accent)" : "var(--border)"}`, background: modo === "identificada" ? "var(--accent-bg, #EFF6FF)" : "var(--surface-alt)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
+                  <input type="radio" checked={modo === "identificada"} onChange={() => setModo("identificada")} /> <UserCheck size={12} /> Identificada
+                </span>
+                <span style={{ fontSize: 11, color: "var(--text-dim)" }}>Enviada como comunicado — sabe quem respondeu.</span>
+              </label>
+            </div>
+          </div>
+          {modo === "identificada" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <label style={labelSt}>Enviar para</label>
+                <select value={scopeType} onChange={(e) => { setScopeType(e.target.value); setScopeValue(""); }} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                  <option value="todos">Todos os colaboradores</option>
+                  <option value="frente">Por frente</option>
+                  <option value="departamento">Por departamento</option>
+                </select>
+              </div>
+              {scopeType !== "todos" && (
+                <div>
+                  <label style={labelSt}>{scopeType === "frente" ? "Frente" : "Departamento"}</label>
+                  <select value={scopeValue} onChange={(e) => setScopeValue(e.target.value)} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
+                    <option value="">Selecione…</option>
+                    {(scopeType === "frente" ? RH_FRENTES.map((id) => ({ id, label: RH_FRENTE_LABELS[id] })) : RH_DEPARTMENTS.map((d) => ({ id: d, label: d }))).map((o) => (
+                      <option key={o.id} value={o.id}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <label style={labelSt}>Encerra em (opcional)</label>
             <input type="date" value={fechaEm} onChange={(e) => setFechaEm(e.target.value)} className="text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} />
@@ -305,12 +352,40 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHComunicacaoView({ currentUser, canWrite }) {
-  const { pesquisas, loading, enviarComunicado, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas } = useRHComunicacao({ userId: currentUser?.id });
+  const { pesquisas, loading, enviarComunicado, criarPesquisa, setPesquisaStatus, deletarPesquisa, carregarRespostas, enviarPesquisaNotificacao } = useRHComunicacao({ userId: currentUser?.id });
   const [tab, setTab] = useState("comunicados");
   const [novaOpen, setNovaOpen] = useState(false);
   const [resultadosDe, setResultadosDe] = useState(null);
+  const [pesquisaSearch, setPesquisaSearch] = useState("");
+  const [pesquisaStatusFilter, setPesquisaStatusFilter] = useState("all");
+  const [pesquisaModoFilter, setPesquisaModoFilter] = useState("all");
+  const [notificando, setNotificando] = useState(null); // id da pesquisa sendo notificada
+  const [notifyResult, setNotifyResult] = useState(null); // { id, count }
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  const pesquisasFiltradas = useMemo(() => {
+    const q = pesquisaSearch.trim().toLowerCase();
+    return pesquisas.filter((p) => {
+      if (pesquisaStatusFilter !== "all" && p.status !== pesquisaStatusFilter) return false;
+      if (pesquisaModoFilter !== "all" && (p.modo || "anonima") !== pesquisaModoFilter) return false;
+      if (q && !p.titulo?.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [pesquisas, pesquisaSearch, pesquisaStatusFilter, pesquisaModoFilter]);
+
+  const handleNotificar = async (pesquisaId) => {
+    setNotificando(pesquisaId);
+    setNotifyResult(null);
+    try {
+      const count = await enviarPesquisaNotificacao(pesquisaId);
+      setNotifyResult({ id: pesquisaId, count });
+    } catch (e) {
+      setNotifyResult({ id: pesquisaId, error: e?.message || "Erro ao notificar." });
+    } finally {
+      setNotificando(null);
+    }
+  };
 
   if (!isSupabaseConfigured) {
     return <EmptyState icon={Megaphone} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar este módulo." />;
@@ -324,7 +399,7 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
             <Megaphone size={22} style={{ color: "var(--text)" }} />
             <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Comunicação</h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Comunicados internos e pesquisas anônimas</p>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Comunicados internos e pesquisas — anônimas ou identificadas</p>
         </div>
         {canWrite && tab === "pesquisas" && <Button icon={Plus} onClick={() => setNovaOpen(true)}>Nova pesquisa</Button>}
       </div>
@@ -344,11 +419,48 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
       ) : loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : pesquisas.length === 0 ? (
-        <EmptyState icon={ClipboardList} title="Nenhuma pesquisa" description="Crie uma pesquisa anônima — as respostas nunca ficam ligadas a quem respondeu." />
+        <EmptyState icon={ClipboardList} title="Nenhuma pesquisa" description="Crie uma pesquisa anônima ou identificada — o modo é sua escolha na criação." />
       ) : (
+        <>
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            <div className="relative" style={{ minWidth: 200 }}>
+              <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+              <input
+                value={pesquisaSearch}
+                onChange={(e) => setPesquisaSearch(e.target.value)}
+                placeholder="Buscar pesquisa…"
+                className="w-full text-xs rounded-xl border pl-7 pr-3 py-1.5 outline-none"
+                style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+              />
+            </div>
+            <select
+              value={pesquisaStatusFilter}
+              onChange={(e) => setPesquisaStatusFilter(e.target.value)}
+              className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+              style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+            >
+              <option value="all">Todos os status</option>
+              <option value="aberta">Aberta</option>
+              <option value="encerrada">Encerrada</option>
+            </select>
+            <select
+              value={pesquisaModoFilter}
+              onChange={(e) => setPesquisaModoFilter(e.target.value)}
+              className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+              style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+            >
+              <option value="all">Todos os modos</option>
+              <option value="anonima">Anônima</option>
+              <option value="identificada">Identificada</option>
+            </select>
+          </div>
+          {pesquisasFiltradas.length === 0 ? (
+            <div style={{ fontSize: 13, color: "var(--text-dim)", padding: "24px 0", textAlign: "center" }}>Nenhuma pesquisa encontrada com esses filtros.</div>
+          ) : (
         <div className="flex flex-col gap-3" style={{ maxWidth: 720 }}>
-          {pesquisas.map((p) => {
+          {pesquisasFiltradas.map((p) => {
             const aberta = p.status === "aberta";
+            const identificada = p.modo === "identificada";
             const url = `${origin}/pesquisa/${p.id}`;
             return (
               <div key={p.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 16, background: "var(--surface)" }}>
@@ -359,13 +471,23 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
                       {(p.perguntas?.length || 0)} pergunta(s) · {fmt(p.created_at)}{p.fecha_em ? ` · encerra ${fmt(p.fecha_em)}` : ""}
                     </div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "#DCFCE7" : "var(--surface-alt)", borderRadius: 99, padding: "2px 10px" }}>
-                    {aberta ? "Aberta" : "Encerrada"}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span style={{ fontSize: 11, fontWeight: 700, color: identificada ? "var(--accent)" : "var(--text-dim)", background: identificada ? "#DBEAFE" : "var(--surface-alt)", borderRadius: 99, padding: "2px 10px", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      {identificada ? <UserCheck size={11} /> : <Lock size={11} />} {identificada ? "Identificada" : "Anônima"}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "#DCFCE7" : "var(--surface-alt)", borderRadius: 99, padding: "2px 10px" }}>
+                      {aberta ? "Aberta" : "Encerrada"}
+                    </span>
+                  </div>
                 </div>
                 {canWrite && (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12, alignItems: "center" }}>
-                    {aberta && <QRCodeButton url={url} title={p.titulo} buttonLabel="QR / link" compact />}
+                    {aberta && !identificada && <QRCodeButton url={url} title={p.titulo} buttonLabel="QR / link" compact />}
+                    {aberta && identificada && (
+                      <button onClick={() => handleNotificar(p.id)} disabled={notificando === p.id} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: notificando === p.id ? "default" : "pointer", opacity: notificando === p.id ? 0.6 : 1 }}>
+                        {notificando === p.id ? <Loader2 size={12} className="animate-spin" /> : <BellRing size={12} />} Notificar colaboradores
+                      </button>
+                    )}
                     <button onClick={() => setResultadosDe(p)} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                       <BarChart3 size={12} /> Ver respostas
                     </button>
@@ -377,10 +499,17 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
                     </button>
                   </div>
                 )}
+                {notifyResult?.id === p.id && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: notifyResult.error ? "var(--danger)" : "var(--success)" }}>
+                    {notifyResult.error || `Notificação enviada para ${notifyResult.count} colaborador${notifyResult.count !== 1 ? "es" : ""}.`}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
+          )}
+        </>
       )}
 
       {novaOpen && <NovaPesquisaModal onSave={criarPesquisa} onClose={() => setNovaOpen(false)} />}
