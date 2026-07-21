@@ -96,9 +96,24 @@ Deno.serve(async (req) => {
     });
 
     // Se o usuário já existe no Auth, trata como reenvio sem errar
-    if (authErr && !authErr.message?.includes("already been registered")) {
+    const alreadyRegistered = Boolean(authErr?.message?.includes("already been registered"));
+    if (authErr && !alreadyRegistered) {
       return new Response(JSON.stringify({ error: authErr.message }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (alreadyRegistered) {
+      // O GoTrue não reenvia e-mail de convite pra quem já tem conta confirmada —
+      // marca o convite como aceito em vez de deixá-lo "aguardando" pra sempre
+      // com um last_sent_at que mentiria sobre um envio que não aconteceu.
+      await supabase
+        .from("invitations")
+        .update({ accepted_at: new Date().toISOString() })
+        .eq("id", invitation_id);
+
+      return new Response(JSON.stringify({ success: true, already_registered: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
