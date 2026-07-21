@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MessageSquare, Plus, X, TrendingUp, Pencil, Settings2, AlertCircle,
-  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, BellRing,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { isSupabaseConfigured } from "../../lib/supabase";
@@ -12,8 +12,9 @@ import { useRHMovimentacoes } from "../../hooks/use-rh-movimentacoes";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useProfiles } from "../../hooks/use-profiles";
-import { nextPendingCycle, addDaysISO } from "../../utils/rh-feedback-cycles";
+import { nextPendingCycle, addDaysISO, CICLO_TIPOS, avaliacaoDiasParaProxima, cicloTipoLabel } from "../../utils/rh-feedback-cycles";
 import { formatBRL } from "../../utils/currency";
+import { RH_DEPARTMENTS } from "../../constants/rh-config";
 import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
 import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -40,15 +41,7 @@ function isEvaluatorEligible(u) {
   return roles.some(r => EVALUATOR_ROLES.includes(r));
 }
 
-const TIPOS = [
-  { id: "30_dias",     label: "30 dias" },
-  { id: "60_dias",     label: "60 dias" },
-  { id: "90_dias",     label: "90 dias" },
-  { id: "semestral",   label: "Semestral" },
-  { id: "anual",       label: "Anual" },
-  { id: "ad_hoc",      label: "Ad-hoc" },
-  { id: "reavaliacao", label: "Reavaliação" },
-];
+const TIPOS = CICLO_TIPOS;
 
 // Nota qualitativa-ancorada em vez de número solto: pesquisa de mercado
 // (Adobe/Deloitte/Microsoft e afins) mostra que escalas com rótulo reduzem o
@@ -1006,6 +999,95 @@ function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, on
   );
 }
 
+// ── Lembretes ────────────────────────────────────────────────────────────────
+// Próxima avaliação por colaborador ativo, com filtro por departamento —
+// reunião com o RH (20/07): "preciso de lembretes de quando é a próxima".
+// Reaproveita avaliacaoDiasParaProxima (rh-feedback-cycles.js), a mesma
+// função que alimenta o e-mail/notificação disparados em App.jsx.
+
+function FeedbackRemindersView({ colaboradores, feedbacks, onRowClick }) {
+  const [filterDept, setFilterDept] = useState("all");
+
+  const rows = useMemo(() => {
+    return colaboradores
+      .filter((c) => c.employeeStatus === "ativo")
+      .filter((c) => filterDept === "all" || c.department === filterDept)
+      .map((c) => {
+        const feedbacksDoColaborador = feedbacks.filter((f) => f.user_id === c.id);
+        const info = avaliacaoDiasParaProxima(c, feedbacksDoColaborador);
+        return { colaborador: c, info };
+      })
+      .filter((r) => r.info)
+      .sort((a, b) => a.info.diasRestantes - b.info.diasRestantes);
+  }, [colaboradores, feedbacks, filterDept]);
+
+  const selectSt = { borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" };
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <select
+          value={filterDept}
+          onChange={(e) => setFilterDept(e.target.value)}
+          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+          style={selectSt}
+        >
+          <option value="all">Todos os departamentos</option>
+          {RH_DEPARTMENTS.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+              {["Colaborador", "Departamento", "Tipo do ciclo", "Data prevista", "Situação"].map((h) => (
+                <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr><td colSpan={5} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma avaliação prevista encontrada.</td></tr>
+            )}
+            {rows.map(({ colaborador: c, info }) => {
+              const atrasado = info.diasRestantes < 0;
+              const situacao = info.emAndamento
+                ? "Em andamento"
+                : atrasado
+                ? `Atrasada há ${Math.abs(info.diasRestantes)} dia(s)`
+                : info.diasRestantes === 0
+                ? "Vence hoje"
+                : `Em ${info.diasRestantes} dia(s)`;
+              const cor = info.emAndamento ? "var(--text-dim)" : atrasado || info.diasRestantes <= 15 ? "var(--danger)" : "var(--text-dim)";
+              return (
+                <tr key={c.id} onClick={() => onRowClick?.(c)} style={{ borderBottom: "1px solid var(--border)", cursor: onRowClick ? "pointer" : "default" }}
+                  onMouseEnter={(e) => { if (onRowClick) e.currentTarget.style.background = "var(--surface-alt)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <InitialsAvatar name={c.fullName} size={26} />
+                      <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{c.fullName || "—"}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.department || "—"}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{cicloTipoLabel(info.tipo)}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(info.periodEnd)}</td>
+                  <td className="px-4 py-3 text-xs font-semibold" style={{ color: cor }}>{situacao}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── Calendário ───────────────────────────────────────────────────────────────
 // Agrupa por period_end — mesmo campo usado na tabela e no card ("até {data}").
 
@@ -1123,7 +1205,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const feedbackStageFields = useRHStageFields("feedback");
   const { users } = useProfiles();
 
-  const [viewMode, setViewMode]                   = useState("kanban"); // "kanban" | "table" | "calendar"
+  const [viewMode, setViewMode]                   = useState("kanban"); // "kanban" | "table" | "calendar" | "lembretes"
   const [novoOpen, setNovoOpen]                   = useState(false);
   const [completandoId, setCompletandoId]         = useState(null);
   const [autoavaliandoId, setAutoavaliandoId]     = useState(null);
@@ -1384,6 +1466,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
             <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+            <ViewToggleButton active={viewMode === "lembretes"} onClick={() => setViewMode("lembretes")} icon={BellRing} label="Lembretes" />
           </div>
           {canWrite && (
             <>
@@ -1414,6 +1497,12 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           stages={stages}
           colaboradoresById={colaboradoresById}
           onPillClick={(f) => setDrawerFeedbackId(f.id)}
+        />
+      ) : viewMode === "lembretes" ? (
+        <FeedbackRemindersView
+          colaboradores={colaboradores}
+          feedbacks={feedbacks}
+          onRowClick={(c) => setHistoricoColaboradorId(c.id)}
         />
       ) : (
         <>

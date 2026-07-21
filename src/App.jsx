@@ -35,6 +35,8 @@ import { useRHFeedback } from "./hooks/use-rh-feedback";
 import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
 import { useCRMDespesas } from "./hooks/use-crm-despesas";
 import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim } from "./utils/rh-compliance-dates";
+import { avaliacaoDiasParaProxima, cicloTipoLabel } from "./utils/rh-feedback-cycles";
+import { sendRhEmail } from "./utils/rh-send-email";
 import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
 import { LoginScreen, PasswordResetScreen } from "./components/shell/LoginScreen";
@@ -458,6 +460,48 @@ export default function App() {
       }
     }
   }, [colaboradoresParaLembretes, isRHManager, pushNotification]);
+
+  // Lembrete de avaliação de desempenho se aproximando — avisa RH/gestor
+  // (in-app + e-mail) quando o próximo ciclo de um colaborador ativo está a
+  // até 15 dias de vencer (ou já venceu), uma vez por dia por colaborador.
+  // Reunião com o RH (20/07): "preciso de lembretes de quando é a próxima".
+  const avaliacaoVistoRef = useRef(new Set());
+  useEffect(() => {
+    if (!isRHManager) return;
+    const hoje = new Date();
+    const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    const destinatarios = users.filter((u) => (u.roles || []).some((r) => ["gerente_rh", "admin"].includes(r)) && u.email);
+    for (const c of colaboradoresParaLembretes) {
+      if (c.employeeStatus !== "ativo") continue;
+      const feedbacksDoColaborador = meusCiclosFeedback.filter((f) => f.user_id === c.id);
+      const info = avaliacaoDiasParaProxima(c, feedbacksDoColaborador);
+      if (!info || info.emAndamento || info.diasRestantes > 15) continue;
+      const key = `${c.id}:${info.periodEnd}:${hojeISO}`;
+      if (avaliacaoVistoRef.current.has(key)) continue;
+      avaliacaoVistoRef.current.add(key);
+
+      const dueLabel = info.diasRestantes < 0
+        ? `venceu há ${Math.abs(info.diasRestantes)} dia(s)`
+        : info.diasRestantes === 0
+        ? "vence hoje"
+        : `vence em ${info.diasRestantes} dia(s)`;
+      pushNotification({
+        type: "avaliacao_proxima",
+        title: info.diasRestantes < 0 ? "Avaliação de desempenho atrasada" : "Avaliação de desempenho se aproximando",
+        body: `${c.fullName}: próxima avaliação (${cicloTipoLabel(info.tipo)}) ${dueLabel}.`,
+      });
+      for (const dest of destinatarios) {
+        sendRhEmail("avaliacao_proxima", dest.email, {
+          EMPLOYEE_NAME: c.fullName || "",
+          JOB_TITLE: c.jobTitle || "—",
+          DEPARTMENT: c.department || "—",
+          TIPO_CICLO: cicloTipoLabel(info.tipo),
+          DUE_DATE: new Date(info.periodEnd).toLocaleDateString("pt-BR"),
+          DUE_LABEL: dueLabel,
+        });
+      }
+    }
+  }, [colaboradoresParaLembretes, meusCiclosFeedback, isRHManager, users, pushNotification]);
 
   // Lembrete de reembolso de Viagens pendente há muito tempo — mesma ideia
   // de "approval-queue timeout" do Concur/TravelPerk: sem isso, uma despesa

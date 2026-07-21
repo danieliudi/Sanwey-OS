@@ -7,6 +7,22 @@
 // duplicado.
 import { parseDateInput } from "./date";
 
+// Rótulos de tipo de ciclo — compartilhado entre RHFeedbackView (telas) e o
+// lembrete de proximidade (App.jsx / e-mail).
+export const CICLO_TIPOS = [
+  { id: "30_dias",     label: "30 dias" },
+  { id: "60_dias",     label: "60 dias" },
+  { id: "90_dias",     label: "90 dias" },
+  { id: "semestral",   label: "Semestral" },
+  { id: "anual",       label: "Anual" },
+  { id: "ad_hoc",      label: "Ad-hoc" },
+  { id: "reavaliacao", label: "Reavaliação" },
+];
+
+export function cicloTipoLabel(id) {
+  return CICLO_TIPOS.find((t) => t.id === id)?.label || id;
+}
+
 const CHECKIN_SEQUENCE = [
   { tipo: "30_dias", days: 30 },
   { tipo: "60_dias", days: 60 },
@@ -74,12 +90,14 @@ function reachedAcompanhamento(stage) {
   return idx >= ONBOARDING_ORDER.indexOf("acompanhamento");
 }
 
-// Retorna { tipo, periodStart, periodEnd } pro próximo ciclo pendente desse
-// colaborador, ou null se ainda não é hora de criar um (já tem um em
-// aberto, ainda não venceu o próximo, ou não há data de referência).
-export function nextPendingCycle(colaborador, feedbacksDoColaborador) {
-  const hasOpen = feedbacksDoColaborador.some((f) => f.status !== "concluido");
-  if (hasOpen) return null;
+// Calcula qual é o próximo ciclo — pendente (a criar) ou já em andamento —
+// sem gate de vencimento, pra poder alimentar tanto a criação automática
+// (nextPendingCycle, que só cria depois de vencido) quanto o lembrete de
+// proximidade (avaliacaoDiasParaProxima, que quer saber mesmo estando no
+// futuro).
+function computeProximoCiclo(colaborador, feedbacksDoColaborador) {
+  const aberto = feedbacksDoColaborador.find((f) => f.status !== "concluido");
+  if (aberto) return { tipo: aberto.tipo, periodEnd: aberto.period_end, emAndamento: true };
 
   const concluidos = feedbacksDoColaborador.filter((f) => f.status === "concluido");
   const tiposConcluidos = new Set(concluidos.map((f) => f.tipo));
@@ -100,6 +118,7 @@ export function nextPendingCycle(colaborador, feedbacksDoColaborador) {
         tipo: proximoCheckin.tipo,
         periodStart: colaborador.admissionDate,
         periodEnd: addDaysISO(colaborador.admissionDate, proximoCheckin.days),
+        emAndamento: false,
       };
     }
   }
@@ -117,6 +136,27 @@ export function nextPendingCycle(colaborador, feedbacksDoColaborador) {
   const periodEnd = (cadencia.ancorarAniversario && colaborador.admissionDate)
     ? (proximoAniversarioISO(colaborador.admissionDate, base) || addDaysISO(base, cadencia.days))
     : addDaysISO(base, cadencia.days);
-  if (new Date(periodEnd) > new Date()) return null;
-  return { tipo: cadencia.tipo, periodStart: base, periodEnd };
+  return { tipo: cadencia.tipo, periodStart: base, periodEnd, emAndamento: false };
+}
+
+// Retorna { tipo, periodStart, periodEnd } pro próximo ciclo pendente desse
+// colaborador, ou null se ainda não é hora de criar um (já tem um em
+// aberto, ainda não venceu o próximo, ou não há data de referência).
+export function nextPendingCycle(colaborador, feedbacksDoColaborador) {
+  const hasOpen = feedbacksDoColaborador.some((f) => f.status !== "concluido");
+  if (hasOpen) return null;
+  const proximo = computeProximoCiclo(colaborador, feedbacksDoColaborador);
+  if (!proximo || proximo.emAndamento) return null;
+  if (new Date(proximo.periodEnd) > new Date()) return null;
+  return { tipo: proximo.tipo, periodStart: proximo.periodStart, periodEnd: proximo.periodEnd };
+}
+
+// Dias restantes até a próxima avaliação (negativo = já vencida) — pro
+// lembrete preventivo, que ao contrário de nextPendingCycle quer saber a
+// data mesmo estando no futuro (pra avisar ANTES de vencer, não só depois).
+export function avaliacaoDiasParaProxima(colaborador, feedbacksDoColaborador) {
+  const proximo = computeProximoCiclo(colaborador, feedbacksDoColaborador);
+  if (!proximo?.periodEnd) return null;
+  const diasRestantes = Math.floor((new Date(proximo.periodEnd).getTime() - Date.now()) / 86400000);
+  return { tipo: proximo.tipo, periodEnd: proximo.periodEnd, diasRestantes, emAndamento: !!proximo.emAndamento };
 }
