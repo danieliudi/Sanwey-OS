@@ -32,6 +32,8 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { useAvailableHeight } from "../../hooks/use-available-height";
+import { KanbanFab } from "../shared/KanbanFab";
 
 // Avaliadores elegíveis (FASE 5) — mesmo critério admin/RH usado pela ramificação
 // de acesso amplo da RLS rh_avaliacoes_read (admin/gerente_rh/rh enxergam tudo).
@@ -640,7 +642,7 @@ function FeedbackKanbanColumn({
   stage, stages, feedbackList, colaboradoresById,
   onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteFeedback,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields, getCompleteness, getUnread,
+  canWrite, onEditFields, getCompleteness, getUnread, boardHeight,
 }) {
   return (
     <div
@@ -653,10 +655,7 @@ function FeedbackKanbanColumn({
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        // Altura fixa (não máxima) — senão a barra de scroll horizontal
-        // subia junto com colunas de poucos cards em vez de ficar sempre
-        // no rodapé da tela.
-        height: "calc(100vh - 260px)",
+        height: boardHeight,
       }}
     >
       <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
@@ -1217,6 +1216,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const [dragOverStageKey, setDragOverStageKey]   = useState(null);
   const [moveError, setMoveError]                 = useState(null);
   const reconciledRef = useRef(false);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode]);
 
   const { viewedAt, markViewed } = useRecordViews("rh_feedback", currentUser?.id);
   useEffect(() => { if (drawerFeedbackId) markViewed(drawerFeedbackId); }, [drawerFeedbackId]);
@@ -1527,7 +1527,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
             )}
             emptyLabel="Nada aqui"
           />
-          <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="hidden lg:flex">
+          <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
             {stages.map((stage) => (
               <FeedbackKanbanColumn
                 key={stage.id}
@@ -1548,9 +1548,11 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                 onEditFields={setFieldEditorStage}
                 getCompleteness={getFeedbackCompleteness}
                 getUnread={(f) => hasUnreadRHComment(f, viewedAt, currentUser?.id)}
+                boardHeight={boardHeight}
               />
             ))}
           </div>
+          {canWrite && <KanbanFab label="Novo feedback" onClick={() => setNovoOpen(true)} />}
         </>
       )}
 
