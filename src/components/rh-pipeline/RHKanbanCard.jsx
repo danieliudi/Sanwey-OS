@@ -20,7 +20,7 @@ function stageKeyOf(s) {
   return s?.stageKey ?? s?.id;
 }
 
-function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, agingDays, completeness, unread, children }) {
+function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, deleteLabel, deleteConfirmMessage, agingDays, completeness, unread, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -106,6 +106,8 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
               targets={moveTargets.map(s => ({ key: stageKeyOf(s), name: s.name, color: s.color }))}
               onMove={onMoveToStage ? (key) => onMoveToStage(id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(id) : undefined}
+              deleteLabel={deleteLabel}
+              confirmMessage={deleteConfirmMessage}
               onOpenChange={setMenuOpen}
             />
           )}

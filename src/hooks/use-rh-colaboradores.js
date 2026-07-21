@@ -155,12 +155,6 @@ export function useRHColaboradores({ userId, enabled = true } = {}) {
     setColaboradores(prev => prev.map(c => c.id === id ? merged : c));
   }, [colaboradores]);
 
-  const deleteColaborador = useCallback(async (id) => {
-    const { error } = await supabase.from("rh_colaboradores").delete().eq("id", id);
-    if (error) throw new Error(error.message);
-    setColaboradores(prev => prev.filter(c => c.id !== id));
-  }, []);
-
   const changeOnboardingStage = useCallback(async (id, stage) => {
     const patch = { onboarding_stage: stage, onboarding_stage_changed_at: new Date().toISOString() };
     const { error } = await supabase.from("rh_colaboradores").update(patch).eq("id", id);
@@ -168,5 +162,5 @@ export function useRHColaboradores({ userId, enabled = true } = {}) {
     setColaboradores(prev => prev.map(c => c.id === id ? { ...c, onboardingStage: stage, onboardingStageChangedAt: patch.onboarding_stage_changed_at } : c));
   }, []);
 
-  return { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador, changeOnboardingStage, refetch: fetchAll };
+  return { colaboradores, loading, createColaborador, updateColaborador, changeOnboardingStage, refetch: fetchAll };
 }

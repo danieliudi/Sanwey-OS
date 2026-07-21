@@ -62,6 +62,32 @@ function addDays(base, days) {
 // admissão (D+10/45/60), onde o -1 dia do addDays() distorceria o marco.
 const TIPO_TRILHA_LABELS = { administrativa: "Administrativa", operacional: "Operacional", iso: "ISO (10/45/60)" };
 
+// "Excluir" no menu de três pontos do card de Onboarding — achado de
+// auditoria: deleteColaborador (use-rh-colaboradores.js) é um DELETE físico
+// em rh_colaboradores, cujo CASCADE apaga sem chance de recuperação as
+// avaliações, atribuições de treinamento, benefícios, movimentações e
+// solicitações de atualização de dados desse colaborador. O módulo de RH já
+// tem o padrão certo pra "tirar do fluxo sem apagar o cadastro" nessa mesma
+// tabela — RHFuncionariosView usa employee_status="desligado" no
+// offboarding. Por isso "Excluir" aqui não faz hard delete: move pra uma
+// etapa terminal dedicada (handleRemoveFromOnboarding, mais abaixo),
+// mantendo o colaborador intacto em Funcionários e reversível a qualquer
+// momento.
+//
+// Não reusa a etapa terminal "concluido" pra isso — ela é terminal&&!lost,
+// o mesmo critério que use-insights-metrics.js usa pra contar "tempo médio
+// de onboarding concluído com sucesso" (revisão adversarial da migration
+// 20260758). Um colaborador removido por engano/duplicidade contaria como
+// onboarding bem-sucedido. A migration 20260758_rh_onboarding_removido_stage
+// cria uma etapa terminal separada (terminal&&lost=true), mesmo padrão já
+// usado no domain 'candidatos' pra "reprovado" — sai do cálculo de sucesso
+// de graça (o filtro já é terminal && !lost) e ganha o selo visual de X
+// vermelho que RHKanbanCard.jsx já renderiza pra qualquer stage com lost=true.
+const REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE =
+  "Remover este colaborador do onboarding? O cadastro continua em Funcionários — " +
+  "nada é apagado, e o histórico (avaliações, treinamentos, movimentações) não é afetado. " +
+  "O card só sai do fluxo ativo, indo pra etapa \"Removido\"; dá pra reverter movendo de volta a qualquer momento.";
+
 function addDaysLocalISO(baseISO, days) {
   const d = parseDateInput(baseISO);
   if (Number.isNaN(d.getTime())) return null;
@@ -202,7 +228,7 @@ function OnboardingCardBody({ colaborador, tarefas, vagaTitle }) {
 
 function OnboardingKanbanColumn({
   stage, stages, colaboradoresList, tarefasByColaborador, vagasById,
-  onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard,
+  onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, deleteLabel, deleteConfirmMessage,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, onAddColaborador,
 }) {
@@ -278,6 +304,8 @@ function OnboardingKanbanColumn({
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteCard : undefined}
+              deleteLabel={deleteLabel}
+              deleteConfirmMessage={deleteConfirmMessage}
               agingDays={daysInStage(c.onboardingStageChangedAt)}
               completeness={getCompleteness?.(c)}
               unread={getUnread?.(c)}
@@ -984,12 +1012,28 @@ function OnboardingCalendarView({ colaboradores, stages, onPillClick }) {
 
 export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentions }) {
   const { templates, tarefas, loading: loadingTarefas, createTemplate, applyChecklist, applyTaskToMany, updateTarefaStatus, deleteTarefa } = useRHOnboarding({ userId: currentUser?.id });
-  const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador, createColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  // deleteColaborador (hard delete + CASCADE) foi removido do hook — nenhuma
+  // tela do app oferecia um caminho seguro e intencional pra ele (era um
+  // import morto em RHFuncionariosView, e o único uso real, aqui no
+  // Onboarding, foi substituído por handleRemoveFromOnboarding — ver
+  // REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE acima).
+  const { colaboradores, loading: loadingColaboradores, changeOnboardingStage, updateColaborador, createColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
   const { vagas } = useRHRecrutamento({ userId: currentUser?.id });
   const { treinamentos, atribuicoes: treinamentoAtribuicoes, assignToUsers: assignTreinamento } = useRHTreinamentos({ userId: currentUser?.id });
   const { feedbacks, createPendingCycle } = useRHFeedback({ userId: currentUser?.id });
   const { stages, loading: loadingStages } = useRHPipelineStages("onboarding");
+  // Etapa terminal "de saída" (ex.: "Removido") — alvo de
+  // handleRemoveFromOnboarding. Especificamente terminal && lost, não
+  // qualquer terminal: "concluido" também é terminal, mas é terminal &&
+  // !lost, o critério que use-insights-metrics.js usa pra contar "onboarding
+  // concluído com sucesso" — usar "concluido" aqui poluiria essa métrica pra
+  // quem foi só removido/cadastrado por engano (ver migration
+  // 20260758_rh_onboarding_removido_stage.sql). Calculada a partir de
+  // rh_pipeline_stages (admin pode renomear/reordenar via "Editar etapas"),
+  // nunca hardcoded — se não houver etapa terminal+lost configurada, a
+  // opção "Excluir" fica indisponível (ver onDeleteCard abaixo).
+  const onboardingRemovedStageKey = useMemo(() => stages.find((s) => s.terminal && s.lost)?.stageKey || null, [stages]);
   const onboardingStageFields = useRHStageFields("onboarding");
   const { users } = useProfiles();
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
@@ -1073,13 +1117,16 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
     }
   };
 
-  // Excluir card no menu "…" do Kanban — apaga o colaborador por completo
-  // (rh_colaboradores é o cadastro mestre, compartilhado com Treinamentos/
-  // Avaliação/Férias), mesmo padrão de confirmação inline do MoveStageMenu
-  // usado nos outros domínios de RH. Fecha o drawer se estava aberto nesse
-  // colaborador.
-  const handleDeleteColaborador = async (id) => {
-    await deleteColaborador(id);
+  // "Excluir" no menu "…" do Kanban de Onboarding — NÃO é hard delete (ver
+  // REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE acima pro porquê). Move o
+  // colaborador pra etapa terminal via changeOnboardingStage direto — sem
+  // passar por handleStageChange — porque "sair do board" não deveria ficar
+  // travado pela validação de campos obrigatórios da etapa atual (a mesma
+  // razão pela qual um delete de verdade também não seria bloqueado por ela).
+  // Fecha o drawer se estava aberto nesse colaborador, mesmo padrão de antes.
+  const handleRemoveFromOnboarding = async (id) => {
+    if (!onboardingRemovedStageKey) return;
+    await changeOnboardingStage(id, onboardingRemovedStageKey);
     if (drawerColaboradorId === id) setDrawerColaboradorId(null);
   };
 
@@ -1222,6 +1269,14 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           </div>
           {canWrite && (
             <>
+              {/* Ponto de entrada direto pro Onboarding — cadastra alguém que já
+                  está em processo sem precisar ter vindo do Recrutamento.
+                  Reaproveita o mesmo NovoColaboradorModal e o mesmo estado
+                  (addColaboradorStage) já usados pelo "+" de cada coluna,
+                  só que abrindo direto na primeira etapa do board. */}
+              <Button variant="primary" size="sm" icon={Plus} onClick={() => setAddColaboradorStage(stages[0]?.stageKey || null)}>
+                Novo colaborador
+              </Button>
               <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
               <Button variant="secondary" size="sm" icon={Users} onClick={() => setBulkTarefaOpen(true)}>Tarefa em lote</Button>
               <Button variant="secondary" size="sm" icon={Plus} onClick={() => setNovaTemplateOpen(true)}>Template</Button>
@@ -1286,7 +1341,9 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
                 onDragStart={canWrite ? handleCardDragStart : undefined}
                 onDragEnd={canWrite ? handleCardDragEnd : undefined}
                 onMoveToStage={canWrite ? handleStageChange : undefined}
-                onDeleteCard={canWrite ? handleDeleteColaborador : undefined}
+                onDeleteCard={canWrite && onboardingRemovedStageKey ? handleRemoveFromOnboarding : undefined}
+                deleteLabel="Remover do onboarding"
+                deleteConfirmMessage={REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE}
                 agingDays={daysInStage(c.onboardingStageChangedAt)}
                 completeness={getColaboradorCompleteness?.(c)}
                 unread={hasUnreadRHComment(c, viewedAt, currentUser?.id)}
@@ -1315,7 +1372,9 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
                 onDragStart={handleCardDragStart}
                 onDragEnd={handleCardDragEnd}
                 onMoveToStage={handleStageChange}
-                onDeleteCard={handleDeleteColaborador}
+                onDeleteCard={onboardingRemovedStageKey ? handleRemoveFromOnboarding : undefined}
+                deleteLabel="Remover do onboarding"
+                deleteConfirmMessage={REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE}
                 isDragOver={dragOverStageKey === stage.stageKey}
                 onColumnDragOver={handleColumnDragOver}
                 onColumnDragLeave={handleColumnDragLeave}

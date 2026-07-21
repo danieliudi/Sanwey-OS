@@ -1265,7 +1265,7 @@ export function RHFuncionariosView({
   onUpdateUser,
   canWrite,
 }) {
-  const { colaboradores, createColaborador, updateColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, createColaborador, updateColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const [search, setSearch]         = useState("");
   const [filterDept, setFilterDept] = useState("all");
   const [filterFrente, setFilterFrente] = useState("all");

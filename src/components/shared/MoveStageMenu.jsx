@@ -17,7 +17,14 @@ import { MoreVertical, ArrowRight, Trash2 } from "lucide-react";
 // precisar abrir o detalhe primeiro. Confirmação inline (2 cliques) em vez
 // de window.confirm, que trava sessões automatizadas/headless sem handler
 // de diálogo.
-export function MoveStageMenu({ targets = [], onMove, onOpenChange, onDelete, deleteLabel = "Excluir card" }) {
+export function MoveStageMenu({
+  targets = [], onMove, onOpenChange, onDelete, deleteLabel = "Excluir card",
+  // Mensagem do passo de confirmação (2º clique) — sobrescrevível por chamador
+  // que precisa deixar claro que "Excluir" aqui não é uma exclusão física
+  // (ex.: Onboarding de RH, ver RHOnboardingView). Default cobre o caso comum
+  // (hard delete em Leads/Campanhas/Entregas/demais Kanbans de RH).
+  confirmMessage = "Excluir este card? Não pode ser desfeito.",
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pos, setPos] = useState(null); // { top | bottom, left } em coordenadas de viewport
@@ -97,7 +104,7 @@ export function MoveStageMenu({ targets = [], onMove, onOpenChange, onDelete, de
           {confirmingDelete ? (
             <div style={{ padding: "10px 12px" }}>
               <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 8 }}>
-                Excluir este card? Não pode ser desfeito.
+                {confirmMessage}
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 <button
