@@ -9,7 +9,6 @@ import {
   Briefcase,
   BarChart2,
   Plus,
-  UserCog,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -1309,22 +1308,40 @@ export function RHFuncionariosView({
     };
   }, [users, colaboradoresSemAcesso]);
 
-  const filteredColaboradores = useMemo(() => {
-    return colaboradoresSemAcesso.filter((c) => {
-      if (search) {
-        const q = search.toLowerCase();
-        if (!(c.fullName || "").toLowerCase().includes(q) && !(c.email || "").toLowerCase().includes(q)) return false;
-      }
-      if (filterDept !== "all" && c.department !== filterDept) return false;
-      if (filterFrente !== "all" && c.frente !== filterFrente) return false;
-      if (filterStatus !== "all" && (c.employeeStatus || "ativo") !== filterStatus) return false;
-      if (filterContract !== "all" && c.contractType !== filterContract) return false;
-      return true;
-    });
-  }, [colaboradoresSemAcesso, search, filterDept, filterFrente, filterStatus, filterContract]);
+  // Lista única com todo mundo — colaborador sem login carrega _hasAccess:
+  // false e um selo inline na tabela, em vez de uma seção separada.
+  const unifiedRows = useMemo(() => {
+    const withAccess = users.map((u) => ({
+      _hasAccess: true,
+      _raw: u,
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      job_title: u.job_title,
+      frente: u.frente,
+      department: u.department,
+      contract_type: u.contract_type,
+      employee_status: u.employee_status || "ativo",
+      admission_date: u.admission_date,
+    }));
+    const withoutAccess = colaboradoresSemAcesso.map((c) => ({
+      _hasAccess: false,
+      _raw: c,
+      id: c.id,
+      name: c.fullName,
+      email: c.email,
+      job_title: c.jobTitle,
+      frente: c.frente,
+      department: c.department,
+      contract_type: c.contractType,
+      employee_status: c.employeeStatus || "ativo",
+      admission_date: c.admissionDate,
+    }));
+    return [...withAccess, ...withoutAccess];
+  }, [users, colaboradoresSemAcesso]);
 
   const filtered = useMemo(() => {
-    const arr = users.filter((u) => {
+    const arr = unifiedRows.filter((u) => {
       if (search) {
         const q = search.toLowerCase();
         if (
@@ -1335,7 +1352,7 @@ export function RHFuncionariosView({
       }
       if (filterDept !== "all" && u.department !== filterDept) return false;
       if (filterFrente !== "all" && u.frente !== filterFrente) return false;
-      if (filterStatus !== "all" && (u.employee_status || "ativo") !== filterStatus) return false;
+      if (filterStatus !== "all" && u.employee_status !== filterStatus) return false;
       if (filterContract !== "all" && u.contract_type !== filterContract) return false;
       return true;
     });
@@ -1347,7 +1364,7 @@ export function RHFuncionariosView({
       return 0;
     });
     return arr;
-  }, [users, search, filterDept, filterFrente, filterStatus, filterContract, sortCol, sortDir]);
+  }, [unifiedRows, search, filterDept, filterFrente, filterStatus, filterContract, sortCol, sortDir]);
 
   const selectSt = {
     borderColor: "var(--border)",
@@ -1595,7 +1612,7 @@ export function RHFuncionariosView({
                   <tr
                     key={u.id}
                     style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
-                    onClick={() => setSelected(u)}
+                    onClick={() => (u._hasAccess ? setSelected(u._raw) : setEditingColaborador(u._raw))}
                     onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
@@ -1603,8 +1620,18 @@ export function RHFuncionariosView({
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <Avatar user={u} size={34} />
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
-                            {u.name || "Sem nome"}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+                              {u.name || "Sem nome"}
+                            </span>
+                            {!u._hasAccess && (
+                              <span
+                                title="Não tem login no sistema"
+                                style={{ fontSize: 9, fontWeight: 700, color: "var(--text-dim)", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 99, padding: "1px 7px", textTransform: "uppercase", letterSpacing: "0.04em" }}
+                              >
+                                Sem acesso
+                              </span>
+                            )}
                           </div>
                           <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>
                             {u.email}
@@ -1644,7 +1671,7 @@ export function RHFuncionariosView({
             {filtered.map((u) => (
               <div
                 key={u.id}
-                onClick={() => setSelected(u)}
+                onClick={() => (u._hasAccess ? setSelected(u._raw) : setEditingColaborador(u._raw))}
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border)",
@@ -1660,8 +1687,18 @@ export function RHFuncionariosView({
               >
                 <Avatar user={u} size={40} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>
-                    {u.name || "Sem nome"}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>
+                      {u.name || "Sem nome"}
+                    </span>
+                    {!u._hasAccess && (
+                      <span
+                        title="Não tem login no sistema"
+                        style={{ fontSize: 9, fontWeight: 700, color: "var(--text-dim)", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 99, padding: "1px 7px", textTransform: "uppercase", letterSpacing: "0.04em" }}
+                      >
+                        Sem acesso
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>
                     {u.job_title || u.email}
@@ -1681,47 +1718,6 @@ export function RHFuncionariosView({
             ))}
           </div>
         </>
-      )}
-
-      {/* Colaboradores sem acesso ao sistema */}
-      {filteredColaboradores.length > 0 && (
-        <div style={{ marginTop: 28 }}>
-          <div className="flex items-center gap-2 mb-3">
-            <UserCog size={16} style={{ color: "var(--text-dim)" }} />
-            <div style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>
-              Colaboradores sem acesso ao sistema
-            </div>
-            <span style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 99, padding: "1px 8px" }}>
-              {filteredColaboradores.length}
-            </span>
-          </div>
-          <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-            {filteredColaboradores.map((c) => (
-              <div
-                key={c.id}
-                onClick={() => setEditingColaborador(c)}
-                style={{
-                  background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12,
-                  padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "var(--surface)"; }}
-              >
-                <Avatar user={{ name: c.fullName }} size={34} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {c.fullName}
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>
-                    {c.jobTitle || c.department || "—"}
-                  </div>
-                </div>
-                <FrenteBadge frente={c.frente} />
-                <StatusBadge statusId={c.employeeStatus || "ativo"} />
-              </div>
-            ))}
-          </div>
-        </div>
       )}
 
       {/* Detail Modal */}

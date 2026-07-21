@@ -462,8 +462,6 @@ export function PurchaseRequestDetailDrawer({
         <SectionLabel>Solicitação</SectionLabel>
         <FieldRow label="Solicitante"><ReadValue value={purchase.requesterName} /></FieldRow>
         <FieldRow label="Prazo desejado"><ReadValue value={purchase.dueDate ? formatDateBR(purchase.dueDate) : null} /></FieldRow>
-        <FieldRow label="E-mail"><ReadValue value={purchase.requesterEmail} /></FieldRow>
-        <FieldRow label="Telefone"><ReadValue value={purchase.requesterPhone} /></FieldRow>
         {purchase.description && (
           <FieldRow label="Descrição">
             <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{purchase.description}</div>

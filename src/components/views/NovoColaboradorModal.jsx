@@ -66,7 +66,6 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
   const [fileError, setFileError] = useState(null);
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState(false);
-  const [closeVaga, setCloseVaga] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [captureOpen, setCaptureOpen] = useState(false);
@@ -219,7 +218,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
       const stageExtras = stageId
         ? { onboardingStage: stageId, onboardingStageChangedAt: new Date().toISOString(), customFields: customValues }
         : {};
-      const payload = hireContext ? { ...form, ...stageExtras, _closeVaga: closeVaga } : { ...form, ...stageExtras };
+      const payload = { ...form, ...stageExtras };
       const novo = await onSave(payload);
       const targetId = novo?.id || initialData?.id;
       if (file && targetId) {
@@ -278,10 +277,9 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
                 Convertendo candidato aprovado{hireContext.vagaTitle ? ` — vaga "${hireContext.vagaTitle}"` : ""}
               </div>
               {hireContext.vagaId && (
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--success)", cursor: "pointer" }}>
-                  <input type="checkbox" checked={closeVaga} onChange={(e) => setCloseVaga(e.target.checked)} />
-                  Encerrar esta vaga como preenchida
-                </label>
+                <div style={{ fontSize: 12, color: "var(--success)" }}>
+                  Esta vaga será encerrada automaticamente como preenchida.
+                </div>
               )}
             </div>
           )}

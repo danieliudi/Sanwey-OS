@@ -2798,9 +2798,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
 
   // ── Contratação: candidato aprovado → funcionário → onboarding ─────────────
   const handleSaveHired = async (form) => {
-    const { _closeVaga, ...colaboradorData } = form;
     const vaga = vagaDoCandidatoContratando;
-    const novo = await createColaborador({ ...colaboradorData, vagaId: vaga?.id || null });
+    const novo = await createColaborador({ ...form, vagaId: vaga?.id || null });
     if (vaga?.job_title && novo?.id) {
       const template = onboardingTemplates.find(
         (t) => t.cargo && t.cargo.toLowerCase() === vaga.job_title.toLowerCase()
@@ -2814,7 +2813,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
         );
       }
     }
-    if (_closeVaga && vaga?.id) {
+    if (vaga?.id) {
       await changeVagaStage(vaga.id, "encerrada");
     }
     // Marca a aplicação como contratada — dá sinal durável de "já contratado"
