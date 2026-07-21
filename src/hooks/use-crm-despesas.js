@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 const BUCKET = "crm-comprovantes";
 
@@ -31,12 +32,14 @@ export function useCRMDespesas({ userId, enabled = true } = {}) {
     // use-profiles.js: "cannot add postgres_changes callbacks... after
     // subscribe()").
     const channelName = `crm-viagem-despesas-${Math.random().toString(36).slice(2, 9)}`;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "crm_viagem_despesas" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "crm_viagem_despesas" }, debouncedFetchAll)
       .subscribe();
     return () => {
       activeRef.current = false;
+      debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll, enabled]);

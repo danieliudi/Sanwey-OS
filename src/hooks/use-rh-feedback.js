@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -26,12 +27,14 @@ export function useRHFeedback({ userId, enabled = true } = {}) {
     fetchAll();
     if (!isSupabaseConfigured) return;
     const channelName = `rh-feedback-${Math.random().toString(36).slice(2, 9)}`;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_avaliacoes" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_avaliacoes" }, debouncedFetchAll)
       .subscribe();
     return () => {
       activeRef.current = false;
+      debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll, enabled]);

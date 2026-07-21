@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 export function useRHOnboarding({ userId } = {}) {
   const [templates, setTemplates] = useState([]);
@@ -27,14 +28,16 @@ export function useRHOnboarding({ userId } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured) return;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channelName = `rh-onboarding-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_onboarding_templates" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_onboarding_tarefas" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_onboarding_templates" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_onboarding_tarefas" }, debouncedFetchAll)
       .subscribe();
     return () => {
       activeRef.current = false;
+      debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll]);

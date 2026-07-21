@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { defaultPipelines, DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
+import { debounce } from "../utils/debounce";
 
 // Gerencia o pipeline de cada empresa (etapas, ordem, cor, probabilidade,
 // código, SLA). Migrado de localStorage pra Supabase (tabela
@@ -68,16 +69,17 @@ export function usePipelines() {
     activeRef.current = true;
     if (!isSupabaseConfigured) return;
     fetchAll();
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(`pipeline-stages-comercial-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_pipeline_stages" }, (payload) => {
         if (!activeRef.current) return;
         const row = payload.new?.domain === DOMAIN ? payload.new : (payload.old?.domain === DOMAIN ? payload.old : null);
         if (!row) return;
-        fetchAll(); // mudança de company/reorder é mais simples de refetch que reconciliar linha a linha
+        debouncedFetchAll(); // mudança de company/reorder é mais simples de refetch que reconciliar linha a linha
       })
       .subscribe();
-    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   // Patch numa etapa específica (não muda ordem, só campos).

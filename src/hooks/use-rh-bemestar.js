@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 // Bem-estar (redesenhado — reunião com o RH, 20/07): sessões com janela de
 // horários (horario_inicio/horario_fim/slot_minutos) + reservas por horário
@@ -32,12 +33,13 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured || !enabled) return;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(`rh-bemestar-${Math.random().toString(36).slice(2, 9)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_sessoes" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_fila" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_sessoes" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_fila" }, debouncedFetchAll)
       .subscribe();
-    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [enabled, fetchAll]);
 
   const criarSessao = useCallback(async (data) => {

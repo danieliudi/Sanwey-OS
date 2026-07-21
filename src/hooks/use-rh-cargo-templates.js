@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 export function useRHCargoTemplates({ userId } = {}) {
   const [cargos, setCargos] = useState([]);
@@ -23,12 +24,14 @@ export function useRHCargoTemplates({ userId } = {}) {
     fetchAll();
     if (!isSupabaseConfigured) return;
     const channelName = `rh-cargo-templates-${Math.random().toString(36).slice(2, 9)}`;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_cargo_templates" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_cargo_templates" }, debouncedFetchAll)
       .subscribe();
     return () => {
       activeRef.current = false;
+      debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll]);

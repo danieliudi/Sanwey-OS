@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 /**
  * Manages allowed stage transition rules per company. Migrado de
@@ -38,16 +39,17 @@ export function usePipelineTransitions() {
     activeRef.current = true;
     if (!isSupabaseConfigured) return;
     fetchAll();
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(`pipeline-transitions-comercial-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "pipeline_stage_transitions" }, (payload) => {
         if (!activeRef.current) return;
         const domain = payload.new?.domain ?? payload.old?.domain;
         if (domain !== DOMAIN) return;
-        fetchAll();
+        debouncedFetchAll();
       })
       .subscribe();
-    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   // Reconstrói o shape { [companyId]: { [fromStageId]: string[] } } a partir

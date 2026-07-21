@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 // Fornecedores de RH (convênio médico, seguradora, terceirizada) com
 // contrato real (vigência/valor/status) + histórico de eventos (reajuste,
@@ -99,14 +100,15 @@ export function useRHSuppliers({ userId, enabled = true } = {}) {
 
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled) return;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const suffix = Math.random().toString(36).slice(2, 9);
     const channel = supabase
       .channel(`rh-suppliers-${suffix}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_fornecedores" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_fornecedor_contratos" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_fornecedor_contrato_eventos" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_fornecedores" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_fornecedor_contratos" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_fornecedor_contrato_eventos" }, debouncedFetchAll)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [enabled, fetchAll]);
 
   const createSupplier = useCallback(async (supplier) => {

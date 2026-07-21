@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 const TABLE = "marketing_supplier_quotes";
 
@@ -81,11 +82,12 @@ export function useMarketingQuotes({ userId, role, roles, enabled = true } = {})
 
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled) return;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(`marketing-quotes-${Math.random().toString(36).slice(2, 9)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, debouncedFetchAll)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [enabled, fetchAll]);
 
   const createQuote = useCallback(async (quote) => {

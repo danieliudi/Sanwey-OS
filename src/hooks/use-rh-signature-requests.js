@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 // Assinatura eletrônica via D4Sign (item 12) — histórico de envios por
 // domain/recordId (mesmo padrão genérico multi-domínio de rh_stage_history)
@@ -46,11 +47,12 @@ export function useRHSignatureRequests({ domain, recordId, enabled = true } = {}
 
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled || !domain || !recordId) return;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(`rh-signature-requests-${domain}-${recordId}-${Math.random().toString(36).slice(2, 9)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_signature_requests", filter: `record_id=eq.${recordId}` }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_signature_requests", filter: `record_id=eq.${recordId}` }, debouncedFetchAll)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [domain, recordId, enabled, fetchAll]);
 
   const sendForSignature = useCallback(async ({ signers, sourceStoragePath, message }) => {

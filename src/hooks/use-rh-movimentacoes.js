@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 // Movimentações de cargo/salário (Onda 3, itens 8+9): histórico + fluxo de
 // aprovação da diretoria. Nasce 'pendente'; a aprovação (RPC, só diretoria)
@@ -26,12 +27,14 @@ export function useRHMovimentacoes({ userId } = {}) {
     fetchAll();
     if (!isSupabaseConfigured) return;
     const channelName = `rh-movimentacoes-${Math.random().toString(36).slice(2, 9)}`;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_movimentacoes" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_movimentacoes" }, debouncedFetchAll)
       .subscribe();
     return () => {
       activeRef.current = false;
+      debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll]);

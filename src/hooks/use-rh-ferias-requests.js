@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 const TABLE = "rh_ferias";
 const SELECT = "*, profiles:user_id(id, name, initials, email), approver:approved_by(name)";
@@ -24,11 +25,12 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled) return;
     const channelName = `rh_ferias_rt_${Math.random().toString(36).slice(2, 9)}`;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, debouncedFetchAll)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [enabled, fetchAll]);
 
   const createRequest = useCallback(async (data) => {

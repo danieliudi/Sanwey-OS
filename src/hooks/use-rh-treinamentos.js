@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 function vencimentoDate(atribuicao, treinamento) {
   if (!treinamento?.validade_dias || !atribuicao?.data_conclusao) return null;
@@ -35,14 +36,16 @@ export function useRHTreinamentos({ userId } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured) return;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channelName = `rh-treinamentos-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_treinamentos" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_treinamento_atribuicoes" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_treinamentos" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_treinamento_atribuicoes" }, debouncedFetchAll)
       .subscribe();
     return () => {
       activeRef.current = false;
+      debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll]);

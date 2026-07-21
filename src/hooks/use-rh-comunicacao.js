@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 // Comunicação interna (Onda 4, item 11): comunicados (broadcast via
 // notifications) + pesquisas anônimas (definição em rh_pesquisas; respostas
@@ -25,11 +26,12 @@ export function useRHComunicacao({ userId } = {}) {
     activeRef.current = true;
     fetchAll();
     if (!isSupabaseConfigured) return;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(`rh-pesquisas-${Math.random().toString(36).slice(2, 9)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_pesquisas" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_pesquisas" }, debouncedFetchAll)
       .subscribe();
-    return () => { activeRef.current = false; supabase.removeChannel(channel); };
+    return () => { activeRef.current = false; debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [fetchAll]);
 
   // Comunicado: retorna quantos destinatários receberam. `importante` ignora

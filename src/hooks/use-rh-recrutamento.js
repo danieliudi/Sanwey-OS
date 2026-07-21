@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 // Slug único e legível pro link público da vaga: título + sufixo curto.
 function slugify(title) {
@@ -79,15 +80,17 @@ export function useRHRecrutamento({ userId } = {}) {
     // Realtime: qualquer mudança nas 3 tabelas recarrega tudo. O volume do
     // módulo de RH é baixo, então um refetch simples é mais robusto do que
     // reconciliar patches otimistas em 3 tabelas relacionadas.
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channelName = `rh-recrutamento-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_vagas" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_candidatos" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_aplicacoes" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_vagas" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_candidatos" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_aplicacoes" }, debouncedFetchAll)
       .subscribe();
     return () => {
       activeRef.current = false;
+      debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll]);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 export function useCRMViagens({ userId } = {}) {
   const [registros, setRegistros] = useState([]);
@@ -23,12 +24,14 @@ export function useCRMViagens({ userId } = {}) {
     fetchAll();
     if (!isSupabaseConfigured) return;
     const channelName = `crm-viagem-registros-${Math.random().toString(36).slice(2, 9)}`;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "crm_viagem_registros" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "crm_viagem_registros" }, debouncedFetchAll)
       .subscribe();
     return () => {
       activeRef.current = false;
+      debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll]);

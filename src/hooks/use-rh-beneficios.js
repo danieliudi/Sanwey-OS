@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 // Catálogo de benefícios genéricos (VT/VR/VA/Wellhub/convênio médico),
 // linkado opcionalmente a um fornecedor (use-rh-suppliers.js), + vínculo
@@ -51,13 +52,14 @@ export function useRHBeneficios({ userId, enabled = true } = {}) {
 
   useEffect(() => {
     if (!isSupabaseConfigured || !enabled) return;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const suffix = Math.random().toString(36).slice(2, 9);
     const channel = supabase
       .channel(`rh-beneficios-${suffix}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_beneficios_catalogo" }, fetchAll)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_colaborador_beneficios" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_beneficios_catalogo" }, debouncedFetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_colaborador_beneficios" }, debouncedFetchAll)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { debouncedFetchAll.cancel(); supabase.removeChannel(channel); };
   }, [enabled, fetchAll]);
 
   const createCatalogoItem = useCallback(async (item) => {

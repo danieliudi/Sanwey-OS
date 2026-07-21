@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { debounce } from "../utils/debounce";
 
 // Mapeia snake_case do banco para camelCase — mesmo padrão de use-leads.js.
 function rowToColaborador(r) {
@@ -117,13 +118,15 @@ export function useRHColaboradores({ userId, enabled = true } = {}) {
     if (!enabled) { setLoading(false); return; }
     fetchAll();
     if (!isSupabaseConfigured) return;
+    const debouncedFetchAll = debounce(fetchAll, 400);
     const channelName = `rh-colaboradores-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rh_colaboradores" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rh_colaboradores" }, debouncedFetchAll)
       .subscribe();
     return () => {
       activeRef.current = false;
+      debouncedFetchAll.cancel();
       supabase.removeChannel(channel);
     };
   }, [fetchAll, enabled]);
