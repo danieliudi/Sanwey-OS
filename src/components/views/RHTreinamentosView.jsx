@@ -26,6 +26,7 @@ import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } 
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+import { useAvailableHeight } from "../../hooks/use-available-height";
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -541,7 +542,7 @@ function TreinamentoBoardColumn({
   stage, stages, atribList, colaboradoresById,
   onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteAtribuicao,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields, getCompleteness, getUnread,
+  canWrite, onEditFields, getCompleteness, getUnread, boardHeight,
 }) {
   return (
     <div
@@ -549,7 +550,7 @@ function TreinamentoBoardColumn({
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
       className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-      style={{ width: 260, minWidth: 260, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "calc(100vh - 320px)" }}
+      style={{ width: 260, minWidth: 260, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: boardHeight }}
     >
       <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
       <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
@@ -985,6 +986,7 @@ function TreinamentoBoardModal({
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
   const [moveError, setMoveError] = useState(null);
+  const [boardRef, boardHeight] = useAvailableHeight(24, [viewMode]);
 
   const { viewedAt, markViewed } = useRecordViews("rh_treinamentos", currentUser?.id);
 
@@ -1111,7 +1113,7 @@ function TreinamentoBoardModal({
                 )}
                 emptyLabel="Ninguém aqui"
               />
-              <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16 }} className="hidden lg:flex">
+              <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
                 {stages.map((stage) => (
                   <TreinamentoBoardColumn
                     key={stage.id}
@@ -1132,6 +1134,7 @@ function TreinamentoBoardModal({
                     onEditFields={setFieldEditorStage}
                     getCompleteness={getCompleteness}
                     getUnread={(a) => hasUnreadRHComment(a, viewedAt, currentUser?.id)}
+                    boardHeight={boardHeight}
                   />
                 ))}
               </div>
