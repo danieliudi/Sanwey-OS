@@ -40,6 +40,10 @@ const ROLE_OPTIONS_BASE = [
 
 const ROLE_OPTIONS_ADMIN = [
   ...ROLE_OPTIONS_BASE,
+  // Diretoria: vê tudo da plataforma em modo leitura, não escreve nada — só
+  // admin concede (mesmo critério do próprio "admin" abaixo, dado o alcance
+  // do papel). Ver migration 20260756_papel_diretoria.sql.
+  { value: "diretoria", label: "Diretoria" },
   { value: "admin", label: "Admin" },
 ];
 
@@ -52,6 +56,7 @@ function roleLabel(role) {
   if (role === "agencia")           return "Agência";
   if (role === "rh")                return "RH";
   if (role === "gerente_rh")        return "Ger. RH";
+  if (role === "diretoria")         return "Diretoria";
   return "Vendedor";
 }
 
@@ -64,6 +69,7 @@ function roleBadgeVariant(role) {
   if (role === "agencia")           return "secondary";
   if (role === "rh")                return "secondary";
   if (role === "gerente_rh")        return "dark";
+  if (role === "diretoria")         return "admin";
   return "default";
 }
 

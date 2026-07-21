@@ -79,6 +79,11 @@ export function computeRoleFlags(roles) {
     isPureRH:            rolesSubsetOf(list, ["rh", "gerente_rh"]),
     isAdmin:             hasAnyRole(list, ["admin"]),
     isInsights:          hasAnyRole(list, ["admin", "rh", "gerente_rh", "marketing", "gerente_marketing"]),
+    // Diretoria (reunião com o RH, 20/07): enxerga tudo da plataforma em modo
+    // leitura — nenhuma escrita em lugar nenhum (garantido via RLS, ver
+    // migration 20260756_papel_diretoria.sql). Não é sinônimo de admin: não
+    // concede nenhuma ação, só visibilidade.
+    isDiretoria:         hasAnyRole(list, ["diretoria"]),
   };
 }
 
@@ -90,6 +95,13 @@ export function defaultModulesForRoles(roles) {
   const f = computeRoleFlags(roles);
   const set = new Set();
   if (f.isPortalOnly || f.isAgencia) return set;
+
+  // Diretoria: acesso de leitura a TODOS os módulos, sem exceção (a escrita é
+  // bloqueada via RLS, não aqui — ver migration 20260756_papel_diretoria.sql).
+  if (f.isDiretoria) {
+    ALL_MODULE_IDS.forEach(m => set.add(m));
+    return set;
+  }
 
   if (!f.isPureMarketing && !f.isPureRH) {
     ["commercial-overview", "crm", "clients", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));

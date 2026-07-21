@@ -161,9 +161,13 @@ export default function App() {
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
   const isRHManager        = hasAnyRole(["gerente_rh", "admin"]);
   const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
+  // Diretoria (reunião com o RH, 20/07): vê tudo da plataforma, escreve nada
+  // (RLS bloqueia toda escrita — ver migration 20260756_papel_diretoria.sql).
+  // A única exceção pedida é interação mais rica no Painel Executivo.
+  const isDiretoria        = hasAnyRole(["diretoria"]);
   // Painel Executivo deixou de ser exclusivo do gerente Comercial: cada
   // gerente de departamento acessa pra ver (só) o card do próprio setor.
-  const canSeeExecutive    = isManagerRole || isMarketingManager || isRHManager;
+  const canSeeExecutive    = isManagerRole || isMarketingManager || isRHManager || isDiretoria;
   const isAdmin            = hasAnyRole(["admin"]);
   // isInsightsUser: quem o Painel de Insights (src/hooks/use-insights-metrics.js)
   // de fato consegue ler quase todos os dados — o hook cruza
@@ -173,7 +177,7 @@ export default function App() {
   // marketing/gerente_marketing/admin). "gerente" (gerente Comercial) sozinho
   // não tem leitura garantida em nenhuma dessas — sem esse gate ele passava
   // pelo `isManager` genérico e via quase todo card do painel zerado.
-  const isInsightsUser     = hasAnyRole(["admin", "rh", "gerente_rh", "marketing", "gerente_marketing"]);
+  const isInsightsUser     = hasAnyRole(["admin", "rh", "gerente_rh", "marketing", "gerente_marketing"]) || isDiretoria;
   const {
     users,
     loading: usersLoading,
@@ -914,13 +918,13 @@ export default function App() {
   const accessibleCompanies = useMemo(() => {
     if (!currentUser) return [];
     const enabled = new Set(settings.enabledCompanies);
-    const base = isManager
+    const base = (isManager || isDiretoria)
       ? ["industria", "resibag"]
       : currentUser.companies;
     const filtered = base.filter(id => enabled.has(id));
     if (filtered.length === 0) return []; // edge case: user disabled all
     return filtered.length > 1 ? ["all", ...filtered] : filtered;
-  }, [currentUser, settings.enabledCompanies, isManager]);
+  }, [currentUser, settings.enabledCompanies, isManager, isDiretoria]);
 
   // Keep activeCompany valid when enabled list changes.
   useEffect(() => {
@@ -985,7 +989,7 @@ export default function App() {
       });
     }
 
-    if (isMarketingUser) {
+    if (isMarketingUser || isDiretoria) {
       const mktItems = [];
       // Todo usuário de marketing vê "Visão Geral" (Marketing Dashboard) —
       // antes só admin/gerente viam, porque "Início" apontava direto pra cá
@@ -1004,7 +1008,7 @@ export default function App() {
       groups.push({ label: "Marketing", items: mktItems });
     }
 
-    if (isRHUser) {
+    if (isRHUser || isDiretoria) {
       groups.push({
         label: "Recursos Humanos",
         items: [
@@ -1076,7 +1080,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, allowedModules]);
+  }, [isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, isDiretoria, allowedModules]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1121,7 +1125,7 @@ export default function App() {
       setSection("dashboard");
     }
     const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras"];
-    if (!isMarketingUser && !isAgencia && marketingOnly.includes(section)) {
+    if (!isMarketingUser && !isAgencia && !isDiretoria && marketingOnly.includes(section)) {
       setSection("dashboard");
     }
     // Agência não acessa Solicitações, Fornecedores nem Compras (áreas internas de marketing)
@@ -1137,7 +1141,7 @@ export default function App() {
     // Onboarding/Treinamentos ficam de fora do guard — todo colaborador acessa
     // o próprio checklist, não só o time de RH (RLS já restringe os dados).
     const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias", "rh-cargos", "rh-comunicacao", "rh-bem-estar", "rh-fornecedores", "rh-relatorios"];
-    if (!isRHUser && rhSections.includes(section)) {
+    if (!isRHUser && !isDiretoria && rhSections.includes(section)) {
       setSection("dashboard");
     }
     // Pure RH users shouldn't access CRM sections
@@ -1305,6 +1309,10 @@ export default function App() {
               // com nav própria de só 2 itens (Campanhas/Entregas); Minhas
               // Tarefas agrega módulos (RH, CRM interno) fora do seu escopo.
               <Navigate to={ROUTES.marketing} replace />
+            ) : isDiretoria ? (
+              // Diretoria não tem tarefas/leads próprios — pousa direto no
+              // Painel Executivo, a única tela com que de fato interage.
+              <Navigate to={ROUTES.executive} replace />
             ) : (
               // FASE 6: Minhas Tarefas é a tela de pouso pós-login pra todo
               // papel interno. Os antigos destinos por papel (Executivo, Visão
@@ -1429,7 +1437,7 @@ export default function App() {
           } />
           <Route path={ROUTES.executive} element={
             canSeeExecutive
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager} isRHManager={isRHManager} isComercialManager={isManager} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager || isDiretoria} isRHManager={isRHManager || isDiretoria} isComercialManager={isManager || isDiretoria} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.insights} element={
@@ -1515,47 +1523,47 @@ export default function App() {
             <TutoriaisView currentUser={currentUser} onNavigate={setSection} />
           } />
           <Route path={ROUTES["marketing-home"]} element={
-            isMarketingUser
+            (isMarketingUser || isDiretoria)
               ? <MarketingDashboardView user={currentUser} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.marketing} element={
-            (isMarketingUser || isAgencia)
+            (isMarketingUser || isAgencia || isDiretoria)
               ? <MarketingView user={currentUser} users={users} evaluateAutomations={evaluateAutomations} pushNotification={pushNotification} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["marketing-entregas"]} element={
-            (isMarketingUser || isAgencia)
+            (isMarketingUser || isAgencia || isDiretoria)
               ? <EntregasView user={currentUser} users={users} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["marketing-despesas"]} element={
-            (isMarketingUser && !isAgencia)
+            ((isMarketingUser && !isAgencia) || isDiretoria)
               ? <DespesasView user={currentUser} users={users} campaigns={campaigns} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["marketing-solicitacoes"]} element={
-            (isMarketingUser && !isAgencia)
+            ((isMarketingUser && !isAgencia) || isDiretoria)
               ? <MarketingRequestsView user={currentUser} users={users} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["marketing-fornecedores"]} element={
-            (isMarketingUser && !isAgencia)
+            ((isMarketingUser && !isAgencia) || isDiretoria)
               ? <FornecedoresView user={currentUser} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["marketing-compras"]} element={
-            (isMarketingUser && !isAgencia)
+            ((isMarketingUser && !isAgencia) || isDiretoria)
               ? <ComprasMarketingView user={currentUser} users={users} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["rh-overview"]} element={
-            isRHUser
+            (isRHUser || isDiretoria)
               ? <RHOverviewView currentUser={currentUser} canWrite={isRHManager} onNavigate={setSection} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-funcionarios"]} element={
-            isRHUser
+            (isRHUser || isDiretoria)
               ? <RHFuncionariosView
                   users={users}
                   leads={leads}
@@ -1566,12 +1574,12 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-fornecedores"]} element={
-            isRHUser
+            (isRHUser || isDiretoria)
               ? <RHFornecedoresView currentUser={currentUser} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-recrutamento"]} element={
-            isRHUser
+            (isRHUser || isDiretoria)
               ? <RHRecrutamentoView
                   user={currentUser}
                   canWrite={isRHManager}
@@ -1581,36 +1589,36 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-onboarding"]} element={
-            <RHOnboardingView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} notifyMentions={notifyMentions} />
+            <RHOnboardingView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser || isDiretoria} notifyMentions={notifyMentions} />
           } />
           <Route path={ROUTES["rh-treinamentos"]} element={
-            <RHTreinamentosView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} users={users} notifyMentions={notifyMentions} />
+            <RHTreinamentosView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser || isDiretoria} users={users} notifyMentions={notifyMentions} />
           } />
           <Route path={ROUTES["rh-feedback"]} element={
-            <RHFeedbackView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser} notifyMentions={notifyMentions} />
+            <RHFeedbackView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser || isDiretoria} notifyMentions={notifyMentions} />
           } />
           <Route path={ROUTES["rh-ferias"]} element={
-            isRHUser
+            (isRHUser || isDiretoria)
               ? <RHFeriasView currentUser={currentUser} users={users} canWrite={isRHManager} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-cargos"]} element={
-            isRHManager
+            (isRHManager || isDiretoria)
               ? <RHCargosView currentUser={currentUser} canWrite={isRHManager} isDirector={isAdmin} users={users} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-comunicacao"]} element={
-            isRHManager
+            (isRHManager || isDiretoria)
               ? <RHComunicacaoView currentUser={currentUser} canWrite={isRHManager} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-bem-estar"]} element={
-            isRHManager
+            (isRHManager || isDiretoria)
               ? <RHBemEstarView currentUser={currentUser} canWrite={isRHManager} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-relatorios"]} element={
-            isRHManager
+            (isRHManager || isDiretoria)
               ? <RHRelatoriosView currentUser={currentUser} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
