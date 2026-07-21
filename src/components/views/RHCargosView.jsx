@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Briefcase, Plus, X, Pencil, Sparkles, Loader2, TrendingUp, ArrowRight,
-  Check, XCircle, Clock, DollarSign,
+  Check, XCircle, Clock, DollarSign, Search, LayoutGrid, List,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
@@ -464,6 +464,50 @@ function MovimentacaoCard({ mov, colaborador, isDirector, onAprovar, onRecusar, 
   );
 }
 
+// ── Tabela de movimentações (histórico) ───────────────────────────────────────
+
+function MovimentacoesTableView({ movimentacoes, colaboradoresById }) {
+  return (
+    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Colaborador", "Tipo", "Cargo", "Departamento", "Salário", "Data", "Status"].map((h) => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {movimentacoes.length === 0 && (
+            <tr><td colSpan={7} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma movimentação encontrada.</td></tr>
+          )}
+          {movimentacoes.map((m) => {
+            const colaborador = colaboradoresById.get(m.colaborador_id);
+            const st = STATUS_INFO[m.status] || STATUS_INFO.pendente;
+            return (
+              <tr key={m.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)" }}>{colaborador?.fullName || "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{tipoMovLabel(m.tipo)}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{m.cargo_novo || "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{m.department_novo || "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{m.salario_novo != null ? formatBRL(m.salario_novo) : "—"}</td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(m.effective_date || m.created_at)}</td>
+                <td className="px-4 py-3">
+                  <span style={{ fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 99, padding: "2px 10px" }}>
+                    {st.label}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHCargosView({ currentUser, canWrite, isDirector, users = [], notifyMentions }) {
@@ -477,11 +521,39 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
   const [busyId, setBusyId] = useState(null);
   const [actionError, setActionError] = useState(null);
 
+  // Filtros + tabela — Cargos e Movimentações eram "muito simples e pobre"
+  // (reunião com o RH, 20/07): sem busca/filtro em Cargos, e Movimentações era
+  // uma lista única de cards sem jeito de isolar o histórico de um colaborador.
+  const [cargoSearch, setCargoSearch] = useState("");
+  const [cargoDeptFilter, setCargoDeptFilter] = useState("all");
+  const [movColaboradorFilter, setMovColaboradorFilter] = useState("all");
+  const [movTipoFilter, setMovTipoFilter] = useState("all");
+  const [movStatusFilter, setMovStatusFilter] = useState("all");
+  const [movViewMode, setMovViewMode] = useState("cards"); // "cards" | "tabela"
+
   const colaboradoresById = useMemo(() => new Map(colaboradores.map((c) => [c.id, c])), [colaboradores]);
   const colaboradoresAtivos = useMemo(() => colaboradores.filter((c) => c.employeeStatus === "ativo"), [colaboradores]);
 
-  const pendentes = useMemo(() => movimentacoes.filter((m) => m.status === "pendente"), [movimentacoes]);
-  const decididas = useMemo(() => movimentacoes.filter((m) => m.status !== "pendente"), [movimentacoes]);
+  const cargosFiltrados = useMemo(() => {
+    const q = cargoSearch.trim().toLowerCase();
+    return cargos.filter((c) => {
+      if (cargoDeptFilter !== "all" && c.department !== cargoDeptFilter) return false;
+      if (q && !c.name?.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [cargos, cargoSearch, cargoDeptFilter]);
+
+  const movimentacoesFiltradas = useMemo(() => {
+    return movimentacoes.filter((m) => {
+      if (movColaboradorFilter !== "all" && m.colaborador_id !== movColaboradorFilter) return false;
+      if (movTipoFilter !== "all" && m.tipo !== movTipoFilter) return false;
+      if (movStatusFilter !== "all" && m.status !== movStatusFilter) return false;
+      return true;
+    });
+  }, [movimentacoes, movColaboradorFilter, movTipoFilter, movStatusFilter]);
+
+  const pendentes = useMemo(() => movimentacoesFiltradas.filter((m) => m.status === "pendente"), [movimentacoesFiltradas]);
+  const decididas = useMemo(() => movimentacoesFiltradas.filter((m) => m.status !== "pendente"), [movimentacoesFiltradas]);
 
   const directorIds = useMemo(
     () => (users || []).filter((u) => (u.roles?.length ? u.roles : [u.role]).includes("admin")).map((u) => u.id),
@@ -561,8 +633,33 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
         cargos.length === 0 ? (
           <EmptyState icon={Briefcase} title="Nenhum cargo cadastrado" description="Cadastre os cargos com suas faixas salariais para padronizar contratações e movimentações." />
         ) : (
+          <>
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              <div className="relative" style={{ minWidth: 200 }}>
+                <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+                <input
+                  value={cargoSearch}
+                  onChange={(e) => setCargoSearch(e.target.value)}
+                  placeholder="Buscar cargo…"
+                  className="w-full text-xs rounded-xl border pl-7 pr-3 py-1.5 outline-none"
+                  style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+                />
+              </div>
+              <select
+                value={cargoDeptFilter}
+                onChange={(e) => setCargoDeptFilter(e.target.value)}
+                className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+                style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+              >
+                <option value="all">Todos os departamentos</option>
+                {RH_DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            {cargosFiltrados.length === 0 ? (
+              <div style={{ fontSize: 13, color: "var(--text-dim)", padding: "24px 0", textAlign: "center" }}>Nenhum cargo encontrado com esses filtros.</div>
+            ) : (
           <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-            {cargos.map((c) => (
+            {cargosFiltrados.map((c) => (
               <div key={c.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 16, background: "var(--surface)", display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>{c.name}</div>
@@ -584,9 +681,56 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
               </div>
             ))}
           </div>
+            )}
+          </>
         )
       ) : (
         <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={movColaboradorFilter}
+              onChange={(e) => setMovColaboradorFilter(e.target.value)}
+              className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+              style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+            >
+              <option value="all">Todos os colaboradores</option>
+              {colaboradores.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
+            </select>
+            <select
+              value={movTipoFilter}
+              onChange={(e) => setMovTipoFilter(e.target.value)}
+              className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+              style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+            >
+              <option value="all">Todos os tipos</option>
+              {TIPO_MOV.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+            <select
+              value={movStatusFilter}
+              onChange={(e) => setMovStatusFilter(e.target.value)}
+              className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+              style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
+            >
+              <option value="all">Todos os status</option>
+              {Object.entries(STATUS_INFO).map(([id, info]) => <option key={id} value={id}>{info.label}</option>)}
+            </select>
+            <div className="inline-flex rounded-lg border overflow-hidden ml-auto" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+              <button
+                onClick={() => setMovViewMode("cards")}
+                className="flex items-center gap-1.5"
+                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "cards" ? "var(--accent)" : "transparent", color: movViewMode === "cards" ? "#FFF" : "var(--text-dim)" }}
+              >
+                <LayoutGrid size={13} /> Cards
+              </button>
+              <button
+                onClick={() => setMovViewMode("tabela")}
+                className="flex items-center gap-1.5"
+                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "tabela" ? "var(--accent)" : "transparent", color: movViewMode === "tabela" ? "#FFF" : "var(--text-dim)" }}
+              >
+                <List size={13} /> Tabela
+              </button>
+            </div>
+          </div>
           {pendentes.length > 0 && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
@@ -603,7 +747,9 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
             <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
               <TrendingUp size={12} style={{ display: "inline", marginRight: 4 }} /> Histórico
             </div>
-            {decididas.length === 0 ? (
+            {movViewMode === "tabela" ? (
+              <MovimentacoesTableView movimentacoes={decididas} colaboradoresById={colaboradoresById} />
+            ) : decididas.length === 0 ? (
               <div style={{ fontSize: 13, color: "var(--text-dim)", padding: "8px 0" }}>Nenhuma movimentação decidida ainda.</div>
             ) : (
               <div className="flex flex-col gap-2">
