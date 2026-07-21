@@ -97,13 +97,13 @@ export function MoveStageMenu({
             left: pos?.left ?? -9999,
             visibility: pos ? "visible" : "hidden",
             background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8,
-            boxShadow: "var(--shadow-pop)", zIndex: 2000, minWidth: 180, overflow: "hidden",
+            boxShadow: "var(--shadow-pop)", zIndex: 2000, minWidth: 180, maxWidth: 260, overflow: "hidden",
           }}
           onClick={e => e.stopPropagation()}
         >
           {confirmingDelete ? (
             <div style={{ padding: "10px 12px" }}>
-              <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 8 }}>
+              <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 8, lineHeight: 1.4 }}>
                 {confirmMessage}
               </div>
               <div style={{ display: "flex", gap: 6 }}>

@@ -84,9 +84,8 @@ const TIPO_TRILHA_LABELS = { administrativa: "Administrativa", operacional: "Ope
 // de graça (o filtro já é terminal && !lost) e ganha o selo visual de X
 // vermelho que RHKanbanCard.jsx já renderiza pra qualquer stage com lost=true.
 const REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE =
-  "Remover este colaborador do onboarding? O cadastro continua em Funcionários — " +
-  "nada é apagado, e o histórico (avaliações, treinamentos, movimentações) não é afetado. " +
-  "O card só sai do fluxo ativo, indo pra etapa \"Removido\"; dá pra reverter movendo de volta a qualquer momento.";
+  "Remover do onboarding? Nada é apagado — o cadastro e o histórico continuam " +
+  "intactos em Funcionários. O card só sai do board, indo pra etapa \"Removido\", e dá pra reverter a qualquer momento.";
 
 function addDaysLocalISO(baseISO, days) {
   const d = parseDateInput(baseISO);
