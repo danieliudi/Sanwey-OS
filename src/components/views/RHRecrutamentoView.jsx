@@ -3135,9 +3135,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : viewMode === "vagas" ? (
         /* ═══ VAGAS ═══ */
-        vagas.length === 0 ? (
-          <EmptyState icon={Briefcase} title="Nenhuma vaga cadastrada" description='Clique em "Nova vaga" para começar' />
-        ) : boardMode === "table" ? (
+        boardMode === "table" ? (
           <VagaTableView
             vagas={vagasFrenteFiltradas}
             stages={vagaStages}

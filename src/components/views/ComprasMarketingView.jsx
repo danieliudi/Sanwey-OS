@@ -11,7 +11,6 @@ import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
 import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR, parseDateInput } from "../../utils/date";
-import { EmptyState } from "../ui/EmptyState";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { useRecordViews } from "../../hooks/use-record-views";
@@ -708,8 +707,6 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
 
       {loading ? (
         <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando solicitações…</div>
-      ) : visiblePurchases.length === 0 ? (
-        <EmptyState icon={ShoppingCart} title="Nenhuma solicitação de compra" description="Solicitações enviadas pelo link público ou criadas internamente aparecerão aqui." />
       ) : viewMode === "kanban" ? (
         <>
           <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} getUnread={getPurchaseUnread} />

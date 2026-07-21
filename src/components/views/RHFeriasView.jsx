@@ -992,12 +992,6 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : !isSupabaseConfigured ? (
         <EmptyState icon={Calendar} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar este módulo." />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={CalendarCheck}
-          title="Nenhuma solicitação encontrada"
-          description={filterStatus !== "todas" ? "Tente mudar o filtro de status." : "As solicitações de afastamento aparecerão aqui."}
-        />
       ) : viewMode === "table" ? (
         <FeriasTableView requests={filtered} stages={stages} onRowClick={(r) => setDrawerReqId(r.id)} />
       ) : viewMode === "calendar" ? (

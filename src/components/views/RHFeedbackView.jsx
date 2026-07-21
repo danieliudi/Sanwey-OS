@@ -1481,8 +1481,6 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
-      ) : feedbacks.length === 0 ? (
-        <EmptyState icon={MessageSquare} title="Nenhum ciclo de avaliação ainda" />
       ) : viewMode === "table" ? (
         <FeedbackTableView
           feedbacks={feedbacks}

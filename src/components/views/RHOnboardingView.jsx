@@ -1310,8 +1310,6 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
-      ) : colaboradores.length === 0 ? (
-        <EmptyState icon={ClipboardCheck} title="Nenhum colaborador cadastrado" description="Os colaboradores em onboarding aparecerão aqui." />
       ) : viewMode === "table" ? (
         <OnboardingTableView
           colaboradores={colaboradores}
