@@ -6,6 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
+  FileBarChart,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -87,6 +88,7 @@ import { RHFeriasView } from "./components/views/RHFeriasView";
 import { RHCargosView } from "./components/views/RHCargosView";
 import { RHComunicacaoView } from "./components/views/RHComunicacaoView";
 import { RHBemEstarView } from "./components/views/RHBemEstarView";
+import { RHRelatoriosView } from "./components/views/RHRelatoriosView";
 import { MeuRHView } from "./components/views/MeuRHView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
@@ -1017,6 +1019,7 @@ export default function App() {
           { id: "rh-comunicacao",  label: "Comunicação",       icon: Megaphone },
           { id: "rh-bem-estar",    label: "Bem-estar",         icon: HeartHandshake },
           { id: "rh-fornecedores", label: "Fornecedores",      icon: Building2 },
+          { id: "rh-relatorios",   label: "Relatórios",        icon: FileBarChart },
         ],
       });
     } else {
@@ -1133,7 +1136,7 @@ export default function App() {
     // RH sections only for rh/gerente_rh/admin
     // Onboarding/Treinamentos ficam de fora do guard — todo colaborador acessa
     // o próprio checklist, não só o time de RH (RLS já restringe os dados).
-    const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias", "rh-cargos", "rh-comunicacao", "rh-bem-estar"];
+    const rhSections = ["rh-overview", "rh-funcionarios", "rh-recrutamento", "rh-ferias", "rh-cargos", "rh-comunicacao", "rh-bem-estar", "rh-fornecedores", "rh-relatorios"];
     if (!isRHUser && rhSections.includes(section)) {
       setSection("dashboard");
     }
@@ -1604,6 +1607,11 @@ export default function App() {
           <Route path={ROUTES["rh-bem-estar"]} element={
             isRHManager
               ? <RHBemEstarView currentUser={currentUser} canWrite={isRHManager} />
+              : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES["rh-relatorios"]} element={
+            isRHManager
+              ? <RHRelatoriosView currentUser={currentUser} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["meu-rh"]} element={

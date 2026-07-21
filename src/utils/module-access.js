@@ -46,6 +46,7 @@ export const MODULE_GROUPS = [
       { id: "rh-comunicacao",  label: "Comunicação" },
       { id: "rh-bem-estar",    label: "Bem-estar" },
       { id: "rh-fornecedores", label: "Fornecedores (RH)" },
+      { id: "rh-relatorios",   label: "Relatórios" },
     ],
   },
   {
@@ -102,7 +103,7 @@ export function defaultModulesForRoles(roles) {
 
   if (f.isRH) {
     ["rh-overview", "rh-recrutamento", "rh-onboarding", "rh-treinamentos", "rh-feedback",
-     "rh-ferias", "rh-funcionarios", "rh-cargos", "rh-comunicacao", "rh-bem-estar", "rh-fornecedores"]
+     "rh-ferias", "rh-funcionarios", "rh-cargos", "rh-comunicacao", "rh-bem-estar", "rh-fornecedores", "rh-relatorios"]
       .forEach(m => set.add(m));
   } else {
     // Todo colaborador (não só RH) acessa o próprio checklist/treinamentos/

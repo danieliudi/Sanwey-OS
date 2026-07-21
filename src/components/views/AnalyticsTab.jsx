@@ -6,6 +6,7 @@ import {
 import { Download, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK } from "../../utils/currency";
+import { exportLeadsToCSV } from "../../utils/export-csv";
 
 // ── Period helpers ────────────────────────────────────────────────────────────
 
@@ -70,38 +71,6 @@ function computeKpis(leads) {
 function pctDelta(curr, prev) {
   if (!prev || prev === 0) return null;
   return Math.round(((curr - prev) / prev) * 100);
-}
-
-function exportCSV(leads, usersById) {
-  const headers = [
-    "Empresa", "CNPJ", "Etapa", "Empresa Sanwey", "Valor (R$)",
-    "Responsável", "Setor", "Cidade", "Estado", "SKU",
-    "Classificação", "Data criação",
-  ];
-  const rows = leads.map(l => [
-    l.company || "",
-    l.cnpj || "",
-    l.stage || "",
-    COMPANIES[l.companyId]?.short || l.companyId || "",
-    l.value || 0,
-    usersById.get(l.owner)?.name || "",
-    l.sector || "",
-    l.city || "",
-    l.state || "",
-    l.skuName || l.sku || "",
-    l.clientClassification || "",
-    l.createdAt ? new Date(l.createdAt).toLocaleDateString("pt-BR") : "",
-  ]);
-  const csv = [headers, ...rows]
-    .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";"))
-    .join("\n");
-  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `sanwey-relatorio-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
@@ -311,7 +280,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
         </span>
 
         <button
-          onClick={() => exportCSV(currentLeads, usersById)}
+          onClick={() => exportLeadsToCSV(currentLeads, { usersById, filename: `sanwey-relatorio-${new Date().toISOString().slice(0, 10)}.csv` })}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded border cursor-pointer transition-colors"
           style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
           onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
