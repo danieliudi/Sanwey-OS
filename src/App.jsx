@@ -34,8 +34,9 @@ import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
 import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
 import { useCRMDespesas } from "./hooks/use-crm-despesas";
-import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim } from "./utils/rh-compliance-dates";
+import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim, contratoFornecedorDiasParaVencer } from "./utils/rh-compliance-dates";
 import { avaliacaoDiasParaProxima, cicloTipoLabel } from "./utils/rh-feedback-cycles";
+import { useRHSuppliers } from "./hooks/use-rh-suppliers";
 import { sendRhEmail } from "./utils/rh-send-email";
 import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
@@ -502,6 +503,42 @@ export default function App() {
       }
     }
   }, [colaboradoresParaLembretes, meusCiclosFeedback, isRHManager, users, pushNotification]);
+
+  // Lembrete de vencimento de contrato com fornecedor — avisa o responsável
+  // pelo contrato (in-app + e-mail) quando a vigência está a até 30 dias de
+  // acabar (ou já acabou). Reunião com o RH (20/07): "colocar notificação/
+  // lembrete pro usuário responsável receber email e notificação de
+  // vencimento do contrato".
+  const { contratos: contratosParaLembretes } = useRHSuppliers({ enabled: Boolean(currentUser) && isRHManager });
+  const contratoVistoRef = useRef(new Set());
+  useEffect(() => {
+    if (!isRHManager) return;
+    const hoje = new Date();
+    const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    for (const c of contratosParaLembretes) {
+      if (c.status !== "ativo") continue;
+      const dias = contratoFornecedorDiasParaVencer(c, hoje);
+      if (dias == null || dias > 30) continue;
+      const key = `${c.id}:${hojeISO}`;
+      if (contratoVistoRef.current.has(key)) continue;
+      contratoVistoRef.current.add(key);
+
+      const dueLabel = dias < 0 ? `venceu há ${Math.abs(dias)} dia(s)` : dias === 0 ? "vence hoje" : `vence em ${dias} dia(s)`;
+      pushNotification({
+        type: "contrato_fornecedor_vencendo",
+        title: dias < 0 ? "Contrato com fornecedor vencido" : "Contrato com fornecedor vencendo",
+        body: `${c.titulo}: ${dueLabel}.`,
+      });
+      const responsavel = c.responsavelId ? users.find((u) => u.id === c.responsavelId) : null;
+      if (responsavel?.email) {
+        sendRhEmail("contrato_fornecedor_vencendo", responsavel.email, {
+          CONTRATO_TITULO: c.titulo || "",
+          DUE_DATE: c.vigenciaFim ? new Date(c.vigenciaFim).toLocaleDateString("pt-BR") : "—",
+          DUE_LABEL: dueLabel,
+        });
+      }
+    }
+  }, [contratosParaLembretes, isRHManager, users, pushNotification]);
 
   // Lembrete de reembolso de Viagens pendente há muito tempo — mesma ideia
   // de "approval-queue timeout" do Concur/TravelPerk: sem isso, uma despesa

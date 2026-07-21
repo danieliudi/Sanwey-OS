@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
 import {
-  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp,
+  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid,
 } from "lucide-react";
 import { useRHSuppliers } from "../../hooks/use-rh-suppliers";
+import { useProfiles } from "../../hooks/use-profiles";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
+import { contratoFornecedorDiasParaVencer } from "../../utils/rh-compliance-dates";
 import { CurrencyInput } from "../ui/CurrencyInput";
 
 const TIPO_LABELS = {
@@ -134,9 +136,9 @@ function NovoFornecedorModal({ onSave, onClose }) {
   );
 }
 
-const EMPTY_CONTRATO_FORM = { titulo: "", vigenciaInicio: "", vigenciaFim: "", valor: "", status: "ativo" };
+const EMPTY_CONTRATO_FORM = { titulo: "", vigenciaInicio: "", vigenciaFim: "", valor: "", status: "ativo", responsavelId: "" };
 
-function NovoContratoModal({ fornecedorId, onSave, onClose }) {
+function NovoContratoModal({ fornecedorId, users, onSave, onClose }) {
   const [form, setForm] = useState(EMPTY_CONTRATO_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -153,7 +155,7 @@ function NovoContratoModal({ fornecedorId, onSave, onClose }) {
     setSaving(true);
     setError(null);
     try {
-      await onSave({ ...form, fornecedorId, valor: form.valor ? Number(form.valor) : null });
+      await onSave({ ...form, fornecedorId, valor: form.valor ? Number(form.valor) : null, responsavelId: form.responsavelId || null });
       onClose();
     } catch (err) {
       setError(err.message || "Erro ao salvar.");
@@ -198,6 +200,13 @@ function NovoContratoModal({ fornecedorId, onSave, onClose }) {
                 {Object.entries(STATUS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
               </select>
             </div>
+          </div>
+          <div>
+            <label style={labelSt()}>Responsável</label>
+            <select className={inputCls} style={inputSt} value={form.responsavelId} onChange={(e) => setForm(f => ({ ...f, responsavelId: e.target.value }))}>
+              <option value="">Sem responsável definido</option>
+              {(users || []).map((u) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
+            </select>
           </div>
           {error && <div style={{ fontSize: 12, color: "var(--danger)" }}>{error}</div>}
           <div className="flex gap-2 mt-2">
@@ -263,14 +272,16 @@ function NovoEventoForm({ contratoId, onSave, onDone }) {
   );
 }
 
-function ContratoRow({ contrato, eventos, onAddEvento }) {
+function ContratoRow({ contrato, eventos, users, onAddEvento, onUpdateResponsavel }) {
   const [expanded, setExpanded] = useState(false);
   const [addingEvento, setAddingEvento] = useState(false);
   const statusColor = STATUS_COLORS[contrato.status] || STATUS_COLORS.ativo;
   const contratoEventos = eventos.filter(e => e.contratoId === contrato.id);
+  const diasParaVencer = contrato.status === "ativo" ? contratoFornecedorDiasParaVencer(contrato) : null;
+  const vencendo = diasParaVencer != null && diasParaVencer <= 30;
 
   return (
-    <div className="rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+    <div className="rounded-xl border" style={{ borderColor: vencendo ? "var(--danger)" : "var(--border)", background: "var(--surface)" }}>
       <button
         onClick={() => setExpanded(v => !v)}
         className="w-full flex items-center justify-between gap-3 p-3"
@@ -278,11 +289,16 @@ function ContratoRow({ contrato, eventos, onAddEvento }) {
       >
         <div className="flex-1 min-w-0">
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{contrato.titulo}</div>
-          <div className="flex items-center gap-3 mt-1" style={{ fontSize: 11, color: "var(--text-dim)" }}>
+          <div className="flex items-center gap-3 mt-1 flex-wrap" style={{ fontSize: 11, color: "var(--text-dim)" }}>
             {contrato.vigenciaInicio && (
               <span className="flex items-center gap-1"><Calendar size={10} /> {formatDateBR(contrato.vigenciaInicio)}{contrato.vigenciaFim ? ` – ${formatDateBR(contrato.vigenciaFim)}` : ""}</span>
             )}
             {contrato.valor != null && <span className="flex items-center gap-1"><DollarSign size={10} /> {formatK(contrato.valor)}</span>}
+            {vencendo && (
+              <span style={{ fontWeight: 700, color: "var(--danger)" }}>
+                {diasParaVencer < 0 ? `Venceu há ${Math.abs(diasParaVencer)}d` : diasParaVencer === 0 ? "Vence hoje" : `Vence em ${diasParaVencer}d`}
+              </span>
+            )}
           </div>
         </div>
         <span style={{ fontSize: 11, fontWeight: 600, color: statusColor.text, background: statusColor.bg, borderRadius: 99, padding: "2px 10px" }}>
@@ -293,6 +309,18 @@ function ContratoRow({ contrato, eventos, onAddEvento }) {
 
       {expanded && (
         <div className="px-3 pb-3 flex flex-col gap-2" style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+          <div className="flex items-center gap-2" style={{ fontSize: 12 }} onClick={(e) => e.stopPropagation()}>
+            <span style={{ color: "var(--text-dim)" }}>Responsável:</span>
+            <select
+              value={contrato.responsavelId || ""}
+              onChange={(e) => onUpdateResponsavel(contrato.id, e.target.value || null)}
+              className="text-xs rounded-lg border px-2 py-1 outline-none"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}
+            >
+              <option value="">Sem responsável definido</option>
+              {(users || []).map((u) => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
+            </select>
+          </div>
           {contratoEventos.length === 0 && !addingEvento && (
             <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum evento registrado ainda.</div>
           )}
@@ -326,7 +354,7 @@ function ContratoRow({ contrato, eventos, onAddEvento }) {
   );
 }
 
-function FornecedorDrawer({ fornecedor, contratos, eventos, onClose, onCreateContrato, onAddEvento }) {
+function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onCreateContrato, onAddEvento, onUpdateResponsavel }) {
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
   const fornecedorContratos = contratos.filter(c => c.fornecedorId === fornecedor.id);
 
@@ -370,23 +398,110 @@ function FornecedorDrawer({ fornecedor, contratos, eventos, onClose, onCreateCon
               <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum contrato cadastrado ainda.</div>
             )}
             {fornecedorContratos.map(c => (
-              <ContratoRow key={c.id} contrato={c} eventos={eventos} onAddEvento={onAddEvento} />
+              <ContratoRow key={c.id} contrato={c} eventos={eventos} users={users} onAddEvento={onAddEvento} onUpdateResponsavel={onUpdateResponsavel} />
             ))}
           </div>
         </div>
       </div>
 
       {novoContratoOpen && (
-        <NovoContratoModal fornecedorId={fornecedor.id} onSave={onCreateContrato} onClose={() => setNovoContratoOpen(false)} />
+        <NovoContratoModal fornecedorId={fornecedor.id} users={users} onSave={onCreateContrato} onClose={() => setNovoContratoOpen(false)} />
       )}
     </>
   );
 }
 
+// ── Contratos (visão agregada cross-fornecedor) ─────────────────────────────
+// Reunião com o RH (20/07): "precisa melhorar a view" — antes só dava pra ver
+// contratos abrindo o drawer de cada fornecedor um por um.
+
+function ContratosTableView({ contratos, suppliers, users, onRowClick }) {
+  const [statusFilter, setStatusFilter] = useState("all");
+  const suppliersById = useMemo(() => new Map(suppliers.map(s => [s.id, s])), [suppliers]);
+  const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
+
+  const rows = useMemo(() => {
+    return contratos
+      .filter(c => statusFilter === "all" || c.status === statusFilter)
+      .map(c => ({ contrato: c, diasParaVencer: c.status === "ativo" ? contratoFornecedorDiasParaVencer(c) : null }))
+      .sort((a, b) => {
+        const fa = a.contrato.vigenciaFim ? new Date(a.contrato.vigenciaFim).getTime() : Infinity;
+        const fb = b.contrato.vigenciaFim ? new Date(b.contrato.vigenciaFim).getTime() : Infinity;
+        return fa - fb;
+      });
+  }, [contratos, statusFilter]);
+
+  const selectSt = { borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" };
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="text-xs rounded-xl border px-3 py-1.5 outline-none"
+          style={selectSt}
+        >
+          <option value="all">Todos os status</option>
+          {Object.entries(STATUS_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+        </select>
+      </div>
+
+      <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+              {["Contrato", "Fornecedor", "Vigência", "Valor", "Responsável", "Status"].map(h => (
+                <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr><td colSpan={6} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhum contrato encontrado.</td></tr>
+            )}
+            {rows.map(({ contrato: c, diasParaVencer }) => {
+              const fornecedor = suppliersById.get(c.fornecedorId);
+              const responsavel = c.responsavelId ? usersById.get(c.responsavelId) : null;
+              const statusColor = STATUS_COLORS[c.status] || STATUS_COLORS.ativo;
+              const vencendo = diasParaVencer != null && diasParaVencer <= 30;
+              return (
+                <tr key={c.id} onClick={() => onRowClick(fornecedor)} style={{ borderBottom: "1px solid var(--border)", cursor: fornecedor ? "pointer" : "default" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)" }}>{c.titulo}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fornecedor?.name || "—"}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: vencendo ? "var(--danger)" : "var(--text-dim)", fontWeight: vencendo ? 700 : 400 }}>
+                    {c.vigenciaFim ? formatDateBR(c.vigenciaFim) : "—"}
+                    {vencendo && (
+                      <div>{diasParaVencer < 0 ? `Venceu há ${Math.abs(diasParaVencer)}d` : diasParaVencer === 0 ? "Vence hoje" : `Vence em ${diasParaVencer}d`}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.valor != null ? formatK(c.valor) : "—"}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{responsavel?.name || responsavel?.email || "—"}</td>
+                  <td className="px-4 py-3">
+                    <span style={{ fontSize: 11, fontWeight: 600, color: statusColor.text, background: statusColor.bg, borderRadius: 99, padding: "2px 10px" }}>
+                      {STATUS_LABELS[c.status] || c.status}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function RHFornecedoresView({ currentUser }) {
-  const { suppliers, contratos, eventos, loading, createSupplier, createContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
+  const { suppliers, contratos, eventos, loading, createSupplier, createContrato, updateContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
+  const { users } = useProfiles();
   const [novoOpen, setNovoOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [viewMode, setViewMode] = useState("fornecedores"); // "fornecedores" | "contratos"
 
   const selected = useMemo(() => suppliers.find(s => s.id === selectedId) || null, [suppliers, selectedId]);
   const contratoCountByFornecedor = useMemo(() => {
@@ -398,6 +513,10 @@ export function RHFornecedoresView({ currentUser }) {
     return map;
   }, [contratos]);
 
+  const handleUpdateResponsavel = (contratoId, responsavelId) => {
+    updateContrato(contratoId, { responsavelId }).catch((err) => console.error("Falha ao atualizar responsável do contrato:", err));
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -405,13 +524,31 @@ export function RHFornecedoresView({ currentUser }) {
           <Building2 size={22} style={{ color: "var(--text)" }} />
           <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>Fornecedores</h1>
         </div>
-        <button
-          onClick={() => setNovoOpen(true)}
-          className="flex items-center gap-1.5 font-semibold"
-          style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
-        >
-          <Plus size={14} /> Novo fornecedor
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+            <button
+              onClick={() => setViewMode("fornecedores")}
+              className="flex items-center gap-1.5"
+              style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: viewMode === "fornecedores" ? "var(--accent)" : "transparent", color: viewMode === "fornecedores" ? "#FFF" : "var(--text-dim)" }}
+            >
+              <LayoutGrid size={13} /> Fornecedores
+            </button>
+            <button
+              onClick={() => setViewMode("contratos")}
+              className="flex items-center gap-1.5"
+              style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: viewMode === "contratos" ? "var(--accent)" : "transparent", color: viewMode === "contratos" ? "#FFF" : "var(--text-dim)" }}
+            >
+              <List size={13} /> Contratos
+            </button>
+          </div>
+          <button
+            onClick={() => setNovoOpen(true)}
+            className="flex items-center gap-1.5 font-semibold"
+            style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
+          >
+            <Plus size={14} /> Novo fornecedor
+          </button>
+        </div>
       </div>
       <p className="text-sm" style={{ color: "var(--text-dim)", marginTop: -8 }}>
         Convênio médico, seguradora, terceirizada de RH — cadastro, contrato (vigência/valor) e histórico de reajustes, renovações, faturas e orçamentos.
@@ -424,6 +561,8 @@ export function RHFornecedoresView({ currentUser }) {
           <FileText size={24} style={{ color: "var(--text-dim)", margin: "0 auto 8px" }} />
           <div className="text-sm" style={{ color: "var(--text-dim)" }}>Nenhum fornecedor cadastrado ainda.</div>
         </div>
+      ) : viewMode === "contratos" ? (
+        <ContratosTableView contratos={contratos} suppliers={suppliers} users={users} onRowClick={(f) => f && setSelectedId(f.id)} />
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
           {suppliers.map(s => (
@@ -452,9 +591,11 @@ export function RHFornecedoresView({ currentUser }) {
           fornecedor={selected}
           contratos={contratos}
           eventos={eventos}
+          users={users}
           onClose={() => setSelectedId(null)}
           onCreateContrato={createContrato}
           onAddEvento={addEvento}
+          onUpdateResponsavel={handleUpdateResponsavel}
         />
       )}
     </div>

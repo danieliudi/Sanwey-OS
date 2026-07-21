@@ -43,6 +43,7 @@ function rowToContrato(r) {
     valor: r.valor ?? null,
     status: r.status,
     notes: r.notes ?? null,
+    responsavelId: r.responsavel_id ?? null,
     createdAt: r.created_at ?? null,
   };
 }
@@ -56,6 +57,7 @@ function contratoToRow(c) {
     valor: c.valor ?? null,
     status: c.status ?? "ativo",
     notes: c.notes ?? null,
+    responsavel_id: c.responsavelId || null,
   };
 }
 

@@ -15,7 +15,8 @@ type EmailType =
   | "candidato_reprovado"
   | "vaga_manager_link"
   | "candidatura_recebida"
-  | "avaliacao_proxima";
+  | "avaliacao_proxima"
+  | "contrato_fornecedor_vencendo";
 
 interface SendEmailBody {
   type: EmailType;
@@ -43,6 +44,7 @@ const SUBJECTS: Record<EmailType, string> = {
   vaga_manager_link:   "Candidatos pra sua avaliação — Grupo Sanwey",
   candidatura_recebida:"Recebemos sua candidatura — Grupo Sanwey",
   avaliacao_proxima:   "Avaliação de desempenho se aproximando — Grupo Sanwey",
+  contrato_fornecedor_vencendo: "Contrato com fornecedor vencendo — Grupo Sanwey",
 };
 
 // ── Template builders ─────────────────────────────────────────────────────────
@@ -185,6 +187,17 @@ function tplAvaliacaoProxima(vars: Record<string, string>): string {
   return applyVars(shell(inner, "#C7212B"), vars);
 }
 
+function tplContratoFornecedorVencendo(vars: Record<string, string>): string {
+  const inner = `<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">Contrato com fornecedor vencendo</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#8A8680;line-height:1.6;">Olá! O contrato <strong style="color:#2C2C2B;">{{CONTRATO_TITULO}}</strong>, sob sua responsabilidade, {{DUE_LABEL}}.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F9F5F1;border:1px solid #E5E0DA;border-radius:10px;margin-bottom:28px;"><tr><td style="padding:16px 20px;"><table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td width="40%" style="padding:5px 0;font-size:13px;color:#8A8680;">Contrato</td><td width="60%" style="padding:5px 0;font-size:13px;color:#2C2C2B;font-weight:600;">{{CONTRATO_TITULO}}</td></tr>
+      <tr><td style="padding:5px 0;font-size:13px;color:#8A8680;">Fim da vigência</td><td style="padding:5px 0;font-size:14px;color:#2C2C2B;font-weight:700;">{{DUE_DATE}}</td></tr>
+    </table></td></tr></table>
+    <table cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#C7212B;border-radius:10px;"><a href="{{APP_URL}}/rh/fornecedores" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;">Ver na plataforma &rarr;</a></td></tr></table>`;
+  return applyVars(shell(inner, "#C7212B"), vars);
+}
+
 function buildHtml(type: EmailType, vars: Record<string, string>): string {
   switch (type) {
     case "ferias_aprovadas":   return tplFeriasAprovadas(vars);
@@ -195,6 +208,7 @@ function buildHtml(type: EmailType, vars: Record<string, string>): string {
     case "vaga_manager_link":  return tplVagaManagerLink(vars);
     case "candidatura_recebida": return tplCandidaturaRecebida(vars);
     case "avaliacao_proxima": return tplAvaliacaoProxima(vars);
+    case "contrato_fornecedor_vencendo": return tplContratoFornecedorVencendo(vars);
   }
 }
 
@@ -294,6 +308,7 @@ Deno.serve(async (req) => {
       "vaga_manager_link",
       "candidatura_recebida",
       "avaliacao_proxima",
+      "contrato_fornecedor_vencendo",
     ];
 
     if (!body?.type || !validTypes.includes(body.type)) {

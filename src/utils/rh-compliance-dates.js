@@ -92,6 +92,13 @@ export function avaliacaoDiasParaVencer(avaliacao, hoje = new Date()) {
   return daysBetween(hoje, d);
 }
 
+// Vencimento de contrato com fornecedor (reunião com o RH, 20/07): dias até
+// (ou desde) o fim da vigência, pro lembrete do responsável pelo contrato.
+export function contratoFornecedorDiasParaVencer(contrato, hoje = new Date()) {
+  if (!contrato?.vigenciaFim) return null;
+  return daysBetween(hoje, parseDateInput(contrato.vigenciaFim));
+}
+
 function isMesDiaProximo(dateStr, hoje, janelaDias) {
   if (!dateStr) return null;
   const d = parseDateInput(dateStr);
