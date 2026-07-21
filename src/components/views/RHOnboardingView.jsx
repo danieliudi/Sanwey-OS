@@ -35,6 +35,8 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
+import { useAvailableHeight } from "../../hooks/use-available-height";
+import { KanbanFab } from "../shared/KanbanFab";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
 // As etapas vêm de rh_pipeline_stages (domain="onboarding"), editáveis pelo RH
@@ -229,7 +231,7 @@ function OnboardingKanbanColumn({
   stage, stages, colaboradoresList, tarefasByColaborador, vagasById,
   onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, deleteLabel, deleteConfirmMessage,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields, getCompleteness, getUnread, onAddColaborador,
+  canWrite, onEditFields, getCompleteness, getUnread, onAddColaborador, boardHeight,
 }) {
   return (
     <div
@@ -242,11 +244,7 @@ function OnboardingKanbanColumn({
         background: "var(--surface-alt)",
         borderColor: isDragOver ? stage.color + "70" : "var(--border)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        // Altura fixa (não máxima) — senão a coluna encolhia pro tamanho do
-        // conteúdo quando tinha poucos cards, e a barra de scroll horizontal
-        // (que fica logo abaixo das colunas) subia junto em vez de ficar
-        // sempre no rodapé da tela.
-        height: "calc(100vh - 260px)",
+        height: boardHeight,
       }}
     >
       {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
@@ -1045,6 +1043,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const [draggedColaboradorId, setDraggedColaboradorId] = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
   const [moveError, setMoveError] = useState(null);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode]);
 
   const { viewedAt, markViewed } = useRecordViews("rh_onboarding", currentUser?.id);
 
@@ -1356,7 +1355,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
             addLabel="Adicionar colaborador"
             emptyLabel="Ninguém aqui"
           />
-          <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16, flex: 1 }} className="hidden lg:flex">
+          <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
             {stages.map((stage) => (
               <OnboardingKanbanColumn
                 key={stage.id}
@@ -1381,9 +1380,11 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
                 getCompleteness={getColaboradorCompleteness}
                 getUnread={(c) => hasUnreadRHComment(c, viewedAt, currentUser?.id)}
                 onAddColaborador={() => setAddColaboradorStage(stage.stageKey)}
+                boardHeight={boardHeight}
               />
             ))}
           </div>
+          {canWrite && <KanbanFab label="Novo colaborador" onClick={() => setAddColaboradorStage(stages[0]?.stageKey || null)} />}
         </>
       )}
 
