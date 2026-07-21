@@ -15,6 +15,8 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
+import { useAvailableHeight } from "../../hooks/use-available-height";
+import { KanbanFab } from "../shared/KanbanFab";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
@@ -295,10 +297,11 @@ function CreateModal({ currentUser, onCreate, onClose }) {
 
 /* ── Kanban view ──────────────────────────────────────────────────────── */
 function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop, getUnread }) {
+  const [boardRef, boardHeight] = useAvailableHeight(16);
   return (
     <div className="hidden lg:block relative">
-      <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin" }}>
-        <div className="flex gap-3" style={{ minWidth: `${PURCHASE_STAGES.length * 260}px` }}>
+      <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
+        <div className="flex gap-3 h-full" style={{ minWidth: `${PURCHASE_STAGES.length * 260}px` }}>
           {PURCHASE_STAGES.map(stage => {
             const color = STAGE_COLORS[stage.id] || "var(--text-dim)";
             const items = purchases.filter(p => p.stage === stage.id);
@@ -309,7 +312,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
                 onDragLeave={onColumnDragLeave}
                 onDrop={() => onColumnDrop(stage.id)}
                 className="flex flex-col rounded-xl border overflow-hidden transition-all duration-150"
-                style={{ width: 252, minWidth: 252, background: "var(--surface-alt)", borderColor: isOver ? color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${color}30` : "none", minHeight: 420, flexShrink: 0 }}>
+                style={{ width: 252, minWidth: 252, background: "var(--surface-alt)", borderColor: isOver ? color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${color}30` : "none", height: "100%", flexShrink: 0 }}>
                 <div style={{ height: 6, background: color, flexShrink: 0 }} />
                 <div className="px-3.5 pt-3 pb-2.5" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
                   <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
@@ -317,7 +320,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
                     <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({items.length})</span>
                   </div>
                 </div>
-                <div className="px-2 pt-2 pb-2 flex-1 overflow-y-auto" style={{ maxHeight: "62vh", display: "flex", flexDirection: "column", gap: 6 }}>
+                <div className="px-2 pt-2 pb-2 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                   {items.length === 0 ? (
                     <div className="text-center py-8 text-xs" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
                       {isOver ? "Soltar aqui" : "Nenhuma solicitação"}
@@ -667,6 +670,8 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
           </button>
         </div>
       </div>
+
+      {viewMode === "kanban" && <KanbanFab label="Nova solicitação" onClick={() => setShowCreate(true)} />}
 
       {/* Rejected strip — tira fina, não uma coluna do kanban */}
       {rejectedPurchases.length > 0 && (
