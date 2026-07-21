@@ -37,6 +37,7 @@ import { useCRMDespesas } from "./hooks/use-crm-despesas";
 import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim, contratoFornecedorDiasParaVencer } from "./utils/rh-compliance-dates";
 import { avaliacaoDiasParaProxima, cicloTipoLabel } from "./utils/rh-feedback-cycles";
 import { useRHSuppliers } from "./hooks/use-rh-suppliers";
+import { useRHBemEstar } from "./hooks/use-rh-bemestar";
 import { sendRhEmail } from "./utils/rh-send-email";
 import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
@@ -539,6 +540,31 @@ export default function App() {
       }
     }
   }, [contratosParaLembretes, isRHManager, users, pushNotification]);
+
+  // Lembrete de bem-estar chegando perto — reunião com o RH (20/07): "recebe
+  // e-mail avisando... e quando estiver próximo". Roda enquanto um RH tem a
+  // tela aberta (mesmo padrão de todo lembrete deste app); avisa a PESSOA que
+  // reservou o horário (e-mail capturado no agendamento), não o RH.
+  const { sessoes: bemEstarSessoes, fila: bemEstarFila, marcarLembreteEnviado } = useRHBemEstar({ enabled: Boolean(currentUser) && isRHManager });
+  useEffect(() => {
+    if (!isRHManager) return;
+    const agora = Date.now();
+    const sessoesPorId = new Map(bemEstarSessoes.map((s) => [s.id, s]));
+    for (const f of bemEstarFila) {
+      if (f.lembrete_enviado || f.status === "atendido" || f.status === "faltou" || !f.email || !f.horario) continue;
+      const sessao = sessoesPorId.get(f.sessao_id);
+      if (!sessao?.data || sessao.status !== "aberta") continue;
+      const alvo = new Date(`${sessao.data}T${f.horario}`).getTime();
+      const minutosParaAlvo = (alvo - agora) / 60000;
+      if (minutosParaAlvo > 30 || minutosParaAlvo < -5) continue;
+      marcarLembreteEnviado(f.id).catch(() => {});
+      sendRhEmail("bemestar_lembrete", f.email, {
+        NOME: f.nome || "",
+        SESSAO_TITULO: sessao.titulo || "",
+        HORARIO: (f.horario || "").slice(0, 5),
+      });
+    }
+  }, [bemEstarSessoes, bemEstarFila, isRHManager, marcarLembreteEnviado]);
 
   // Lembrete de reembolso de Viagens pendente há muito tempo — mesma ideia
   // de "approval-queue timeout" do Concur/TravelPerk: sem isso, uma despesa

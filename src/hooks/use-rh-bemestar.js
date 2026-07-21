@@ -1,21 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
-// Bem-estar (Onda 4, item 12): sessões + fila FIFO. RH lê a fila inteira (com
-// nomes, pra chamar); a entrada é sempre pela RPC pública anônima.
-export function useRHBemEstar({ userId } = {}) {
+// Bem-estar (redesenhado — reunião com o RH, 20/07): sessões com janela de
+// horários (horario_inicio/horario_fim/slot_minutos) + reservas por horário
+// marcado (agenda de restaurante), no lugar da antiga fila FIFO "chamar o
+// próximo". RH lê a fila inteira (com nomes/contato); a reserva em si é
+// sempre pela RPC pública anônima (submit_bemestar_agendamento).
+export function useRHBemEstar({ userId, enabled = true } = {}) {
   const [sessoes, setSessoes] = useState([]);
   const [fila, setFila] = useState([]);
   const [loading, setLoading] = useState(true);
   const activeRef = useRef(true);
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
       const [{ data: sData }, { data: fData }] = await Promise.all([
         supabase.from("rh_bemestar_sessoes").select("*").order("created_at", { ascending: false }),
-        supabase.from("rh_bemestar_fila").select("*").order("senha", { ascending: true }),
+        supabase.from("rh_bemestar_fila").select("*").order("horario", { ascending: true }),
       ]);
       if (!activeRef.current) return;
       setSessoes(sData || []);
@@ -23,22 +26,30 @@ export function useRHBemEstar({ userId } = {}) {
     } finally {
       if (activeRef.current) setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     activeRef.current = true;
     fetchAll();
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || !enabled) return;
     const channel = supabase
       .channel(`rh-bemestar-${Math.random().toString(36).slice(2, 9)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_sessoes" }, fetchAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "rh_bemestar_fila" }, fetchAll)
       .subscribe();
     return () => { activeRef.current = false; supabase.removeChannel(channel); };
-  }, [fetchAll]);
+  }, [enabled, fetchAll]);
 
   const criarSessao = useCallback(async (data) => {
-    const row = { titulo: data.titulo, descricao: data.descricao || null, data: data.data || null, created_by: userId };
+    const row = {
+      titulo: data.titulo,
+      descricao: data.descricao || null,
+      data: data.data || null,
+      horario_inicio: data.horarioInicio || null,
+      horario_fim: data.horarioFim || null,
+      slot_minutos: data.slotMinutos || 30,
+      created_by: userId,
+    };
     const { data: nova, error } = await supabase.from("rh_bemestar_sessoes").insert(row).select().single();
     if (error) throw new Error(error.message);
     setSessoes(prev => [nova, ...prev]);
@@ -58,26 +69,22 @@ export function useRHBemEstar({ userId } = {}) {
   }, []);
 
   const setFilaStatus = useCallback(async (id, status) => {
-    const patch = { status };
-    if (status === "chamado") patch.called_at = new Date().toISOString();
-    const { error } = await supabase.from("rh_bemestar_fila").update(patch).eq("id", id);
+    const { error } = await supabase.from("rh_bemestar_fila").update({ status }).eq("id", id);
     if (error) throw new Error(error.message);
-    setFila(prev => prev.map(f => f.id === id ? { ...f, ...patch } : f));
+    setFila(prev => prev.map(f => f.id === id ? { ...f, status } : f));
   }, []);
 
-  // Chama o próximo da fila (menor senha ainda 'na_fila').
-  const chamarProximo = useCallback(async (sessaoId) => {
-    const proximo = fila
-      .filter(f => f.sessao_id === sessaoId && f.status === "na_fila")
-      .sort((a, b) => a.senha - b.senha)[0];
-    if (!proximo) return null;
-    await setFilaStatus(proximo.id, "chamado");
-    return proximo;
-  }, [fila, setFilaStatus]);
+  // Marca que o lembrete de proximidade (App.jsx) já foi enviado — evita
+  // reenviar a cada re-render/poll do efeito.
+  const marcarLembreteEnviado = useCallback(async (id) => {
+    const { error } = await supabase.from("rh_bemestar_fila").update({ lembrete_enviado: true }).eq("id", id);
+    if (error) throw new Error(error.message);
+    setFila(prev => prev.map(f => f.id === id ? { ...f, lembrete_enviado: true } : f));
+  }, []);
 
   return useMemo(() => ({
     sessoes, fila, loading,
-    criarSessao, setSessaoStatus, deletarSessao, setFilaStatus, chamarProximo,
+    criarSessao, setSessaoStatus, deletarSessao, setFilaStatus, marcarLembreteEnviado,
     refetch: fetchAll,
-  }), [sessoes, fila, loading, criarSessao, setSessaoStatus, deletarSessao, setFilaStatus, chamarProximo, fetchAll]);
+  }), [sessoes, fila, loading, criarSessao, setSessaoStatus, deletarSessao, setFilaStatus, marcarLembreteEnviado, fetchAll]);
 }

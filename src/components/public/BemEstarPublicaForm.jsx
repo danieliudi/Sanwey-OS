@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, AlertCircle, HeartHandshake } from "lucide-react";
+import { Loader2, AlertCircle, HeartHandshake, CheckCircle2, Clock } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
 
-// Fila de bem-estar (Onda 4, item 12): página pública sem login. A pessoa entra
-// na fila e recebe uma senha (ordem de chegada) + quantos estão na frente.
-// Não vê a lista de ninguém.
+// Agendamento de bem-estar (reunião com o RH, 20/07): página pública sem
+// login, agora por horário marcado — igual reserva de restaurante — em vez
+// da antiga fila FIFO. A pessoa escolhe um horário livre, informa contato
+// (e-mail e/ou WhatsApp) e recebe confirmação por e-mail.
 const ACCENT = "#C7212B";
 const UNIDADES = [
   { id: "", label: "Não informar" },
@@ -18,10 +19,15 @@ const UNIDADES = [
 export default function BemEstarPublicaForm() {
   const { id } = useParams();
   const [sessao, setSessao] = useState(undefined); // undefined=loading, null=indisponível
+  const [horarios, setHorarios] = useState([]);
+  const [horarioEscolhido, setHorarioEscolhido] = useState("");
   const [nome, setNome] = useState("");
+  const [ramal, setRamal] = useState("");
+  const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [unidade, setUnidade] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [ticket, setTicket] = useState(null); // { senha, na_frente }
+  const [confirmado, setConfirmado] = useState(null); // { horario }
   const [error, setError] = useState(null);
 
   useEffect(() => { document.title = "Bem-estar — Grupo Sanwey"; }, []);
@@ -30,49 +36,66 @@ export default function BemEstarPublicaForm() {
     let active = true;
     if (!isSupabaseConfigured) { setSessao(null); return; }
     (async () => {
-      const { data, error: err } = await supabase.rpc("get_bemestar_sessao_publica", { p_id: id });
+      const [{ data, error: err }, { data: hData }] = await Promise.all([
+        supabase.rpc("get_bemestar_sessao_publica", { p_id: id }),
+        supabase.rpc("get_bemestar_horarios_disponiveis", { p_id: id }),
+      ]);
       if (!active) return;
       const row = Array.isArray(data) ? data[0] : data;
       if (err || !row) { setSessao(null); return; }
       setSessao(row);
+      setHorarios(hData || []);
     })();
     return () => { active = false; };
   }, [id]);
 
-  const canSubmit = nome.trim().length >= 2 && !submitting;
+  const canSubmit = nome.trim().length >= 2 && Boolean(horarioEscolhido) && (email.trim() || whatsapp.trim()) && !submitting;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (nome.trim().length < 2) { setError("Digite seu nome."); return; }
+    if (!horarioEscolhido) { setError("Escolha um horário."); return; }
+    if (!email.trim() && !whatsapp.trim()) { setError("Informe e-mail ou WhatsApp pra receber a confirmação."); return; }
     setSubmitting(true); setError(null);
     try {
-      const { data, error: err } = await supabase.rpc("submit_bemestar_agendamento", { p_sessao_id: id, p_nome: nome.trim(), p_frente: unidade || null });
+      const { data, error: err } = await supabase.rpc("submit_bemestar_agendamento", {
+        p_sessao_id: id, p_horario: horarioEscolhido, p_nome: nome.trim(),
+        p_ramal: ramal.trim() || null, p_email: email.trim() || null, p_whatsapp: whatsapp.trim() || null,
+        p_frente: unidade || null,
+      });
       if (err) throw err;
       const row = Array.isArray(data) ? data[0] : data;
-      setTicket({ senha: row?.senha, naFrente: row?.na_frente ?? 0 });
+      setConfirmado({ horario: row?.horario || horarioEscolhido });
+      if (row?.id && email.trim()) {
+        supabase.functions.invoke("rh-send-email", { body: { type: "bemestar_confirmado", agendamentoId: row.id } }).catch(() => {});
+      }
     } catch (err) {
-      setError(friendlyError(err, "Não foi possível entrar na fila. Tente novamente."));
+      setError(friendlyError(err, "Não foi possível reservar esse horário. Tente novamente."));
+      // Horário pode ter sido ocupado por outra pessoa nesse meio-tempo — recarrega a lista.
+      const { data: hData } = await supabase.rpc("get_bemestar_horarios_disponiveis", { p_id: id });
+      setHorarios(hData || []);
+      setHorarioEscolhido("");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const temHorariosLivres = useMemo(() => horarios.some((h) => h.disponivel), [horarios]);
+
   if (sessao === undefined) {
     return <Shell><div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}><Loader2 size={24} className="animate-spin" style={{ color: ACCENT }} /></div></Shell>;
   }
   if (!sessao) {
-    return <Shell><h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Fila indisponível</h1><p style={{ color: "#5c5f60", fontSize: 14 }}>Este link não corresponde a nenhuma sessão aberta no momento — se você está no local, avise o RH ou o responsável pelo atendimento pra abrir a fila.</p></Shell>;
+    return <Shell><h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Agendamento indisponível</h1><p style={{ color: "#5c5f60", fontSize: 14 }}>Este link não corresponde a nenhuma sessão aberta no momento — se você está no local, avise o RH ou o responsável pelo atendimento.</p></Shell>;
   }
-  if (ticket) {
+  if (confirmado) {
     return (
       <Shell>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}>
-          <div style={{ fontSize: 13, color: "#5c5f60", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700 }}>Sua senha</div>
-          <div style={{ fontSize: 72, fontWeight: 800, color: ACCENT, lineHeight: 1, fontFamily: "'Barlow Condensed', Inter, sans-serif" }}>#{ticket.senha}</div>
-          <div style={{ fontSize: 15, color: "#201a1a", marginTop: 4 }}>
-            {ticket.naFrente === 0 ? "Você é o próximo!" : `${ticket.naFrente} pessoa${ticket.naFrente !== 1 ? "s" : ""} na sua frente`}
-          </div>
-          <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 8, maxWidth: 320 }}>Fique por perto — o RH vai chamar sua senha. Guarde esse número.</p>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: ACCENT + "1A", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle2 size={28} color={ACCENT} /></div>
+          <div style={{ fontSize: 13, color: "#5c5f60", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700, marginTop: 4 }}>Horário reservado</div>
+          <div style={{ fontSize: 56, fontWeight: 800, color: ACCENT, lineHeight: 1, fontFamily: "'Barlow Condensed', Inter, sans-serif" }}>{(confirmado.horario || "").slice(0, 5)}</div>
+          <p style={{ fontSize: 14, color: "#201a1a", marginTop: 4, maxWidth: 320 }}>Chegue no horário combinado. Você vai receber um lembrete quando estiver chegando a hora.</p>
         </div>
       </Shell>
     );
@@ -86,19 +109,57 @@ export default function BemEstarPublicaForm() {
         </div>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: "#201a1a", margin: "0 0 6px", letterSpacing: "-0.02em" }}>{sessao.titulo}</h1>
         {sessao.descricao && <p style={{ color: "#5c5f60", fontSize: 14, margin: "0 0 8px", lineHeight: 1.55 }}>{sessao.descricao}</p>}
-        <div style={{ fontSize: 13, color: "#5c5f60" }}>{sessao.na_fila} pessoa{sessao.na_fila !== 1 ? "s" : ""} na fila agora.</div>
       </header>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div>
+          <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 8 }}>Escolha um horário *</label>
+          {!temHorariosLivres ? (
+            <div style={{ fontSize: 13, color: "#5c5f60" }}>Nenhum horário livre no momento.</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(76px, 1fr))", gap: 8 }}>
+              {horarios.map((h) => {
+                const label = (h.horario || "").slice(0, 5);
+                const active = horarioEscolhido === h.horario;
+                return (
+                  <button key={h.horario} type="button" disabled={!h.disponivel} onClick={() => setHorarioEscolhido(h.horario)}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                      padding: "10px 0", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: h.disponivel ? "pointer" : "not-allowed",
+                      border: `1.5px solid ${active ? ACCENT : h.disponivel ? "#D1D5DB" : "#E5E7EB"}`,
+                      background: active ? ACCENT : h.disponivel ? "#FFF" : "#F3F4F6",
+                      color: active ? "#FFF" : h.disponivel ? "#201a1a" : "#9CA3AF",
+                    }}>
+                    <Clock size={11} /> {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div>
           <label htmlFor="bemestar-nome" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Seu nome *</label>
           <input id="bemestar-nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como o RH vai te chamar" style={input} />
         </div>
+        <div className="grid grid-cols-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <label htmlFor="bemestar-ramal" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Ramal</label>
+            <input id="bemestar-ramal" type="text" value={ramal} onChange={(e) => setRamal(e.target.value)} style={input} />
+          </div>
+          <div>
+            <label htmlFor="bemestar-unidade" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Unidade</label>
+            <select id="bemestar-unidade" value={unidade} onChange={(e) => setUnidade(e.target.value)} style={input}>
+              {UNIDADES.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
+            </select>
+          </div>
+        </div>
         <div>
-          <label htmlFor="bemestar-unidade" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Unidade</label>
-          <select id="bemestar-unidade" value={unidade} onChange={(e) => setUnidade(e.target.value)} style={input}>
-            {UNIDADES.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
-          </select>
+          <label htmlFor="bemestar-email" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>E-mail</label>
+          <input id="bemestar-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Pra receber a confirmação" style={input} />
+        </div>
+        <div>
+          <label htmlFor="bemestar-whatsapp" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>WhatsApp <span style={{ fontWeight: 400, color: "#9CA3AF" }}>(preferencial)</span></label>
+          <input id="bemestar-whatsapp" type="text" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="(11) 99999-9999" style={input} />
         </div>
         {error && (
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: 12, borderRadius: 8, background: "#FEF2F2", color: "#B91C1C", fontSize: 13, border: "1px solid #FECACA" }}>
@@ -107,7 +168,7 @@ export default function BemEstarPublicaForm() {
         )}
         <button type="submit" disabled={!canSubmit}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, background: canSubmit ? ACCENT : "#D1D5DB", color: "#FFF", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 700, cursor: canSubmit ? "pointer" : "not-allowed" }}>
-          {submitting && <Loader2 size={14} className="animate-spin" />} {submitting ? "Entrando…" : "Entrar na fila"}
+          {submitting && <Loader2 size={14} className="animate-spin" />} {submitting ? "Reservando…" : "Reservar horário"}
         </button>
       </form>
     </Shell>

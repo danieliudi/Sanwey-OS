@@ -16,7 +16,9 @@ type EmailType =
   | "vaga_manager_link"
   | "candidatura_recebida"
   | "avaliacao_proxima"
-  | "contrato_fornecedor_vencendo";
+  | "contrato_fornecedor_vencendo"
+  | "bemestar_confirmado"
+  | "bemestar_lembrete";
 
 interface SendEmailBody {
   type: EmailType;
@@ -31,6 +33,9 @@ interface SendEmailBody {
   // público, sem login) — ver handlePublicCandidaturaRecebida.
   vagaSlug?: string;
   candidateId?: string;
+  // Usado só por "bemestar_confirmado" (disparado pelo próprio formulário
+  // público de agendamento, sem login) — ver handlePublicBemEstarConfirmado.
+  agendamentoId?: string;
 }
 
 // ── Subjects ──────────────────────────────────────────────────────────────────
@@ -45,6 +50,8 @@ const SUBJECTS: Record<EmailType, string> = {
   candidatura_recebida:"Recebemos sua candidatura — Grupo Sanwey",
   avaliacao_proxima:   "Avaliação de desempenho se aproximando — Grupo Sanwey",
   contrato_fornecedor_vencendo: "Contrato com fornecedor vencendo — Grupo Sanwey",
+  bemestar_confirmado: "Agendamento confirmado — Grupo Sanwey",
+  bemestar_lembrete:   "Seu horário de bem-estar está chegando — Grupo Sanwey",
 };
 
 // ── Template builders ─────────────────────────────────────────────────────────
@@ -198,6 +205,24 @@ function tplContratoFornecedorVencendo(vars: Record<string, string>): string {
   return applyVars(shell(inner, "#C7212B"), vars);
 }
 
+function tplBemEstarConfirmado(vars: Record<string, string>): string {
+  const inner = `<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">Agendamento confirmado ✓</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#8A8680;line-height:1.6;">Olá, <strong style="color:#2C2C2B;">{{NOME}}</strong>! Seu horário em <strong style="color:#2C2C2B;">{{SESSAO_TITULO}}</strong> está reservado.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F9F5F1;border:1px solid #E5E0DA;border-radius:10px;margin-bottom:28px;"><tr><td style="padding:16px 20px;"><table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td width="40%" style="padding:5px 0;font-size:13px;color:#8A8680;">Data</td><td width="60%" style="padding:5px 0;font-size:13px;color:#2C2C2B;font-weight:600;">{{DATA}}</td></tr>
+      <tr><td style="padding:5px 0;font-size:13px;color:#8A8680;">Horário</td><td style="padding:5px 0;font-size:14px;color:#2C2C2B;font-weight:700;">{{HORARIO}}</td></tr>
+    </table></td></tr></table>
+    <p style="margin:0;font-size:13px;color:#8A8680;line-height:1.5;">Chegue com alguns minutos de antecedência. Vamos te avisar de novo quando o horário estiver próximo.</p>`;
+  return applyVars(shell(inner, "#C7212B"), vars);
+}
+
+function tplBemEstarLembrete(vars: Record<string, string>): string {
+  const inner = `<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">Seu horário está chegando</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#8A8680;line-height:1.6;">Olá, <strong style="color:#2C2C2B;">{{NOME}}</strong>! Seu horário em <strong style="color:#2C2C2B;">{{SESSAO_TITULO}}</strong> é às <strong style="color:#2C2C2B;">{{HORARIO}}</strong> — está chegando a hora.</p>
+    <p style="margin:0;font-size:13px;color:#8A8680;line-height:1.5;">Fique por perto do local combinado.</p>`;
+  return applyVars(shell(inner, "#C7212B"), vars);
+}
+
 function buildHtml(type: EmailType, vars: Record<string, string>): string {
   switch (type) {
     case "ferias_aprovadas":   return tplFeriasAprovadas(vars);
@@ -209,6 +234,8 @@ function buildHtml(type: EmailType, vars: Record<string, string>): string {
     case "candidatura_recebida": return tplCandidaturaRecebida(vars);
     case "avaliacao_proxima": return tplAvaliacaoProxima(vars);
     case "contrato_fornecedor_vencendo": return tplContratoFornecedorVencendo(vars);
+    case "bemestar_confirmado": return tplBemEstarConfirmado(vars);
+    case "bemestar_lembrete": return tplBemEstarLembrete(vars);
   }
 }
 
@@ -288,6 +315,69 @@ async function handlePublicCandidaturaRecebida(
   return new Response(JSON.stringify({ success: true, sent: 1 }), { headers: jsonHeaders });
 }
 
+// Disparado pelo próprio formulário público de agendamento de bem-estar (sem
+// login) — mesmo cuidado de handlePublicCandidaturaRecebida: nunca aceita
+// `to` livre do cliente, sempre re-deriva e-mail/nome/horário do banco via
+// agendamentoId (client service-role, ignora RLS).
+async function handlePublicBemEstarConfirmado(
+  supabase: ReturnType<typeof createClient>,
+  body: SendEmailBody,
+): Promise<Response> {
+  const jsonHeaders = { ...corsHeaders, "Content-Type": "application/json" };
+  const noop = () => new Response(JSON.stringify({ success: true, sent: 0 }), { headers: jsonHeaders });
+
+  const agendamentoId = typeof body.agendamentoId === "string" ? body.agendamentoId.trim() : "";
+  if (!agendamentoId) {
+    return new Response(JSON.stringify({ error: "agendamentoId é obrigatório" }), { status: 400, headers: jsonHeaders });
+  }
+
+  const { data: agendamento } = await supabase
+    .from("rh_bemestar_fila")
+    .select("nome, email, horario, sessao_id")
+    .eq("id", agendamentoId)
+    .maybeSingle();
+  if (!agendamento?.email) return noop(); // e-mail é opcional no agendamento
+
+  const { data: sessao } = await supabase
+    .from("rh_bemestar_sessoes")
+    .select("titulo, data")
+    .eq("id", agendamento.sessao_id)
+    .maybeSingle();
+  if (!sessao) return noop();
+
+  const html = buildHtml("bemestar_confirmado", {
+    NOME: agendamento.nome || "",
+    SESSAO_TITULO: sessao.titulo || "",
+    DATA: sessao.data ? new Date(sessao.data + "T00:00:00").toLocaleDateString("pt-BR") : "—",
+    HORARIO: (agendamento.horario || "").slice(0, 5),
+  });
+
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) {
+    console.warn("[rh-send-email] RESEND_API_KEY não configurada. Confirmação de bem-estar NÃO enviada.");
+    return noop();
+  }
+
+  const resendRes = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "noreply@sanwey.com.br",
+      to: agendamento.email,
+      subject: SUBJECTS.bemestar_confirmado,
+      html,
+    }),
+  });
+
+  if (!resendRes.ok) {
+    const errBody = await resendRes.text();
+    console.error("[rh-send-email] Resend error (bemestar_confirmado):", resendRes.status, errBody);
+    return new Response(JSON.stringify({ success: false, sent: 0 }), { headers: jsonHeaders });
+  }
+
+  return new Response(JSON.stringify({ success: true, sent: 1 }), { headers: jsonHeaders });
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -309,6 +399,8 @@ Deno.serve(async (req) => {
       "candidatura_recebida",
       "avaliacao_proxima",
       "contrato_fornecedor_vencendo",
+      "bemestar_confirmado",
+      "bemestar_lembrete",
     ];
 
     if (!body?.type || !validTypes.includes(body.type)) {
@@ -323,11 +415,15 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // "candidatura_recebida" é público — disparado pelo formulário de
-    // candidatura sem login. Não passa pelo gate de JWT/role abaixo (ver
-    // handlePublicCandidaturaRecebida pra como evita virar relay aberto).
+    // "candidatura_recebida" e "bemestar_confirmado" são públicos —
+    // disparados pelos próprios formulários sem login. Não passam pelo gate
+    // de JWT/role abaixo (ver handlePublicCandidaturaRecebida/
+    // handlePublicBemEstarConfirmado pra como evitam virar relay aberto).
     if (body.type === "candidatura_recebida") {
       return await handlePublicCandidaturaRecebida(supabase, body);
+    }
+    if (body.type === "bemestar_confirmado") {
+      return await handlePublicBemEstarConfirmado(supabase, body);
     }
 
     // Validate JWT — caller must be an authenticated Supabase user
