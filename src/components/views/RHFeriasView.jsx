@@ -25,6 +25,8 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { EmptyState } from "../ui/EmptyState";
+import { useAvailableHeight } from "../../hooks/use-available-height";
+import { KanbanFab } from "../shared/KanbanFab";
 
 // ── Documento obrigatório por tipo de licença ────────────────────────────────
 // Pesquisa de mercado (Convenia/Gusto/Personio) + prática CLT: alguns tipos
@@ -354,7 +356,7 @@ function FeriasCardBody({ req, canWrite, onAprovar, onRecusar, busy }) {
 function FeriasKanbanColumn({
   stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteRequest,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields, getCompleteness, getUnread, onAprovar, onRecusar, busyId,
+  canWrite, onEditFields, getCompleteness, getUnread, onAprovar, onRecusar, busyId, boardHeight,
 }) {
   return (
     <div
@@ -362,7 +364,7 @@ function FeriasKanbanColumn({
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
       className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-      style={{ width: 272, minWidth: 272, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "calc(100vh - 260px)" }}
+      style={{ width: 272, minWidth: 272, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: boardHeight }}
     >
       <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
       <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
@@ -781,6 +783,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
   const [draggedId, setDraggedId]         = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode]);
 
   const { viewedAt, markViewed } = useRecordViews("rh_ferias", currentUser?.id);
   useEffect(() => { if (drawerReqId) markViewed(drawerReqId); }, [drawerReqId]);
@@ -1021,7 +1024,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
             )}
             emptyLabel="Nada aqui"
           />
-          <div style={{ gap: 12, overflowX: "auto", paddingBottom: 16 }} className="hidden lg:flex">
+          <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
             {stages.map((stage) => (
               <FeriasKanbanColumn
                 key={stage.id}
@@ -1044,9 +1047,11 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                 onAprovar={handleAprovar}
                 onRecusar={handleRecusar}
                 busyId={busyId}
+                boardHeight={boardHeight}
               />
             ))}
           </div>
+          <KanbanFab label="Solicitar" onClick={() => setShowSolicitar(true)} />
         </>
       )}
 
