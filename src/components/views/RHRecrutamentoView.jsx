@@ -3112,7 +3112,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           {canWrite && viewMode === "vagas" && (
             <button
               onClick={() => setQuickAddVaga(true)}
-              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "6px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+              className="flex items-center gap-1.5 font-semibold"
+              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "none", cursor: "pointer" }}
             >
               <Plus size={14} /> Nova vaga
             </button>

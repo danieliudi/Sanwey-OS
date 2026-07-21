@@ -794,7 +794,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
 
       {viewMode === "calendar" ? (
         <PipelineCalendarView
-          leads={leads}
+          leads={starredOnly ? leads.filter(l => l.starred) : leads}
           user={user}
           activeCompany={activeCompany}
           onLeadClick={onLeadClick}
