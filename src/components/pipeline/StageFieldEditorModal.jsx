@@ -1,13 +1,25 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   X, Plus, Trash2, GripVertical, ChevronUp, ChevronDown,
   Pencil, Check, Type, AlignLeft, Hash, DollarSign, Calendar,
   Clock, Mail, Phone, Link, CheckSquare, List, RadioTower,
-  ListChecks, User, Settings2,
+  ListChecks, User, Settings2, Zap,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { FIELD_TYPES, slugifyKey } from "../../hooks/use-stage-fields";
 import { VALIDATION_PRESETS, VALIDATION_RULE_TYPES } from "../../utils/field-validation";
+import { useAutomations } from "../../hooks/use-automations";
+
+// Automação "toca" uma etapa se ela dispara a partir dela, chega nela via
+// stage_change, mede tempo parado nela, cobra campo pendente nela, ou move
+// um card pra ela como ação (then/else) — union de todo jeito de uma regra
+// referenciar um stageKey.
+function automationTouchesStage(rule, stageKey) {
+  const t = rule.trigger || {};
+  if (t.fromStage === stageKey || t.toStage === stageKey || t.stageId === stageKey) return true;
+  const actions = [...(rule.thenActions || []), ...(rule.elseActions || [])];
+  return actions.some(a => a.type === "move_stage" && a.targetStage === stageKey);
+}
 
 // Ícone por tipo de campo
 const TYPE_ICON = {
@@ -569,6 +581,15 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
   const [showAdd, setShowAdd] = useState(false);
   const [opError, setOpError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const { automations } = useAutomations();
+  const automationCount = useMemo(() => {
+    if (!open || !stage) return 0;
+    return automations.filter(r =>
+      r.module === "crm" &&
+      (r.companyId === companyId || r.companyId === "all") &&
+      automationTouchesStage(r, stage.id)
+    ).length;
+  }, [automations, open, stage, companyId]);
 
   useEffect(() => {
     if (open) { setShowAdd(false); setOpError(null); }
@@ -713,6 +734,12 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
           <div className="text-xs" style={{ color: "var(--text-dim)" }}>
             Campos que aparecem no drawer quando um card está nesta etapa.
           </div>
+          {automationCount > 0 && (
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-dim)" }}>
+              <Zap size={12} style={{ color: accent, flexShrink: 0 }} />
+              {automationCount} automação{automationCount !== 1 ? "ões" : ""} vinculada{automationCount !== 1 ? "s" : ""} a esta etapa
+            </div>
+          )}
 
           {opError && (
             <div style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px" }}>
