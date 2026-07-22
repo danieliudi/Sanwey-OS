@@ -459,7 +459,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // Altura disponível até o rodapé da janela, medida ao vivo a partir do
   // topo do board — pra barra de scroll horizontal do Kanban nunca ficar
   // abaixo da dobra, em qualquer tamanho de janela (ver use-available-height.js).
-  const [boardRef, boardHeight] = useAvailableHeight(16);
+  // trailingRef mede o painel de analytics + texto de dica que vêm depois do
+  // board, pra sobrar espaço suficiente pra eles também caberem sem empurrar
+  // a página além da viewport.
+  const trailingRef = useRef(null);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
 
   // Mesma regra de permissão do botão de excluir dentro do LeadDetailDrawer
   // (canDelete) — reaproveitada aqui pro atalho de excluir direto no "..."
@@ -1049,14 +1053,15 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       </>)}
 
       {/* ── Analytics panel (apenas no kanban) ── */}
-      {viewMode === "kanban" && scopedLeads.length > 0 && (
-        <AnalyticsPanel scopedLeads={scopedLeads} stages={stages} />
-      )}
-
       {viewMode === "kanban" && (
-        <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
-          Arraste para mover entre etapas · Clique no card para ver detalhes
-        </p>
+        <div ref={trailingRef}>
+          {scopedLeads.length > 0 && (
+            <AnalyticsPanel scopedLeads={scopedLeads} stages={stages} />
+          )}
+          <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
+            Arraste para mover entre etapas · Clique no card para ver detalhes
+          </p>
+        </div>
       )}
 
       {viewMode === "table" && (

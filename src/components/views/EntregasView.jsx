@@ -649,7 +649,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
   const campaignsById = useMemo(() => new Map(campaigns.map(c => [c.id, c])), [campaigns]);
   const stageFields = useRHStageFields("marketing_deliverables");
-  const [boardRef, boardHeight] = useAvailableHeight(16);
+  // trailingRef mede o painel de analytics + texto de dica que vêm depois do
+  // board, pra sobrar espaço suficiente pra eles também caberem (ver
+  // use-available-height.js).
+  const trailingRef = useRef(null);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables"),
   // editáveis via RHStageEditorModal — mesmo padrão do RHOnboardingView.
@@ -1113,12 +1117,13 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         />
       )}
 
-      {!loading && !loadingStages && viewMode === "kanban" && deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} stages={kanbanStages} />}
-
       {!loading && !loadingStages && viewMode === "kanban" && (
-        <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
-          Arraste para mover · "+" para criar · Clique para ver detalhes
-        </p>
+        <div ref={trailingRef}>
+          {deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} stages={kanbanStages} />}
+          <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
+            Arraste para mover · "+" para criar · Clique para ver detalhes
+          </p>
+        </div>
       )}
     </div>
 

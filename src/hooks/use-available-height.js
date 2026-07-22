@@ -12,13 +12,15 @@ import { useEffect, useRef, useState } from "react";
 // como no Pipefy). Recalcula em resize e sempre que `deps` mudar (ex.:
 // `loading` terminando, o que muda a altura do conteúdo acima do board).
 //
-// O limite inferior real não é window.innerHeight: o <footer> global do
-// App.jsx (mais o padding-bottom do wrapper de conteúdo) sempre ocupa espaço
-// abaixo do board. Usar só `window.innerHeight - marginBottom` ignorava isso
-// e sobrava menos de 16px de fato — a página esticava além da viewport pra
-// caber o footer, gerando o gap/scroll que o board deveria ter evitado. Usa
-// o topo do <footer> (único na página) como limite quando ele existe.
-export function useAvailableHeight(marginBottom = 16, deps = []) {
+// `trailingRef` (opcional) aponta pro wrapper de qualquer conteúdo que vem
+// DEPOIS do board no mesmo fluxo (texto de dica, painel de analytics — ver
+// CRMView/MarketingView/EntregasView) — sua ALTURA entra na conta pra sobrar
+// espaço suficiente pra ele também caber. Importante: usar a altura de um
+// elemento (intrínseca) e não a POSIÇÃO de um elemento downstream (ex.: o
+// <footer> global, tentado antes) — a posição de algo depois do board
+// depende da altura do próprio board, então usá-la criava um cálculo
+// circular que só piorava a cada resize em vez de convergir.
+export function useAvailableHeight(marginBottom = 16, deps = [], trailingRef = null) {
   const ref = useRef(null);
   const [height, setHeight] = useState(480);
 
@@ -27,9 +29,8 @@ export function useAvailableHeight(marginBottom = 16, deps = []) {
     if (!el) return;
     const update = () => {
       const top = el.getBoundingClientRect().top;
-      const footer = document.querySelector("footer");
-      const bottomBoundary = footer ? Math.min(footer.getBoundingClientRect().top, window.innerHeight) : window.innerHeight;
-      setHeight(Math.max(280, Math.round(bottomBoundary - top - marginBottom)));
+      const trailingHeight = trailingRef?.current ? trailingRef.current.getBoundingClientRect().height : 0;
+      setHeight(Math.max(280, Math.round(window.innerHeight - top - trailingHeight - marginBottom)));
     };
     update();
     window.addEventListener("resize", update);
