@@ -1633,18 +1633,6 @@ export default function App() {
         </ErrorBoundary>
         </div>
 
-        <footer
-          className="px-6 py-4 border-t text-xs flex items-center justify-between flex-wrap gap-2"
-          style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: "var(--text-dim)" }}
-        >
-          <div className="font-medium" style={{ letterSpacing: "0.01em" }}>
-            Gestão Sanwey
-          </div>
-          <div style={{ color: "var(--text-dim)" }}>
-            Maio 2026
-          </div>
-        </footer>
-
         <div className="lg:hidden">
           <MobileBottomNav
             section={section}
