@@ -1,4 +1,5 @@
 import React from "react";
+import { AlertTriangle } from "lucide-react";
 import { validateFieldFormat } from "../../utils/field-validation";
 import { CurrencyInput } from "../ui/CurrencyInput";
 
@@ -50,6 +51,22 @@ function renderInput({ field, value, onChange, users, companyId }) {
 
   const t = field.fieldType;
   const opts = Array.isArray(field.options) ? field.options : [];
+
+  // Campo de seleção configurado sem opções (cadastro incompleto/migração) —
+  // sem isso, radio/multicheck renderizam uma <div> vazia e select mostra só
+  // o placeholder, indistinguível de "ainda não escolhi".
+  if ((t === "select" || t === "radio" || t === "multicheck") && opts.length === 0) {
+    return (
+      <div style={{
+        width: "100%", boxSizing: "border-box", display: "flex", alignItems: "flex-start", gap: 6,
+        background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 8,
+        padding: "8px 12px", fontSize: 12, color: "var(--warning)",
+      }}>
+        <AlertTriangle size={14} style={{ color: "var(--warning)", flexShrink: 0, marginTop: 1 }} />
+        <span>Nenhuma opção configurada para este campo — configure em Editar fase.</span>
+      </div>
+    );
+  }
 
   if (t === "textarea") {
     return (
