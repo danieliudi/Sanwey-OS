@@ -16,7 +16,7 @@ import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
 import { formatK, formatBRL } from "../../utils/currency";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
 import { useLeadAttachments } from "../../hooks/use-lead-attachments";
@@ -372,7 +372,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     if (!decisionMakerName || decisionMakerName === "—") return "—";
     return decisionMakerName.split(" ").map(n => n[0]).filter(Boolean).join("").slice(0, 2);
   }, [decisionMakerName]);
-  const firstName = decisionMakerName?.split(" ")[0] || "time";
+  const firstName = (decisionMakerName && decisionMakerName !== "—") ? decisionMakerName.split(" ")[0] : "time";
 
   // Normalize probability for display (handle both 0–1 and 0–100 formats)
   const probDisplay = lead
@@ -383,7 +383,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     if (!lead || !company) return "";
     const senderName = currentUser?.name || "[Seu nome]";
     const senderEmail = currentUser?.email ? `\n${currentUser.email}` : "";
-    return `Olá ${firstName},\n\nIdentifiquei que a ${lead.company} teve ${(lead.evidence || "").toLowerCase()}.\n\nSou da ${company.name} e gostaria de entender melhor como podemos apoiar nesse momento.\n\nPodemos agendar 20 minutos esta semana?\n\nAbraço,\n${senderName}${senderEmail}\n${company.name}`;
+    const hasEvidence = Boolean(lead.evidence && lead.evidence.trim());
+    const openingLine = hasEvidence
+      ? `Identifiquei que a ${lead.company} teve ${lead.evidence.toLowerCase()}.`
+      : `Estou acompanhando o momento da ${lead.company} e acredito que possamos ajudar em algo relevante agora.`;
+    return `Olá ${firstName},\n\n${openingLine}\n\nSou da ${company.name} e gostaria de entender melhor como podemos apoiar nesse momento.\n\nPodemos agendar 20 minutos esta semana?\n\nAbraço,\n${senderName}${senderEmail}\n${company.name}`;
   }, [lead, company, firstName, currentUser]);
 
   // IMPORTANT: todos os hooks precisam rodar antes de qualquer return.
@@ -404,6 +408,13 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   }, [lead]);
 
   if (!lead || !company) return null;
+
+  // Mesma exclusão de cor em etapa terminal que o Kanban já aplica — um
+  // negócio ganho/perdido não deveria mostrar "vencido" pra uma data de
+  // fechamento passada.
+  const currentStageInfo = companyStages.find(s => s.id === lead.stage);
+  const isTerminalStage = Boolean(currentStageInfo?.terminal);
+  const closeStyle = (lead.closeDate && !isTerminalStage) ? closeDateUrgencyStyle(lead.closeDate) : null;
 
   const handleCopyDraft = () => {
     if (navigator.clipboard?.writeText) {
@@ -693,9 +704,15 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   {probDisplay}%
                 </div>
               </div>
-              <div className="rounded-lg p-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+              <div
+                className="rounded-lg p-2"
+                style={{
+                  background: closeStyle ? closeStyle.bg : "var(--surface)",
+                  border: `1px solid ${closeStyle ? closeStyle.border : "var(--border)"}`,
+                }}
+              >
                 <div className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>Fechamento</div>
-                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: "var(--text)" }}>
+                <div className="text-xs font-bold mt-0.5 truncate" style={{ color: closeStyle ? closeStyle.text : "var(--text)" }}>
                   {lead.closeDate ? formatDateBR(lead.closeDate).replace(/(\d{2}\/\d{2}\/)\d{2}(\d{2})$/, "$1$2") : "—"}
                 </div>
               </div>

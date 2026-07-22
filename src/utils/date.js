@@ -25,6 +25,29 @@ export function daysSince(input) {
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
 
+// Mesmo vocabulário {bg,text,border} do agingStyle (LeadKanbanCard), mas com
+// tokens CSS custom theme-aware em vez de hex fixos — compartilhado entre
+// LeadKanbanCard e LeadDetailDrawer pra não divergir o limiar entre os dois.
+export function closeDateUrgencyStyle(closeDate) {
+  if (!closeDate) return null;
+  const days = daysSince(closeDate);
+  if (days > 0) {
+    return {
+      bg: "var(--danger-bg)",
+      text: "var(--danger)",
+      border: "color-mix(in srgb, var(--danger) 20%, transparent)",
+    };
+  }
+  if (days >= -7) {
+    return {
+      bg: "var(--amber-bg)",
+      text: "var(--amber)",
+      border: "color-mix(in srgb, var(--amber) 20%, transparent)",
+    };
+  }
+  return null;
+}
+
 // Grava um "AAAA-MM-DD" de <input type=date> numa coluna timestamptz sem
 // "voltar" um dia quando reexibido em fuso negativo (BRT). new Date(str)
 // interpretaria a string pura como meia-noite UTC — constrói meia-noite

@@ -6,7 +6,7 @@ import { CompanyTag } from "../ui/CompanyTag";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { formatK } from "../../utils/currency";
-import { formatDateBR } from "../../utils/date";
+import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -54,6 +54,7 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
   // Card de etapa terminal (ganho/perdido) fica visualmente "arquivado" —
   // menos ênfase que os cards ainda em jogo, com um selo do resultado.
   const isTerminal = Boolean(currentStage?.terminal);
+  const closeStyle = !isTerminal ? closeDateUrgencyStyle(lead.closeDate) : null;
 
   const shadowBase  = `var(--shadow-card)`;
   const shadowHover = `var(--shadow-pop)`;
@@ -150,7 +151,21 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
           {formatK(lead.value)}
         </span>
         <span style={{ color: "var(--text-dim)" }}>
-          {probDisplay}% · {formatDateBR(lead.closeDate)}
+          {probDisplay}%{" "}·{" "}
+          {closeStyle ? (
+            <span
+              className="px-1 py-0.5 rounded font-bold"
+              style={{
+                background: closeStyle.bg,
+                color: closeStyle.text,
+                border: `1px solid ${closeStyle.border}`,
+              }}
+            >
+              {formatDateBR(lead.closeDate)}
+            </span>
+          ) : (
+            formatDateBR(lead.closeDate)
+          )}
         </span>
       </div>
 
