@@ -4,7 +4,7 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 
 // Renderiza um input para um campo customizado de etapa (pipeline_stage_fields),
 // reutilizado pelo modal de criação e pelo drawer de detalhe.
-export function StageFieldInput({ field, value, onChange, users, companyId }) {
+export function StageFieldInput({ field, value, onChange, users, companyId, touched = true }) {
   const input = renderInput({ field, value, onChange, users, companyId });
   // Validação de formato (camada 2, além de presença/obrigatoriedade) — só
   // mostra o erro quando há valor preenchido; campo vazio é responsabilidade
@@ -13,18 +13,21 @@ export function StageFieldInput({ field, value, onChange, users, companyId }) {
   const hasValue = !(value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0));
   // Destaque de obrigatório vazio — antes só aparecia como alert() ao tentar
   // mudar de etapa; aqui já sinaliza inline, sem precisar tentar mover o card.
-  const isMissingRequired = (field.effectiveRequired ?? field.required) && !hasValue;
+  // `touched` (default true) deixa quem chama decidir se o sinalizador só
+  // deve valer depois de blur/tentativa de submit (criação) ou sempre
+  // (edição de card já existente, onde pendência deve aparecer de cara).
+  const isMissingRequired = touched && (field.effectiveRequired ?? field.required) && !hasValue;
 
   return (
     <div
-      style={isMissingRequired ? { background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: 6 } : undefined}
+      style={isMissingRequired ? { background: "var(--danger-bg)", border: "1px solid var(--danger)", borderRadius: 8, padding: 6 } : undefined}
     >
       {input}
       {hasValue && error && (
         <div style={{ fontSize: 11, color: "#B91C1C", marginTop: 4 }}>{error}</div>
       )}
       {isMissingRequired && (
-        <div style={{ fontSize: 11, color: "#B91C1C", marginTop: 4 }}>Campo obrigatório</div>
+        <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 4 }}>Campo obrigatório</div>
       )}
     </div>
   );

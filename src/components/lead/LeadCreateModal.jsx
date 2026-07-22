@@ -63,7 +63,7 @@ function findMatches({ name, cnpj }, existingLeads, limit = 5) {
 
 // ── Field renderer ────────────────────────────────────────────────────────────
 
-function FieldInput({ def, configEntry, value, onChange, users, companyId, inputRef }) {
+function FieldInput({ def, configEntry, value, onChange, users, companyId, inputRef, touched }) {
   const baseStyle = {
     width: "100%",
     fontSize: 13,
@@ -87,7 +87,7 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
         style={{ ...baseStyle, appearance: "none", paddingRight: 32,
           backgroundImage: "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
           backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", backgroundSize: "14px",
-          borderColor: configEntry.required && !value ? "var(--accent)" : "#D1D5DB",
+          borderColor: touched && configEntry.required && !value ? "var(--danger)" : "#D1D5DB",
         }}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -251,6 +251,17 @@ export function LeadCreateModal({
   // não precisar abrir o card de novo só pra preencher o que a fase pede.
   const [customValues, setCustomValues] = useState({});
   const [saving, setSaving] = useState(false);
+  // Evita a validação "Campo obrigatório" aparecer antes de qualquer
+  // interação (QW2): só sinaliza um campo depois que ele foi tocado (blur)
+  // ou depois de uma tentativa de submit que falhou. Chaves prefixadas por
+  // namespace ("base:"/"stage:") porque fieldKey de campo customizado da
+  // etapa é livre (definido pelo admin) e pode colidir com um id de campo
+  // base (ex.: "sector").
+  const [touchedKeys, setTouchedKeys] = useState(() => new Set());
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const markTouched = useCallback((key) => {
+    setTouchedKeys(prev => (prev.has(key) ? prev : new Set(prev).add(key)));
+  }, []);
 
   // Guarda contra descarte acidental: fechar por clique-fora/ESC/X com o
   // formulário preenchido pede confirmação. Achado da 2ª auditoria.
@@ -282,6 +293,8 @@ export function LeadCreateModal({
       setError(null);
       setSaving(false);
       setDuplicates([]);
+      setTouchedKeys(new Set());
+      setSubmitAttempted(false);
       setTimeout(() => firstRef.current?.focus(), 80);
     }
   }, [open, currentUser]);
@@ -319,6 +332,7 @@ export function LeadCreateModal({
       if (!entry.required) continue;
       if (isFieldEmpty(values[entry.id])) {
         const def = FIELD_DEFS[entry.id];
+        setSubmitAttempted(true);
         setError(`O campo "${def?.label || entry.id}" é obrigatório.`);
         return;
       }
@@ -327,6 +341,7 @@ export function LeadCreateModal({
     // bloqueia mover um card com campo vazio, só que antes mesmo dele existir.
     const missing = getMissingRequiredFields(visibleStageFields, customValues);
     if (missing.length > 0) {
+      setSubmitAttempted(true);
       setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`);
       return;
     }
@@ -508,7 +523,10 @@ export function LeadCreateModal({
             if (!def) return null;
             return (
               <React.Fragment key={entry.id}>
-                <div style={{ marginBottom: entry.id === "company" && duplicates.length > 0 ? 8 : 16 }}>
+                <div
+                  style={{ marginBottom: entry.id === "company" && duplicates.length > 0 ? 8 : 16 }}
+                  onBlur={() => markTouched(`base:${entry.id}`)}
+                >
                   <label
                     style={{
                       display: "block",
@@ -533,6 +551,7 @@ export function LeadCreateModal({
                     users={users}
                     companyId={companyId}
                     inputRef={idx === 0 ? firstRef : undefined}
+                    touched={submitAttempted || touchedKeys.has(`base:${entry.id}`)}
                   />
                 </div>
                 {(entry.id === "company" || entry.id === "cnpj") && duplicates.length > 0 && (
@@ -617,7 +636,7 @@ export function LeadCreateModal({
               </div>
               <div className="flex flex-col gap-3">
                 {visibleStageFields.map(f => (
-                  <div key={f.id}>
+                  <div key={f.id} onBlur={() => markTouched(`stage:${f.fieldKey}`)}>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
                       {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 2 }}>*</span>}
                       {f.label}
@@ -628,6 +647,7 @@ export function LeadCreateModal({
                       onChange={val => setCustomValues(prev => ({ ...prev, [f.fieldKey]: val }))}
                       users={users}
                       companyId={companyId}
+                      touched={submitAttempted || touchedKeys.has(`stage:${f.fieldKey}`)}
                     />
                   </div>
                 ))}
