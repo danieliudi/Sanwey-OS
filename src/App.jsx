@@ -96,8 +96,35 @@ import { MobileBottomNav } from "./components/shell/MobileBottomNav";
 import { AppToast } from "./components/shared/AppToast";
 import { useAppUpdate } from "./hooks/use-app-update";
 import { useChangelogNotice } from "./hooks/use-changelog-notice";
+import { useScreenTips } from "./hooks/use-screen-tips";
 
 const INITIAL_SIGNALS = generateMarketSignals();
+
+// Onboarding contextual por tela: reaproveita o quickStart que já existe em
+// VIDEO_TUTORIALS (src/data/tutorials.js), hoje só visível na tela separada
+// "Tutoriais". Mapeia o id de `section` (rota) pro `description`
+// correspondente em VIDEO_TUTORIALS — só as combinações que genuinamente
+// existem nos dois lados hoje. "Usuários", "Construtor de pipeline" e
+// "Histórico do funil" (conteúdo do papel gerente) ficam de fora de
+// propósito: as 3 telas que descrevem foram absorvidas por outra rota
+// (Usuários → dentro de Configurações; Construtor de pipeline → botão
+// dentro do próprio Kanban de "crm"; Histórico do funil → aba dentro do
+// Executivo) e não têm mais uma `section` própria pra receber a dica sem
+// colidir com o mapeamento já escolhido pra "crm"/"executive" abaixo.
+const SECTION_SCREEN_TIP_KEYS = {
+  crm: "Negócios",
+  signals: "Sinais",
+  automations: "Automações",
+  executive: "Executivo",
+  marketing: "Campanhas",
+  "marketing-entregas": "Entregas",
+  "marketing-despesas": "Despesas",
+  "marketing-home": "Visão Geral",
+  "rh-overview": "Visão Geral",
+  "rh-funcionarios": "Funcionários",
+  "rh-recrutamento": "Recrutamento",
+  "rh-ferias": "Férias",
+};
 
 export default function App() {
   // Supabase drives auth when env vars are present. When not configured, we
@@ -647,6 +674,14 @@ export default function App() {
     const path = ROUTES[id];
     if (path) navigate(path);
   }, [navigate]);
+
+  // Toast de dica de tela — nunca junto do onboarding nem dos outros 2 toasts
+  // (update disponível, novidades): só um AppToast visível por vez.
+  const { tip: screenTip, dismiss: dismissScreenTip } = useScreenTips(
+    currentUser,
+    SECTION_SCREEN_TIP_KEYS[section],
+    { skip: showOnboarding || needRefresh || changelogItems.length > 0 }
+  );
 
   // Destino genérico de uma notificação de @menção — leva pra tela certa
   // (e, no caso de leads, abre o card exato); os outros módulos ainda não
@@ -1693,6 +1728,14 @@ export default function App() {
           <ul className="list-disc pl-4 space-y-0.5">
             {changelogItems.map((item, i) => <li key={i}>{item}</li>)}
           </ul>
+        </AppToast>
+      )}
+
+      {screenTip && (
+        <AppToast title={`${screenTip.icon} ${sectionTitle}`} onDismiss={dismissScreenTip}>
+          <ol className="list-decimal pl-4 space-y-0.5">
+            {screenTip.steps.map((s, i) => <li key={i}>{s}</li>)}
+          </ol>
         </AppToast>
       )}
 
