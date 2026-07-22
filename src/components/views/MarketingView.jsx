@@ -424,7 +424,7 @@ function KpiBar({ campaigns }) {
   }).length;
 
   return (
-    <div className="grid grid-cols-3 gap-2 mb-3">
+    <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
       <KpiCard label="Campanhas ativas" value={String(active)} />
       <KpiCard label="Orçamento total"     value={formatK(totalBudget)} />
       <KpiCard label="Urgente"          value={String(urgent)} red={urgent > 0} />
@@ -682,7 +682,11 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const stageFields = useRHStageFields("marketing");
-  const [boardRef, boardHeight] = useAvailableHeight(16);
+  // trailingRef mede o painel de analytics + texto de dica que vêm depois do
+  // board, pra sobrar espaço suficiente pra eles também caberem (ver
+  // use-available-height.js).
+  const trailingRef = useRef(null);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing"), editáveis via
   // RHStageEditorModal — mesmo padrão do RHOnboardingView. Normalizamos pro
@@ -1273,14 +1277,15 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       </>)}
 
       {/* Analytics panel */}
-      {!loading && !loadingStages && viewMode === "kanban" && filteredCampaigns.length > 0 && (
-        <AnalyticsPanel campaigns={filteredCampaigns} stages={kanbanStages} />
-      )}
-
       {!loading && !loadingStages && viewMode === "kanban" && (
-        <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
-          Arraste para mover · Use "+" no cabeçalho ou o botão flutuante para criar · Clique no card para ver detalhes
-        </p>
+        <div ref={trailingRef}>
+          {filteredCampaigns.length > 0 && (
+            <AnalyticsPanel campaigns={filteredCampaigns} stages={kanbanStages} />
+          )}
+          <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
+            Arraste para mover · Use "+" no cabeçalho ou o botão flutuante para criar · Clique no card para ver detalhes
+          </p>
+        </div>
       )}
 
       {/* Detail drawer */}
