@@ -1261,7 +1261,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="font-semibold text-sm" style={{ color: lead.value > 0 ? "#15803D" : "var(--text-dim)" }}>
-                  {lead.value > 0 ? `R$ ${formatK(lead.value)}` : "—"}
+                  {lead.value > 0 ? formatK(lead.value) : "—"}
                 </span>
                 {onStarToggle && (
                   <button
@@ -1405,7 +1405,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                 </td>
                 {/* Value */}
                 <td style={{ padding: "10px 12px", fontWeight: 600, color: lead.value > 0 ? "#15803D" : "var(--text-dim)" }}>
-                  {lead.value > 0 ? `R$ ${formatK(lead.value)}` : "—"}
+                  {lead.value > 0 ? formatK(lead.value) : "—"}
                 </td>
                 {/* Fit Score */}
                 <td style={{ padding: "10px 12px" }}>
