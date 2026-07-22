@@ -28,6 +28,7 @@ import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadLeadComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
+import { daysSince } from "../../utils/date";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 
@@ -1150,7 +1151,19 @@ const TABLE_COLS = [
   { id: "sector",    label: "Setor",        width: 140,  sortable: true },
   { id: "owner",     label: "Responsável",  width: 140,  sortable: true },
   { id: "stageChangedAt", label: "Última mov.", width: 120, sortable: true },
+  { id: "timeInStage", label: "Tempo na etapa", width: 110, sortable: true },
+  { id: "timeInPipe",  label: "Tempo no pipe",  width: 110, sortable: true },
 ];
+
+// Mesmo vocabulário de urgência do badge de SLA no card Kanban (LeadKanbanCard
+// agingStyle), só que com tokens theme-aware em vez de hex fixos.
+function stageTimeStyle(days, slaDays) {
+  if (!slaDays) return { color: "var(--text-dim)" };
+  const ratio = days / slaDays;
+  if (ratio >= 1)   return { color: "var(--danger)" };
+  if (ratio >= 0.7) return { color: "var(--amber)" };
+  return { color: "var(--text-dim)" };
+}
 
 function SortIcon({ col, sortCol, sortDir }) {
   if (sortCol !== col) return <ArrowUpDown size={11} style={{ color: "var(--border-strong)", flexShrink: 0 }} />;
@@ -1195,6 +1208,8 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
           break;
         }
         case "stageChangedAt": va = a.stageChangedAt || a.createdAt || ""; vb = b.stageChangedAt || b.createdAt || ""; break;
+        case "timeInStage": va = daysSince(a.stageChangedAt || a.createdAt); vb = daysSince(b.stageChangedAt || b.createdAt); break;
+        case "timeInPipe":  va = daysSince(a.createdAt || a.dateDetected); vb = daysSince(b.createdAt || b.dateDetected); break;
         default:          va = ""; vb = "";
       }
       if (va < vb) return sortDir === "asc" ? -1 : 1;
@@ -1443,6 +1458,14 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                 {/* Last move */}
                 <td style={{ padding: "10px 12px", color: "var(--text-dim)", fontSize: 12 }}>
                   {fmt(lead.stageChangedAt || lead.createdAt)}
+                </td>
+                {/* SLA: tempo na etapa atual, colorido pelo slaDays da etapa */}
+                <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 600, ...stageTimeStyle(daysSince(lead.stageChangedAt || lead.createdAt), stage?.slaDays) }}>
+                  {daysSince(lead.stageChangedAt || lead.createdAt)}d
+                </td>
+                {/* SLA: tempo total desde que o lead entrou no pipe */}
+                <td style={{ padding: "10px 12px", color: "var(--text-dim)", fontSize: 12 }}>
+                  {daysSince(lead.createdAt || lead.dateDetected)}d
                 </td>
               </tr>
             );
