@@ -30,7 +30,7 @@ function agingStyle(days, sla) {
 function DeliverableKanbanCardImpl({
   item, users, onClick, onDragStart, onDragEnd,
   stages, onMoveToStage, onDeleteCard, canWrite, onToggleStar, completeness, unread,
-  showMoveOptions = true,
+  campaignsById, showMoveOptions = true,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
@@ -49,6 +49,7 @@ function DeliverableKanbanCardImpl({
   const isTerminal  = Boolean(stage?.terminal);
   const priColor    = PRIORITY_COLORS[item.priority] || null;
   const isOverdue   = item.deadline && new Date(item.deadline) < new Date();
+  const campaign    = item.campaignId ? campaignsById?.get(item.campaignId) : null;
   // showMoveOptions=false no board desktop (drag-and-drop já cobre mover) —
   // o card então só oferece excluir, com um ícone de lixeira direto no lugar
   // dos "3 pontinhos" (ver MoveStageMenu). O acordeão mobile (sem drag)
@@ -153,6 +154,15 @@ function DeliverableKanbanCardImpl({
       {item.requesterName && (
         <div className="text-[11px] mb-1.5" style={{ color: "var(--text-dim)" }}>
           {item.requesterName}{item.department ? ` · ${item.department}` : ""}
+        </div>
+      )}
+
+      {/* Campanha vinculada — mesmo tratamento discreto da tag de empresa do
+          CampaignKanbanCard; sem campaign_id, não renderiza nada (sem
+          placeholder "Sem campanha"). */}
+      {campaign && (
+        <div className="text-[10px] mb-1.5 truncate" style={{ color: "var(--text-dim)" }} title={campaign.name}>
+          {campaign.name}
         </div>
       )}
 

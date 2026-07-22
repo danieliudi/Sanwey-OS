@@ -48,6 +48,19 @@ function isStuckInRevisao(d) {
     (Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000 > 3;
 }
 
+// Mesmo critério de "atrasada" já usado no badge do card (DeliverableKanbanCard)
+// e na coluna Prazo da Tabela — o filtro "Vencidas" precisa achar exatamente
+// os mesmos itens que já aparecem em vermelho no board.
+function isOverdueDeliverable(d) {
+  return Boolean(d.deadline) && new Date(d.deadline) < new Date();
+}
+
+function isDueSoon(d) {
+  if (!d.deadline) return false;
+  const diffMs = new Date(d.deadline).getTime() - Date.now();
+  return diffMs >= 0 && diffMs <= 7 * 86400000;
+}
+
 function isStaticValueEmpty(v) {
   if (v === null || v === undefined) return true;
   if (typeof v === "string") return v.trim() === "";
@@ -691,6 +704,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   // Deep-link do card "Presas em revisão" no Painel de Marketing (achado
   // da auditoria de fricção de 18/07) — chega via navigate(..., {state}).
   const [stuckOnly,      setStuckOnly]      = useState(Boolean(location.state?.stuckOnly));
+  const [campaignFilter, setCampaignFilter] = useState("");
+  const [deadlineFilter, setDeadlineFilter] = useState("");
 
   // roles[] cobre cargo adicional — user.role sozinho fica só de fallback.
   // Achado da 2ª auditoria (esta view ficou de fora do fix a28bfb5).
@@ -700,7 +715,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const toggleCompanyFilter = (id) =>
     setCompanyFilter(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
-  const activeFilterCount = (ownerFilter ? 1 : 0) + companyFilter.length + (starredOnly ? 1 : 0) + (stuckOnly ? 1 : 0);
+  const activeFilterCount = (ownerFilter ? 1 : 0) + companyFilter.length + (starredOnly ? 1 : 0) + (stuckOnly ? 1 : 0) + (campaignFilter ? 1 : 0) + (deadlineFilter ? 1 : 0);
 
   /* Filtered deliverables */
   const filtered = useMemo(() => {
@@ -709,8 +724,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     if (ownerFilter)             list = list.filter(d => getDeliverableAssigneeIds(d).includes(ownerFilter));
     if (companyFilter.length > 0) list = list.filter(d => companyFilter.some(c => d.companyIds?.includes(c)));
     if (starredOnly)             list = list.filter(d => d.starred);
+    if (campaignFilter)          list = list.filter(d => d.campaignId === campaignFilter);
+    if (deadlineFilter === "overdue")     list = list.filter(isOverdueDeliverable);
+    if (deadlineFilter === "due_soon")    list = list.filter(isDueSoon);
+    if (deadlineFilter === "no_deadline") list = list.filter(d => !d.deadline);
     return list;
-  }, [deliverables, ownerFilter, companyFilter, starredOnly, stuckOnly]);
+  }, [deliverables, ownerFilter, companyFilter, starredOnly, stuckOnly, campaignFilter, deadlineFilter]);
 
   const handleDragStart = useCallback((item) => setDraggedItem(item), []);
   const handleDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
@@ -891,6 +910,22 @@ export function EntregasView({ user, users = [], notifyMentions }) {
               </select>
             )}
 
+            {/* Campaign filter */}
+            <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}
+              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: campaignFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
+              <option value="">Todas as campanhas</option>
+              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+
+            {/* Deadline filter */}
+            <select value={deadlineFilter} onChange={e => setDeadlineFilter(e.target.value)}
+              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: deadlineFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
+              <option value="">Todos os prazos</option>
+              <option value="overdue">Vencidas</option>
+              <option value="due_soon">Próximos 7 dias</option>
+              <option value="no_deadline">Sem prazo</option>
+            </select>
+
             {/* Company filter */}
             {COMPANY_IDS.map(id => {
               const co  = COMPANIES[id];
@@ -911,7 +946,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             </button>
 
             {activeFilterCount > 0 && (
-              <button onClick={() => { setOwnerFilter(""); setCompanyFilter([]); setStarredOnly(false); setStuckOnly(false); }}
+              <button onClick={() => { setOwnerFilter(""); setCompanyFilter([]); setStarredOnly(false); setStuckOnly(false); setCampaignFilter(""); setDeadlineFilter(""); }}
                 style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--danger)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
                 <X size={11} /> Limpar
               </button>
@@ -977,6 +1012,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                           onToggleStar={canWrite ? toggleStar : null}
                           completeness={getItemCompleteness(item)}
                           unread={getItemUnread(item)}
+                          campaignsById={campaignsById}
                         />
                       ))
                     )}
@@ -1081,6 +1117,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
                             unread={getItemUnread(item)}
+                            campaignsById={campaignsById}
                             showMoveOptions={false}
                           />
                         ))
