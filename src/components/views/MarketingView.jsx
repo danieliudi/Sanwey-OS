@@ -382,6 +382,7 @@ function KpiCard({ label, value, red }) {
         borderColor: "var(--border)",
         padding: "8px 10px",
         boxShadow: "var(--shadow-card)",
+        minWidth: 140,
       }}
     >
       <div
@@ -424,7 +425,7 @@ function KpiBar({ campaigns }) {
   }).length;
 
   return (
-    <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+    <div className="flex items-stretch gap-2 flex-wrap mb-3">
       <KpiCard label="Campanhas ativas" value={String(active)} />
       <KpiCard label="Orçamento total"     value={formatK(totalBudget)} />
       <KpiCard label="Urgente"          value={String(urgent)} red={urgent > 0} />
