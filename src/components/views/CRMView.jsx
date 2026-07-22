@@ -250,10 +250,7 @@ function KpiBar({ scopedLeads }) {
   }, [scopedLeads]);
 
   return (
-    <div
-      className="grid gap-3"
-      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", marginBottom: 4 }}
-    >
+    <div className="flex items-stretch gap-3 flex-wrap" style={{ marginBottom: 4 }}>
       <KpiCard label="Oportunidades"  value={String(m.total)} />
       <KpiCard label="Valor total"    value={formatK(m.totalValue)} />
       <KpiCard label="Valor ponderado" value={formatK(m.weightedValue)} />
@@ -276,6 +273,7 @@ function KpiCard({ label, value, sub }) {
         borderColor: "var(--border)",
         padding: "12px 16px",
         boxShadow: "var(--shadow-card)",
+        minWidth: 140,
       }}
     >
       <div
