@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   Inbox, CheckCircle2, XCircle, Clock, Filter, Plus, ChevronDown,
-  CalendarDays, Building2, Tag, AlertCircle, ExternalLink, Copy, Check,
+  CalendarDays, Building2, Tag, AlertCircle, ExternalLink,
   RefreshCw,
 } from "lucide-react";
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
@@ -11,6 +11,7 @@ import { EditableProtocolNumber } from "../shared/EditableProtocolNumber";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
+import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
 
 const STATUS_CONFIG = {
   pendente:   { label: "Pendente",   color: "#D97706", bg: "#FEF3C7", icon: Clock },
@@ -290,36 +291,6 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
   );
 }
 
-/* ── Copy public link ─── mesmo padrão do ComprasMarketingView, que já
-   tinha isso — Solicitações não deixava copiar o link público daqui,
-   só enterrado em Configurações → Integrações (achado da auditoria de
-   fricção de 18/07). ──────────────────────────────────────────────── */
-function CopyLinkButton() {
-  const [copied, setCopied] = useState(false);
-  const url = `${window.location.origin}/solicitar-marketing`;
-  const handleCopy = () => {
-    navigator.clipboard?.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <button
-      onClick={handleCopy}
-      title={url}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
-      style={{
-        background: copied ? "#DCFCE7" : "var(--surface)",
-        borderColor: copied ? "#BBF7D0" : "var(--border)",
-        color: copied ? "#15803D" : "var(--text-dim)",
-        cursor: "pointer",
-      }}
-    >
-      {copied ? <Check size={13} /> : <Copy size={13} />}
-      {copied ? "Link copiado!" : "Copiar link público"}
-    </button>
-  );
-}
-
 /* ── Main View ────────────────────────────────────────────────────── */
 export function MarketingRequestsView({ user, users }) {
   const {
@@ -400,7 +371,7 @@ export function MarketingRequestsView({ user, users }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <CopyLinkButton />
+          <CopyPublicLinkButton url={`${window.location.origin}/solicitar-marketing`} label="Copiar link público" title={`${window.location.origin}/solicitar-marketing`} variant="strong" />
           <div
             className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
             style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-dim)" }}

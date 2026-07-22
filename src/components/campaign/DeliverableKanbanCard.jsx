@@ -1,10 +1,10 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Clock, Star, MessageCircle } from "lucide-react";
+import { Star } from "lucide-react";
 import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
-import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
+import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
 
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
 const PRIORITY_LABELS = { baixa: "Baixa",   media: "Média",   alta: "Alta"  };
@@ -12,19 +12,6 @@ const PRIORITY_LABELS = { baixa: "Baixa",   media: "Média",   alta: "Alta"  };
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
-}
-
-// Tempo na etapa (neutro) vs. SLA estourado (vermelho) — só fica âmbar/
-// vermelho de fato passando do SLA da etapa; sem SLA, ou dentro do prazo, é
-// só um badge neutro (tempo decorrido).
-function agingStyle(days, sla) {
-  if (days <= 0) return null;
-  if (sla) {
-    const ratio = days / sla;
-    if (ratio >= 1)   return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
-    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  }
-  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
 function DeliverableKanbanCardImpl({
@@ -45,7 +32,6 @@ function DeliverableKanbanCardImpl({
 
   const stage       = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
   const daysInStage = daysFromDate(item.stageChangedAt);
-  const ageStyle    = daysInStage !== null ? agingStyle(daysInStage, stage?.sla) : null;
   const isTerminal  = Boolean(stage?.terminal);
   const priColor    = PRIORITY_COLORS[item.priority] || null;
   const isOverdue   = item.deadline && new Date(item.deadline) < new Date();
@@ -95,28 +81,13 @@ function DeliverableKanbanCardImpl({
           {item.requestNumber ? `${item.requestNumber} ${item.title}` : item.title}
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-          {unread && (
-            <span
-              title="Comentário novo"
-              className="inline-flex items-center justify-center rounded-full"
-              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
-            >
-              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
-            </span>
-          )}
-          {ageStyle && daysInStage !== null && (
-            <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-              style={{ fontSize: 10, background: ageStyle.bg, color: ageStyle.text, border: `1px solid ${ageStyle.border}` }}
-              title={`${daysInStage} dias nesta etapa`}
-            >
-              <Clock size={8} strokeWidth={2.5} />
-              {daysInStage}d
-            </span>
-          )}
-          {completeness?.total > 0 && (
-            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={22} />
-          )}
+          <KanbanCardStatusChips
+            unread={unread}
+            agingDays={daysInStage}
+            slaDays={stage?.sla}
+            completeness={completeness}
+            completenessSize={22}
+          />
           {priColor && (
             <span
               className="inline-flex items-center px-1.5 py-0.5 rounded-md font-bold"

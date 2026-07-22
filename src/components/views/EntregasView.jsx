@@ -29,6 +29,7 @@ import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
+import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -1050,38 +1051,35 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
                     style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "100%", flexShrink: 0 }}>
-                    <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
-                    <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                      style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold flex items-center gap-1.5"
-                          style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                          <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
-                          <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({stageItems.length})</span>
-                        </div>
-                        {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
-                      </div>
-                      {canWrite && (
-                        <button onClick={() => setFieldEditorStage(stage)}
-                          className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                          title="Editar campos desta etapa">
-                          <Settings2 size={13} />
-                        </button>
-                      )}
-                      {canWrite && !stage.terminal && (
-                        <button onClick={() => setQuickAddStage(stage.id)}
-                          className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                          title="Adicionar entrega">
-                          <Plus size={14} />
-                        </button>
-                      )}
-                    </div>
+                    <KanbanColumnHeader
+                      color={stage.color}
+                      name={stage.name}
+                      count={stageItems.length}
+                      actions={<>
+                        {canWrite && (
+                          <button onClick={() => setFieldEditorStage(stage)}
+                            className="flex items-center justify-center rounded-md transition-colors"
+                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                            title="Editar campos desta etapa">
+                            <Settings2 size={13} />
+                          </button>
+                        )}
+                        {canWrite && !stage.terminal && (
+                          <button onClick={() => setQuickAddStage(stage.id)}
+                            className="flex items-center justify-center rounded-md transition-colors"
+                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                            title="Adicionar entrega">
+                            <Plus size={14} />
+                          </button>
+                        )}
+                      </>}
+                    >
+                      {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
+                    </KanbanColumnHeader>
 
                     <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       {stageItems.length === 0 ? (

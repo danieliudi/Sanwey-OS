@@ -9,7 +9,6 @@ import {
   X,
   MessageSquare,
   UserPlus,
-  Link2,
   Check,
   Sparkles,
   Loader2,
@@ -44,6 +43,7 @@ import { useRHManagerLinks } from "../../hooks/use-rh-manager-links";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { QRCodeButton } from "../shared/QRCodeButton";
+import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
@@ -69,6 +69,7 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { AppToast } from "../shared/AppToast";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
+import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -924,43 +925,33 @@ function VagaKanbanColumn({
         height: boardHeight,
       }}
     >
-      {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
-          cor + header branco em vez de bolinha + fundo tingido. */}
-      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
-      <div
-        className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-        style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
-      >
-        <div className="min-w-0 flex-1">
-          <div
-            className="font-semibold flex items-center gap-1.5"
-            style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}
-          >
-            <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
-            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({vagasList.length})</span>
+      <KanbanColumnHeader
+        color={stage.color}
+        name={stage.name}
+        count={vagasList.length}
+        actions={
+          <div className="flex items-center gap-1 shrink-0">
+            {canWrite && (
+              <button
+                onClick={onAddVaga}
+                title="Adicionar vaga"
+                style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
+              >
+                <Plus size={14} />
+              </button>
+            )}
+            {canWrite && (
+              <button
+                onClick={() => onEditFields(stage)}
+                title="Editar campos desta etapa"
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
+              >
+                <Settings2 size={12} />
+              </button>
+            )}
           </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {canWrite && (
-            <button
-              onClick={onAddVaga}
-              title="Adicionar vaga"
-              style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
-            >
-              <Plus size={14} />
-            </button>
-          )}
-          {canWrite && (
-            <button
-              onClick={() => onEditFields(stage)}
-              title="Editar campos desta etapa"
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
-            >
-              <Settings2 size={12} />
-            </button>
-          )}
-        </div>
-      </div>
+        }
+      />
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {vagasList.length === 0 ? (
           <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
@@ -1078,7 +1069,7 @@ function StageFixedFields({ fields, values, onChange, users }) {
 // ── Vaga Drawer ───────────────────────────────────────────────────────────────
 
 function VagaDrawer({
-  vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onCopyLink, onClose, onVerCandidatos, copiedSlug,
+  vaga, candidatosCount, canWrite, stages, onStageChange, onEdit, onClose, onVerCandidatos,
   customFields, onCustomFieldChange, onAddActivity, onUpdateActivity, currentUser, users, moveError, notifyMentions, onUpdateResponsibles,
   onDelete, onEditFields,
 }) {
@@ -1218,13 +1209,7 @@ function VagaDrawer({
         <>
           {vaga.stage === "publicada" && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <button
-                onClick={() => onCopyLink(vaga)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
-              >
-                {copiedSlug === vaga.id ? <Check size={12} color="var(--success)" /> : <Link2 size={12} />}
-                {copiedSlug === vaga.id ? "Link copiado!" : "Copiar link"}
-              </button>
+              <CopyPublicLinkButton url={`${window.location.origin}/vagas/${vaga.link_slug}`} />
               <a
                 href={whatsappShareUrl(vaga)}
                 target="_blank"
@@ -2451,43 +2436,33 @@ function KanbanColumn({
         height: boardHeight,
       }}
     >
-      {/* Column header — mesmo padrão do Pipeline/Campanhas/Entregas: banda de
-          cor + header branco em vez de bolinha + fundo tingido. */}
-      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
-      <div
-        className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-        style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
-      >
-        <div className="min-w-0 flex-1">
-          <div
-            className="font-semibold flex items-center gap-1.5"
-            style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}
-          >
-            <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
-            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({candidatos.length})</span>
+      <KanbanColumnHeader
+        color={stage.color}
+        name={stage.name}
+        count={candidatos.length}
+        actions={
+          <div className="flex items-center gap-1 shrink-0">
+            {canWrite && (
+              <button
+                onClick={onAddCandidato}
+                style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
+                title="Adicionar candidato"
+              >
+                <Plus size={14} />
+              </button>
+            )}
+            {canWrite && (
+              <button
+                onClick={() => onEditFields(stage)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
+                title="Editar campos desta etapa"
+              >
+                <Settings2 size={12} />
+              </button>
+            )}
           </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {canWrite && (
-            <button
-              onClick={onAddCandidato}
-              style={{ background: "none", border: "none", cursor: "pointer", color: stage.color, padding: 2, display: "flex" }}
-              title="Adicionar candidato"
-            >
-              <Plus size={14} />
-            </button>
-          )}
-          {canWrite && (
-            <button
-              onClick={() => onEditFields(stage)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}
-              title="Editar campos desta etapa"
-            >
-              <Settings2 size={12} />
-            </button>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {/* Cards */}
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -2739,7 +2714,6 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const [candMoveError, setCandMoveError]   = useState(null);
   const [cargosManagerOpen, setCargosManagerOpen] = useState(false);
   const [addCandidatoStage, setAddCandidatoStage] = useState(null);
-  const [copiedSlug, setCopiedSlug]         = useState(null);
   const [triagemOpen, setTriagemOpen]       = useState(false);
   const [hiringCandidato, setHiringCandidato] = useState(null);
   const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, boardMode]);
@@ -2978,17 +2952,6 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     await updateAplicacao(aplicacaoId, { activities });
   };
 
-  const handleCopyLink = async (vaga, urlOverride) => {
-    const link = urlOverride || `${window.location.origin}/vagas/${vaga.link_slug}`;
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopiedSlug(vaga.id);
-      setTimeout(() => setCopiedSlug((s) => (s === vaga.id ? null : s)), 2000);
-    } catch {
-      window.prompt("Copie o link:", link);
-    }
-  };
-
   const activeVaga = vagas.find((v) => v.id === selectedVaga) || null;
 
   // ── Filtro de frente (R12: talent pool/vagas por padrão pode ser filtrado
@@ -3206,14 +3169,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           {canWrite && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-dim)" }}>Banco de talentos:</span>
-              <button
-                onClick={() => handleCopyLink({ id: "__banco_talentos__" }, `${window.location.origin}/trabalhe-conosco`)}
-                title="Copiar link de candidatura espontânea"
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
-              >
-                {copiedSlug === "__banco_talentos__" ? <Check size={12} color="var(--success)" /> : <Link2 size={12} />}
-                {copiedSlug === "__banco_talentos__" ? "Link copiado!" : "Copiar link"}
-              </button>
+              <CopyPublicLinkButton url={`${window.location.origin}/trabalhe-conosco`} title="Copiar link de candidatura espontânea" />
               <QRCodeButton url={`${window.location.origin}/trabalhe-conosco`} title="Trabalhe conosco" buttonLabel="QR code" />
             </div>
           )}
@@ -3246,13 +3202,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           {/* Link público / WhatsApp da vaga selecionada */}
           {activeVaga?.link_slug && activeVaga.stage === "publicada" && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              <button
-                onClick={() => handleCopyLink(activeVaga)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--text)", cursor: "pointer" }}
-              >
-                {copiedSlug === activeVaga.id ? <Check size={12} color="var(--success)" /> : <Link2 size={12} />}
-                {copiedSlug === activeVaga.id ? "Link copiado!" : "Copiar link da vaga"}
-              </button>
+              <CopyPublicLinkButton url={`${window.location.origin}/vagas/${activeVaga.link_slug}`} label="Copiar link da vaga" />
               <a
                 href={whatsappShareUrl(activeVaga)}
                 target="_blank"
@@ -3444,11 +3394,9 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           candidatosCount={candidatosByVaga[vagaEmDrawer.id] || 0}
           canWrite={canWrite}
           stages={vagaStages}
-          copiedSlug={copiedSlug}
           onStageChange={handleVagaStageChange}
           moveError={vagaMoveError}
           onEdit={(v) => { setEditingVaga(v); setVagaDrawerId(null); }}
-          onCopyLink={handleCopyLink}
           onVerCandidatos={handleVerCandidatos}
           onClose={() => setVagaDrawerId(null)}
           customFields={vagaStageFields.getFields(vagaEmDrawer.stage)}

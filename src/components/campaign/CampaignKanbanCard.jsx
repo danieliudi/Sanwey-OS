@@ -1,11 +1,11 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Clock, Star, AlertTriangle, TrendingUp, Check, X as XIcon, MessageCircle } from "lucide-react";
+import { Star, AlertTriangle, TrendingUp, Check, X as XIcon } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { CHANNEL_COLORS, MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { formatK } from "../../utils/currency";
-import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
+import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -15,19 +15,6 @@ function daysFromDate(dateStr) {
 function daysUntilDate(dateStr) {
   if (!dateStr) return null;
   return Math.floor((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-}
-
-// Tempo na etapa (neutro) vs. SLA estourado (vermelho) — só fica âmbar/
-// vermelho de fato passando do SLA da etapa; sem SLA, ou dentro do prazo, é
-// só um badge neutro (tempo decorrido).
-function slaStyle(daysInStage, sla) {
-  if (daysInStage <= 0) return null;
-  if (sla) {
-    const ratio = daysInStage / sla;
-    if (ratio >= 1)   return { bg: "#FEE2E2", text: "var(--danger)", border: "#FECACA" };
-    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  }
-  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
 function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread, showMoveOptions = true }) {
@@ -47,7 +34,6 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
   const stage = (stages || MARKETING_STAGES).find(s => s.id === campaign.stage);
   const daysInStage = daysFromDate(campaign.stageChangedAt);
   const daysToLaunch = daysUntilDate(campaign.launchDate);
-  const ageStyle = daysInStage !== null ? slaStyle(daysInStage, stage?.sla) : null;
   const isTerminal = Boolean(stage?.terminal);
 
   const isUrgent = daysToLaunch !== null && daysToLaunch <= 7 &&
@@ -103,38 +89,26 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
           {campaign.name}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {unread && (
-            <span
-              title="Comentário novo"
-              className="inline-flex items-center justify-center rounded-full"
-              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
-            >
-              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
-            </span>
-          )}
-          {isUrgent && (
-            <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-              style={{ fontSize: 10, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA" }}
-              title={`Lançamento em ${daysToLaunch}d`}
-            >
-              <AlertTriangle size={8} strokeWidth={2.5} />
-              URGENTE
-            </span>
-          )}
-          {ageStyle && !isUrgent && (
-            <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-              style={{ fontSize: 10, background: ageStyle.bg, color: ageStyle.text, border: `1px solid ${ageStyle.border}` }}
-              title={`${daysInStage}d nesta etapa (SLA: ${stage?.sla}d)`}
-            >
-              <Clock size={8} strokeWidth={2.5} />
-              {daysInStage}d
-            </span>
-          )}
-          {completeness?.total > 0 && (
-            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
-          )}
+          <KanbanCardStatusChips
+            unread={unread}
+            agingDays={isUrgent ? null : daysInStage}
+            slaDays={stage?.sla}
+            agingTitle={`${daysInStage}d nesta etapa (SLA: ${stage?.sla}d)`}
+            dangerColor="var(--danger)"
+            completeness={completeness}
+            completenessSize={26}
+          >
+            {isUrgent && (
+              <span
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
+                style={{ fontSize: 10, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA" }}
+                title={`Lançamento em ${daysToLaunch}d`}
+              >
+                <AlertTriangle size={8} strokeWidth={2.5} />
+                URGENTE
+              </span>
+            )}
+          </KanbanCardStatusChips>
           {campaign.starred && (
             <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} />
           )}

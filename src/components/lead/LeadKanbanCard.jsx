@@ -1,31 +1,16 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Clock, Check, X as XIcon, MessageCircle } from "lucide-react";
+import { Check, X as XIcon } from "lucide-react";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
-import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { CompanyTag } from "../ui/CompanyTag";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
+import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
-}
-
-// Tempo na etapa (neutro, informativo) vs. SLA estourado (vermelho) — antes
-// os 3 tons (verde/âmbar/vermelho) eram só por dias corridos fixos (7/21),
-// sem nenhuma relação com o slaDays real de cada etapa. Agora só fica
-// vermelho/âmbar quando de fato passa do slaDays configurado; sem SLA
-// definido, ou dentro do prazo, é só um badge neutro (tempo decorrido).
-function agingStyle(days, slaDays) {
-  if (days <= 0) return null;
-  if (slaDays) {
-    const ratio = days / slaDays;
-    if (ratio >= 1)   return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
-    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  }
-  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
 // Renderiza um dos campos escolháveis em stage.cardPreviewFields (item
@@ -68,7 +53,6 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
 
   const currentStage = stages?.find(s => s.id === lead.stage);
   const daysInStage = daysFromDate(lead.stageChangedAt);
-  const ageStyle = daysInStage !== null ? agingStyle(daysInStage, currentStage?.slaDays) : null;
   const probDisplay = lead.probability > 1
     ? Math.round(lead.probability)
     : Math.round(lead.probability * 100);
@@ -134,34 +118,14 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
           <span className="line-clamp-2">{lead.company}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {unread && (
-            <span
-              title="Comentário novo"
-              className="inline-flex items-center justify-center rounded-full"
-              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
-            >
-              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
-            </span>
-          )}
-          {ageStyle && (
-            <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-              style={{
-                fontSize: 10,
-                background: ageStyle.bg,
-                color: ageStyle.text,
-                border: `1px solid ${ageStyle.border}`,
-                letterSpacing: "-0.01em",
-              }}
-              title={`${daysInStage} dias nesta etapa`}
-            >
-              <Clock size={8} strokeWidth={2.5} />
-              {daysInStage}d
-            </span>
-          )}
-          {completeness?.total > 0 && (
-            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={30} />
-          )}
+          <KanbanCardStatusChips
+            unread={unread}
+            agingDays={daysInStage}
+            slaDays={currentStage?.slaDays}
+            tightTracking
+            completeness={completeness}
+            completenessSize={30}
+          />
           <FitScoreCircle score={lead.fitScore} size={30} />
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
             <MoveStageMenu

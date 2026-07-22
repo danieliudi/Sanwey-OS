@@ -29,6 +29,7 @@ import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadLeadComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
+import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { daysSince } from "../../utils/date";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
@@ -926,50 +927,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
                 }}
               >
-                {/* Column header — top color band like HubSpot (mais grosso pra
-                    dar mais peso visual à identidade de cor da etapa) */}
-                <div
-                  style={{
-                    height: 8,
-                    background: stage.color,
-                    flexShrink: 0,
-                  }}
-                />
-                <div
-                  className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                  style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className="font-semibold flex items-center gap-1.5"
-                      style={{
-                        color: "var(--text)",
-                        fontSize: 11,
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      <span
-                        title={stage.name}
-                        style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}
-                      >
-                        {stage.name}
-                      </span>
-                      <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>
-                        ({bucket.leads.length})
-                      </span>
-                    </div>
-                    {isBlocked ? (
-                      <div className="text-xs mt-1 font-semibold" style={{ color: "#B91C1C" }}>
-                        Transição bloqueada
-                      </div>
-                    ) : (
-                      <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", fontWeight: 600 }}>
-                        {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}
-                      </div>
-                    )}
-                  </div>
-                  {isManager && !stage.terminal && (
+                <KanbanColumnHeader
+                  color={stage.color}
+                  name={stage.name}
+                  count={bucket.leads.length}
+                  actions={isManager && !stage.terminal && (
                     <button
                       onClick={() => setEditingStage({ stage, companyId: colCompanyId })}
                       className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
@@ -981,7 +943,17 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                       <Settings size={13} />
                     </button>
                   )}
-                </div>
+                >
+                  {isBlocked ? (
+                    <div className="text-xs mt-1 font-semibold" style={{ color: "#B91C1C" }}>
+                      Transição bloqueada
+                    </div>
+                  ) : (
+                    <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", fontWeight: 600 }}>
+                      {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}
+                    </div>
+                  )}
+                </KanbanColumnHeader>
 
                 {/* Cards */}
                 <div
