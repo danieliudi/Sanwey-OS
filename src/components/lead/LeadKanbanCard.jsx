@@ -54,7 +54,7 @@ function renderPreviewField(key, lead, { probDisplay, closeStyle }) {
   }
 }
 
-function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread, pipelineTransitions }) {
+function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread, pipelineTransitions, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -77,7 +77,12 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
   // etapas — mesma regra que já bloqueia o drop no drag-and-drop (ver
   // CRMView.jsx); sem regra configurada, permanece aberto (comportamento
   // anterior).
-  const moveTargets = stages
+  //
+  // showMoveOptions=false no board desktop (drag-and-drop já cobre mover) —
+  // o card então só oferece excluir, com um ícone de lixeira direto no lugar
+  // dos "3 pontinhos" (ver MoveStageMenu). O card mobile (acordeão, sem
+  // drag) continua passando showMoveOptions=true, único jeito de mover lá.
+  const moveTargets = showMoveOptions && stages
     ? stages.filter(s =>
         s.id !== lead.stage && !s.terminal &&
         (!pipelineTransitions || pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, s.id))

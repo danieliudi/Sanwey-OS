@@ -20,7 +20,7 @@ function stageKeyOf(s) {
   return s?.stageKey ?? s?.id;
 }
 
-function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, deleteLabel, deleteConfirmMessage, agingDays, completeness, unread, children }) {
+function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, deleteLabel, deleteConfirmMessage, agingDays, completeness, unread, children, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -28,7 +28,10 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
   const ageStyle = agingDays != null ? agingStyle(agingDays, currentStage?.slaDays) : null;
   const isTerminal = Boolean(currentStage?.terminal);
 
-  const moveTargets = stages
+  // showMoveOptions=false no board desktop (drag-and-drop já cobre mover) —
+  // o "..." vira lixeira direta (ver MoveStageMenu). O acordeão mobile, sem
+  // drag, continua passando showMoveOptions=true.
+  const moveTargets = showMoveOptions && stages
     ? stages.filter(s => stageKeyOf(s) !== stage && !s.terminal)
     : [];
 

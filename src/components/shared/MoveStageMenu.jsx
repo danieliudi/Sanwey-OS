@@ -17,6 +17,14 @@ import { MoreVertical, ArrowRight, Trash2 } from "lucide-react";
 // precisar abrir o detalhe primeiro. Confirmação inline (2 cliques) em vez
 // de window.confirm, que trava sessões automatizadas/headless sem handler
 // de diálogo.
+//
+// Sem `targets` (nenhuma opção de "mover para"): o board desktop já cobre
+// mover via drag-and-drop, então o menu com "..." + dropdown de uma linha só
+// (achado do usuário, 22/07) é um passo a mais sem necessidade — o gatilho
+// vira direto o ícone de lixeira, e o clique já entra no passo de
+// confirmação, sem dropdown intermediário. Quem NÃO tem drag-and-drop (o
+// acordeão mobile, que reusa este mesmo componente) continua passando
+// `targets`/`onMove` e mantém o menu completo — ver LeadKanbanCard/RHKanbanCard.
 export function MoveStageMenu({
   targets = [], onMove, onOpenChange, onDelete, deleteLabel = "Excluir card",
   // Mensagem do passo de confirmação (2º clique) — sobrescrevível por chamador
@@ -72,20 +80,32 @@ export function MoveStageMenu({
   const hasMoveTargets = Boolean(targets?.length && onMove);
   if (!hasMoveTargets && !onDelete) return null;
 
+  // Sem opções de "mover para" (board desktop, drag-and-drop já cobre isso):
+  // o gatilho vira direto a lixeira, e o clique já abre no passo de
+  // confirmação — sem dropdown de uma linha só no meio do caminho.
+  const deleteOnly = !hasMoveTargets && Boolean(onDelete);
+
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
       <button
-        title="Mover para outra etapa"
-        onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
+        title={deleteOnly ? "Excluir card" : "Mover para outra etapa"}
+        onClick={e => {
+          e.stopPropagation();
+          if (deleteOnly) {
+            setMenuOpen(v => { const next = !v; if (next) setConfirmingDelete(true); return next; });
+          } else {
+            setMenuOpen(v => !v);
+          }
+        }}
         style={{
           background: "transparent", border: "none", color: "var(--text-dim)",
           cursor: "pointer", padding: 2, borderRadius: 4, display: "flex",
           alignItems: "center", lineHeight: 1,
         }}
-        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+        onMouseEnter={e => { e.currentTarget.style.background = deleteOnly ? "#FEE2E2" : "var(--surface-alt)"; e.currentTarget.style.color = deleteOnly ? "#B91C1C" : "var(--accent)"; }}
         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
       >
-        <MoreVertical size={14} />
+        {deleteOnly ? <Trash2 size={14} /> : <MoreVertical size={14} />}
       </button>
       {menuOpen && createPortal(
         <div
