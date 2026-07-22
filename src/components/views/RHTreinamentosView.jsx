@@ -582,6 +582,7 @@ function TreinamentoBoardColumn({
               agingDays={daysInStage(a.status_changed_at)}
               completeness={getCompleteness?.(a)}
               unread={getUnread?.(a)}
+              showMoveOptions={false}
             >
               <AtribuicaoCardBody atribuicao={a} colaborador={colaboradoresById.get(a.colaborador_id)} />
             </RHKanbanCard>

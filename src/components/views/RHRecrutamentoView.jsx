@@ -977,6 +977,7 @@ function VagaKanbanColumn({
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteVaga : undefined}
+              showMoveOptions={false}
               agingDays={daysInStage(v.stage_changed_at)}
               completeness={getCompleteness?.(v)}
               unread={getUnread?.(v)}
@@ -2505,6 +2506,7 @@ function KanbanColumn({
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteCandidato : undefined}
+              showMoveOptions={false}
               agingDays={daysInStage(c.stage_changed_at)}
               completeness={getCompleteness?.(c)}
               unread={getUnread?.(c)}

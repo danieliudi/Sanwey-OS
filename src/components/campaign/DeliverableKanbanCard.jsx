@@ -30,6 +30,7 @@ function agingStyle(days, sla) {
 function DeliverableKanbanCardImpl({
   item, users, onClick, onDragStart, onDragEnd,
   stages, onMoveToStage, onDeleteCard, canWrite, onToggleStar, completeness, unread,
+  showMoveOptions = true,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
@@ -48,7 +49,13 @@ function DeliverableKanbanCardImpl({
   const isTerminal  = Boolean(stage?.terminal);
   const priColor    = PRIORITY_COLORS[item.priority] || null;
   const isOverdue   = item.deadline && new Date(item.deadline) < new Date();
-  const moveTargets = (stages || DELIVERABLE_STAGES).filter(s => s.id !== item.stage && !s.terminal);
+  // showMoveOptions=false no board desktop (drag-and-drop já cobre mover) —
+  // o card então só oferece excluir, com um ícone de lixeira direto no lugar
+  // dos "3 pontinhos" (ver MoveStageMenu). O acordeão mobile (sem drag)
+  // continua com showMoveOptions=true (default), único jeito de mover lá.
+  const moveTargets = showMoveOptions
+    ? (stages || DELIVERABLE_STAGES).filter(s => s.id !== item.stage && !s.terminal)
+    : [];
 
   const shadowBase  = `var(--shadow-card)`;
   const shadowHover = `var(--shadow-pop)`;

@@ -691,6 +691,7 @@ function FeedbackKanbanColumn({
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteFeedback : undefined}
+              showMoveOptions={false}
               agingDays={daysInStage(f.status_changed_at)}
               completeness={getCompleteness?.(f)}
               unread={getUnread?.(f)}

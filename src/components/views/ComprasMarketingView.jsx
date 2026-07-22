@@ -98,7 +98,12 @@ function CopyLinkButton() {
 }
 
 /* ── Kanban card ──────────────────────────────────────────────────────── */
-function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onDragStart, onDragEnd, stages, onMoveToStage, unread }) {
+// showMoveOptions=false (board desktop, drag-and-drop já cobre mover): o menu
+// "..." fica só com a opção de excluir — vira direto o ícone de lixeira, sem
+// dropdown intermediário (ver MoveStageMenu). O acordeão mobile, sem
+// drag-and-drop, continua passando showMoveOptions=true (default), único
+// jeito de mover um card lá.
+function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, unread, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const responsibleIds = purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []);
   const resolvedResponsible = responsibleIds.map(id => users?.find(u => u.id === id)).filter(Boolean);
@@ -109,7 +114,7 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
   // no menu deixaria a aprovação sem essa decisão registrada. As demais
   // etapas avançam livremente entre si; "pago" (terminal) só por
   // arrastar/drawer, não aparece no menu — mesmo padrão de Entregas/Vagas.
-  const moveTargets = purchase.stage === "solicitado"
+  const moveTargets = !showMoveOptions ? [] : purchase.stage === "solicitado"
     ? (stages || PURCHASE_STAGES).filter(s => s.id === "cotacao")
     : purchase.stage === "cotacao"
     ? (stages || PURCHASE_STAGES).filter(s => s.id === "aprovado")
@@ -142,11 +147,12 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
           {purchase.totalValue != null && (
             <span className="text-xs font-bold" style={{ color: "var(--text)" }}>{formatK(purchase.totalValue)}</span>
           )}
-          {onMoveToStage && moveTargets.length > 0 && (
+          {((onMoveToStage && moveTargets.length > 0) || onDeleteCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: STAGE_COLORS[s.id] }))}
-              onMove={(key) => onMoveToStage(purchase.id, key)}
+              onMove={onMoveToStage ? (key) => onMoveToStage(purchase.id, key) : undefined}
               onOpenChange={setMenuOpen}
+              onDelete={onDeleteCard ? () => onDeleteCard(purchase.id) : undefined}
             />
           )}
         </div>
@@ -296,7 +302,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
 }
 
 /* ── Kanban view ──────────────────────────────────────────────────────── */
-function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop, getUnread }) {
+function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop, getUnread }) {
   const [boardRef, boardHeight] = useAvailableHeight(16);
   return (
     <div className="hidden lg:block relative">
@@ -337,6 +343,8 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
                         onDragStart={onDragStart}
                         onDragEnd={onDragEnd}
                         onMoveToStage={onMoveToStage}
+                        onDeleteCard={onDeleteCard}
+                        showMoveOptions={false}
                         unread={getUnread?.(p)}
                       />
                     ))
@@ -351,7 +359,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
   );
 }
 
-function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick, onMoveToStage, getUnread }) {
+function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick, onMoveToStage, onDeleteCard, getUnread }) {
   const [expanded, setExpanded] = useState(() => new Set(["solicitado"]));
   const toggle = (id) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   return (
@@ -372,7 +380,7 @@ function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick,
                 {items.length === 0
                   ? <div className="text-center py-3 text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma solicitação</div>
                   : items.map(p => (
-                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} users={users} onClick={onCardClick} onMoveToStage={onMoveToStage} unread={getUnread?.(p)} />
+                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} users={users} onClick={onCardClick} onMoveToStage={onMoveToStage} onDeleteCard={onDeleteCard} unread={getUnread?.(p)} />
                   ))}
               </div>
             )}
@@ -545,7 +553,7 @@ function CalendarView({ purchases, onPillClick }) {
 export function ComprasMarketingView({ user, users = [], notifyMentions }) {
   const {
     purchases, loading, error,
-    createPurchase, updatePurchase,
+    createPurchase, updatePurchase, deletePurchase,
     approvePurchase, rejectPurchase, getLastPurchasePrice,
   } = useMarketingPurchaseRequests();
 
@@ -584,6 +592,20 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
   }, []);
 
   const handleCreate = useCallback(async (purchase) => { await createPurchase(purchase); }, [createPurchase]);
+
+  // Excluir direto pelo card (menu "..." → lixeira) — deletePurchase já
+  // existia no hook (hard delete, RLS permite a qualquer usuário de
+  // marketing em qualquer etapa) mas não estava conectado a nenhum lugar da
+  // tela; card e drawer não ofereciam exclusão nenhuma até agora.
+  const handleDeletePurchase = useCallback(async (id) => {
+    setStageError(null);
+    try {
+      await deletePurchase(id);
+      setSelected(prev => (prev?.id === id ? null : prev));
+    } catch (err) {
+      setStageError(err?.message || "Não foi possível excluir a solicitação.");
+    }
+  }, [deletePurchase]);
 
   // "Solicitado" só avança pra "Cotação" (comparar fornecedores, plain
   // update); "Cotação" só avança pra "Aprovado" via approvePurchase (RPC) —
@@ -714,12 +736,13 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
         <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando solicitações…</div>
       ) : viewMode === "kanban" ? (
         <>
-          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} getUnread={getPurchaseUnread} />
+          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} onDeleteCard={handleDeletePurchase} getUnread={getPurchaseUnread} />
           <KanbanBoard
             purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             onMoveToStage={attemptStageChange}
+            onDeleteCard={handleDeletePurchase}
             dragOverStage={dragOverStage}
             onColumnDragOver={handleColumnDragOver}
             onColumnDragLeave={handleColumnDragLeave}

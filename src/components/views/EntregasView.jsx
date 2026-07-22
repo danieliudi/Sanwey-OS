@@ -1087,6 +1087,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
                             unread={getItemUnread(item)}
+                            showMoveOptions={false}
                           />
                         ))
                       )}

@@ -1265,6 +1265,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                             onDeleteCard={canWrite ? handleDelete : undefined}
                             completeness={getCampaignCompleteness(c)}
                             unread={getCampaignUnread(c)}
+                            showMoveOptions={false}
                           />
                         ))
                       )}

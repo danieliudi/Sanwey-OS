@@ -395,6 +395,7 @@ function FeriasKanbanColumn({
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteRequest : undefined}
+              showMoveOptions={false}
               agingDays={daysInStage(req.status_changed_at)}
               completeness={getCompleteness?.(req)}
               unread={getUnread?.(req)}

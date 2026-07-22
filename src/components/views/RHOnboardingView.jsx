@@ -301,6 +301,7 @@ function OnboardingKanbanColumn({
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteCard : undefined}
+              showMoveOptions={false}
               deleteLabel={deleteLabel}
               deleteConfirmMessage={deleteConfirmMessage}
               agingDays={daysInStage(c.onboardingStageChangedAt)}

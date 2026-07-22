@@ -1028,6 +1028,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         completeness={getLeadCompleteness(lead)}
                         unread={getLeadUnread(lead)}
                         pipelineTransitions={pipelineTransitions}
+                        showMoveOptions={false}
                       />
                     ))
                   )}

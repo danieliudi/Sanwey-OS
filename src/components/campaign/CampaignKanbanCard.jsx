@@ -30,7 +30,7 @@ function slaStyle(daysInStage, sla) {
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
-function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread }) {
+function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -64,7 +64,12 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
     .map(id => COMPANIES[id]?.short || id)
     .join(", ");
 
-  const moveTargets = (stages || MARKETING_STAGES).filter(s => s.id !== campaign.stage && !s.terminal);
+  // showMoveOptions=false no board desktop (drag-and-drop já cobre mover) —
+  // o "..." vira lixeira direta (ver MoveStageMenu). O bloco mobile (acordeão,
+  // sem drag) continua passando showMoveOptions=true, único jeito de mover lá.
+  const moveTargets = showMoveOptions
+    ? (stages || MARKETING_STAGES).filter(s => s.id !== campaign.stage && !s.terminal)
+    : [];
 
   return (
     <div
