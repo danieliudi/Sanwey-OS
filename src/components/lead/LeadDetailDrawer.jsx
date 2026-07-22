@@ -984,15 +984,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               />
             )}
 
-            {/* ── Tab: Email ── */}
-            {sideTab === "email" && (
-              <PlaceholderPanel
-                icon={Mail}
-                title="Email"
-                hint="Em breve — emails vinculados e rascunhos centralizados aqui."
-              />
-            )}
-
             {/* ── Tab: PDF ── */}
             {/* Mantido montado (display:none) quando a aba não está ativa pra
                 não perder o rascunho da proposta ao trocar de aba; key={lead.id}
@@ -1456,7 +1447,6 @@ const SIDE_TABS = [
   { id: "ia",           label: "IA",          icon: Sparkles },
   { id: "anexos",       label: "Anexos",      icon: Paperclip },
   { id: "checklists",   label: "Checklists",  icon: ListChecks },
-  { id: "email",        label: "Email",       icon: Mail },
   { id: "pdf",          label: "PDF",         icon: FileDown },
 ];
 
