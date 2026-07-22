@@ -30,6 +30,7 @@ export const ROUTES = {
   marketing:                  "/marketing",
   "marketing-home":           "/marketing/inicio",
   "marketing-entregas":       "/marketing/entregas",
+  "marketing-tarefas":        "/marketing/tarefas",
   "marketing-despesas":       "/marketing/despesas",
   "marketing-solicitacoes":   "/marketing/solicitacoes",
   "marketing-fornecedores":   "/marketing/fornecedores",

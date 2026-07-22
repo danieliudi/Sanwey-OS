@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart, RefreshCw, Sparkles,
+  FileBarChart, RefreshCw, Sparkles, ListTodo,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -71,6 +71,7 @@ import { AutomationsView } from "./components/views/AutomationsView";
 import { TutoriaisView } from "./components/views/TutoriaisView";
 import { MarketingView } from "./components/views/MarketingView";
 import { EntregasView } from "./components/views/EntregasView";
+import { MarketingTarefasView } from "./components/views/MarketingTarefasView";
 import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
 import { MinhasTarefasView } from "./components/views/MinhasTarefasView";
@@ -690,6 +691,7 @@ export default function App() {
   const NOTIFICATION_LINK_SECTIONS = {
     campaigns: "marketing",
     deliverables: "marketing-entregas",
+    marketing_tasks: "marketing-tarefas",
     purchase_requests: "marketing-compras",
     marketing_requests: "marketing-solicitacoes",
     rh_vagas: "rh-recrutamento",
@@ -1045,6 +1047,10 @@ export default function App() {
         { id: "marketing",                label: "Campanhas",    icon: Megaphone },
         { id: "marketing-solicitacoes",   label: "Solicitações", icon: Inbox },
         { id: "marketing-entregas",       label: "Entregas",     icon: Package },
+        // Logo abaixo de "Entregas" (pedido explícito do usuário) — board
+        // separado de tarefas do dia a dia do time, pra não misturar com as
+        // entregas/demandas de produção com a agência.
+        { id: "marketing-tarefas",        label: "Tarefas",      icon: ListTodo },
         { id: "marketing-fornecedores",   label: "Fornecedores", icon: Truck },
         { id: "marketing-compras",        label: "Compras",      icon: ShoppingCart },
         { id: "marketing-despesas",       label: "Despesas",     icon: DollarSign }
@@ -1168,7 +1174,7 @@ export default function App() {
     if (!isInsightsUser && section === "insights") {
       setSection("dashboard");
     }
-    const marketingOnly = ["marketing", "marketing-entregas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras"];
+    const marketingOnly = ["marketing", "marketing-entregas", "marketing-tarefas", "marketing-despesas", "marketing-solicitacoes", "marketing-fornecedores", "marketing-compras"];
     if (!isMarketingUser && !isAgencia && !isDiretoria && marketingOnly.includes(section)) {
       setSection("dashboard");
     }
@@ -1193,7 +1199,7 @@ export default function App() {
       setSection("rh-overview");
     }
     // Agência can access marketing routes + their own profile (settings).
-    const agenciaBlocked = ["crm", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "dashboard", "tutorials"];
+    const agenciaBlocked = ["crm", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
@@ -1581,6 +1587,15 @@ export default function App() {
             (isMarketingUser || isAgencia || isDiretoria)
               ? <EntregasView user={currentUser} users={users} notifyMentions={notifyMentions} />
               : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          {/* Sem isAgencia aqui (ao contrário de marketing-entregas) — pedido
+              explícito: board de tarefas do dia a dia, separado do que a
+              Agência acompanha em Entregas. RLS de marketing_tasks já barra
+              agência no SELECT; isto barra a rota também. */}
+          <Route path={ROUTES["marketing-tarefas"]} element={
+            ((isMarketingUser && !isAgencia) || isDiretoria)
+              ? <MarketingTarefasView user={currentUser} users={users} notifyMentions={notifyMentions} />
+              : <Navigate to={ROUTES.marketing} replace />
           } />
           <Route path={ROUTES["marketing-despesas"]} element={
             ((isMarketingUser && !isAgencia) || isDiretoria)
