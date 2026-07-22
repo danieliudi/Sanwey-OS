@@ -84,10 +84,12 @@ export function PurchaseRequestDetailDrawer({
 
   // Multi-cargo (FASE 1): checa `roles` (com fallback pro `role` escalar pra
   // qualquer leitura ainda não sincronizada) — mesmo critério do gate no
-  // servidor (approve_purchase_request/reject_purchase_request), que já usa
-  // current_user_has_role('gerente_marketing').
+  // servidor (approve_purchase_request/reject_purchase_request + guard
+  // trigger). Ampliado a pedido do usuário: qualquer pessoa de marketing em
+  // geral pode aprovar/rejeitar agora, não só gerente_marketing/admin (ver
+  // migration 20260764_marketing_purchase_requests_broaden_approval.sql).
   const currentUserRoles = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
-  const canApprove = currentUserRoles.includes("admin") || currentUserRoles.includes("gerente_marketing");
+  const canApprove = currentUserRoles.includes("admin") || currentUserRoles.includes("marketing") || currentUserRoles.includes("gerente_marketing");
   const marketingUsers = useMemo(
     () => (users || []).filter(u => {
       const r = u.roles?.length ? u.roles : (u.role ? [u.role] : []);
@@ -813,7 +815,14 @@ export function PurchaseRequestDetailDrawer({
         </div>
       )}
 
-      {!isPending && actionError && (
+      {/* Fallback de erro pra quem está em "solicitado"/"cotacao" mas SEM
+          canApprove — o botão "Mover pra Cotação" acima é livre pra
+          qualquer marketing (não exige canApprove), mas o único outro
+          display de actionError fica dentro do bloco "isPending &&
+          canApprove" logo acima. Sem este fallback, um erro de
+          handleMoveStage nessa combinação (isPending && !canApprove) não
+          aparecia em lugar nenhum — achado ao ampliar quem pode agir aqui. */}
+      {!(isPending && canApprove) && actionError && (
         <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{actionError}</div>
       )}
 
