@@ -27,6 +27,7 @@ import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
 
@@ -882,16 +883,9 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   return (
     <>
     {stageError && (
-      <div
-        className="fixed z-50 flex items-start gap-2 p-3 rounded-xl text-sm shadow-lg"
-        style={{ top: 16, right: 16, maxWidth: 380, background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FCA5A5" }}
-      >
-        <AlertCircle size={15} className="shrink-0 mt-0.5" />
-        <span className="flex-1">{stageError}</span>
-        <button onClick={() => setStageError(null)} className="shrink-0" style={{ color: "#B91C1C" }}>
-          <X size={14} />
-        </button>
-      </div>
+      <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setStageError(null)}>
+        {stageError}
+      </AppToast>
     )}
     <div>
       {/* Header */}
