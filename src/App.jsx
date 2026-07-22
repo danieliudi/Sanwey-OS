@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart,
+  FileBarChart, RefreshCw, Sparkles,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -93,6 +93,9 @@ import { MeuRHView } from "./components/views/MeuRHView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
+import { AppToast } from "./components/shared/AppToast";
+import { useAppUpdate } from "./hooks/use-app-update";
+import { useChangelogNotice } from "./hooks/use-changelog-notice";
 
 const INITIAL_SIGNALS = generateMarketSignals();
 
@@ -123,6 +126,12 @@ export default function App() {
   const dismissOnboarding = useCallback(() => {
     if (currentUser?.id) setOnboardingDoneMap(m => ({ ...m, [currentUser.id]: true }));
   }, [currentUser?.id, setOnboardingDoneMap]);
+
+  // Toast "nova versão disponível" + toast "novidades" — ver
+  // specautoupdatechangelogtoast.md. Quem está vendo o tour de boas-vindas
+  // (showOnboarding) não recebe também o toast de novidades na mesma sessão.
+  const { needRefresh, updateNow, dismiss: dismissAppUpdate } = useAppUpdate();
+  const { items: changelogItems, dismiss: dismissChangelog } = useChangelogNotice(currentUser, { skip: showOnboarding });
 
   // Multi-cargo (FASE 1): `roles` é a fonte de verdade — um usuário pode
   // acumular mais de um cargo (ex: vendedor + agencia). `role` (escalar)
@@ -1668,6 +1677,23 @@ export default function App() {
 
       {showOnboarding && (
         <OnboardingModal currentUser={currentUser} onDone={dismissOnboarding} />
+      )}
+
+      {needRefresh && (
+        <AppToast
+          icon={RefreshCw}
+          title="Nova versão disponível"
+          onDismiss={dismissAppUpdate}
+          action={{ label: "Atualizar agora", onClick: updateNow }}
+        />
+      )}
+
+      {!needRefresh && changelogItems.length > 0 && (
+        <AppToast icon={Sparkles} title="Novidades" onDismiss={dismissChangelog}>
+          <ul className="list-disc pl-4 space-y-0.5">
+            {changelogItems.map((item, i) => <li key={i}>{item}</li>)}
+          </ul>
+        </AppToast>
       )}
 
       <CommandPalette
