@@ -34,7 +34,7 @@ import { StageNavigator } from "../shared/StageNavigator";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
-export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions }) {
+export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions, pipelineTransitions }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
   const [mobileTab, setMobileTab] = useState("info");
@@ -415,6 +415,15 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const currentStageInfo = companyStages.find(s => s.id === lead.stage);
   const isTerminalStage = Boolean(currentStageInfo?.terminal);
   const closeStyle = (lead.closeDate && !isTerminalStage) ? closeDateUrgencyStyle(lead.closeDate) : null;
+
+  // Restringe "Mover card para fase" às transições configuradas em Comercial
+  // > Editar etapas (mesma regra que já bloqueia o drag-and-drop no Kanban,
+  // ver CRMView.jsx) — sem regra configurada pra empresa/etapa, permanece
+  // aberto (todas as etapas), preservando o comportamento anterior.
+  const moveTargets = companyStages.filter(s =>
+    s.id !== lead.stage &&
+    (!pipelineTransitions || pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, s.id))
+  );
 
   const handleCopyDraft = () => {
     if (navigator.clipboard?.writeText) {
@@ -1326,7 +1335,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
             <div className="lg:hidden flex-1 min-h-0 overflow-y-auto p-5 pb-24" style={{ background: "var(--surface-alt)" }}>
               <MoveAndCommentsPanel
                 moveError={moveError}
-                stageTargets={companyStages.filter((s) => s.id !== lead.stage)}
+                stageTargets={moveTargets}
                 onMove={moveToStage}
                 commentsFeed={commentsFeed}
                 currentUser={currentUser}
@@ -1347,7 +1356,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           >
             <MoveAndCommentsPanel
               moveError={moveError}
-              stageTargets={companyStages.filter((s) => s.id !== lead.stage)}
+              stageTargets={moveTargets}
               onMove={moveToStage}
               commentsFeed={commentsFeed}
               currentUser={currentUser}

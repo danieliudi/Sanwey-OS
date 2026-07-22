@@ -870,6 +870,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
                         completeness={getLeadCompleteness(lead)}
                         unread={getLeadUnread(lead)}
+                        pipelineTransitions={pipelineTransitions}
                       />
                     ))
                   )}
@@ -1024,6 +1025,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
                         completeness={getLeadCompleteness(lead)}
                         unread={getLeadUnread(lead)}
+                        pipelineTransitions={pipelineTransitions}
                       />
                     ))
                   )}

@@ -28,7 +28,7 @@ function agingStyle(days, slaDays) {
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
-function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread }) {
+function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread, pipelineTransitions }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -47,8 +47,15 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
     ? Math.round(lead.probability)
     : Math.round(lead.probability * 100);
 
+  // Restringe o menu "..." às transições configuradas em Comercial > Editar
+  // etapas — mesma regra que já bloqueia o drop no drag-and-drop (ver
+  // CRMView.jsx); sem regra configurada, permanece aberto (comportamento
+  // anterior).
   const moveTargets = stages
-    ? stages.filter(s => s.id !== lead.stage && !s.terminal)
+    ? stages.filter(s =>
+        s.id !== lead.stage && !s.terminal &&
+        (!pipelineTransitions || pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, s.id))
+      )
     : [];
 
   // Card de etapa terminal (ganho/perdido) fica visualmente "arquivado" —

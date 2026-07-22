@@ -1673,6 +1673,7 @@ export default function App() {
           pipelines={pipelines}
           onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("crm"); }}
           notifyMentions={notifyMentions}
+          pipelineTransitions={pipelineTransitions}
         />
       </ErrorBoundary>
 
