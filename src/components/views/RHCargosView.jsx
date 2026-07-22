@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Briefcase, Plus, X, Pencil, Sparkles, Loader2, TrendingUp, ArrowRight,
+  Briefcase, Plus, X, Pencil, Trash2, Sparkles, Loader2, TrendingUp, ArrowRight,
   Check, XCircle, Clock, DollarSign, Search, LayoutGrid, List,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
@@ -56,7 +56,7 @@ function parseShiftRange(raw) {
 
 // ── Modal: cargo (criar/editar) com descrição por IA ──────────────────────────
 
-function CargoModal({ initialData, currentUser, onSave, onClose }) {
+function CargoModal({ initialData, currentUser, onSave, onDelete, onClose }) {
   const [name, setName]               = useState(initialData?.name || "");
   const [department, setDepartment]   = useState(initialData?.department || "");
   const [contractType, setContractType] = useState(initialData?.contract_type || "");
@@ -82,6 +82,7 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
   const [error, setError]             = useState(null);
   const [aiLoading, setAiLoading]     = useState(false);
   const [aiError, setAiError]         = useState(null);
+  const [deleting, setDeleting]       = useState(false);
 
   const { complete, isConfigured: aiConfigured } = useAI(currentUser);
   const shift = shiftStart && shiftEnd ? `${shiftStart} às ${shiftEnd}` : "";
@@ -145,6 +146,19 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
       setError(err?.message || "Erro ao salvar cargo.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Excluir o cargo "${initialData.name}"? Vagas que apontam pra ele deixam de ter o vínculo, mas não são apagadas.`)) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await onDelete(initialData.id);
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao excluir cargo.");
+      setDeleting(false);
     }
   };
 
@@ -252,10 +266,15 @@ function CargoModal({ initialData, currentUser, onSave, onClose }) {
           {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving || deleting} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Criar cargo"}
             </button>
-            <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
+            <button type="button" onClick={onClose} disabled={saving || deleting} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
+            {initialData && onDelete && (
+              <button type="button" onClick={handleDelete} disabled={saving || deleting} title="Excluir cargo" style={{ display: "flex", alignItems: "center", gap: 5, padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, border: "1px solid var(--danger)", background: "var(--surface)", color: "var(--danger)", cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.6 : 1 }}>
+                <Trash2 size={14} /> {deleting ? "Excluindo…" : "Excluir"}
+              </button>
+            )}
           </div>
         </form>
       </div>
@@ -592,6 +611,13 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
     finally { setBusyId(null); }
   };
 
+  const handleDeleteCargo = async (cargo) => {
+    if (!window.confirm(`Excluir o cargo "${cargo.name}"? Vagas que apontam pra ele deixam de ter o vínculo, mas não são apagadas.`)) return;
+    setActionError(null);
+    try { await deleteCargo(cargo.id); }
+    catch (e) { setActionError(e?.message || "Erro ao excluir cargo."); }
+  };
+
   if (!isSupabaseConfigured) {
     return <EmptyState icon={Briefcase} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar este módulo." />;
   }
@@ -664,7 +690,10 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>{c.name}</div>
                   {canWrite && (
-                    <button onClick={() => setCargoModal({ data: c })} title="Editar" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}><Pencil size={14} /></button>
+                    <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                      <button onClick={() => setCargoModal({ data: c })} title="Editar" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}><Pencil size={14} /></button>
+                      <button onClick={() => handleDeleteCargo(c)} title="Excluir cargo" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}><Trash2 size={14} /></button>
+                    </div>
                   )}
                 </div>
                 <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
@@ -767,6 +796,7 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
           initialData={cargoModal.data || null}
           currentUser={currentUser}
           onSave={(data) => cargoModal.data ? updateCargo(cargoModal.data.id, data) : createCargo(data)}
+          onDelete={cargoModal.data ? deleteCargo : undefined}
           onClose={() => setCargoModal(null)}
         />
       )}
