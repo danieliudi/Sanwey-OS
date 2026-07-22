@@ -145,6 +145,18 @@ export function usePipelines() {
       if (!keepKeys.has(row.stage_key)) {
         const { error } = await supabase.from("rh_pipeline_stages").delete().eq("id", row.id);
         if (error) hadError = true;
+        // Limpa dado dependente da etapa removida — sem isso ficavam linhas
+        // órfãs em pipeline_stage_transitions (matriz de transição aceitando/
+        // bloqueando mover PRA ou DE uma etapa que não existe mais) e em
+        // pipeline_stage_fields (campos customizados de uma etapa apagada,
+        // nunca mais visíveis/editáveis mas ocupando espaço no banco).
+        if (!error) {
+          await supabase.from("pipeline_stage_transitions").delete()
+            .eq("domain", DOMAIN).eq("company_id", companyId)
+            .or(`from_stage_key.eq.${row.stage_key},to_stage_key.eq.${row.stage_key}`);
+          await supabase.from("pipeline_stage_fields").delete()
+            .eq("company_id", companyId).eq("stage_id", row.stage_key);
+        }
       }
     }
 

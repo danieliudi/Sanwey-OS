@@ -36,6 +36,12 @@ function stageToRow(s) {
   };
 }
 
+// camelCase -> coluna, usado só por updateStage (patch parcial — ver abaixo).
+const ROW_COLUMN_BY_KEY = {
+  stageKey: "stage_key", name: "name", color: "color", orderIdx: "order_idx",
+  probability: "probability", slaDays: "sla_days", terminal: "terminal", won: "won", lost: "lost",
+};
+
 export function useRHPipelineStages(domain) {
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
@@ -100,11 +106,21 @@ export function useRHPipelineStages(domain) {
     return rowToStage(data);
   }, [domain]);
 
+  // Update PARCIAL de verdade — só escreve as colunas cuja chave está
+  // presente em `patch`. Antes isso passava por stageToRow(patch), que
+  // reconstrói o objeto inteiro assumindo todos os campos presentes; pra
+  // booleans (terminal/won/lost) ausentes do patch, `!!undefined` virava
+  // `false` e SOBRESCREVIA o valor real no banco (não era undefined, então
+  // não era removido pelo filtro seguinte) — renomear/recolorir qualquer
+  // etapa via RHStageEditorModal (que só manda {name,color,probability,
+  // slaDays}) zerava terminal/won/lost silenciosamente. Achado em auditoria
+  // ao vivo (22/07), reproduzido em Onboarding e Avaliação de Desempenho.
   const updateStage = useCallback(async (id, patch) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado");
-    const row = stageToRow({ ...patch });
-    // Remove chaves undefined para não sobrescrever com NULL.
-    Object.keys(row).forEach(k => row[k] === undefined && delete row[k]);
+    const row = {};
+    for (const [key, column] of Object.entries(ROW_COLUMN_BY_KEY)) {
+      if (key in patch) row[column] = patch[key];
+    }
     const { error: err } = await supabase
       .from(TABLE).update(row).eq("id", id);
     if (err) throw err;

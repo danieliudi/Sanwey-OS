@@ -1174,6 +1174,13 @@ function TreinamentoBoardModal({
           domainLabel="Treinamentos"
           records={atribuicoes}
           stageField="status"
+          // pendente/concluido/vencido não são "terminal" (não representam um
+          // resultado tipo ganho/perdido), mas são lidos direto em código —
+          // detecção de atraso, botão de concluir/reciclar (ver
+          // use-rh-treinamentos.js e este arquivo) — pra TODOS os
+          // treinamentos da plataforma, não só o board aberto. Apagar
+          // qualquer uma quebra essa lógica de compliance silenciosamente.
+          nonDeletableStageKeys={["pendente", "concluido", "vencido"]}
         />
       )}
 

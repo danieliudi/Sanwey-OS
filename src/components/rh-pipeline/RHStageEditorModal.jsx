@@ -34,6 +34,13 @@ export function RHStageEditorModal({
   domainLabel,
   records,
   stageField,
+  // stage_keys que não têm "terminal" (não são um resultado tipo
+  // ganho/perdido) mas ainda assim não podem ser removidas — ex.: Treinamentos
+  // usa 'pendente'/'concluido'/'vencido' como estágios estruturais lidos por
+  // regra de compliance (detecção de atraso, botão de concluir) em código,
+  // não só como config; apagar uma delas quebra essa lógica pra TODOS os
+  // treinamentos da plataforma, não só o board aberto no momento.
+  nonDeletableStageKeys = [],
 }) {
   const { stages, addStage, updateStage, deleteStage, reorderStages } = useRHPipelineStages(domain);
 
@@ -41,9 +48,14 @@ export function RHStageEditorModal({
   const [dragIdx, setDragIdx] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  // Só semeia o draft quando o modal ABRE, não a cada mudança de `stages`
+  // (Realtime) enquanto ele já está aberto — antes, qualquer alteração
+  // concorrente nesse domain (inclusive o próprio eco da gravação em curso)
+  // resetava o draft local e descartava edições ainda não salvas do usuário.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) setDraft(stages.map(s => ({ ...s, isNew: false })));
-  }, [open, stages]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -100,6 +112,10 @@ export function RHStageEditorModal({
 
   const handleDelete = (idx) => {
     const stage = draft[idx];
+    if (nonDeletableStageKeys.includes(stage.stageKey)) {
+      alert(`"${stage.name}" é uma etapa estrutural de ${domainLabel} e não pode ser removida.`);
+      return;
+    }
     const count = countsByStage[stage.stageKey] || 0;
     if (count > 0) {
       alert(`Não dá pra remover "${stage.name}": ${count} registro${count !== 1 ? "s" : ""} ainda está${count !== 1 ? "ão" : ""} nessa etapa. Mova esses registros antes.`);
@@ -118,10 +134,36 @@ export function RHStageEditorModal({
     setSaving(true);
     try {
       const originalById = new Map(stages.map(s => [s.id, s]));
-      const usedKeys = new Set(draft.filter(s => !s.isNew).map(s => s.stageKey));
       // idByRef: tempId (novas) ou stageKey (existentes) -> id real no banco.
       const idByRef = new Map();
 
+      // Deletes primeiro, ANTES de qualquer add/update. Duas razões:
+      // 1) revalida a contagem de registros aqui, no momento real da
+      //    gravação — a checagem em handleDelete só vale pro instante do
+      //    clique; se algo foi movido pra essa etapa nesse meio-tempo (modal
+      //    ficou aberto, outro usuário moveu um registro), a exclusão feita
+      //    "às cegas" no final do save órfã esse registro silenciosamente.
+      // 2) evita colisão de stage_key: apagar uma etapa e criar outra com o
+      //    mesmo nome (mesmo slug) na mesma sessão fazia o INSERT da nova
+      //    rodar antes do DELETE da antiga, batendo na constraint
+      //    unique(domain, stage_key) e abortando o save no meio, sem
+      //    rollback do que já tinha sido gravado.
+      const remainingIds = new Set(draft.filter(s => !s.isNew).map(s => s.id));
+      const blockedDeletes = [];
+      for (const orig of stages) {
+        if (remainingIds.has(orig.id)) continue;
+        const liveCount = countsByStage[orig.stageKey] || 0;
+        if (liveCount > 0) {
+          blockedDeletes.push({ name: orig.name, count: liveCount });
+          continue;
+        }
+        await deleteStage(orig.id);
+      }
+      if (blockedDeletes.length) {
+        alert(blockedDeletes.map(b => `Não deu pra remover "${b.name}": ${b.count} registro(s) foram movidos pra lá enquanto o editor estava aberto.`).join("\n"));
+      }
+
+      const usedKeys = new Set(draft.filter(s => !s.isNew).map(s => s.stageKey));
       for (let i = 0; i < draft.length; i++) {
         const s = draft[i];
         if (s.isNew) {
@@ -158,14 +200,6 @@ export function RHStageEditorModal({
             });
           }
           idByRef.set(s.stageKey, s.id);
-        }
-      }
-
-      // Remove no banco as etapas que saíram do draft.
-      const remainingIds = new Set(draft.filter(s => !s.isNew).map(s => s.id));
-      for (const orig of stages) {
-        if (!remainingIds.has(orig.id)) {
-          await deleteStage(orig.id);
         }
       }
 
@@ -246,6 +280,7 @@ export function RHStageEditorModal({
           {draft.map((stage, idx) => {
             const count = countsByStage[stage.stageKey] || 0;
             const isTerminal = !!stage.terminal;
+            const isProtected = nonDeletableStageKeys.includes(stage.stageKey);
             return (
               <div
                 key={stage.isNew ? stage.tempId : stage.stageKey}
@@ -336,8 +371,12 @@ export function RHStageEditorModal({
                 </div>
 
                 {/* Delete */}
-                {isTerminal ? (
-                  <span />
+                {isTerminal || isProtected ? (
+                  isProtected ? (
+                    <span title={`Etapa estrutural de ${domainLabel} — não pode ser removida`} style={{ display: "flex", justifyContent: "center", color: "#D1D5DB" }}>
+                      <Trash2 size={13} />
+                    </span>
+                  ) : <span />
                 ) : (
                   <button
                     onClick={() => handleDelete(idx)}

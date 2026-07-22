@@ -28,9 +28,14 @@ export function StageEditorModal({
   const [draft, setDraft] = useState(() => stages.map(s => ({ ...s })));
   const [dragIdx, setDragIdx] = useState(null);
 
+  // Só semeia o draft quando o modal ABRE, não a cada mudança de `stages`
+  // (Realtime) enquanto ele já está aberto — antes, qualquer alteração
+  // concorrente nesse pipeline resetava o draft local e descartava edições
+  // ainda não salvas do usuário (ver mesma correção em RHStageEditorModal.jsx).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) setDraft(stages.map(s => ({ ...s })));
-  }, [open, stages]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -101,6 +106,17 @@ export function StageEditorModal({
     for (const s of draft) {
       if (!s.name?.trim()) { alert("Toda etapa precisa de um nome."); return; }
       if (!s.code?.trim()) { alert(`Etapa "${s.name}" precisa de um código (letra).`); return; }
+    }
+    // Revalida a contagem de leads AGORA, não só no clique da lixeira — o
+    // modal pode ficar aberto um tempo, e um lead pode ter sido movido pra
+    // uma etapa já removida do draft nesse meio-tempo (outra aba, outro
+    // vendedor). Sem essa segunda checagem, o replacePipeline apagava a
+    // etapa "às cegas" e esse lead ficava com um stage órfão.
+    const draftIds = new Set(draft.map(s => s.id));
+    const blockedRemovals = stages.filter(s => !draftIds.has(s.id) && (countsByStage[s.id] || 0) > 0);
+    if (blockedRemovals.length) {
+      alert(blockedRemovals.map(s => `Não deu pra remover "${s.name}": ${countsByStage[s.id]} lead(s) foram movidos pra lá enquanto o editor estava aberto.`).join("\n"));
+      return;
     }
     onReplacePipeline(companyId, draft);
     onClose();
