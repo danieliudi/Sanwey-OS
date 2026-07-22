@@ -28,6 +28,32 @@ function agingStyle(days, slaDays) {
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
+// Renderiza um dos campos escolháveis em stage.cardPreviewFields (item
+// "preview de campo configurável" do comparativo com o Pipefy) — retorna
+// null quando o lead não tem valor pro campo, pra a chamadora pular sem
+// deixar separador órfão. Mantém a mesma paleta já usada no resto do card.
+function renderPreviewField(key, lead, { probDisplay, closeStyle }) {
+  switch (key) {
+    case "value":
+      return lead.value > 0 ? { text: formatK(lead.value), color: "#15803D", weight: 600 } : null;
+    case "probability":
+      return Number.isFinite(lead.probability) ? { text: `${probDisplay}%`, color: "var(--text-dim)" } : null;
+    case "closeDate":
+      if (!lead.closeDate) return null;
+      return closeStyle
+        ? { text: formatDateBR(lead.closeDate), pill: closeStyle }
+        : { text: formatDateBR(lead.closeDate), color: "var(--text-dim)" };
+    case "sector":
+      return lead.sector ? { text: lead.sector, color: "var(--text-dim)" } : null;
+    case "city":
+      return lead.city ? { text: lead.city, color: "var(--text-dim)" } : null;
+    case "decisionMaker":
+      return (lead.decisionMaker?.name && lead.decisionMaker.name !== "—") ? { text: lead.decisionMaker.name, color: "var(--text-dim)" } : null;
+    default:
+      return null;
+  }
+}
+
 function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread, pipelineTransitions }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
@@ -152,29 +178,51 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
         </div>
       )}
 
-      {/* Value + probability + close date */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-semibold" style={{ color: "var(--text)" }}>
-          {formatK(lead.value)}
-        </span>
-        <span style={{ color: "var(--text-dim)" }}>
-          {probDisplay}%{" "}·{" "}
-          {closeStyle ? (
-            <span
-              className="px-1 py-0.5 rounded font-bold"
-              style={{
-                background: closeStyle.bg,
-                color: closeStyle.text,
-                border: `1px solid ${closeStyle.border}`,
-              }}
-            >
-              {formatDateBR(lead.closeDate)}
-            </span>
-          ) : (
-            formatDateBR(lead.closeDate)
-          )}
-        </span>
-      </div>
+      {/* Preview de campos — configurável por etapa (Editar fase); sem
+          config, mantém o trio fixo valor/probabilidade/fechamento de
+          sempre, pra não regredir o visual do caso comum. */}
+      {Array.isArray(currentStage?.cardPreviewFields) && currentStage.cardPreviewFields.length > 0 ? (
+        <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-xs">
+          {currentStage.cardPreviewFields.map(key => {
+            const f = renderPreviewField(key, lead, { probDisplay, closeStyle });
+            if (!f) return null;
+            return f.pill ? (
+              <span
+                key={key}
+                className="px-1 py-0.5 rounded font-bold"
+                style={{ background: f.pill.bg, color: f.pill.text, border: `1px solid ${f.pill.border}` }}
+              >
+                {f.text}
+              </span>
+            ) : (
+              <span key={key} style={{ color: f.color, fontWeight: f.weight }}>{f.text}</span>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold" style={{ color: "var(--text)" }}>
+            {formatK(lead.value)}
+          </span>
+          <span style={{ color: "var(--text-dim)" }}>
+            {probDisplay}%{" "}·{" "}
+            {closeStyle ? (
+              <span
+                className="px-1 py-0.5 rounded font-bold"
+                style={{
+                  background: closeStyle.bg,
+                  color: closeStyle.text,
+                  border: `1px solid ${closeStyle.border}`,
+                }}
+              >
+                {formatDateBR(lead.closeDate)}
+              </span>
+            ) : (
+              formatDateBR(lead.closeDate)
+            )}
+          </span>
+        </div>
+      )}
 
       {/* Owner footer */}
       {showOwnerFooter && resolvedOwners.length > 0 && (

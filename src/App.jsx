@@ -1402,6 +1402,7 @@ export default function App() {
               onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
               onReplacePipeline={replacePipeline}
               onResetPipeline={resetCompanyPipeline}
+              onUpdateStage={updateStage}
             />
           } />
           <Route path={ROUTES["crm-viagens"]} element={

@@ -9,6 +9,7 @@ import { COMPANIES } from "../../constants/companies";
 import { FIELD_TYPES, slugifyKey } from "../../hooks/use-stage-fields";
 import { VALIDATION_PRESETS, VALIDATION_RULE_TYPES } from "../../utils/field-validation";
 import { useAutomations } from "../../hooks/use-automations";
+import { CARD_PREVIEW_FIELD_CATALOG, MAX_CARD_PREVIEW_FIELDS } from "../../constants/pipelines";
 
 // Automação "toca" uma etapa se ela dispara a partir dela, chega nela via
 // stage_change, mede tempo parado nela, cobra campo pendente nela, ou move
@@ -577,10 +578,11 @@ function FieldRow({ field, accent, otherFields, onDelete, onRename, onMoveUp, on
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 
-export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFields }) {
+export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFields, onUpdateStage }) {
   const [showAdd, setShowAdd] = useState(false);
   const [opError, setOpError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [previewBusy, setPreviewBusy] = useState(false);
   const { automations } = useAutomations();
   const automationCount = useMemo(() => {
     if (!open || !stage) return 0;
@@ -607,6 +609,22 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
   const company = COMPANIES[companyId];
   const accent  = company?.primary || "var(--text)";
   const fields  = stageFields.getFields(companyId, stage.id);
+
+  // NULL/vazio = padrão (valor/probabilidade/fechamento), ver LeadKanbanCard.
+  const previewFields = Array.isArray(stage.cardPreviewFields) ? stage.cardPreviewFields : [];
+  const handleTogglePreviewField = async (key) => {
+    if (!onUpdateStage || previewBusy) return;
+    const next = previewFields.includes(key)
+      ? previewFields.filter(k => k !== key)
+      : previewFields.length >= MAX_CARD_PREVIEW_FIELDS ? previewFields : [...previewFields, key];
+    if (next === previewFields) return;
+    setPreviewBusy(true);
+    try {
+      await onUpdateStage(companyId, stage.id, { cardPreviewFields: next.length ? next : null });
+    } finally {
+      setPreviewBusy(false);
+    }
+  };
 
   const run = async (fn) => {
     setBusy(true);
@@ -738,6 +756,41 @@ export function StageFieldEditorModal({ open, onClose, stage, companyId, stageFi
             <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-dim)" }}>
               <Zap size={12} style={{ color: accent, flexShrink: 0 }} />
               {automationCount} automação{automationCount !== 1 ? "ões" : ""} vinculada{automationCount !== 1 ? "s" : ""} a esta etapa
+            </div>
+          )}
+
+          {onUpdateStage && (
+            <div style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 8, padding: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
+                Preview do card no Kanban
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 8 }}>
+                Escolha até {MAX_CARD_PREVIEW_FIELDS} campos pra aparecer no card desta etapa. Sem escolha, usa o padrão (Valor, Probabilidade, Fechamento).
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {CARD_PREVIEW_FIELD_CATALOG.map(f => {
+                  const checked = previewFields.includes(f.key);
+                  const disabled = previewBusy || (!checked && previewFields.length >= MAX_CARD_PREVIEW_FIELDS);
+                  return (
+                    <button
+                      key={f.key}
+                      onClick={() => handleTogglePreviewField(f.key)}
+                      disabled={disabled}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors"
+                      style={{
+                        border: `1px solid ${checked ? accent : "#E5E7EB"}`,
+                        background: checked ? accent + "12" : "#FFFFFF",
+                        color: checked ? accent : "var(--text-dim)",
+                        cursor: disabled ? "not-allowed" : "pointer",
+                        opacity: disabled && !checked ? 0.5 : 1,
+                      }}
+                    >
+                      {checked && <Check size={11} />}
+                      {f.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 

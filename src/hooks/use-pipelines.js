@@ -24,6 +24,7 @@ function rowToStage(r) {
     terminal: r.terminal,
     won: r.won,
     lost: r.lost,
+    cardPreviewFields: Array.isArray(r.card_preview_fields) && r.card_preview_fields.length ? r.card_preview_fields : null,
   };
 }
 
@@ -41,6 +42,7 @@ function stageToRow(companyId, s, orderIdx) {
     terminal: !!s.terminal,
     won: !!s.won,
     lost: !!s.lost,
+    card_preview_fields: Array.isArray(s.cardPreviewFields) && s.cardPreviewFields.length ? s.cardPreviewFields : null,
   };
 }
 

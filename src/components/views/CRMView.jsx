@@ -449,7 +449,7 @@ function AnalyticsPanel({ scopedLeads, stages }) {
 
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage }) {
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
@@ -1103,6 +1103,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         stage={editingStage?.stage}
         companyId={editingStage?.companyId}
         stageFields={stageFields}
+        onUpdateStage={onUpdateStage}
       />
 
       {/* Editor de etapas + matriz de transições (ex-PipelineBuilderView) */}

@@ -15,6 +15,21 @@ export const DEFAULT_PIPELINE_STAGES = Object.freeze([
   Object.freeze({ id: "perdido",      name: "Perdido",               code: "X", color: NEUTRAL.red, probability: 0, terminal: true, lost: true }),
 ]);
 
+// Catálogo de campos que o dono da fase pode escolher pra aparecer no
+// preview do card do Kanban (item "preview de campo configurável" do
+// comparativo com o Pipefy) — até 3 por etapa (rh_pipeline_stages.
+// card_preview_fields). NULL/vazio = usa o padrão (valor/probabilidade/
+// fechamento), ver LeadKanbanCard.
+export const CARD_PREVIEW_FIELD_CATALOG = [
+  { key: "value",         label: "Valor" },
+  { key: "probability",   label: "Probabilidade" },
+  { key: "closeDate",     label: "Data de fechamento" },
+  { key: "sector",        label: "Setor" },
+  { key: "city",          label: "Cidade" },
+  { key: "decisionMaker", label: "Decisor" },
+];
+export const MAX_CARD_PREVIEW_FIELDS = 3;
+
 // Set of stage IDs considered "won" — used by history analytics.
 export const WON_STAGES = new Set(
   DEFAULT_PIPELINE_STAGES.filter(s => s.won).map(s => s.id)
