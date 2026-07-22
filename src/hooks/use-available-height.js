@@ -11,6 +11,13 @@ import { useEffect, useRef, useState } from "react";
 // alcançá-la — o pedido do usuário era que ela nunca saísse da tela visível,
 // como no Pipefy). Recalcula em resize e sempre que `deps` mudar (ex.:
 // `loading` terminando, o que muda a altura do conteúdo acima do board).
+//
+// O limite inferior real não é window.innerHeight: o <footer> global do
+// App.jsx (mais o padding-bottom do wrapper de conteúdo) sempre ocupa espaço
+// abaixo do board. Usar só `window.innerHeight - marginBottom` ignorava isso
+// e sobrava menos de 16px de fato — a página esticava além da viewport pra
+// caber o footer, gerando o gap/scroll que o board deveria ter evitado. Usa
+// o topo do <footer> (único na página) como limite quando ele existe.
 export function useAvailableHeight(marginBottom = 16, deps = []) {
   const ref = useRef(null);
   const [height, setHeight] = useState(480);
@@ -20,7 +27,9 @@ export function useAvailableHeight(marginBottom = 16, deps = []) {
     if (!el) return;
     const update = () => {
       const top = el.getBoundingClientRect().top;
-      setHeight(Math.max(280, Math.round(window.innerHeight - top - marginBottom)));
+      const footer = document.querySelector("footer");
+      const bottomBoundary = footer ? Math.min(footer.getBoundingClientRect().top, window.innerHeight) : window.innerHeight;
+      setHeight(Math.max(280, Math.round(bottomBoundary - top - marginBottom)));
     };
     update();
     window.addEventListener("resize", update);
