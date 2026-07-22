@@ -13,6 +13,13 @@ import { Send, AtSign, MessageCircle, Pencil, Trash2, Check, X } from "lucide-re
 // authorName fica undefined e cai no fallback "Sistema" abaixo) e por
 // persistir o retorno de onAddComment(text, mentionedIds).
 
+const EDIT_WINDOW_MS = 12 * 60 * 60 * 1000;
+
+function withinEditWindow(createdAt) {
+  if (!createdAt) return false;
+  return Date.now() - new Date(createdAt).getTime() < EDIT_WINDOW_MS;
+}
+
 function timeAgo(iso) {
   if (!iso) return "";
   const diff = Date.now() - new Date(iso).getTime();
@@ -197,7 +204,12 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
         ) : (
           chronological.map((c) => {
             const isOwn = !!currentUser && c.authorId === currentUser.id;
-            const canEdit = isOwn && !!c.id && !!onUpdateComment;
+            const isAdmin = Boolean(currentUser?.roles?.includes("admin") || currentUser?.role === "admin");
+            // Editar: sempre só o próprio autor, e só dentro de 12h do createdAt.
+            // Excluir: autor dentro das 12h, OU admin a qualquer momento (nunca
+            // edita comentário alheio, só exclui) — pedido explícito do usuário.
+            const canEdit = isOwn && withinEditWindow(c.createdAt) && !!c.id && !!onUpdateComment;
+            const canDelete = !!c.id && !!onUpdateComment && (isAdmin || (isOwn && withinEditWindow(c.createdAt)));
             const isEditing = editingId === c.id;
             const isConfirmingDelete = confirmingDeleteId === c.id;
             return (
@@ -262,24 +274,28 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
                       >
                         {renderTextWithMentions(c.text, (c.mentionedNames || []))}
                       </div>
-                      {canEdit && !isConfirmingDelete && (
+                      {(canEdit || canDelete) && !isConfirmingDelete && (
                         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                          <button
-                            onClick={() => startEdit(c)}
-                            title="Editar comentário"
-                            className="flex items-center justify-center rounded-full"
-                            style={{ width: 22, height: 22, background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer" }}
-                          >
-                            <Pencil size={12} />
-                          </button>
-                          <button
-                            onClick={() => setConfirmingDeleteId(c.id)}
-                            title="Excluir comentário"
-                            className="flex items-center justify-center rounded-full"
-                            style={{ width: 22, height: 22, background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer" }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => startEdit(c)}
+                              title="Editar comentário"
+                              className="flex items-center justify-center rounded-full"
+                              style={{ width: 22, height: 22, background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer" }}
+                            >
+                              <Pencil size={12} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => setConfirmingDeleteId(c.id)}
+                              title="Excluir comentário"
+                              className="flex items-center justify-center rounded-full"
+                              style={{ width: 22, height: 22, background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer" }}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
                         </div>
                       )}
                       {isConfirmingDelete && (
