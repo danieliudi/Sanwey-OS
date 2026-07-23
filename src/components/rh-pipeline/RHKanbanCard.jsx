@@ -2,6 +2,7 @@ import React, { memo, useRef, useState } from "react";
 import { Check, X as XIcon } from "lucide-react";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
+import { terminalCardBackground, terminalAccentOpacity } from "../shared/terminal-card-style";
 
 function stageKeyOf(s) {
   return s?.stageKey ?? s?.id;
@@ -33,11 +34,10 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
       onClick={() => { if (!menuOpen) onClick?.(id); }}
       className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
-        background: "var(--surface)",
+        background: terminalCardBackground(isTerminal),
         border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
-        opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;
@@ -55,9 +55,9 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
         <div className="flex items-center shrink-0">
           {isTerminal && (
             currentStage.won
-              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A" }} />
+              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A", opacity: terminalAccentOpacity(isTerminal) }} />
               : currentStage.lost
-                ? <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626" }} />
+                ? <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626", opacity: terminalAccentOpacity(isTerminal) }} />
                 : null
           )}
         </div>
@@ -69,6 +69,7 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
             tightTracking
             completeness={completeness}
             completenessSize={26}
+            muted={isTerminal}
           />
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
             <MoveStageMenu
@@ -83,7 +84,15 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
         </div>
       </div>
 
-      {children}
+      {/* `children` é o conteúdo específico de cada um dos 5 boards de RH
+          (título, badges, avatares — definidos nos respectivos *View.jsx,
+          fora do escopo deste componente-shell). Sem acesso ao que é texto
+          vs. cor lá dentro, aplica a mesma opacity de acento aqui uma vez só
+          — resultado equivalente ao tratamento por elemento dos outros 4
+          cards, sem duplicar a lógica nos 5 arquivos de board. */}
+      <div style={{ opacity: terminalAccentOpacity(isTerminal) }}>
+        {children}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import { Clock, MessageCircle } from "lucide-react";
 import { CompletenessBadge } from "../ui/CompletenessBadge";
+import { terminalAccentOpacity } from "./terminal-card-style";
 
 // Extraído de 4 cópias quase idênticas — RHKanbanCard, LeadKanbanCard,
 // CampaignKanbanCard, DeliverableKanbanCard (auditoria cross-codebase,
@@ -38,6 +39,11 @@ function agingStyle(days, slaDays, dangerColor) {
 // letterSpacing no chip) — viraram prop pra não mudar o visual de nenhum
 // dos 4 cards. Não é uma decisão nova de estilo, é preservação do que já
 // estava divergente.
+//
+// `muted` (etapa terminal — ver src/components/shared/terminal-card-style.js):
+// aplica a mesma opacity reduzida nos 3 chips coloridos daqui (unread, aging,
+// completude), sem tocar no card/coluna em volta. Único ponto de verdade pros
+// 4 cards que já reusam este componente — não recalcule o valor no chamador.
 export function KanbanCardStatusChips({
   unread,
   agingDays,
@@ -47,9 +53,11 @@ export function KanbanCardStatusChips({
   tightTracking = false,
   completeness,
   completenessSize = 26,
+  muted = false,
   children,
 }) {
   const ageStyle = agingStyle(agingDays, slaDays, dangerColor);
+  const accentOpacity = terminalAccentOpacity(muted);
 
   return (
     <>
@@ -57,7 +65,7 @@ export function KanbanCardStatusChips({
         <span
           title="Comentário novo"
           className="inline-flex items-center justify-center rounded-full"
-          style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
+          style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF", opacity: accentOpacity }}
         >
           <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
         </span>
@@ -71,6 +79,7 @@ export function KanbanCardStatusChips({
             background: ageStyle.bg,
             color: ageStyle.text,
             border: `1px solid ${ageStyle.border}`,
+            opacity: accentOpacity,
             ...(tightTracking ? { letterSpacing: "-0.01em" } : null),
           }}
           title={agingTitle ?? `${agingDays} dias nesta etapa`}
@@ -80,7 +89,9 @@ export function KanbanCardStatusChips({
         </span>
       )}
       {completeness?.total > 0 && (
-        <CompletenessBadge filled={completeness.filled} total={completeness.total} size={completenessSize} />
+        <span className="inline-flex" style={{ opacity: accentOpacity }}>
+          <CompletenessBadge filled={completeness.filled} total={completeness.total} size={completenessSize} />
+        </span>
       )}
     </>
   );

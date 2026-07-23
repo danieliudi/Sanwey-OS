@@ -6,6 +6,7 @@ import { formatK } from "../../utils/currency";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
+import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -66,11 +67,10 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
       onClick={() => { if (!menuOpen) onClick?.(campaign); }}
       className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
-        background: "var(--surface)",
+        background: terminalCardBackground(isTerminal),
         border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
-        opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;
@@ -85,7 +85,7 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
     >
       {/* Header: name + badges + menu */}
       <div className="flex items-start justify-between gap-2 mb-1.5">
-        <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: "var(--text)" }}>
+        <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: terminalTextColor(isTerminal) }}>
           {campaign.name}
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -97,11 +97,12 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
             dangerColor="var(--danger)"
             completeness={completeness}
             completenessSize={26}
+            muted={isTerminal}
           >
             {isUrgent && (
               <span
                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-                style={{ fontSize: 10, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA" }}
+                style={{ fontSize: 10, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA", opacity: terminalAccentOpacity(isTerminal) }}
                 title={`Lançamento em ${daysToLaunch}d`}
               >
                 <AlertTriangle size={8} strokeWidth={2.5} />
@@ -110,7 +111,7 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
             )}
           </KanbanCardStatusChips>
           {campaign.starred && (
-            <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} />
+            <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B", opacity: terminalAccentOpacity(isTerminal) }} />
           )}
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
             <MoveStageMenu
@@ -138,7 +139,7 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
         {campaign.channel && channelStyle && (
           <span
             className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold"
-            style={{ background: channelStyle.bg, color: channelStyle.text, border: `1px solid ${channelStyle.border}` }}
+            style={{ background: channelStyle.bg, color: channelStyle.text, border: `1px solid ${channelStyle.border}`, opacity: terminalAccentOpacity(isTerminal) }}
           >
             {campaign.channel}
           </span>
@@ -158,14 +159,17 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {campaign.budget > 0 && (
-            <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>
+            <span className="text-[11px] font-semibold" style={{ color: terminalTextColor(isTerminal) }}>
               {formatK(campaign.budget)}
             </span>
           )}
           {campaign.launchDate && (
             <span
               className="text-[10px]"
-              style={{ color: daysToLaunch !== null && daysToLaunch <= 3 ? "var(--danger)" : "var(--text-dim)" }}
+              style={{
+                color: daysToLaunch !== null && daysToLaunch <= 3 ? "var(--danger)" : "var(--text-dim)",
+                opacity: terminalAccentOpacity(isTerminal),
+              }}
             >
               {daysToLaunch !== null
                 ? daysToLaunch < 0
@@ -189,7 +193,9 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
             </span>
           )}
           {resolvedOwners.length > 0 && (
-            <AvatarStack users={resolvedOwners} size={20} max={3} />
+            <span className="inline-flex" style={{ opacity: terminalAccentOpacity(isTerminal) }}>
+              <AvatarStack users={resolvedOwners} size={20} max={3} />
+            </span>
           )}
         </div>
       </div>
