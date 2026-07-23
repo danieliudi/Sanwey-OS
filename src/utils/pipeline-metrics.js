@@ -1,6 +1,6 @@
 // Helpers de métrica que dependem da config de pipeline (probability,
 // slaDays). Antes essas constantes eram globais (STALE_THRESHOLD_DAYS=14).
-// Agora cada etapa tem o seu SLA configurável no Pipeline Builder.
+// Agora cada etapa tem o seu SLA configurável no editor de etapas da Venda.
 
 import { DEFAULT_PIPELINE_STAGES } from "../constants/pipelines";
 
@@ -13,7 +13,7 @@ const DEFAULT_SLA_DAYS = 14;
 // Movido de CRMView.jsx pra cá pra ser compartilhado — o Dashboard
 // filtrava só por `owner` (escalar), então um lead onde o usuário era
 // apenas co-responsável nunca aparecia em "Minhas tarefas", mesmo já
-// aparecendo no Kanban do Pipeline. Achado da auditoria de fricção de 18/07.
+// aparecendo no Kanban de Venda. Achado da auditoria de fricção de 18/07.
 export function getLeadOwnerIds(l) {
   return Array.isArray(l.ownerIds) && l.ownerIds.length ? l.ownerIds : (l.owner ? [l.owner] : []);
 }

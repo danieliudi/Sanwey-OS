@@ -1025,7 +1025,7 @@ export default function App() {
         label: "Comercial",
         items: [
           { id: "commercial-overview", label: "Visão Geral", icon: LayoutDashboard },
-          { id: "crm",          label: "Pipeline",   icon: Layers },
+          { id: "crm",          label: "Venda",   icon: Layers },
           { id: "clients",      label: "Clientes",   icon: Users },
           { id: "signals",      label: "Sinais",     icon: Bell },
           { id: "explorer",     label: "Explorador", icon: Globe2 },
@@ -1504,7 +1504,7 @@ export default function App() {
             <Navigate to={ROUTES.executive} replace />
           } />
           {/* Construtor de pipeline standalone foi absorvido pelo botão
-              "Editar etapas" dentro do próprio Kanban de Pipeline. Redireciona
+              "Editar etapas" dentro do próprio Kanban de Venda. Redireciona
               quem tem o link salvo. */}
           <Route path={ROUTES["pipeline-builder"]} element={<Navigate to={ROUTES.crm} replace />} />
           <Route path={ROUTES.automations} element={

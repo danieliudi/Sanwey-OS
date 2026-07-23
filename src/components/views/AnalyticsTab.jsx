@@ -297,7 +297,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
         <section>
           <SectionTitle>Comparativo de período</SectionTitle>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-            <CompareCard label="Pipeline" curr={curr.pipeline} prev={prev.pipeline} fmt={formatK} />
+            <CompareCard label="Venda" curr={curr.pipeline} prev={prev.pipeline} fmt={formatK} />
             <CompareCard label="Receita realizada" curr={curr.wonValue} prev={prev.wonValue} fmt={formatK} />
             <CompareCard label="Win rate" curr={curr.winRate} prev={prev.winRate} fmt={v => `${v}%`} />
             <CompareCard label="Ticket médio" curr={curr.avgTicket} prev={prev.avgTicket} fmt={formatK} />
@@ -310,7 +310,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
         <SectionTitle>Regional</SectionTitle>
         <div className="grid lg:grid-cols-2 gap-4 mt-3">
           <ChartCard
-            title="Receita + pipeline por estado"
+            title="Receita + venda por estado"
             subtitle="Valor acumulado por UF (top 12)"
           >
             {stateData.length === 0 ? <EmptyState /> : (
@@ -322,14 +322,14 @@ export function AnalyticsTab({ allLeads, period, users }) {
                   <Tooltip formatter={v => formatK(v)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="receita" name="Receita" stackId="a" fill="var(--color-resibag)" />
-                  <Bar dataKey="pipeline" name="Pipeline" stackId="a" fill="#3B82F6" radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="pipeline" name="Venda" stackId="a" fill="#3B82F6" radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </ChartCard>
 
           <ChartCard
-            title="Receita + pipeline por cidade"
+            title="Receita + venda por cidade"
             subtitle="Top 10 cidades"
           >
             {cityData.length === 0 ? <EmptyState /> : (
@@ -341,7 +341,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                   <Tooltip formatter={v => formatK(v)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="receita" name="Receita" stackId="a" fill="var(--color-resibag)" />
-                  <Bar dataKey="pipeline" name="Pipeline" stackId="a" fill="#6366F1" radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="pipeline" name="Venda" stackId="a" fill="#6366F1" radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -355,7 +355,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
         <div className="grid lg:grid-cols-2 gap-4 mt-3">
           <ChartCard
             title="Receita por setor"
-            subtitle="Top 10 setores · receita realizada + pipeline em aberto"
+            subtitle="Top 10 setores · receita realizada + venda em aberto"
           >
             {sectorData.length === 0 ? <EmptyState /> : (
               <ResponsiveContainer width="100%" height={Math.max(180, sectorData.length * 28 + 50)}>
@@ -366,7 +366,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                   <Tooltip formatter={v => formatK(v)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="receita" name="Receita" stackId="a" fill="var(--color-resibag)" />
-                  <Bar dataKey="pipeline" name="Pipeline" stackId="a" fill="#93C5FD" radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="pipeline" name="Venda" stackId="a" fill="#93C5FD" radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -385,7 +385,7 @@ export function AnalyticsTab({ allLeads, period, users }) {
                   <Tooltip formatter={v => formatK(v)} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="receita" name="Receita" stackId="a" fill="#8B5CF6" />
-                  <Bar dataKey="pipeline" name="Pipeline" stackId="a" fill="#C4B5FD" radius={[0, 3, 3, 0]} />
+                  <Bar dataKey="pipeline" name="Venda" stackId="a" fill="#C4B5FD" radius={[0, 3, 3, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}

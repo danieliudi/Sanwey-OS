@@ -12,7 +12,7 @@ export const MODULE_GROUPS = [
     label: "Comercial",
     modules: [
       { id: "commercial-overview", label: "Visão Geral" },
-      { id: "crm",                 label: "Pipeline" },
+      { id: "crm",                 label: "Venda" },
       { id: "clients",             label: "Clientes" },
       { id: "signals",             label: "Sinais" },
       { id: "explorer",            label: "Explorador" },

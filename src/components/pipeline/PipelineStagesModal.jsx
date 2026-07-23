@@ -13,7 +13,7 @@ import { SellerPreviewModal } from "./SellerPreviewModal";
  * removida). Mostra o fluxo de etapas + a matriz de regras de transição,
  * com atalhos pra abrir o StageEditorModal ("Editar etapas") e o
  * SellerPreviewModal ("Preview vendedor"). Aberto a partir do botão
- * "Editar etapas" na toolbar do Kanban de Pipeline (CRMView) — a empresa
+ * "Editar etapas" na toolbar do Kanban de Venda (CRMView) — a empresa
  * já vem resolvida pelo chamador (companyForPipeline), sem seletor de
  * empresa próprio.
  */

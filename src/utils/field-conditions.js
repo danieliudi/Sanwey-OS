@@ -1,6 +1,6 @@
 // Avaliador de campos condicionais por etapa — mostrar/ocultar/exigir um
 // campo com base no valor de outro campo da mesma etapa, no mesmo espírito
-// do field_conditions do Pipefy. Compartilhado pelo Pipeline de CRM
+// do field_conditions do Pipefy. Compartilhado pelo Kanban de Venda (CRM)
 // (pipeline_stage_fields) e pelos kanbans de RH (rh_pipeline_stage_fields).
 //
 // Condição: { fieldKey, operator, value } | null. null = sem condição (o

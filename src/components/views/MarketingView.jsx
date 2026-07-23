@@ -801,7 +801,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   // (estático ou condicional) vazio — vale tanto pro drag-and-drop quanto
   // pro "Mover para" do menu do card. Antes disso "required" era só o
   // asterisco visual, confirmado ao vivo que não travava nada. Mesmo padrão
-  // do attemptStageChange do Pipeline de CRM (CRMView.jsx), mas lendo os
+  // do attemptStageChange do Kanban de Venda (CRMView.jsx), mas lendo os
   // campos via useRHStageFields("marketing") — Marketing não usa a tabela
   // antiga pipeline_stage_fields. Banner não-bloqueante em vez de alert()
   // nativo — trava sessões automatizadas/headless (achado da auditoria de

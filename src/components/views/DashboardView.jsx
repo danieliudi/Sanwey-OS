@@ -38,7 +38,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
     if (!isGroupView) s = s.filter(l => l.companyId === activeCompany);
     // getLeadOwnerIds() em vez de `owner` (escalar) — um lead onde o
     // usuário é só co-responsável (ownerIds[]) nunca aparecia aqui, mesmo
-    // já aparecendo no Kanban do Pipeline (CRMView já usava getLeadOwnerIds
+    // já aparecendo no Kanban de Venda (CRMView já usava getLeadOwnerIds
     // em tudo). Achado da auditoria de fricção de 18/07.
     if (isConsultor) {
       s = s.filter(l => getLeadOwnerIds(l).includes(user.id));
@@ -100,7 +100,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
         }
       }
 
-      // Usa SLA por etapa configurado no Pipeline Builder (com fallback
+      // Usa SLA por etapa configurado no editor de etapas da Venda (com fallback
       // pro default global). Substitui o threshold único de 14 dias.
       const companyStages = pipelines?.[l.companyId];
       if (isStale(l, companyStages)) {
@@ -164,7 +164,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
         )}
         {widgetVisible("pipeline_open") && (
           <StatCard icon={HandCoins} value={formatK(stats.pipelineValue)}
-            label="Pipeline aberto"
+            label="Venda aberta"
             sublabel={`${stats.openCount} oportunidades`} compact />
         )}
         {widgetVisible("won_value") && (
