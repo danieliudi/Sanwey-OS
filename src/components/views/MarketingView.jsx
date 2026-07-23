@@ -437,11 +437,12 @@ function KpiBar({ campaigns }) {
   );
 }
 
-// ── Analytics panel (collapsible) ────────────────────────────────────────────
+// ── Analytics dashboard (aba "Análise" do toggle de visualização) ────────────
+// Era um acordeão "Análise das campanhas" escondido embaixo do board — o
+// Daniel pediu (2ª cobrança) pra tirar de lá e virar uma visualização
+// própria ao lado de "Calendário".
 
 function AnalyticsPanel({ campaigns, stages }) {
-  const [open, setOpen] = useState(false);
-
   const stageStats = useMemo(() => {
     // Etapas vivas (DB, editáveis) quando disponíveis — MARKETING_STAGES é só
     // o fallback estático de antes da customização por etapa existir. Sem
@@ -465,31 +466,23 @@ function AnalyticsPanel({ campaigns, stages }) {
   const maxCount  = Math.max(...stageStats.map(s => s.count), 1);
   const maxBudget = Math.max(...stageStats.map(s => s.totalBudget), 1);
 
+  if (campaigns.length === 0) {
+    return (
+      <div
+        className="rounded-2xl border p-8 text-sm text-center"
+        style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+      >
+        Nenhuma campanha nos filtros atuais — a análise aparece assim que houver campanhas.
+      </div>
+    );
+  }
+
   return (
     <div style={{ marginTop: 8 }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 text-xs font-medium transition-colors duration-150"
-        style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
-        onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
-        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+      <div
+        className="rounded-2xl border p-5"
+        style={{ background: "var(--surface)", borderColor: "var(--border)" }}
       >
-        <TrendingUp size={13} strokeWidth={2} />
-        <span>Análise das campanhas</span>
-        <ChevronDown
-          size={13}
-          style={{
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.2s",
-          }}
-        />
-      </button>
-
-      {open && (
-        <div
-          className="rounded-2xl border mt-3 p-5"
-          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-        >
           <div className="text-xs font-semibold mb-4" style={{ color: "var(--text-dim)" }}>
             Distribuição por etapa
           </div>
@@ -570,8 +563,7 @@ function AnalyticsPanel({ campaigns, stages }) {
               </div>
             ))}
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -745,7 +737,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const [filterChannel, setFilterChannel]     = useState("all");
   const [filterStarred, setFilterStarred]     = useState(false);
   const [ownerFilter, setOwnerFilter]         = useState("all");
-  const [viewMode, setViewMode]               = useState("kanban"); // "kanban" | "table" | "calendar"
+  const [viewMode, setViewMode]               = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["briefing"]));
   const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -955,6 +947,12 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               icon={CalendarIcon}
               label="Calendário"
             />
+            <ViewToggleButton
+              active={viewMode === "analytics"}
+              onClick={() => setViewMode("analytics")}
+              icon={TrendingUp}
+              label="Análise"
+            />
           </div>
           {isManager && (
             <Select
@@ -1030,8 +1028,9 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         <KanbanFab label="Nova campanha" onClick={() => setQuickAddStage("briefing")} />
       )}
 
-      {/* KPI bar */}
-      {viewMode === "kanban" && <KpiBar campaigns={filteredCampaigns} />}
+      {/* KPI bar — também na aba Análise: os stat cards fazem parte do
+          dashboard de dados das campanhas */}
+      {(viewMode === "kanban" || viewMode === "analytics") && <KpiBar campaigns={filteredCampaigns} />}
 
       {/* Loading state */}
       {(loading || loadingStages) && (
@@ -1267,12 +1266,14 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         </div>
       </>)}
 
-      {/* Analytics panel */}
+      {/* Aba Análise — dashboard dos dados das campanhas (junto com a KpiBar
+          acima). Saiu de baixo do board Kanban a pedido do Daniel. */}
+      {!loading && !loadingStages && viewMode === "analytics" && (
+        <AnalyticsPanel campaigns={filteredCampaigns} stages={kanbanStages} />
+      )}
+
       {!loading && !loadingStages && viewMode === "kanban" && (
         <div ref={trailingRef}>
-          {filteredCampaigns.length > 0 && (
-            <AnalyticsPanel campaigns={filteredCampaigns} stages={kanbanStages} />
-          )}
           <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
             Arraste para mover · Use "+" no cabeçalho ou o botão flutuante para criar · Clique no card para ver detalhes
           </p>
