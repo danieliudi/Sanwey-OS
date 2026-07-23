@@ -823,8 +823,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           card arredondado com sombra que existia aqui foi rejeitado (não
           batia com a referência do Pipefy). */}
       <KanbanBoardHeader className="mb-4">
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+      {/* Header: título + ações + toggle de filtros numa única linha — mesma
+          densidade do header do Pipeline (CRMView.jsx). Os selects de filtro
+          só aparecem numa 2ª linha quando showFilters está aberto, em vez de
+          sempre reservar uma linha inteira mesmo fechado. */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
             <Package size={22} style={{ color: "var(--text)" }} />
@@ -834,7 +837,29 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           </div>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de entregas de campanha</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* Filtros */}
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "var(--surface-alt)" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+            <Filter size={12} />
+            Filtros
+            {activeFilterCount > 0 && (
+              <span style={{ background: "var(--accent)", color: "#FFF", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px", marginLeft: 2 }}>{activeFilterCount}</span>
+            )}
+          </button>
+
+          {/* Chip do deep-link "Presas em revisão" (Painel de Marketing) —
+              fica visível mesmo com o painel de filtros fechado. */}
+          {stuckOnly && (
+            <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: "1px solid #FED7AA", background: "#FFF7ED", color: "#D97706", fontSize: 11, fontWeight: 600 }}>
+              Presas em revisão · +3 dias
+              <button onClick={() => setStuckOnly(false)} style={{ display: "flex", color: "#D97706", background: "none", border: "none", cursor: "pointer", padding: 0 }} title="Limpar filtro">
+                <X size={11} />
+              </button>
+            </span>
+          )}
+
           {/* View toggle */}
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     />
@@ -882,30 +907,9 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         </div>
       </div>
 
-      {/* Filter toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <button
-          onClick={() => setShowFilters(v => !v)}
-          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "var(--surface-alt)" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
-          <Filter size={12} />
-          Filtros
-          {activeFilterCount > 0 && (
-            <span style={{ background: "var(--accent)", color: "#FFF", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px", marginLeft: 2 }}>{activeFilterCount}</span>
-          )}
-        </button>
-
-        {/* Chip do deep-link "Presas em revisão" (Painel de Marketing) —
-            fica visível mesmo com o painel de filtros fechado. */}
-        {stuckOnly && (
-          <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: "1px solid #FED7AA", background: "#FFF7ED", color: "#D97706", fontSize: 11, fontWeight: 600 }}>
-            Presas em revisão · +3 dias
-            <button onClick={() => setStuckOnly(false)} style={{ display: "flex", color: "#D97706", background: "none", border: "none", cursor: "pointer", padding: 0 }} title="Limpar filtro">
-              <X size={11} />
-            </button>
-          </span>
-        )}
-
-        {showFilters && (
+      {/* Filtros expandidos: só ocupam espaço quando showFilters está aberto */}
+      {showFilters && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <>
             {/* Owner filter (managers only) */}
             {isManager && (
@@ -958,8 +962,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
               </button>
             )}
           </>
-        )}
-      </div>
+        </div>
+      )}
       </KanbanBoardHeader>
 
       {canWrite && viewMode === "kanban" && (
