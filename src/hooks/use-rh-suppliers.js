@@ -126,6 +126,11 @@ export function useRHSuppliers({ userId, enabled = true } = {}) {
     if (error) throw new Error(error.message);
   }, [suppliers]);
 
+  const deleteSupplier = useCallback(async (id) => {
+    const { error } = await supabase.from("rh_fornecedores").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+  }, []);
+
   const createContrato = useCallback(async (contrato) => {
     const row = contratoToRow(contrato);
     const { data, error } = await supabase.from("rh_fornecedor_contratos").insert({ ...row, created_by: userId ?? null }).select().single();
@@ -157,7 +162,7 @@ export function useRHSuppliers({ userId, enabled = true } = {}) {
 
   return {
     suppliers, contratos, eventos, loading,
-    createSupplier, updateSupplier, createContrato, updateContrato, addEvento,
+    createSupplier, updateSupplier, deleteSupplier, createContrato, updateContrato, addEvento,
     refetch: fetchAll,
   };
 }

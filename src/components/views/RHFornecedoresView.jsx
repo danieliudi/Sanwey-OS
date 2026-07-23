@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
-  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid,
+  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Pencil, Trash2,
 } from "lucide-react";
 import { useRHSuppliers } from "../../hooks/use-rh-suppliers";
 import { useProfiles } from "../../hooks/use-profiles";
@@ -50,14 +50,21 @@ function labelSt() {
 
 const EMPTY_FORNECEDOR_FORM = { name: "", tipo: "convenio_medico", contactName: "", email: "", phone: "", notes: "" };
 
-function NovoFornecedorModal({ onSave, onClose }) {
-  const [form, setForm] = useState(EMPTY_FORNECEDOR_FORM);
+function NovoFornecedorModal({ fornecedor, onSave, onClose }) {
+  const initialForm = useMemo(() => fornecedor
+    ? {
+        name: fornecedor.name || "", tipo: fornecedor.tipo || "convenio_medico",
+        contactName: fornecedor.contactName || "", email: fornecedor.email || "",
+        phone: fornecedor.phone || "", notes: fornecedor.notes || "",
+      }
+    : EMPTY_FORNECEDOR_FORM, [fornecedor]);
+  const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   // Clicar fora não deve zerar o que já foi digitado — pede confirmação se
   // o formulário estiver sujo, mesmo padrão do cadastro de Funcionários.
-  const dirty = JSON.stringify(form) !== JSON.stringify(EMPTY_FORNECEDOR_FORM);
+  const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
   const guardedClose = () => {
     if (dirty && !window.confirm("Descartar os dados preenchidos? As informações não salvas serão perdidas.")) return;
     onClose();
@@ -89,7 +96,7 @@ function NovoFornecedorModal({ onSave, onClose }) {
     <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={guardedClose}>
       <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Novo fornecedor</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{fornecedor ? "Editar fornecedor" : "Novo fornecedor"}</div>
           <button onClick={guardedClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={18} /></button>
         </div>
         <form onSubmit={submit} style={{ padding: "20px 24px 24px" }} className="flex flex-col gap-3">
@@ -124,7 +131,7 @@ function NovoFornecedorModal({ onSave, onClose }) {
           {error && <div style={{ fontSize: 12, color: "var(--danger)" }}>{error}</div>}
           <div className="flex gap-2 mt-2">
             <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
-              {saving ? "Salvando…" : "Cadastrar"}
+              {saving ? "Salvando…" : fornecedor ? "Salvar alterações" : "Cadastrar"}
             </button>
             <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
               Cancelar
@@ -354,7 +361,7 @@ function ContratoRow({ contrato, eventos, users, onAddEvento, onUpdateResponsave
   );
 }
 
-function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onCreateContrato, onAddEvento, onUpdateResponsavel }) {
+function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onEdit, onDelete, onCreateContrato, onAddEvento, onUpdateResponsavel }) {
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
   const fornecedorContratos = contratos.filter(c => c.fornecedorId === fornecedor.id);
 
@@ -367,7 +374,11 @@ function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onCr
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{fornecedor.name}</div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{TIPO_LABELS[fornecedor.tipo] || fornecedor.tipo}</div>
           </div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={18} /></button>
+          <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+            <button onClick={onEdit} title="Editar fornecedor" style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><Pencil size={16} /></button>
+            <button onClick={onDelete} title="Excluir fornecedor" style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--danger)", padding: 4, display: "flex" }}><Trash2 size={16} /></button>
+            <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
+          </div>
         </div>
 
         <div style={{ padding: "20px 24px", flex: 1 }}>
@@ -497,9 +508,10 @@ function ContratosTableView({ contratos, suppliers, users, onRowClick }) {
 }
 
 export function RHFornecedoresView({ currentUser }) {
-  const { suppliers, contratos, eventos, loading, createSupplier, createContrato, updateContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
+  const { suppliers, contratos, eventos, loading, createSupplier, updateSupplier, deleteSupplier, createContrato, updateContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
   const { users } = useProfiles();
   const [novoOpen, setNovoOpen] = useState(false);
+  const [editingFornecedor, setEditingFornecedor] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [viewMode, setViewMode] = useState("fornecedores"); // "fornecedores" | "contratos"
 
@@ -515,6 +527,16 @@ export function RHFornecedoresView({ currentUser }) {
 
   const handleUpdateResponsavel = (contratoId, responsavelId) => {
     updateContrato(contratoId, { responsavelId }).catch((err) => console.error("Falha ao atualizar responsável do contrato:", err));
+  };
+
+  const handleDeleteFornecedor = async (fornecedor) => {
+    if (!window.confirm(`Excluir o fornecedor "${fornecedor.name}"? Os contratos e o histórico de eventos vinculados também serão apagados.`)) return;
+    try {
+      await deleteSupplier(fornecedor.id);
+      setSelectedId(null);
+    } catch (err) {
+      window.alert(err.message || "Erro ao excluir fornecedor.");
+    }
   };
 
   return (
@@ -586,6 +608,14 @@ export function RHFornecedoresView({ currentUser }) {
         <NovoFornecedorModal onSave={createSupplier} onClose={() => setNovoOpen(false)} />
       )}
 
+      {editingFornecedor && (
+        <NovoFornecedorModal
+          fornecedor={editingFornecedor}
+          onSave={(form) => updateSupplier(editingFornecedor.id, form)}
+          onClose={() => setEditingFornecedor(null)}
+        />
+      )}
+
       {selected && (
         <FornecedorDrawer
           fornecedor={selected}
@@ -593,6 +623,8 @@ export function RHFornecedoresView({ currentUser }) {
           eventos={eventos}
           users={users}
           onClose={() => setSelectedId(null)}
+          onEdit={() => setEditingFornecedor(selected)}
+          onDelete={() => handleDeleteFornecedor(selected)}
           onCreateContrato={createContrato}
           onAddEvento={addEvento}
           onUpdateResponsavel={handleUpdateResponsavel}
