@@ -12,8 +12,8 @@ export const MODULE_GROUPS = [
     label: "Comercial",
     modules: [
       { id: "commercial-overview", label: "Visão Geral" },
-      { id: "crm",                 label: "Venda" },
-      { id: "posvenda",            label: "Pós-venda" },
+      { id: "crm",                 label: "Funil de Vendas" },
+      { id: "posvenda",            label: "Funil de Pós-venda" },
       { id: "clients",             label: "Clientes" },
       { id: "signals",             label: "Sinais" },
       { id: "explorer",            label: "Explorador" },

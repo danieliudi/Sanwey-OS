@@ -31,7 +31,7 @@ export function KanbanColumnHeader({
   // Props novas (Redesign v2, ver plano do Kanban) — todas opcionais, default
   // = comportamento de sempre, pra não mudar nada nos 7 boards que ainda não
   // passaram por essa revisão (Marketing, Compras de Marketing, RH ×5). Só
-  // Venda/Entregas/Pós-venda passam os valores "modo Pipefy".
+  // Funil de Vendas/Entregas/Pós-venda passam os valores "modo Pipefy".
   nameColor = "var(--text)",
   nameFontSize = 11,
   nameFontWeight = 600,

@@ -643,7 +643,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-            Venda
+            Funil de Vendas
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {scopedLeads.length} oportunidades

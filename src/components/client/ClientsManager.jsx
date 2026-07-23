@@ -186,7 +186,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
             <Users size={16} /> Clientes
           </h2>
           <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-            Cadastro central de clientes — usado para vincular aos cards da Venda.
+            Cadastro central de clientes — usado para vincular aos cards do Funil de Vendas.
           </p>
         </div>
         <div className="flex items-center gap-2">

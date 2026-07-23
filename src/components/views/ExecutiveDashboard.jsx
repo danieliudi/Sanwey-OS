@@ -263,7 +263,7 @@ export function ExecutiveDashboard({
                 Comercial
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Venda aberta"     sublabel="Em aberto" accent={"var(--text)"} />
+                <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
                 <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
                 <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
                 <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
@@ -610,10 +610,10 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
   return (
     <div className="space-y-5">
       <div className="grid lg:grid-cols-2 gap-5">
-        {/* Venda por empresa */}
+        {/* Funil de Vendas por empresa */}
         <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
           <h3 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
-            Venda por empresa
+            Funil de Vendas por empresa
           </h3>
           <div className="space-y-4">
             {metricsByCompany.map(m => {
@@ -684,7 +684,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
-                {["Empresa", "Leads", "Venda", "Forecast", "Ganho", "Ativação", "Parados"].map((h, i) => (
+                {["Empresa", "Leads", "Funil de Vendas", "Forecast", "Ganho", "Ativação", "Parados"].map((h, i) => (
                   <th
                     key={h}
                     className={`py-2.5 text-xs font-semibold ${i === 0 ? "text-left pr-3" : "text-right px-3"}`}

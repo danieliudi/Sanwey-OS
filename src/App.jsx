@@ -1026,13 +1026,13 @@ export default function App() {
         label: "Comercial",
         items: [
           { id: "commercial-overview", label: "Visão Geral", icon: LayoutDashboard },
-          { id: "crm",          label: "Venda",   icon: Layers },
-          // Logo abaixo de "Venda" (pedido explícito do usuário) — conectado
-          // ao Kanban de Venda igual Recrutamento é conectado a Onboarding:
+          { id: "crm",          label: "Funil de Vendas",   icon: Layers },
+          // Logo abaixo de "Funil de Vendas" (pedido explícito do usuário) — conectado
+          // ao Kanban do Funil de Vendas igual Recrutamento é conectado a Onboarding:
           // botão "Enviar para Pós-venda" no negócio Ganho (ver
           // LeadDetailDrawer.jsx) cria um caso aqui, o negócio original
-          // continua existindo em Venda.
-          { id: "posvenda",     label: "Pós-venda", icon: Handshake },
+          // continua existindo no Funil de Vendas.
+          { id: "posvenda",     label: "Funil de Pós-venda", icon: Handshake },
           { id: "clients",      label: "Clientes",   icon: Users },
           { id: "signals",      label: "Sinais",     icon: Bell },
           { id: "explorer",     label: "Explorador", icon: Globe2 },
@@ -1522,7 +1522,7 @@ export default function App() {
             <Navigate to={ROUTES.executive} replace />
           } />
           {/* Construtor de pipeline standalone foi absorvido pelo botão
-              "Editar etapas" dentro do próprio Kanban de Venda. Redireciona
+              "Editar etapas" dentro do próprio Kanban do Funil de Vendas. Redireciona
               quem tem o link salvo. */}
           <Route path={ROUTES["pipeline-builder"]} element={<Navigate to={ROUTES.crm} replace />} />
           <Route path={ROUTES.automations} element={

@@ -1,5 +1,5 @@
 // Auto-preenchimento ao mover um lead para a etapa de negócio fechado
-// ("ganho") no Kanban de Venda (Comercial).
+// ("ganho") no Kanban do Funil de Vendas (Comercial).
 //
 // custom_fields é um jsonb PLANO indexado por field_key (não escopado por
 // etapa). Isso tem dois efeitos que este helper trata:

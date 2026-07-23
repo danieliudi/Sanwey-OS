@@ -531,7 +531,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
       await onUpdate(lead.id, { sentToPosvendaAt: new Date().toISOString() });
       setPosvendaSent(true);
     } catch (e) {
-      setPosvendaError(e.message || "Não foi possível enviar para Pós-venda.");
+      setPosvendaError(e.message || "Não foi possível enviar para o Funil de Pós-venda.");
     } finally {
       setSendingToPosvenda(false);
     }
@@ -1552,7 +1552,7 @@ function MoveAndCommentsPanel({
           {alreadySentToPosvenda ? (
             <div className="flex items-center gap-2 text-xs font-medium" style={{ color: "var(--text-dim)" }}>
               <Handshake size={13} />
-              Já enviado para Pós-venda
+              Já enviado para o Funil de Pós-venda
             </div>
           ) : (
             <>
@@ -1563,7 +1563,7 @@ function MoveAndCommentsPanel({
                 style={{ background: "var(--accent)", color: "#FFFFFF", border: "none", opacity: sendingToPosvenda ? 0.6 : 1 }}
               >
                 <Handshake size={14} />
-                {sendingToPosvenda ? "Enviando…" : "Enviar para Pós-venda"}
+                {sendingToPosvenda ? "Enviando…" : "Enviar para o Funil de Pós-venda"}
               </button>
               {posvendaError && (
                 <div className="mt-2 text-xs" style={{ color: "var(--danger)" }}>{posvendaError}</div>

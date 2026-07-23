@@ -19,7 +19,7 @@ import React from "react";
  * sinalizando "tem mais coluna pra rolar", mas o usuário revisou contra os
  * prints do Pipefy e pediu pra tirar, sem substituto.
  *
- * Piloto em 3 boards (Venda/CRMView, Entregas/EntregasView, Pós-venda/
+ * Piloto em 3 boards (Funil de Vendas/CRMView, Entregas/EntregasView, Pós-venda/
  * PosVendaView) — ver CLAUDE.md antes de aplicar em outro board. Sempre
  * renderizado dentro do `hidden lg:block` já existente (mobile continua no
  * accordion, intocado).

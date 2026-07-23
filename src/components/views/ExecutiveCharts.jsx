@@ -31,7 +31,7 @@ const STAGE_NAMES = {
 };
 
 export function ExecutiveCharts({ leads, pipelines, users }) {
-  // ── Venda por empresa ────────────────────────────────────────────────────
+  // ── Funil de Vendas por empresa ──────────────────────────────────────────
   const pipelineByCompany = useMemo(() => {
     const m = {};
     for (const id of COMPANY_IDS) {
@@ -155,7 +155,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
   return (
     <div className="space-y-4">
       <div className="grid lg:grid-cols-2 gap-4">
-        <ChartCard title="Venda por empresa" subtitle="Valor total e forecast ponderado">
+        <ChartCard title="Funil de Vendas por empresa" subtitle="Valor total e forecast ponderado">
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={pipelineByCompany} margin={{ top: 16, right: 12, left: -8, bottom: 0 }}>
               <CartesianGrid stroke="#F3F4F6" vertical={false} />
@@ -163,7 +163,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
               <YAxis tick={{ fontSize: 10 }} tickFormatter={formatK} />
               <Tooltip formatter={(v) => formatK(v)} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="valor"    name="Venda" fill="#1D4ED8" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="valor"    name="Funil de Vendas" fill="#1D4ED8" radius={[6, 6, 0, 0]} />
               <Bar dataKey="forecast" name="Forecast" fill="#10B981" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

@@ -355,7 +355,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-                Pós-venda
+                Funil de Pós-venda
               </h1>
               <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
                 {summary.count} caso{summary.count !== 1 ? "s" : ""}
@@ -529,7 +529,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
         open={stageEditorOpen}
         onClose={() => setStageEditorOpen(false)}
         domain="posvenda"
-        domainLabel="Pós-venda"
+        domainLabel="Funil de Pós-venda"
         records={cases}
         stageField="stage"
       />

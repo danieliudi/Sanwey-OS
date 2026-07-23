@@ -3,7 +3,7 @@ import { DEFAULT_PIPELINE_STAGES } from "./pipelines";
 
 export const DASHBOARD_WIDGETS = [
   { id: "leads_count", label: "Total de leads" },
-  { id: "pipeline_open", label: "Venda aberta" },
+  { id: "pipeline_open", label: "Funil de Vendas aberto" },
   { id: "won_value", label: "Valor ganho" },
   { id: "avg_fit", label: "Fit score médio" },
 ];
