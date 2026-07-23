@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { StageColorPicker } from "./StageColorPicker";
 
 // "Opções avançadas para {Fase}" — modal por etapa no layout do Pipefy:
@@ -28,6 +28,7 @@ export function StageAdvancedModal({
   onClose,
   stage,
   onSave,
+  onDelete,
   showProbability = true,
   accent = "var(--accent)",
 }) {
@@ -37,6 +38,7 @@ export function StageAdvancedModal({
   const [slaDays, setSlaDays]         = useState(null);
   const [terminal, setTerminal]       = useState(false);
   const [saving, setSaving]           = useState(false);
+  const [deleting, setDeleting]       = useState(false);
   const [error, setError]             = useState(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,6 +83,20 @@ export function StageAdvancedModal({
       setError(e?.message || "Erro ao salvar. Tente novamente.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Excluir a etapa "${stage.name}"? Essa ação não pode ser desfeita.`)) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await onDelete();
+      onClose();
+    } catch (e) {
+      setError(e?.message || "Erro ao excluir. Tente novamente.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -228,6 +244,25 @@ export function StageAdvancedModal({
           {error && (
             <div style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, padding: "8px 12px" }}>
               {error}
+            </div>
+          )}
+
+          {onDelete && (
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+              <div style={SECTION_TITLE}>Excluir etapa</div>
+              <div style={SECTION_HELP}>
+                Remove esta fase do Kanban. Só é possível excluir etapas sem registros ativos.
+              </div>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting || saving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
+                style={{ borderColor: "#FECACA", color: "#B91C1C", background: "#FEF2F2" }}
+              >
+                <Trash2 size={12} />
+                {deleting ? "Excluindo…" : "Excluir esta etapa"}
+              </button>
             </div>
           )}
         </div>

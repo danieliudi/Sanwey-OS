@@ -1,6 +1,6 @@
 import {
   Type, AlignLeft, Hash, DollarSign, Calendar, Clock, Mail, Phone,
-  Link, CheckSquare, List, RadioTower, ListChecks, User,
+  Link, CheckSquare, List, RadioTower, ListChecks, User, Percent,
 } from "lucide-react";
 
 // Catálogo único de tipos de campo customizado por etapa — mesmo conjunto
@@ -21,6 +21,7 @@ export const FIELD_TYPES = [
   { value: "radio",      label: "Escolha única (radio)" },
   { value: "multicheck", label: "Múltiplas escolhas" },
   { value: "user",       label: "Usuário do sistema" },
+  { value: "percent_steps", label: "Progresso (%)" },
 ];
 
 export const TYPE_ICON = {
@@ -39,6 +40,7 @@ export const TYPE_ICON = {
   radio:      RadioTower,
   multicheck: ListChecks,
   user:       User,
+  percent_steps: Percent,
 };
 
 export const OPTION_FIELD_TYPES = ["select", "radio", "multicheck"];

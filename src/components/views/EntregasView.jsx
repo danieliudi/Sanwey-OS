@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
-  Filter, CalendarDays, LayoutGrid, List, Pencil, Settings2, AlertCircle,
+  Filter, CalendarDays, LayoutGrid, List, Settings2, AlertCircle,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
@@ -11,8 +11,8 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { useMarketingCampaigns }    from "../../hooks/use-marketing-campaigns";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
-import { RHStageListManager } from "../shared/stage-editor/StageListManager";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
+import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
 } from "../../constants/marketing-pipelines";
@@ -22,7 +22,7 @@ import { useUsersById }  from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
-import { DeliverableDetailDrawer, STAGE_FIELDS } from "../campaign/DeliverableDetailDrawer";
+import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
 import { AvatarStack } from "../shared/AvatarStack";
 import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
@@ -62,23 +62,6 @@ function isDueSoon(d) {
   if (!d.deadline) return false;
   const diffMs = new Date(d.deadline).getTime() - Date.now();
   return diffMs >= 0 && diffMs <= 7 * 86400000;
-}
-
-function isStaticValueEmpty(v) {
-  if (v === null || v === undefined) return true;
-  if (typeof v === "string") return v.trim() === "";
-  if (Array.isArray(v)) return v.length === 0;
-  return false;
-}
-
-// STAGE_FIELDS (DeliverableDetailDrawer.jsx) é um segundo formulário fixo
-// por etapa, além dos campos dinâmicos de useRHStageFields — a troca de
-// etapa só validava os dinâmicos, então os campos "obrigatórios" desse
-// formulário fixo nunca travavam nada (achado da auditoria completa).
-function getMissingStaticFields(stage, stageData) {
-  const fields = STAGE_FIELDS[stage] || [];
-  const dataForStage = stageData?.[stage] || {};
-  return fields.filter(f => f.required && isStaticValueEmpty(dataForStage[f.key]));
 }
 
 /* ── CSV export ─────────────────────────────────────────────── */
@@ -654,6 +637,86 @@ function DeliverableCalendarView({ deliverables, stages, onSelect }) {
   );
 }
 
+/* ── Nova etapa (criação rápida a partir do fim do Kanban) ──────
+   "Editar etapas" (lista completa) saiu do header — criar uma etapa agora
+   é isso aqui, ou "Opções Avançadas" dentro de "Editar campos desta etapa"
+   pra renomear/recolorir/excluir uma já existente. */
+const NEW_STAGE_DEFAULTS_COLOR = "#64748B";
+
+function slugifyStageKeyLocal(label) {
+  return (label || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50) || `etapa_${Date.now().toString(36)}`;
+}
+
+function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
+  const [name, setName]   = useState("");
+  const [color, setColor] = useState(NEW_STAGE_DEFAULTS_COLOR);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let key = slugifyStageKeyLocal(name);
+      let suffix = 1;
+      while (existingKeys.includes(key)) key = `${slugifyStageKeyLocal(name)}_${suffix++}`;
+      await onAdd({ stageKey: key, name: name.trim(), color, orderIdx: nextOrderIdx, terminal: false, won: false, lost: false });
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao criar etapa.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "var(--shadow-pop)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova etapa</div>
+          <button type="button" onClick={onClose}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" }}>
+            Nome da etapa
+          </label>
+          <div className="flex items-center gap-2.5" style={{ marginBottom: 18 }}>
+            <StageColorPicker value={color} onChange={setColor} size={38} />
+            <input autoFocus type="text" placeholder="Ex.: Aprovação Jurídica"
+              value={name} onChange={e => setName(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+          </div>
+          {error && (
+            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+          )}
+          <button type="submit" disabled={saving || !name.trim()}
+            className="w-full font-semibold py-2.5 rounded-xl text-sm"
+            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            {saving ? "Criando…" : "Criar etapa"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main view ───────────────────────────────────────────────── */
 export function EntregasView({ user, users = [], notifyMentions }) {
   const location = useLocation();
@@ -674,17 +737,23 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const trailingRef = useRef(null);
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
 
-  // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables"),
-  // editáveis via RHStageListManager — mesmo padrão do RHOnboardingView.
+  // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables").
+  // "Editar etapas" (lista separada) foi consolidado dentro de "Editar
+  // campos desta etapa": criar/reordenar/excluir agora vivem no próprio
+  // board — "+ Nova etapa" no fim do Kanban, reordenar arrastando a coluna,
+  // excluir dentro de "Opções Avançadas" desse painel (ver
+  // RHStageFieldsPanel/StageAdvancedModal). Piloto desse padrão de
+  // navegação; os outros 8 boards continuam com "Editar etapas" por ora.
   // Normalizamos pro shape que o resto do arquivo (colunas, badges,
   // DeliverableKanbanCard) já espera: { id, name, color, sla, terminal }.
-  const { stages: dbStages, loading: loadingStages } = useRHPipelineStages("marketing_deliverables");
+  const { stages: dbStages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("marketing_deliverables");
   const kanbanStages = useMemo(
     () => dbStages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, sla: s.slaDays, terminal: s.terminal })),
     [dbStages]
   );
-  const [stageEditorOpen, setStageEditorOpen] = useState(false);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
+  const [addingStage, setAddingStage] = useState(false);
+  const [draggedColumnKey, setDraggedColumnKey] = useState(null);
 
   const usersById = useUsersById(users);
 
@@ -747,16 +816,16 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   // asterisco visual, confirmado ao vivo que não travava nada. Mesmo padrão
   // do attemptStageChange do Pipeline de CRM (CRMView.jsx), mas lendo os
   // campos via useRHStageFields("marketing_deliverables") — Entregas não usa
-  // a tabela antiga pipeline_stage_fields.
+  // a tabela antiga pipeline_stage_fields. Único caminho de validação desde
+  // 20260774/775 (o formulário fixo STAGE_FIELDS que existia em paralelo,
+  // com sua própria checagem separada, foi unificado nesse sistema).
   const attemptStageChange = useCallback(async (itemId, toStage) => {
     const item = deliverables.find(d => d.id === itemId);
     if (!item) return false;
     const fields = stageFields.getFields(item.stage);
     const missing = getMissingRequiredFields(fields, item.customFields || {});
-    const missingStatic = getMissingStaticFields(item.stage, item.stageData);
-    if (missing.length > 0 || missingStatic.length > 0) {
-      const labels = [...missing.map(f => f.label), ...missingStatic.map(f => f.label)];
-      setStageError(`Não dá pra mover "${item.title}": preencha antes — ${labels.join(", ")}.`);
+    if (missing.length > 0) {
+      setStageError(`Não dá pra mover "${item.title}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
       return false;
     }
     setStageError(null);
@@ -779,6 +848,27 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     if (draggedItem.stage !== toStage) await attemptStageChange(draggedItem.id, toStage);
     setDraggedItem(null); setDragOverStage(null);
   }, [draggedItem, canWrite, attemptStageChange]);
+
+  // Reordenar colunas arrastando o cabeçalho — canal de drag separado do
+  // drag-and-drop de cards acima (draggedItem), pra um não interferir no
+  // outro. Substitui o drag-reorder que antes só existia dentro do modal
+  // "Editar etapas" (ver comentário acima de kanbanStages).
+  const handleColumnDragEnd = useCallback(() => setDraggedColumnKey(null), []);
+  const handleColumnDrop = useCallback((targetStageKey) => {
+    const draggedKey = draggedColumnKey;
+    setDraggedColumnKey(null);
+    if (!draggedKey || draggedKey === targetStageKey) return;
+    const order = kanbanStages.map(s => s.id);
+    const fromIdx = order.indexOf(draggedKey);
+    const toIdx   = order.indexOf(targetStageKey);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const nextOrder = [...order];
+    nextOrder.splice(fromIdx, 1);
+    nextOrder.splice(toIdx, 0, draggedKey);
+    const dbIdByKey = new Map(dbStages.map(s => [s.stageKey, s.id]));
+    const orderedIds = nextOrder.map(k => dbIdByKey.get(k)).filter(Boolean);
+    if (orderedIds.length === nextOrder.length) reorderStages(orderedIds);
+  }, [draggedColumnKey, kanbanStages, dbStages, reorderStages]);
 
   const handleQuickAdd = useCallback(async (item) => { await createDeliverable(item); }, [createDeliverable]);
 
@@ -866,19 +956,6 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela"     />
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
           </div>
-          {/* Editar etapas */}
-          {canWrite && (
-            <button
-              onClick={() => setStageEditorOpen(true)}
-              title="Editar etapas do Kanban"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
-            >
-              <Pencil size={13} />
-              Editar etapas
-            </button>
-          )}
           {/* Export CSV */}
           <button
             onClick={() => exportCSV(filtered, kanbanStages)}
@@ -1046,6 +1123,16 @@ export function EntregasView({ user, users = [], notifyMentions }) {
               </div>
             );
           })}
+          {canWrite && (
+            <button
+              onClick={() => setAddingStage(true)}
+              className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+            >
+              <Plus size={13} />
+              Nova etapa
+            </button>
+          )}
         </div>
 
         {/* Desktop kanban: horizontal scroll */}
@@ -1064,43 +1151,57 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     className="flex flex-col rounded-lg transition-all duration-150"
                     style={{ width: 272, minWidth: 272, overflow: "hidden", background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
                     {/* Cabeçalho encostado no topo da coluna, sem gap/sombra
-                        (Redesign v2) — ver CRMView.jsx pro mesmo padrão. */}
-                    <KanbanColumnHeader
-                      color={stage.color}
-                      name={stage.name}
-                      count={stageItems.length}
-                      bandHeight={4}
-                      letterSpacing="normal"
-                      nameColor={stage.color}
-                      nameFontSize={14}
-                      nameFontWeight={700}
-                      uppercase={false}
-                      countFontSize={12}
-                      actions={<>
-                        {canWrite && (
-                          <button onClick={() => setFieldEditorStage(stage)}
-                            className="flex items-center justify-center rounded-md transition-colors"
-                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                            title="Editar campos desta etapa">
-                            <Settings2 size={13} />
-                          </button>
-                        )}
-                        {canWrite && !stage.terminal && (
-                          <button onClick={() => setQuickAddStage(stage.id)}
-                            className="flex items-center justify-center rounded-md transition-colors"
-                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                            title="Adicionar entrega">
-                            <Plus size={14} />
-                          </button>
-                        )}
-                      </>}
+                        (Redesign v2) — ver CRMView.jsx pro mesmo padrão.
+                        Arrastável pra reordenar etapas (substitui o
+                        drag-reorder que só existia dentro de "Editar
+                        etapas") — canal de drag separado do card
+                        (draggedColumnKey vs draggedItem), então soltar um
+                        card aqui continua funcionando normalmente. */}
+                    <div
+                      draggable={canWrite}
+                      onDragStart={() => canWrite && setDraggedColumnKey(stage.id)}
+                      onDragEnd={handleColumnDragEnd}
+                      onDragOver={e => { if (draggedColumnKey) { e.preventDefault(); e.stopPropagation(); } }}
+                      onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.id) { e.stopPropagation(); handleColumnDrop(stage.id); } }}
+                      style={{ cursor: canWrite ? "grab" : "default" }}
                     >
-                      {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
-                    </KanbanColumnHeader>
+                      <KanbanColumnHeader
+                        color={stage.color}
+                        name={stage.name}
+                        count={stageItems.length}
+                        bandHeight={4}
+                        letterSpacing="normal"
+                        nameColor={stage.color}
+                        nameFontSize={14}
+                        nameFontWeight={700}
+                        uppercase={false}
+                        countFontSize={12}
+                        actions={<>
+                          {canWrite && (
+                            <button onClick={() => setFieldEditorStage(stage)}
+                              className="flex items-center justify-center rounded-md transition-colors"
+                              style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                              title="Editar campos desta etapa">
+                              <Settings2 size={13} />
+                            </button>
+                          )}
+                          {canWrite && !stage.terminal && (
+                            <button onClick={() => setQuickAddStage(stage.id)}
+                              className="flex items-center justify-center rounded-md transition-colors"
+                              style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                              title="Adicionar entrega">
+                              <Plus size={14} />
+                            </button>
+                          )}
+                        </>}
+                      >
+                        {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
+                      </KanbanColumnHeader>
+                    </div>
 
                     <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       {stageItems.length === 0 ? (
@@ -1145,6 +1246,19 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                   </div>
                 );
               })}
+              {canWrite && (
+                <button
+                  onClick={() => setAddingStage(true)}
+                  title="Nova etapa"
+                  className="flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-xs font-semibold shrink-0"
+                  style={{ width: 140, height: 64, borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                >
+                  <Plus size={16} />
+                  Nova etapa
+                </button>
+              )}
             </div>
           </KanbanBoardScrollArea>
         </div>
@@ -1205,19 +1319,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       />
     )}
 
-    {/* Editor de etapas do Kanban (rh_pipeline_stages, domain="marketing_deliverables") */}
-    {canWrite && (
-      <RHStageListManager
-        open={stageEditorOpen}
-        onClose={() => setStageEditorOpen(false)}
-        domain="marketing_deliverables"
-        domainLabel="Entregas de Marketing"
-        records={deliverables}
-        stageField="stage"
-      />
-    )}
-
-    {/* Editor de campos customizados por etapa (rh_pipeline_stage_fields) */}
+    {/* Editor de campos customizados por etapa (rh_pipeline_stage_fields) —
+        "Opções Avançadas" dentro dele também cobre renomear/recolorir/SLA/
+        excluir a etapa (records+stageField habilitam a exclusão guardada
+        por registro ativo). Substitui o antigo "Editar etapas" separado. */}
     {canWrite && (
       <RHStageFieldsPanel
         open={!!fieldEditorStage}
@@ -1225,6 +1330,17 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         domain="marketing_deliverables"
         stageKey={fieldEditorStage?.id}
         stageName={fieldEditorStage?.name}
+        records={deliverables}
+        stageField="stage"
+      />
+    )}
+
+    {addingStage && (
+      <NewStageModal
+        existingKeys={dbStages.map(s => s.stageKey)}
+        nextOrderIdx={dbStages.length}
+        onAdd={addStage}
+        onClose={() => setAddingStage(false)}
       />
     )}
 

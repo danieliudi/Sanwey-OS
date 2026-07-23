@@ -418,6 +418,7 @@ export function StageFieldsPanel({
   automationCount = 0,
   cardPreview = null,  // { selected, catalog, max, onToggle(key), busy }
   onSaveStage = null,  // async (patch) — habilita "Opções Avançadas"
+  onDeleteStage = null, // async () — habilita "Excluir esta etapa" dentro de Opções Avançadas
   showProbability = false,
 }) {
   const [addingType, setAddingType] = useState(null);
@@ -732,6 +733,7 @@ export function StageFieldsPanel({
           accent={accent}
           showProbability={showProbability}
           onSave={onSaveStage}
+          onDelete={onDeleteStage ? async () => { await onDeleteStage(); onClose(); } : undefined}
         />
       )}
     </>
