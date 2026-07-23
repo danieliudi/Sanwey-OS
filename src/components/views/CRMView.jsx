@@ -30,7 +30,8 @@ import { hasUnreadLeadComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
-import { KanbanBoardCanvas } from "../shared/KanbanBoardCanvas";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { daysSince } from "../../utils/date";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
@@ -462,12 +463,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // abaixo da dobra, em qualquer tamanho de janela (ver use-available-height.js).
   // trailingRef mede o painel de analytics + texto de dica que vêm depois do
   // board, pra sobrar espaço suficiente pra eles também caberem sem empurrar
-  // a página além da viewport. marginBottom = 36 (16 do respiro original + 20
-  // do padding inferior do KanbanBoardCanvas, que passou a existir DEPOIS do
-  // fim do board e antes do trailingRef) — sem isso a barra de scroll
-  // horizontal do board voltaria a vazar da tela visível.
+  // a página além da viewport. marginBottom = 16, o respiro do próprio
+  // KanbanBoardScrollArea (pb-4) — sem isso a barra de scroll horizontal do
+  // board voltaria a vazar da tela visível.
   const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(36, [], trailingRef);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
 
   // Mesma regra de permissão do botão de excluir dentro do LeadDetailDrawer
   // (canDelete) — reaproveitada aqui pro atalho de excluir direto no "..."
@@ -653,12 +653,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       </AppToast>
     )}
     <div className="space-y-5">
-      {/* Toolbar: título + view-toggle + filtros + ações, tudo dentro de um
-          único container elevado (mesma convenção de card com sombra usada
-          em ExecutiveDashboard/ClientsManager/etc. — rounded-xl + border +
-          shadow-card; ver KanbanBoardCanvas.jsx pro canvas do board logo
-          abaixo) — antes era texto/botões soltos direto na página. */}
-      <div className="rounded-xl border p-4 flex items-center justify-between flex-wrap gap-3" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
+      {/* Toolbar: título + view-toggle + filtros + ações, dentro da barra de
+          topo chapada e de ponta a ponta (ver KanbanBoardHeader.jsx) — o
+          card arredondado com sombra que existia aqui foi rejeitado (não
+          batia com a referência do Pipefy: barra plana, sem cantos, indo
+          até a borda da janela a partir de `lg`). */}
+      <KanbanBoardHeader>
+        <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             Pipeline
@@ -802,11 +803,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             </button>
           )}
         </div>
-      </div>
+        </div>
+      </KanbanBoardHeader>
 
       {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
         <KanbanFab
           label="Nova oportunidade"
+          leftOffset={288}
           onClick={() => {
             const firstStage = stages.find(s => !s.terminal);
             if (firstStage) setCreateModalStage({ stageId: firstStage.id, stage: firstStage, companyId: isGroupView ? firstValidCompany : activeCompany });
@@ -898,7 +901,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
 
       {/* Desktop kanban: horizontal scroll */}
       <div className="hidden lg:block">
-        <KanbanBoardCanvas scrollRef={boardRef} height={boardHeight}>
+        <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
         <div
           className="flex gap-3 h-full"
           style={{ minWidth: `${stages.length * 284}px` }}
@@ -918,16 +921,21 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 onDragOver={e => handleDragOver(e, stage.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={() => handleDrop(stage.id, colCompanyId)}
-                className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+                className="flex flex-col rounded-xl transition-all duration-150"
                 style={{
                   width: 272,
                   minWidth: 272,
                   height: "100%",
-                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "var(--surface-alt)" : "var(--surface)",
-                  borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "70" : isOver && !canAccept ? "#FECACA" : "var(--border)",
-                  boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
+                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? stage.color + "14" : "var(--surface-alt)",
+                  boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}40` : isOver && !canAccept ? "0 0 0 2px #FECACA" : "none",
                 }}
               >
+                {/* Cabeçalho como bloco branco separado (gap) do corpo
+                    bege/cinza da coluna — a coluna em si é só o "section"
+                    de fundo, o header é a peça que se destaca, como no
+                    Pipefy. */}
+                <div className="p-2 pb-0" style={{ flexShrink: 0 }}>
+                <div className="rounded-lg overflow-hidden" style={{ background: "var(--surface)", boxShadow: "var(--shadow-card)" }}>
                 <KanbanColumnHeader
                   color={stage.color}
                   name={stage.name}
@@ -955,6 +963,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                     </div>
                   )}
                 </KanbanColumnHeader>
+                </div>
+                </div>
 
                 {/* Cards */}
                 <div
@@ -1014,7 +1024,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             );
           })}
         </div>
-        </KanbanBoardCanvas>
+        </KanbanBoardScrollArea>
       </div>
       </>)}
 
