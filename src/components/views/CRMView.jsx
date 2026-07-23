@@ -892,8 +892,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       <div className="hidden lg:block">
         <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
         <div
-          className="flex gap-3 h-full"
-          style={{ minWidth: `${stages.length * 284}px` }}
+          className="flex gap-2 h-full"
+          style={{ minWidth: `${stages.length * 280}px` }}
         >
           {stages.map(stage => {
             const bucket = byStage[stage.id] || { leads: [], total: 0 };
@@ -910,25 +910,30 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 onDragOver={e => handleDragOver(e, stage.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={() => handleDrop(stage.id, colCompanyId)}
-                className="flex flex-col rounded-xl transition-all duration-150"
+                className="flex flex-col rounded-lg transition-all duration-150"
                 style={{
                   width: 272,
                   minWidth: 272,
                   height: "100%",
+                  overflow: "hidden",
                   background: isBlocked ? "#FEF2F2" : isOver && canAccept ? stage.color + "14" : "var(--surface-alt)",
                   boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}40` : isOver && !canAccept ? "0 0 0 2px #FECACA" : "none",
                 }}
               >
-                {/* Cabeçalho como bloco branco separado (gap) do corpo
-                    bege/cinza da coluna — a coluna em si é só o "section"
-                    de fundo, o header é a peça que se destaca, como no
-                    Pipefy. */}
-                <div className="p-2 pb-0" style={{ flexShrink: 0 }}>
-                <div className="rounded-lg overflow-hidden" style={{ background: "var(--surface)", boxShadow: "var(--shadow-card)" }}>
+                {/* Cabeçalho encostado no topo da coluna, sem gap/sombra
+                    (Redesign v2) — cor do nome vira a própria cor da etapa,
+                    igual ao acordeão mobile, seguindo os prints do Pipefy. */}
                 <KanbanColumnHeader
                   color={stage.color}
                   name={stage.name}
                   count={bucket.leads.length}
+                  bandHeight={4}
+                  letterSpacing="normal"
+                  nameColor={stage.color}
+                  nameFontSize={14}
+                  nameFontWeight={700}
+                  uppercase={false}
+                  countFontSize={12}
                   actions={isManager && !stage.terminal && (
                     <button
                       onClick={() => setEditingStage({ stage, companyId: colCompanyId })}
@@ -952,8 +957,6 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                     </div>
                   )}
                 </KanbanColumnHeader>
-                </div>
-                </div>
 
                 {/* Cards */}
                 <div

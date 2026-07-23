@@ -434,7 +434,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
             KanbanBoardScrollArea.jsx). */}
         <div className="hidden lg:block">
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
-            <div className="flex gap-3 h-full" style={{ minWidth: `${stages.length * 284}px` }}>
+            <div className="flex gap-2 h-full" style={{ minWidth: `${stages.length * 280}px` }}>
               {stages.map(stage => {
                 const bucket = byStage[stage.stageKey] || { cases: [], total: 0 };
                 const isOver = dragOverStage === stage.stageKey;
@@ -444,22 +444,29 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                     onDragOver={e => handleDragOver(e, stage.stageKey)}
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.stageKey)}
-                    className="flex flex-col rounded-xl transition-all duration-150"
+                    className="flex flex-col rounded-lg transition-all duration-150"
                     style={{
-                      width: 272, minWidth: 272, height: "100%",
+                      width: 272, minWidth: 272, height: "100%", overflow: "hidden",
                       background: isOver ? stage.color + "14" : "var(--surface-alt)",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none",
                     }}
                   >
-                    <div className="p-2 pb-0" style={{ flexShrink: 0 }}>
-                      <div className="rounded-lg overflow-hidden" style={{ background: "var(--surface)", boxShadow: "var(--shadow-card)" }}>
-                        <KanbanColumnHeader color={stage.color} name={stage.name} count={bucket.cases.length}>
-                          <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", fontWeight: 600 }}>
-                            {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}
-                          </div>
-                        </KanbanColumnHeader>
+                    <KanbanColumnHeader
+                      color={stage.color}
+                      name={stage.name}
+                      count={bucket.cases.length}
+                      bandHeight={4}
+                      letterSpacing="normal"
+                      nameColor={stage.color}
+                      nameFontSize={14}
+                      nameFontWeight={700}
+                      uppercase={false}
+                      countFontSize={12}
+                    >
+                      <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", fontWeight: 600 }}>
+                        {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}
                       </div>
-                    </div>
+                    </KanbanColumnHeader>
 
                     <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ display: "flex", flexDirection: "column", gap: 6, minHeight: 0 }}>
                       {bucket.cases.length === 0 ? (

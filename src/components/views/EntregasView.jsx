@@ -1051,7 +1051,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         {/* Desktop kanban: horizontal scroll */}
         <div className="hidden lg:block">
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
-            <div className="flex gap-3 h-full" style={{ minWidth: `${kanbanStages.length * 284}px` }}>
+            <div className="flex gap-2 h-full" style={{ minWidth: `${kanbanStages.length * 280}px` }}>
               {kanbanStages.map(stage => {
                 const stageItems = filtered.filter(d => d.stage === stage.id);
                 const isOver     = dragOverStage === stage.id;
@@ -1061,17 +1061,21 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     onDragOver={e => handleDragOver(e, stage.id)}
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
-                    className="flex flex-col rounded-xl transition-all duration-150"
-                    style={{ width: 272, minWidth: 272, background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
-                    {/* Cabeçalho como bloco branco separado (gap) do corpo
-                        bege/cinza da coluna — ver CRMView.jsx pro mesmo
-                        padrão no Pipeline. */}
-                    <div className="p-2 pb-0" style={{ flexShrink: 0 }}>
-                    <div className="rounded-lg overflow-hidden" style={{ background: "var(--surface)", boxShadow: "var(--shadow-card)" }}>
+                    className="flex flex-col rounded-lg transition-all duration-150"
+                    style={{ width: 272, minWidth: 272, overflow: "hidden", background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
+                    {/* Cabeçalho encostado no topo da coluna, sem gap/sombra
+                        (Redesign v2) — ver CRMView.jsx pro mesmo padrão. */}
                     <KanbanColumnHeader
                       color={stage.color}
                       name={stage.name}
                       count={stageItems.length}
+                      bandHeight={4}
+                      letterSpacing="normal"
+                      nameColor={stage.color}
+                      nameFontSize={14}
+                      nameFontWeight={700}
+                      uppercase={false}
+                      countFontSize={12}
                       actions={<>
                         {canWrite && (
                           <button onClick={() => setFieldEditorStage(stage)}
@@ -1097,8 +1101,6 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     >
                       {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
                     </KanbanColumnHeader>
-                    </div>
-                    </div>
 
                     <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       {stageItems.length === 0 ? (

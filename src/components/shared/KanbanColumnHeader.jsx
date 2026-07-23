@@ -28,6 +28,15 @@ export function KanbanColumnHeader({
   truncateName = true,
   actions = null,
   children = null,
+  // Props novas (Redesign v2, ver plano do Kanban) — todas opcionais, default
+  // = comportamento de sempre, pra não mudar nada nos 7 boards que ainda não
+  // passaram por essa revisão (Marketing, Compras de Marketing, RH ×5). Só
+  // Venda/Entregas/Pós-venda passam os valores "modo Pipefy".
+  nameColor = "var(--text)",
+  nameFontSize = 11,
+  nameFontWeight = 600,
+  uppercase = true,
+  countFontSize = null,
 }) {
   return (
     <>
@@ -40,8 +49,8 @@ export function KanbanColumnHeader({
       >
         <div className="min-w-0 flex-1">
           <div
-            className="font-semibold flex items-center gap-1.5"
-            style={{ color: "var(--text)", fontSize: 11, letterSpacing, textTransform: "uppercase" }}
+            className="flex items-center gap-1.5"
+            style={{ color: nameColor, fontSize: nameFontSize, fontWeight: nameFontWeight, letterSpacing, textTransform: uppercase ? "uppercase" : "none" }}
           >
             {truncateName ? (
               <span
@@ -53,7 +62,7 @@ export function KanbanColumnHeader({
             ) : (
               name
             )}
-            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({count})</span>
+            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0, ...(countFontSize ? { fontSize: countFontSize } : {}) }}>({count})</span>
           </div>
           {children}
         </div>
