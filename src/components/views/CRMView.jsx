@@ -30,6 +30,7 @@ import { hasUnreadLeadComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardCanvas } from "../shared/KanbanBoardCanvas";
 import { daysSince } from "../../utils/date";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
@@ -461,9 +462,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // abaixo da dobra, em qualquer tamanho de janela (ver use-available-height.js).
   // trailingRef mede o painel de analytics + texto de dica que vêm depois do
   // board, pra sobrar espaço suficiente pra eles também caberem sem empurrar
-  // a página além da viewport.
+  // a página além da viewport. marginBottom = 36 (16 do respiro original + 20
+  // do padding inferior do KanbanBoardCanvas, que passou a existir DEPOIS do
+  // fim do board e antes do trailingRef) — sem isso a barra de scroll
+  // horizontal do board voltaria a vazar da tela visível.
   const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  const [boardRef, boardHeight] = useAvailableHeight(36, [], trailingRef);
 
   // Mesma regra de permissão do botão de excluir dentro do LeadDetailDrawer
   // (canDelete) — reaproveitada aqui pro atalho de excluir direto no "..."
@@ -649,8 +653,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       </AppToast>
     )}
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* Toolbar: título + view-toggle + filtros + ações, tudo dentro de um
+          único container elevado (mesma convenção de card com sombra usada
+          em ExecutiveDashboard/ClientsManager/etc. — rounded-xl + border +
+          shadow-card; ver KanbanBoardCanvas.jsx pro canvas do board logo
+          abaixo) — antes era texto/botões soltos direto na página. */}
+      <div className="rounded-xl border p-4 flex items-center justify-between flex-wrap gap-3" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
         <div>
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
             Pipeline
@@ -889,15 +897,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       </div>
 
       {/* Desktop kanban: horizontal scroll */}
-      <div className="hidden lg:block relative">
-        {/* Fade gradient indicating more stages exist to the right */}
-        <div
-          className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
-          style={{
-            background: "linear-gradient(to left, #DEDAD6 0%, transparent 100%)",
-          }}
-        />
-      <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
+      <div className="hidden lg:block">
+        <KanbanBoardCanvas scrollRef={boardRef} height={boardHeight}>
         <div
           className="flex gap-3 h-full"
           style={{ minWidth: `${stages.length * 284}px` }}
@@ -922,7 +923,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   width: 272,
                   minWidth: 272,
                   height: "100%",
-                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "var(--surface-alt)" : "var(--surface-alt)",
+                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? "var(--surface-alt)" : "var(--surface)",
                   borderColor: isBlocked ? "#FECACA" : isOver && canAccept ? stage.color + "70" : isOver && !canAccept ? "#FECACA" : "var(--border)",
                   boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
                 }}
@@ -1013,7 +1014,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             );
           })}
         </div>
-      </div>
+        </KanbanBoardCanvas>
       </div>
       </>)}
 

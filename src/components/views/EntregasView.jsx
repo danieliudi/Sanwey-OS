@@ -30,6 +30,7 @@ import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardCanvas } from "../shared/KanbanBoardCanvas";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -666,9 +667,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const stageFields = useRHStageFields("marketing_deliverables");
   // trailingRef mede o painel de analytics + texto de dica que vêm depois do
   // board, pra sobrar espaço suficiente pra eles também caberem (ver
-  // use-available-height.js).
+  // use-available-height.js). marginBottom = 36 (16 do respiro original + 20
+  // do padding inferior do novo KanbanBoardCanvas, que passou a existir
+  // DEPOIS do fim do board e antes do trailingRef) — sem isso a barra de
+  // scroll horizontal do board voltaria a vazar da tela visível.
   const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  const [boardRef, boardHeight] = useAvailableHeight(36, [], trailingRef);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables"),
   // editáveis via RHStageEditorModal — mesmo padrão do RHOnboardingView.
@@ -814,6 +818,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       </AppToast>
     )}
     <div>
+      {/* Toolbar: título + view-toggle + ações + filtros, tudo dentro de um
+          único container elevado (mesma convenção de card com sombra usada
+          em ExecutiveDashboard/ClientsManager/etc. — rounded-xl + border +
+          shadow-card) — antes era texto/botões soltos direto na página. */}
+      <div className="rounded-xl border p-4 mb-4" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
@@ -873,12 +882,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         </div>
       </div>
 
-      {canWrite && viewMode === "kanban" && (
-        <KanbanFab label="Nova entrega" onClick={() => setQuickAddStage("solicitacao")} />
-      )}
-
       {/* Filter toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <button
           onClick={() => setShowFilters(v => !v)}
           style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "var(--surface-alt)" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
@@ -955,6 +960,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           </>
         )}
       </div>
+      </div>
+
+      {canWrite && viewMode === "kanban" && (
+        <KanbanFab label="Nova entrega" onClick={() => setQuickAddStage("solicitacao")} />
+      )}
 
       {(loading || loadingStages) && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando entregas…</div>}
 
@@ -1035,10 +1045,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         </div>
 
         {/* Desktop kanban: horizontal scroll */}
-        <div className="hidden lg:block relative">
-          <div className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
-            style={{ background: "linear-gradient(to left, var(--bg) 0%, transparent 100%)" }} />
-          <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
+        <div className="hidden lg:block">
+          <KanbanBoardCanvas scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-3 h-full" style={{ minWidth: `${kanbanStages.length * 284}px` }}>
               {kanbanStages.map(stage => {
                 const stageItems = filtered.filter(d => d.stage === stage.id);
@@ -1050,7 +1058,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "100%", flexShrink: 0 }}>
+                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "100%", flexShrink: 0 }}>
                     <KanbanColumnHeader
                       color={stage.color}
                       name={stage.name}
@@ -1125,7 +1133,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                 );
               })}
             </div>
-          </div>
+          </KanbanBoardCanvas>
         </div>
       </>)}
 
