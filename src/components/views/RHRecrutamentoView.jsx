@@ -2716,7 +2716,17 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const [addCandidatoStage, setAddCandidatoStage] = useState(null);
   const [triagemOpen, setTriagemOpen]       = useState(false);
   const [hiringCandidato, setHiringCandidato] = useState(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, boardMode]);
+  // O board (boardRef) fica escondido atrás do "Carregando…" enquanto
+  // loading/vagaStagesLoading/candStagesLoading são true (ver render mais
+  // abaixo) — nesse primeiro efeito, `el` é null e o hook sai cedo (não
+  // arma ResizeObserver nem listener de resize nenhum). viewMode/boardMode
+  // não mudam quando o carregamento termina, então sem essas 3 flags aqui
+  // o efeito nunca re-executava depois que o board finalmente montava, e
+  // `boardHeight` ficava travado no fallback (480) pelo resto da sessão —
+  // board sempre mais baixo que o espaço disponível (achado ao vivo, este
+  // era exatamente o gap reportado). Mesma lógica documentada no próprio
+  // hook ("loading terminando" como exemplo de dep).
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, boardMode, loading, vagaStagesLoading, candStagesLoading]);
 
   const { viewedAt: vagaViewedAt, markViewed: markVagaViewed } = useRecordViews("rh_vagas", user?.id);
   const { viewedAt: candViewedAt, markViewed: markCandViewed } = useRecordViews("rh_candidatos", user?.id);
