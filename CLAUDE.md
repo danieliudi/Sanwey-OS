@@ -133,3 +133,30 @@ se já existe como dado configurável:
 Se o que você precisa cabe em uma dessas, é dado — não código novo, e
 certamente não schema novo. Mudança de schema real (nova tabela/coluna) exige
 confirmação explícita do Daniel antes de aplicar, sempre.
+
+## 6. Padrões de página — Tabela, Kanban, Cards
+
+Decidido com o Daniel em 23/07/2026 — spec completa, com `arquivo:linha` de
+cada achado e a especificação visual por estado, em
+`docs/design-spec-padroes-de-pagina.md`. Três formas de mostrar dados que se
+repetem pela plataforma; página nova (ou reescrita) que for fundamentalmente
+uma dessas três **segue o padrão do doc, não inventa uma variante**:
+
+| Padrão | Referência | Quando usar |
+|---|---|---|
+| Tabela com filtro | `RHFuncionariosView.jsx` | lista de registros com muitas colunas/comparação lado a lado |
+| Kanban | ver regra 2 acima — já maduro, 9 boards | fluxo com etapas/estados que um registro atravessa |
+| Grade de cards | novo — spec completa no doc acima | catálogo de registros (card = link) ou seletor de opções (card = checkbox) — uma variante só do mesmo componente, comportamento adaptado |
+
+Componentes que **ainda não existem** e precisam ser extraídos antes de
+migrar qualquer página pro padrão (regra 4 — já passaram do limite de 3ª
+ocorrência, diagnóstico completo no doc): `Tabs` (reescrito 4×), `FilterBar`
+(busca+filtro reescrito 4×+), `Card`/`EntityCard` (grade ad hoc em 7+ telas).
+Adotar também o `Modal.jsx` já existente (`src/components/ui/Modal.jsx`, 0
+usos confirmados hoje) em vez de overlay `position:fixed;inset:0` na mão.
+
+Decisões já fechadas com o Daniel (não reabrir sem motivo novo — ver "Notas
+de decisão" no doc pra racional completo): densidade de card é toggle
+grade/lista controlado pelo usuário, não fixo por página nem única pra tudo;
+faixa de resumo (`StatCard`) no topo de toda página de catálogo com métrica
+óbvia; catálogo e seletor são uma variante só do mesmo componente de card.
