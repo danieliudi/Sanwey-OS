@@ -809,7 +809,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
         <KanbanFab
           label="Nova oportunidade"
-          leftOffset={288}
+          flush
           onClick={() => {
             const firstStage = stages.find(s => !s.terminal);
             if (firstStage) setCreateModalStage({ stageId: firstStage.id, stage: firstStage, companyId: isGroupView ? firstValidCompany : activeCompany });

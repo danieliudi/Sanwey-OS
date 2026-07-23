@@ -967,7 +967,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       </KanbanBoardHeader>
 
       {canWrite && viewMode === "kanban" && (
-        <KanbanFab label="Nova entrega" leftOffset={288} onClick={() => setQuickAddStage("solicitacao")} />
+        <KanbanFab label="Nova entrega" flush onClick={() => setQuickAddStage("solicitacao")} />
       )}
 
       {(loading || loadingStages) && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando entregas…</div>}
