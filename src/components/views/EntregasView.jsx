@@ -1062,7 +1062,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-lg transition-all duration-150"
-                    style={{ width: 272, minWidth: 272, overflow: "hidden", background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
+                    style={{ width: 272, minWidth: 272, overflow: "hidden", border: "1px solid var(--border)", background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
                     {/* Cabeçalho encostado no topo da coluna, sem gap/sombra
                         (Redesign v2) — ver CRMView.jsx pro mesmo padrão. */}
                     <KanbanColumnHeader

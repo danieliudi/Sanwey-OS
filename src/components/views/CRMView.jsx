@@ -916,6 +916,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   minWidth: 272,
                   height: "100%",
                   overflow: "hidden",
+                  border: "1px solid var(--border)",
                   background: isBlocked ? "#FEF2F2" : isOver && canAccept ? stage.color + "14" : "var(--surface-alt)",
                   boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}40` : isOver && !canAccept ? "0 0 0 2px #FECACA" : "none",
                 }}

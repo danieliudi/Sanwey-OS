@@ -306,6 +306,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
                   minWidth: 272,
                   height: "100%",
                   overflow: "hidden",
+                  border: "1px solid var(--border)",
                   background: isOver ? color + "14" : "var(--surface-alt)",
                   boxShadow: isOver ? `0 0 0 2px ${color}30` : "none",
                 }}>

@@ -150,10 +150,10 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
     display: "flex",
     flexDirection: "column",
     // Sem overflow:hidden aqui — o botão de recolher (right:-11, encostado
-    // na borda) e o tooltip do item em modo trilho (left:100%) precisam
-    // sair da caixa da sidebar; `nav` logo abaixo já cuida do próprio
-    // scroll interno (overflowY auto / overflowX hidden), então nada aqui
-    // depende do pai recortar conteúdo.
+    // na borda) precisa sair da caixa da sidebar; `nav` logo abaixo já cuida
+    // do próprio scroll interno (overflowY auto / overflowX hidden). O
+    // tooltip do item em modo trilho é position:fixed (ver NavItem) — não
+    // depende de nenhum overflow daqui.
     zIndex: isMobile ? 50 : 40,
     ...(isMobile
       ? {
@@ -412,10 +412,20 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
 // nenhum gesto/atraso extra atrapalhando.
 function NavItem({ icon: Icon, label, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
   const [hovered, setHovered] = useState(false);
+  // Âncora do tooltip em coordenadas de viewport. O balão era absolute
+  // (left:100%) dentro do <nav>, mas o nav tem overflowX:hidden pro scroll
+  // interno — o balão saía da caixa e era recortado na borda da sidebar
+  // (bug reportado com print: tooltip escondido atrás do conteúdo).
+  // position:fixed escapa de qualquer overflow de ancestral.
+  const [tip, setTip] = useState(null);
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        setTip({ x: r.right + 10, y: r.top + r.height / 2 });
+        setHovered(true);
+      }}
       onMouseLeave={() => setHovered(false)}
       onDragOver={onRowDragOver}
       onDrop={onRowDrop}
@@ -457,10 +467,10 @@ function NavItem({ icon: Icon, label, active, onClick, rail, isDragOver, onIconD
         </span>
       )}
       {!rail && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
-      {rail && hovered && (
+      {rail && hovered && tip && (
         <span
           style={{
-            position: "absolute", left: "100%", top: "50%", transform: "translateY(-50%)", marginLeft: 10,
+            position: "fixed", left: tip.x, top: tip.y, transform: "translateY(-50%)",
             background: "var(--text)", color: "var(--bg)", fontSize: 12, fontWeight: 600,
             padding: "5px 10px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "var(--shadow-pop)", zIndex: 60,
             pointerEvents: "none",

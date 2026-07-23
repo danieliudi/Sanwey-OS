@@ -552,7 +552,7 @@ function TreinamentoBoardColumn({
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
       className="flex flex-col rounded-lg transition-all duration-150"
-      style={{ width: 272, minWidth: 272, height: boardHeight, overflow: "hidden", background: "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none" }}
+      style={{ width: 272, minWidth: 272, height: boardHeight, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none" }}
     >
       <KanbanColumnHeader
         color={stage.color}

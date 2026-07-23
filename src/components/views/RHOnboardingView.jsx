@@ -245,6 +245,7 @@ function OnboardingKanbanColumn({
       style={{
         width: 272, minWidth: 272,
         overflow: "hidden",
+        border: "1px solid var(--border)",
         background: isDragOver ? stage.color + "14" : "var(--surface-alt)",
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
         height: boardHeight,

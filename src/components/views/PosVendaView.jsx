@@ -449,6 +449,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                     className="flex flex-col rounded-lg transition-all duration-150"
                     style={{
                       width: 272, minWidth: 272, height: "100%", overflow: "hidden",
+                      border: "1px solid var(--border)",
                       background: isOver ? stage.color + "14" : "var(--surface-alt)",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none",
                     }}

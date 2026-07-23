@@ -1167,6 +1167,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       minWidth: 272,
                       height: "100%",
                       overflow: "hidden",
+                      border: "1px solid var(--border)",
                       background: "var(--surface-alt)",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "none",
                     }}
