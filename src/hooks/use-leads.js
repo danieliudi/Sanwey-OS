@@ -56,6 +56,7 @@ function rowToLead(r) {
     isDemo: Boolean(r.is_demo),
     createdBy: r.created_by || null,
     badges: Array.isArray(r.badges) ? r.badges : [],
+    sentToPosvendaAt: r.sent_to_posvenda_at ?? null,
   };
 }
 
@@ -103,6 +104,7 @@ function leadToRow(l, extras = {}) {
     custom_fields: l.customFields && typeof l.customFields === "object" ? l.customFields : {},
     next_follow_up: l.nextFollowUp ?? null,
     client_id: l.clientId ?? null,
+    sent_to_posvenda_at: l.sentToPosvendaAt ?? null,
     ...extras,
   };
 }
@@ -129,6 +131,7 @@ function patchToRow(patch) {
     nextFollowUp: "next_follow_up",
     clientId: "client_id",
     ownerIds: "owner_ids",
+    sentToPosvendaAt: "sent_to_posvenda_at",
   };
   const out = {};
   for (const [k, v] of Object.entries(patch)) {
