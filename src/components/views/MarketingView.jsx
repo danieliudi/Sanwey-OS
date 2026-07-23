@@ -21,6 +21,8 @@ import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -889,8 +891,11 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       </AppToast>
     )}
     <div>
+      {/* Toolbar: título + ações + view-toggle + filtros, dentro da barra de
+          topo chapada e de ponta a ponta (ver KanbanBoardHeader.jsx). */}
+      <KanbanBoardHeader className="mb-4">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
             <Megaphone size={22} style={{ color: "var(--text)" }} />
@@ -983,15 +988,8 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         </div>
       </div>
 
-      {viewMode === "kanban" && canWrite && (
-        <KanbanFab label="Nova campanha" onClick={() => setQuickAddStage("briefing")} />
-      )}
-
-      {/* KPI bar */}
-      {viewMode === "kanban" && <KpiBar campaigns={filteredCampaigns} />}
-
       {/* Filters */}
-      <div className="flex items-center gap-2 flex-wrap mb-4">
+      <div className="flex items-center gap-2 flex-wrap">
         <select
           value={filterCompany}
           onChange={e => setFilterCompany(e.target.value)}
@@ -1026,6 +1024,14 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           Destaques
         </button>
       </div>
+      </KanbanBoardHeader>
+
+      {viewMode === "kanban" && canWrite && (
+        <KanbanFab label="Nova campanha" onClick={() => setQuickAddStage("briefing")} />
+      )}
+
+      {/* KPI bar */}
+      {viewMode === "kanban" && <KpiBar campaigns={filteredCampaigns} />}
 
       {/* Loading state */}
       {(loading || loadingStages) && (
@@ -1137,15 +1143,11 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         </div>
 
         {/* Desktop kanban: horizontal scroll */}
-        <div className="hidden lg:block relative">
-          <div
-            className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
-            style={{ background: "linear-gradient(to left, var(--bg) 0%, transparent 100%)" }}
-          />
-          <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
+        <div className="hidden lg:block">
+          <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div
-              className="flex gap-3 h-full"
-              style={{ minWidth: `${kanbanStages.length * 284}px` }}
+              className="flex gap-2 h-full"
+              style={{ minWidth: `${kanbanStages.length * 280}px` }}
             >
               {kanbanStages.map(stage => {
                 const stageCampaigns = filteredCampaigns.filter(c => c.stage === stage.id);
@@ -1159,21 +1161,27 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                     onDragOver={e => handleDragOver(e, stage.id)}
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
-                    className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+                    className="flex flex-col rounded-lg transition-all duration-150"
                     style={{
                       width: 272,
                       minWidth: 272,
-                      background: isOver ? "var(--surface-alt)" : "var(--surface-alt)",
-                      borderColor: isOver ? stage.color + "70" : "var(--border)",
-                      boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
                       height: "100%",
-                      flexShrink: 0,
+                      overflow: "hidden",
+                      background: "var(--surface-alt)",
+                      boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "none",
                     }}
                   >
                     <KanbanColumnHeader
                       color={stage.color}
                       name={stage.name}
                       count={count}
+                      bandHeight={4}
+                      letterSpacing="normal"
+                      nameColor={stage.color}
+                      nameFontSize={14}
+                      nameFontWeight={700}
+                      uppercase={false}
+                      countFontSize={12}
                       actions={<>
                         {canWrite && !stage.terminal && (
                           <button
@@ -1254,7 +1262,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                 );
               })}
             </div>
-          </div>
+          </KanbanBoardScrollArea>
         </div>
       </>)}
 

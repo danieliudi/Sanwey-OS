@@ -28,6 +28,8 @@ import { EmptyState } from "../ui/EmptyState";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 
 // ── Documento obrigatório por tipo de licença ────────────────────────────────
 // Pesquisa de mercado (Convenia/Gusto/Personio) + prática CLT: alguns tipos
@@ -357,20 +359,27 @@ function FeriasCardBody({ req, canWrite, onAprovar, onRecusar, busy }) {
 function FeriasKanbanColumn({
   stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteRequest,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
-  canWrite, onEditFields, getCompleteness, getUnread, onAprovar, onRecusar, busyId, boardHeight,
+  canWrite, onEditFields, getCompleteness, getUnread, onAprovar, onRecusar, busyId,
 }) {
   return (
     <div
       onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
-      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-      style={{ width: 272, minWidth: 272, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: boardHeight }}
+      className="flex flex-col rounded-lg transition-all duration-150"
+      style={{ width: 272, minWidth: 272, height: "100%", overflow: "hidden", background: isDragOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none" }}
     >
       <KanbanColumnHeader
         color={stage.color}
         name={stage.name}
         count={reqList.length}
+        bandHeight={4}
+        letterSpacing="normal"
+        nameColor={stage.color}
+        nameFontSize={14}
+        nameFontWeight={700}
+        uppercase={false}
+        countFontSize={12}
         actions={canWrite && (
           <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
             <Settings2 size={13} />
@@ -939,26 +948,28 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
 
   return (
     <div>
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <CalendarCheck size={22} style={{ color: "var(--text)" }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Férias & Licenças</h1>
+      <KanbanBoardHeader className="mb-4">
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <CalendarCheck size={22} style={{ color: "var(--text)" }} />
+              <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Férias & Licenças</h1>
+            </div>
+            <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Gestão de solicitações de afastamento</p>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Gestão de solicitações de afastamento</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
-            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
-            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+              <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
+              <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
+              <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+            </div>
+            {canWrite && (
+              <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
+            )}
+            <Button size="sm" icon={Plus} onClick={() => setShowSolicitar(true)}>Solicitar</Button>
           </div>
-          {canWrite && (
-            <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
-          )}
-          <Button size="sm" icon={Plus} onClick={() => setShowSolicitar(true)}>Solicitar</Button>
         </div>
-      </div>
+      </KanbanBoardHeader>
 
       <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
         {[
@@ -1030,32 +1041,35 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
             )}
             emptyLabel="Nada aqui"
           />
-          <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
-            {stages.map((stage) => (
-              <FeriasKanbanColumn
-                key={stage.id}
-                stage={stage}
-                stages={stages}
-                reqList={reqByStage[stage.stageKey] || []}
-                onCardClick={(r) => setDrawerReqId(r.id)}
-                onDragStart={setDraggedId}
-                onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
-                onMoveToStage={handleMoveToStage}
-                onDeleteRequest={canWrite ? deleteRequest : undefined}
-                isDragOver={dragOverStageKey === stage.stageKey}
-                onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
-                onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
-                onColumnDrop={handleColumnDrop}
-                canWrite={canWrite}
-                onEditFields={setFieldEditorStage}
-                getCompleteness={getReqCompleteness}
-                getUnread={(r) => hasUnreadRHComment(r, viewedAt, currentUser?.id)}
-                onAprovar={handleAprovar}
-                onRecusar={handleRecusar}
-                busyId={busyId}
-                boardHeight={boardHeight}
-              />
-            ))}
+          <div className="hidden lg:block">
+            <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
+              <div className="flex gap-2 h-full" style={{ minWidth: `${stages.length * 280}px` }}>
+                {stages.map((stage) => (
+                  <FeriasKanbanColumn
+                    key={stage.id}
+                    stage={stage}
+                    stages={stages}
+                    reqList={reqByStage[stage.stageKey] || []}
+                    onCardClick={(r) => setDrawerReqId(r.id)}
+                    onDragStart={setDraggedId}
+                    onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
+                    onMoveToStage={handleMoveToStage}
+                    onDeleteRequest={canWrite ? deleteRequest : undefined}
+                    isDragOver={dragOverStageKey === stage.stageKey}
+                    onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
+                    onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
+                    onColumnDrop={handleColumnDrop}
+                    canWrite={canWrite}
+                    onEditFields={setFieldEditorStage}
+                    getCompleteness={getReqCompleteness}
+                    getUnread={(r) => hasUnreadRHComment(r, viewedAt, currentUser?.id)}
+                    onAprovar={handleAprovar}
+                    onRecusar={handleRecusar}
+                    busyId={busyId}
+                  />
+                ))}
+              </div>
+            </KanbanBoardScrollArea>
           </div>
           <KanbanFab label="Solicitar" onClick={() => setShowSolicitar(true)} />
         </>

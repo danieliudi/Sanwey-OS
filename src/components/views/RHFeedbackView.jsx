@@ -35,6 +35,8 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 
 // Avaliadores elegíveis (FASE 5) — mesmo critério admin/RH usado pela ramificação
 // de acesso amplo da RLS rh_avaliacoes_read (admin/gerente_rh/rh enxergam tudo).
@@ -650,19 +652,26 @@ function FeedbackKanbanColumn({
       onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
-      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+      className="flex flex-col rounded-lg transition-all duration-150"
       style={{
         width: 272, minWidth: 272,
-        background: "var(--surface-alt)",
-        borderColor: isDragOver ? stage.color + "70" : "var(--border)",
-        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
         height: boardHeight,
+        overflow: "hidden",
+        background: isDragOver ? stage.color + "14" : "var(--surface-alt)",
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
       }}
     >
       <KanbanColumnHeader
         color={stage.color}
         name={stage.name}
         count={feedbackList.length}
+        bandHeight={4}
+        letterSpacing="normal"
+        nameColor={stage.color}
+        nameFontSize={14}
+        nameFontWeight={700}
+        uppercase={false}
+        countFontSize={12}
         actions={canWrite && (
           <button
             onClick={() => onEditFields(stage)}
@@ -1460,29 +1469,31 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   // ── RH: Kanban completo ────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <MessageSquare size={22} style={{ color: "var(--text)" }} />
-            <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Avaliação de Desempenho</h1>
+      <KanbanBoardHeader>
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <MessageSquare size={22} style={{ color: "var(--text)" }} />
+              <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Avaliação de Desempenho</h1>
+            </div>
+            <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Ciclos de avaliação e histórico</p>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Ciclos de avaliação e histórico</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
-            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
-            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
-            <ViewToggleButton active={viewMode === "lembretes"} onClick={() => setViewMode("lembretes")} icon={BellRing} label="Lembretes" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+              <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
+              <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
+              <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+              <ViewToggleButton active={viewMode === "lembretes"} onClick={() => setViewMode("lembretes")} icon={BellRing} label="Lembretes" />
+            </div>
+            {canWrite && (
+              <>
+                <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
+                <Button size="sm" icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
+              </>
+            )}
           </div>
-          {canWrite && (
-            <>
-              <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
-              <Button size="sm" icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
-            </>
-          )}
         </div>
-      </div>
+      </KanbanBoardHeader>
 
       <AvaliacaoStats feedbacks={feedbacks} />
 
@@ -1534,30 +1545,34 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
             )}
             emptyLabel="Nada aqui"
           />
-          <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
-            {stages.map((stage) => (
-              <FeedbackKanbanColumn
-                key={stage.id}
-                stage={stage}
-                stages={stages}
-                feedbackList={feedbackByStage[stage.stageKey] || []}
-                colaboradoresById={colaboradoresById}
-                onCardClick={(f) => setDrawerFeedbackId(f.id)}
-                onDragStart={handleCardDragStart}
-                onDragEnd={handleCardDragEnd}
-                onMoveToStage={handleStageChange}
-                onDeleteFeedback={canWrite ? deleteFeedback : undefined}
-                isDragOver={dragOverStageKey === stage.stageKey}
-                onColumnDragOver={handleColumnDragOver}
-                onColumnDragLeave={handleColumnDragLeave}
-                onColumnDrop={handleColumnDrop}
-                canWrite={canWrite}
-                onEditFields={setFieldEditorStage}
-                getCompleteness={getFeedbackCompleteness}
-                getUnread={(f) => hasUnreadRHComment(f, viewedAt, currentUser?.id)}
-                boardHeight={boardHeight}
-              />
-            ))}
+          <div className="hidden lg:block">
+            <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
+              <div className="flex gap-2 h-full" style={{ minWidth: `${stages.length * 280}px` }}>
+                {stages.map((stage) => (
+                  <FeedbackKanbanColumn
+                    key={stage.id}
+                    stage={stage}
+                    stages={stages}
+                    feedbackList={feedbackByStage[stage.stageKey] || []}
+                    colaboradoresById={colaboradoresById}
+                    onCardClick={(f) => setDrawerFeedbackId(f.id)}
+                    onDragStart={handleCardDragStart}
+                    onDragEnd={handleCardDragEnd}
+                    onMoveToStage={handleStageChange}
+                    onDeleteFeedback={canWrite ? deleteFeedback : undefined}
+                    isDragOver={dragOverStageKey === stage.stageKey}
+                    onColumnDragOver={handleColumnDragOver}
+                    onColumnDragLeave={handleColumnDragLeave}
+                    onColumnDrop={handleColumnDrop}
+                    canWrite={canWrite}
+                    onEditFields={setFieldEditorStage}
+                    getCompleteness={getFeedbackCompleteness}
+                    getUnread={(f) => hasUnreadRHComment(f, viewedAt, currentUser?.id)}
+                    boardHeight={boardHeight}
+                  />
+                ))}
+              </div>
+            </KanbanBoardScrollArea>
           </div>
           {canWrite && <KanbanFab label="Novo feedback" onClick={() => setNovoOpen(true)} />}
         </>

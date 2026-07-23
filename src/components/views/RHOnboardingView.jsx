@@ -38,6 +38,8 @@ import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
 // As etapas vêm de rh_pipeline_stages (domain="onboarding"), editáveis pelo RH
@@ -239,12 +241,12 @@ function OnboardingKanbanColumn({
       onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
-      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+      className="flex flex-col rounded-lg transition-all duration-150"
       style={{
         width: 272, minWidth: 272,
-        background: "var(--surface-alt)",
-        borderColor: isDragOver ? stage.color + "70" : "var(--border)",
-        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
+        overflow: "hidden",
+        background: isDragOver ? stage.color + "14" : "var(--surface-alt)",
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
         height: boardHeight,
       }}
     >
@@ -252,6 +254,13 @@ function OnboardingKanbanColumn({
         color={stage.color}
         name={stage.name}
         count={colaboradoresList.length}
+        bandHeight={4}
+        letterSpacing="normal"
+        nameColor={stage.color}
+        nameFontSize={14}
+        nameFontWeight={700}
+        uppercase={false}
+        countFontSize={12}
         actions={
           <div className="flex items-center gap-1 shrink-0">
             {canWrite && (
@@ -1252,7 +1261,8 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   // ── RH: Kanban completo ────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+      <KanbanBoardHeader className="mb-4">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
             <ClipboardCheck size={22} style={{ color: "var(--text)" }} />
@@ -1285,6 +1295,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           )}
         </div>
       </div>
+      </KanbanBoardHeader>
 
       {!loading && colaboradores.length > 0 && (
         <div className="flex items-stretch gap-3 flex-wrap mb-4">
@@ -1358,34 +1369,38 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
             addLabel="Adicionar colaborador"
             emptyLabel="Ninguém aqui"
           />
-          <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
-            {stages.map((stage) => (
-              <OnboardingKanbanColumn
-                key={stage.id}
-                stage={stage}
-                stages={stages}
-                colaboradoresList={colaboradoresByStage[stage.stageKey] || []}
-                tarefasByColaborador={tarefasByColaborador}
-                vagasById={vagasById}
-                onCardClick={(c) => setDrawerColaboradorId(c.id)}
-                onDragStart={handleCardDragStart}
-                onDragEnd={handleCardDragEnd}
-                onMoveToStage={handleStageChange}
-                onDeleteCard={onboardingRemovedStageKey ? handleRemoveFromOnboarding : undefined}
-                deleteLabel="Remover do onboarding"
-                deleteConfirmMessage={REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE}
-                isDragOver={dragOverStageKey === stage.stageKey}
-                onColumnDragOver={handleColumnDragOver}
-                onColumnDragLeave={handleColumnDragLeave}
-                onColumnDrop={handleColumnDrop}
-                canWrite={canWrite}
-                onEditFields={setFieldEditorStage}
-                getCompleteness={getColaboradorCompleteness}
-                getUnread={(c) => hasUnreadRHComment(c, viewedAt, currentUser?.id)}
-                onAddColaborador={() => setAddColaboradorStage(stage.stageKey)}
-                boardHeight={boardHeight}
-              />
-            ))}
+          <div className="hidden lg:block">
+            <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
+              <div className="flex gap-2" style={{ minWidth: `${stages.length * 280}px` }}>
+                {stages.map((stage) => (
+                  <OnboardingKanbanColumn
+                    key={stage.id}
+                    stage={stage}
+                    stages={stages}
+                    colaboradoresList={colaboradoresByStage[stage.stageKey] || []}
+                    tarefasByColaborador={tarefasByColaborador}
+                    vagasById={vagasById}
+                    onCardClick={(c) => setDrawerColaboradorId(c.id)}
+                    onDragStart={handleCardDragStart}
+                    onDragEnd={handleCardDragEnd}
+                    onMoveToStage={handleStageChange}
+                    onDeleteCard={onboardingRemovedStageKey ? handleRemoveFromOnboarding : undefined}
+                    deleteLabel="Remover do onboarding"
+                    deleteConfirmMessage={REMOVE_FROM_ONBOARDING_CONFIRM_MESSAGE}
+                    isDragOver={dragOverStageKey === stage.stageKey}
+                    onColumnDragOver={handleColumnDragOver}
+                    onColumnDragLeave={handleColumnDragLeave}
+                    onColumnDrop={handleColumnDrop}
+                    canWrite={canWrite}
+                    onEditFields={setFieldEditorStage}
+                    getCompleteness={getColaboradorCompleteness}
+                    getUnread={(c) => hasUnreadRHComment(c, viewedAt, currentUser?.id)}
+                    onAddColaborador={() => setAddColaboradorStage(stage.stageKey)}
+                    boardHeight={boardHeight}
+                  />
+                ))}
+              </div>
+            </KanbanBoardScrollArea>
           </div>
           {canWrite && <KanbanFab label="Novo colaborador" onClick={() => setAddColaboradorStage(stages[0]?.stageKey || null)} />}
         </>

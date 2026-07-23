@@ -70,6 +70,8 @@ import { AppToast } from "../shared/AppToast";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -916,19 +918,26 @@ function VagaKanbanColumn({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+      className="flex flex-col rounded-lg transition-all duration-150"
       style={{
         width: 272, minWidth: 272,
-        background: "var(--surface-alt)",
-        borderColor: isDragOver ? stage.color + "70" : "var(--border)",
-        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        height: boardHeight,
+        height: "100%",
+        overflow: "hidden",
+        background: isDragOver ? stage.color + "14" : "var(--surface-alt)",
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
       }}
     >
       <KanbanColumnHeader
         color={stage.color}
         name={stage.name}
         count={vagasList.length}
+        bandHeight={4}
+        letterSpacing="normal"
+        nameColor={stage.color}
+        nameFontSize={14}
+        nameFontWeight={700}
+        uppercase={false}
+        countFontSize={12}
         actions={
           <div className="flex items-center gap-1 shrink-0">
             {canWrite && (
@@ -2427,19 +2436,26 @@ function KanbanColumn({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
+      className="flex flex-col rounded-lg transition-all duration-150"
       style={{
         width: 272, minWidth: 272,
-        background: "var(--surface-alt)",
-        borderColor: isDragOver ? stage.color + "70" : "var(--border)",
-        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)",
-        height: boardHeight,
+        height: "100%",
+        overflow: "hidden",
+        background: isDragOver ? stage.color + "14" : "var(--surface-alt)",
+        boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
       }}
     >
       <KanbanColumnHeader
         color={stage.color}
         name={stage.name}
         count={candidatos.length}
+        bandHeight={4}
+        letterSpacing="normal"
+        nameColor={stage.color}
+        nameFontSize={14}
+        nameFontWeight={700}
+        uppercase={false}
+        countFontSize={12}
         actions={
           <div className="flex items-center gap-1 shrink-0">
             {canWrite && (
@@ -3011,6 +3027,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
         </AppToast>
       )}
       {/* Header */}
+      <KanbanBoardHeader>
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -3094,6 +3111,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           )}
         </div>
       </div>
+      </KanbanBoardHeader>
 
       {!isSupabaseConfigured ? (
         <EmptyState icon={Briefcase} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar o módulo de recrutamento" />
@@ -3141,32 +3159,36 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
               addLabel="Nova vaga"
               emptyLabel="Nenhuma vaga"
             />
-            <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
-              {vagaStages.map((stage) => (
-                <VagaKanbanColumn
-                  key={stage.stageKey}
-                  stage={stage}
-                  stages={vagaStages}
-                  vagasList={vagasByStage[stage.stageKey] || []}
-                  candidatosByVaga={candidatosByVaga}
-                  canWrite={canWrite}
-                  onCardClick={(v) => setVagaDrawerId(v.id)}
-                  onMoveToStage={attemptVagaStageChange}
-                  onDeleteVaga={(id) => deleteVaga(id)}
-                  onDragStart={handleVagaDragStart}
-                  onDragEnd={handleVagaDragEnd}
-                  isDragOver={dragOverVagaStage === stage.stageKey}
-                  onDragOver={(e) => handleVagaDragOver(e, stage.stageKey)}
-                  onDragLeave={handleVagaDragLeave}
-                  onDrop={() => handleVagaDrop(stage.stageKey)}
-                  onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
-                  getCompleteness={getVagaCompleteness}
-                  getUnread={(v) => hasUnreadRHComment(v, vagaViewedAt, user?.id)}
-                  onAddVaga={() => setAddVagaStage(stage.stageKey)}
-                  usersById={usersById}
-                  boardHeight={boardHeight}
-                />
-              ))}
+            <div className="hidden lg:block">
+              <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
+                <div className="flex gap-2 h-full" style={{ minWidth: `${vagaStages.length * 280}px` }}>
+                  {vagaStages.map((stage) => (
+                    <VagaKanbanColumn
+                      key={stage.stageKey}
+                      stage={stage}
+                      stages={vagaStages}
+                      vagasList={vagasByStage[stage.stageKey] || []}
+                      candidatosByVaga={candidatosByVaga}
+                      canWrite={canWrite}
+                      onCardClick={(v) => setVagaDrawerId(v.id)}
+                      onMoveToStage={attemptVagaStageChange}
+                      onDeleteVaga={(id) => deleteVaga(id)}
+                      onDragStart={handleVagaDragStart}
+                      onDragEnd={handleVagaDragEnd}
+                      isDragOver={dragOverVagaStage === stage.stageKey}
+                      onDragOver={(e) => handleVagaDragOver(e, stage.stageKey)}
+                      onDragLeave={handleVagaDragLeave}
+                      onDrop={() => handleVagaDrop(stage.stageKey)}
+                      onEditFields={(s) => setFieldEditorStage({ domain: "vagas", stageKey: s.stageKey, stageName: s.name })}
+                      getCompleteness={getVagaCompleteness}
+                      getUnread={(v) => hasUnreadRHComment(v, vagaViewedAt, user?.id)}
+                      onAddVaga={() => setAddVagaStage(stage.stageKey)}
+                      usersById={usersById}
+                      boardHeight={boardHeight}
+                    />
+                  ))}
+                </div>
+              </KanbanBoardScrollArea>
             </div>
             {canWrite && <KanbanFab label="Nova vaga" onClick={() => setQuickAddVaga(true)} />}
           </>
@@ -3320,31 +3342,35 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                 addLabel="Novo candidato"
                 emptyLabel="Nenhum candidato"
               />
-              <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
-                {candStages.map((stage) => (
-                  <KanbanColumn
-                    key={stage.stageKey}
-                    stage={stage}
-                    stages={candStages}
-                    candidatos={candByStage[stage.stageKey] || []}
-                    vagas={vagas}
-                    canWrite={canWrite}
-                    onCardClick={(c) => setSelectedCandidatoId(c.id)}
-                    onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
-                    onMoveToStage={attemptCandStageChange}
-                    onDeleteCandidato={(id) => deleteAplicacao(id)}
-                    onDragStart={handleCandDragStart}
-                    onDragEnd={handleCandDragEnd}
-                    isDragOver={dragOverCandStage === stage.stageKey}
-                    onDragOver={(e) => handleCandDragOver(e, stage.stageKey)}
-                    onDragLeave={handleCandDragLeave}
-                    onDrop={() => handleCandDrop(stage.stageKey)}
-                    onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
-                    getCompleteness={getCandCompleteness}
-                    getUnread={(c) => hasUnreadRHComment(c, candViewedAt, user?.id)}
-                    boardHeight={boardHeight}
-                  />
-                ))}
+              <div className="hidden lg:block">
+                <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
+                  <div className="flex gap-2 h-full" style={{ minWidth: `${candStages.length * 280}px` }}>
+                    {candStages.map((stage) => (
+                      <KanbanColumn
+                        key={stage.stageKey}
+                        stage={stage}
+                        stages={candStages}
+                        candidatos={candByStage[stage.stageKey] || []}
+                        vagas={vagas}
+                        canWrite={canWrite}
+                        onCardClick={(c) => setSelectedCandidatoId(c.id)}
+                        onAddCandidato={() => setAddCandidatoStage(stage.stageKey)}
+                        onMoveToStage={attemptCandStageChange}
+                        onDeleteCandidato={(id) => deleteAplicacao(id)}
+                        onDragStart={handleCandDragStart}
+                        onDragEnd={handleCandDragEnd}
+                        isDragOver={dragOverCandStage === stage.stageKey}
+                        onDragOver={(e) => handleCandDragOver(e, stage.stageKey)}
+                        onDragLeave={handleCandDragLeave}
+                        onDrop={() => handleCandDrop(stage.stageKey)}
+                        onEditFields={(s) => setFieldEditorStage({ domain: "candidatos", stageKey: s.stageKey, stageName: s.name })}
+                        getCompleteness={getCandCompleteness}
+                        getUnread={(c) => hasUnreadRHComment(c, candViewedAt, user?.id)}
+                        boardHeight={boardHeight}
+                      />
+                    ))}
+                  </div>
+                </KanbanBoardScrollArea>
               </div>
               {canWrite && <KanbanFab label="Novo candidato" onClick={() => setAddCandidatoStage(candStages[0]?.stageKey || null)} />}
             </>

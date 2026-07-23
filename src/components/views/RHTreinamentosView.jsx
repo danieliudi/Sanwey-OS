@@ -28,6 +28,7 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -550,13 +551,20 @@ function TreinamentoBoardColumn({
       onDragOver={(e) => onColumnDragOver(e, stage.stageKey)}
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
-      className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-      style={{ width: 260, minWidth: 260, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: boardHeight }}
+      className="flex flex-col rounded-lg transition-all duration-150"
+      style={{ width: 272, minWidth: 272, height: boardHeight, overflow: "hidden", background: "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none" }}
     >
       <KanbanColumnHeader
         color={stage.color}
         name={stage.name}
         count={atribList.length}
+        bandHeight={4}
+        letterSpacing="normal"
+        nameColor={stage.color}
+        nameFontSize={14}
+        nameFontWeight={700}
+        uppercase={false}
+        countFontSize={12}
         actions={canWrite && (
           <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
             <Settings2 size={13} />
@@ -1126,30 +1134,34 @@ function TreinamentoBoardModal({
                 )}
                 emptyLabel="Ninguém aqui"
               />
-              <div ref={boardRef} style={{ gap: 12, overflowX: "auto", paddingBottom: 16, height: boardHeight }} className="hidden lg:flex">
-                {stages.map((stage) => (
-                  <TreinamentoBoardColumn
-                    key={stage.id}
-                    stage={stage}
-                    stages={stages}
-                    atribList={byStage[stage.stageKey] || []}
-                    colaboradoresById={colaboradoresById}
-                    onCardClick={(a) => setDrawerId(a.id)}
-                    onDragStart={setDraggedId}
-                    onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
-                    onMoveToStage={handleMove}
-                    onDeleteAtribuicao={canWrite ? onDelete : undefined}
-                    isDragOver={dragOverStageKey === stage.stageKey}
-                    onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
-                    onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
-                    onColumnDrop={handleDrop}
-                    canWrite={canWrite}
-                    onEditFields={setFieldEditorStage}
-                    getCompleteness={getCompleteness}
-                    getUnread={(a) => hasUnreadRHComment(a, viewedAt, currentUser?.id)}
-                    boardHeight={boardHeight}
-                  />
-                ))}
+              <div className="hidden lg:block">
+                <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
+                  <div className="flex gap-2 h-full" style={{ minWidth: `${stages.length * 280}px` }}>
+                    {stages.map((stage) => (
+                      <TreinamentoBoardColumn
+                        key={stage.id}
+                        stage={stage}
+                        stages={stages}
+                        atribList={byStage[stage.stageKey] || []}
+                        colaboradoresById={colaboradoresById}
+                        onCardClick={(a) => setDrawerId(a.id)}
+                        onDragStart={setDraggedId}
+                        onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
+                        onMoveToStage={handleMove}
+                        onDeleteAtribuicao={canWrite ? onDelete : undefined}
+                        isDragOver={dragOverStageKey === stage.stageKey}
+                        onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
+                        onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}
+                        onColumnDrop={handleDrop}
+                        canWrite={canWrite}
+                        onEditFields={setFieldEditorStage}
+                        getCompleteness={getCompleteness}
+                        getUnread={(a) => hasUnreadRHComment(a, viewedAt, currentUser?.id)}
+                        boardHeight={boardHeight}
+                      />
+                    ))}
+                  </div>
+                </KanbanBoardScrollArea>
               </div>
             </>
           )}

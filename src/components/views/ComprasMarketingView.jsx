@@ -20,6 +20,8 @@ import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
@@ -287,8 +289,8 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
   const [boardRef, boardHeight] = useAvailableHeight(16);
   return (
     <div className="hidden lg:block relative">
-      <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
-        <div className="flex gap-3 h-full" style={{ minWidth: `${PURCHASE_STAGES.length * 260}px` }}>
+      <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
+        <div className="flex gap-2 h-full" style={{ minWidth: `${PURCHASE_STAGES.length * 280}px` }}>
           {PURCHASE_STAGES.map(stage => {
             const color = STAGE_COLORS[stage.id] || "var(--text-dim)";
             const items = purchases.filter(p => p.stage === stage.id);
@@ -298,14 +300,26 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
                 onDragOver={e => onColumnDragOver(e, stage.id)}
                 onDragLeave={onColumnDragLeave}
                 onDrop={() => onColumnDrop(stage.id)}
-                className="flex flex-col rounded-xl border overflow-hidden transition-all duration-150"
-                style={{ width: 252, minWidth: 252, background: "var(--surface-alt)", borderColor: isOver ? color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${color}30` : "none", height: "100%", flexShrink: 0 }}>
+                className="flex flex-col rounded-lg transition-all duration-150"
+                style={{
+                  width: 272,
+                  minWidth: 272,
+                  height: "100%",
+                  overflow: "hidden",
+                  background: isOver ? color + "14" : "var(--surface-alt)",
+                  boxShadow: isOver ? `0 0 0 2px ${color}30` : "none",
+                }}>
                 <KanbanColumnHeader
                   color={color}
                   name={stage.name}
                   count={items.length}
-                  bandHeight={6}
-                  letterSpacing="0.06em"
+                  bandHeight={4}
+                  letterSpacing="normal"
+                  nameColor={color}
+                  nameFontSize={14}
+                  nameFontWeight={700}
+                  uppercase={false}
+                  countFontSize={12}
                   truncateName={false}
                 />
                 <div className="px-2 pt-2 pb-2 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -336,7 +350,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
             );
           })}
         </div>
-      </div>
+      </KanbanBoardScrollArea>
     </div>
   );
 }
@@ -634,8 +648,8 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+      <KanbanBoardHeader className="mb-4">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
             <ShoppingCart size={22} style={{ color: "var(--text)" }} />
@@ -674,6 +688,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
           </button>
         </div>
       </div>
+      </KanbanBoardHeader>
 
       {viewMode === "kanban" && <KanbanFab label="Nova solicitação" onClick={() => setShowCreate(true)} />}
 
