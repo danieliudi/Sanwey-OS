@@ -30,7 +30,8 @@ import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
-import { KanbanBoardCanvas } from "../shared/KanbanBoardCanvas";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -667,12 +668,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const stageFields = useRHStageFields("marketing_deliverables");
   // trailingRef mede o painel de analytics + texto de dica que vêm depois do
   // board, pra sobrar espaço suficiente pra eles também caberem (ver
-  // use-available-height.js). marginBottom = 36 (16 do respiro original + 20
-  // do padding inferior do novo KanbanBoardCanvas, que passou a existir
-  // DEPOIS do fim do board e antes do trailingRef) — sem isso a barra de
-  // scroll horizontal do board voltaria a vazar da tela visível.
+  // use-available-height.js). marginBottom = 16, o respiro do próprio
+  // KanbanBoardScrollArea (pb-4) — sem isso a barra de scroll horizontal do
+  // board voltaria a vazar da tela visível.
   const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(36, [], trailingRef);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables"),
   // editáveis via RHStageEditorModal — mesmo padrão do RHOnboardingView.
@@ -818,11 +818,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       </AppToast>
     )}
     <div>
-      {/* Toolbar: título + view-toggle + ações + filtros, tudo dentro de um
-          único container elevado (mesma convenção de card com sombra usada
-          em ExecutiveDashboard/ClientsManager/etc. — rounded-xl + border +
-          shadow-card) — antes era texto/botões soltos direto na página. */}
-      <div className="rounded-xl border p-4 mb-4" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
+      {/* Toolbar: título + view-toggle + ações + filtros, dentro da barra de
+          topo chapada e de ponta a ponta (ver KanbanBoardHeader.jsx) — o
+          card arredondado com sombra que existia aqui foi rejeitado (não
+          batia com a referência do Pipefy). */}
+      <KanbanBoardHeader className="mb-4">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
@@ -960,10 +960,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           </>
         )}
       </div>
-      </div>
+      </KanbanBoardHeader>
 
       {canWrite && viewMode === "kanban" && (
-        <KanbanFab label="Nova entrega" onClick={() => setQuickAddStage("solicitacao")} />
+        <KanbanFab label="Nova entrega" leftOffset={288} onClick={() => setQuickAddStage("solicitacao")} />
       )}
 
       {(loading || loadingStages) && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando entregas…</div>}
@@ -1046,7 +1046,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
 
         {/* Desktop kanban: horizontal scroll */}
         <div className="hidden lg:block">
-          <KanbanBoardCanvas scrollRef={boardRef} height={boardHeight}>
+          <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-3 h-full" style={{ minWidth: `${kanbanStages.length * 284}px` }}>
               {kanbanStages.map(stage => {
                 const stageItems = filtered.filter(d => d.stage === stage.id);
@@ -1057,8 +1057,13 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     onDragOver={e => handleDragOver(e, stage.id)}
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
-                    className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "100%", flexShrink: 0 }}>
+                    className="flex flex-col rounded-xl transition-all duration-150"
+                    style={{ width: 272, minWidth: 272, background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
+                    {/* Cabeçalho como bloco branco separado (gap) do corpo
+                        bege/cinza da coluna — ver CRMView.jsx pro mesmo
+                        padrão no Pipeline. */}
+                    <div className="p-2 pb-0" style={{ flexShrink: 0 }}>
+                    <div className="rounded-lg overflow-hidden" style={{ background: "var(--surface)", boxShadow: "var(--shadow-card)" }}>
                     <KanbanColumnHeader
                       color={stage.color}
                       name={stage.name}
@@ -1088,6 +1093,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     >
                       {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
                     </KanbanColumnHeader>
+                    </div>
+                    </div>
 
                     <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       {stageItems.length === 0 ? (
@@ -1133,7 +1140,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                 );
               })}
             </div>
-          </KanbanBoardCanvas>
+          </KanbanBoardScrollArea>
         </div>
       </>)}
 
