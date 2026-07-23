@@ -1214,7 +1214,16 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const [dragOverStageKey, setDragOverStageKey]   = useState(null);
   const [moveError, setMoveError]                 = useState(null);
   const reconciledRef = useRef(false);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode]);
+  // deps precisa incluir os 4 `loading` — o board (e o ref medido) só monta
+  // depois que os dados carregam (ver "{loading ? ... : ...}" abaixo). Sem
+  // isso, o efeito do hook roda uma única vez com boardRef.current ainda
+  // nulo (retorna cedo, sem nunca anexar o ResizeObserver/resize) e
+  // boardHeight fica travado no fallback (480px) pro resto da sessão, bem
+  // abaixo do espaço real disponível — só um toggle manual de viewMode
+  // forçava o recálculo. Mesmo padrão de correção já usado em
+  // RHRecrutamentoView.jsx (deps: viewMode + loading + vagaStagesLoading +
+  // candStagesLoading).
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, loadingFeedbacks, loadingColaboradores, loadingStages, loadingMeuColaborador]);
 
   const { viewedAt, markViewed } = useRecordViews("rh_feedback", currentUser?.id);
   useEffect(() => { if (drawerFeedbackId) markViewed(drawerFeedbackId); }, [drawerFeedbackId]);

@@ -187,8 +187,8 @@ export const FAQ_ITEMS = [
     answer: "São alertas automáticos sobre publicações regulatórias (IBAMA, ANTT, Inmetro), licitações, mudanças de norma e oportunidades de mercado relevantes para cada unidade do grupo.",
   },
   {
-    question: "Como configuro as etapas do pipeline?",
-    answer: "Acesse Construtor de Pipeline no menu lateral (disponível para gerentes e admins). Lá você cria, edita e reordena as etapas de cada unidade.",
+    question: "Como configuro as etapas da Venda?",
+    answer: "Dentro do Kanban de Venda, clique em Editar etapas (disponível para gerentes e admins). Lá você cria, edita e reordena as etapas de cada unidade.",
   },
   {
     question: "Os dados ficam salvos se eu fechar o navegador?",

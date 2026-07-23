@@ -5,7 +5,7 @@ import {
   Check, Trash2, Mail, ChevronDown, ChevronUp,
   Clock, GitBranch, CalendarClock, ArrowRight, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
-  File, FileImage, FileSpreadsheet, AlertCircle, Pencil,
+  File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -31,6 +31,7 @@ import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
+import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
 
 const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
 
@@ -50,6 +51,9 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const [noteText, setNoteText] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
   const [moveError, setMoveError] = useState(null);
+  const [sendingToPosvenda, setSendingToPosvenda] = useState(false);
+  const [posvendaError, setPosvendaError] = useState(null);
+  const [posvendaSent, setPosvendaSent] = useState(false);
 
   const stageFields = useStageFields();
   const customDefs = lead ? stageFields.getFields(lead.companyId, lead.stage) : [];
@@ -416,6 +420,13 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const isTerminalStage = Boolean(currentStageInfo?.terminal);
   const closeStyle = (lead.closeDate && !isTerminalStage) ? closeDateUrgencyStyle(lead.closeDate) : null;
 
+  // Negócio Ganho -> Pós-venda: mesmo padrão de Recrutamento -> Onboarding
+  // (ação explícita, só disponível numa etapa flag específica, ver
+  // rh_pipeline_stages.won). O negócio de origem continua existindo aqui,
+  // só marcado (sentToPosvendaAt) — nunca duas vezes sem querer.
+  const isWonStage = Boolean(currentStageInfo?.won);
+  const alreadySentToPosvenda = Boolean(lead.sentToPosvendaAt) || posvendaSent;
+
   // Restringe "Mover card para fase" às transições configuradas em Comercial
   // > Editar etapas (mesma regra que já bloqueia o drag-and-drop no Kanban,
   // ver CRMView.jsx) — sem regra configurada pra empresa/etapa, permanece
@@ -509,6 +520,21 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     setContactEmailDraft(lead.contactEmail || "");
     setContactEmailError(null);
     setEditingContactEmail(false);
+  };
+
+  const handleSendToPosvenda = async () => {
+    if (!isWonStage || alreadySentToPosvenda || sendingToPosvenda) return;
+    setSendingToPosvenda(true);
+    setPosvendaError(null);
+    try {
+      await createPosvendaCaseFromLead(lead, currentUser?.id);
+      await onUpdate(lead.id, { sentToPosvendaAt: new Date().toISOString() });
+      setPosvendaSent(true);
+    } catch (e) {
+      setPosvendaError(e.message || "Não foi possível enviar para Pós-venda.");
+    } finally {
+      setSendingToPosvenda(false);
+    }
   };
 
   const canDelete = onDelete && (
@@ -1336,6 +1362,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 isManager={isManager}
                 onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
                 onGoToIA={() => { setSideTab("ia"); setMobileTab("info"); }}
+                isWonStage={isWonStage}
+                alreadySentToPosvenda={alreadySentToPosvenda}
+                sendingToPosvenda={sendingToPosvenda}
+                posvendaError={posvendaError}
+                onSendToPosvenda={handleSendToPosvenda}
               />
             </div>
           )}
@@ -1357,6 +1388,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               isManager={isManager}
               onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
               onGoToIA={() => setSideTab("ia")}
+              isWonStage={isWonStage}
+              alreadySentToPosvenda={alreadySentToPosvenda}
+              sendingToPosvenda={sendingToPosvenda}
+              posvendaError={posvendaError}
+              onSendToPosvenda={handleSendToPosvenda}
             />
           </aside>
         </div>
@@ -1488,6 +1524,7 @@ function MoveAndCommentsPanel({
   moveError, stageTargets, onMove,
   commentsFeed, currentUser, mentionableUsers, onAddComment, onUpdateComment,
   isManager, onNavigateToPipelineBuilder, onGoToIA,
+  isWonStage, alreadySentToPosvenda, sendingToPosvenda, posvendaError, onSendToPosvenda,
 }) {
   return (
     <>
@@ -1505,6 +1542,36 @@ function MoveAndCommentsPanel({
         onMove={onMove}
         getKey={(s) => s.id}
       />
+
+      {/* Enviar para Pós-venda — só aparece na etapa Ganho (rh_pipeline_stages
+          .won), mesmo padrão do "Contratar" em Recrutamento->Onboarding: ação
+          explícita, cria um card novo no Kanban de Pós-venda, o negócio aqui
+          continua existindo (só marcado como já enviado). */}
+      {isWonStage && (
+        <div className="mt-4 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          {alreadySentToPosvenda ? (
+            <div className="flex items-center gap-2 text-xs font-medium" style={{ color: "var(--text-dim)" }}>
+              <Handshake size={13} />
+              Já enviado para Pós-venda
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={onSendToPosvenda}
+                disabled={sendingToPosvenda}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer"
+                style={{ background: "var(--accent)", color: "#FFFFFF", border: "none", opacity: sendingToPosvenda ? 0.6 : 1 }}
+              >
+                <Handshake size={14} />
+                {sendingToPosvenda ? "Enviando…" : "Enviar para Pós-venda"}
+              </button>
+              {posvendaError && (
+                <div className="mt-2 text-xs" style={{ color: "var(--danger)" }}>{posvendaError}</div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
         <CommentsPanel

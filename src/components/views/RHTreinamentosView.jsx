@@ -986,7 +986,20 @@ function TreinamentoBoardModal({
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
   const [moveError, setMoveError] = useState(null);
-  const [boardRef, boardHeight] = useAvailableHeight(24, [viewMode]);
+  // marginBottom = 16 pra casar com o paddingBottom:16 do próprio scroll
+  // container do board logo abaixo (era 24, um valor arbitrário sem
+  // relação com nenhum respiro real deste board — não existe painel de
+  // analytics nem texto de dica depois do Kanban aqui, então não há
+  // trailingRef a passar).
+  // `loadingStages` entra nas deps porque a div do board (boardRef) só
+  // existe no DOM quando loadingStages vira false (antes disso o galho
+  // renderizado é "Carregando…", sem o ref) — sem essa dependência, a
+  // única vez que o efeito do hook roda encontra boardRef.current ainda
+  // nulo, sai cedo (`if (!el) return`) e nunca mais recalcula, deixando
+  // boardHeight travado no fallback de 480px pro resto da vida do modal
+  // (só "curava" se o usuário trocasse viewMode manualmente) — era esse o
+  // board ficando raso mesmo em janela alta, reportado de novo.
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, loadingStages]);
 
   const { viewedAt, markViewed } = useRecordViews("rh_treinamentos", currentUser?.id);
 

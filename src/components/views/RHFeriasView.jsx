@@ -781,7 +781,15 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
   const [draggedId, setDraggedId]         = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode]);
+  // deps precisa incluir os `loading` — o board (e o ref medido) só monta
+  // depois que requests/stages carregam (ver "{loading ? ... : ...}" abaixo).
+  // Sem isso, o efeito do hook roda uma única vez com boardRef.current ainda
+  // nulo (retorna cedo, sem nunca anexar o ResizeObserver/resize) e
+  // boardHeight fica travado no fallback (480px) pro resto da sessão, bem
+  // abaixo do espaço real disponível — só um toggle manual de viewMode
+  // forçava o recálculo. Mesmo padrão de correção já usado em
+  // RHFeedbackView.jsx/RHRecrutamentoView.jsx.
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, loadingRequests, loadingStages]);
 
   const { viewedAt, markViewed } = useRecordViews("rh_ferias", currentUser?.id);
   useEffect(() => { if (drawerReqId) markViewed(drawerReqId); }, [drawerReqId]);

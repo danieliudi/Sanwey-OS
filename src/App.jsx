@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart, RefreshCw, Sparkles, ListTodo,
+  FileBarChart, RefreshCw, Sparkles, ListTodo, Handshake,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -58,6 +58,7 @@ import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
 import { ExplorerView } from "./components/views/ExplorerView";
 import { CRMView } from "./components/views/CRMView";
+import { PosVendaView } from "./components/views/PosVendaView";
 import { CRMViagensView } from "./components/views/CRMViagensView";
 import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
 import { InsightsView } from "./components/views/InsightsView";
@@ -1025,7 +1026,13 @@ export default function App() {
         label: "Comercial",
         items: [
           { id: "commercial-overview", label: "Visão Geral", icon: LayoutDashboard },
-          { id: "crm",          label: "Pipeline",   icon: Layers },
+          { id: "crm",          label: "Venda",   icon: Layers },
+          // Logo abaixo de "Venda" (pedido explícito do usuário) — conectado
+          // ao Kanban de Venda igual Recrutamento é conectado a Onboarding:
+          // botão "Enviar para Pós-venda" no negócio Ganho (ver
+          // LeadDetailDrawer.jsx) cria um caso aqui, o negócio original
+          // continua existindo em Venda.
+          { id: "posvenda",     label: "Pós-venda", icon: Handshake },
           { id: "clients",      label: "Clientes",   icon: Users },
           { id: "signals",      label: "Sinais",     icon: Bell },
           { id: "explorer",     label: "Explorador", icon: Globe2 },
@@ -1183,7 +1190,7 @@ export default function App() {
       setSection("marketing");
     }
     // Pure marketing users shouldn't access CRM sections
-    const crmSections = ["crm", "signals", "explorer", "crm-viagens", "commercial-overview"];
+    const crmSections = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview"];
     if (isPureMarketing && crmSections.includes(section)) {
       setSection("dashboard");
     }
@@ -1199,7 +1206,7 @@ export default function App() {
       setSection("rh-overview");
     }
     // Agência can access marketing routes + their own profile (settings).
-    const agenciaBlocked = ["crm", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials"];
+    const agenciaBlocked = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials"];
     if (isAgencia && agenciaBlocked.includes(section)) {
       setSection("marketing");
     }
@@ -1301,7 +1308,7 @@ export default function App() {
         onNewLead={() => { setSection("crm"); navigate(ROUTES.crm); setCrmAutoCreate(true); }}
       />
 
-      <div className="flex flex-col min-w-0 lg:ml-[288px]" style={{ minHeight: "100vh", overflowX: "clip" }}>
+      <div className="flex flex-col min-w-0 app-content-shell" style={{ minHeight: "100vh", overflowX: "clip" }}>
         <TopBar
           title={sectionTitle}
           onMenuToggle={() => setSidebarMobileOpen(v => !v)}
@@ -1455,6 +1462,17 @@ export default function App() {
               onUpdateStage={updateStage}
             />
           } />
+          <Route path={ROUTES.posvenda} element={
+            isAgencia ? <Navigate to={ROUTES.marketing} replace /> : isPureRH ? <Navigate to={ROUTES.dashboard} replace /> : <PosVendaView
+              user={currentUser}
+              activeCompany={activeCompany}
+              accessibleCompanies={accessibleCompanies}
+              onCompanyChange={setActiveCompany}
+              leads={leads}
+              users={users}
+              onOpenLead={setSelectedLead}
+            />
+          } />
           <Route path={ROUTES["crm-viagens"]} element={
             isAgencia || isPureMarketing || isPureRH
               ? <Navigate to={ROUTES.dashboard} replace />
@@ -1504,7 +1522,7 @@ export default function App() {
             <Navigate to={ROUTES.executive} replace />
           } />
           {/* Construtor de pipeline standalone foi absorvido pelo botão
-              "Editar etapas" dentro do próprio Kanban de Pipeline. Redireciona
+              "Editar etapas" dentro do próprio Kanban de Venda. Redireciona
               quem tem o link salvo. */}
           <Route path={ROUTES["pipeline-builder"]} element={<Navigate to={ROUTES.crm} replace />} />
           <Route path={ROUTES.automations} element={

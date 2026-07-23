@@ -10,7 +10,7 @@ const STAGE_LABELS = Object.fromEntries(
 );
 
 // Nome da etapa considerando o pipeline customizado da empresa do lead —
-// sem isso, uma empresa que renomeou uma etapa no Construtor de Pipeline
+// sem isso, uma empresa que renomeou uma etapa no editor de etapas da Venda
 // via o export mostrava sempre o nome padrão global (achado da auditoria
 // de fricção de 18/07 — as duas exportações de CSV divergiam nisso).
 function resolveStageLabel(lead, pipelines) {

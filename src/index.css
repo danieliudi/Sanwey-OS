@@ -62,6 +62,20 @@
   --topbar-height: 64px;
 }
 
+/* Recuo do conteúdo pra sidebar fixa — Sidebar.jsx muda --sidebar-width em
+   runtime (288px/72px) ao recolher/expandir o menu; só existe abaixo de
+   1024px o menu vira overlay off-canvas (Sidebar.jsx), então não reserva
+   espaço de layout e o recuo não se aplica. */
+.app-content-shell {
+  margin-left: 0;
+  transition: margin-left 0.2s cubic-bezier(.4,0,.2,1);
+}
+@media (min-width: 1024px) {
+  .app-content-shell {
+    margin-left: var(--sidebar-width);
+  }
+}
+
 /* ─── Dark mode ───────────────────────────────────────────────────────────── */
 [data-theme="dark"] {
   --bg:            #1A1A18;

@@ -87,7 +87,7 @@ function ToggleRow({ checked, onChange, label, sublabel, disabled }) {
 }
 
 const EXPORT_DOMAIN_LABEL = {
-  leads_crm: "Leads (Pipeline)",
+  leads_crm: "Leads (Venda)",
   leads_dashboard: "Leads (Minhas Tarefas)",
   leads_explorer: "Leads (Explorador)",
   viagens_registros: "Viagens (registros)",

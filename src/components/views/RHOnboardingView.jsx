@@ -1035,7 +1035,18 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const [draggedColaboradorId, setDraggedColaboradorId] = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
   const [moveError, setMoveError] = useState(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode]);
+  // O board (boardRef) fica escondido atrás do "Carregando…" enquanto
+  // loadingTarefas/loadingColaboradores/loadingStages/loadingMeuColaborador
+  // são true (ver render mais abaixo, `loading ? <Carregando/> : ...`) —
+  // nesse primeiro efeito, `el` é null e o hook sai cedo (não arma
+  // ResizeObserver nem listener de resize nenhum). viewMode não muda quando o
+  // carregamento termina, então sem essas 4 flags aqui o efeito nunca
+  // re-executava depois que o board finalmente montava, e `boardHeight`
+  // ficava travado no fallback (480) pelo resto da sessão — board sempre
+  // mais baixo que o espaço disponível. Mesmo achado/fix já aplicado em
+  // RHRecrutamentoView.jsx (ver comentário lá) — mesma lógica documentada no
+  // próprio hook ("loading terminando" como exemplo de dep).
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, loadingTarefas, loadingColaboradores, loadingStages, loadingMeuColaborador]);
 
   const { viewedAt, markViewed } = useRecordViews("rh_onboarding", currentUser?.id);
 

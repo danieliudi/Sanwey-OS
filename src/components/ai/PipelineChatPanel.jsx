@@ -109,7 +109,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
           <div className="flex items-center gap-2">
             <Bot size={17} style={{ color: RED }} />
             <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
-              Chat com Pipeline
+              Chat com Venda
             </span>
           </div>
           <button

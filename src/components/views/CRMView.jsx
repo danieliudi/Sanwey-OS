@@ -313,8 +313,6 @@ function KpiCard({ label, value, sub }) {
 // ── Analytics panel (collapsible) ────────────────────────────────────────────
 
 function AnalyticsPanel({ scopedLeads, stages }) {
-  const [open, setOpen] = useState(false);
-
   const stageStats = useMemo(() => {
     const nonTerminal = stages.filter(s => !s.terminal);
     return nonTerminal.map(stage => {
@@ -335,38 +333,22 @@ function AnalyticsPanel({ scopedLeads, stages }) {
   const maxTotal = Math.max(...stageStats.map(s => s.total), 1);
 
   return (
-    <div style={{ marginTop: 8 }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 text-xs font-medium transition-colors duration-150"
-        style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
-        onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
-        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+    <div
+      className="rounded-2xl border p-5"
+      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+    >
+      <div className="flex items-center gap-1.5 mb-4" style={{ color: "var(--text)" }}>
+        <TrendingUp size={15} strokeWidth={2} />
+        <span className="text-sm font-semibold">Análise do funil</span>
+      </div>
+      <div className="text-xs font-semibold mb-4" style={{ color: "var(--text-dim)" }}>
+        Distribuição por etapa
+      </div>
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
       >
-        <TrendingUp size={13} strokeWidth={2} />
-        <span>Análise do funil</span>
-        <ChevronDown
-          size={13}
-          style={{
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.2s",
-          }}
-        />
-      </button>
-
-      {open && (
-        <div
-          className="rounded-2xl border mt-3 p-5"
-          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-        >
-          <div className="text-xs font-semibold mb-4" style={{ color: "var(--text-dim)" }}>
-            Distribuição por etapa
-          </div>
-          <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
-          >
-            {stageStats.map(({ stage, count, total, avgDays }) => (
+        {stageStats.map(({ stage, count, total, avgDays }) => (
               <div key={stage.id}>
                 {/* Stage name + counts */}
                 <div className="flex items-center justify-between mb-1.5">
@@ -441,10 +423,8 @@ function AnalyticsPanel({ scopedLeads, stages }) {
                     : count > 0 ? "Sem tempo registrado" : "—"}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
@@ -461,9 +441,10 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   // Altura disponível até o rodapé da janela, medida ao vivo a partir do
   // topo do board — pra barra de scroll horizontal do Kanban nunca ficar
   // abaixo da dobra, em qualquer tamanho de janela (ver use-available-height.js).
-  // trailingRef mede o painel de analytics + texto de dica que vêm depois do
-  // board, pra sobrar espaço suficiente pra eles também caberem sem empurrar
-  // a página além da viewport. marginBottom = 16, o respiro do próprio
+  // trailingRef mede o texto de dica que vem depois do board (a Análise do
+  // funil saiu daqui — agora é a própria view "analise", ver ViewToggleButton
+  // abaixo), pra sobrar espaço suficiente pra ele caber sem empurrar a
+  // página além da viewport. marginBottom = 16, o respiro do próprio
   // KanbanBoardScrollArea (pb-4) — sem isso a barra de scroll horizontal do
   // board voltaria a vazar da tela visível.
   const trailingRef = useRef(null);
@@ -662,7 +643,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-            Pipeline
+            Venda
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {scopedLeads.length} oportunidades
@@ -731,6 +712,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               onClick={() => setViewMode("calendar")}
               icon={CalendarIcon}
               label="Calendário"
+            />
+            <ViewToggleButton
+              active={viewMode === "analise"}
+              onClick={() => setViewMode("analise")}
+              icon={TrendingUp}
+              label="Análise"
             />
           </div>
           <button
@@ -809,7 +796,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       {viewMode === "kanban" && onAddLead && stages.filter(s => !s.terminal).length > 0 && (
         <KanbanFab
           label="Nova oportunidade"
-          leftOffset={288}
+          flush
           onClick={() => {
             const firstStage = stages.find(s => !s.terminal);
             if (firstStage) setCreateModalStage({ stageId: firstStage.id, stage: firstStage, companyId: isGroupView ? firstValidCompany : activeCompany });
@@ -833,6 +820,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           onStarToggle={onStarToggle}
           isGroupView={isGroupView}
         />
+      ) : viewMode === "analise" ? (
+        <AnalyticsPanel scopedLeads={scopedLeads} stages={stages} />
       ) : (<>
       {/* Mobile kanban: vertical collapsible stages */}
       <div className="lg:hidden space-y-1.5 pb-24">
@@ -1028,12 +1017,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       </div>
       </>)}
 
-      {/* ── Analytics panel (apenas no kanban) ── */}
+      {/* ── Dica de uso (apenas no kanban) ── */}
       {viewMode === "kanban" && (
         <div ref={trailingRef}>
-          {scopedLeads.length > 0 && (
-            <AnalyticsPanel scopedLeads={scopedLeads} stages={stages} />
-          )}
           <p className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
             Arraste para mover entre etapas · Clique no card para ver detalhes
           </p>

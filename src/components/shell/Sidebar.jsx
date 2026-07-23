@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { LogOut, ChevronDown } from "lucide-react";
+import { LogOut, ChevronDown, ChevronLeft } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 
 const STORAGE_KEY = "sidebar_collapsed_groups";
 const ORDER_KEY = "sidebar_item_order";
+const RAIL_KEY = "sidebar_rail_collapsed";
+
+function loadRail() {
+  try { return localStorage.getItem(RAIL_KEY) === "1"; }
+  catch { return false; }
+}
+function saveRail(v) {
+  try { localStorage.setItem(RAIL_KEY, v ? "1" : "0"); } catch {}
+}
 
 function loadCollapsed() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }
@@ -43,6 +52,7 @@ function useIsMobile() {
 }
 
 const SIDEBAR_W = 288;
+const SIDEBAR_W_RAIL = 72;
 
 const T = {
   bg:            "var(--surface-alt)",
@@ -74,6 +84,26 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
   const [order, setOrder] = useState(loadOrder);
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
+  const [railCollapsed, setRailCollapsed] = useState(loadRail);
+  // Modo "trilho" (só ícones) — só existe em desktop; no mobile o menu é um
+  // overlay off-canvas que não reserva espaço de layout, então recolher não
+  // faz sentido lá (ver useIsMobile acima e sidebarStyle abaixo).
+  const rail = !isMobile && railCollapsed;
+
+  // Outros componentes (App.jsx, KanbanFab) leem a largura real da sidebar
+  // via essa custom property em vez de assumir 288px fixo — assim eles
+  // acompanham o recolher/expandir sem precisar de prop drilling.
+  useEffect(() => {
+    document.documentElement.style.setProperty("--sidebar-width", `${railCollapsed ? SIDEBAR_W_RAIL : SIDEBAR_W}px`);
+  }, [railCollapsed]);
+
+  const toggleRail = () => {
+    setRailCollapsed(prev => {
+      const next = !prev;
+      saveRail(next);
+      return next;
+    });
+  };
 
   const handleNavClick = (itemId) => {
     onSectionChange(itemId);
@@ -114,17 +144,23 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
     position: "fixed",
     top: 0, left: 0,
     height: "100vh",
-    width: SIDEBAR_W,
+    width: isMobile ? SIDEBAR_W : (rail ? SIDEBAR_W_RAIL : SIDEBAR_W),
     background: T.bg,
     borderRight: `1px solid ${T.border}`,
     display: "flex",
     flexDirection: "column",
-    overflow: "hidden",
+    // Sem overflow:hidden aqui — o botão de recolher (right:-11, encostado
+    // na borda) e o tooltip do item em modo trilho (left:100%) precisam
+    // sair da caixa da sidebar; `nav` logo abaixo já cuida do próprio
+    // scroll interno (overflowY auto / overflowX hidden), então nada aqui
+    // depende do pai recortar conteúdo.
     zIndex: isMobile ? 50 : 40,
-    ...(isMobile && {
-      transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
-      transition: "transform 0.25s cubic-bezier(.4,0,.2,1)",
-    }),
+    ...(isMobile
+      ? {
+          transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.25s cubic-bezier(.4,0,.2,1)",
+        }
+      : { transition: "width 0.2s cubic-bezier(.4,0,.2,1)" }),
   };
 
   return (
@@ -144,7 +180,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             height: 64,
             display: "flex",
             alignItems: "center",
-            padding: "0 20px",
+            padding: rail ? "0 0 0 18px" : "0 20px",
             gap: 12,
             flexShrink: 0,
             background: "none",
@@ -174,11 +210,41 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
               style={{ width: 20, height: 20, objectFit: "contain", filter: "brightness(0) invert(1)" }}
             />
           </div>
-          <div style={{ lineHeight: 1.3 }}>
-            <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 14 }}>Gestão Sanwey</div>
-            <div style={{ color: "var(--text-faint)", fontSize: 11 }}>Plataforma integrada</div>
-          </div>
+          {!rail && (
+            <div style={{ lineHeight: 1.3, overflow: "hidden", whiteSpace: "nowrap" }}>
+              <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 14 }}>Gestão Sanwey</div>
+              <div style={{ color: "var(--text-faint)", fontSize: 11 }}>Plataforma integrada</div>
+            </div>
+          )}
         </button>
+
+        {/* Botão de recolher/expandir — só existe em desktop (mobile é
+            overlay off-canvas, não tem "trilho"). Flutua encostado na borda
+            direita da sidebar, sempre no mesmo lugar. */}
+        {!isMobile && (
+          <button
+            onClick={toggleRail}
+            title={rail ? "Expandir menu" : "Recolher menu"}
+            style={{
+              position: "absolute",
+              top: 78, right: -11,
+              width: 22, height: 22,
+              borderRadius: "50%",
+              background: "var(--surface)",
+              border: "1px solid var(--border-strong)",
+              boxShadow: "var(--shadow-card)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer",
+              color: "var(--text-dim)",
+              zIndex: 5,
+              padding: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "#FFFFFF"; e.currentTarget.style.borderColor = "var(--accent)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+          >
+            <ChevronLeft size={13} strokeWidth={2.5} style={{ transform: rail ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+          </button>
+        )}
 
         {/* ── Nav ── */}
         <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "4px 0 8px", scrollbarWidth: "none" }}>
@@ -189,7 +255,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                 {gi > 0 && group.label && (
                   <div style={{ height: 1, background: "var(--border)", margin: "0 16px 8px" }} />
                 )}
-                {group.label && (
+                {group.label && !rail && (
                   <button
                     onClick={() => toggleGroup(group.label)}
                     style={{
@@ -225,13 +291,17 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                     />
                   </button>
                 )}
-                {!isCollapsed && orderedItems(group).map((item) => (
+                {/* No modo trilho ignora o collapse por grupo — não há rótulo
+                    pra reabrir um grupo fechado, então todo item fica sempre
+                    visível quando só ícones. */}
+                {(!isCollapsed || rail) && orderedItems(group).map((item) => (
                   <NavItem
                     key={item.id}
                     icon={item.icon}
                     label={item.label}
                     active={section === item.id}
                     onClick={() => handleNavClick(item.id)}
+                    rail={rail}
                     isDragOver={dragOverId === item.id}
                     onIconDragStart={() => setDraggedId(item.id)}
                     onIconDragEnd={() => { setDraggedId(null); setDragOverId(null); }}
@@ -251,15 +321,16 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
             padding: "8px 8px",
             display: "flex",
             alignItems: "center",
+            justifyContent: rail ? "center" : undefined,
             gap: 4,
             flexShrink: 0,
           }}
         >
           <button
             onClick={() => handleNavClick("settings")}
-            title="Configurações"
+            title={rail ? `Configurações · ${currentUser?.name || "Convidado"}` : "Configurações"}
             style={{
-              flex: 1,
+              flex: rail ? "0 0 auto" : 1,
               minWidth: 0,
               display: "flex",
               alignItems: "center",
@@ -296,35 +367,39 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                 ? <img src={currentUser.avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : (currentUser?.initials || "?")}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: section === "settings" ? "var(--accent)" : "var(--text)", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {currentUser?.name || "Convidado"}
+            {!rail && (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: section === "settings" ? "var(--accent)" : "var(--text)", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {currentUser?.name || "Convidado"}
+                </div>
+                <div style={{ color: "var(--text-faint)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {ROLE_LABEL[currentUser?.role] || "—"}
+                </div>
               </div>
-              <div style={{ color: "var(--text-faint)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {ROLE_LABEL[currentUser?.role] || "—"}
-              </div>
-            </div>
+            )}
           </button>
-          <button
-            onClick={onLogout}
-            title="Sair"
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "var(--text-faint)",
-              cursor: "pointer",
-              padding: 8,
-              borderRadius: "var(--radius-sm)",
-              display: "flex",
-              alignItems: "center",
-              flexShrink: 0,
-              transition: "background 0.12s, color 0.12s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--border)"; e.currentTarget.style.color = "var(--danger)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
-          >
-            <LogOut size={15} strokeWidth={2} />
-          </button>
+          {!rail && (
+            <button
+              onClick={onLogout}
+              title="Sair"
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--text-faint)",
+                cursor: "pointer",
+                padding: 8,
+                borderRadius: "var(--radius-sm)",
+                display: "flex",
+                alignItems: "center",
+                flexShrink: 0,
+                transition: "background 0.12s, color 0.12s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--border)"; e.currentTarget.style.color = "var(--danger)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
+            >
+              <LogOut size={15} strokeWidth={2} />
+            </button>
+          )}
         </div>
       </aside>
     </>
@@ -335,7 +410,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
 // é `draggable`, então um clique normal em qualquer outro ponto da linha
 // (inclusive no próprio ícone sem mover) continua navegando na hora, sem
 // nenhum gesto/atraso extra atrapalhando.
-function NavItem({ icon: Icon, label, active, onClick, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
+function NavItem({ icon: Icon, label, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
@@ -345,20 +420,23 @@ function NavItem({ icon: Icon, label, active, onClick, isDragOver, onIconDragSta
       onDragOver={onRowDragOver}
       onDrop={onRowDrop}
       style={{
-        width: "calc(100% - 16px)",
-        margin: "0 8px",
+        width: rail ? "auto" : "calc(100% - 16px)",
+        margin: rail ? "1px 12px" : "0 8px",
         display: "flex",
         alignItems: "center",
+        justifyContent: rail ? "center" : "flex-start",
         gap: 9,
-        padding: "7px 10px",
+        padding: rail ? "9px" : "7px 10px",
         position: "relative",
         fontSize: 13,
         fontFamily: "inherit",
         fontWeight: active ? 600 : 500,
         color: active ? "var(--text)" : hovered ? "var(--text)" : "var(--text-dim)",
-        background: active ? "var(--surface)" : hovered ? "var(--border)" : "transparent",
+        background: rail
+          ? (active ? "var(--accent-tint)" : hovered ? "var(--border)" : "transparent")
+          : (active ? "var(--surface)" : hovered ? "var(--border)" : "transparent"),
         border: "none",
-        boxShadow: isDragOver ? "inset 0 2px 0 0 var(--accent)" : active ? "var(--shadow-card)" : "none",
+        boxShadow: isDragOver ? "inset 0 2px 0 0 var(--accent)" : (!rail && active) ? "var(--shadow-card)" : "none",
         cursor: "pointer",
         textAlign: "left",
         whiteSpace: "nowrap",
@@ -372,13 +450,25 @@ function NavItem({ icon: Icon, label, active, onClick, isDragOver, onIconDragSta
           onDragStart={(e) => { e.stopPropagation(); onIconDragStart?.(); }}
           onDragEnd={(e) => { e.stopPropagation(); onIconDragEnd?.(); }}
           onMouseDown={(e) => e.stopPropagation()}
-          title="Arraste para reordenar"
+          title={rail ? undefined : "Arraste para reordenar"}
           style={{ display: "flex", flexShrink: 0, cursor: "grab" }}
         >
-          <Icon size={15} strokeWidth={2} style={{ opacity: 0.85 }} />
+          <Icon size={15} strokeWidth={2} style={{ opacity: 0.85, color: rail && active ? "var(--accent)" : undefined }} />
         </span>
       )}
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
+      {!rail && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
+      {rail && hovered && (
+        <span
+          style={{
+            position: "absolute", left: "100%", top: "50%", transform: "translateY(-50%)", marginLeft: 10,
+            background: "var(--text)", color: "var(--bg)", fontSize: 12, fontWeight: 600,
+            padding: "5px 10px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "var(--shadow-pop)", zIndex: 60,
+            pointerEvents: "none",
+          }}
+        >
+          {label}
+        </span>
+      )}
     </button>
   );
 }

@@ -1,4 +1,4 @@
-// Categorias de cliente usadas no cadastro central e no seletor do Pipeline.
+// Categorias de cliente usadas no cadastro central e no seletor da Venda.
 // `color` é usado para o chip/tag tanto na tabela de Configurações quanto no
 // mini-card do drawer.
 
