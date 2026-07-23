@@ -62,8 +62,8 @@ export async function callAI(provider, model, apiKey, messages, maxTokens) {
 export function useAI(currentUser) {
   const aiConfig = currentUser?.aiConfig;
   const hasPersonalConfig = Boolean(aiConfig?.provider && aiConfig?.apiKey && aiConfig?.model);
-  const orgConfigured = useOrgAIStatus();
-  const isConfigured = hasPersonalConfig || (isSupabaseConfigured && orgConfigured);
+  const orgStatus = useOrgAIStatus();
+  const isConfigured = hasPersonalConfig || (isSupabaseConfigured && orgStatus.configured);
 
   const complete = useCallback(async (messages, { maxTokens = 1200 } = {}) => {
     if (!isConfigured) throw new Error('Configure sua LLM nas Configurações → Integrações de IA (ou peça a um admin pra configurar a chave da empresa).');
@@ -76,5 +76,11 @@ export function useAI(currentUser) {
     return callAI(null, null, null, messages, maxTokens);
   }, [aiConfig, hasPersonalConfig, isConfigured]);
 
-  return { complete, isConfigured, provider: aiConfig?.provider, model: aiConfig?.model };
+  // `provider` reflete quem VAI atender a chamada: chave pessoal quando
+  // existe, senão o provedor da chave da empresa. Telas com recurso de visão
+  // (leitura de documento/currículo) dependem disso pra saber se a extração
+  // é suportada — devolver só o provedor pessoal fazia chave org parecer
+  // "sem provedor" e a extração era pulada em silêncio.
+  const provider = hasPersonalConfig ? aiConfig.provider : orgStatus.provider;
+  return { complete, isConfigured, provider, model: aiConfig?.model };
 }

@@ -13,29 +13,35 @@ function fetchOrgAIStatus() {
   inflightPromise = supabase.functions
     .invoke("ai-assistant", { body: { action: "status" } })
     .then(({ data, error }) => {
-      cachedStatus = error || data?.error ? { configured: false } : { configured: Boolean(data?.configured) };
+      cachedStatus = error || data?.error
+        ? { configured: false, provider: null }
+        : { configured: Boolean(data?.configured), provider: data?.provider || null };
       return cachedStatus;
     })
     .catch(() => {
-      cachedStatus = { configured: false };
+      cachedStatus = { configured: false, provider: null };
       return cachedStatus;
     });
   return inflightPromise;
 }
 
-// Status (só configurado/não — nunca a chave em si) da IA em nível de
-// empresa, configurada via secrets AI_ORG_* no projeto Supabase (mesmo
+// Status (configurado/não + provedor — nunca a chave em si) da IA em nível
+// de empresa, configurada via secrets AI_ORG_* no projeto Supabase (mesmo
 // padrão do D4SIGN_API_TOKEN). Usado como fallback quando o usuário não
-// tem chave pessoal salva em Configurações → Integrações de IA.
+// tem chave pessoal salva em Configurações → Integrações de IA. O provedor
+// é necessário no cliente: recursos de visão (leitura de documento/currículo)
+// só funcionam com Anthropic, e as telas precisam saber disso pra decidir
+// se tentam a extração — sem ele, chave org ficava invisível e o
+// preenchimento automático desistia em silêncio.
 export function useOrgAIStatus() {
-  const [configured, setConfigured] = useState(cachedStatus?.configured ?? false);
+  const [status, setStatus] = useState(cachedStatus ?? { configured: false, provider: null });
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let cancelled = false;
-    fetchOrgAIStatus().then(status => { if (!cancelled) setConfigured(status.configured); });
+    fetchOrgAIStatus().then(s => { if (!cancelled) setStatus(s); });
     return () => { cancelled = true; };
   }, []);
 
-  return configured;
+  return status;
 }

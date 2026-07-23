@@ -322,6 +322,11 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
                 Configure uma LLM (Anthropic) em Configurações → Integrações de IA para usar o preenchimento automático. O upload do documento continua funcionando normalmente.
               </div>
             )}
+            {isConfigured && provider !== "anthropic" && (
+              <div style={{ fontSize: 11, color: "var(--warning)", marginTop: 6 }}>
+                O preenchimento automático por leitura do documento só funciona com o provedor Anthropic — a chave configurada ({provider || "provedor desconhecido"}) não lê imagens/PDF. O upload do documento continua funcionando normalmente.
+              </div>
+            )}
           </div>
 
           <style>{`
