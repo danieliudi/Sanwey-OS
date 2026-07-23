@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, Pencil, AlertCircle, ExternalLink, Trash2 } from "lucide-react";
+import { Plus, X, Pencil, AlertCircle, ExternalLink, Trash2, Settings } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -13,7 +13,8 @@ import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
-import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
+import { RHStageListManager } from "../shared/stage-editor/StageListManager";
+import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { usePosvenda } from "../../hooks/use-posvenda";
 import { useAvailableHeight } from "../../hooks/use-available-height";
@@ -315,6 +316,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const [stageError, setStageError] = useState(null);
   const [createModalStage, setCreateModalStage] = useState(null);
   const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [editingFieldsStage, setEditingFieldsStage] = useState(null); // { stageKey, name }
   const [selectedCase, setSelectedCase] = useState(null);
 
   const trailingRef = useRef(null);
@@ -462,6 +464,18 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                       nameFontWeight={700}
                       uppercase={false}
                       countFontSize={12}
+                      actions={isManager && !stage.terminal && (
+                        <button
+                          onClick={() => setEditingFieldsStage({ stageKey: stage.stageKey, name: stage.name })}
+                          className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
+                          style={{ width: 24, height: 24, flexShrink: 0, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                          title="Editar fase"
+                        >
+                          <Settings size={13} />
+                        </button>
+                      )}
                     >
                       <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", fontWeight: 600 }}>
                         {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}
@@ -525,13 +539,21 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
         </div>
       </div>
 
-      <RHStageEditorModal
+      <RHStageListManager
         open={stageEditorOpen}
         onClose={() => setStageEditorOpen(false)}
         domain="posvenda"
         domainLabel="Funil de Pós-venda"
         records={cases}
         stageField="stage"
+      />
+
+      <RHStageFieldsPanel
+        open={!!editingFieldsStage}
+        onClose={() => setEditingFieldsStage(null)}
+        domain="posvenda"
+        stageKey={editingFieldsStage?.stageKey}
+        stageName={editingFieldsStage?.name}
       />
 
       {selectedCase && (

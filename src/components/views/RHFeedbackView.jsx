@@ -15,8 +15,8 @@ import { useProfiles } from "../../hooks/use-profiles";
 import { nextPendingCycle, addDaysISO, CICLO_TIPOS, avaliacaoDiasParaProxima, cicloTipoLabel } from "../../utils/rh-feedback-cycles";
 import { formatBRL } from "../../utils/currency";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
-import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
-import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageListManager } from "../shared/stage-editor/StageListManager";
+import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
@@ -1619,7 +1619,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
       )}
 
       {canWrite && (
-        <RHStageEditorModal
+        <RHStageListManager
           open={stageEditorOpen}
           onClose={() => setStageEditorOpen(false)}
           domain="feedback"
@@ -1630,7 +1630,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
       )}
 
       {canWrite && (
-        <RHStageFieldEditorModal
+        <RHStageFieldsPanel
           open={!!fieldEditorStage}
           onClose={() => setFieldEditorStage(null)}
           domain="feedback"

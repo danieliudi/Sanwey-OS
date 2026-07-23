@@ -22,8 +22,8 @@ import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { nextPendingCycle } from "../../utils/rh-feedback-cycles";
 import { parseDateInput } from "../../utils/date";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
-import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
-import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageListManager } from "../shared/stage-editor/StageListManager";
+import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
@@ -43,7 +43,7 @@ import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
 // As etapas vêm de rh_pipeline_stages (domain="onboarding"), editáveis pelo RH
-// via RHStageEditorModal — ver useRHPipelineStages("onboarding") mais abaixo.
+// via RHStageListManager — ver useRHPipelineStages("onboarding") mais abaixo.
 // Os stageKeys (documentacao/integracao/acompanhamento/avaliacao/concluido) já
 // batem com os valores existentes em rh_colaboradores.onboarding_stage.
 
@@ -1453,7 +1453,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
       )}
 
       {canWrite && (
-        <RHStageEditorModal
+        <RHStageListManager
           open={stageEditorOpen}
           onClose={() => setStageEditorOpen(false)}
           domain="onboarding"
@@ -1464,7 +1464,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
       )}
 
       {canWrite && (
-        <RHStageFieldEditorModal
+        <RHStageFieldsPanel
           open={!!fieldEditorStage}
           onClose={() => setFieldEditorStage(null)}
           domain="onboarding"

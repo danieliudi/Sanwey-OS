@@ -4,7 +4,7 @@ import {
   Info, Pencil, FastForward, Ban, CheckCheck, Eye, GitBranch,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
-import { StageEditorModal } from "./StageEditorModal";
+import { CRMStageListManager } from "../shared/stage-editor/StageListManager";
 import { SellerPreviewModal } from "./SellerPreviewModal";
 
 /**
@@ -274,10 +274,12 @@ export function PipelineStagesModal({
         </div>
       </div>
 
-      <StageEditorModal
+      <CRMStageListManager
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         companyId={companyId}
+        companyLabel={companyData?.short}
+        accent={accent}
         stages={safeStages}
         leads={leads}
         onReplacePipeline={onReplacePipeline}

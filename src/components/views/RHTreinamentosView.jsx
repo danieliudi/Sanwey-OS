@@ -12,8 +12,8 @@ import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useMyColaborador } from "../../hooks/use-my-colaborador";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
-import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
-import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageListManager } from "../shared/stage-editor/StageListManager";
+import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
@@ -1192,7 +1192,7 @@ function TreinamentoBoardModal({
       )}
 
       {canWrite && (
-        <RHStageEditorModal
+        <RHStageListManager
           open={stageEditorOpen}
           onClose={() => setStageEditorOpen(false)}
           domain="treinamentos"
@@ -1210,7 +1210,7 @@ function TreinamentoBoardModal({
       )}
 
       {canWrite && (
-        <RHStageFieldEditorModal
+        <RHStageFieldsPanel
           open={!!fieldEditorStage}
           onClose={() => setFieldEditorStage(null)}
           domain="treinamentos"

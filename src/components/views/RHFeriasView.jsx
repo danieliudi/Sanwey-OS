@@ -9,8 +9,8 @@ import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
-import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
-import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageListManager } from "../shared/stage-editor/StageListManager";
+import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
@@ -1100,7 +1100,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       )}
 
       {canWrite && (
-        <RHStageEditorModal
+        <RHStageListManager
           open={stageEditorOpen}
           onClose={() => setStageEditorOpen(false)}
           domain="ferias"
@@ -1111,7 +1111,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       )}
 
       {canWrite && (
-        <RHStageFieldEditorModal
+        <RHStageFieldsPanel
           open={!!fieldEditorStage}
           onClose={() => setFieldEditorStage(null)}
           domain="ferias"

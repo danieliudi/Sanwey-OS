@@ -11,7 +11,7 @@ import { Select } from "../ui/Select";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
 import { LeadFormBuilder } from "../lead/LeadFormBuilder";
-import { StageFieldEditorModal } from "../pipeline/StageFieldEditorModal";
+import { CRMStageFieldsPanel } from "../shared/stage-editor/CRMStageFieldsPanel";
 import { PipelineStagesModal } from "../pipeline/PipelineStagesModal";
 import { DynamicField, validateFields } from "../ui/DynamicField";
 import { PipelineCalendarView } from "./PipelineCalendarView";
@@ -941,7 +941,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                       style={{ width: 24, height: 24, flexShrink: 0, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
                       onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                      title="Editar campos desta etapa"
+                      title="Editar fase"
                     >
                       <Settings size={13} />
                     </button>
@@ -1066,8 +1066,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         />
       )}
 
-      {/* Stage field editor */}
-      <StageFieldEditorModal
+      {/* Editor de fase (campos + opções avançadas, estilo Pipefy) */}
+      <CRMStageFieldsPanel
         open={Boolean(editingStage)}
         onClose={() => setEditingStage(null)}
         stage={editingStage?.stage}

@@ -10,8 +10,8 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { usePersonalEvents } from "../../hooks/use-personal-events";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
-import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
-import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageListManager } from "../shared/stage-editor/StageListManager";
+import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { CampaignKanbanCard } from "../campaign/CampaignKanbanCard";
 import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { CampaignCalendar } from "../campaign/CampaignCalendar";
@@ -694,7 +694,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing"), editáveis via
-  // RHStageEditorModal — mesmo padrão do RHOnboardingView. Normalizamos pro
+  // RHStageListManager — mesmo padrão do RHOnboardingView. Normalizamos pro
   // shape que o resto do arquivo (colunas, badges, CampaignKanbanCard) já
   // espera: { id, name, color, sla, terminal }.
   const { stages: dbStages, loading: loadingStages } = useRHPipelineStages("marketing");
@@ -1296,7 +1296,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
 
       {/* Editor de etapas do Kanban (rh_pipeline_stages, domain="marketing") */}
       {canWrite && (
-        <RHStageEditorModal
+        <RHStageListManager
           open={stageEditorOpen}
           onClose={() => setStageEditorOpen(false)}
           domain="marketing"
@@ -1308,7 +1308,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
 
       {/* Editor de campos customizados por etapa (rh_pipeline_stage_fields) */}
       {canWrite && (
-        <RHStageFieldEditorModal
+        <RHStageFieldsPanel
           open={!!fieldEditorStage}
           onClose={() => setFieldEditorStage(null)}
           domain="marketing"

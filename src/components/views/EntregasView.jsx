@@ -11,8 +11,8 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { useMarketingCampaigns }    from "../../hooks/use-marketing-campaigns";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
-import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
-import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageListManager } from "../shared/stage-editor/StageListManager";
+import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import {
   DELIVERABLE_STAGES, DELIVERABLE_DEPARTMENTS, DELIVERABLE_PRIORITIES,
 } from "../../constants/marketing-pipelines";
@@ -675,7 +675,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables"),
-  // editáveis via RHStageEditorModal — mesmo padrão do RHOnboardingView.
+  // editáveis via RHStageListManager — mesmo padrão do RHOnboardingView.
   // Normalizamos pro shape que o resto do arquivo (colunas, badges,
   // DeliverableKanbanCard) já espera: { id, name, color, sla, terminal }.
   const { stages: dbStages, loading: loadingStages } = useRHPipelineStages("marketing_deliverables");
@@ -1207,7 +1207,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
 
     {/* Editor de etapas do Kanban (rh_pipeline_stages, domain="marketing_deliverables") */}
     {canWrite && (
-      <RHStageEditorModal
+      <RHStageListManager
         open={stageEditorOpen}
         onClose={() => setStageEditorOpen(false)}
         domain="marketing_deliverables"
@@ -1219,7 +1219,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
 
     {/* Editor de campos customizados por etapa (rh_pipeline_stage_fields) */}
     {canWrite && (
-      <RHStageFieldEditorModal
+      <RHStageFieldsPanel
         open={!!fieldEditorStage}
         onClose={() => setFieldEditorStage(null)}
         domain="marketing_deliverables"

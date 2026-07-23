@@ -54,8 +54,8 @@ import { useAI } from "../../hooks/use-ai";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
-import { RHStageEditorModal } from "../rh-pipeline/RHStageEditorModal";
-import { RHStageFieldEditorModal } from "../rh-pipeline/RHStageFieldEditorModal";
+import { RHStageListManager } from "../shared/stage-editor/StageListManager";
+import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { useRecordViews } from "../../hooks/use-record-views";
@@ -75,7 +75,7 @@ import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
-// useRHPipelineStages("vagas"|"candidatos") — ver RHStageEditorModal. Estes
+// useRHPipelineStages("vagas"|"candidatos") — ver RHStageListManager. Estes
 // helpers viram simples lookups sobre o array vindo do hook, com fallback
 // pra não quebrar a UI enquanto os stages ainda estão carregando.
 function findStage(stages, key) {
@@ -1189,7 +1189,7 @@ function VagaDrawer({
         users={users}
       />
 
-      {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
+      {/* Campos customizados desta etapa (RHStageListManager → RHStageFieldsPanel) */}
       {visibleCustomFields.length > 0 && (
         <div>
           <div style={labelSt}>Campos desta etapa</div>
@@ -1945,7 +1945,7 @@ function CandidatoDrawer({
         users={users}
       />
 
-      {/* Campos customizados desta etapa (RHStageEditorModal → RHStageFieldEditorModal) */}
+      {/* Campos customizados desta etapa (RHStageListManager → RHStageFieldsPanel) */}
       {visibleCustomFields.length > 0 && (
         <div>
           <div style={labelSt}>Campos desta etapa</div>
@@ -3485,7 +3485,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
       )}
 
       {stageEditorOpen && (
-        <RHStageEditorModal
+        <RHStageListManager
           open={stageEditorOpen}
           onClose={() => setStageEditorOpen(false)}
           domain={viewMode}
@@ -3496,7 +3496,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
       )}
 
       {fieldEditorStage && (
-        <RHStageFieldEditorModal
+        <RHStageFieldsPanel
           open={Boolean(fieldEditorStage)}
           onClose={() => setFieldEditorStage(null)}
           domain={fieldEditorStage.domain}

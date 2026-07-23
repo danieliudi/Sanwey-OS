@@ -1,24 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
-// Tipos de campo suportados na v1.
-export const FIELD_TYPES = [
-  { value: "text",       label: "Texto curto" },
-  { value: "textarea",   label: "Texto longo" },
-  { value: "number",     label: "Número" },
-  { value: "currency",   label: "Moeda (R$)" },
-  { value: "date",       label: "Data" },
-  { value: "datetime",   label: "Data e hora" },
-  { value: "time",       label: "Hora (HH:MM)" },
-  { value: "email",      label: "E-mail" },
-  { value: "phone",      label: "Telefone" },
-  { value: "url",        label: "URL" },
-  { value: "checkbox",   label: "Caixa de seleção" },
-  { value: "select",     label: "Lista suspensa" },
-  { value: "radio",      label: "Escolha única (radio)" },
-  { value: "multicheck", label: "Múltiplas escolhas" },
-  { value: "user",       label: "Usuário do sistema" },
-];
+// Catálogo único em src/constants/field-types.js; reexportado aqui pra
+// manter os importadores existentes deste hook funcionando.
+export { FIELD_TYPES } from "../constants/field-types";
 
 function rowToField(r) {
   return {
