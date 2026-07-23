@@ -1,11 +1,12 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Clock, Star, AlertTriangle, TrendingUp, Check, X as XIcon, MessageCircle } from "lucide-react";
+import { Star, AlertTriangle, TrendingUp, Check, X as XIcon } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { CHANNEL_COLORS, MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { formatK } from "../../utils/currency";
-import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
+import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
+import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
@@ -15,19 +16,6 @@ function daysFromDate(dateStr) {
 function daysUntilDate(dateStr) {
   if (!dateStr) return null;
   return Math.floor((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-}
-
-// Tempo na etapa (neutro) vs. SLA estourado (vermelho) — só fica âmbar/
-// vermelho de fato passando do SLA da etapa; sem SLA, ou dentro do prazo, é
-// só um badge neutro (tempo decorrido).
-function slaStyle(daysInStage, sla) {
-  if (daysInStage <= 0) return null;
-  if (sla) {
-    const ratio = daysInStage / sla;
-    if (ratio >= 1)   return { bg: "#FEE2E2", text: "var(--danger)", border: "#FECACA" };
-    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  }
-  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
 
 function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread, showMoveOptions = true }) {
@@ -47,7 +35,6 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
   const stage = (stages || MARKETING_STAGES).find(s => s.id === campaign.stage);
   const daysInStage = daysFromDate(campaign.stageChangedAt);
   const daysToLaunch = daysUntilDate(campaign.launchDate);
-  const ageStyle = daysInStage !== null ? slaStyle(daysInStage, stage?.sla) : null;
   const isTerminal = Boolean(stage?.terminal);
 
   const isUrgent = daysToLaunch !== null && daysToLaunch <= 7 &&
@@ -80,11 +67,10 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
       onClick={() => { if (!menuOpen) onClick?.(campaign); }}
       className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
-        background: "var(--surface)",
+        background: terminalCardBackground(isTerminal),
         border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
-        opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;
@@ -99,44 +85,33 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
     >
       {/* Header: name + badges + menu */}
       <div className="flex items-start justify-between gap-2 mb-1.5">
-        <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: "var(--text)" }}>
+        <div className="font-semibold text-[13px] leading-snug flex-1" style={{ color: terminalTextColor(isTerminal) }}>
           {campaign.name}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {unread && (
-            <span
-              title="Comentário novo"
-              className="inline-flex items-center justify-center rounded-full"
-              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
-            >
-              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
-            </span>
-          )}
-          {isUrgent && (
-            <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-              style={{ fontSize: 10, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA" }}
-              title={`Lançamento em ${daysToLaunch}d`}
-            >
-              <AlertTriangle size={8} strokeWidth={2.5} />
-              URGENTE
-            </span>
-          )}
-          {ageStyle && !isUrgent && (
-            <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-              style={{ fontSize: 10, background: ageStyle.bg, color: ageStyle.text, border: `1px solid ${ageStyle.border}` }}
-              title={`${daysInStage}d nesta etapa (SLA: ${stage?.sla}d)`}
-            >
-              <Clock size={8} strokeWidth={2.5} />
-              {daysInStage}d
-            </span>
-          )}
-          {completeness?.total > 0 && (
-            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
-          )}
+          <KanbanCardStatusChips
+            unread={unread}
+            agingDays={isUrgent ? null : daysInStage}
+            slaDays={stage?.sla}
+            agingTitle={`${daysInStage}d nesta etapa (SLA: ${stage?.sla}d)`}
+            dangerColor="var(--danger)"
+            completeness={completeness}
+            completenessSize={26}
+            muted={isTerminal}
+          >
+            {isUrgent && (
+              <span
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
+                style={{ fontSize: 10, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA", opacity: terminalAccentOpacity(isTerminal) }}
+                title={`Lançamento em ${daysToLaunch}d`}
+              >
+                <AlertTriangle size={8} strokeWidth={2.5} />
+                URGENTE
+              </span>
+            )}
+          </KanbanCardStatusChips>
           {campaign.starred && (
-            <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} />
+            <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B", opacity: terminalAccentOpacity(isTerminal) }} />
           )}
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
             <MoveStageMenu
@@ -164,7 +139,7 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
         {campaign.channel && channelStyle && (
           <span
             className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold"
-            style={{ background: channelStyle.bg, color: channelStyle.text, border: `1px solid ${channelStyle.border}` }}
+            style={{ background: channelStyle.bg, color: channelStyle.text, border: `1px solid ${channelStyle.border}`, opacity: terminalAccentOpacity(isTerminal) }}
           >
             {campaign.channel}
           </span>
@@ -184,14 +159,17 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {campaign.budget > 0 && (
-            <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>
+            <span className="text-[11px] font-semibold" style={{ color: terminalTextColor(isTerminal) }}>
               {formatK(campaign.budget)}
             </span>
           )}
           {campaign.launchDate && (
             <span
               className="text-[10px]"
-              style={{ color: daysToLaunch !== null && daysToLaunch <= 3 ? "var(--danger)" : "var(--text-dim)" }}
+              style={{
+                color: daysToLaunch !== null && daysToLaunch <= 3 ? "var(--danger)" : "var(--text-dim)",
+                opacity: terminalAccentOpacity(isTerminal),
+              }}
             >
               {daysToLaunch !== null
                 ? daysToLaunch < 0
@@ -215,7 +193,9 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
             </span>
           )}
           {resolvedOwners.length > 0 && (
-            <AvatarStack users={resolvedOwners} size={20} max={3} />
+            <span className="inline-flex" style={{ opacity: terminalAccentOpacity(isTerminal) }}>
+              <AvatarStack users={resolvedOwners} size={20} max={3} />
+            </span>
           )}
         </div>
       </div>

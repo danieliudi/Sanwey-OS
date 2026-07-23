@@ -1,0 +1,24 @@
+-- Já aplicada ao projeto vivo via MCP (apply_migration); este arquivo existe
+-- para que um `supabase db reset` reproduza o mesmo schema.
+--
+-- Achado ao validar a migration anterior (broaden_approval): existiam DOIS
+-- overloads de approve_purchase_request no banco —
+-- approve_purchase_request(uuid, uuid) [2 parâmetros, criado em
+-- 20260714_marketing_purchase_requests.sql] e
+-- approve_purchase_request(uuid, uuid, uuid) [3 parâmetros, criado em
+-- 20260751_compras_marketing_cotacao_stage.sql]. A migration de 20260751
+-- usou CREATE OR REPLACE com uma assinatura diferente (ganhou p_supplier_id),
+-- o que no Postgres cria um NOVO overload em vez de substituir o antigo —
+-- a versão de 2 parâmetros ficou órfã no banco, nunca removida.
+--
+-- Consequência real: o overload órfão ainda tinha o critério de permissão
+-- ANTIGO (admin/gerente_marketing, sem 'marketing' — não pega o fix desta
+-- sessão) E a checagem de etapa ANTIGA (v_row.stage <> 'solicitado', que
+-- nem reconhece a etapa "cotacao" — rejeitaria aprovar a partir dela). O
+-- client atual (use-marketing-purchase-requests.js) sempre chama a RPC
+-- passando os 3 parâmetros nomeados, então o PostgREST resolve pro overload
+-- de 3 parâmetros na prática — mas o overload de 2 continuava reachable via
+-- RPC direta (ex: chamando só com p_id/p_responsible_id), o que teria
+-- reintroduzido silenciosamente o bug de escopo estreito que esta sessão
+-- corrigiu. Remove o overload morto.
+DROP FUNCTION IF EXISTS public.approve_purchase_request(uuid, uuid);

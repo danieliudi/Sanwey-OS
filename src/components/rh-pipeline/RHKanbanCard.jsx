@@ -1,20 +1,8 @@
 import React, { memo, useRef, useState } from "react";
-import { Clock, Check, X as XIcon, MessageCircle } from "lucide-react";
-import { CompletenessBadge } from "../ui/CompletenessBadge";
+import { Check, X as XIcon } from "lucide-react";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
-
-// Tempo na etapa (neutro) vs. SLA estourado (vermelho) — só fica âmbar/
-// vermelho quando de fato passa do slaDays configurado pra etapa; sem SLA,
-// ou dentro do prazo, é só um badge neutro (tempo decorrido).
-function agingStyle(days, slaDays) {
-  if (days <= 0) return null;
-  if (slaDays) {
-    const ratio = days / slaDays;
-    if (ratio >= 1)   return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
-    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  }
-  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
-}
+import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
+import { terminalCardBackground, terminalAccentOpacity } from "../shared/terminal-card-style";
 
 function stageKeyOf(s) {
   return s?.stageKey ?? s?.id;
@@ -25,7 +13,6 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
   const cardRef = useRef(null);
 
   const currentStage = stages?.find(s => stageKeyOf(s) === stage);
-  const ageStyle = agingDays != null ? agingStyle(agingDays, currentStage?.slaDays) : null;
   const isTerminal = Boolean(currentStage?.terminal);
 
   // showMoveOptions=false no board desktop (drag-and-drop já cobre mover) —
@@ -47,11 +34,10 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
       onClick={() => { if (!menuOpen) onClick?.(id); }}
       className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
-        background: "var(--surface)",
+        background: terminalCardBackground(isTerminal),
         border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
-        opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;
@@ -69,41 +55,22 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
         <div className="flex items-center shrink-0">
           {isTerminal && (
             currentStage.won
-              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A" }} />
+              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A", opacity: terminalAccentOpacity(isTerminal) }} />
               : currentStage.lost
-                ? <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626" }} />
+                ? <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626", opacity: terminalAccentOpacity(isTerminal) }} />
                 : null
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {unread && (
-            <span
-              title="Comentário novo"
-              className="inline-flex items-center justify-center rounded-full"
-              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
-            >
-              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
-            </span>
-          )}
-          {ageStyle && (
-            <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-              style={{
-                fontSize: 10,
-                background: ageStyle.bg,
-                color: ageStyle.text,
-                border: `1px solid ${ageStyle.border}`,
-                letterSpacing: "-0.01em",
-              }}
-              title={`${agingDays} dias nesta etapa`}
-            >
-              <Clock size={8} strokeWidth={2.5} />
-              {agingDays}d
-            </span>
-          )}
-          {completeness?.total > 0 && (
-            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={26} />
-          )}
+          <KanbanCardStatusChips
+            unread={unread}
+            agingDays={agingDays}
+            slaDays={currentStage?.slaDays}
+            tightTracking
+            completeness={completeness}
+            completenessSize={26}
+            muted={isTerminal}
+          />
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: stageKeyOf(s), name: s.name, color: s.color }))}
@@ -117,7 +84,15 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
         </div>
       </div>
 
-      {children}
+      {/* `children` é o conteúdo específico de cada um dos 5 boards de RH
+          (título, badges, avatares — definidos nos respectivos *View.jsx,
+          fora do escopo deste componente-shell). Sem acesso ao que é texto
+          vs. cor lá dentro, aplica a mesma opacity de acento aqui uma vez só
+          — resultado equivalente ao tratamento por elemento dos outros 4
+          cards, sem duplicar a lógica nos 5 arquivos de board. */}
+      <div style={{ opacity: terminalAccentOpacity(isTerminal) }}>
+        {children}
+      </div>
     </div>
   );
 }

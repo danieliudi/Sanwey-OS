@@ -27,6 +27,7 @@ export const MODULE_GROUPS = [
       { id: "marketing",              label: "Campanhas" },
       { id: "marketing-solicitacoes", label: "Solicitações" },
       { id: "marketing-entregas",     label: "Entregas" },
+      { id: "marketing-tarefas",      label: "Tarefas" },
       { id: "marketing-fornecedores", label: "Fornecedores" },
       { id: "marketing-compras",      label: "Compras" },
       { id: "marketing-despesas",     label: "Despesas" },
@@ -109,7 +110,7 @@ export function defaultModulesForRoles(roles) {
   }
 
   if (f.isMarketing) {
-    ["marketing-home", "marketing", "marketing-solicitacoes", "marketing-entregas",
+    ["marketing-home", "marketing", "marketing-solicitacoes", "marketing-entregas", "marketing-tarefas",
      "marketing-fornecedores", "marketing-compras", "marketing-despesas"].forEach(m => set.add(m));
   }
 

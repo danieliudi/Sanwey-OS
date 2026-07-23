@@ -24,10 +24,13 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { DeliverableDetailDrawer, STAGE_FIELDS } from "../campaign/DeliverableDetailDrawer";
 import { AvatarStack } from "../shared/AvatarStack";
+import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
+import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardCanvas } from "../shared/KanbanBoardCanvas";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -45,6 +48,19 @@ function getDeliverableAssigneeIds(d) {
 function isStuckInRevisao(d) {
   return d.stage === "revisao" && d.stageChangedAt &&
     (Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000 > 3;
+}
+
+// Mesmo critério de "atrasada" já usado no badge do card (DeliverableKanbanCard)
+// e na coluna Prazo da Tabela — o filtro "Vencidas" precisa achar exatamente
+// os mesmos itens que já aparecem em vermelho no board.
+function isOverdueDeliverable(d) {
+  return Boolean(d.deadline) && new Date(d.deadline) < new Date();
+}
+
+function isDueSoon(d) {
+  if (!d.deadline) return false;
+  const diffMs = new Date(d.deadline).getTime() - Date.now();
+  return diffMs >= 0 && diffMs <= 7 * 86400000;
 }
 
 function isStaticValueEmpty(v) {
@@ -651,9 +667,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const stageFields = useRHStageFields("marketing_deliverables");
   // trailingRef mede o painel de analytics + texto de dica que vêm depois do
   // board, pra sobrar espaço suficiente pra eles também caberem (ver
-  // use-available-height.js).
+  // use-available-height.js). marginBottom = 36 (16 do respiro original + 20
+  // do padding inferior do novo KanbanBoardCanvas, que passou a existir
+  // DEPOIS do fim do board e antes do trailingRef) — sem isso a barra de
+  // scroll horizontal do board voltaria a vazar da tela visível.
   const trailingRef = useRef(null);
-  const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
+  const [boardRef, boardHeight] = useAvailableHeight(36, [], trailingRef);
 
   // Etapas vêm de rh_pipeline_stages (domain="marketing_deliverables"),
   // editáveis via RHStageEditorModal — mesmo padrão do RHOnboardingView.
@@ -690,6 +709,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   // Deep-link do card "Presas em revisão" no Painel de Marketing (achado
   // da auditoria de fricção de 18/07) — chega via navigate(..., {state}).
   const [stuckOnly,      setStuckOnly]      = useState(Boolean(location.state?.stuckOnly));
+  const [campaignFilter, setCampaignFilter] = useState("");
+  const [deadlineFilter, setDeadlineFilter] = useState("");
 
   // roles[] cobre cargo adicional — user.role sozinho fica só de fallback.
   // Achado da 2ª auditoria (esta view ficou de fora do fix a28bfb5).
@@ -699,7 +720,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const toggleCompanyFilter = (id) =>
     setCompanyFilter(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
-  const activeFilterCount = (ownerFilter ? 1 : 0) + companyFilter.length + (starredOnly ? 1 : 0) + (stuckOnly ? 1 : 0);
+  const activeFilterCount = (ownerFilter ? 1 : 0) + companyFilter.length + (starredOnly ? 1 : 0) + (stuckOnly ? 1 : 0) + (campaignFilter ? 1 : 0) + (deadlineFilter ? 1 : 0);
 
   /* Filtered deliverables */
   const filtered = useMemo(() => {
@@ -708,8 +729,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     if (ownerFilter)             list = list.filter(d => getDeliverableAssigneeIds(d).includes(ownerFilter));
     if (companyFilter.length > 0) list = list.filter(d => companyFilter.some(c => d.companyIds?.includes(c)));
     if (starredOnly)             list = list.filter(d => d.starred);
+    if (campaignFilter)          list = list.filter(d => d.campaignId === campaignFilter);
+    if (deadlineFilter === "overdue")     list = list.filter(isOverdueDeliverable);
+    if (deadlineFilter === "due_soon")    list = list.filter(isDueSoon);
+    if (deadlineFilter === "no_deadline") list = list.filter(d => !d.deadline);
     return list;
-  }, [deliverables, ownerFilter, companyFilter, starredOnly, stuckOnly]);
+  }, [deliverables, ownerFilter, companyFilter, starredOnly, stuckOnly, campaignFilter, deadlineFilter]);
 
   const handleDragStart = useCallback((item) => setDraggedItem(item), []);
   const handleDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
@@ -788,18 +813,16 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   return (
     <>
     {stageError && (
-      <div
-        className="fixed z-50 flex items-start gap-2 p-3 rounded-xl text-sm shadow-lg"
-        style={{ top: 16, right: 16, maxWidth: 380, background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FCA5A5" }}
-      >
-        <AlertCircle size={15} className="shrink-0 mt-0.5" />
-        <span className="flex-1">{stageError}</span>
-        <button onClick={() => setStageError(null)} className="shrink-0" style={{ color: "#B91C1C" }}>
-          <X size={14} />
-        </button>
-      </div>
+      <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setStageError(null)}>
+        {stageError}
+      </AppToast>
     )}
     <div>
+      {/* Toolbar: título + view-toggle + ações + filtros, tudo dentro de um
+          único container elevado (mesma convenção de card com sombra usada
+          em ExecutiveDashboard/ClientsManager/etc. — rounded-xl + border +
+          shadow-card) — antes era texto/botões soltos direto na página. */}
+      <div className="rounded-xl border p-4 mb-4" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
         <div>
@@ -859,12 +882,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         </div>
       </div>
 
-      {canWrite && viewMode === "kanban" && (
-        <KanbanFab label="Nova entrega" onClick={() => setQuickAddStage("solicitacao")} />
-      )}
-
       {/* Filter toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <button
           onClick={() => setShowFilters(v => !v)}
           style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "var(--surface-alt)" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
@@ -897,6 +916,22 @@ export function EntregasView({ user, users = [], notifyMentions }) {
               </select>
             )}
 
+            {/* Campaign filter */}
+            <select value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}
+              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: campaignFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
+              <option value="">Todas as campanhas</option>
+              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+
+            {/* Deadline filter */}
+            <select value={deadlineFilter} onChange={e => setDeadlineFilter(e.target.value)}
+              style={{ padding: "6px 12px", borderRadius: 12, border: "1px solid var(--border)", fontSize: 12, color: deadlineFilter ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", outline: "none", cursor: "pointer" }}>
+              <option value="">Todos os prazos</option>
+              <option value="overdue">Vencidas</option>
+              <option value="due_soon">Próximos 7 dias</option>
+              <option value="no_deadline">Sem prazo</option>
+            </select>
+
             {/* Company filter */}
             {COMPANY_IDS.map(id => {
               const co  = COMPANIES[id];
@@ -917,7 +952,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             </button>
 
             {activeFilterCount > 0 && (
-              <button onClick={() => { setOwnerFilter(""); setCompanyFilter([]); setStarredOnly(false); setStuckOnly(false); }}
+              <button onClick={() => { setOwnerFilter(""); setCompanyFilter([]); setStarredOnly(false); setStuckOnly(false); setCampaignFilter(""); setDeadlineFilter(""); }}
                 style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--danger)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}>
                 <X size={11} /> Limpar
               </button>
@@ -925,6 +960,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           </>
         )}
       </div>
+      </div>
+
+      {canWrite && viewMode === "kanban" && (
+        <KanbanFab label="Nova entrega" onClick={() => setQuickAddStage("solicitacao")} />
+      )}
 
       {(loading || loadingStages) && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando entregas…</div>}
 
@@ -983,6 +1023,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                           onToggleStar={canWrite ? toggleStar : null}
                           completeness={getItemCompleteness(item)}
                           unread={getItemUnread(item)}
+                          campaignsById={campaignsById}
                         />
                       ))
                     )}
@@ -1004,10 +1045,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         </div>
 
         {/* Desktop kanban: horizontal scroll */}
-        <div className="hidden lg:block relative">
-          <div className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
-            style={{ background: "linear-gradient(to left, var(--bg) 0%, transparent 100%)" }} />
-          <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
+        <div className="hidden lg:block">
+          <KanbanBoardCanvas scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-3 h-full" style={{ minWidth: `${kanbanStages.length * 284}px` }}>
               {kanbanStages.map(stage => {
                 const stageItems = filtered.filter(d => d.stage === stage.id);
@@ -1019,39 +1058,36 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "100%", flexShrink: 0 }}>
-                    <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
-                    <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                      style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold flex items-center gap-1.5"
-                          style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                          <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
-                          <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({stageItems.length})</span>
-                        </div>
-                        {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
-                      </div>
-                      {canWrite && (
-                        <button onClick={() => setFieldEditorStage(stage)}
-                          className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                          title="Editar campos desta etapa">
-                          <Settings2 size={13} />
-                        </button>
-                      )}
-                      {canWrite && !stage.terminal && (
-                        <button onClick={() => setQuickAddStage(stage.id)}
-                          className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                          title="Adicionar entrega">
-                          <Plus size={14} />
-                        </button>
-                      )}
-                    </div>
+                    style={{ width: 272, minWidth: 272, background: isOver ? "var(--surface-alt)" : "var(--surface)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "100%", flexShrink: 0 }}>
+                    <KanbanColumnHeader
+                      color={stage.color}
+                      name={stage.name}
+                      count={stageItems.length}
+                      actions={<>
+                        {canWrite && (
+                          <button onClick={() => setFieldEditorStage(stage)}
+                            className="flex items-center justify-center rounded-md transition-colors"
+                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                            title="Editar campos desta etapa">
+                            <Settings2 size={13} />
+                          </button>
+                        )}
+                        {canWrite && !stage.terminal && (
+                          <button onClick={() => setQuickAddStage(stage.id)}
+                            className="flex items-center justify-center rounded-md transition-colors"
+                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                            title="Adicionar entrega">
+                            <Plus size={14} />
+                          </button>
+                        )}
+                      </>}
+                    >
+                      {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
+                    </KanbanColumnHeader>
 
                     <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       {stageItems.length === 0 ? (
@@ -1087,6 +1123,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
                             unread={getItemUnread(item)}
+                            campaignsById={campaignsById}
                             showMoveOptions={false}
                           />
                         ))
@@ -1096,7 +1133,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                 );
               })}
             </div>
-          </div>
+          </KanbanBoardCanvas>
         </div>
       </>)}
 

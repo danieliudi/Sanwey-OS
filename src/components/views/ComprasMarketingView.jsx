@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ShoppingCart, Plus, LayoutGrid, List, CalendarDays as CalendarIcon,
-  ChevronLeft, ChevronRight, Copy, X, XCircle, Check, MessageCircle,
+  ChevronLeft, ChevronRight, X, XCircle, MessageCircle,
 } from "lucide-react";
 import { useMarketingPurchaseRequests, PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-marketing-purchase-requests";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
@@ -13,10 +13,13 @@ import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR, parseDateInput } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
+import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
+import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
+import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
@@ -70,33 +73,6 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
   );
 }
 
-/* ── Copy public link ────────────────────────────────────────────────── */
-function CopyLinkButton() {
-  const [copied, setCopied] = useState(false);
-  const url = `${window.location.origin}/solicitar-compra`;
-  const handleCopy = () => {
-    navigator.clipboard?.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  return (
-    <button
-      onClick={handleCopy}
-      title={url}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors"
-      style={{
-        background: copied ? "#DCFCE7" : "var(--surface)",
-        borderColor: copied ? "#BBF7D0" : "var(--border)",
-        color: copied ? "#15803D" : "var(--text-dim)",
-        cursor: "pointer",
-      }}
-    >
-      {copied ? <Check size={13} /> : <Copy size={13} />}
-      {copied ? "Link copiado!" : "Copiar link público"}
-    </button>
-  );
-}
-
 /* ── Kanban card ──────────────────────────────────────────────────────── */
 // showMoveOptions=false (board desktop, drag-and-drop já cobre mover): o menu
 // "..." fica só com a opção de excluir — vira direto o ícone de lixeira, sem
@@ -108,6 +84,11 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
   const responsibleIds = purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []);
   const resolvedResponsible = responsibleIds.map(id => users?.find(u => u.id === id)).filter(Boolean);
   const firstResponsible = resolvedResponsible[0];
+  // "pago" é a etapa terminal do fluxo de compras (mesmo flag `terminal` das
+  // etapas de rh_pipeline_stages) — card lê como arquivado, mesmo tratamento
+  // dos outros 4 Kanbans (ver src/components/shared/terminal-card-style.js).
+  const currentStage = (stages || PURCHASE_STAGES).find(s => s.id === purchase.stage);
+  const isTerminal = Boolean(currentStage?.terminal);
   // Solicitado só avança pra Cotação (comparação de fornecedores); Cotação
   // só avança pra Aprovado (via approvePurchase — mantém approved_by/
   // approved_at corretos, e o vencedor é escolhido no drawer). Pular etapas
@@ -126,26 +107,26 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
       onDragEnd={() => onDragEnd?.()}
       onClick={() => { if (!menuOpen) onClick(purchase); }}
       className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" }}
+      style={{ background: terminalCardBackground(isTerminal), border: "1px solid var(--border)", boxShadow: "var(--shadow-card)" }}
       onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow-pop)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = "var(--shadow-card)"; e.currentTarget.style.borderColor = "var(--border)"; }}
     >
       <div className="flex items-center justify-between gap-2 mb-1.5">
         {purchase.requestNumber && (
-          <span className="font-mono font-bold text-xs" style={{ color: "var(--accent)" }}>{purchase.requestNumber}</span>
+          <span className="font-mono font-bold text-xs" style={{ color: "var(--accent)", opacity: terminalAccentOpacity(isTerminal) }}>{purchase.requestNumber}</span>
         )}
         <div className="flex items-center gap-1.5 ml-auto" onClick={e => e.stopPropagation()}>
           {unread && (
             <span
               title="Comentário novo"
               className="inline-flex items-center justify-center rounded-full"
-              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
+              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF", opacity: terminalAccentOpacity(isTerminal) }}
             >
               <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
             </span>
           )}
           {purchase.totalValue != null && (
-            <span className="text-xs font-bold" style={{ color: "var(--text)" }}>{formatK(purchase.totalValue)}</span>
+            <span className="text-xs font-bold" style={{ color: terminalTextColor(isTerminal) }}>{formatK(purchase.totalValue)}</span>
           )}
           {((onMoveToStage && moveTargets.length > 0) || onDeleteCard) && (
             <MoveStageMenu
@@ -157,7 +138,7 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
           )}
         </div>
       </div>
-      <div className="font-semibold text-[13px] leading-snug mb-2" style={{ color: "var(--text)" }}>
+      <div className="font-semibold text-[13px] leading-snug mb-2" style={{ color: terminalTextColor(isTerminal) }}>
         {purchase.itemName}
       </div>
       <div className="flex items-center justify-between text-[11px]" style={{ color: "var(--text-dim)" }}>
@@ -167,13 +148,13 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
           // atual (new Date()) fazia o item acender vermelho ~21h da véspera
           // (meia-noite UTC vira 21h BRT) e durante todo o próprio dia de
           // vencimento. Agora compara início-do-dia local. Achado da auditoria.
-          <span style={{ color: parseDateInput(purchase.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) ? "#DC2626" : "var(--text-dim)", fontWeight: 500 }}>
+          <span style={{ color: parseDateInput(purchase.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) ? "#DC2626" : "var(--text-dim)", fontWeight: 500, opacity: terminalAccentOpacity(isTerminal) }}>
             {formatDateBR(purchase.dueDate)}
           </span>
         )}
       </div>
       {resolvedResponsible.length > 0 && (
-        <div className="flex items-center gap-1.5 mt-2">
+        <div className="flex items-center gap-1.5 mt-2" style={{ opacity: terminalAccentOpacity(isTerminal) }}>
           <AvatarStack users={resolvedResponsible} size={18} max={2} />
           <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>{firstResponsible?.name}</span>
         </div>
@@ -319,13 +300,14 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
                 onDrop={() => onColumnDrop(stage.id)}
                 className="flex flex-col rounded-xl border overflow-hidden transition-all duration-150"
                 style={{ width: 252, minWidth: 252, background: "var(--surface-alt)", borderColor: isOver ? color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${color}30` : "none", height: "100%", flexShrink: 0 }}>
-                <div style={{ height: 6, background: color, flexShrink: 0 }} />
-                <div className="px-3.5 pt-3 pb-2.5" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
-                  <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                    {stage.name}
-                    <span style={{ color: "var(--text-dim)", fontWeight: 500 }}>({items.length})</span>
-                  </div>
-                </div>
+                <KanbanColumnHeader
+                  color={color}
+                  name={stage.name}
+                  count={items.length}
+                  bandHeight={6}
+                  letterSpacing="0.06em"
+                  truncateName={false}
+                />
                 <div className="px-2 pt-2 pb-2 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                   {items.length === 0 ? (
                     <div className="text-center py-8 text-xs" style={{ color: "var(--text-dim)", opacity: 0.6 }}>
@@ -666,7 +648,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <CopyLinkButton />
+          <CopyPublicLinkButton url={`${window.location.origin}/solicitar-compra`} label="Copiar link público" title={`${window.location.origin}/solicitar-compra`} variant="strong" />
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}  label="Kanban" />
             <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}        label="Tabela" />

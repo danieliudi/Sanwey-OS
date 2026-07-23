@@ -1,12 +1,28 @@
+import { createRequire } from "node:module";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+const require = createRequire(import.meta.url);
+const pkg = require("./package.json");
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt" (era "autoUpdate") — expõe needRefresh/onNeedRefresh em vez
+      // de trocar o service worker em silêncio, pra dar pra avisar o usuário
+      // com um toast em vez de só aplicar e esperar o próximo hard refresh
+      // (ver src/hooks/use-app-update.js). injectRegister continua "auto":
+      // o próprio plugin detecta o import de virtual:pwa-register/react no
+      // hook e evita registrar o SW duas vezes (confirmado nos docs oficiais
+      // via Context7, /vite-pwa/docs — "auto" adapta ao método de registro
+      // conforme os virtual modules importados, só cai pro <script> se
+      // nenhum for detectado).
+      registerType: "prompt",
       injectRegister: "auto",
       // Só cacheia o shell do app (JS/CSS/ícones) — nenhuma chamada de rede
       // pro Supabase (auth/dados/realtime) passa pelo service worker, então

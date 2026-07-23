@@ -242,11 +242,15 @@ export function useMyTasks({ currentUser } = {}) {
 
     // ── Aguardando minha aprovação ───────────────────────────────────────
     // Role gates below mirror the real frontend gates: PurchaseRequestDetailDrawer.jsx
-    // (`canApprove` = admin/gerente_marketing), use-marketing-quotes.js
-    // (`canApprove` = admin/gerente_marketing), use-marketing-requests.js
-    // (`canWrite` = admin/marketing/gerente_marketing), and App.jsx's
-    // `isRHManager` (admin/gerente_rh) gating the RHFeriasView `canWrite` prop.
-    if (hasAnyRole(currentUser, ["admin", "gerente_marketing"])) {
+    // (`canApprove` = admin/marketing/gerente_marketing — ampliado, ver
+    // migration 20260764_marketing_purchase_requests_broaden_approval.sql),
+    // use-marketing-quotes.js (`canApprove` = admin/gerente_marketing, NÃO
+    // ampliado — fluxo de cotação por e-mail aposentado, mas ainda separado
+    // do de compras; mantém gate próprio, não misturar com o de cima),
+    // use-marketing-requests.js (`canWrite` = admin/marketing/gerente_marketing),
+    // and App.jsx's `isRHManager` (admin/gerente_rh) gating the RHFeriasView
+    // `canWrite` prop.
+    if (hasAnyRole(currentUser, ["admin", "marketing", "gerente_marketing"])) {
       for (const p of (purchases || [])) {
         if (p.stage !== "solicitado") continue;
         out.push({
@@ -264,7 +268,9 @@ export function useMyTasks({ currentUser } = {}) {
           raw: p,
         });
       }
+    }
 
+    if (hasAnyRole(currentUser, ["admin", "gerente_marketing"])) {
       for (const q of (quotes || [])) {
         if (q.status !== "pendente") continue;
         out.push({

@@ -253,7 +253,7 @@ export function RHStageEditorModal({
           className="px-5 py-2.5 text-xs border-b"
           style={{ background: "#FFFBEB", borderColor: "#FDE68A", color: "#92400E" }}
         >
-          Alterações afetam o Kanban imediatamente para todos os usuários do RH. Não dá pra remover etapas com registros ativos.
+          Alterações afetam o Kanban imediatamente para todos os usuários de {domainLabel}. Não dá pra remover etapas com registros ativos.
         </div>
 
         {/* Header row */}
@@ -356,11 +356,17 @@ export function RHStageEditorModal({
                     <span
                       className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
                       style={{
-                        background: stage.won ? "#E8F2EC" : "#FEF2F2",
-                        color: stage.won ? "#1A6E35" : "#B91C1C",
+                        // 3 estados, não 2: terminal&&won = Ganho, terminal&&lost =
+                        // Perdido, terminal&&!won&&!lost = encerrada sem ser vitória
+                        // nem derrota (ex.: "Concluído" do Onboarding, "Entregue" de
+                        // Entregas) — cair no fallback binário antigo rotulava essas
+                        // como "Perdido" mesmo com lost=false no banco (bug real,
+                        // achado na auditoria do doc de admin cross-kanban).
+                        background: stage.won ? "#E8F2EC" : stage.lost ? "#FEF2F2" : "#EFF6FF",
+                        color: stage.won ? "#1A6E35" : stage.lost ? "#B91C1C" : "#1D4ED8",
                       }}
                     >
-                      {stage.won ? "Ganho" : "Perdido"}
+                      {stage.won ? "Ganho" : stage.lost ? "Perdido" : "Concluído"}
                     </span>
                   )}
                   {count > 0 && (

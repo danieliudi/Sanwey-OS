@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, AlertCircle, ShoppingCart } from "lucide-react";
-import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
+import { useMarketingExpenses, useMarketingExpenseItems } from "../../hooks/use-marketing-expenses";
 import { EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { formatK, formatBRL } from "../../utils/currency";
@@ -40,6 +40,71 @@ function StatusBadge({ status }) {
   );
 }
 
+function ExpenseItemRow({ row, onChange, onRemove }) {
+  const quantity = parseFloat(String(row.quantity).replace(",", ".")) || 0;
+  const unitValue = Number(row.unitValue) || 0;
+  const rowTotal = quantity * unitValue;
+  return (
+    <div className="rounded-xl border px-3 py-2" style={{ borderColor: "var(--border)" }}>
+      <div className="flex items-center gap-2 mb-1.5">
+        <input
+          type="text"
+          placeholder="Descrição do item"
+          value={row.description}
+          onChange={e => onChange({ description: e.target.value })}
+          className="flex-1 text-xs rounded-lg border px-2.5 py-1.5 outline-none"
+          style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+          onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+          onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+        />
+        <button
+          type="button"
+          onClick={onRemove}
+          title="Remover item"
+          style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", padding: 4, borderRadius: 6, display: "flex", flexShrink: 0 }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="number"
+          min="0"
+          step="any"
+          placeholder="Qtd"
+          value={row.quantity}
+          onChange={e => onChange({ quantity: e.target.value })}
+          className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+          style={{ width: 56, borderColor: "var(--border-strong)", color: "var(--text)" }}
+          onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+          onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+        />
+        <span className="text-xs" style={{ color: "var(--text-dim)" }}>×</span>
+        <div className="flex-1">
+          <CurrencyInput
+            placeholder="Valor unit."
+            value={row.unitValue}
+            onChange={v => onChange({ unitValue: v })}
+            className="w-full text-xs rounded-lg border px-2.5 py-1.5 outline-none"
+            style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+            onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+            onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+          />
+        </div>
+        <span className="text-xs" style={{ color: "var(--text-dim)" }}>=</span>
+        <div
+          className="text-xs font-semibold text-right shrink-0"
+          style={{ width: 80, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}
+        >
+          {formatBRL(rowTotal)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser }) {
   // Id gerado no cliente pra despesas novas — permite subir a nota fiscal
   // pro Storage (path `expense-invoices/${id}/...`) antes mesmo do primeiro
@@ -58,6 +123,52 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
   const [error, setError]   = useState(null);
   const [uploading, setUploading] = useState(false);
   useEscToClose(onClose);
+
+  const { fetchItems, createExpenseItem, updateExpenseItem, deleteExpenseItem } = useMarketingExpenseItems();
+  const isEditing = Boolean(initial?.id);
+  const [rows, setRows] = useState([]);
+  const [itemsLoading, setItemsLoading] = useState(isEditing);
+  const originalItemsRef = useRef([]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    let alive = true;
+    fetchItems(id)
+      .then(data => {
+        if (!alive) return;
+        originalItemsRef.current = data;
+        setRows(data.map(it => ({
+          key: it.id,
+          dbId: it.id,
+          description: it.description,
+          quantity: String(it.quantity),
+          unitValue: it.unitValue,
+        })));
+      })
+      .catch(err => { if (alive) setError(err?.message || "Erro ao carregar itens da despesa."); })
+      .finally(() => { if (alive) setItemsLoading(false); });
+    return () => { alive = false; };
+  }, [isEditing, id, fetchItems]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addRow = () => setRows(prev => [...prev, { key: crypto.randomUUID(), dbId: null, description: "", quantity: "1", unitValue: "" }]);
+  const removeRow = (key) => setRows(prev => prev.filter(r => r.key !== key));
+  const updateRow = (key, patch) => setRows(prev => prev.map(r => r.key === key ? { ...r, ...patch } : r));
+
+  const hasItems = rows.length > 0;
+  const validRows = useMemo(() => rows.filter(r => r.description.trim()), [rows]);
+  const computedTotal = useMemo(() => validRows.reduce((sum, r) => {
+    const q = parseFloat(String(r.quantity).replace(",", ".")) || 0;
+    const u = Number(r.unitValue) || 0;
+    return sum + q * u;
+  }, 0), [validRows]);
+
+  // Enquanto há itens, o campo Valor é só exibição (o trigger do banco recalcula
+  // amount a partir da soma dos itens) — mantemos form.amount em sincronia pra
+  // já deixar o valor certo pronto assim que o último item for removido e o
+  // campo voltar a ficar editável direto.
+  useEffect(() => {
+    if (hasItems) setForm(f => ({ ...f, amount: computedTotal }));
+  }, [hasItems, computedTotal]);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
@@ -103,13 +214,49 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
     setSaving(true);
     setError(null);
     try {
-      await onSave({
+      const parentPayload = {
         ...form,
         id,
-        amount:      parseFloat(form.amount) || 0,
         dueDate:     localDateInputToISOString(form.dueDate),
         invoiceDate: form.invoiceDate || null,
-      });
+      };
+
+      const syncItems = async () => {
+        const keptDbIds = new Set(validRows.filter(r => r.dbId).map(r => r.dbId));
+        const toDelete = originalItemsRef.current.filter(it => !keptDbIds.has(it.id));
+        for (const it of toDelete) {
+          await deleteExpenseItem(it.id);
+        }
+        for (const row of validRows) {
+          const quantity = parseFloat(String(row.quantity).replace(",", ".")) || 0;
+          const unitValue = Number(row.unitValue) || 0;
+          if (row.dbId) {
+            const orig = originalItemsRef.current.find(it => it.id === row.dbId);
+            if (!orig || orig.description !== row.description || orig.quantity !== quantity || orig.unitValue !== unitValue) {
+              await updateExpenseItem(row.dbId, { description: row.description, quantity, unitValue });
+            }
+          } else {
+            await createExpenseItem({ expenseId: id, description: row.description, quantity, unitValue });
+          }
+        }
+      };
+
+      // Itens novos só podem ser gravados depois que a despesa (pai) existe —
+      // FK expense_id. Mas se o último item de uma despesa que já tinha itens
+      // está sendo removido, marketing_expense_items_sync_amount_trg zera
+      // `amount` no delete — precisa sincronizar os itens ANTES de gravar o
+      // valor manual, senão o trigger sobrescreveria o que o usuário digitou.
+      const willHaveItems  = validRows.length > 0;
+      const isLosingLastItem = !willHaveItems && originalItemsRef.current.length > 0;
+
+      if (isLosingLastItem) {
+        await syncItems();
+        await onSave({ ...parentPayload, amount: parseFloat(form.amount) || 0 });
+      } else {
+        await onSave({ ...parentPayload, amount: willHaveItems ? computedTotal : (parseFloat(form.amount) || 0) });
+        await syncItems();
+      }
+
       onClose();
     } catch (err) {
       setError(err?.message || "Erro ao salvar despesa.");
@@ -202,29 +349,88 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
             </select>
           </div>
 
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <CurrencyInput
-                prefix={null}
-                placeholder="Valor R$"
-                value={form.amount}
-                onChange={v => set("amount", v)}
+          {hasItems ? (
+            <div className="space-y-2">
+              <div
+                className="w-full text-sm rounded-xl border px-3 py-2"
+                style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface-alt)" }}
+                title="Recalculado automaticamente a partir dos itens abaixo"
+              >
+                Total (calculado a partir dos itens):{" "}
+                <span style={{ color: "var(--text)", fontWeight: 600 }}>{formatBRL(computedTotal)}</span>
+              </div>
+              <input
+                type="date"
+                value={form.dueDate}
+                onChange={e => set("dueDate", e.target.value)}
+                title="Vencimento"
                 className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-                style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+                style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)" }}
                 onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
                 onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
               />
             </div>
-            <input
-              type="date"
-              value={form.dueDate}
-              onChange={e => set("dueDate", e.target.value)}
-              title="Vencimento"
-              className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)" }}
-              onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
-              onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
-            />
+          ) : (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <CurrencyInput
+                  prefix={null}
+                  placeholder="Valor R$"
+                  value={form.amount}
+                  onChange={v => set("amount", v)}
+                  className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                  style={{ borderColor: "var(--border-strong)", color: "var(--text)" }}
+                  onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+                  onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+                />
+              </div>
+              <input
+                type="date"
+                value={form.dueDate}
+                onChange={e => set("dueDate", e.target.value)}
+                title="Vencimento"
+                className="flex-1 text-sm rounded-xl border px-3 py-2 outline-none"
+                style={{ borderColor: "var(--border-strong)", color: form.dueDate ? "var(--text)" : "var(--text-dim)" }}
+                onFocus={e => { e.target.style.borderColor = "var(--accent)"; }}
+                onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
+              />
+            </div>
+          )}
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                Itens
+              </div>
+              {itemsLoading && (
+                <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>Carregando…</span>
+              )}
+            </div>
+
+            {rows.length > 0 && (
+              <div className="space-y-2 mb-2">
+                {rows.map(row => (
+                  <ExpenseItemRow
+                    key={row.key}
+                    row={row}
+                    onChange={patch => updateRow(row.key, patch)}
+                    onRemove={() => removeRow(row.key)}
+                  />
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={addRow}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold"
+              style={{ borderColor: "var(--border)", borderStyle: "dashed", color: "var(--text-dim)", background: "transparent", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.borderColor = "var(--accent)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "var(--border)"; }}
+            >
+              <Plus size={12} />
+              Adicionar item
+            </button>
           </div>
 
           <div>

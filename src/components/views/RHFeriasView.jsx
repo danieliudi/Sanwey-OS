@@ -27,6 +27,7 @@ import { Badge } from "../ui/Badge";
 import { EmptyState } from "../ui/EmptyState";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
+import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 
 // ── Documento obrigatório por tipo de licença ────────────────────────────────
 // Pesquisa de mercado (Convenia/Gusto/Personio) + prática CLT: alguns tipos
@@ -366,20 +367,16 @@ function FeriasKanbanColumn({
       className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
       style={{ width: 272, minWidth: 272, background: "var(--surface-alt)", borderColor: isDragOver ? stage.color + "70" : "var(--border)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: boardHeight }}
     >
-      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
-      <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold flex items-center gap-1.5" style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
-            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({reqList.length})</span>
-          </div>
-        </div>
-        {canWrite && (
+      <KanbanColumnHeader
+        color={stage.color}
+        name={stage.name}
+        count={reqList.length}
+        actions={canWrite && (
           <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
             <Settings2 size={13} />
           </button>
         )}
-      </div>
+      />
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {reqList.length === 0 ? (
           <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Nada aqui</div>

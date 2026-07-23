@@ -1,47 +1,33 @@
 import React, { memo, useMemo, useRef, useState } from "react";
-import { Clock, Check, X as XIcon, MessageCircle } from "lucide-react";
+import { Check, X as XIcon } from "lucide-react";
 import { FitScoreCircle } from "../ui/FitScoreCircle";
-import { CompletenessBadge } from "../ui/CompletenessBadge";
 import { CompanyTag } from "../ui/CompanyTag";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
+import { KanbanCardStatusChips } from "../shared/KanbanCardStatusChips";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
+import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
 
 function daysFromDate(dateStr) {
   if (!dateStr) return null;
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// Tempo na etapa (neutro, informativo) vs. SLA estourado (vermelho) — antes
-// os 3 tons (verde/âmbar/vermelho) eram só por dias corridos fixos (7/21),
-// sem nenhuma relação com o slaDays real de cada etapa. Agora só fica
-// vermelho/âmbar quando de fato passa do slaDays configurado; sem SLA
-// definido, ou dentro do prazo, é só um badge neutro (tempo decorrido).
-function agingStyle(days, slaDays) {
-  if (days <= 0) return null;
-  if (slaDays) {
-    const ratio = days / slaDays;
-    if (ratio >= 1)   return { bg: "#FEE2E2", text: "#DC2626", border: "#FECACA" };
-    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
-  }
-  return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
-}
-
 // Renderiza um dos campos escolháveis em stage.cardPreviewFields (item
 // "preview de campo configurável" do comparativo com o Pipefy) — retorna
 // null quando o lead não tem valor pro campo, pra a chamadora pular sem
 // deixar separador órfão. Mantém a mesma paleta já usada no resto do card.
-function renderPreviewField(key, lead, { probDisplay, closeStyle }) {
+function renderPreviewField(key, lead, { probDisplay, closeStyle, accentOpacity }) {
   switch (key) {
     case "value":
-      return lead.value > 0 ? { text: formatK(lead.value), color: "#15803D", weight: 600 } : null;
+      return lead.value > 0 ? { text: formatK(lead.value), color: "#15803D", weight: 600, opacity: accentOpacity } : null;
     case "probability":
       return Number.isFinite(lead.probability) ? { text: `${probDisplay}%`, color: "var(--text-dim)" } : null;
     case "closeDate":
       if (!lead.closeDate) return null;
       return closeStyle
-        ? { text: formatDateBR(lead.closeDate), pill: closeStyle }
+        ? { text: formatDateBR(lead.closeDate), pill: closeStyle, opacity: accentOpacity }
         : { text: formatDateBR(lead.closeDate), color: "var(--text-dim)" };
     case "sector":
       return lead.sector ? { text: lead.sector, color: "var(--text-dim)" } : null;
@@ -68,7 +54,6 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
 
   const currentStage = stages?.find(s => s.id === lead.stage);
   const daysInStage = daysFromDate(lead.stageChangedAt);
-  const ageStyle = daysInStage !== null ? agingStyle(daysInStage, currentStage?.slaDays) : null;
   const probDisplay = lead.probability > 1
     ? Math.round(lead.probability)
     : Math.round(lead.probability * 100);
@@ -106,11 +91,10 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
       onClick={() => { if (!menuOpen) onClick?.(lead); }}
       className="p-3.5 rounded-lg cursor-pointer transition-all duration-150"
       style={{
-        background: "var(--surface)",
+        background: terminalCardBackground(isTerminal),
         border: "1px solid var(--border)",
         boxShadow: shadowBase,
         position: "relative",
-        opacity: isTerminal ? 0.6 : 1,
       }}
       onMouseEnter={e => {
         e.currentTarget.style.boxShadow = shadowHover;
@@ -125,44 +109,27 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
     >
       {/* Company + aging badge + score + menu */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="font-semibold text-[13px] leading-snug flex-1 flex items-start gap-1.5" style={{ color: "var(--text)", minHeight: 34 }}>
+        <div className="font-semibold text-[13px] leading-snug flex-1 flex items-start gap-1.5" style={{ color: terminalTextColor(isTerminal), minHeight: 34 }}>
           {isTerminal && (
             currentStage.won
-              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A", flexShrink: 0, marginTop: 1 }} />
-              : <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626", flexShrink: 0, marginTop: 1 }} />
+              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A", flexShrink: 0, marginTop: 1, opacity: terminalAccentOpacity(isTerminal) }} />
+              : <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626", flexShrink: 0, marginTop: 1, opacity: terminalAccentOpacity(isTerminal) }} />
           )}
           <span className="line-clamp-2">{lead.company}</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {unread && (
-            <span
-              title="Comentário novo"
-              className="inline-flex items-center justify-center rounded-full"
-              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF" }}
-            >
-              <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
-            </span>
-          )}
-          {ageStyle && (
-            <span
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-              style={{
-                fontSize: 10,
-                background: ageStyle.bg,
-                color: ageStyle.text,
-                border: `1px solid ${ageStyle.border}`,
-                letterSpacing: "-0.01em",
-              }}
-              title={`${daysInStage} dias nesta etapa`}
-            >
-              <Clock size={8} strokeWidth={2.5} />
-              {daysInStage}d
-            </span>
-          )}
-          {completeness?.total > 0 && (
-            <CompletenessBadge filled={completeness.filled} total={completeness.total} size={30} />
-          )}
-          <FitScoreCircle score={lead.fitScore} size={30} />
+          <KanbanCardStatusChips
+            unread={unread}
+            agingDays={daysInStage}
+            slaDays={currentStage?.slaDays}
+            tightTracking
+            completeness={completeness}
+            completenessSize={30}
+            muted={isTerminal}
+          />
+          <span className="inline-flex" style={{ opacity: terminalAccentOpacity(isTerminal) }}>
+            <FitScoreCircle score={lead.fitScore} size={30} />
+          </span>
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
@@ -189,24 +156,24 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
       {Array.isArray(currentStage?.cardPreviewFields) && currentStage.cardPreviewFields.length > 0 ? (
         <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-xs">
           {currentStage.cardPreviewFields.map(key => {
-            const f = renderPreviewField(key, lead, { probDisplay, closeStyle });
+            const f = renderPreviewField(key, lead, { probDisplay, closeStyle, accentOpacity: terminalAccentOpacity(isTerminal) });
             if (!f) return null;
             return f.pill ? (
               <span
                 key={key}
                 className="px-1 py-0.5 rounded font-bold"
-                style={{ background: f.pill.bg, color: f.pill.text, border: `1px solid ${f.pill.border}` }}
+                style={{ background: f.pill.bg, color: f.pill.text, border: `1px solid ${f.pill.border}`, opacity: f.opacity }}
               >
                 {f.text}
               </span>
             ) : (
-              <span key={key} style={{ color: f.color, fontWeight: f.weight }}>{f.text}</span>
+              <span key={key} style={{ color: f.color, fontWeight: f.weight, opacity: f.opacity }}>{f.text}</span>
             );
           })}
         </div>
       ) : (
         <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold" style={{ color: "var(--text)" }}>
+          <span className="font-semibold" style={{ color: terminalTextColor(isTerminal) }}>
             {formatK(lead.value)}
           </span>
           <span style={{ color: "var(--text-dim)" }}>
@@ -218,6 +185,7 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
                   background: closeStyle.bg,
                   color: closeStyle.text,
                   border: `1px solid ${closeStyle.border}`,
+                  opacity: terminalAccentOpacity(isTerminal),
                 }}
               >
                 {formatDateBR(lead.closeDate)}
@@ -233,7 +201,7 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
       {showOwnerFooter && resolvedOwners.length > 0 && (
         <div
           className="mt-2.5 pt-2 border-t text-[11px] flex items-center justify-between"
-          style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}
+          style={{ borderColor: "var(--border)", color: "var(--text-dim)", opacity: terminalAccentOpacity(isTerminal) }}
         >
           <AvatarStack users={resolvedOwners} size={18} max={3} />
           {isGroupView && <CompanyTag companyId={lead.companyId} />}

@@ -20,6 +20,7 @@ import { formatK } from "../../utils/currency";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
+import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
@@ -27,6 +28,7 @@ import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
 
@@ -882,16 +884,9 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   return (
     <>
     {stageError && (
-      <div
-        className="fixed z-50 flex items-start gap-2 p-3 rounded-xl text-sm shadow-lg"
-        style={{ top: 16, right: 16, maxWidth: 380, background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FCA5A5" }}
-      >
-        <AlertCircle size={15} className="shrink-0 mt-0.5" />
-        <span className="flex-1">{stageError}</span>
-        <button onClick={() => setStageError(null)} className="shrink-0" style={{ color: "#B91C1C" }}>
-          <X size={14} />
-        </button>
-      </div>
+      <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setStageError(null)}>
+        {stageError}
+      </AppToast>
     )}
     <div>
       {/* Header */}
@@ -1175,57 +1170,42 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       flexShrink: 0,
                     }}
                   >
-                    {/* Top color band — mais grosso pra dar mais peso visual */}
-                    <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
-
-                    {/* Column header */}
-                    <div
-                      className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                      style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}
+                    <KanbanColumnHeader
+                      color={stage.color}
+                      name={stage.name}
+                      count={count}
+                      actions={<>
+                        {canWrite && !stage.terminal && (
+                          <button
+                            onClick={() => setQuickAddStage(stage.id)}
+                            title="Nova campanha nesta etapa"
+                            className="flex items-center justify-center rounded-md transition-colors"
+                            style={{ width: 26, height: 26, color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer", flexShrink: 0 }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                          >
+                            <Plus size={14} />
+                          </button>
+                        )}
+                        {canWrite && (
+                          <button
+                            onClick={() => setFieldEditorStage(stage)}
+                            title="Editar campos desta etapa"
+                            className="flex items-center justify-center rounded-md transition-colors"
+                            style={{ width: 26, height: 26, color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer", flexShrink: 0 }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                          >
+                            <Settings2 size={13} />
+                          </button>
+                        )}
+                      </>}
                     >
-                      <div className="min-w-0 flex-1">
-                        <div
-                          className="font-semibold flex items-center gap-1.5"
-                          style={{
-                            color: "var(--text)",
-                            fontSize: 11,
-                            letterSpacing: "0.08em",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
-                          <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({count})</span>
-                        </div>
-                        <div className="text-xs mt-0.5 font-semibold" style={{ color: "var(--text-dim)" }}>
-                          {totalBudget > 0 ? formatK(totalBudget) : "R$ 0"}
-                          {stage.sla && <span style={{ fontWeight: 400, marginLeft: 6 }}>· SLA {stage.sla}d</span>}
-                        </div>
+                      <div className="text-xs mt-0.5 font-semibold" style={{ color: "var(--text-dim)" }}>
+                        {totalBudget > 0 ? formatK(totalBudget) : "R$ 0"}
+                        {stage.sla && <span style={{ fontWeight: 400, marginLeft: 6 }}>· SLA {stage.sla}d</span>}
                       </div>
-                      {canWrite && !stage.terminal && (
-                        <button
-                          onClick={() => setQuickAddStage(stage.id)}
-                          title="Nova campanha nesta etapa"
-                          className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 26, height: 26, color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                        >
-                          <Plus size={14} />
-                        </button>
-                      )}
-                      {canWrite && (
-                        <button
-                          onClick={() => setFieldEditorStage(stage)}
-                          title="Editar campos desta etapa"
-                          className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 26, height: 26, color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                        >
-                          <Settings2 size={13} />
-                        </button>
-                      )}
-                    </div>
+                    </KanbanColumnHeader>
 
                     {/* Cards */}
                     <div

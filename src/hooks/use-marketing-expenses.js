@@ -131,3 +131,70 @@ export function useMarketingExpenses({ userId, role } = {}) {
     refetch: fetchAll,
   };
 }
+
+const ITEMS_TABLE = "marketing_expense_items";
+
+function rowToExpenseItem(r) {
+  return {
+    id:          r.id,
+    expenseId:   r.expense_id,
+    description: r.description,
+    quantity:    r.quantity != null ? Number(r.quantity) : 1,
+    unitValue:   r.unit_value != null ? Number(r.unit_value) : 0,
+  };
+}
+
+function expenseItemToRow(item) {
+  return {
+    expense_id:  item.expenseId,
+    description: item.description,
+    quantity:    item.quantity,
+    unit_value:  item.unitValue,
+  };
+}
+
+// Itens (quantidade × valor unitário) de uma despesa — marketing_expenses.amount
+// é recalculado automaticamente pelo trigger marketing_expense_items_sync_amount_trg
+// assim que um item é gravado/alterado/removido, então este hook nunca grava
+// `amount` diretamente, só os itens.
+export function useMarketingExpenseItems() {
+  const fetchItems = useCallback(async (expenseId) => {
+    if (!isSupabaseConfigured || !expenseId) return [];
+    const { data, error: err } = await supabase
+      .from(ITEMS_TABLE)
+      .select("*")
+      .eq("expense_id", expenseId)
+      .order("created_at", { ascending: true });
+    if (err) throw err;
+    return (data || []).map(rowToExpenseItem);
+  }, []);
+
+  const createExpenseItem = useCallback(async (item) => {
+    if (!isSupabaseConfigured) return null;
+    const { data, error: err } = await supabase
+      .from(ITEMS_TABLE)
+      .insert(expenseItemToRow(item))
+      .select()
+      .single();
+    if (err) throw err;
+    return rowToExpenseItem(data);
+  }, []);
+
+  const updateExpenseItem = useCallback(async (id, patch) => {
+    if (!isSupabaseConfigured) return;
+    const row = {};
+    if (patch.description !== undefined) row.description = patch.description;
+    if (patch.quantity !== undefined)    row.quantity = patch.quantity;
+    if (patch.unitValue !== undefined)   row.unit_value = patch.unitValue;
+    const { error: err } = await supabase.from(ITEMS_TABLE).update(row).eq("id", id);
+    if (err) throw err;
+  }, []);
+
+  const deleteExpenseItem = useCallback(async (id) => {
+    if (!isSupabaseConfigured) return;
+    const { error: err } = await supabase.from(ITEMS_TABLE).delete().eq("id", id);
+    if (err) throw err;
+  }, []);
+
+  return { fetchItems, createExpenseItem, updateExpenseItem, deleteExpenseItem };
+}
