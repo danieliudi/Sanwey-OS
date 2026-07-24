@@ -2,6 +2,7 @@
 
 Status: rascunho
 Piloto: RH
+Dono do piloto (arbitra os critérios da seção 6 e aprova mudança de schema): Daniel
 
 ## 1. Problema & Decisão
 
@@ -20,7 +21,9 @@ gerente consegue montar esse tipo de automação sozinho.
 direto, e a própria tela de Automações ganha um assistente guiado — pensado pra quem
 nunca configurou IA — que qualquer manager/admin de módulo usa pra criar esse tipo de
 agente sozinho. A execução roda internalizada na plataforma (sem depender do n8n),
-usando a chave de IA (BYOLLM) de quem criou o agente.
+usando a chave de IA que quem criou o agente já configurou em Configurações →
+Integrações de IA (BYOLLM — bring your own LLM, o mesmo modelo de "cada um usa a
+própria chave" que a plataforma já aplica hoje pra outras features de IA).
 
 **Por módulo, não global.** A arquitetura é a mesma pra qualquer módulo (é só um
 registro módulo → tabela, seção 4), mas o lançamento é incremental — cada
@@ -77,7 +80,8 @@ chamam essa função, nenhuma tela de RH chama.
 - **Exemplo Recrutamento**: quando um candidato se aplica, dispara a mesma triagem que
   já existe hoje sob o botão manual "Triar com IA" (`RHRecrutamentoView`) — só que
   automático, com o resultado indo pra aprovação em vez de aparecer direto na tela. Não
-  reinventa o prompt de triagem, reaproveita o que já está em produção.
+  reinventa o prompt de triagem, reaproveita o que já está em produção. O botão manual
+  continua existindo do jeito que está — o agente é um caminho a mais, não substitui.
 - **Exemplo Onboarding**: quando um colaborador entra na etapa "Documentação", IA monta
   um checklist personalizado com base no cargo, pra aprovação de quem conduz o
   onboarding.
@@ -213,21 +217,34 @@ utilitária chamada pelas duas, cada uma com seu próprio modelo de autenticaç�
 resultado em `agent_actions` com `automation_id` e `created_by` = dono do agente (não
 quem/o que disparou o evento).
 
-**Limite de execução**: antes de chamar a IA, conta quantas linhas em `agent_actions` esse
-`automation_id` já gerou nas últimas 24h. Teto de 50/dia, fixo no código da
-`agent-runner` — não é campo configurável em nenhuma tela, ninguém consegue elevar isso
-pela UI. Ao atingir o teto, a automação recebe `paused_reason = "Limite diário de
-execuções atingido"` e para até o dia seguinte.
+**Limite de execução**: antes de chamar a IA, conta quantas linhas em `agent_actions`
+esse `automation_id` já gerou na janela móvel das últimas 24h. Teto de 50, fixo no
+código da `agent-runner` — não é campo configurável em nenhuma tela. Ao bater o teto, a
+`agent-runner` só pula esse agente na varredura de hoje — **não** seta `paused_reason`,
+não mostra aviso, não precisa de ninguém agir. Assim que a janela de 24h andar e o
+número de linhas cair de novo abaixo de 50, o agente volta a rodar sozinho na próxima
+varredura. É esperado, não é uma falha — nunca deveria acontecer em uso normal (ver
+seção 6: bater o teto é sinal de bug na condição, não de sucesso do limite).
 
 ### Falha de chave e pausa visível
 
-Se a chave do criador falhar (revogada, usuário desligado, sem crédito), a
-`agent-runner` seta `paused_reason` e não tenta de novo sozinha — sem retry silencioso.
-Qualquer automação com `paused_reason` preenchido mostra um badge com o token
+`paused_reason` é reservado só pra isto: a chave do criador falhou (revogada, usuário
+desligado, sem crédito). Diferente do limite diário, isso nunca se resolve sozinho — a
+`agent-runner` seta `paused_reason` e não tenta de novo até alguém agir. Qualquer
+automação com `paused_reason` preenchido mostra um badge com o token
 `--warning`/`--warning-bg` (é pendência de configuração, não erro de quem usa o
 formulário — mesma distinção já usada no resto da plataforma) visível pra qualquer
 manager/admin do módulo, não só pro criador. Resolver exige ação explícita: o criador
 corrige a chave, ou outro manager assume o agente com a própria chave.
+
+### Kill-switch
+
+Além da pausa por agente individual, a `agent-runner` verifica um flag único
+(secret no Supabase, ex: `AGENT_RUNNER_ENABLED`) antes de processar qualquer
+`suggest_with_ai` — desligar esse flag para todos os agentes de uma vez, em qualquer
+módulo, sem precisar de deploy nem de desativar automação por automação. É o
+emergency stop que um mecanismo de governança precisa ter e que a pausa individual, por
+si só, não cobre.
 
 ### `agent-gateway` / n8n (SDR-Q, SCOUT, CADÊNCIA, SENTINELA, CROSS)
 
@@ -318,6 +335,12 @@ escrita nessa ação específica. Colaborador comum continua vendo e agindo sobr
   provedor de LLM configurado (OpenAI/Anthropic/Gemini). Não é risco novo — é o mesmo
   modelo que já vale hoje pras outras features de IA da plataforma — mas vale ter em
   mente que o volume de dado sensível passando por esse caminho cresce com o rollout.
+- **Dado do próprio registro tentando manipular o prompt.** Um campo de texto livre
+  (nota de fornecedor, observação de candidato) pode conter uma instrução escondida
+  tentando fazer a IA ignorar o template e gerar outra coisa. O gate de aprovação
+  humana em `agent_actions` já contém o pior caso (o rascunho manipulado nunca sai da
+  plataforma sozinho), mas vale registrar como algo a observar nas primeiras
+  aprovações do piloto.
 
 ## 6. Critérios de sucesso do piloto & rollout
 
@@ -330,7 +353,9 @@ Deliberadamente simples — nada de painel novo (isso está fora de escopo, seç
   desenhar.
 - A maioria das sugestões geradas é aprovada ou aprovada-com-edição, não rejeitada ou
   ignorada. Taxa de rejeição alta é sinal de que o prompt guiado (seção 3) precisa de
-  ajuste antes de expandir pra mais gente.
+  ajuste antes de expandir pra mais gente. Não precisa de painel novo pra medir isso —
+  é uma consulta em `agent_actions.status` agrupada por `automation_id`, rodada por
+  quem estiver acompanhando o piloto.
 - Nenhum agente precisou do teto de 50/dia pra ser contido — se precisou, é sinal de
   bug na condição, não de sucesso.
 - Ninguém precisou pedir pra um dev mexer em código pra criar, editar ou ajustar um
