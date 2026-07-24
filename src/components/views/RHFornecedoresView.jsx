@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
-  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid,
+  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Search,
 } from "lucide-react";
 import { useRHSuppliers } from "../../hooks/use-rh-suppliers";
 import { useProfiles } from "../../hooks/use-profiles";
@@ -8,6 +8,13 @@ import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { contratoFornecedorDiasParaVencer } from "../../utils/rh-compliance-dates";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { Tabs } from "../shared/Tabs";
+import { FilterBar } from "../shared/FilterBar";
+import { Card, CardGrid, CardSkeleton, GridListToggle } from "../shared/Card";
+import { Badge } from "../ui/Badge";
+import { StatCard } from "../ui/StatCard";
+import { EmptyState } from "../ui/EmptyState";
+import { Modal } from "../ui/Modal";
 
 const TIPO_LABELS = {
   convenio_medico: "Convênio médico",
@@ -86,13 +93,8 @@ function NovoFornecedorModal({ onSave, onClose }) {
   const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={guardedClose}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Novo fornecedor</div>
-          <button onClick={guardedClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={18} /></button>
-        </div>
-        <form onSubmit={submit} style={{ padding: "20px 24px 24px" }} className="flex flex-col gap-3">
+    <Modal open onClose={guardedClose} title="Novo fornecedor" width={460}>
+      <form onSubmit={submit} style={{ padding: "20px 24px 24px" }} className="flex flex-col gap-3">
           <div>
             <label style={labelSt()}>Nome *</label>
             <input required autoFocus className={inputCls} style={inputSt} value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} />
@@ -131,8 +133,7 @@ function NovoFornecedorModal({ onSave, onClose }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -502,6 +503,8 @@ export function RHFornecedoresView({ currentUser }) {
   const [novoOpen, setNovoOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [viewMode, setViewMode] = useState("fornecedores"); // "fornecedores" | "contratos"
+  const [search, setSearch] = useState("");
+  const [density, setDensity] = useState("grid");
 
   const selected = useMemo(() => suppliers.find(s => s.id === selectedId) || null, [suppliers, selectedId]);
   const contratoCountByFornecedor = useMemo(() => {
@@ -512,6 +515,25 @@ export function RHFornecedoresView({ currentUser }) {
     }
     return map;
   }, [contratos]);
+  const contratosAtivos = useMemo(() => contratos.filter(c => c.status === "ativo").length, [contratos]);
+  const vencendo = useMemo(() => {
+    const fornecedorIds = new Set();
+    let total = 0;
+    for (const c of contratos) {
+      if (c.status !== "ativo") continue;
+      const dias = contratoFornecedorDiasParaVencer(c);
+      if (dias != null && dias <= 30) {
+        fornecedorIds.add(c.fornecedorId);
+        total += 1;
+      }
+    }
+    return { fornecedorIds, total };
+  }, [contratos]);
+  const filteredSuppliers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return suppliers;
+    return suppliers.filter(s => (s.name || "").toLowerCase().includes(q));
+  }, [suppliers, search]);
 
   const handleUpdateResponsavel = (contratoId, responsavelId) => {
     updateContrato(contratoId, { responsavelId }).catch((err) => console.error("Falha ao atualizar responsável do contrato:", err));
@@ -525,22 +547,14 @@ export function RHFornecedoresView({ currentUser }) {
           <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>Fornecedores</h1>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <button
-              onClick={() => setViewMode("fornecedores")}
-              className="flex items-center gap-1.5"
-              style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: viewMode === "fornecedores" ? "var(--accent)" : "transparent", color: viewMode === "fornecedores" ? "#FFF" : "var(--text-dim)" }}
-            >
-              <LayoutGrid size={13} /> Fornecedores
-            </button>
-            <button
-              onClick={() => setViewMode("contratos")}
-              className="flex items-center gap-1.5"
-              style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: viewMode === "contratos" ? "var(--accent)" : "transparent", color: viewMode === "contratos" ? "#FFF" : "var(--text-dim)" }}
-            >
-              <List size={13} /> Contratos
-            </button>
-          </div>
+          <Tabs
+            tabs={[
+              { id: "fornecedores", label: "Fornecedores", icon: LayoutGrid },
+              { id: "contratos", label: "Contratos", icon: List },
+            ]}
+            active={viewMode}
+            onChange={setViewMode}
+          />
           <button
             onClick={() => setNovoOpen(true)}
             className="flex items-center gap-1.5 font-semibold"
@@ -554,32 +568,79 @@ export function RHFornecedoresView({ currentUser }) {
         Convênio médico, seguradora, terceirizada de RH — cadastro, contrato (vigência/valor) e histórico de reajustes, renovações, faturas e orçamentos.
       </p>
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard icon={Building2} value={suppliers.length} label="Fornecedores" />
+        <StatCard icon={FileText} value={contratosAtivos} label="Contratos ativos" />
+        <StatCard
+          icon={Clock}
+          value={vencendo.total}
+          label="Vencendo em 30 dias"
+          sublabel="Contratos ativos"
+          accent={vencendo.total > 0 ? "var(--warning)" : undefined}
+        />
+      </div>
+
+      {viewMode === "fornecedores" && (
+        <FilterBar
+          search={{ value: search, onChange: (e) => setSearch(e.target.value), placeholder: "Buscar fornecedor…" }}
+          trailing={<GridListToggle value={density} onChange={setDensity} />}
+        />
+      )}
+
       {loading ? (
-        <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando…</div>
+        <CardGrid density={density}>
+          {Array.from({ length: 6 }, (_, i) => <CardSkeleton key={i} density={density} />)}
+        </CardGrid>
       ) : suppliers.length === 0 ? (
-        <div className="p-8 rounded-xl border text-center" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-          <FileText size={24} style={{ color: "var(--text-dim)", margin: "0 auto 8px" }} />
-          <div className="text-sm" style={{ color: "var(--text-dim)" }}>Nenhum fornecedor cadastrado ainda.</div>
-        </div>
+        <EmptyState
+          icon={Building2}
+          title="Nenhum fornecedor cadastrado ainda"
+          description="Cadastre o primeiro fornecedor pra acompanhar contratos, vigências, reajustes e renovações num lugar só."
+          action={
+            <button
+              onClick={() => setNovoOpen(true)}
+              className="flex items-center gap-1.5 font-semibold"
+              style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}
+            >
+              <Plus size={14} /> Novo fornecedor
+            </button>
+          }
+        />
       ) : viewMode === "contratos" ? (
         <ContratosTableView contratos={contratos} suppliers={suppliers} users={users} onRowClick={(f) => f && setSelectedId(f.id)} />
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {suppliers.map(s => (
+      ) : filteredSuppliers.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="Nenhum resultado pra esta busca"
+          description="Nenhum fornecedor com esse nome. Tente outro termo ou limpe a busca."
+          action={
             <button
-              key={s.id}
-              onClick={() => setSelectedId(s.id)}
-              className="text-left rounded-xl border p-4"
-              style={{ background: "var(--surface)", borderColor: "var(--border)", cursor: "pointer" }}
+              onClick={() => setSearch("")}
+              style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
             >
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{s.name}</div>
-              <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>{TIPO_LABELS[s.tipo] || s.tipo}</div>
-              <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 8 }}>
-                {contratoCountByFornecedor.get(s.id) || 0} contrato(s) ativo(s)
-              </div>
+              Limpar busca
             </button>
-          ))}
-        </div>
+          }
+        />
+      ) : (
+        <CardGrid density={density}>
+          {filteredSuppliers.map(s => {
+            const isVencendo = vencendo.fornecedorIds.has(s.id);
+            return (
+              <Card
+                key={s.id}
+                density={density}
+                onClick={() => setSelectedId(s.id)}
+                icon={<span style={{ fontSize: density === "list" ? 12 : 15, fontWeight: 700 }}>{(s.name || "").trim().charAt(0).toUpperCase() || "?"}</span>}
+                title={s.name}
+                meta={TIPO_LABELS[s.tipo] || s.tipo}
+                badges={isVencendo ? <Badge variant="urgent">Contrato vencendo</Badge> : null}
+                status={isVencendo ? { color: "var(--amber)", label: "Vencendo" } : null}
+                footer={`${contratoCountByFornecedor.get(s.id) || 0} contrato(s) ativo(s)`}
+              />
+            );
+          })}
+        </CardGrid>
       )}
 
       {novoOpen && (
