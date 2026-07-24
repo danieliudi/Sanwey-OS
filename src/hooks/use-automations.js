@@ -46,6 +46,10 @@ function rowToRule(r) {
     conditionGroups: Array.isArray(r.condition_groups) ? r.condition_groups : [],
     thenActions: Array.isArray(r.then_actions) ? r.then_actions : [],
     elseActions: Array.isArray(r.else_actions) ? r.else_actions : [],
+    // paused_reason (Agent Builder, PRD docs/prd-agent-builder.md seção 4):
+    // intervenção do sistema (chave quebrada, ou nasce sem chave configurada)
+    // — independente de `enabled`, que é intenção do usuário.
+    pausedReason: r.paused_reason ?? null,
     createdBy: r.created_by,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -68,6 +72,10 @@ function ruleToRow(rule, extras = {}) {
     condition_groups: Array.isArray(rule.conditionGroups) ? rule.conditionGroups : [],
     then_actions: thenActions,
     else_actions: Array.isArray(rule.elseActions) ? rule.elseActions : [],
+    // undefined (não mencionado no patch) preserva o valor atual da coluna —
+    // só grava null explicitamente quando o chamador passa pausedReason: null
+    // de propósito (ex.: reativar manualmente um agente pausado).
+    ...(rule.pausedReason !== undefined ? { paused_reason: rule.pausedReason } : {}),
     ...extras,
   };
 }

@@ -1217,14 +1217,20 @@ export default function App() {
     const intelItems = [];
     if (canSeeExecutive) intelItems.push({ id: "executive", label: "Executivo",  icon: BarChart3 });
     if (isInsightsUser) intelItems.push({ id: "insights", label: "Insights", icon: TrendingUp });
-    if (isManager) {
+    // Agent Builder (PRD docs/prd-agent-builder.md): gerente_rh também cria e
+    // aprova agentes de IA (piloto Fornecedores RH), não só o gerente
+    // Comercial — mesmo gate que module-access.js/current_user_has_module.
+    if (isManager || isRHManager) {
       intelItems.push({ id: "agents", label: "Agentes", icon: Bot });
     }
     if (intelItems.length > 0) {
       groups.push({ label: "Inteligência", items: intelItems });
     }
 
-    if (isManager) {
+    // Automações inclui agora o Agent Builder de RH (isRHManager) — /settings
+    // já é universal (rota sem gate, ver ROUTES.settings), então ampliar este
+    // grupo não muda nenhum acesso a Configurações, só dá o atalho no menu.
+    if (isManager || isRHManager) {
       groups.push({
         label: "Configuração",
         items: [
@@ -1248,7 +1254,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, isDiretoria, allowedModules]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, isDiretoria, allowedModules]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1277,8 +1283,15 @@ export default function App() {
     // all role flags are false, which would kick the user to "/" on refresh.
     if (!currentUser) return;
 
-    const managerOnly = ["agents", "crossref", "funnel-history", "automations", "fair-import", "users"];
+    // "agents"/"automations" também são de gerente_rh agora (Agent Builder,
+    // PRD docs/prd-agent-builder.md) — as outras seguem exclusivas do
+    // gerente Comercial.
+    const managerOnly = ["crossref", "funnel-history", "fair-import", "users"];
+    const managerOrRHManagerOnly = ["agents", "automations"];
     if (!isManager && managerOnly.includes(section)) {
+      setSection("dashboard");
+    }
+    if (!isManager && !isRHManager && managerOrRHManagerOnly.includes(section)) {
       setSection("dashboard");
     }
     // "executive" (Painel Executivo) não é mais exclusivo do gerente
@@ -1334,7 +1347,7 @@ export default function App() {
       setSection("dashboard");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, isManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section, allowedModules]);
+  }, [currentUser, isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, section, allowedModules]);
 
   if (supabaseEnabled && supaLoading && !currentUser) {
     return (
@@ -1607,7 +1620,7 @@ export default function App() {
               )
           } />
           <Route path={ROUTES.agents} element={
-            isManager
+            (isManager || isRHManager)
               ? <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
@@ -1637,7 +1650,7 @@ export default function App() {
               quem tem o link salvo. */}
           <Route path={ROUTES["pipeline-builder"]} element={<Navigate to={ROUTES.crm} replace />} />
           <Route path={ROUTES.automations} element={
-            isManager ? (
+            (isManager || isRHManager) ? (
               <AutomationsView
                 leads={leads}
                 pipelines={pipelines}

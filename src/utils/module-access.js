@@ -127,7 +127,11 @@ export function defaultModulesForRoles(roles) {
 
   if (f.isManager || f.isMarketingManager || f.isRHManager) set.add("executive");
   if (f.isInsights) set.add("insights");
-  if (f.isManager) set.add("agents");
+  // Agent Builder (PRD docs/prd-agent-builder.md): gerente_rh também cria e
+  // aprova agentes de IA de RH, não só o gerente Comercial — espelha
+  // current_user_has_module('agents') no banco (migration
+  // 20260780_agent_builder_fase1_schema.sql).
+  if (f.isManager || f.isRHManager) set.add("agents");
 
   return set;
 }
