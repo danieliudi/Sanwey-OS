@@ -30,6 +30,7 @@
   /* Shape */
   --radius-sm:     6px;
   --radius-md:     8px;
+  --radius-lg:     12px;
 
   /* Elevation — cards ficam quase planos (1px de sombra), só "levantam" no
      hover/foco. Nada de sombra pesada por padrão (tom Notion). */
