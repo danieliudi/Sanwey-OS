@@ -872,7 +872,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   {lead.city && <CaptureRow label="Cidade" value={lead.city} />}
                   {lead.sector && <CaptureRow label="Setor" value={lead.sector} />}
                   {lead.size && <CaptureRow label="Porte" value={lead.size} />}
-                  {lead.value > 0 && <CaptureRow label="Valor (R$)" value={formatBRL(lead.value)} />}
+                  {lead.value > 0 && <CaptureRow label="Valor" value={formatBRL(lead.value)} />}
                   {lead.owner && (
                     <CaptureRow
                       label="Responsável"

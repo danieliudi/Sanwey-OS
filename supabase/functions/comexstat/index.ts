@@ -1,5 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+// Auth: mesmo padrão de resend-invite/d4sign-status/delete-user — exige JWT
+// de sessão válida (auth.getUser), sem checagem de role extra (qualquer
+// usuário logado pode consultar, é só enriquecimento de dado público).
 
 const COMEXSTAT_BASE = "https://api-comexstat.mdic.gov.br";
 const CACHE_TTL_HOURS = 24;
@@ -28,15 +31,29 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
 
+  const authHeader = req.headers.get("Authorization") || "";
+  const jwt = authHeader.replace(/^Bearer\s+/i, "");
+  if (!jwt) return jsonResponse({ error: "Autenticação necessária" }, 401);
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRole) {
+    return jsonResponse({ error: "Edge function misconfigured" }, 500);
+  }
+  const admin = createClient(supabaseUrl, serviceRole);
+
+  const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+  if (userErr || !userData?.user) return jsonResponse({ error: "Sessão inválida" }, 401);
+
   let body;
   try {
     body = await req.json();
   } catch {
-    return jsonResponse({ error: "Invalid JSON body" });
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
 
   if (!body?.flow || !Array.isArray(body.ncms) || body.ncms.length === 0 || !body.from || !body.to) {
-    return jsonResponse({ error: "Missing required fields: flow, ncms[], from, to" });
+    return jsonResponse({ error: "Missing required fields: flow, ncms[], from, to" }, 400);
   }
 
   const details = Array.isArray(body.details) && body.details.length > 0 ? body.details : ["state"];
@@ -55,10 +72,6 @@ Deno.serve(async (req) => {
   };
 
   const cacheKey = await sha256("comexstat:" + JSON.stringify(payload));
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const admin = (supabaseUrl && serviceRole) ? createClient(supabaseUrl, serviceRole) : null;
 
   if (!body.refresh && admin) {
     try {
@@ -88,7 +101,7 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.log("fetch threw", e?.message || e);
-    return jsonResponse({ error: "ComexStat unreachable", detail: String(e?.message || e), payload });
+    return jsonResponse({ error: "ComexStat unreachable", detail: String(e?.message || e), payload }, 502);
   }
 
   const rawText = await upstream.text();
@@ -100,14 +113,14 @@ Deno.serve(async (req) => {
       status: upstream.status,
       detail: rawText.slice(0, 500),
       sentPayload: payload,
-    });
+    }, 502);
   }
 
   let upstreamJson;
   try {
     upstreamJson = JSON.parse(rawText);
   } catch (e) {
-    return jsonResponse({ error: "ComexStat returned non-JSON", detail: rawText.slice(0, 500) });
+    return jsonResponse({ error: "ComexStat returned non-JSON", detail: rawText.slice(0, 500) }, 502);
   }
 
   const list = upstreamJson?.data?.list ?? [];

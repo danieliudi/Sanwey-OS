@@ -71,6 +71,22 @@ function leadStageLabel(companyStages, stage) {
 // This hook recomputes the CURRENT state every render — it's a persistent
 // list, not a "newly happened" feed, so thresholds are windows (`<= Nd`)
 // rather than the exact day-boundaries the one-shot notifications use.
+//
+// Casing contract (audit P2.8): every task object's own top-level fields —
+// id/bucket/module/moduleLabel/icon/title/subtitle/badge/badgeTone/
+// urgencyRank/section/lead — are always camelCase; that part IS consistent
+// and is the only shape `MinhasTarefasView` (the sole consumer) reads from.
+// The `raw` field (and `lead`, for lead items) is a passthrough of whatever
+// the ORIGINATING hook returns, and those disagree on casing today:
+// useLeads/useMarketingCampaigns/useMarketingDeliverables/
+// useMarketingPurchaseRequests/useMarketingQuotes/useMarketingRequests
+// already normalize to camelCase, while useRHFeedback/useRHRecrutamento/
+// useRHTreinamentos hand back raw `select("*")` rows (snake_case: user_id,
+// evaluator_id, period_end, responsible_ids, treinamento_id, etc.). Fixing
+// that means normalizing inside those 3 hooks, not here — remapping the
+// fields on this end would just duplicate that normalization on an object
+// nothing currently reads (`raw` has zero consumers today), so it's
+// intentionally left as a documented passthrough instead of invented here.
 export function useMyTasks({ currentUser } = {}) {
   const userId = currentUser?.id;
   const role = currentUser?.role;

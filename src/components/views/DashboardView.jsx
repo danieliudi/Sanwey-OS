@@ -3,7 +3,7 @@ import {
   Target, HandCoins, CheckCircle2, Gauge, RefreshCcw, Download,
   Clock, CalendarClock, AlertTriangle, CalendarCheck, ArrowRight,
 } from "lucide-react";
-import { COMPANIES } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { StatCard } from "../ui/StatCard";
 import { Button } from "../ui/Button";
 import { formatK } from "../../utils/currency";
@@ -128,7 +128,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
             {isGroupView
-              ? `${scopedLeads.length} leads em 4 empresas`
+              ? `${scopedLeads.length} leads em ${COMPANY_IDS.length} empresas`
               : `${companyData?.name || "—"} · ${scopedLeads.length} leads`}
             {totalTasks > 0 && ` · ${totalTasks} pendência${totalTasks !== 1 ? "s" : ""}`}
           </p>
