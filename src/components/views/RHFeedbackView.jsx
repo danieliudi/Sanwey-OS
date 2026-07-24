@@ -1252,7 +1252,9 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   // salário direto — cria uma movimentação PENDENTE que só vale após a
   // diretoria aprovar (item 9), fechando o furo de "salário aplicado sem
   // aprovação". "Reavaliar" agenda um novo ciclo. Efeitos best-effort: a
-  // conclusão nunca é revertida se um efeito colateral falhar.
+  // conclusão nunca é revertida se um efeito colateral falhar — mas a falha
+  // é relançada com mensagem clara pro modal exibir (antes era só
+  // console.error e o RH achava que a promoção estava encaminhada).
   const handleCompleteFeedback = useCallback(async (avaliacaoId, data) => {
     const fb = feedbacks.find(f => f.id === avaliacaoId);
     const colaborador = fb ? colaboradoresById.get(fb.user_id) : null;
@@ -1291,14 +1293,20 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
             link: { module: "rh_movimentacoes", id: mov?.id },
           }).catch(() => {});
         }
-      } catch (e) { console.error("Falha ao criar movimentação de promoção:", e); }
+      } catch (e) {
+        console.error("Falha ao criar movimentação de promoção:", e);
+        throw new Error("A avaliação foi concluída, mas a movimentação de promoção NÃO foi criada — registre a promoção manualmente em Movimentações.");
+      }
     }
     if (desfecho === "reavaliar" && desfechoMeta.reavaliar_meses && colaborador) {
       try {
         const hoje = new Date().toISOString().slice(0, 10);
         const fim = addDaysISO(hoje, desfechoMeta.reavaliar_meses * 30);
         await createPendingCycle(colaborador.id, "reavaliacao", hoje, fim);
-      } catch (e) { console.error("Falha ao agendar reavaliação:", e); }
+      } catch (e) {
+        console.error("Falha ao agendar reavaliação:", e);
+        throw new Error("A avaliação foi concluída, mas o novo ciclo de reavaliação NÃO foi agendado — crie o ciclo manualmente.");
+      }
     }
   }, [feedbacks, colaboradoresById, completeFeedback, createMovimentacao, createPendingCycle, users, notifyMentions]);
 

@@ -124,7 +124,9 @@ export function usePipelines() {
     const fresh = DEFAULT_PIPELINE_STAGES.map(s => ({ ...s }));
     setPipelines(prev => ({ ...prev, [companyId]: fresh }));
     if (!isSupabaseConfigured) return;
-    await replacePipeline(companyId, fresh);
+    // Engole o throw do replacePipeline: aqui não há modal aberto pra
+    // segurar — o fetchAll interno já reverteu a UI pro estado do banco.
+    await replacePipeline(companyId, fresh).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Substitui o pipeline inteiro de uma empresa. Usado pelo editor que
@@ -173,7 +175,12 @@ export function usePipelines() {
     // replacePipeline não é atômico (várias escritas sequenciais) — se
     // alguma falhar no meio, reverte o otimista pro estado real do banco
     // em vez de deixar a UI mostrar um pipeline que só existe no client.
-    if (hadError) await fetchAll();
+    // E lança: sem o throw, o editor de etapas fechava o modal como se
+    // tivesse salvo (o catch/alert do StageListManager nunca disparava).
+    if (hadError) {
+      await fetchAll();
+      throw new Error("Nem todas as etapas foram salvas — o pipeline foi recarregado do banco.");
+    }
   }, [fetchAll]);
 
   return { pipelines, updateStage, reorderStages, resetCompanyPipeline, replacePipeline };

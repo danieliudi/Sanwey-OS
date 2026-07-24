@@ -141,6 +141,23 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
         </div>
       </div>
 
+      {/* Badges gravados pela automação add_badge — sem isso a ação rodava
+          e o resultado nunca aparecia em nenhum card do Kanban (mesmo
+          formato do LeadCard, único lugar que já os renderizava). */}
+      {Array.isArray(lead.badges) && lead.badges.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2" style={{ opacity: terminalAccentOpacity(isTerminal) }}>
+          {lead.badges.map((b, i) => (
+            <span
+              key={`${b.label}-${i}`}
+              className="px-1.5 py-0.5 rounded-full font-semibold"
+              style={{ fontSize: 10, background: `${b.color || "#6366F1"}22`, color: b.color || "#6366F1" }}
+            >
+              {b.label}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* SKU — só ocupa espaço quando existe; antes ficava uma linha vazia
           (com margem) em todo card sem SKU, quebrando o ritmo vertical entre
           cards de um mesmo board. */}

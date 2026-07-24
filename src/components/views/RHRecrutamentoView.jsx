@@ -1290,7 +1290,14 @@ function VagaDrawer({
       {managerModalOpen && (
         <EncaminharGestorModal
           vagaTitle={vaga.title}
-          onSave={async (form) => { await createManagerLink({ ...form, vagaTitle: vaga.title, userId: currentUser?.id }); setManagerModalOpen(false); }}
+          onSave={async (form) => {
+            // Só fecha como sucesso se o e-mail realmente saiu — quando
+            // emailSent=false o modal mostra o link pra envio manual em vez
+            // de fingir que o gestor foi avisado (achado da auditoria).
+            const res = await createManagerLink({ ...form, vagaTitle: vaga.title, userId: currentUser?.id });
+            if (res?.emailSent) setManagerModalOpen(false);
+            return res;
+          }}
           onClose={() => setManagerModalOpen(false)}
         />
       )}
@@ -1378,6 +1385,7 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [emailFailedLink, setEmailFailedLink] = useState(null);
 
   useEffect(() => {
     const h = (e) => { if (e.key === "Escape") onClose(); };
@@ -1393,7 +1401,10 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
     setSaving(true);
     setError(null);
     try {
-      await onSave({ managerName: name.trim(), managerEmail: email.trim().toLowerCase() });
+      const res = await onSave({ managerName: name.trim(), managerEmail: email.trim().toLowerCase() });
+      if (res && res.emailSent === false && res.link?.token) {
+        setEmailFailedLink(`${window.location.origin}/gestor-vaga/${res.link.token}`);
+      }
     } catch (err) {
       setError(err.message || "Não foi possível gerar o link.");
     } finally {
@@ -1411,6 +1422,24 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
           </button>
         </div>
         <div style={{ padding: "20px 24px 24px" }}>
+          {emailFailedLink ? (
+            <>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "var(--warning)", lineHeight: 1.5 }}>
+                <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+                Link criado, mas o e-mail não foi enviado — copie o link e envie manualmente pro gestor.
+              </div>
+              <div style={{ marginTop: 12, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px", fontSize: 11, color: "var(--text)", wordBreak: "break-all", userSelect: "all" }}>
+                {emailFailedLink}
+              </div>
+              <div className="flex items-center gap-2 mt-4">
+                <CopyPublicLinkButton url={emailFailedLink} label="Copiar link" />
+                <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
+                  Fechar
+                </button>
+              </div>
+            </>
+          ) : (
+          <>
           <p style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5, marginBottom: 16 }}>
             O gestor vai receber um link seguro por e-mail com todos os candidatos da vaga "{vagaTitle}". Ele confirma o próprio e-mail antes de ver qualquer dado — sem precisar de login na plataforma.
           </p>
@@ -1454,6 +1483,8 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
               Cancelar
             </button>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
 // Toast "nova versão disponível" (spec: specautoupdatechangelogtoast.md,
@@ -10,7 +10,7 @@ import { useRegisterSW } from "virtual:pwa-register/react";
 // senão o usuário fecha uma vez e nunca mais vê aviso nenhum, mesmo pra
 // deploys futuros.
 export function useAppUpdate() {
-  const [dismissedAt, setDismissedAt] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
 
   const {
     needRefresh: [needRefresh],
@@ -25,11 +25,18 @@ export function useAppUpdate() {
     },
   });
 
+  // Reset na transição false→true de needRefresh — sem isso o dismiss valia
+  // pra sempre, contradizendo o comportamento descrito acima (o toast nunca
+  // mais aparecia, nem pra deploys futuros).
+  useEffect(() => {
+    if (needRefresh) setDismissed(false);
+  }, [needRefresh]);
+
   const updateNow = useCallback(() => { updateServiceWorker(true); }, [updateServiceWorker]);
-  const dismiss = useCallback(() => { setDismissedAt(Date.now()); }, []);
+  const dismiss = useCallback(() => { setDismissed(true); }, []);
 
   return {
-    needRefresh: needRefresh && dismissedAt === 0,
+    needRefresh: needRefresh && !dismissed,
     updateNow,
     dismiss,
   };

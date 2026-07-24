@@ -15,6 +15,7 @@ function filterByPeriod(leads, period) {
   const now = Date.now();
   let cutoff;
   if (period === "30d") cutoff = now - 30 * 86400000;
+  else if (period === "60d") cutoff = now - 60 * 86400000;
   else if (period === "90d") cutoff = now - 90 * 86400000;
   else if (period === "ytd") cutoff = new Date(new Date().getFullYear(), 0, 1).getTime();
   return leads.filter(l => {
@@ -30,6 +31,9 @@ function getPreviousPeriodLeads(allLeads, period) {
   if (period === "30d") {
     end = now - 30 * 86400000;
     start = end - 30 * 86400000;
+  } else if (period === "60d") {
+    end = now - 60 * 86400000;
+    start = end - 60 * 86400000;
   } else if (period === "90d") {
     end = now - 90 * 86400000;
     start = end - 90 * 86400000;

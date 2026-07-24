@@ -13,6 +13,8 @@
 // complexidade desproporcional a essa camada "nice to have" de qualidade de
 // dado, e inconsistente com o padrão já estabelecido).
 
+import { resolveVisibleFields } from "./field-conditions";
+
 export const EMAIL_PATTERN = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$";
 const PHONE_PATTERN = "^\\+?[0-9]{10,13}$";
 
@@ -99,7 +101,9 @@ export function validateFieldFormat(rule, value) {
 // bloquear a transição de fase junto com os obrigatórios vazios.
 export function getInvalidFields(fields, valuesByKey) {
   const out = [];
-  for (const f of fields || []) {
+  // Campo oculto pela condição de visibilidade não pode bloquear transição —
+  // o usuário não tem como corrigir um valor que nem aparece no formulário.
+  for (const f of resolveVisibleFields(fields, valuesByKey)) {
     const msg = validateFieldFormat(f.validationRule, valuesByKey?.[f.fieldKey]);
     if (msg) out.push({ ...f, validationError: msg });
   }

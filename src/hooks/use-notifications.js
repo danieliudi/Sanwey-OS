@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
+import { getLeadOwnerIds } from "../utils/pipeline-metrics";
 
 const MAX_NOTIFICATIONS = 50;
 
@@ -75,7 +76,9 @@ export function useNotifications({ currentUser, leads = [] } = {}) {
   // Check for follow-ups due today for this user
   useEffect(() => {
     if (!currentUser || !leads.length) return;
-    const myLeads = leads.filter(l => l.owner === currentUser.id && l.nextFollowUp);
+    // getLeadOwnerIds cobre co-responsáveis (owner_ids) — filtrar só pelo
+    // owner escalar deixava co-responsável sem aviso de follow-up.
+    const myLeads = leads.filter(l => getLeadOwnerIds(l).includes(currentUser.id) && l.nextFollowUp);
     for (const lead of myLeads) {
       const today = new Date().toDateString();
       const followUpDate = new Date(lead.nextFollowUp).toDateString();

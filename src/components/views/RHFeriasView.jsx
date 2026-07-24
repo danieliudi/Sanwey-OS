@@ -23,6 +23,7 @@ import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } 
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
+import { Modal } from "../ui/Modal";
 import { Badge } from "../ui/Badge";
 import { EmptyState } from "../ui/EmptyState";
 import { useAvailableHeight } from "../../hooks/use-available-height";
@@ -193,6 +194,50 @@ function UserAvatar({ user, size = 30 }) {
 }
 
 // ── Solicitar Férias Modal ────────────────────────────────────────────────────
+
+// Motivo da recusa em modal estilizado (idioma do RejectModal de
+// MarketingRequestsView, casca ui/Modal) — substitui o window.prompt()
+// nativo. Motivo continua obrigatório: o botão só habilita com texto.
+function RecusarFeriasModal({ req, busy, onConfirm, onClose }) {
+  const [motivo, setMotivo] = useState("");
+  const motivoLimpo = motivo.trim();
+  return (
+    <Modal open onClose={onClose} title="Recusar solicitação" width={440}>
+      <div style={{ padding: "16px 24px 24px" }}>
+        <p style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5, marginBottom: 12 }}>
+          {leaveTypeLabel(req.type)} de <b style={{ color: "var(--text)" }}>{req.profiles?.name || "colaborador"}</b> · {fmt(req.start_date)} – {fmt(req.end_date)}. O motivo será enviado ao colaborador por e-mail e registrado no histórico do card.
+        </p>
+        <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
+          Motivo da recusa *
+        </label>
+        <textarea
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          rows={3}
+          autoFocus
+          placeholder="Informe o motivo da recusa para o colaborador…"
+          className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
+          style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface-alt)", fontSize: 13 }}
+        />
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            onClick={onClose}
+            style={{ padding: "8px 14px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => onConfirm(motivoLimpo)}
+            disabled={busy || !motivoLimpo}
+            style={{ background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: busy || !motivoLimpo ? "default" : "pointer", opacity: busy || !motivoLimpo ? 0.6 : 1 }}
+          >
+            {busy ? "Recusando…" : "Confirmar recusa"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
   const [type, setType]           = useState("");
@@ -785,6 +830,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const [onlyMine, setOnlyMine]           = useState(false);
   const [showSolicitar, setShowSolicitar] = useState(false);
   const [busyId, setBusyId]               = useState(null);
+  const [recusaModal, setRecusaModal]     = useState(null); // { req, resolve }
   const [drawerReqId, setDrawerReqId]     = useState(null);
   const [stageEditorOpen, setStageEditorOpen] = useState(false);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
@@ -835,7 +881,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       if (docExigido) {
         const totalAnexos = await contarAnexos(req.id);
         if (totalAnexos === 0) {
-          alert(`Não dá pra aprovar "${req.profiles?.name || "essa solicitação"}": anexe o(a) ${docExigido} antes (abra o card → aba Anexos).`);
+          (onBlocked || alert)(`Não dá pra aprovar "${req.profiles?.name || "essa solicitação"}": anexe o(a) ${docExigido} antes (abra o card → aba Anexos).`);
           return false;
         }
       }
@@ -848,33 +894,43 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
     }
   }, [changeStatus, currentUser, getStageBlockMessage]);
 
+  // Captura o MOTIVO da recusa antes de confirmar — antes recusava no
+  // primeiro clique e o e-mail mandava req.notes (as observações do PRÓPRIO
+  // colaborador) como se fosse o motivo do gestor. Achado da 2ª auditoria.
+  // O window.prompt() nativo virou modal estilizado (mesma classe de
+  // problema do alert(): trava sessões headless e foge do idioma visual) —
+  // a promise só resolve quando o modal confirma/cancela, preservando o
+  // contrato `await onRecusar → true/false` dos chamadores.
   const handleRecusar = useCallback(async (req, { onBlocked } = {}) => {
     const blockMsg = getStageBlockMessage(req);
     if (blockMsg) { (onBlocked || alert)(blockMsg); return false; }
-    // Captura o MOTIVO da recusa antes de confirmar — antes recusava no
-    // primeiro clique e o e-mail mandava req.notes (as observações do PRÓPRIO
-    // colaborador) como se fosse o motivo do gestor. Achado da 2ª auditoria.
-    const motivo = window.prompt(`Motivo da recusa de "${req.profiles?.name || "esta solicitação"}" (será enviado ao colaborador):`);
-    if (motivo === null) return false; // cancelou
-    const motivoLimpo = motivo.trim();
-    if (!motivoLimpo) { alert("Informe o motivo da recusa."); return false; }
+    return new Promise((resolve) => setRecusaModal({ req, resolve }));
+  }, [getStageBlockMessage]);
+
+  const confirmarRecusa = useCallback(async (motivo) => {
+    if (!recusaModal) return;
+    const { req, resolve } = recusaModal;
     setBusyId(req.id);
     try {
       await changeStatus(req.id, "recusado");
       // Grava no histórico do card pra ficar durável (não só no e-mail).
       await addActivity(req.id, {
         type: "recusa",
-        text: `Recusado: ${motivoLimpo}`,
+        text: `Recusado: ${motivo}`,
         by: currentUser?.name || currentUser?.email || "",
         at: new Date().toISOString(),
       }).catch(() => {});
-      const sent = await sendRhEmail("ferias_rejeitadas", req, { REASON: motivoLimpo, MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
+      const sent = await sendRhEmail("ferias_rejeitadas", req, { REASON: motivo, MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
       if (!sent) alert(`Recusa registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
-      return true;
+      resolve(true);
+    } catch (e) {
+      alert(`Erro ao recusar: ${e?.message || "tente novamente."}`);
+      resolve(false);
     } finally {
       setBusyId(null);
+      setRecusaModal(null);
     }
-  }, [changeStatus, addActivity, currentUser, getStageBlockMessage]);
+  }, [recusaModal, changeStatus, addActivity, currentUser]);
 
   // Mover genérico pra qualquer etapa do pipeline dinâmico de férias (além
   // dos atalhos Aprovar/Recusar) — cobre pipelines com mais de
@@ -1077,6 +1133,15 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
 
       {showSolicitar && <SolicitarFeriasModal currentUser={currentUser} onSave={createRequest} onClose={() => setShowSolicitar(false)} />}
 
+      {recusaModal && (
+        <RecusarFeriasModal
+          req={recusaModal.req}
+          busy={busyId === recusaModal.req.id}
+          onConfirm={confirmarRecusa}
+          onClose={() => { recusaModal.resolve(false); setRecusaModal(null); }}
+        />
+      )}
+
       {drawerReq && (
         <FeriasDrawer
           req={drawerReq}
@@ -1107,6 +1172,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
           domainLabel="Férias"
           records={requests}
           stageField="status"
+          nonDeletableStageKeys={["aprovado", "recusado"]}
         />
       )}
 

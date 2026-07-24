@@ -252,7 +252,9 @@ export function useMyTasks({ currentUser } = {}) {
     // `canWrite` prop.
     if (hasAnyRole(currentUser, ["admin", "marketing", "gerente_marketing"])) {
       for (const p of (purchases || [])) {
-        if (p.stage !== "solicitado") continue;
+        // "cotacao" também aguarda decisão — espelha o isPending do
+        // PurchaseRequestDetailDrawer (solicitado OU cotacao).
+        if (p.stage !== "solicitado" && p.stage !== "cotacao") continue;
         out.push({
           id: `appr-purchase-${p.id}`,
           bucket: "approval",
