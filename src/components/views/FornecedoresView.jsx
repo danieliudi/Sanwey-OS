@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from "react";
 import {
-  Truck, Plus, Pencil, Trash2, Mail, Phone, Building2,
+  Truck, Plus, Trash2, Mail, Phone, Building2, Search,
 } from "lucide-react";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
-import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { EmptyState } from "../ui/EmptyState";
+import { StatCard } from "../ui/StatCard";
+import { Modal } from "../ui/Modal";
+import { FilterBar } from "../shared/FilterBar";
+import { Card, CardGrid, CardSkeleton, GridListToggle } from "../shared/Card";
 
 const CATEGORY_LABELS = {
   agencia: "Agência",
@@ -30,7 +33,6 @@ function SupplierModal({ supplier, onSave, onClose }) {
   }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  useEscToClose(onClose);
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
   const toggleCompany = (id) => setForm(prev => ({
@@ -54,13 +56,8 @@ function SupplierModal({ supplier, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <form onSubmit={handleSubmit} className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
-        <h3 className="font-bold text-base mb-4" style={{ color: "var(--text)" }}>
-          {supplier ? "Editar fornecedor" : "Novo fornecedor"}
-        </h3>
-
+    <Modal open onClose={onClose} title={supplier ? "Editar fornecedor" : "Novo fornecedor"} width={460}>
+      <form onSubmit={handleSubmit} className="p-6">
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>Nome *</label>
@@ -113,7 +110,7 @@ function SupplierModal({ supplier, onSave, onClose }) {
           </div>
         </div>
 
-        {error && <div className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{error}</div>}
+        {error && <div className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{error}</div>}
 
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
@@ -124,60 +121,142 @@ function SupplierModal({ supplier, onSave, onClose }) {
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
 
-/* ── Suppliers tab ───────────────────────────────────────────────── */
-function SuppliersTab({ user }) {
+/* ── Delete confirmation modal ───────────────────────────────────── */
+function ConfirmDeleteModal({ supplier, onConfirm, onClose }) {
+  return (
+    <Modal open onClose={onClose} title="Excluir fornecedor?" width={400}>
+      <div className="p-6">
+        <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>
+          "{supplier.name}" será removido. Cotações já enviadas continuam no histórico.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
+          <button onClick={onConfirm}
+            className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--danger)", color: "#fff" }}>Excluir</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// Cotações agora vivem junto com Compras de Marketing (etapa "Cotação" no
+// kanban de ComprasMarketingView) — o fluxo formal antigo por e-mail, com
+// aba própria aqui, foi aposentado a pedido do usuário.
+export function FornecedoresView({ user }) {
   const { suppliers, loading, canWrite, createSupplier, updateSupplier, deleteSupplier } =
     useMarketingSuppliers({ userId: user?.id, role: user?.role, roles: user?.roles });
   const [editing, setEditing] = useState(null); // supplier | "new" | null
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [density, setDensity] = useState("grid");
+
+  const filteredSuppliers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return suppliers.filter(s => {
+      if (categoryFilter !== "all" && s.category !== categoryFilter) return false;
+      if (q && !(s.name || "").toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [suppliers, search, categoryFilter]);
+
+  const filtersActive = Boolean(search.trim()) || categoryFilter !== "all";
+  const clearFilters = () => { setSearch(""); setCategoryFilter("all"); };
 
   return (
-    <div className="space-y-3">
-      {canWrite && (
-        <div className="flex justify-end">
-          <button onClick={() => setEditing("new")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-            style={{ background: "var(--accent)", color: "#fff" }}>
-            <Plus size={13} /> Novo fornecedor
-          </button>
+    <div className="max-w-5xl mx-auto space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <Truck size={22} style={{ color: "var(--text)" }} />
+          <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>Fornecedores</h1>
         </div>
-      )}
+        {canWrite && (
+          <button onClick={() => setEditing("new")} className="flex items-center gap-1.5 font-semibold"
+            style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}>
+            <Plus size={14} /> Novo fornecedor
+          </button>
+        )}
+      </div>
+      <p className="text-sm" style={{ color: "var(--text-dim)", marginTop: -8 }}>
+        Agências, gráficas, confecções e outros parceiros de marketing
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard icon={Truck} value={suppliers.length} label="Fornecedores" />
+      </div>
+
+      <FilterBar
+        search={{ value: search, onChange: (e) => setSearch(e.target.value), placeholder: "Buscar fornecedor…" }}
+        filters={[{
+          id: "category",
+          value: categoryFilter,
+          onChange: (e) => setCategoryFilter(e.target.value),
+          label: "Categoria",
+          options: [{ value: "all", label: "Todas as categorias" }, ...CATEGORY_OPTIONS.map(c => ({ value: c.id, label: c.label }))],
+        }]}
+        trailing={<GridListToggle value={density} onChange={setDensity} />}
+      />
 
       {loading ? (
-        <div className="py-10 text-center text-sm" style={{ color: "var(--text-dim)" }}>Carregando fornecedores…</div>
+        <CardGrid density={density}>
+          {Array.from({ length: 6 }, (_, i) => <CardSkeleton key={i} density={density} />)}
+        </CardGrid>
       ) : suppliers.length === 0 ? (
-        <EmptyState icon={Truck} title="Nenhum fornecedor cadastrado" description="Cadastre agências, gráficas, confecções e outros parceiros de marketing." />
+        <EmptyState
+          icon={Truck}
+          title="Nenhum fornecedor cadastrado"
+          description="Cadastre agências, gráficas, confecções e outros parceiros de marketing."
+          action={canWrite && (
+            <button onClick={() => setEditing("new")} className="flex items-center gap-1.5 font-semibold"
+              style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
+              <Plus size={14} /> Novo fornecedor
+            </button>
+          )}
+        />
+      ) : filteredSuppliers.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="Nenhum resultado pra estes filtros"
+          description="Nenhum fornecedor corresponde à busca ou categoria selecionada. Tente outro termo ou limpe os filtros."
+          action={
+            <button onClick={clearFilters}
+              style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              Limpar filtros
+            </button>
+          }
+        />
       ) : (
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
-          {suppliers.map(s => (
-            <div key={s.id} className="rounded-xl border p-4" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{s.name}</div>
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
-                    {CATEGORY_LABELS[s.category] || s.category}
-                  </span>
-                </div>
-                {canWrite && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => setEditing(s)} style={{ color: "var(--text-dim)" }}><Pencil size={13} /></button>
-                    <button onClick={() => setConfirmDelete(s)} style={{ color: "#DC2626" }}><Trash2 size={13} /></button>
-                  </div>
-                )}
-              </div>
-              <div className="mt-2 space-y-1 text-xs" style={{ color: "var(--text-dim)" }}>
+        <CardGrid density={density}>
+          {filteredSuppliers.map(s => (
+            <Card
+              key={s.id}
+              density={density}
+              onClick={canWrite ? () => setEditing(s) : undefined}
+              icon={<span style={{ fontSize: density === "list" ? 12 : 15, fontWeight: 700 }}>{(s.name || "").trim().charAt(0).toUpperCase() || "?"}</span>}
+              title={s.name}
+              meta={CATEGORY_LABELS[s.category] || s.category}
+              footer={`${s.companyIds.length} empresa(s) atendida(s)`}
+              menu={canWrite && (
+                <button onClick={() => setConfirmDelete(s)} aria-label="Excluir fornecedor" style={{ color: "var(--danger)", background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+                  <Trash2 size={14} />
+                </button>
+              )}
+            >
+              <div className="space-y-1 text-xs" style={{ color: "var(--text-dim)" }}>
                 <div className="flex items-center gap-1"><Mail size={10} /> {s.email}</div>
                 {s.phone && <div className="flex items-center gap-1"><Phone size={10} /> {s.phone}</div>}
                 {s.companyIds.length > 0 && (
                   <div className="flex items-center gap-1"><Building2 size={10} /> {s.companyIds.map(id => COMPANIES[id]?.short || id).join(", ")}</div>
                 )}
               </div>
-            </div>
+            </Card>
           ))}
-        </div>
+        </CardGrid>
       )}
 
       {editing && (
@@ -189,40 +268,12 @@ function SuppliersTab({ user }) {
       )}
 
       {confirmDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}
-          onClick={e => { if (e.target === e.currentTarget) setConfirmDelete(null); }}>
-          <div className="rounded-2xl p-6 w-full max-w-sm" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
-            <h3 className="font-bold text-base mb-2" style={{ color: "var(--text)" }}>Excluir fornecedor?</h3>
-            <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>
-              "{confirmDelete.name}" será removido. Cotações já enviadas continuam no histórico.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setConfirmDelete(null)} className="px-4 py-2 rounded-lg text-sm font-semibold border"
-                style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
-              <button onClick={async () => { await deleteSupplier(confirmDelete.id); setConfirmDelete(null); }}
-                className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "#DC2626", color: "#fff" }}>Excluir</button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDeleteModal
+          supplier={confirmDelete}
+          onConfirm={async () => { await deleteSupplier(confirmDelete.id); setConfirmDelete(null); }}
+          onClose={() => setConfirmDelete(null)}
+        />
       )}
-    </div>
-  );
-}
-
-// Cotações agora vivem junto com Compras de Marketing (etapa "Cotação" no
-// kanban de ComprasMarketingView) — o fluxo formal antigo por e-mail, com
-// aba própria aqui, foi aposentado a pedido do usuário.
-export function FornecedoresView({ user }) {
-  return (
-    <div className="max-w-5xl mx-auto space-y-4">
-      <div>
-        <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>Fornecedores</h1>
-        <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-          Agências, gráficas, confecções e outros parceiros de marketing
-        </p>
-      </div>
-
-      <SuppliersTab user={user} />
     </div>
   );
 }
