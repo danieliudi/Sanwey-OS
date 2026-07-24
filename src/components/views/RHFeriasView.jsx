@@ -31,6 +31,7 @@ import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { AppToast } from "../shared/AppToast";
 
 // ── Documento obrigatório por tipo de licença ────────────────────────────────
 // Pesquisa de mercado (Convenia/Gusto/Personio) + prática CLT: alguns tipos
@@ -932,6 +933,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const [onlyMine, setOnlyMine]           = useState(false);
   const [showSolicitar, setShowSolicitar] = useState(false);
   const [busyId, setBusyId]               = useState(null);
+  const [boardError, setBoardError]       = useState(null);
   const [recusaModal, setRecusaModal]     = useState(null); // { req, resolve }
   const [drawerReqId, setDrawerReqId]     = useState(null);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
@@ -1006,7 +1008,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   // contrato `await onRecusar → true/false` dos chamadores.
   const handleRecusar = useCallback(async (req, { onBlocked } = {}) => {
     const blockMsg = getStageBlockMessage(req);
-    if (blockMsg) { (onBlocked || alert)(blockMsg); return false; }
+    if (blockMsg) { (onBlocked || setBoardError)(blockMsg); return false; }
     return new Promise((resolve) => setRecusaModal({ req, resolve }));
   }, [getStageBlockMessage]);
 
@@ -1024,10 +1026,10 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
         at: new Date().toISOString(),
       }).catch(() => {});
       const sent = await sendRhEmail("ferias_rejeitadas", req, { REASON: motivo, MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
-      if (!sent) alert(`Recusa registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
+      if (!sent) setBoardError(`Recusa registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
       resolve(true);
     } catch (e) {
-      alert(`Erro ao recusar: ${e?.message || "tente novamente."}`);
+      setBoardError(`Erro ao recusar: ${e?.message || "tente novamente."}`);
       resolve(false);
     } finally {
       setBusyId(null);
@@ -1130,6 +1132,11 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
 
   return (
     <div>
+      {boardError && (
+        <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setBoardError(null)}>
+          {boardError}
+        </AppToast>
+      )}
       <KanbanBoardHeader className="mb-4">
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>

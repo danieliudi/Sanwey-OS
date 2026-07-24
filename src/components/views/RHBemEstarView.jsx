@@ -154,6 +154,7 @@ export function RHBemEstarView({ currentUser, canWrite }) {
   const { sessoes, fila, loading, criarSessao, setSessaoStatus, deletarSessao, setFilaStatus } = useRHBemEstar({ userId: currentUser?.id });
   const [novaOpen, setNovaOpen] = useState(false);
   const [expanded, setExpanded] = useState(() => new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   const toggle = (id) => setExpanded((prev) => {
@@ -204,14 +205,32 @@ export function RHBemEstarView({ currentUser, canWrite }) {
                     {aberta ? "Aberta" : "Encerrada"}
                   </span>
                   {canWrite && (
-                    <>
-                      <button onClick={() => setSessaoStatus(s.id, aberta ? "encerrada" : "aberta")} style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}>
-                        {aberta ? "Encerrar" : "Reabrir"}
-                      </button>
-                      <button onClick={() => { if (window.confirm("Excluir esta sessão e as reservas?")) deletarSessao(s.id); }} title="Excluir" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", display: "flex", padding: 4, flexShrink: 0 }}>
-                        <Trash2 size={14} />
-                      </button>
-                    </>
+                    confirmDeleteId === s.id ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: "var(--text)", whiteSpace: "nowrap" }}>Excluir sessão e reservas?</span>
+                        <button
+                          onClick={() => { deletarSessao(s.id); setConfirmDeleteId(null); }}
+                          style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                        >
+                          Excluir
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button onClick={() => setSessaoStatus(s.id, aberta ? "encerrada" : "aberta")} style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}>
+                          {aberta ? "Encerrar" : "Reabrir"}
+                        </button>
+                        <button onClick={() => setConfirmDeleteId(s.id)} title="Excluir" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", display: "flex", padding: 4, flexShrink: 0 }}>
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )
                   )}
                 </div>
                 {isOpen && (

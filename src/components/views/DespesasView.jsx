@@ -573,6 +573,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
   const [filterCompany, setFilterCompany]   = useState("all");
   const [modalExpense, setModalExpense]      = useState(null);
   const [modalOpen, setModalOpen]           = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const filtered = useMemo(() => {
     return expenses.filter(e => {
@@ -804,46 +805,62 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
                   </td>
                   <td className="px-4 py-3">
                     {canWrite && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openEdit(expense)}
-                          title="Editar"
-                          style={{
-                            background: "none",
-                            border: "none",
-                            color: "var(--text-dim)",
-                            cursor: "pointer",
-                            padding: 4,
-                            borderRadius: 6,
-                            display: "flex",
-                            alignItems: "center",
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm("Excluir esta despesa?")) deleteExpense(expense.id);
-                          }}
-                          title="Excluir"
-                          style={{
-                            background: "none",
-                            border: "none",
-                            color: "var(--text-dim)",
-                            cursor: "pointer",
-                            padding: 4,
-                            borderRadius: 6,
-                            display: "flex",
-                            alignItems: "center",
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "var(--danger)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                      confirmDeleteId === expense.id ? (
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                          <span className="text-[11px]" style={{ color: "var(--text)" }}>Excluir?</span>
+                          <button
+                            onClick={() => { deleteExpense(expense.id); setConfirmDeleteId(null); }}
+                            style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                          >
+                            Excluir
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openEdit(expense)}
+                            title="Editar"
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "var(--text-dim)",
+                              cursor: "pointer",
+                              padding: 4,
+                              borderRadius: 6,
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(expense.id)}
+                            title="Excluir"
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "var(--text-dim)",
+                              cursor: "pointer",
+                              padding: 4,
+                              borderRadius: 6,
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "var(--danger)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )
                     )}
                   </td>
                 </tr>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Megaphone, Plus, X, Send, ClipboardList, BarChart3, Trash2, Check,
+  Megaphone, Plus, X, Send, ClipboardList, BarChart3, Check,
   Loader2, Lock, AlertTriangle, Search, UserCheck, BellRing,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
@@ -8,6 +8,7 @@ import { useRHComunicacao } from "../../hooks/use-rh-comunicacao";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
 import { QRCodeButton } from "../shared/QRCodeButton";
+import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 
@@ -294,7 +295,7 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
           <div>
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{pesquisa.titulo}</div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2, display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <Lock size={11} /> {data.total} resposta{data.total !== 1 ? "s" : ""} · anônimas
+              {pesquisa.modo === "identificada" ? <UserCheck size={11} /> : <Lock size={11} />} {data.total} resposta{data.total !== 1 ? "s" : ""} · {pesquisa.modo === "identificada" ? "identificadas" : "anônimas"}
             </div>
           </div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
@@ -494,9 +495,11 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
                     <button onClick={() => setPesquisaStatus(p.id, aberta ? "encerrada" : "aberta")} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--surface)", color: "var(--text-dim)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                       {aberta ? "Encerrar" : "Reabrir"}
                     </button>
-                    <button onClick={() => { if (window.confirm("Excluir esta pesquisa e todas as respostas?")) deletarPesquisa(p.id); }} title="Excluir" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", display: "flex", padding: 4 }}>
-                      <Trash2 size={14} />
-                    </button>
+                    <MoveStageMenu
+                      onDelete={() => deletarPesquisa(p.id)}
+                      deleteLabel="Excluir pesquisa"
+                      confirmMessage="Excluir esta pesquisa e todas as respostas? Não pode ser desfeito."
+                    />
                   </div>
                 )}
                 {notifyResult?.id === p.id && (
