@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 
 // Toast "nova versão disponível" (spec: specautoupdatechangelogtoast.md,
@@ -16,6 +16,11 @@ export function useAppUpdate() {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
+    // Reset do dismiss a cada novo SW em waiting (inclusive no 2º deploy da
+    // mesma sessão) — needRefresh do useRegisterSW fica true de vez após a
+    // primeira detecção, então observar a transição via useEffect não pega
+    // deploys seguintes; só este callback dispara em todos (achado do QA).
+    onNeedRefresh() { setDismissed(false); },
     onRegisteredSW(_url, registration) {
       if (!registration) return;
       // Checa por update a cada 10min — pega deploy mesmo com a aba aberta
@@ -24,13 +29,6 @@ export function useAppUpdate() {
       setInterval(() => { registration.update(); }, 10 * 60 * 1000);
     },
   });
-
-  // Reset na transição false→true de needRefresh — sem isso o dismiss valia
-  // pra sempre, contradizendo o comportamento descrito acima (o toast nunca
-  // mais aparecia, nem pra deploys futuros).
-  useEffect(() => {
-    if (needRefresh) setDismissed(false);
-  }, [needRefresh]);
 
   const updateNow = useCallback(() => { updateServiceWorker(true); }, [updateServiceWorker]);
   const dismiss = useCallback(() => { setDismissed(true); }, []);
