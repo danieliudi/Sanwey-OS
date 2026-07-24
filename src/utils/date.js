@@ -48,6 +48,19 @@ export function closeDateUrgencyStyle(closeDate) {
   return null;
 }
 
+// Tempo relativo curto ("42m atrás", "3h atrás", "5d atrás") — nasceu só em
+// AgentActionsView.jsx; extraído aqui na 2ª ocorrência (use-agent-runs-summary
+// consumindo em AutomationsView.jsx, regra do CLAUDE.md).
+export function relativeTime(iso) {
+  if (!iso) return "—";
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return `${m}m atrás`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h atrás`;
+  return `${Math.floor(h / 24)}d atrás`;
+}
+
 // Grava um "AAAA-MM-DD" de <input type=date> numa coluna timestamptz sem
 // "voltar" um dia quando reexibido em fuso negativo (BRT). new Date(str)
 // interpretaria a string pura como meia-noite UTC — constrói meia-noite

@@ -1221,7 +1221,11 @@ export default function App() {
     // aprova agentes de IA (piloto Fornecedores RH), não só o gerente
     // Comercial — mesmo gate que module-access.js/current_user_has_module.
     if (isManager || isRHManager) {
-      intelItems.push({ id: "agents", label: "Agentes", icon: Bot });
+      // Badge = agentes de IA pausados pelo sistema (paused_reason truthy —
+      // chave de IA quebrada/ausente), não pausa manual (enabled=false):
+      // isso pede atenção de alguém, pausa manual foi decisão do próprio time.
+      const pausedAgentsCount = automations.filter(a => a.module === "rh-fornecedores" && a.pausedReason).length;
+      intelItems.push({ id: "agents", label: "Agentes", icon: Bot, badge: pausedAgentsCount > 0 ? pausedAgentsCount : undefined });
     }
     if (intelItems.length > 0) {
       groups.push({ label: "Inteligência", items: intelItems });
@@ -1254,7 +1258,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, isDiretoria, allowedModules]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, isDiretoria, allowedModules, automations]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1621,7 +1625,7 @@ export default function App() {
           } />
           <Route path={ROUTES.agents} element={
             (isManager || isRHManager)
-              ? <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} />
+              ? <AgentActionsView currentUser={currentUser} activeCompany={activeCompany} automations={automations} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           {/* fair-import is now a tab inside ExplorerView */}
@@ -1656,6 +1660,7 @@ export default function App() {
                 pipelines={pipelines}
                 activeCompany={activeCompany}
                 currentUser={currentUser}
+                onNavigate={setSection}
               />
             ) : <Navigate to={ROUTES.dashboard} replace />
           } />

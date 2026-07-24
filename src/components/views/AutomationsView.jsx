@@ -3,6 +3,7 @@ import {
   Zap, Plus, Trash2, ToggleLeft, ToggleRight, ArrowRight,
   AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X, Info,
   Share2, Building2, GitBranch, CornerDownRight, ClipboardList,
+  Bot, MoreVertical, Clock, ArrowUpRight,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -10,7 +11,14 @@ import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipel
 import { AUTOMATION_TEMPLATES } from "../../constants/automation-templates";
 import { MARKETING_AUTOMATION_TEMPLATES } from "../../constants/marketing-pipelines";
 import { useAutomations } from "../../hooks/use-automations";
+import { useAgentRunsSummary } from "../../hooks/use-agent-runs-summary";
+import { relativeTime } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
+import { Tabs } from "../shared/Tabs";
+import { Card, CardGrid } from "../shared/Card";
+import { AgentBuilderWizard } from "../agents/AgentBuilderWizard";
+
+const FILTER_AUTOMATION_STORAGE_KEY = "agentActionsFilterAutomationId";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -81,13 +89,20 @@ const COMPANY_OPTIONS = [
 
 // ── Main view ────────────────────────────────────────────────────────────────
 
-export function AutomationsView({ leads, pipelines, activeCompany, currentUser }) {
-  const { automations, addAutomation, deleteAutomation, toggleAutomation, stats } = useAutomations({ userId: currentUser?.id });
+export function AutomationsView({ leads, pipelines, activeCompany, currentUser, onNavigate }) {
+  const { automations, addAutomation, updateAutomation, deleteAutomation, toggleAutomation, stats } = useAutomations({ userId: currentUser?.id });
+  const agentRunsSummary = useAgentRunsSummary();
   const [showBuilder, setShowBuilder] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [moduleTab, setModuleTab] = useState("all");
+  const [mainTab, setMainTab] = useState("automations"); // "automations" | "agents"
   // Quando o usuário clica num template, pré-preenche o builder.
   const [builderInitial, setBuilderInitial] = useState(null);
+  // Wizard do Agent Builder (AgentBuilderWizard) — totalmente separado do
+  // AutomationBuilder técnico acima; `agentWizardRule` != null = modo edição.
+  const [agentWizardOpen, setAgentWizardOpen] = useState(false);
+  const [agentWizardRule, setAgentWizardRule] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const openBuilder = (initial = null) => {
     setBuilderInitial(initial);
@@ -97,6 +112,44 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser }
     setShowBuilder(false);
     setBuilderInitial(null);
   };
+
+  const openAgentWizard = (rule = null) => {
+    setAgentWizardRule(rule);
+    setAgentWizardOpen(true);
+  };
+  const closeAgentWizard = () => {
+    setAgentWizardOpen(false);
+    setAgentWizardRule(null);
+  };
+
+  const goToSuggestions = (automationId) => {
+    try { sessionStorage.setItem(FILTER_AUTOMATION_STORAGE_KEY, automationId); } catch {}
+    onNavigate?.("agents");
+  };
+
+  // Agentes de IA (thenActions[0].type === "suggest_with_ai") vivem numa aba
+  // separada — o AutomationBuilder técnico acima nunca ramifica pra IA
+  // (decisão do PRD, docs/prd-agent-builder.md seção 3).
+  const commonAutomations = useMemo(
+    () => automations.filter(rule => thenActionsOf(rule)[0]?.type !== "suggest_with_ai"),
+    [automations]
+  );
+  const aiAgents = useMemo(
+    () => automations.filter(rule => thenActionsOf(rule)[0]?.type === "suggest_with_ai"),
+    [automations]
+  );
+
+  // Contagens da aba "automations" derivadas de commonAutomations, não do
+  // `stats` cru do hook (que soma tudo, incluindo agentes) — senão "Todas (N)"
+  // no filtro de módulo diverge do que a lista realmente mostra.
+  const commonStats = useMemo(() => ({
+    total: commonAutomations.length,
+    enabled: commonAutomations.filter(a => a.enabled).length,
+  }), [commonAutomations]);
+  const agentStats = useMemo(() => ({
+    total: aiAgents.length,
+    enabled: aiAgents.filter(a => a.enabled && !a.pausedReason).length,
+  }), [aiAgents]);
 
   const allStages = useMemo(() => {
     const p = pipelines || defaultPipelines();
@@ -137,124 +190,166 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser }
             </span>
           </div>
           <p className="text-sm mt-1" style={{ color: "var(--text-dim)" }}>
-            Regras automáticas sem IA, compartilhadas com a equipe — {stats.enabled} ativa{stats.enabled !== 1 ? "s" : ""} de {stats.total}
+            {mainTab === "agents"
+              ? <>Agentes de IA com aprovação humana — {agentStats.enabled} ativo{agentStats.enabled !== 1 ? "s" : ""} de {agentStats.total}</>
+              : <>Regras automáticas sem IA, compartilhadas com a equipe — {commonStats.enabled} ativa{commonStats.enabled !== 1 ? "s" : ""} de {commonStats.total}</>
+            }
           </p>
         </div>
         <button
-          onClick={() => openBuilder()}
+          onClick={() => mainTab === "agents" ? openAgentWizard() : openBuilder()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
           style={{ background: "var(--accent)", color: "#FFFFFF" }}
           onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
         >
           <Plus size={15} />
-          Nova automação
+          {mainTab === "agents" ? "Novo agente de IA" : "Nova automação"}
         </button>
       </div>
 
-      {/* Stats bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {TRIGGER_TYPES.map(t => {
-          const Icon = t.icon;
-          const count = stats.byType[t.id] || 0;
-          return (
-            <div
-              key={t.id}
-              className="rounded-xl border px-4 py-3 flex items-center gap-3"
-              style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
-            >
-              <Icon size={16} style={{ color: "var(--text-dim)" }} />
-              <div>
-                <div className="text-lg font-bold leading-none" style={{ color: "var(--text)" }}>{count}</div>
-                <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{t.label}</div>
+      {/* Automações comuns vs. Agentes de IA — duas abas da mesma tela,
+          mesmo motor por baixo (docs/prd-agent-builder.md seção 3). */}
+      <Tabs
+        tabs={[
+          { id: "automations", label: "Automações", icon: Zap, count: commonAutomations.length },
+          { id: "agents",      label: "Agentes de IA", icon: Bot, count: aiAgents.length },
+        ]}
+        active={mainTab}
+        onChange={setMainTab}
+      />
+
+      {mainTab === "automations" && (
+        <>
+          {/* Stats bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {TRIGGER_TYPES.map(t => {
+              const Icon = t.icon;
+              const count = stats.byType[t.id] || 0;
+              return (
+                <div
+                  key={t.id}
+                  className="rounded-xl border px-4 py-3 flex items-center gap-3"
+                  style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
+                >
+                  <Icon size={16} style={{ color: "var(--text-dim)" }} />
+                  <div>
+                    <div className="text-lg font-bold leading-none" style={{ color: "var(--text)" }}>{count}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>{t.label}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Empty state */}
+          {commonAutomations.length === 0 && (
+            <EmptyState
+              icon={Zap}
+              title="Nenhuma automação criada"
+              description="Escolha um template abaixo para começar — ou crie do zero se preferir."
+              action={
+                <button
+                  onClick={() => openBuilder()}
+                  className="mt-1 text-xs"
+                  style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Criar automação personalizada
+                </button>
+              }
+            />
+          )}
+
+          {/* Galeria de templates — mostra sempre que houver poucos automatismos
+              configurados (≤ 3). Quando o time já tem muitos, escondemos pra
+              não ocupar espaço. */}
+          {commonAutomations.length <= 3 && (
+            <TemplateGallery onUseTemplate={(t) => openBuilder(t.rule)} />
+          )}
+
+          {/* Module filter tabs */}
+          {commonAutomations.length > 0 && (
+            <div className="flex gap-1 border-b overflow-x-auto" style={{ borderColor: "var(--border)", scrollbarWidth: "none" }}>
+              {[
+                { id: "all",       label: `Todas (${commonAutomations.length})` },
+                { id: "crm",       label: `CRM (${stats.byModule?.crm || 0})` },
+                { id: "marketing", label: `Marketing (${stats.byModule?.marketing || 0})` },
+                { id: "universal", label: `Universal (${stats.byModule?.universal || 0})` },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setModuleTab(t.id)}
+                  className="px-3 py-2 text-xs font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap"
+                  style={{
+                    borderBottomColor: moduleTab === t.id ? "var(--accent)" : "transparent",
+                    color:             moduleTab === t.id ? "var(--accent)" : "var(--text-dim)",
+                    background:        "none",
+                    border:            "none",
+                    borderBottom:      `2px solid ${moduleTab === t.id ? "var(--accent)" : "transparent"}`,
+                    cursor:            "pointer",
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Automation list */}
+          {commonAutomations.length > 0 && (
+            <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+              <div className="divide-y" style={{ borderColor: "var(--surface-alt)" }}>
+                {commonAutomations.filter(rule => moduleTab === "all" || (rule.module ?? "crm") === moduleTab).map(rule => (
+                  <AutomationRow
+                    key={rule.id}
+                    rule={rule}
+                    allStages={allStages}
+                    expanded={expandedId === rule.id}
+                    onExpand={() => setExpandedId(id => id === rule.id ? null : rule.id)}
+                    onToggle={() => toggleAutomation(rule.id)}
+                    onDelete={() => deleteAutomation(rule.id)}
+                  />
+                ))}
               </div>
             </div>
-          );
-        })}
-      </div>
+          )}
 
-      {/* Empty state */}
-      {automations.length === 0 && (
-        <EmptyState
-          icon={Zap}
-          title="Nenhuma automação criada"
-          description="Escolha um template abaixo para começar — ou crie do zero se preferir."
-          action={
-            <button
-              onClick={() => openBuilder()}
-              className="mt-1 text-xs"
-              style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-            >
-              Criar automação personalizada
-            </button>
-          }
+          {/* How it works */}
+          <HowItWorks />
+        </>
+      )}
+
+      {mainTab === "agents" && (
+        <AgentsPanel
+          aiAgents={aiAgents}
+          agentRunsSummary={agentRunsSummary}
+          confirmDeleteId={confirmDeleteId}
+          setConfirmDeleteId={setConfirmDeleteId}
+          onCreate={() => openAgentWizard()}
+          onEdit={(rule) => openAgentWizard(rule)}
+          onToggle={(rule) => toggleAutomation(rule.id)}
+          onDelete={(rule) => deleteAutomation(rule.id)}
+          onGoToSuggestions={goToSuggestions}
         />
       )}
 
-      {/* Galeria de templates — mostra sempre que houver poucos automatismos
-          configurados (≤ 3). Quando o time já tem muitos, escondemos pra
-          não ocupar espaço. */}
-      {automations.length <= 3 && (
-        <TemplateGallery onUseTemplate={(t) => openBuilder(t.rule)} />
-      )}
-
-      {/* Module filter tabs */}
-      {automations.length > 0 && (
-        <div className="flex gap-1 border-b overflow-x-auto" style={{ borderColor: "var(--border)", scrollbarWidth: "none" }}>
-          {[
-            { id: "all",       label: `Todas (${automations.length})` },
-            { id: "crm",       label: `CRM (${stats.byModule?.crm || 0})` },
-            { id: "marketing", label: `Marketing (${stats.byModule?.marketing || 0})` },
-            { id: "universal", label: `Universal (${stats.byModule?.universal || 0})` },
-          ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setModuleTab(t.id)}
-              className="px-3 py-2 text-xs font-medium border-b-2 transition-colors shrink-0 whitespace-nowrap"
-              style={{
-                borderBottomColor: moduleTab === t.id ? "var(--accent)" : "transparent",
-                color:             moduleTab === t.id ? "var(--accent)" : "var(--text-dim)",
-                background:        "none",
-                border:            "none",
-                borderBottom:      `2px solid ${moduleTab === t.id ? "var(--accent)" : "transparent"}`,
-                cursor:            "pointer",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Automation list */}
-      {automations.length > 0 && (
-        <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-          <div className="divide-y" style={{ borderColor: "var(--surface-alt)" }}>
-            {automations.filter(rule => moduleTab === "all" || (rule.module ?? "crm") === moduleTab).map(rule => (
-              <AutomationRow
-                key={rule.id}
-                rule={rule}
-                allStages={allStages}
-                expanded={expandedId === rule.id}
-                onExpand={() => setExpandedId(id => id === rule.id ? null : rule.id)}
-                onToggle={() => toggleAutomation(rule.id)}
-                onDelete={() => deleteAutomation(rule.id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* How it works */}
-      <HowItWorks />
-
-      {/* Builder modal */}
+      {/* Builder modal (automações comuns) */}
       {showBuilder && (
         <AutomationBuilder
           allStages={allStages}
           initialRule={builderInitial}
           onSave={(rule) => { addAutomation(rule); closeBuilder(); }}
           onClose={closeBuilder}
+        />
+      )}
+
+      {/* Assistente do Agent Builder (docs/prd-agent-builder.md seção 3) —
+          ele mesmo chama useAutomations() e persiste, não recebe onSave. */}
+      {agentWizardOpen && (
+        <AgentBuilderWizard
+          currentUser={currentUser}
+          initialRule={agentWizardRule}
+          onClose={closeAgentWizard}
         />
       )}
     </div>
@@ -504,6 +599,184 @@ function AutomationDetail({ rule, allStages }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Agentes de IA (Agent Builder, docs/prd-agent-builder.md seção 3) ─────────
+// "Meus agentes de IA": cartão por agente, com status/última execução/link
+// pras sugestões geradas — só o piloto Fornecedores RH por enquanto, mas
+// o registro abaixo é onde um 2º módulo (seção 6 do PRD) ganharia entrada.
+
+const AGENT_MODULE_LABELS = {
+  "rh-fornecedores": "Fornecedores (RH)",
+};
+
+function AgentStatusBadge({ rule }) {
+  if (rule.pausedReason) {
+    return (
+      <span
+        className="px-2 py-0.5 rounded-full text-[10px] font-semibold inline-block max-w-[170px] truncate align-bottom"
+        style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
+        title={rule.pausedReason}
+      >
+        {rule.pausedReason}
+      </span>
+    );
+  }
+  if (!rule.enabled) {
+    return (
+      <span
+        className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+        style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+      >
+        Pausado manualmente
+      </span>
+    );
+  }
+  return (
+    <span
+      className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+      style={{ background: "var(--success-bg)", color: "var(--success)" }}
+    >
+      Ativo
+    </span>
+  );
+}
+
+function AgentCardMenu({ rule, onEdit, onToggle, onDeleteRequest }) {
+  const [open, setOpen] = useState(false);
+  const itemSt = { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "transparent", border: "none", cursor: "pointer", fontSize: 12, textAlign: "left" };
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        title="Ações do agente"
+        style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", borderRadius: 6 }}
+      >
+        <MoreVertical size={14} />
+      </button>
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setOpen(false)} />
+          <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, boxShadow: "var(--shadow-pop)", minWidth: 160, zIndex: 20, overflow: "hidden" }}>
+            <button onClick={() => { setOpen(false); onEdit(); }} style={{ ...itemSt, color: "var(--text)" }}>
+              <Settings2 size={13} /> Editar
+            </button>
+            <button onClick={() => { setOpen(false); onToggle(); }} style={{ ...itemSt, color: "var(--text)" }}>
+              {rule.enabled ? <ToggleLeft size={13} /> : <ToggleRight size={13} />}
+              {rule.enabled ? "Pausar" : "Reativar"}
+            </button>
+            <button onClick={() => { setOpen(false); onDeleteRequest(); }} style={{ ...itemSt, color: "var(--danger)" }}>
+              <Trash2 size={13} /> Excluir
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AgentCard({ rule, lastRunAt, confirmingDelete, onEdit, onToggle, onDeleteRequest, onDeleteConfirm, onDeleteCancel, onGoToSuggestions }) {
+  const trigger = rule.trigger || {};
+  const meta = trigger.type === "date_approaching"
+    ? `Avisa ${trigger.days ?? "?"} dia(s) antes do vencimento`
+    : null;
+
+  return (
+    <Card
+      icon={<Bot size={18} />}
+      iconBg="var(--accent-tint)"
+      title={rule.name || "Sem nome"}
+      meta={meta}
+      badges={
+        <>
+          <span
+            className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+          >
+            {AGENT_MODULE_LABELS[rule.module] || rule.module}
+          </span>
+          <AgentStatusBadge rule={rule} />
+        </>
+      }
+      headerAction={
+        confirmingDelete ? (
+          <div className="flex items-center gap-1.5 whitespace-nowrap">
+            <span className="text-[11px]" style={{ color: "var(--text)" }}>Excluir?</span>
+            <button
+              onClick={onDeleteConfirm}
+              style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+            >
+              Excluir
+            </button>
+            <button
+              onClick={onDeleteCancel}
+              style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+            >
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <AgentCardMenu rule={rule} onEdit={onEdit} onToggle={onToggle} onDeleteRequest={onDeleteRequest} />
+        )
+      }
+      footer={
+        <div className="flex flex-col gap-1.5 w-full">
+          <span className="flex items-center gap-1.5" style={{ color: "var(--text-dim)", fontWeight: 500 }}>
+            <Clock size={11} />
+            {lastRunAt ? `Última execução ${relativeTime(lastRunAt)}` : "Nunca executado"}
+          </span>
+          <button
+            onClick={onGoToSuggestions}
+            className="flex items-center gap-1 self-start"
+            style={{ background: "none", border: "none", color: "var(--accent)", fontWeight: 600, cursor: "pointer", padding: 0 }}
+          >
+            Ver sugestões geradas
+            <ArrowUpRight size={12} />
+          </button>
+        </div>
+      }
+    />
+  );
+}
+
+function AgentsPanel({ aiAgents, agentRunsSummary, confirmDeleteId, setConfirmDeleteId, onCreate, onEdit, onToggle, onDelete, onGoToSuggestions }) {
+  if (aiAgents.length === 0) {
+    return (
+      <EmptyState
+        icon={Bot}
+        title="Nenhum agente de IA criado"
+        description="Crie um agente guiado — toda sugestão gerada passa por aprovação humana antes de sair da plataforma."
+        action={
+          <button
+            onClick={onCreate}
+            className="mt-1 text-xs"
+            style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+          >
+            Criar agente de IA
+          </button>
+        }
+      />
+    );
+  }
+
+  return (
+    <CardGrid>
+      {aiAgents.map(rule => (
+        <AgentCard
+          key={rule.id}
+          rule={rule}
+          lastRunAt={agentRunsSummary.get(rule.id)?.lastRunAt || null}
+          confirmingDelete={confirmDeleteId === rule.id}
+          onEdit={() => onEdit(rule)}
+          onToggle={() => onToggle(rule)}
+          onDeleteRequest={() => setConfirmDeleteId(rule.id)}
+          onDeleteConfirm={() => { onDelete(rule); setConfirmDeleteId(null); }}
+          onDeleteCancel={() => setConfirmDeleteId(null)}
+          onGoToSuggestions={() => onGoToSuggestions(rule.id)}
+        />
+      ))}
+    </CardGrid>
   );
 }
 

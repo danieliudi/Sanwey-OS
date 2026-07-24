@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bot, RefreshCw, CheckCircle2, XCircle, EyeOff, ChevronDown, ChevronUp,
   Clock, AlertTriangle, TrendingUp, Mail, Zap, Target, Telescope, Repeat2,
@@ -8,6 +8,7 @@ import { NEUTRAL } from "../../constants/companies";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { AgentConfigModal } from "../agents/AgentConfigModal";
+import { relativeTime } from "../../utils/date";
 
 // ── Agent metadata ─────────────────────────────────────────────────────────
 const AGENTS = {
@@ -27,17 +28,6 @@ const PRIORITY = {
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-function relativeTime(iso) {
-  if (!iso) return "—";
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 60) return `${m}m atrás`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h atrás`;
-  return `${Math.floor(h / 24)}d atrás`;
-}
 
 // ── Action card ────────────────────────────────────────────────────────────
 function ActionCard({ action, agent, onResolve, resolving }) {
@@ -77,6 +67,19 @@ function ActionCard({ action, agent, onResolve, resolving }) {
               <span className="flex items-center gap-1 text-[10px]" style={{ color: "var(--text-dim)" }}>
                 <Clock size={10} />
                 {payload.days_stale}d parado
+              </span>
+            )}
+            {/* Fornecedor de RH (Agent Builder, ver agent-runner) — sem lead_id,
+                fica sem contexto nenhum no card fechado se não vier aqui. */}
+            {payload.fornecedor_nome && (
+              <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+                {payload.fornecedor_nome}
+              </span>
+            )}
+            {payload.dias_para_vencer != null && (
+              <span className="flex items-center gap-1 text-[10px]" style={{ color: "var(--text-dim)" }}>
+                <Clock size={10} />
+                {payload.dias_para_vencer}d p/ vencer
               </span>
             )}
           </div>
@@ -198,9 +201,9 @@ function ActionCard({ action, agent, onResolve, resolving }) {
 }
 
 // ── Agent section ──────────────────────────────────────────────────────────
-function AgentSection({ agentId, actions, onResolve, resolving }) {
+function AgentSection({ agentId, actions, onResolve, resolving, metaOverride }) {
   const [open, setOpen] = useState(true);
-  const meta = AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: "var(--text-dim)", bg: "var(--surface-alt)" };
+  const meta = metaOverride || AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: "var(--text-dim)", bg: "var(--surface-alt)" };
   const { Icon } = meta;
   const pendingCount = actions.filter(a => a.status === "pending").length;
 
@@ -261,8 +264,10 @@ function AgentSection({ agentId, actions, onResolve, resolving }) {
   );
 }
 
+const FILTER_AUTOMATION_STORAGE_KEY = "agentActionsFilterAutomationId";
+
 // ── Main view ──────────────────────────────────────────────────────────────
-export function AgentActionsView({ currentUser, activeCompany }) {
+export function AgentActionsView({ currentUser, activeCompany, automations, filterAutomationId: filterAutomationIdProp }) {
   const [actions, setActions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -270,6 +275,29 @@ export function AgentActionsView({ currentUser, activeCompany }) {
   const [resolving, setResolving] = useState(null); // action id being resolved
   const [resolveError, setResolveError] = useState(null);
   const [configOpen, setConfigOpen] = useState(false);
+  // "Ver sugestões geradas →" (AutomationsView, aba Agentes de IA) navega pra
+  // cá via setSection/rota — sem forma de passar um prop de fato através da
+  // troca de rota, então o automation_id viaja num sessionStorage de curta
+  // duração; filterAutomationIdProp cobre quem já tiver o valor à mão.
+  const [filterAutomationId, setFilterAutomationId] = useState(() => {
+    if (filterAutomationIdProp) return filterAutomationIdProp;
+    try {
+      const stored = sessionStorage.getItem(FILTER_AUTOMATION_STORAGE_KEY);
+      if (stored) sessionStorage.removeItem(FILTER_AUTOMATION_STORAGE_KEY);
+      return stored || null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    if (filterAutomationIdProp) setFilterAutomationId(filterAutomationIdProp);
+  }, [filterAutomationIdProp]);
+
+  const automationNamesById = useMemo(() => {
+    const map = new Map();
+    for (const a of automations || []) map.set(a.id, a.name || "Agente removido");
+    return map;
+  }, [automations]);
 
   // roles[] cobre cargo adicional — currentUser.role sozinho fica só de fallback.
   // Achado da 2ª auditoria (esta view ficou de fora do fix a28bfb5).
@@ -355,22 +383,45 @@ export function AgentActionsView({ currentUser, activeCompany }) {
     return isAgentEnabled(companyId, a.agent_id);
   });
 
+  // Ações do Agent Builder (Automações → aba "Agentes de IA") chegam todas com
+  // agent_id="automation" — agrupar por esse valor cru juntaria agentes de IA
+  // diferentes numa seção só; agrupa por automation_id em vez disso, com o
+  // nome real da automação como rótulo (automationNamesById, populado via prop).
+  const groupKeyOf = (a) => a.agent_id === "automation" ? `automation:${a.automation_id}` : a.agent_id;
+
+  const sectionMetaOverrides = {};
+  visibleActions.forEach(a => {
+    if (a.agent_id !== "automation") return;
+    const key = groupKeyOf(a);
+    if (sectionMetaOverrides[key]) return;
+    sectionMetaOverrides[key] = {
+      label: automationNamesById.get(a.automation_id) || "Agente removido",
+      sub: "Agente de IA",
+      Icon: Bot,
+      color: "var(--accent)",
+      bg: "var(--surface-alt)",
+    };
+  });
+
   const grouped = agentOrder.reduce((acc, agentId) => {
-    const list = visibleActions.filter(a => a.agent_id === agentId);
+    const list = visibleActions.filter(a => groupKeyOf(a) === agentId);
     if (list.length > 0) acc[agentId] = list;
     return acc;
   }, {});
-  // catch unknown agent_ids
+  // catch unknown agent_ids / agent_id="automation" (agrupado por automation_id acima)
   visibleActions.forEach(a => {
-    if (!agentOrder.includes(a.agent_id) && !grouped[a.agent_id]) {
-      grouped[a.agent_id] = [];
-    }
-    if (!agentOrder.includes(a.agent_id)) {
-      grouped[a.agent_id] = [...(grouped[a.agent_id] || []), a];
-    }
+    const key = groupKeyOf(a);
+    if (agentOrder.includes(key)) return;
+    grouped[key] = [...(grouped[key] || []), a];
   });
 
   const totalPending = visibleActions.filter(a => a.status === "pending").length;
+
+  // filterAutomationId (vindo de "Ver sugestões geradas →"): ignora todo o
+  // agrupamento por agente, lista só as ações daquela automação.
+  const automationFilteredActions = filterAutomationId
+    ? visibleActions.filter(a => a.automation_id === filterAutomationId)
+    : null;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -442,6 +493,27 @@ export function AgentActionsView({ currentUser, activeCompany }) {
         </div>
       </div>
 
+      {/* Filtro por automação — "Ver sugestões geradas →" da aba Agentes de IA */}
+      {filterAutomationId && (
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs flex-wrap"
+          style={{ background: "var(--surface-alt)", border: "1px solid var(--border)", color: "var(--text-dim)" }}
+        >
+          <Bot size={12} style={{ color: "var(--accent)" }} />
+          Mostrando só sugestões de{" "}
+          <strong style={{ color: "var(--text)" }}>
+            {automationNamesById.get(filterAutomationId) || "agente removido"}
+          </strong>
+          <button
+            onClick={() => setFilterAutomationId(null)}
+            className="ml-auto text-xs font-semibold cursor-pointer"
+            style={{ background: "none", border: "none", color: "var(--accent)" }}
+          >
+            Ver todos os agentes
+          </button>
+        </div>
+      )}
+
       {/* Filter tabs */}
       <div className="overflow-x-auto" style={{ scrollbarWidth: "none" }}>
       <div className="flex items-center gap-1 border-b" style={{ borderColor: "#EFEFEF", width: "max-content", minWidth: "100%" }}>
@@ -501,7 +573,7 @@ export function AgentActionsView({ currentUser, activeCompany }) {
       )}
 
       {/* Empty state */}
-      {!loading && !error && Object.keys(grouped).length === 0 && (
+      {!loading && !error && (filterAutomationId ? automationFilteredActions.length === 0 : Object.keys(grouped).length === 0) && (
         <div className="py-20 text-center space-y-3">
           <div
             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"
@@ -522,8 +594,23 @@ export function AgentActionsView({ currentUser, activeCompany }) {
         </div>
       )}
 
+      {/* Lista simples (sem accordion por agente) quando filtrado por automação */}
+      {!loading && !error && filterAutomationId && automationFilteredActions.length > 0 && (
+        <div className="rounded-xl border divide-y overflow-hidden" style={{ borderColor: "var(--border)" }}>
+          {automationFilteredActions.map(action => (
+            <ActionCard
+              key={action.id}
+              action={action}
+              agent={sectionMetaOverrides[`automation:${action.automation_id}`] || { color: "var(--accent)" }}
+              onResolve={handleResolve}
+              resolving={resolving}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Agent sections */}
-      {!loading && !error && Object.keys(grouped).length > 0 && (
+      {!loading && !error && !filterAutomationId && Object.keys(grouped).length > 0 && (
         <div className="space-y-4">
           {Object.entries(grouped).map(([agentId, agentActions]) => (
             <AgentSection
@@ -532,6 +619,7 @@ export function AgentActionsView({ currentUser, activeCompany }) {
               actions={agentActions}
               onResolve={handleResolve}
               resolving={resolving}
+              metaOverride={sectionMetaOverrides[agentId]}
             />
           ))}
         </div>

@@ -299,6 +299,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                     key={item.id}
                     icon={item.icon}
                     label={item.label}
+                    badge={item.badge}
                     active={section === item.id}
                     onClick={() => handleNavClick(item.id)}
                     rail={rail}
@@ -410,7 +411,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
 // é `draggable`, então um clique normal em qualquer outro ponto da linha
 // (inclusive no próprio ícone sem mover) continua navegando na hora, sem
 // nenhum gesto/atraso extra atrapalhando.
-function NavItem({ icon: Icon, label, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
+function NavItem({ icon: Icon, label, badge, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
   const [hovered, setHovered] = useState(false);
   // Âncora do tooltip em coordenadas de viewport. O balão era absolute
   // (left:100%) dentro do <nav>, mas o nav tem overflowX:hidden pro scroll
@@ -461,12 +462,38 @@ function NavItem({ icon: Icon, label, active, onClick, rail, isDragOver, onIconD
           onDragEnd={(e) => { e.stopPropagation(); onIconDragEnd?.(); }}
           onMouseDown={(e) => e.stopPropagation()}
           title={rail ? undefined : "Arraste para reordenar"}
-          style={{ display: "flex", flexShrink: 0, cursor: "grab" }}
+          style={{ position: "relative", display: "flex", flexShrink: 0, cursor: "grab" }}
         >
           <Icon size={15} strokeWidth={2} style={{ opacity: 0.85, color: rail && active ? "var(--accent)" : undefined }} />
+          {/* Modo trilho esconde o label — o pill numérico não cabe, vira só
+              um ponto no canto do ícone (mesma linguagem de "precisa de
+              atenção", ver comment-badge.js). */}
+          {rail && badge != null && (
+            <span
+              style={{
+                position: "absolute", top: -3, right: -3,
+                width: 7, height: 7, borderRadius: "50%",
+                background: "var(--warning)", border: "1.5px solid var(--surface-alt)",
+              }}
+            />
+          )}
         </span>
       )}
-      {!rail && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
+      {!rail && <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
+      {!rail && badge != null && (
+        <span
+          style={{
+            flexShrink: 0,
+            minWidth: 16, height: 16, padding: "0 5px",
+            borderRadius: 999,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            fontSize: 10, fontWeight: 700, lineHeight: 1,
+            background: "var(--warning-bg)", color: "var(--warning)",
+          }}
+        >
+          {badge}
+        </span>
+      )}
       {rail && hovered && tip && (
         <span
           style={{

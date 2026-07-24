@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import {
-  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Search,
+  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Search, Bot,
 } from "lucide-react";
+import { AgentBuilderWizard } from "../agents/AgentBuilderWizard";
 import { useRHSuppliers } from "../../hooks/use-rh-suppliers";
 import { useProfiles } from "../../hooks/use-profiles";
 import { formatK } from "../../utils/currency";
@@ -505,6 +506,12 @@ export function RHFornecedoresView({ currentUser }) {
   const [viewMode, setViewMode] = useState("fornecedores"); // "fornecedores" | "contratos"
   const [search, setSearch] = useState("");
   const [density, setDensity] = useState("grid");
+  const [agentWizardOpen, setAgentWizardOpen] = useState(false);
+
+  // roles[] cobre cargo adicional — currentUser.role sozinho fica só de
+  // fallback (mesmo formato de checagem já usado em AgentActionsView/App.jsx).
+  const userRoleList = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
+  const canCreateAgent = userRoleList.includes("gerente_rh") || userRoleList.includes("admin");
 
   const selected = useMemo(() => suppliers.find(s => s.id === selectedId) || null, [suppliers, selectedId]);
   const contratoCountByFornecedor = useMemo(() => {
@@ -555,6 +562,15 @@ export function RHFornecedoresView({ currentUser }) {
             active={viewMode}
             onChange={setViewMode}
           />
+          {canCreateAgent && (
+            <button
+              onClick={() => setAgentWizardOpen(true)}
+              className="flex items-center gap-1.5 font-semibold"
+              style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border-strong)", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
+            >
+              <Bot size={14} /> Criar agente de IA
+            </button>
+          )}
           <button
             onClick={() => setNovoOpen(true)}
             className="flex items-center gap-1.5 font-semibold"
@@ -645,6 +661,10 @@ export function RHFornecedoresView({ currentUser }) {
 
       {novoOpen && (
         <NovoFornecedorModal onSave={createSupplier} onClose={() => setNovoOpen(false)} />
+      )}
+
+      {agentWizardOpen && (
+        <AgentBuilderWizard currentUser={currentUser} onClose={() => setAgentWizardOpen(false)} />
       )}
 
       {selected && (
