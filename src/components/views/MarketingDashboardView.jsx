@@ -1,8 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Megaphone, Package, DollarSign, Zap, Award, ArrowUp, ArrowDown,
-} from "lucide-react";
+import { Megaphone, Package, DollarSign, Zap, Award, Clock, AlertTriangle } from "lucide-react";
 import { ROUTES } from "../../constants/routes";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -13,8 +11,12 @@ import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables
 import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { MARKETING_STAGES, EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
-import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
+import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatBRL, formatK } from "../../utils/currency";
+import { StatCard } from "../ui/StatCard";
+import { Badge } from "../ui/Badge";
+import { Eyebrow } from "../shared/PanelHeading";
+import { PanelEmptyState } from "../shared/PanelEmptyState";
 
 // ── Date helpers ────────────────────────────────────────────────────────────────
 
@@ -38,54 +40,6 @@ function shortMonth(date) {
   return new Date(date).toLocaleString("pt-BR", { month: "short" });
 }
 
-// ── Sparkline SVG ───────────────────────────────────────────────────────────────
-
-function Sparkline({ values = [], color = "var(--color-industria)", w = 70, h = 32 }) {
-  if (values.length < 2) return <div style={{ width: w, height: h }} />;
-  const max = Math.max(...values) || 1;
-  const min = Math.min(...values);
-  const range = max - min || 1;
-  const pts = values.map((v, i) => {
-    const x = ((i / (values.length - 1)) * (w - 4) + 2).toFixed(1);
-    const y = (h - 4 - ((v - min) / range) * (h - 8) + 2).toFixed(1);
-    return `${x},${y}`;
-  });
-  const lineStr = pts.join(" ");
-  const fillStr = `2,${h - 2} ${lineStr} ${w - 2},${h - 2}`;
-  const gId = `sg${color.replace(/[^a-z0-9]/gi, "")}`;
-  return (
-    <svg width={w} height={h} style={{ display: "block", flexShrink: 0 }}>
-      <defs>
-        <linearGradient id={gId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-        </linearGradient>
-      </defs>
-      <polygon points={fillStr} fill={`url(#${gId})`} />
-      <polyline points={lineStr} fill="none" stroke={color} strokeWidth={1.8}
-                strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// ── MoM badge ───────────────────────────────────────────────────────────────────
-
-function MoMBadge({ delta, invert }) {
-  if (delta === null || delta === undefined || !Number.isFinite(delta)) return null;
-  const up  = invert ? delta < 0 : delta > 0;
-  const dn  = invert ? delta > 0 : delta < 0;
-  const color = delta === 0 ? "var(--text-dim)" : up ? "#16A34A" : "#DC2626";
-  const bg    = delta === 0 ? "var(--surface-alt)" : up ? "#DCFCE7" : "#FEE2E2";
-  const Icon  = delta > 0 ? ArrowUp : delta < 0 ? ArrowDown : null;
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 2,
-                   padding: "2px 6px", borderRadius: 99, fontSize: 10, fontWeight: 700,
-                   background: bg, color, whiteSpace: "nowrap" }}>
-      {Icon && <Icon size={9} />}{Math.abs(delta)}%
-    </span>
-  );
-}
-
 // ── Company tabs ────────────────────────────────────────────────────────────────
 
 function CompanyTabs({ selected, onChange, companyIds }) {
@@ -94,63 +48,32 @@ function CompanyTabs({ selected, onChange, companyIds }) {
     ...companyIds.map(id => COMPANIES[id]).filter(Boolean),
   ];
   return (
-    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+    <div
+      className="flex overflow-x-auto lg:overflow-visible lg:flex-wrap"
+      style={{ gap: 6, scrollbarWidth: "none" }}
+    >
       {tabs.map(co => {
         const active = selected === co.id;
         return (
-          <button key={co.id} onClick={() => onChange(co.id)} style={{
-            padding: "5px 14px", borderRadius: 20,
-            border: `1.5px solid ${active ? co.primary : "var(--border)"}`,
-            background: active ? co.primary : "var(--surface)",
-            color: active ? "#FFFFFF" : "var(--text-dim)",
-            fontWeight: active ? 700 : 500, fontSize: 12,
-            cursor: "pointer", transition: "all 0.15s",
-            letterSpacing: "0.01em", fontFamily: "inherit",
-            boxShadow: active ? `0 2px 8px ${co.primary}45` : "none",
-          }}>
+          <button
+            key={co.id}
+            onClick={() => onChange(co.id)}
+            className="shrink-0 px-3.5 py-3 lg:py-[5px]"
+            style={{
+              borderRadius: 20,
+              border: `1.5px solid ${active ? co.primary : "var(--border)"}`,
+              background: active ? co.primary : "var(--surface)",
+              color: active ? "#FFFFFF" : "var(--text-dim)",
+              fontWeight: active ? 700 : 500, fontSize: 12,
+              cursor: "pointer", transition: "all 0.15s",
+              letterSpacing: "0.01em", fontFamily: "inherit",
+              boxShadow: active ? `0 2px 8px ${co.primary}45` : "none",
+            }}
+          >
             {co.short || co.name}
           </button>
         );
       })}
-    </div>
-  );
-}
-
-// ── KPI card ────────────────────────────────────────────────────────────────────
-
-function KpiCard({ icon: Icon, label, value, sub, delta, invertDelta, color, sparkline }) {
-  return (
-    <div style={{
-      background: "var(--surface)",
-      border: "1px solid var(--border)",
-      borderRadius: 12,
-      padding: "16px 18px",
-      display: "flex", flexDirection: "column", gap: 2,
-      position: "relative", overflow: "hidden",
-    }}>
-      <div style={{
-        position: "absolute", top: 0, left: 0, right: 0, height: 3,
-        background: color, borderRadius: "12px 12px 0 0",
-      }} />
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-        <div style={{
-          width: 34, height: 34, borderRadius: 9,
-          background: color + "18",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          {Icon && <Icon size={15} style={{ color }} strokeWidth={2.5} />}
-        </div>
-        {sparkline && <Sparkline values={sparkline} color={color} />}
-      </div>
-      <div style={{ fontSize: 30, fontWeight: 800, color: "var(--text)", lineHeight: 1,
-                    marginTop: 8, letterSpacing: "-0.03em" }}>
-        {value}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 500 }}>{label}</span>
-        <MoMBadge delta={delta} invert={invertDelta} />
-      </div>
-      {sub && <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>{sub}</div>}
     </div>
   );
 }
@@ -166,8 +89,7 @@ function Panel({ title, subtitle, children }) {
       {(title || subtitle) && (
         <div style={{ marginBottom: 14 }}>
           {title && (
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)",
-                          letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
               {title}
             </div>
           )}
@@ -176,14 +98,6 @@ function Panel({ title, subtitle, children }) {
           )}
         </div>
       )}
-      {children}
-    </div>
-  );
-}
-
-function EmptyState({ children }) {
-  return (
-    <div style={{ padding: "24px 0", textAlign: "center", color: "var(--text-dim)", fontSize: 12 }}>
       {children}
     </div>
   );
@@ -199,7 +113,7 @@ function StagePipelineBar({ campaigns, stages: allStages }) {
       .filter(s => s.count > 0),
     [campaigns, allStages],
   );
-  if (total === 0) return <EmptyState>Sem campanhas</EmptyState>;
+  if (total === 0) return <PanelEmptyState>Sem campanhas</PanelEmptyState>;
   return (
     <div>
       <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden",
@@ -245,7 +159,7 @@ function ChannelChart({ campaigns, primaryColor }) {
   }, [campaigns]);
 
   const max = Math.max(...data.map(d => d.count), 1);
-  if (data.length === 0) return <EmptyState>Sem campanhas com canal definido</EmptyState>;
+  if (data.length === 0) return <PanelEmptyState>Sem campanhas com canal definido</PanelEmptyState>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -275,7 +189,7 @@ function ChannelChart({ campaigns, primaryColor }) {
 
 function MonthlyTrendChart({ data, primaryColor }) {
   const hasData = data.some(m => m.campanhas > 0 || m.entregas > 0);
-  if (!hasData) return <EmptyState>Sem dados de atividade ainda</EmptyState>;
+  if (!hasData) return <PanelEmptyState>Sem dados de atividade ainda</PanelEmptyState>;
   const sec = primaryColor + "88";
   return (
     <ResponsiveContainer width="100%" height={190}>
@@ -321,7 +235,7 @@ function BurnRateChart({ expenses, primaryColor }) {
     });
   }, [expenses]);
 
-  if (!data.some(m => m.total > 0)) return <EmptyState>Sem despesas registradas</EmptyState>;
+  if (!data.some(m => m.total > 0)) return <PanelEmptyState>Sem despesas registradas</PanelEmptyState>;
 
   return (
     <ResponsiveContainer width="100%" height={160}>
@@ -362,7 +276,7 @@ function CategoryDonut({ expenses }) {
   }, [expenses]);
 
   const total = data.reduce((s, d) => s + d.value, 0);
-  if (data.length === 0) return <EmptyState>Sem despesas registradas</EmptyState>;
+  if (data.length === 0) return <PanelEmptyState>Sem despesas registradas</PanelEmptyState>;
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -399,7 +313,7 @@ function CategoryDonut({ expenses }) {
 
 // ── Agency metrics ───────────────────────────────────────────────────────────────
 
-function AgencyMetrics({ deliverables, primaryColor }) {
+function AgencyMetrics({ deliverables }) {
   const navigate = useNavigate();
   const m = useMemo(() => {
     const done = deliverables.filter(d => d.stage === "entregue");
@@ -415,36 +329,32 @@ function AgencyMetrics({ deliverables, primaryColor }) {
     return { sla, avgLead, stuck, total: done.length };
   }, [deliverables]);
 
-  const slaColor = m.sla == null ? "var(--text-dim)" : m.sla >= 80 ? "#16A34A" : m.sla >= 60 ? "#D97706" : "#DC2626";
-
-  const card = (value, label, sub, color, warn, onClick) => (
-    <div
-      onClick={onClick}
-      style={{
-        background: warn ? "#FFF7ED" : "var(--surface)",
-        border: `1px solid ${warn ? "#FED7AA" : "var(--border)"}`,
-        borderRadius: 12, padding: "16px 18px", textAlign: "center", flex: 1,
-        cursor: onClick ? "pointer" : "default",
-      }}
-    >
-      <div style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: "-0.02em", lineHeight: 1 }}>
-        {value}
-      </div>
-      <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 5, fontWeight: 600 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>{sub}</div>}
-    </div>
-  );
+  const goToStuck = () => navigate(ROUTES["marketing-entregas"], { state: { filterStage: "revisao", stuckOnly: true } });
 
   return (
-    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-      {card(m.sla != null ? `${m.sla}%` : "—", "SLA cumprido",
-            m.total > 0 ? `${m.total} entregas` : "sem entregas", slaColor, false)}
-      {card(m.avgLead != null ? `${m.avgLead}d` : "—", "Lead time médio",
-            "Pendente → Entregue", primaryColor || "var(--text)", false)}
-      {card(m.stuck, "Presas em revisão",
-            m.stuck > 0 ? "Mais de 3 dias · clique para ver" : "Mais de 3 dias",
-            m.stuck > 0 ? "#D97706" : "#16A34A", m.stuck > 0,
-            m.stuck > 0 ? () => navigate(ROUTES["marketing-entregas"], { state: { filterStage: "revisao", stuckOnly: true } }) : undefined)}
+    <div className="-mx-4 sm:-mx-6 lg:mx-0">
+      <div
+        className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:grid-cols-3 lg:overflow-visible"
+        style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+      >
+        <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+          <StatCard icon={Award} value={m.sla != null ? `${m.sla}%` : "—"} label="SLA cumprido"
+            sublabel={m.total > 0 ? `${m.total} entregas` : "sem entregas"} compact />
+        </div>
+        <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+          <StatCard icon={Clock} value={m.avgLead != null ? `${m.avgLead}d` : "—"} label="Lead time médio"
+            sublabel="Pendente → Entregue" compact />
+        </div>
+        <div
+          className="flex-none w-[132px] lg:w-auto"
+          style={{ scrollSnapAlign: "start", cursor: m.stuck > 0 ? "pointer" : "default" }}
+          onClick={m.stuck > 0 ? goToStuck : undefined}
+        >
+          <StatCard icon={AlertTriangle} value={m.stuck} label="Presas em revisão"
+            sublabel={m.stuck > 0 ? "Mais de 3 dias · clique para ver" : "Mais de 3 dias"}
+            accent={m.stuck > 0 ? "var(--warning)" : undefined} compact />
+        </div>
+      </div>
     </div>
   );
 }
@@ -460,7 +370,7 @@ function TopPerformanceList({ campaigns, primaryColor, stages }) {
     [campaigns],
   );
 
-  if (top.length === 0) return <EmptyState>Sem campanhas pontuadas ainda</EmptyState>;
+  if (top.length === 0) return <PanelEmptyState>Sem campanhas pontuadas ainda</PanelEmptyState>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -478,12 +388,7 @@ function TopPerformanceList({ campaigns, primaryColor, stages }) {
                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {c.name}
                 </span>
-                {stage && (
-                  <span style={{ padding: "1px 7px", borderRadius: 4, fontSize: 10, fontWeight: 600,
-                                 background: stage.color + "22", color: stage.color, flexShrink: 0 }}>
-                    {stage.name}
-                  </span>
-                )}
+                {stage && <Badge customColor={stage.color}>{stage.name}</Badge>}
               </div>
               <span style={{ fontSize: 14, fontWeight: 800, color: col,
                              fontVariantNumeric: "tabular-nums", flexShrink: 0, marginLeft: 8 }}>
@@ -500,17 +405,6 @@ function TopPerformanceList({ campaigns, primaryColor, stages }) {
           </div>
         );
       })}
-    </div>
-  );
-}
-
-// ── Section label ────────────────────────────────────────────────────────────────
-
-function SectionLabel({ children }) {
-  return (
-    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", letterSpacing: "0.1em",
-                  textTransform: "uppercase", marginBottom: 10, marginTop: 20 }}>
-      {children}
     </div>
   );
 }
@@ -548,7 +442,6 @@ export function MarketingDashboardView({ user }) {
   const [selectedCompany, setSelectedCompany] = useState("all");
   const co           = selectedCompany !== "all" ? (COMPANIES[selectedCompany] || null) : null;
   const primaryColor = co?.primary || "var(--color-industria)";
-  const accentColor  = co?.active  || "var(--color-industria)";
 
   // ── Filtered slices ──
   const fCampaigns = useMemo(() =>
@@ -613,55 +506,37 @@ export function MarketingDashboardView({ user }) {
     });
   }, [fCampaigns, fDeliverables]);
 
-  const sparkCampaigns = trendData.map(m => m.campanhas);
-  const sparkDelivs    = trendData.map(m => m.entregas);
-
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-
-  // ── Hero strip accent ──
-  // When a company is selected, the top of the page gets a subtle tinted background.
-  const heroBg = co
-    ? `linear-gradient(135deg, ${co.light} 0%, #FFFFFF 70%)`
-    : "transparent";
 
   return (
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <div style={{
-        borderRadius: 14, padding: "20px 24px", marginBottom: 20,
-        background: heroBg,
-        border: co ? `1px solid ${co.primary}22` : "none",
-        transition: "background 0.4s ease, border-color 0.4s ease",
-      }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-                      flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
-          <div>
-            <h1 style={{ fontSize: 24, fontWeight: 800, color: co ? co.primary : "var(--text)",
-                         letterSpacing: "-0.02em", lineHeight: 1, margin: 0,
-                         transition: "color 0.3s ease" }}>
-              {greeting}, {user?.name?.split(" ")[0] || "—"}
-            </h1>
-            <p style={{ fontSize: 13, color: "var(--text-dim)", margin: "5px 0 0" }}>
-              Dashboard de Marketing
-              {co && <> · <strong style={{ color: co.primary }}>{co.name}</strong></>}
-              {" "}· {fCampaigns.length} campanha{fCampaigns.length !== 1 ? "s" : ""}
-              {loading && " · carregando…"}
-            </p>
-          </div>
-          {/* Live badge */}
-          {kpi.live > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px",
-                          borderRadius: 20, background: "#DCFCE7", border: "1px solid #86EFAC" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success)",
-                             boxShadow: "0 0 0 3px #16A34A33" }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--success)" }}>
-                {kpi.live} ao vivo
-              </span>
-            </div>
-          )}
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between mb-4">
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--text)",
+                       letterSpacing: "-0.02em", lineHeight: 1.15, margin: 0 }}>
+            {greeting}, {user?.name?.split(" ")[0] || "—"}
+          </h1>
+          <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-dim)", margin: "4px 0 0" }}>
+            Dashboard de Marketing
+            {co && <> · <strong style={{ color: co.primary }}>{co.name}</strong></>}
+            {" "}· {fCampaigns.length} campanha{fCampaigns.length !== 1 ? "s" : ""}
+            {loading && " · carregando…"}
+          </p>
         </div>
+        {kpi.live > 0 && (
+          <div className="self-start">
+            <Badge variant="success" size="md">
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--success)",
+                             boxShadow: "0 0 0 3px #16A34A33", display: "inline-block" }} />
+              {kpi.live} ao vivo
+            </Badge>
+          </div>
+        )}
+      </div>
+      <div className="mb-5">
         <CompanyTabs
           selected={selectedCompany}
           onChange={setSelectedCompany}
@@ -670,37 +545,39 @@ export function MarketingDashboardView({ user }) {
       </div>
 
       {/* ── KPI Strip ──────────────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
-                    gap: 10, marginBottom: 14 }}>
-        <KpiCard
-          icon={Megaphone} label="Campanhas ativas" value={kpi.active}
-          delta={mom.campaigns.d} color={primaryColor} sparkline={sparkCampaigns}
-        />
-        <KpiCard
-          icon={Zap} label="Ao vivo agora" value={kpi.live}
-          color={kpi.live > 0 ? "#16A34A" : "var(--text-dim)"}
-          sub={kpi.live > 0 ? "em exibição" : "nenhuma ao vivo"}
-        />
-        <KpiCard
-          icon={DollarSign} label="Orçamento comprometido"
-          value={kpi.budget > 0 ? formatBRL(kpi.budget) : "R$ 0"}
-          delta={mom.expenses.d} invertDelta color={accentColor}
-        />
-        <KpiCard
-          icon={Package} label="Entregas concluídas" value={kpi.entregue}
-          delta={mom.deliverables.d} color={accentColor} sparkline={sparkDelivs}
-        />
-        <KpiCard
-          icon={Award} label="Performance médio"
-          value={kpi.avgScore != null ? kpi.avgScore : "—"}
-          sub={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "ótimo" : kpi.avgScore >= 60 ? "bom" : "atenção") : "sem dados"}
-          color={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "#16A34A" : kpi.avgScore >= 60 ? "#D97706" : "#DC2626") : "var(--text-dim)"}
-        />
+      <div className="-mx-4 sm:-mx-6 lg:mx-0 mb-3.5">
+        <div
+          className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:overflow-visible"
+          style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))" }}
+        >
+          <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+            <StatCard icon={Megaphone} value={kpi.active} label="Campanhas ativas"
+              trend={mom.campaigns.d} compact />
+          </div>
+          <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+            <StatCard icon={Zap} value={kpi.live} label="Ao vivo agora"
+              sublabel={kpi.live > 0 ? "em exibição" : "nenhuma ao vivo"}
+              accent={kpi.live > 0 ? "var(--success)" : undefined} compact />
+          </div>
+          <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+            <StatCard icon={DollarSign} value={formatK(kpi.budget)} label="Orçamento comprometido"
+              trend={-mom.expenses.d} compact />
+          </div>
+          <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+            <StatCard icon={Package} value={kpi.entregue} label="Entregas concluídas"
+              trend={mom.deliverables.d} compact />
+          </div>
+          <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+            <StatCard icon={Award} value={kpi.avgScore != null ? kpi.avgScore : "—"} label="Performance médio"
+              sublabel={kpi.avgScore != null ? (kpi.avgScore >= 80 ? "ótimo" : kpi.avgScore >= 60 ? "bom" : "atenção") : "sem dados"}
+              compact />
+          </div>
+        </div>
       </div>
 
       {/* ── Activity + Channel ─────────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,3fr) minmax(0,2fr)",
-                    gap: 10, marginBottom: 10 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-2.5 mb-2.5">
         <Panel title="Atividade mensal" subtitle="Campanhas criadas vs. entregas concluídas (últimos 6 meses)">
           <MonthlyTrendChart data={trendData} primaryColor={primaryColor} />
         </Panel>
@@ -721,17 +598,17 @@ export function MarketingDashboardView({ user }) {
 
       {/* ── Agency effectiveness ───────────────────────────────────── */}
       {!isAgencia && (
-        <>
-          <SectionLabel>Efetividade da agência</SectionLabel>
-          <AgencyMetrics deliverables={fDeliverables} primaryColor={primaryColor} />
-        </>
+        <div className="mt-5">
+          <Eyebrow>Efetividade da agência</Eyebrow>
+          <AgencyMetrics deliverables={fDeliverables} />
+        </div>
       )}
 
       {/* ── Financial ──────────────────────────────────────────────── */}
       {!isAgencia && (
-        <>
-          <SectionLabel>Análise financeira</SectionLabel>
-          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr]" style={{ gap: 10, marginBottom: 10 }}>
+        <div className="mt-5">
+          <Eyebrow>Análise financeira</Eyebrow>
+          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr]" style={{ gap: 10, marginBottom: 10 }}>
             <Panel title="Burn rate" subtitle="Gasto mensal · últimos 6 meses">
               <BurnRateChart expenses={fExpenses} primaryColor={primaryColor} />
             </Panel>
@@ -739,14 +616,16 @@ export function MarketingDashboardView({ user }) {
               <CategoryDonut expenses={fExpenses} />
             </Panel>
           </div>
-        </>
+        </div>
       )}
 
       {/* ── Top 5 ──────────────────────────────────────────────────── */}
-      <SectionLabel>Top 5 · performance</SectionLabel>
-      <Panel>
-        <TopPerformanceList campaigns={fCampaigns} primaryColor={primaryColor} stages={campaignStages} />
-      </Panel>
+      <div className="mt-5">
+        <Eyebrow>Top 5 · performance</Eyebrow>
+        <Panel>
+          <TopPerformanceList campaigns={fCampaigns} primaryColor={primaryColor} stages={campaignStages} />
+        </Panel>
+      </div>
 
     </div>
   );

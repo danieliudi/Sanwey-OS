@@ -3,23 +3,22 @@ import {
   Users,
   Briefcase,
   Calendar,
-  TrendingUp,
   Clock,
   UserCheck,
   UserMinus,
-  ArrowRight,
-  Building2,
+  TrendingUp,
 } from "lucide-react";
 import {
-  RH_DEPARTMENTS,
-  RH_CONTRACT_TYPES,
-  RH_EMPLOYEE_STATUSES,
   RH_DESLIGAMENTO_TIPOS,
 } from "../../constants/rh-config";
 import { parseDateInput } from "../../utils/date";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { StatCard } from "../ui/StatCard";
+import { Badge } from "../ui/Badge";
+import { PanelTitle } from "../shared/PanelHeading";
+import { PanelEmptyState } from "../shared/PanelEmptyState";
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -91,68 +90,6 @@ function Avatar({ name, bg, size = 34 }) {
   );
 }
 
-function SectionHeader({ title, action, onAction }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingBottom: 10,
-        marginBottom: 14,
-        borderBottom: `1px solid ${"var(--border)"}`,
-      }}
-    >
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          textTransform: "uppercase",
-          color: "var(--text-dim)",
-          letterSpacing: "0.08em",
-        }}
-      >
-        {title}
-      </span>
-      {action && (
-        <button
-          onClick={onAction}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--color-industria)",
-            fontSize: 12,
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            gap: 3,
-            padding: 0,
-          }}
-        >
-          {action}
-          <ArrowRight size={12} />
-        </button>
-      )}
-    </div>
-  );
-}
-
-function EmptyState({ text }) {
-  return (
-    <div
-      style={{
-        textAlign: "center",
-        color: "var(--text-dim)",
-        fontSize: 13,
-        padding: "24px 0",
-      }}
-    >
-      {text}
-    </div>
-  );
-}
-
 export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { stages: vagaStages } = useRHPipelineStages("vagas");
@@ -210,6 +147,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
   });
   const turnoverRate = totalAtivos > 0 ? Math.round((desligados12m.length / (totalAtivos + desligados12m.length)) * 100) : 0;
   const desligadosVoluntarios = desligados12m.filter((c) => c.desligamentoTipo === "voluntario").length;
+  const voluntariosPct = desligados12m.length ? Math.round((desligadosVoluntarios / desligados12m.length) * 100) : 0;
   const exitPorTipo = RH_DESLIGAMENTO_TIPOS
     .map((t) => ({ ...t, n: desligados12m.filter((c) => c.desligamentoTipo === t.id).length }))
     .filter((t) => t.n > 0);
@@ -235,66 +173,32 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
   const maxDept = deptList.length > 0 ? deptList[0][1] : 1;
 
   const statCards = [
-    {
-      label: "Total de Funcionários",
-      value: totalFuncionarios,
-      icon: <Users size={20} color={"var(--text-dim)"} />,
-      accent: "var(--text)",
-    },
-    {
-      label: "Ativos",
-      value: totalAtivos,
-      icon: <UserCheck size={20} color="var(--success)" />,
-      accent: "var(--success)",
-    },
-    {
-      label: "De Férias",
-      value: totalFerias,
-      icon: <Calendar size={20} color="var(--accent)" />,
-      accent: "var(--accent)",
-    },
-    {
-      label: "Afastados",
-      value: totalAfastados,
-      icon: <UserMinus size={20} color="var(--warning)" />,
-      accent: "var(--warning)",
-    },
+    { key: "total", label: "Total de Funcionários", value: totalFuncionarios, icon: Users },
+    { key: "ativos", label: "Ativos", value: totalAtivos, icon: UserCheck },
+    { key: "ferias", label: "De Férias", value: totalFerias, icon: Calendar },
+    { key: "afastados", label: "Afastados", value: totalAfastados, icon: UserMinus, accent: totalAfastados > 0 ? "var(--warning)" : undefined },
   ];
 
   const card = {
     background: "var(--surface)",
     border: "1px solid var(--border)",
-    borderRadius: 10,
+    borderRadius: "var(--radius-lg)",
     boxShadow: "var(--shadow-card)",
   };
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--surface)" }}>
-      <div
-        style={{
-          padding: "24px 32px",
-          maxWidth: 1200,
-          margin: "0 auto",
-        }}
-        className="rh-overview-container"
-      >
-        <style>{`
-          @media (max-width: 768px) {
-            .rh-overview-container { padding: 16px !important; }
-            .rh-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
-            .rh-two-col { grid-template-columns: 1fr !important; }
-            .rh-three-col { grid-template-columns: 1fr !important; }
-          }
-        `}</style>
+      <div className="p-4 lg:px-8 lg:py-6" style={{ maxWidth: 1200, margin: "0 auto" }}>
 
         <div style={{ marginBottom: 28 }}>
           <h1
             style={{
-              fontSize: 22,
+              fontSize: 26,
               fontWeight: 800,
               color: "var(--text)",
               margin: 0,
-              letterSpacing: "-0.01em",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.15,
             }}
           >
             Visão Geral — RH
@@ -311,83 +215,49 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           </p>
         </div>
 
-        <div
-          className="rh-stats-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 16,
-            marginBottom: 28,
-          }}
-        >
-          {statCards.map((sc) => (
-            <div
-              key={sc.label}
-              style={{
-                ...card,
-                padding: 20,
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-                position: "relative",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: 16,
-                  right: 16,
-                  opacity: 0.7,
-                }}
-              >
-                {sc.icon}
+        {/* Stat cards — carrossel de peek abaixo de 1024px (adendo mobile) */}
+        <div className="-mx-4 lg:mx-0 mb-7">
+          <div
+            className="flex gap-3 overflow-x-auto px-4 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible"
+            style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+          >
+            {statCards.map((sc) => (
+              <div key={sc.key} className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                <StatCard icon={sc.icon} value={sc.value} label={sc.label} accent={sc.accent} compact />
               </div>
-              <span
-                style={{
-                  fontSize: 32,
-                  fontWeight: 800,
-                  color: sc.accent,
-                  lineHeight: 1,
-                  fontFamily: "'Barlow Condensed', Inter, sans-serif",
-                }}
-              >
-                {sc.value}
-              </span>
-              <span style={{ fontSize: 13, color: "var(--text-dim)", fontWeight: 500 }}>
-                {sc.label}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {desligados12m.length > 0 && (
-          <div style={{ ...card, padding: 20, marginBottom: 28 }}>
+          <div className="p-4 lg:p-5" style={{ ...card, marginBottom: 28 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
               <UserMinus size={16} color="var(--text-dim)" />
-              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>Turnover (últimos 12 meses)</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>Turnover (últimos 12 meses)</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Barlow Condensed', Inter, sans-serif", lineHeight: 1 }}>{desligados12m.length}</div>
-                <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 4 }}>Desligamentos</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: turnoverRate >= 20 ? "var(--danger)" : "var(--text)", fontFamily: "'Barlow Condensed', Inter, sans-serif", lineHeight: 1 }}>{turnoverRate}%</div>
-                <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 4 }}>Taxa aproximada</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", fontFamily: "'Barlow Condensed', Inter, sans-serif", lineHeight: 1 }}>
-                  {desligados12m.length ? Math.round((desligadosVoluntarios / desligados12m.length) * 100) : 0}%
+            <div className="-mx-4 lg:mx-0">
+              <div
+                className="flex gap-3 overflow-x-auto px-4 lg:px-0 lg:grid lg:grid-cols-3 lg:overflow-visible"
+                style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+              >
+                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                  <StatCard icon={UserMinus} value={desligados12m.length} label="Desligamentos" compact />
                 </div>
-                <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 4 }}>Voluntários</div>
+                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                  <StatCard icon={TrendingUp} value={`${turnoverRate}%`} label="Taxa aproximada"
+                    accent={turnoverRate >= 20 ? "var(--danger)" : undefined} compact />
+                </div>
+                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                  <StatCard icon={UserCheck} value={`${voluntariosPct}%`} label="Voluntários" compact />
+                </div>
               </div>
             </div>
             {exitPorTipo.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
                 {exitPorTipo.map((t) => (
-                  <span key={t.id} style={{ fontSize: 11, fontWeight: 600, color: "var(--text-dim)", background: "var(--surface-alt)", borderRadius: 99, padding: "3px 10px" }}>
+                  <Badge key={t.id} variant="neutral">
                     {t.label.split(" (")[0]}: <b style={{ color: "var(--text)" }}>{t.n}</b>
-                  </span>
+                  </Badge>
                 ))}
               </div>
             )}
@@ -400,24 +270,20 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
         )}
 
         <div
-          className="rh-three-col"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 20,
-            marginBottom: 20,
-          }}
+          className="grid grid-cols-1 lg:grid-cols-3"
+          style={{ gap: 20, marginBottom: 20 }}
         >
           <div style={{ ...card, padding: 20 }}>
-            <SectionHeader
+            <PanelTitle
               title="Vagas em Aberto"
               action="Ver todas"
               onAction={() => onNavigate?.("rh-recrutamento")}
+              actionColor="var(--color-industria)"
             />
             {loadingVagas ? (
               <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
             ) : vagas.length === 0 ? (
-              <EmptyState text="Nenhuma vaga em aberto" />
+              <PanelEmptyState>Nenhuma vaga em aberto</PanelEmptyState>
             ) : (
               <>
                 <div
@@ -474,21 +340,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
                             {vaga.department || "—"}
                           </div>
                         </div>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 600,
-                            color: stage.color,
-                            background: `${stage.color}18`,
-                            border: `1px solid ${stage.color}33`,
-                            borderRadius: 99,
-                            padding: "2px 8px",
-                            whiteSpace: "nowrap",
-                            flexShrink: 0,
-                          }}
-                        >
-                          {stage.name}
-                        </span>
+                        <Badge customColor={stage.color}>{stage.name}</Badge>
                       </div>
                     );
                   })}
@@ -498,11 +350,11 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           </div>
 
           <div style={{ ...card, padding: 20 }}>
-            <SectionHeader title="Admissões Recentes" />
+            <PanelTitle title="Admissões Recentes" />
             {loadingColaboradores ? (
               <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
             ) : recentAdmissions.length === 0 ? (
-              <EmptyState text="Nenhuma admissão registrada" />
+              <PanelEmptyState>Nenhuma admissão registrada</PanelEmptyState>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {recentAdmissions.map((c) => (
@@ -552,15 +404,16 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           </div>
 
           <div style={{ ...card, padding: 20 }}>
-            <SectionHeader
+            <PanelTitle
               title="Férias Pendentes"
               action="Ver todas"
               onAction={() => onNavigate?.("rh-ferias")}
+              actionColor="var(--color-industria)"
             />
             {loadingFerias ? (
               <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
             ) : ferias.length === 0 ? (
-              <EmptyState text="Nenhuma solicitação pendente" />
+              <PanelEmptyState>Nenhuma solicitação pendente</PanelEmptyState>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {ferias.map((req) => {
@@ -621,19 +474,15 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
         </div>
 
         <div style={{ ...card, padding: 20 }}>
-          <SectionHeader title="Distribuição por Departamento" />
+          <PanelTitle title="Distribuição por Departamento" />
           {loadingColaboradores ? (
             <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
           ) : deptList.length === 0 ? (
-            <EmptyState text="Sem dados de departamento" />
+            <PanelEmptyState>Sem dados de departamento</PanelEmptyState>
           ) : (
             <div
-              className="rh-two-col"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "8px 32px",
-              }}
+              className="grid grid-cols-1 lg:grid-cols-2"
+              style={{ gap: "8px 32px" }}
             >
               {deptList.map(([dept, count]) => {
                 const pct = Math.round((count / maxDept) * 100);

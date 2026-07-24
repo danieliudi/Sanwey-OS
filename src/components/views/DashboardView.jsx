@@ -1,11 +1,13 @@
 import React, { useMemo } from "react";
 import {
   Target, HandCoins, CheckCircle2, Gauge, RefreshCcw, Download,
-  Clock, CalendarClock, AlertTriangle, CalendarCheck, ArrowRight,
+  Clock, CalendarClock, AlertTriangle, CalendarCheck,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { StatCard } from "../ui/StatCard";
 import { Button } from "../ui/Button";
+import { Eyebrow } from "../shared/PanelHeading";
+import { PanelEmptyState } from "../shared/PanelEmptyState";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, daysSince } from "../../utils/date";
 import { exportLeadsToCSV } from "../../utils/export-csv";
@@ -119,14 +121,14 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
   const totalTasks = tasks.closing.length + tasks.stale.length + tasks.overdue.length + tasks.followUps.length;
 
   return (
-    <div className="space-y-7">
+    <div className="flex flex-col gap-7">
       {/* Page header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em", lineHeight: 1.15 }}>
             {greetingFor(user)}
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
+          <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-dim)", marginTop: 4 }}>
             {isGroupView
               ? `${scopedLeads.length} leads em ${COMPANY_IDS.length} empresas`
               : `${companyData?.name || "—"} · ${scopedLeads.length} leads`}
@@ -137,7 +139,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
           <Button
             variant="secondary"
             icon={RefreshCcw}
-            size="sm"
+            size="md"
             onClick={() => window.location.reload()}
           >
             Atualizar
@@ -146,7 +148,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
             <Button
               variant="secondary"
               icon={Download}
-              size="sm"
+              size="md"
               onClick={() => { exportLeadsToCSV(scopedLeads, { usersById, pipelines }); logExport(user?.id, "leads_dashboard", scopedLeads.length); }}
             >
               Exportar
@@ -155,52 +157,51 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {widgetVisible("leads_count") && (
-          <StatCard icon={Target} value={scopedLeads.length}
-            label={isManager ? (isGroupView ? "Leads no grupo" : "Leads da empresa") : "Meus leads"}
-            sublabel={`${stats.fitCount70} com fit ≥ 70`} compact />
-        )}
-        {widgetVisible("pipeline_open") && (
-          <StatCard icon={HandCoins} value={formatK(stats.pipelineValue)}
-            label="Funil de Vendas aberto"
-            sublabel={`${stats.openCount} oportunidades`} compact />
-        )}
-        {widgetVisible("won_value") && (
-          <StatCard icon={CheckCircle2} value={formatK(stats.wonValue)}
-            label="Valor ganho" sublabel={`${stats.wonCount} fechados`} accent={accent} compact />
-        )}
-        {widgetVisible("avg_fit") && (
-          <StatCard icon={Gauge} value={stats.avgFit} label="Fit score médio"
-            sublabel={`${stats.newCount} novos em 48h`} compact
-            tooltip="Pontuação de 0 a 100 que indica o potencial do lead. Acima de 70 é considerado quente." />
-        )}
-      </div>
-
-      {/* Tarefas e prazos — derivado dos negócios do CRM */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="font-semibold" style={{ fontSize: 15, color: "var(--text)" }}>
-              Tarefas e prazos
-            </h2>
-            <p className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
-              Pendências dos seus negócios · próximos 7 dias e leads parados
-            </p>
-          </div>
-          {totalTasks > 0 && (
-            <button
-              onClick={() => onNavigate("crm")}
-              className="text-xs font-semibold flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all duration-150"
-              style={{ color: accent, background: accent + "0D" }}
-              onMouseEnter={e => { e.currentTarget.style.background = accent + "18"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = accent + "0D"; }}
-            >
-              Abrir pipeline <ArrowRight size={12} />
-            </button>
+      {/* Stat cards — carrossel de peek abaixo de 1024px (adendo mobile) */}
+      <div className="order-2 lg:order-1 -mx-4 sm:-mx-6 lg:mx-0">
+        <div
+          className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible"
+          style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+        >
+          {widgetVisible("leads_count") && (
+            <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+              <StatCard icon={Target} value={scopedLeads.length}
+                label={isManager ? (isGroupView ? "Leads no grupo" : "Leads da empresa") : "Meus leads"}
+                sublabel={`${stats.fitCount70} com fit ≥ 70`} compact />
+            </div>
+          )}
+          {widgetVisible("pipeline_open") && (
+            <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+              <StatCard icon={HandCoins} value={formatK(stats.pipelineValue)}
+                label="Funil de Vendas aberto"
+                sublabel={`${stats.openCount} oportunidades`} compact />
+            </div>
+          )}
+          {widgetVisible("won_value") && (
+            <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+              <StatCard icon={CheckCircle2} value={formatK(stats.wonValue)}
+                label="Valor ganho" sublabel={`${stats.wonCount} fechados`} accent={accent} compact />
+            </div>
+          )}
+          {widgetVisible("avg_fit") && (
+            <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+              <StatCard icon={Gauge} value={stats.avgFit} label="Fit score médio"
+                sublabel={`${stats.newCount} novos em 48h`} compact
+                tooltip="Pontuação de 0 a 100 que indica o potencial do lead. Acima de 70 é considerado quente." />
+            </div>
           )}
         </div>
+      </div>
+
+      {/* Tarefas e prazos — derivado dos negócios do CRM. Vem antes da faixa
+          de stats no mobile (<1024px): é a ação imediata, não um número frio. */}
+      <div className="order-1 lg:order-2">
+        <Eyebrow action={totalTasks > 0 ? "Abrir pipeline" : undefined} onAction={() => onNavigate("crm")} accent={accent}>
+          Tarefas e prazos
+        </Eyebrow>
+        <p className="text-xs mb-3" style={{ color: "var(--text-dim)", marginTop: -6 }}>
+          Pendências dos seus negócios · próximos 7 dias e leads parados
+        </p>
 
         {totalTasks === 0 ? (
           <div
@@ -210,7 +211,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
             Nada urgente por aqui. Seus negócios estão em dia.
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <TaskBucket
               icon={AlertTriangle}
               tone="var(--danger)"
@@ -279,8 +280,8 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
 function TaskBucket({ icon: Icon, tone, title, empty, items }) {
   return (
     <div
-      className="rounded-xl border"
-      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+      className="border"
+      style={{ background: "var(--surface)", borderColor: "var(--border)", borderRadius: "var(--radius-lg)" }}
     >
       <div
         className="px-3.5 py-2.5 flex items-center gap-2"
@@ -292,7 +293,7 @@ function TaskBucket({ icon: Icon, tone, title, empty, items }) {
         >
           <Icon size={13} strokeWidth={2.4} />
         </div>
-        <div className="text-xs font-semibold" style={{ color: "var(--text)", letterSpacing: "0.01em" }}>
+        <div className="text-[13px] font-semibold" style={{ color: "var(--text)", letterSpacing: "0.01em" }}>
           {title}
         </div>
         <div className="ml-auto text-xs font-semibold" style={{ color: tone }}>
@@ -301,9 +302,7 @@ function TaskBucket({ icon: Icon, tone, title, empty, items }) {
       </div>
       <div className="p-1.5">
         {items.length === 0 ? (
-          <div className="px-2 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
-            {empty}
-          </div>
+          <PanelEmptyState>{empty}</PanelEmptyState>
         ) : (
           items.map(it => (
             <button
