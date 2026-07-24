@@ -7,10 +7,7 @@ import {
   Check, Loader2, AlertCircle, RotateCcw, Copy,
 } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
-import {
-  DELIVERABLE_STAGES,
-  DELIVERABLE_REQUEST_TYPES,
-} from "../../constants/marketing-pipelines";
+import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { useDeliverableAttachments }  from "../../hooks/use-deliverable-attachments";
 import { useDeliverableChecklists }   from "../../hooks/use-deliverable-checklists";
@@ -33,37 +30,6 @@ const PURPLE = "#7C3AED";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.zip";
-
-/* ── Stage-specific field configs ───────────────────────────── */
-export const STAGE_FIELDS = {
-  solicitacao: [
-    { key: "request_type",   label: "Tipo de Solicitação",          hint: "Selecione o tipo de solicitação.",             type: "select",     options: DELIVERABLE_REQUEST_TYPES, required: true },
-    { key: "request_date",   label: "Data de Solicitação",          hint: "Data em que a solicitação foi feita.",          type: "date",       required: true },
-    { key: "assignee",       label: "Responsável pela Solicitação", hint: "Selecione o(s) responsável(is).",               type: "user_multi", required: true },
-    { key: "request_status", label: "Status da Solicitação",        hint: "Status atual da solicitação.",                  type: "radio",      options: [{v:"pendente",l:"Pendente"},{v:"em_andamento",l:"Em andamento"},{v:"concluido",l:"Concluído"}] },
-    { key: "observations",   label: "Observações",                  hint: "Observações adicionais.",                       type: "textarea" },
-  ],
-  em_producao: [
-    { key: "production_stage",      label: "Etapa Atual",                   hint: "Etapa atual do processo de produção.",        type: "select",    options: ["Planejamento","Desenvolvimento","Finalização"], required: true },
-    { key: "production_start_date", label: "Data de Início da Produção",    hint: "Data em que a produção foi iniciada.",         type: "date",      required: true },
-    { key: "production_resources",  label: "Recursos Alocados",             hint: "Liste os recursos alocados.",                  type: "textarea" },
-    { key: "production_progress",   label: "Progresso Atual (%)",           hint: "Progresso atual em porcentagem.",              type: "percent_steps", steps: [0, 20, 40, 60, 80, 100], required: true },
-    { key: "production_risks",      label: "Riscos Identificados",          hint: "Riscos que podem impactar a produção.",        type: "multicheck", options: ["Falta de materiais","Problemas técnicos","Atrasos na entrega","Outros"] },
-  ],
-  revisao: [
-    { key: "revision_needed",   label: "Revisão Necessária",        hint: "A revisão é necessária para esta etapa?",     type: "radio_bool", required: true },
-    { key: "revision_date",     label: "Data de Revisão",           hint: "Data em que a revisão será realizada.",        type: "date",       required: true },
-    { key: "revision_assignee", label: "Responsável pela Revisão",  hint: "Selecione o responsável pela revisão.",        type: "user",       required: true },
-    { key: "revision_comments", label: "Comentários da Revisão",    hint: "Comentários ou observações sobre a revisão.",  type: "textarea" },
-    { key: "revision_status",   label: "Status da Revisão",         hint: "Status atual da revisão.",                     type: "select",     options: ["Aprovado","Reprovado","Pendente de aprovação"], required: true },
-  ],
-  entregue: [
-    { key: "delivery_date",        label: "Data de Entrega",         hint: "Data em que foi entregue.",           type: "date",  required: true },
-    { key: "delivery_assignee",    label: "Responsável pela Entrega",hint: "Responsável pela entrega.",           type: "user" },
-    { key: "delivery_approved_by", label: "Aprovado por",            hint: "Nome de quem aprovou a entrega.",     type: "text" },
-    { key: "delivery_comments",    label: "Comentários Finais",      hint: "Observações finais sobre a entrega.", type: "textarea" },
-  ],
-};
 
 /* ── Pill SideTabs ──────────────────────────────────────────── */
 const SIDE_TABS = [
@@ -260,145 +226,6 @@ function formatCustomFieldValue(v) {
   if (Array.isArray(v)) return v.length ? v.join(", ") : null;
   if (typeof v === "boolean") return v ? "Sim" : "Não";
   return String(v);
-}
-
-/* ── Dynamic field renderer ─────────────────────────────────── */
-function StageFieldInput({ field, value, onChange, canWrite, users }) {
-  const disabled = !canWrite;
-
-  if (field.type === "text") {
-    return <input type="text" value={value || ""} placeholder={field.hint}
-      onChange={e => onChange(e.target.value)} disabled={disabled}
-      style={inputBase} onFocus={focusBorder} onBlur={blurBorder} />;
-  }
-  if (field.type === "date") {
-    return <input type="date" value={value ? value.slice(0, 10) : ""}
-      onChange={e => onChange(e.target.value)} disabled={disabled}
-      style={inputBase} onFocus={focusBorder} onBlur={blurBorder} />;
-  }
-  if (field.type === "number") {
-    return <input type="number" min={0} max={100} value={value ?? ""} placeholder={field.hint}
-      onChange={e => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-      disabled={disabled} style={inputBase} onFocus={focusBorder} onBlur={blurBorder} />;
-  }
-  if (field.type === "percent_steps") {
-    const steps = field.steps || [0, 20, 40, 60, 80, 100];
-    const current = value === "" || value === null || value === undefined ? null : Number(value);
-    return (
-      <div>
-        <div style={{ height: 8, borderRadius: 999, background: "var(--surface-alt)", overflow: "hidden", marginBottom: 10 }}>
-          <div style={{
-            width: `${current || 0}%`, height: "100%", borderRadius: 999,
-            background: current >= 100 ? "var(--success)" : "var(--accent)",
-            transition: "width 0.2s ease",
-          }} />
-        </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {steps.map(s => {
-            const active = current === s;
-            return (
-              <button
-                key={s} type="button" disabled={disabled}
-                onClick={() => onChange(s)}
-                style={{
-                  padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
-                  border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-                  background: active ? "var(--accent)" : "var(--surface)",
-                  color: active ? "#fff" : "var(--text-dim)",
-                  cursor: disabled ? "default" : "pointer",
-                }}
-              >
-                {s}%
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-  if (field.type === "textarea") {
-    return <textarea value={value || ""} rows={3} placeholder={field.hint}
-      onChange={e => onChange(e.target.value)} disabled={disabled}
-      style={{ ...inputBase, resize: "vertical" }} onFocus={focusBorder} onBlur={blurBorder} />;
-  }
-  if (field.type === "select") {
-    return (
-      <select value={value || ""} onChange={e => onChange(e.target.value)} disabled={disabled}
-        style={{ ...inputBase, color: value ? "var(--text)" : "var(--text-dim)" }}
-        onFocus={focusBorder} onBlur={blurBorder}>
-        <option value="">Escolha uma opção</option>
-        {(field.options || []).map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    );
-  }
-  if (field.type === "user") {
-    return (
-      <select value={value || ""} onChange={e => onChange(e.target.value)} disabled={disabled}
-        style={{ ...inputBase, color: value ? "var(--text)" : "var(--text-dim)" }}
-        onFocus={focusBorder} onBlur={blurBorder}>
-        <option value="">Selecione um responsável</option>
-        {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-      </select>
-    );
-  }
-  // FASE 5: mais de um responsável — só o campo solicitacao.assignee usa
-  // este tipo (ver STAGE_FIELDS acima); revision_assignee/delivery_assignee
-  // continuam type "user" (escalar, sem coluna própria no banco).
-  if (field.type === "user_multi") {
-    return (
-      <AssigneeMultiSelect
-        value={Array.isArray(value) ? value : (value ? [value] : [])}
-        onChange={onChange}
-        options={users}
-        placeholder="Selecione o(s) responsável(is)"
-        disabled={disabled}
-      />
-    );
-  }
-  if (field.type === "radio") {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-        {(field.options || []).map(o => (
-          <label key={o.v} style={{ display: "flex", alignItems: "center", gap: 8, cursor: disabled ? "default" : "pointer", fontSize: 13, color: "var(--text)" }}>
-            <input type="radio" name={field.key} value={o.v} checked={value === o.v}
-              onChange={() => !disabled && onChange(o.v)} disabled={disabled}
-              style={{ accentColor: "var(--accent)" }} />
-            {o.l}
-          </label>
-        ))}
-      </div>
-    );
-  }
-  if (field.type === "radio_bool") {
-    return (
-      <div style={{ display: "flex", gap: 16 }}>
-        {[{v:true,l:"Sim"},{v:false,l:"Não"}].map(o => (
-          <label key={String(o.v)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: disabled ? "default" : "pointer", fontSize: 13, color: "var(--text)" }}>
-            <input type="radio" name={field.key} value={String(o.v)} checked={value === o.v}
-              onChange={() => !disabled && onChange(o.v)} disabled={disabled}
-              style={{ accentColor: "var(--accent)" }} />
-            {o.l}
-          </label>
-        ))}
-      </div>
-    );
-  }
-  if (field.type === "multicheck") {
-    const checked = Array.isArray(value) ? value : [];
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-        {(field.options || []).map(opt => (
-          <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, cursor: disabled ? "default" : "pointer", fontSize: 13, color: "var(--text)" }}>
-            <input type="checkbox" checked={checked.includes(opt)}
-              onChange={() => { if (!disabled) onChange(checked.includes(opt) ? checked.filter(x => x !== opt) : [...checked, opt]); }}
-              disabled={disabled} style={{ accentColor: "var(--accent)", width: 14, height: 14 }} />
-            {opt}
-          </label>
-        ))}
-      </div>
-    );
-  }
-  return null;
 }
 
 /* ── Atividades tab ─────────────────────────────────────────── */
@@ -641,31 +468,18 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
   );
 }
 
-// FASE 5: mais de um responsável na etapa "solicitacao" — o campo
-// STAGE_FIELDS.solicitacao.assignee agora guarda um array de ids em vez de
-// um id escalar. Ao inicializar/trocar de item, semeia esse campo a partir
-// de assigneeIds (com fallback pro assignee escalar em entregas legadas)
-// quando o stageData ainda não tiver um array salvo ali.
-function seedStageFieldValues(it) {
-  const base = it.stageData?.[it.stage] ?? {};
-  if (it.stage === "solicitacao" && !Array.isArray(base.assignee)) {
-    const seededAssignee = it.assigneeIds?.length ? it.assigneeIds : (it.assignee ? [it.assignee] : []);
-    return { ...base, assignee: seededAssignee };
-  }
-  return base;
-}
-
 /* ── Main component ─────────────────────────────────────────── */
 export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, users = [], canWrite, userId, currentUser, notifyMentions }) {
   const [sideTab,      setSideTab]     = useState("form");
-  const [fieldValues,  setFieldValues] = useState(() => seedStageFieldValues(item));
-  const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | null
+  const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,    setMoveError]   = useState(null);
 
-  // Campos customizados configurados pelo admin via "Editar campos desta
-  // etapa" (rh_pipeline_stage_fields, domain="marketing_deliverables") —
-  // persistidos em item.custom_fields, separado do stageData/fieldValues
-  // acima (que é o formulário fixo por etapa). Mesmo padrão de draft +
+  // Campos customizados configurados via "Editar campos desta etapa"
+  // (rh_pipeline_stage_fields, domain="marketing_deliverables") —
+  // persistidos em item.custom_fields. Única fonte do formulário por etapa
+  // no centro do card: até 20260774/775, Entregas também tinha um formulário
+  // fixo em código (STAGE_FIELDS) que "Editar campos desta etapa" não
+  // alcançava — unificado nessas migrations. Mesmo padrão de draft +
   // debounce do OnboardingDrawer (RHOnboardingView.jsx).
   const stageFieldsHook = useRHStageFields("marketing_deliverables");
   const customDefs = stageFieldsHook.getFields(item.stage);
@@ -676,17 +490,32 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   // no cleanup pra não perder a edição ao fechar em <600ms. Achado da auditoria.
   const customDraftRef = useRef({});
 
+  // "Responsáveis" — campo geral do registro (assignee_ids), não mais preso
+  // à etapa "Solicitação" (era STAGE_FIELDS.solicitacao.assignee, só
+  // editável enquanto o card estivesse lá). Mesmo padrão de draft + debounce
+  // acima, um único campo.
+  const [assigneeDraft, setAssigneeDraft] = useState(null); // null = sem edição pendente
+  const assigneeDebounceRef = useRef(null);
+  const itemRef = useRef(item);
+  useEffect(() => { itemRef.current = item; }, [item]);
+
   useEffect(() => {
     setCustomDraft({});
     customDraftRef.current = {};
+    setAssigneeDraft(null);
     setMoveError(null);
+    setSaveStatus(null);
+    setSideTab("form");
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
+    if (assigneeDebounceRef.current) clearTimeout(assigneeDebounceRef.current);
     return () => {
       if (customDebounceRef.current) { clearTimeout(customDebounceRef.current); customDebounceRef.current = null; }
       if (Object.keys(customDraftRef.current).length > 0) {
         onUpdate(item.id, { customFields: { ...(item.customFields || {}), ...customDraftRef.current } });
       }
+      if (assigneeDebounceRef.current) { clearTimeout(assigneeDebounceRef.current); assigneeDebounceRef.current = null; }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.id]);
 
   const getCustomValue = (fieldKey) =>
@@ -706,6 +535,31 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
 
   const customValuesByKey = { ...(item.customFields || {}), ...customDraft };
   const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
+
+  const assigneeIds = assigneeDraft !== null
+    ? assigneeDraft
+    : (item.assigneeIds?.length ? item.assigneeIds : (item.assignee ? [item.assignee] : []));
+  const resolvedAssignees = useMemo(
+    () => assigneeIds.map(id => (users || []).find(u => u.id === id)).filter(Boolean),
+    [assigneeIds, users]
+  );
+
+  const handleAssigneeChange = (ids) => {
+    setAssigneeDraft(ids);
+    setSaveStatus(null);
+    if (assigneeDebounceRef.current) clearTimeout(assigneeDebounceRef.current);
+    assigneeDebounceRef.current = setTimeout(async () => {
+      setSaveStatus("saving");
+      try {
+        await onUpdate(itemRef.current.id, { assignee: ids[0] || null, assigneeIds: ids });
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(null), 2500);
+      } catch {
+        setSaveStatus("error");
+      }
+      assigneeDebounceRef.current = null;
+    }, 600);
+  };
 
   // Quem pode ser @mencionado nos comentários desta entrega — mesmo escopo
   // usado no CampaignDetailDrawer (domain "marketing", incluindo agência,
@@ -767,64 +621,11 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
   }, [item, onUpdate, currentUser, notifyMentions]);
 
-  const fieldValuesRef = useRef(fieldValues);
-  const itemRef        = useRef(item);
-  const saveTimerRef   = useRef(null);
-  useEffect(() => { fieldValuesRef.current = fieldValues; }, [fieldValues]);
-  useEffect(() => { itemRef.current = item; }, [item]);
-
-  useEffect(() => {
-    const seeded = seedStageFieldValues(item);
-    setFieldValues(seeded);
-    fieldValuesRef.current = seeded;
-    setSaveStatus(null);
-    setSideTab("form");
-    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
-  }, [item.id, item.stage]);
-
   const stageInfo  = DELIVERABLE_STAGES.find(s => s.id === item.stage);
-  const fields     = STAGE_FIELDS[item.stage] || [];
 
   const priorityColor = PRIORITY_COLORS[item.priority] || NEUTRAL.slate;
   const priorityLabel = PRIORITY_LABELS[item.priority] || item.priority;
   const companyLabels = (item.companyIds || []).map(id => COMPANIES[id]?.short || id).join(", ");
-
-  const handleFieldChange = useCallback((key, val) => {
-    const newValues = { ...fieldValuesRef.current, [key]: val };
-    setFieldValues(newValues);
-    fieldValuesRef.current = newValues;
-
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    setSaveStatus(null);
-    saveTimerRef.current = setTimeout(async () => {
-      const it = itemRef.current;
-      setSaveStatus("saving");
-      try {
-        const activity = { type: "field_save", description: `Campos de "${it.stage}" atualizados`, at: new Date().toISOString() };
-        const patch = {
-          stageData:  { ...(it.stageData || {}), [it.stage]: fieldValuesRef.current },
-          activities: [...(it.activities || []), activity],
-        };
-        if (it.stage === "solicitacao" && fieldValuesRef.current.assignee !== undefined) {
-          // FASE 5: campo agora é um array (AssigneeMultiSelect) — escreve
-          // o escalar assignee (1º da lista, pro trigger/colunas legadas) E
-          // o array completo assigneeIds, ambos chegando ao onUpdate/hook.
-          const rawAssignee = fieldValuesRef.current.assignee;
-          const assigneeIds = Array.isArray(rawAssignee) ? rawAssignee : (rawAssignee ? [rawAssignee] : []);
-          patch.assignee = assigneeIds[0] || null;
-          patch.assigneeIds = assigneeIds;
-        }
-        await onUpdate(it.id, patch);
-        setSaveStatus("saved");
-        setTimeout(() => setSaveStatus(null), 2500);
-      } catch {
-        // Falha real de gravação (RLS/rede/constraint) — sem isso o usuário
-        // via "Salvando…" sumir sem virar "✓ Salvo" e achava que tinha
-        // salvo; os campos ficavam só no estado local, perdidos ao reabrir.
-        setSaveStatus("error");
-      }
-    }, 600);
-  }, [onUpdate]);
 
   const handleMoveStage = async (stageId) => {
     // Passa pela mesma validação de campo obrigatório (estático + dinâmico)
@@ -1006,22 +807,26 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           </span>
         )}
       </div>
-      {fields.length === 0
-        ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
-        : fields.map(field => (
-          <FieldRow key={field.key} label={field.label} required={field.required} hint={field.hint}>
-            <StageFieldInput field={field} value={fieldValues[field.key]} onChange={val => handleFieldChange(field.key, val)} canWrite={canWrite} users={users} />
-          </FieldRow>
-        ))
-      }
+      <FieldRow label="Responsáveis">
+        {canWrite ? (
+          <AssigneeMultiSelect
+            value={assigneeIds}
+            onChange={handleAssigneeChange}
+            options={users}
+            placeholder="Selecionar responsáveis…"
+          />
+        ) : (
+          <ReadValue value={resolvedAssignees.map(u => u.name).join(", ") || null} />
+        )}
+      </FieldRow>
 
-      {/* Campos adicionais configurados via "Editar campos desta
-          etapa" (rh_pipeline_stage_fields) — além do formulário fixo
-          acima, que continua intacto. */}
-      {visibleCustomDefs.length > 0 && (
-        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-          <SectionLabel>Campos adicionais da etapa</SectionLabel>
-          {visibleCustomDefs.map(f => (
+      {/* Campos configurados via "Editar campos desta etapa"
+          (rh_pipeline_stage_fields) — única fonte do formulário por etapa. */}
+      <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+        <SectionLabel>Campos desta etapa</SectionLabel>
+        {visibleCustomDefs.length === 0
+          ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
+          : visibleCustomDefs.map(f => (
             <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
               {canWrite ? (
                 <RHStageFieldInput
@@ -1034,9 +839,9 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
                 <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
               )}
             </FieldRow>
-          ))}
-        </div>
-      )}
+          ))
+        }
+      </div>
     </div>
   );
 

@@ -1,0 +1,12 @@
+-- Mesma classe de bug já corrigida em 20260760/20260761/20260763
+-- (leads_stage_check, pipeline_stage_fields_stage_id_check,
+-- rh_pipeline_stages_domain_check): rh_pipeline_stage_fields tinha o mesmo
+-- CHECK hardcoded na coluna domain, mas ficou de fora quando o irmão
+-- rh_pipeline_stages_domain_check foi dropado em 20260763 — travando
+-- silenciosamente "Editar campos desta etapa" pra qualquer domínio criado
+-- depois da lista original, como domain='marketing_tasks' (Tarefas de
+-- Marketing, 20260764): "new row for relation 'rh_pipeline_stage_fields'
+-- violates check constraint 'rh_pipeline_stage_fields_domain_check'".
+-- domain já é validado pela existência real da etapa em rh_pipeline_stages,
+-- não precisa de uma CHECK hardcoded duplicando essa lista.
+ALTER TABLE public.rh_pipeline_stage_fields DROP CONSTRAINT IF EXISTS rh_pipeline_stage_fields_domain_check;

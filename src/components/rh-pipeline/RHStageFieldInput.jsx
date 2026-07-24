@@ -117,6 +117,42 @@ export function RHStageFieldInput({ field, value, onChange, users }) {
     );
   }
 
+  if (t === "percent_steps") {
+    const steps = [0, 20, 40, 60, 80, 100];
+    const current = value === "" || value === null || value === undefined ? null : Number(value);
+    return (
+      <div>
+        <div style={{ height: 8, borderRadius: 999, background: "var(--surface-alt)", overflow: "hidden", marginBottom: 10 }}>
+          <div style={{
+            width: `${current || 0}%`, height: "100%", borderRadius: 999,
+            background: current >= 100 ? "var(--success)" : "var(--accent)",
+            transition: "width 0.2s ease",
+          }} />
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {steps.map(s => {
+            const active = current === s;
+            return (
+              <button
+                key={s} type="button"
+                onClick={() => onChange(s)}
+                style={{
+                  padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+                  border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                  background: active ? "var(--accent)" : "var(--surface)",
+                  color: active ? "#fff" : "var(--text-dim)",
+                  cursor: "pointer",
+                }}
+              >
+                {s}%
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   if (t === "user") {
     // Sem conceito de "empresa" ou papel de venda no RH — lista todos os
     // usuários recebidos, sem filtro adicional.
