@@ -19,6 +19,7 @@ import {
   Check,
   Upload,
   Download,
+  AlertCircle,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -39,9 +40,11 @@ import { EmptyState } from "../ui/EmptyState";
 import { Badge } from "../ui/Badge";
 import { Modal } from "../ui/Modal";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { AppToast } from "../shared/AppToast";
 import { csvRow, triggerDownload, formatDate as formatCSVDate } from "../../utils/export-csv";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
 import { formatDateBR } from "../../utils/date";
+import { formatBRL } from "../../utils/currency";
 import { matchDocumentToColaborador } from "../../utils/rh-document-matching";
 
 const BENEFICIO_STATUS_COLORS = {
@@ -295,6 +298,7 @@ function SolicitacoesAtualizacaoSection({ colaboradorId, canWrite }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [error, setError] = useState(null);
 
   const fetchPendentes = useCallback(async () => {
     setLoading(true);
@@ -312,25 +316,30 @@ function SolicitacoesAtualizacaoSection({ colaboradorId, canWrite }) {
 
   const approve = async (id) => {
     setBusyId(id);
-    const { error } = await supabase.rpc("approve_rh_data_update_request", { p_id: id });
+    const { error: rpcError } = await supabase.rpc("approve_rh_data_update_request", { p_id: id });
     setBusyId(null);
-    if (error) { alert("Falha ao aprovar: " + error.message); return; }
+    if (rpcError) { setError("Falha ao aprovar: " + rpcError.message); return; }
     setRequests((prev) => prev.filter((r) => r.id !== id));
   };
 
   const reject = async (id) => {
     const motivo = window.prompt("Motivo da recusa (opcional):") || null;
     setBusyId(id);
-    const { error } = await supabase.rpc("reject_rh_data_update_request", { p_id: id, p_motivo: motivo });
+    const { error: rpcError } = await supabase.rpc("reject_rh_data_update_request", { p_id: id, p_motivo: motivo });
     setBusyId(null);
-    if (error) { alert("Falha ao recusar: " + error.message); return; }
+    if (rpcError) { setError("Falha ao recusar: " + rpcError.message); return; }
     setRequests((prev) => prev.filter((r) => r.id !== id));
   };
 
-  if (loading || requests.length === 0 || !canWrite) return null;
+  if (loading || (requests.length === 0 && !error) || !canWrite) return null;
 
   return (
     <div style={{ borderRadius: 12, border: "1px solid var(--warning)", padding: "14px 16px", background: "var(--warning-bg)", marginBottom: 20 }}>
+      {error && (
+        <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setError(null)}>
+          {error}
+        </AppToast>
+      )}
       <div style={{ fontWeight: 700, fontSize: 12, color: "var(--warning)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
         Solicitações de atualização pendentes ({requests.length})
       </div>
@@ -1248,7 +1257,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
                   { label: "Tipo de Contrato",  value: contractLabel(user.contract_type) },
                   { label: "Data de Admissão",  value: fmt(user.admission_date) },
                   { label: "Status",            value: statusInfo(user.employee_status).label },
-                  { label: "Salário",           value: user.salary != null ? `R$ ${Number(user.salary).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—" },
+                  { label: "Salário",           value: user.salary != null ? formatBRL(user.salary) : "—" },
                   { label: "Vencimento do ASO", value: fmt(colaboradorRow?.asoVencimento) },
                   { label: "Fim do contrato",   value: fmt(colaboradorRow?.contratoFim) },
                   ...(user.contract_type === "aprendiz" ? [
@@ -1394,6 +1403,8 @@ export function RHFuncionariosView({
   currentUser,
   onUpdateUser,
   canWrite,
+  initialSelectedEmployeeId,
+  onInitialEmployeeConsumed,
 }) {
   const { colaboradores, loading, createColaborador, updateColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const [search, setSearch]         = useState("");
@@ -1402,6 +1413,15 @@ export function RHFuncionariosView({
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterContract, setFilterContract] = useState("all");
   const [selected, setSelected]     = useState(null);
+
+  // Vem do Cmd-K (App.jsx) — funcionário buscado já veio de `users`, que é
+  // a mesma prop que alimenta a paleta, então não precisa esperar loading.
+  useEffect(() => {
+    if (!initialSelectedEmployeeId) return;
+    const employee = users.find(u => u.id === initialSelectedEmployeeId);
+    if (employee) setSelected(employee);
+    onInitialEmployeeConsumed?.();
+  }, [initialSelectedEmployeeId, users, onInitialEmployeeConsumed]);
   const [novoColaboradorOpen, setNovoColaboradorOpen] = useState(false);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [editingColaborador, setEditingColaborador]   = useState(null);

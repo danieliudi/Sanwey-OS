@@ -67,6 +67,11 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState(null);
+  // `loading` começa `false` (só vira `true` depois que o effect abaixo
+  // dispara `fetchAll`) — não serve pra saber se o 1º fetch já resolveu.
+  // Consumidores que precisam esperar o fetch inicial (ex.: MarketingView
+  // abrindo campanha específica vinda do Cmd-K) devem usar este flag.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // roles[] cobre cargo adicional (ex: gerente_marketing como cargo
   // secundário) — role sozinho (cargo principal) fica só de fallback pra
@@ -89,6 +94,7 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
       setError(e.message || String(e));
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   }, []);
 
@@ -196,6 +202,7 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
   return {
     campaigns,
     loading,
+    hasLoadedOnce,
     error,
     canWrite,
     createCampaign,

@@ -343,6 +343,13 @@ export default function App() {
   // access before initialization" em toda renderização).
   const [selectedLead, setSelectedLead] = useState(null);
 
+  // Deep-link do Cmd-K pra campanha/funcionário específico — ao contrário de
+  // `selectedLead`, campanha e funcionário não têm drawer/modal hoisted aqui;
+  // MarketingView/RHFuncionariosView consomem o id e limpam de volta pra
+  // null (ver initialSelectedCampaignId/initialSelectedEmployeeId).
+  const [selectedCampaignId, setSelectedCampaignId] = useState(null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+
   const { markViewed: markLeadViewed } = useRecordViews("leads", currentUser?.id);
   useEffect(() => { if (selectedLead?.id) markLeadViewed(selectedLead.id); }, [selectedLead?.id]);
 
@@ -1598,7 +1605,15 @@ export default function App() {
           } />
           <Route path={ROUTES.marketing} element={
             (isMarketingUser || isAgencia || isDiretoria)
-              ? <MarketingView user={currentUser} users={users} evaluateAutomations={evaluateAutomations} pushNotification={pushNotification} notifyMentions={notifyMentions} />
+              ? <MarketingView
+                  user={currentUser}
+                  users={users}
+                  evaluateAutomations={evaluateAutomations}
+                  pushNotification={pushNotification}
+                  notifyMentions={notifyMentions}
+                  initialSelectedCampaignId={selectedCampaignId}
+                  onInitialCampaignConsumed={() => setSelectedCampaignId(null)}
+                />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["marketing-entregas"]} element={
@@ -1648,6 +1663,8 @@ export default function App() {
                   currentUser={currentUser}
                   onUpdateUser={updateUser}
                   canWrite={isRHManager}
+                  initialSelectedEmployeeId={selectedEmployeeId}
+                  onInitialEmployeeConsumed={() => setSelectedEmployeeId(null)}
                 />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
@@ -1781,8 +1798,8 @@ export default function App() {
         users={users}
         pipelines={pipelines}
         onSelectLead={(lead) => { setSelectedLead(lead); setCmdOpen(false); }}
-        onSelectCampaign={() => { setSection("marketing"); setCmdOpen(false); }}
-        onSelectEmployee={() => { setSection("rh-funcionarios"); setCmdOpen(false); }}
+        onSelectCampaign={(campaign) => { setSection("marketing"); setSelectedCampaignId(campaign.id); setCmdOpen(false); }}
+        onSelectEmployee={(employee) => { setSection("rh-funcionarios"); setSelectedEmployeeId(employee.id); setCmdOpen(false); }}
       />
 
       <ImportModal

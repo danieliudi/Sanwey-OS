@@ -746,10 +746,11 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function MarketingView({ user, users = [], evaluateAutomations, pushNotification, notifyMentions }) {
+export function MarketingView({ user, users = [], evaluateAutomations, pushNotification, notifyMentions, initialSelectedCampaignId, onInitialCampaignConsumed }) {
   const {
     campaigns,
     loading,
+    hasLoadedOnce,
     canWrite,
     createCampaign,
     updateCampaign,
@@ -852,6 +853,20 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const isAgencia  = userRoleList.includes("agencia");
 
   const [selected, setSelected]               = useState(null);
+
+  // Vem do Cmd-K (App.jsx) — só consome quando o fetch local de campanhas já
+  // resolveu ao menos uma vez. Não dá pra usar `loading` puro aqui: ele
+  // começa `false` e só vira `true` depois que o effect do hook dispara
+  // `fetchAll`, então no 1º commit deste componente (MarketingView acabou
+  // de montar vindo do Cmd-K) `loading` ainda é `false` e `campaigns` ainda
+  // `[]` — o guard não bloquearia e a campanha certa nunca abriria.
+  useEffect(() => {
+    if (!initialSelectedCampaignId || !hasLoadedOnce) return;
+    const campaign = campaigns.find(c => c.id === initialSelectedCampaignId);
+    if (campaign) setSelected(campaign);
+    onInitialCampaignConsumed?.();
+  }, [initialSelectedCampaignId, campaigns, hasLoadedOnce, onInitialCampaignConsumed]);
+
   const [draggedCampaign, setDraggedCampaign] = useState(null);
   const [dragOverStage, setDragOverStage]     = useState(null);
   const [stageError, setStageError]           = useState(null);
