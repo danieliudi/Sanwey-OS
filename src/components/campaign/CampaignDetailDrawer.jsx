@@ -1292,7 +1292,7 @@ export function CampaignDetailDrawer({
             <Field label="KPI">
               {isAgencia ? <ReadValue value={get("kpi")} /> : <EditSelect value={get("kpi")} onChange={v => set("kpi", v)} options={MARKETING_KPIS} placeholder="Selecionar KPI" />}
             </Field>
-            <Field label="Orçamento (R$)">
+            <Field label={isAgencia ? "Orçamento" : "Orçamento (R$)"}>
               {isAgencia ? <ReadValue value={get("budget") > 0 ? formatK(get("budget")) : null} /> : (
                 <CurrencyInput
                   prefix={null}
