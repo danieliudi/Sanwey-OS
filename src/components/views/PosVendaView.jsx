@@ -15,10 +15,14 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
+import { StageFieldInput } from "../shared/StageFieldInput";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { usePosvenda } from "../../hooks/use-posvenda";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { formatK } from "../../utils/currency";
+import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
+import { getInvalidFields } from "../../utils/field-validation";
 
 function daysInStage(dateStr) {
   if (!dateStr) return 0;
@@ -66,7 +70,12 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
   const [ownerIds, setOwnerIds] = useState(currentUser?.id ? [currentUser.id] : []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [customValues, setCustomValues] = useState({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const inputRef = useRef(null);
+
+  const stageFields = useRHStageFields("posvenda");
+  const visibleFields = resolveVisibleFields(stageFields.getFields(stage.stageKey), customValues);
 
   React.useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -80,6 +89,17 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!clientName.trim()) return;
+    setSubmitAttempted(true);
+    const missing = getMissingRequiredFields(visibleFields, customValues);
+    if (missing.length > 0) {
+      setError(`Preencha antes: ${missing.map(f => f.label).join(", ")}.`);
+      return;
+    }
+    const invalid = getInvalidFields(visibleFields, customValues);
+    if (invalid.length > 0) {
+      setError(`Corrija antes: ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -90,6 +110,7 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
         value: parseFloat(value) || 0,
         ownerIds: ownerIds.length ? ownerIds : (primaryOwner ? [primaryOwner] : []),
         stage: stage.stageKey,
+        customFields: customValues,
       });
       onClose();
     } catch (err) {
@@ -139,6 +160,26 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
               placeholder="Responsável(is)"
             />
           )}
+          {visibleFields.length > 0 && (
+            <div className="pt-1 space-y-3">
+              {visibleFields.map(f => (
+                <div key={f.id}>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-dim)" }}>
+                    {f.effectiveRequired && <span style={{ color: "var(--danger)" }}>* </span>}
+                    {f.label}
+                  </label>
+                  <StageFieldInput
+                    field={f}
+                    value={customValues[f.fieldKey]}
+                    onChange={val => setCustomValues(prev => ({ ...prev, [f.fieldKey]: val }))}
+                    users={users}
+                    companyId={companyId}
+                    touched={submitAttempted}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           {error && (
             <div className="text-xs rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}>
               {error}
@@ -171,9 +212,25 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
 // ── Detalhe do caso (modal leve — nada comparável ao drawer de 3 painéis de
 // Venda/RH ainda, "começa simples" por pedido explícito do usuário) ─────────
 
-function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, onClose, onMove, onDelete, onOpenLead }) {
+function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, users, onClose, onMove, onDelete, onOpenLead, onUpdateCustomFields }) {
   const st = stages.find(s => s.stageKey === kase.stage) || { name: "—", color: "#8A8680" };
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const stageFields = useRHStageFields("posvenda");
+  const customDefs = stageFields.getFields(kase.stage);
+  const [customDraft, setCustomDraft] = useState({});
+  React.useEffect(() => { setCustomDraft({}); }, [kase.id]);
+
+  const getCustomValue = (fieldKey) =>
+    fieldKey in customDraft ? customDraft[fieldKey] : (kase.customFields?.[fieldKey] ?? "");
+
+  const handleCustomChange = (fieldKey, val) => {
+    setCustomDraft(prev => ({ ...prev, [fieldKey]: val }));
+    onUpdateCustomFields({ ...(kase.customFields || {}), [fieldKey]: val });
+  };
+
+  const customValuesByKey = { ...(kase.customFields || {}), ...customDraft };
+  const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }} onClick={onClose}>
@@ -219,6 +276,26 @@ function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, onClo
               <ExternalLink size={13} />
               Ver negócio de origem em Venda
             </button>
+          )}
+
+          {visibleCustomDefs.length > 0 && (
+            <div className="pt-3 border-t space-y-3" style={{ borderColor: "var(--border)" }}>
+              <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>Campos desta etapa</div>
+              {visibleCustomDefs.map(f => (
+                <div key={f.id}>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+                    {f.effectiveRequired && <span style={{ color: "var(--danger)" }}>* </span>}
+                    {f.label}
+                  </label>
+                  <StageFieldInput
+                    field={f}
+                    value={getCustomValue(f.fieldKey)}
+                    onChange={val => canWrite && handleCustomChange(f.fieldKey, val)}
+                    users={users}
+                  />
+                </div>
+              ))}
+            </div>
           )}
 
           {canWrite && (
@@ -357,9 +434,10 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const companyForBoard = isGroupView ? firstValidCompany : activeCompany;
 
   const { stages, addStage, reorderStages } = useRHPipelineStages("posvenda");
-  const { cases, canWrite, createCase, deleteCase, changeStage } = usePosvenda({
+  const { cases, canWrite, createCase, updateCase, deleteCase, changeStage } = usePosvenda({
     userId: user.id, role: user.role, roles: user.roles,
   });
+  const stageFields = useRHStageFields("posvenda");
 
   const subordinateIds = useMemo(() => {
     if (user.role !== "vendedor") return new Set();
@@ -414,13 +492,33 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const handleDragOver = useCallback((e, stageKey) => { e.preventDefault(); setDragOverStage(stageKey); }, []);
   const handleDragLeave = useCallback((e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }, []);
 
+  // Mesmo enforcement do attemptStageChange do Pipeline de CRM (CRMView.jsx):
+  // bloqueia sair da etapa atual com campo obrigatório (estático ou
+  // condicional) vazio, ou com valor em formato inválido, antes de gravar a
+  // transição.
   const attemptStageChange = useCallback(async (id, stageKey) => {
+    const kase = cases.find(c => c.id === id);
+    if (kase) {
+      const fields = stageFields.getFields(kase.stage);
+      const customValues = kase.customFields || {};
+      const missing = getMissingRequiredFields(fields, customValues);
+      if (missing.length > 0) {
+        setStageError(`Não dá pra mover "${kase.clientName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+        return;
+      }
+      const invalid = getInvalidFields(fields, customValues);
+      if (invalid.length > 0) {
+        setStageError(`Não dá pra mover "${kase.clientName}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+        return;
+      }
+    }
     try {
       await changeStage(id, stageKey);
+      setStageError(null);
     } catch (e) {
       setStageError(e?.message || "Não foi possível mover o caso.");
     }
-  }, [changeStage]);
+  }, [cases, stageFields, changeStage]);
 
   const handleDrop = useCallback((stageKey) => {
     if (draggedCase) attemptStageChange(draggedCase, stageKey);
@@ -690,9 +788,11 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           owners={resolveOwners(selectedCase.ownerIds)}
           sourceLead={leadsById.get(selectedCase.leadId)}
           canWrite={canWrite}
+          users={users}
           onClose={() => setSelectedCase(null)}
           onMove={(stageKey) => attemptStageChange(selectedCase.id, stageKey)}
           onDelete={() => deleteCase(selectedCase.id)}
+          onUpdateCustomFields={(merged) => updateCase(selectedCase.id, { customFields: merged })}
           onOpenLead={onOpenLead}
         />
       )}
