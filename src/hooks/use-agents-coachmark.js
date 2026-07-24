@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
 
@@ -19,10 +20,10 @@ export function useAgentsCoachmark(currentUser, { isRHManager, skip = false } = 
 
   const visible = Boolean(!skip && isRHManager && userId && !seenMap[userId]);
 
-  const dismiss = () => {
+  const dismiss = useCallback(() => {
     if (!userId) return;
     setSeenMap(m => ({ ...m, [userId]: true }));
-  };
+  }, [userId, setSeenMap]);
 
   return { visible, dismiss };
 }

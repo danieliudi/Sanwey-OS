@@ -13,10 +13,21 @@ import { Bot } from "lucide-react";
 export function AgentsSidebarCoachmark({ visible, onDismiss }) {
   const [anchor, setAnchor] = useState(null);
   const [rail, setRail] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024);
   const attachedRef = useRef(null);
 
+  // Sidebar mobile é um <aside> off-canvas (transform:translateX(-100%),
+  // continua no DOM com o menu "fechado") — o coachmark nunca deve aparecer
+  // abaixo do breakpoint de useIsMobile (Sidebar.jsx:44-52) pra não flutuar
+  // perto da borda sem nenhum ícone visível atrás.
   useEffect(() => {
-    if (!visible) {
+    const handler = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  useEffect(() => {
+    if (!visible || isMobile) {
       setAnchor(null);
       return;
     }
@@ -41,20 +52,31 @@ export function AgentsSidebarCoachmark({ visible, onDismiss }) {
       setAnchor({ x: rect.right + 12, y: rect.top + rect.height / 2 });
     };
 
+    const recalc = () => {
+      readRail();
+      updateAnchor();
+    };
+
     const handleTargetClick = () => onDismiss?.();
 
     const attach = (target) => {
       if (disposed) return;
       attachedRef.current = target;
-      target.scrollIntoView({ block: "center", behavior: "instant" });
+      navEl = target.closest("nav");
+      if (navEl) {
+        const navRect = navEl.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        if (targetRect.top < navRect.top || targetRect.bottom > navRect.bottom) {
+          target.scrollIntoView({ block: "center", behavior: "instant" });
+        }
+      }
       readRail();
       updateAnchor();
       target.addEventListener("click", handleTargetClick);
-      ro = new ResizeObserver(updateAnchor);
+      ro = new ResizeObserver(recalc);
       ro.observe(target);
-      window.addEventListener("resize", updateAnchor);
-      navEl = target.closest("nav");
-      navEl?.addEventListener("scroll", updateAnchor);
+      window.addEventListener("resize", recalc);
+      navEl?.addEventListener("scroll", recalc);
     };
 
     const existing = document.querySelector('[data-nav-id="agents"]');
@@ -78,14 +100,14 @@ export function AgentsSidebarCoachmark({ visible, onDismiss }) {
       disposed = true;
       mo?.disconnect();
       ro?.disconnect();
-      window.removeEventListener("resize", updateAnchor);
-      navEl?.removeEventListener("scroll", updateAnchor);
+      window.removeEventListener("resize", recalc);
+      navEl?.removeEventListener("scroll", recalc);
       attachedRef.current?.removeEventListener("click", handleTargetClick);
       attachedRef.current = null;
     };
-  }, [visible, onDismiss]);
+  }, [visible, isMobile, onDismiss]);
 
-  if (!visible || !anchor) return null;
+  if (!visible || isMobile || !anchor) return null;
 
   return (
     <div
