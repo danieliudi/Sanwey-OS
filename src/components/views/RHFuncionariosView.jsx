@@ -6,6 +6,9 @@ import {
   Pencil,
   Save,
   ChevronRight,
+  ChevronLeft,
+  ChevronsRight,
+  ChevronsLeft,
   Briefcase,
   BarChart2,
   Plus,
@@ -15,6 +18,7 @@ import {
   Gift,
   Check,
   Upload,
+  Download,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -32,7 +36,10 @@ import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
 import { RHAttachmentsPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { EmptyState } from "../ui/EmptyState";
+import { Badge } from "../ui/Badge";
+import { Modal } from "../ui/Modal";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { csvRow, triggerDownload, formatDate as formatCSVDate } from "../../utils/export-csv";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
 import { formatDateBR } from "../../utils/date";
 import { matchDocumentToColaborador } from "../../utils/rh-document-matching";
@@ -613,6 +620,135 @@ function SortIcon({ col, sortCol, sortDir }) {
     : <ArrowDown size={11} style={{ color: "var(--accent)", flexShrink: 0 }} />;
 }
 
+const PAGE_SIZE = 50;
+
+function PageBtn({ disabled, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        width: 28, height: 28, borderRadius: 8,
+        border: "1px solid var(--border)", background: "var(--surface)",
+        color: disabled ? "var(--border-strong)" : "var(--text-dim)",
+        cursor: disabled ? "default" : "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SkeletonBar({ width, height = 12 }) {
+  return <div className="animate-pulse" style={{ width, height, borderRadius: 6, background: "var(--surface-alt)" }} />;
+}
+
+function TableSkeleton() {
+  return (
+    <>
+      <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 px-4"
+            style={{ height: 59, borderBottom: i < 5 ? "1px solid var(--border)" : "none" }}
+          >
+            <div className="animate-pulse" style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--surface-alt)", flexShrink: 0 }} />
+            <div style={{ flex: 2, display: "flex", flexDirection: "column", gap: 6 }}>
+              <SkeletonBar width="60%" />
+              <SkeletonBar width="40%" height={10} />
+            </div>
+            {[1, 2, 3, 4, 5].map((c) => (
+              <div key={c} style={{ flex: 1 }}>
+                <SkeletonBar width="70%" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="md:hidden space-y-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}
+          >
+            <div className="animate-pulse" style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--surface-alt)", flexShrink: 0 }} />
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+              <SkeletonBar width="55%" />
+              <SkeletonBar width="35%" height={10} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function BulkStatusModal({ count, onConfirm, onClose }) {
+  const [status, setStatus] = useState("ativo");
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState([]);
+
+  const handleApply = async () => {
+    setSaving(true);
+    setErrors([]);
+    const failed = await onConfirm(status);
+    setSaving(false);
+    if (failed.length > 0) setErrors(failed);
+    else onClose();
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Alterar status em massa" width={420}>
+      <div style={{ padding: "16px 24px 20px" }}>
+        <p style={{ fontSize: 13, color: "var(--text-dim)", margin: "0 0 12px" }}>
+          O novo status será aplicado a {count} colaborador(es) selecionado(s).
+        </p>
+        <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" }}>
+          Novo status
+        </label>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="w-full text-sm rounded-xl border outline-none px-3 py-2"
+          style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+        >
+          {RH_EMPLOYEE_STATUSES.map((s) => (
+            <option key={s.id} value={s.id}>{s.label}</option>
+          ))}
+        </select>
+        {errors.length > 0 && (
+          <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 12 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>Falha em {errors.length} registro(s):</div>
+            {errors.map((msg, i) => <div key={i}>{msg}</div>)}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+          <button
+            onClick={handleApply}
+            disabled={saving}
+            style={{
+              flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10,
+              padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none",
+              cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1,
+            }}
+          >
+            {saving ? "Aplicando…" : `Aplicar a ${count}`}
+          </button>
+          <button
+            onClick={onClose}
+            style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function contractLabel(typeId) {
   return RH_CONTRACT_TYPES.find((c) => c.id === typeId)?.label || typeId || "—";
 }
@@ -651,24 +787,18 @@ function Avatar({ user, size = 36 }) {
   );
 }
 
+// Mesmo mapeamento de cor/significado do RH_EMPLOYEE_STATUSES (verde/azul/
+// âmbar/cinza), só trocando a implementação pelo ui/Badge compartilhado.
+const STATUS_BADGE_VARIANTS = {
+  ativo:     "success",
+  ferias:    "secondary",
+  afastado:  "urgent",
+  desligado: "neutral",
+};
+
 function StatusBadge({ statusId }) {
   const s = statusInfo(statusId);
-  return (
-    <span
-      style={{
-        background: s.bg,
-        color: s.color,
-        border: `1px solid ${s.color}33`,
-        borderRadius: 99,
-        padding: "2px 10px",
-        fontSize: 11,
-        fontWeight: 600,
-        display: "inline-block",
-      }}
-    >
-      {s.label}
-    </span>
-  );
+  return <Badge variant={STATUS_BADGE_VARIANTS[s.id] || "default"}>{s.label}</Badge>;
 }
 
 // ── Employee Detail Modal ─────────────────────────────────────────────────────
@@ -1265,7 +1395,7 @@ export function RHFuncionariosView({
   onUpdateUser,
   canWrite,
 }) {
-  const { colaboradores, createColaborador, updateColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, loading, createColaborador, updateColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const [search, setSearch]         = useState("");
   const [filterDept, setFilterDept] = useState("all");
   const [filterFrente, setFilterFrente] = useState("all");
@@ -1277,6 +1407,9 @@ export function RHFuncionariosView({
   const [editingColaborador, setEditingColaborador]   = useState(null);
   const [sortCol, setSortCol] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
+  const [page, setPage] = useState(1);
+  const [bulkSelected, setBulkSelected] = useState(() => new Set());
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
 
   const handleSort = (col) => {
     if (sortCol === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -1366,6 +1499,90 @@ export function RHFuncionariosView({
     return arr;
   }, [unifiedRows, search, filterDept, filterFrente, filterStatus, filterContract, sortCol, sortDir]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, filterDept, filterFrente, filterStatus, filterContract]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = useMemo(
+    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [filtered, currentPage]
+  );
+
+  const toggleBulk = (id) => setBulkSelected((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const pageAllSelected = paged.length > 0 && paged.every((u) => bulkSelected.has(u.id));
+  const togglePageAll = () => setBulkSelected((prev) => {
+    const next = new Set(prev);
+    paged.forEach((u) => (pageAllSelected ? next.delete(u.id) : next.add(u.id)));
+    return next;
+  });
+
+  const bulkRows = useMemo(
+    () => unifiedRows.filter((u) => bulkSelected.has(u.id)),
+    [unifiedRows, bulkSelected]
+  );
+
+  const exportRowsCSV = (rows, filename) => {
+    const header = ["Funcionário", "E-mail", "Cargo", "Frente", "Departamento", "Contrato", "Status", "Admissão", "Acesso ao sistema"];
+    const lines = rows.map((u) => [
+      u.name || "",
+      u.email || "",
+      u.job_title || "",
+      u.frente ? (RH_FRENTE_LABELS[u.frente] || u.frente) : "",
+      u.department || "",
+      u.contract_type ? contractLabel(u.contract_type) : "",
+      statusInfo(u.employee_status || "ativo").label,
+      formatCSVDate(u.admission_date),
+      u._hasAccess ? "Sim" : "Não",
+    ]);
+    triggerDownload(filename, [csvRow(header), ...lines.map(csvRow)].join("\r\n"));
+  };
+
+  const handleExportCSV = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    exportRowsCSV(filtered, `sanwey-funcionarios-${today}.csv`);
+  };
+
+  const handleExportSelection = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    exportRowsCSV(bulkRows, `sanwey-funcionarios-selecao-${today}.csv`);
+  };
+
+  // Mesmos caminhos de gravação que os modais de detalhe já usam: profile via
+  // onUpdateUser (o sync profile→colaborador propaga), sem-acesso direto no
+  // hook. Retorna a lista de falhas pro modal exibir — nada silencioso.
+  const applyBulkStatus = async (newStatus) => {
+    const rows = bulkRows;
+    const results = await Promise.allSettled(
+      rows.map((u) =>
+        u._hasAccess
+          ? onUpdateUser(u.id, { employee_status: newStatus })
+          : updateColaborador(u.id, { employeeStatus: newStatus })
+      )
+    );
+    const failed = results
+      .map((r, i) => (r.status === "rejected"
+        ? `${rows[i].name || rows[i].email || "—"}: ${r.reason?.message || "erro desconhecido"}`
+        : null))
+      .filter(Boolean);
+    if (failed.length === 0) setBulkSelected(new Set());
+    return failed;
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setFilterDept("all");
+    setFilterFrente("all");
+    setFilterStatus("all");
+    setFilterContract("all");
+  };
+
   const selectSt = {
     borderColor: "var(--border)",
     color: "var(--text)",
@@ -1397,32 +1614,46 @@ export function RHFuncionariosView({
             Registro de colaboradores · {stats.total} no total
           </p>
         </div>
-        {canWrite && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setBulkUploadOpen(true)}
-              className="flex items-center gap-1.5 font-semibold"
-              style={{
-                background: "var(--surface)", color: "var(--text)", borderRadius: 10,
-                padding: "6px 16px", fontSize: 13, border: "1px solid var(--border)",
-                cursor: "pointer",
-              }}
-            >
-              <Upload size={14} /> Importar Documentos
-            </button>
-            <button
-              onClick={() => setNovoColaboradorOpen(true)}
-              className="flex items-center gap-1.5 font-semibold"
-              style={{
-                background: "var(--accent)", color: "#FFF", borderRadius: 10,
-                padding: "6px 16px", fontSize: 13, border: "none",
-                cursor: "pointer",
-              }}
-            >
-              <Plus size={14} /> Novo Funcionário
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-1.5 font-semibold"
+            style={{
+              background: "var(--surface)", color: filtered.length === 0 ? "var(--text-dim)" : "var(--text)",
+              borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "1px solid var(--border)",
+              cursor: filtered.length === 0 ? "default" : "pointer",
+            }}
+          >
+            <Download size={14} /> Exportar CSV
+          </button>
+          {canWrite && (
+            <>
+              <button
+                onClick={() => setBulkUploadOpen(true)}
+                className="flex items-center gap-1.5 font-semibold"
+                style={{
+                  background: "var(--surface)", color: "var(--text)", borderRadius: 10,
+                  padding: "6px 16px", fontSize: 13, border: "1px solid var(--border)",
+                  cursor: "pointer",
+                }}
+              >
+                <Upload size={14} /> Importar Documentos
+              </button>
+              <button
+                onClick={() => setNovoColaboradorOpen(true)}
+                className="flex items-center gap-1.5 font-semibold"
+                style={{
+                  background: "var(--accent)", color: "#FFF", borderRadius: 10,
+                  padding: "6px 16px", fontSize: 13, border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <Plus size={14} /> Novo Funcionário
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Stat cards */}
@@ -1569,13 +1800,73 @@ export function RHFuncionariosView({
         </select>
       </div>
 
+      {/* Barra de ação em massa */}
+      {bulkSelected.size > 0 && (
+        <div
+          className="flex items-center gap-3 flex-wrap mb-3"
+          style={{
+            background: "var(--accent-tint)",
+            border: "1px solid var(--accent)",
+            borderRadius: 10,
+            padding: "8px 14px",
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
+            {bulkSelected.size} selecionado(s)
+          </span>
+          <button
+            onClick={handleExportSelection}
+            className="flex items-center gap-1.5 font-semibold"
+            style={{
+              background: "var(--surface)", color: "var(--text)", borderRadius: 8,
+              padding: "5px 12px", fontSize: 12, border: "1px solid var(--border)",
+              cursor: "pointer",
+            }}
+          >
+            <Download size={13} /> Exportar seleção (CSV)
+          </button>
+          {canWrite && (
+            <button
+              onClick={() => setBulkStatusOpen(true)}
+              className="flex items-center gap-1.5 font-semibold"
+              style={{
+                background: "var(--accent)", color: "#FFF", borderRadius: 8,
+                padding: "5px 12px", fontSize: 12, border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <Pencil size={13} /> Alterar status
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Desktop Table */}
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="Nenhum funcionário encontrado"
-          description="Tente ajustar os filtros"
-        />
+      {loading ? (
+        <TableSkeleton />
+      ) : filtered.length === 0 ? (
+        unifiedRows.length > 0 ? (
+          <EmptyState
+            icon={Users}
+            title="Nenhum resultado pra estes filtros"
+            description="Nenhum colaborador bate com a busca e os filtros atuais."
+            action={
+              <button
+                onClick={clearFilters}
+                className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
+                style={{ background: "var(--accent)", color: "#FFFFFF", border: "none" }}
+              >
+                Limpar filtros
+              </button>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={Users}
+            title="Nenhum funcionário encontrado"
+            description="Tente ajustar os filtros"
+          />
+        )
       ) : (
         <>
           {/* Desktop */}
@@ -1583,6 +1874,15 @@ export function RHFuncionariosView({
             <table className="w-full border-collapse">
               <thead>
                 <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+                  <th className="px-4 py-2.5" style={{ width: 36 }}>
+                    <input
+                      type="checkbox"
+                      checked={pageAllSelected}
+                      onChange={togglePageAll}
+                      title="Selecionar todos da página"
+                      style={{ cursor: "pointer", accentColor: "var(--accent)", display: "block" }}
+                    />
+                  </th>
                   {FUNC_TABLE_COLS.map((col) => (
                     <th
                       key={col.id || col.label}
@@ -1608,14 +1908,24 @@ export function RHFuncionariosView({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((u) => (
+                {paged.map((u) => {
+                  const isChecked = bulkSelected.has(u.id);
+                  return (
                   <tr
                     key={u.id}
-                    style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                    style={{ borderBottom: "1px solid var(--border)", cursor: "pointer", background: isChecked ? "var(--accent-tint)" : "transparent" }}
                     onClick={() => (u._hasAccess ? setSelected(u._raw) : setEditingColaborador(u._raw))}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                    onMouseEnter={(e) => { if (!isChecked) e.currentTarget.style.background = "var(--surface-alt)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = isChecked ? "var(--accent-tint)" : "transparent"; }}
                   >
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleBulk(u.id)}
+                        style={{ cursor: "pointer", accentColor: "var(--accent)", display: "block" }}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <Avatar user={u} size={34} />
@@ -1661,14 +1971,15 @@ export function RHFuncionariosView({
                       <ChevronRight size={14} style={{ color: "var(--text-dim)", opacity: 0.5 }} />
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Mobile cards */}
           <div className="md:hidden space-y-2">
-            {filtered.map((u) => (
+            {paged.map((u) => (
               <div
                 key={u.id}
                 onClick={() => (u._hasAccess ? setSelected(u._raw) : setEditingColaborador(u._raw))}
@@ -1717,6 +2028,27 @@ export function RHFuncionariosView({
               </div>
             ))}
           </div>
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1.5 mt-3">
+              <PageBtn onClick={() => setPage(1)} disabled={currentPage === 1}>
+                <ChevronsLeft size={14} />
+              </PageBtn>
+              <PageBtn onClick={() => setPage(currentPage - 1)} disabled={currentPage === 1}>
+                <ChevronLeft size={14} />
+              </PageBtn>
+              <span style={{ fontSize: 12, color: "var(--text-dim)", padding: "0 8px" }}>
+                página {currentPage} de {totalPages}
+              </span>
+              <PageBtn onClick={() => setPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                <ChevronRight size={14} />
+              </PageBtn>
+              <PageBtn onClick={() => setPage(totalPages)} disabled={currentPage === totalPages}>
+                <ChevronsRight size={14} />
+              </PageBtn>
+            </div>
+          )}
         </>
       )}
 
@@ -1759,6 +2091,14 @@ export function RHFuncionariosView({
           colaboradores={colaboradores}
           currentUser={currentUser}
           onClose={() => setBulkUploadOpen(false)}
+        />
+      )}
+
+      {bulkStatusOpen && (
+        <BulkStatusModal
+          count={bulkSelected.size}
+          onConfirm={applyBulkStatus}
+          onClose={() => setBulkStatusOpen(false)}
         />
       )}
     </div>
