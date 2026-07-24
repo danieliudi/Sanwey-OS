@@ -14,6 +14,10 @@ import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { Modal } from "../ui/Modal";
 import { CompanyTag } from "../ui/CompanyTag";
+import { StatCard } from "../ui/StatCard";
+import { EmptyState } from "../ui/EmptyState";
+import { FilterBar } from "../shared/FilterBar";
+import { Card, CardGrid, CardSkeleton, GridListToggle } from "../shared/Card";
 
 const EMPTY_FORM = {
   id: null, name: "", email: "", role: "vendedor",
@@ -166,7 +170,10 @@ export function UserManagementView({
   const [inviteJustSent, setInviteJustSent] = useState(null);
 
   const [search, setSearch] = useState("");
-  const [menuOpenId, setMenuOpenId] = useState(null);
+  // Densidade lista por padrão: página nomeada explicitamente na spec (seção
+  // 3, doc de padrões de página) como candidata a lista dado volume potencial
+  // de dezenas de usuários — usuário pode alternar pra grade a qualquer momento.
+  const [density, setDensity] = useState("list");
 
   const startNew = useCallback(() => {
     setEditing("new");
@@ -261,7 +268,6 @@ export function UserManagementView({
   const remove = useCallback((id) => {
     const target = users.find(u => u.id === id);
     if (!target) return;
-    setMenuOpenId(null);
     setConfirmDialog({
       message: `Remover ${target.name}? Esta ação não pode ser desfeita.`,
       onConfirm: async () => {
@@ -369,7 +375,7 @@ export function UserManagementView({
     : users;
 
   return (
-    <div className="space-y-6" onClick={() => setMenuOpenId(null)}>
+    <div className="space-y-6">
 
       {/* ── Page header ── */}
       <div className="flex items-start justify-between flex-wrap gap-3">
@@ -393,9 +399,9 @@ export function UserManagementView({
 
       {/* ── Summary stat cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <StatMini label="Total" value={totalUsers} />
-        <StatMini label="Gerentes" value={managerCount} accent="var(--color-industria)" />
-        <StatMini label="Vendedores" value={sellerCount} />
+        <StatCard icon={Users} value={totalUsers} label="Total" />
+        <StatCard icon={Building2} value={managerCount} label="Gerentes" />
+        <StatCard icon={User} value={sellerCount} label="Vendedores" />
       </div>
 
       {/* ── Supabase info ── */}
@@ -460,186 +466,111 @@ export function UserManagementView({
       )}
 
       {/* ── Search ── */}
-      <div className="relative">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-dim)" }} />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar por nome, e-mail ou cargo..."
-          className="w-full rounded-xl border text-sm transition-all"
-          style={{
-            paddingLeft: 42, paddingRight: 16, height: 48,
-            borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)", outline: "none",
-          }}
-          onFocus={e => { e.target.style.borderColor = "var(--accent)"; e.target.style.boxShadow = "0 0 0 3px rgba(181,0,11,0.08)"; }}
-          onBlur={e => { e.target.style.borderColor = "var(--border)"; e.target.style.boxShadow = "none"; }}
-        />
-      </div>
+      <FilterBar
+        search={{ value: search, onChange: (e) => setSearch(e.target.value), placeholder: "Buscar por nome, e-mail ou cargo…" }}
+        trailing={<GridListToggle value={density} onChange={setDensity} />}
+      />
 
       {/* ── User cards ── */}
       {loading && users.length === 0 ? (
-        <div className="p-10 flex items-center justify-center gap-2 text-sm" style={{ color: "var(--text-dim)" }}>
-          <Loader2 size={14} className="animate-spin" />
-          Carregando usuários…
-        </div>
+        <CardGrid density={density}>
+          {Array.from({ length: 6 }, (_, i) => <CardSkeleton key={i} density={density} />)}
+        </CardGrid>
+      ) : users.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="Nenhum usuário cadastrado ainda"
+          description="Cadastre ou convide o primeiro usuário para gerenciar cargos e acessos do time."
+          action={
+            canManageInvites
+              ? <Button variant="primary" icon={UserPlus} onClick={openInvite}>Convidar</Button>
+              : !supabaseEnabled
+                ? <Button variant="primary" icon={UserPlus} onClick={startNew}>Novo usuário</Button>
+                : null
+          }
+        />
       ) : filteredUsers.length === 0 ? (
-        <div className="p-8 text-center rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}>
-          Nenhum usuário encontrado.
-        </div>
+        <EmptyState
+          icon={Search}
+          title="Nenhum resultado para esta busca"
+          description="Nenhum usuário com esse nome, e-mail ou cargo. Tente outro termo ou limpe a busca."
+          action={
+            <button
+              onClick={() => setSearch("")}
+              style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            >
+              Limpar busca
+            </button>
+          }
+        />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <CardGrid density={density}>
           {filteredUsers.map(u => {
             const stats = userStats[u.id] || { total: 0, won: 0, open: 0 };
             const pending = (u.role === "vendedor" || u.role === "consultor") && (!u.companies || u.companies.length === 0);
             const isSelf = u.id === currentUser?.id;
-            const menuOpen = menuOpenId === u.id;
+            const editable = canEdit(u);
+            const deletable = canDelete(u);
 
             return (
-              <div
+              <Card
                 key={u.id}
-                className="rounded-xl border flex flex-col"
-                style={{
-                  background: "var(--surface)",
-                  borderColor: pending ? "#FCD34D" : "var(--border)",
-                  boxShadow: "var(--shadow-card)",
-                  overflow: "hidden",
-                }}
-              >
-                {/* Card top */}
-                <div className="p-5 flex items-start gap-4">
-                  {/* Avatar */}
-                  <div className="relative shrink-0">
-                    <div
-                      className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-white"
-                      style={{ background: u.avatarBg || "var(--accent)", fontSize: 20, overflow: "hidden" }}
-                    >
-                      {u.avatarUrl
-                        ? <img src={u.avatarUrl} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        : (u.initials || u.name?.slice(0, 2).toUpperCase() || "?")
-                      }
-                    </div>
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-bold text-[15px] leading-tight truncate" style={{ color: "var(--text)" }}>
-                          {u.name}
-                        </div>
-                        <div className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-                          {u.email || "—"}
-                        </div>
-                      </div>
-
-                      {/* 3-dot menu */}
-                      {(canEdit(u) || canDelete(u)) && (
-                        <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
-                          <button
-                            onClick={() => setMenuOpenId(menuOpen ? null : u.id)}
-                            className="rounded-lg flex items-center justify-center transition-colors"
-                            style={{ width: 32, height: 32, background: menuOpen ? "var(--surface-alt)" : "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                            onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background = "transparent"; }}
-                          >
-                            <MoreVertical size={15} />
-                          </button>
-                          {menuOpen && (
-                            <div
-                              className="absolute right-0 top-9 rounded-xl border flex flex-col overflow-hidden z-20"
-                              style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-pop)", minWidth: 160 }}
-                            >
-                              {canEdit(u) && (
-                                <button
-                                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors"
-                                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text)" }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                                  onClick={() => { setMenuOpenId(null); startEdit(u); }}
-                                >
-                                  <Edit3 size={14} /> Editar perfil
-                                </button>
-                              )}
-                              {canDelete(u) && (
-                                <button
-                                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors"
-                                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--danger)" }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = "#ffdad6"; }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                                  onClick={() => remove(u.id)}
-                                >
-                                  <Trash2 size={14} /> Remover
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Badges row */}
-                    <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                      <Badge variant={roleBadgeVariant(u.role)} size="sm">{roleLabel(u.role)}</Badge>
-                      {Array.isArray(u.roles) && u.roles.filter(r => r !== u.role).map(r => (
-                        <Badge key={r} variant={roleBadgeVariant(r)} size="sm">+ {roleLabel(r)}</Badge>
-                      ))}
-                      {isSelf && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--surface-alt)", color: "var(--accent)" }}>
-                          Você
-                        </span>
-                      )}
-                      {pending && (
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--amber-bg)", color: "#92400E" }}>
-                          Sem empresa
-                        </span>
-                      )}
-                      {Array.isArray(u.sectors) && u.sectors.map(s => (
-                        <span key={s} className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#EEF2FF", color: "#3730A3" }}>
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Company tags */}
-                    {Array.isArray(u.companies) && u.companies.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {u.companies.map(c => <CompanyTag key={c} companyId={c} size="sm" />)}
-                      </div>
+                density={density}
+                interactive={editable}
+                onClick={editable ? () => startEdit(u) : undefined}
+                icon={
+                  u.avatarUrl
+                    ? <img src={u.avatarUrl} alt={u.name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: density === "list" ? 6 : 8 }} />
+                    : <span style={{ color: "#FFF", fontSize: density === "list" ? 11 : 14, fontWeight: 700 }}>{u.initials || u.name?.slice(0, 2).toUpperCase() || "?"}</span>
+                }
+                iconBg={u.avatarBg || "var(--accent)"}
+                title={u.name}
+                meta={u.email || "—"}
+                status={
+                  pending
+                    ? { color: "var(--amber)", label: "Sem empresa" }
+                    : { color: "var(--text-dim)", label: roleLabel(u.role) }
+                }
+                badges={
+                  <>
+                    <Badge variant={roleBadgeVariant(u.role)} size="sm">{roleLabel(u.role)}</Badge>
+                    {Array.isArray(u.roles) && u.roles.filter(r => r !== u.role).map(r => (
+                      <Badge key={r} variant={roleBadgeVariant(r)} size="sm">+ {roleLabel(r)}</Badge>
+                    ))}
+                    {isSelf && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--surface-alt)", color: "var(--accent)" }}>
+                        Você
+                      </span>
                     )}
+                    {pending && <Badge variant="urgent" size="sm">Sem empresa</Badge>}
+                    {Array.isArray(u.sectors) && u.sectors.map(s => (
+                      <span key={s} className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#EEF2FF", color: "#3730A3" }}>
+                        {s}
+                      </span>
+                    ))}
+                  </>
+                }
+                footer={`${stats.total} lead(s) · ${stats.won} ganho(s)`}
+                menu={
+                  (editable || deletable)
+                    ? <UserCardMenu editable={editable} deletable={deletable} onEdit={() => startEdit(u)} onDelete={() => remove(u.id)} />
+                    : null
+                }
+              >
+                {Array.isArray(u.companies) && u.companies.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {u.companies.map(c => <CompanyTag key={c} companyId={c} size="sm" />)}
                   </div>
-                </div>
-
-                {/* Stats strip */}
-                <div className="border-t mx-0 grid grid-cols-3 divide-x" style={{ borderColor: "var(--border)" }}>
+                )}
+                <div className="grid grid-cols-3 divide-x rounded-lg" style={{ border: "1px solid var(--border)" }}>
                   <StatStrip label="Leads" value={stats.total} />
                   <StatStrip label="Abertos" value={stats.open} />
                   <StatStrip label="Ganhos" value={stats.won} accent="var(--success)" />
                 </div>
-
-                {/* Ver Perfil button */}
-                <div className="p-4 pt-3">
-                  <button
-                    onClick={() => canEdit(u) ? startEdit(u) : null}
-                    disabled={!canEdit(u)}
-                    className="w-full rounded-xl border font-semibold text-sm flex items-center justify-center gap-2 transition-all"
-                    style={{
-                      height: 44,
-                      borderColor: canEdit(u) ? "var(--accent)" : "var(--border)",
-                      color: canEdit(u) ? "var(--accent)" : "var(--text-dim)",
-                      background: "transparent",
-                      cursor: canEdit(u) ? "pointer" : "default",
-                    }}
-                    onMouseEnter={e => { if (canEdit(u)) { e.currentTarget.style.background = "var(--surface-alt)"; } }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                  >
-                    <User size={15} />
-                    Ver Perfil
-                  </button>
-                </div>
-              </div>
+              </Card>
             );
           })}
-        </div>
+        </CardGrid>
       )}
 
       {/* ── Edit / New modal ── */}
@@ -944,13 +875,35 @@ export function UserManagementView({
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function StatMini({ label, value, accent }) {
+function UserCardMenu({ editable, deletable, onEdit, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const itemSt = { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "transparent", border: "none", cursor: "pointer", fontSize: 12, textAlign: "left" };
   return (
-    <div className="rounded-xl border p-4" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-      <div className="text-xs font-semibold mb-1" style={{ color: "var(--text-dim)" }}>{label}</div>
-      <div className="font-bold" style={{ fontSize: 28, color: accent || "var(--text)", lineHeight: 1, letterSpacing: "-0.02em" }}>
-        {value}
-      </div>
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        title="Ações do usuário"
+        style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", borderRadius: 6 }}
+      >
+        <MoreVertical size={14} />
+      </button>
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setOpen(false)} />
+          <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, boxShadow: "var(--shadow-pop)", minWidth: 140, zIndex: 20, overflow: "hidden" }}>
+            {editable && (
+              <button onClick={() => { setOpen(false); onEdit(); }} style={{ ...itemSt, color: "var(--text)" }}>
+                <Edit3 size={13} /> Editar
+              </button>
+            )}
+            {deletable && (
+              <button onClick={() => { setOpen(false); onDelete(); }} style={{ ...itemSt, color: "var(--danger)" }}>
+                <Trash2 size={13} /> Excluir
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

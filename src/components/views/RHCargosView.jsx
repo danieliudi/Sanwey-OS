@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Briefcase, Plus, X, Pencil, Trash2, Sparkles, Loader2, TrendingUp, ArrowRight,
-  Check, XCircle, Clock, DollarSign, Search, LayoutGrid, List,
+  Check, XCircle, Clock, Search, LayoutGrid, List, MoreVertical, Building2,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
@@ -14,6 +14,11 @@ import { formatBRL } from "../../utils/currency";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { CurrencyInput } from "../ui/CurrencyInput";
+import { Modal } from "../ui/Modal";
+import { StatCard } from "../ui/StatCard";
+import { Tabs } from "../shared/Tabs";
+import { FilterBar } from "../shared/FilterBar";
+import { Card, CardGrid, CardSkeleton, GridListToggle } from "../shared/Card";
 import { RHJornadaEditor, formatScheduleBlocks } from "../rh-pipeline/RHJornadaEditor";
 import { RHBenefitsPicker } from "../rh-pipeline/RHBenefitsPicker";
 
@@ -86,12 +91,6 @@ function CargoModal({ initialData, currentUser, onSave, onDelete, onClose }) {
 
   const { complete, isConfigured: aiConfigured } = useAI(currentUser);
   const shift = shiftStart && shiftEnd ? `${shiftStart} às ${shiftEnd}` : "";
-
-  useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
 
   const handleGenerate = async () => {
     if (!name.trim()) { setAiError("Preencha ao menos o nome do cargo."); return; }
@@ -166,12 +165,7 @@ function CargoModal({ initialData, currentUser, onSave, onDelete, onClose }) {
   const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)", fontSize: 13 };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 540, boxShadow: "var(--shadow-pop)", maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{initialData ? "Editar cargo" : "Novo cargo"}</div>
-          <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
-        </div>
+    <Modal open onClose={onClose} title={initialData ? "Editar cargo" : "Novo cargo"} width={540}>
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           <div className="flex flex-col gap-3">
             <div>
@@ -277,8 +271,7 @@ function CargoModal({ initialData, currentUser, onSave, onDelete, onClose }) {
             )}
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -527,6 +520,37 @@ function MovimentacoesTableView({ movimentacoes, colaboradoresById }) {
   );
 }
 
+// ── Menu de ações do card de cargo (kebab, affordance progressiva) ────────────
+
+function CargoCardMenu({ onEdit, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const itemSt = { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "transparent", border: "none", cursor: "pointer", fontSize: 12, textAlign: "left" };
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title="Ações do cargo"
+        style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", borderRadius: 6 }}
+      >
+        <MoreVertical size={14} />
+      </button>
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setOpen(false)} />
+          <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, boxShadow: "var(--shadow-pop)", minWidth: 140, zIndex: 20, overflow: "hidden" }}>
+            <button onClick={() => { setOpen(false); onEdit(); }} style={{ ...itemSt, color: "var(--text)" }}>
+              <Pencil size={13} /> Editar
+            </button>
+            <button onClick={() => { setOpen(false); onDelete(); }} style={{ ...itemSt, color: "var(--danger)" }}>
+              <Trash2 size={13} /> Excluir
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function RHCargosView({ currentUser, canWrite, isDirector, users = [], notifyMentions }) {
@@ -545,6 +569,7 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
   // uma lista única de cards sem jeito de isolar o histórico de um colaborador.
   const [cargoSearch, setCargoSearch] = useState("");
   const [cargoDeptFilter, setCargoDeptFilter] = useState("all");
+  const [cargoDensity, setCargoDensity] = useState("grid");
   const [movColaboradorFilter, setMovColaboradorFilter] = useState("all");
   const [movTipoFilter, setMovTipoFilter] = useState("all");
   const [movStatusFilter, setMovStatusFilter] = useState("all");
@@ -561,6 +586,8 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
       return true;
     });
   }, [cargos, cargoSearch, cargoDeptFilter]);
+
+  const departmentsCobertos = useMemo(() => new Set(cargos.map((c) => c.department).filter(Boolean)).size, [cargos]);
 
   const movimentacoesFiltradas = useMemo(() => {
     return movimentacoes.filter((m) => {
@@ -641,78 +668,87 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
         )}
       </div>
 
-      <div className="inline-flex rounded-lg border overflow-hidden mb-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-        {[{ id: "cargos", label: "Cargos" }, { id: "movimentacoes", label: `Movimentações${pendentes.length ? ` (${pendentes.length})` : ""}` }].map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} role="tab" aria-selected={tab === t.id}
-            className="px-4 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-            style={{ background: tab === t.id ? "var(--accent)" : "var(--surface)", color: tab === t.id ? "#FFF" : "var(--text-dim)", border: "none" }}>
-            {t.label}
-          </button>
-        ))}
+      <div className="mb-4">
+        <Tabs
+          tabs={[
+            { id: "cargos", label: "Cargos" },
+            { id: "movimentacoes", label: "Movimentações", count: pendentes.length || undefined },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
       </div>
 
       {actionError && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{actionError}</div>}
 
-      {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
-      ) : tab === "cargos" ? (
-        cargos.length === 0 ? (
-          <EmptyState icon={Briefcase} title="Nenhum cargo cadastrado" description="Cadastre os cargos com suas faixas salariais para padronizar contratações e movimentações." />
-        ) : (
-          <>
-            <div className="flex items-center gap-2 flex-wrap mb-3">
-              <div className="relative" style={{ minWidth: 200 }}>
-                <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
-                <input
-                  value={cargoSearch}
-                  onChange={(e) => setCargoSearch(e.target.value)}
-                  placeholder="Buscar cargo…"
-                  className="w-full text-xs rounded-xl border pl-7 pr-3 py-1.5 outline-none"
-                  style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
-                />
-              </div>
-              <select
-                value={cargoDeptFilter}
-                onChange={(e) => setCargoDeptFilter(e.target.value)}
-                className="text-xs rounded-xl border px-3 py-1.5 outline-none"
-                style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
-              >
-                <option value="all">Todos os departamentos</option>
-                {RH_DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
+      {tab === "cargos" ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <StatCard icon={Briefcase} value={cargos.length} label="Cargos cadastrados" />
+            <StatCard icon={Building2} value={departmentsCobertos} label="Departamentos cobertos" sublabel={`${departmentsCobertos} de ${RH_DEPARTMENTS.length}`} />
+          </div>
+
+          {!loadingCargos && cargos.length > 0 && (
+            <div className="mb-3">
+              <FilterBar
+                search={{ value: cargoSearch, onChange: (e) => setCargoSearch(e.target.value), placeholder: "Buscar cargo…" }}
+                filters={[{
+                  id: "department",
+                  value: cargoDeptFilter,
+                  onChange: (e) => setCargoDeptFilter(e.target.value),
+                  label: "Departamento",
+                  options: [{ value: "all", label: "Todos os departamentos" }, ...RH_DEPARTMENTS.map((d) => ({ value: d, label: d }))],
+                }]}
+                trailing={<GridListToggle value={cargoDensity} onChange={setCargoDensity} />}
+              />
             </div>
-            {cargosFiltrados.length === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--text-dim)", padding: "24px 0", textAlign: "center" }}>Nenhum cargo encontrado com esses filtros.</div>
-            ) : (
-          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-            {cargosFiltrados.map((c) => (
-              <div key={c.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 16, background: "var(--surface)", display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>{c.name}</div>
-                  {canWrite && (
-                    <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                      <button onClick={() => setCargoModal({ data: c })} title="Editar" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}><Pencil size={14} /></button>
-                      <button onClick={() => handleDeleteCargo(c)} title="Excluir cargo" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex" }}><Trash2 size={14} /></button>
+          )}
+
+          {loadingCargos ? (
+            <CardGrid density={cargoDensity}>
+              {Array.from({ length: 6 }, (_, i) => <CardSkeleton key={i} density={cargoDensity} />)}
+            </CardGrid>
+          ) : cargos.length === 0 ? (
+            <EmptyState icon={Briefcase} title="Nenhum cargo cadastrado" description="Cadastre os cargos com suas faixas salariais para padronizar contratações e movimentações." />
+          ) : cargosFiltrados.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="Nenhum resultado pra estes filtros"
+              description="Nenhum cargo com esse nome ou departamento. Tente outro termo ou limpe os filtros."
+              action={
+                <button
+                  onClick={() => { setCargoSearch(""); setCargoDeptFilter("all"); }}
+                  style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                >
+                  Limpar filtros
+                </button>
+              }
+            />
+          ) : (
+            <CardGrid density={cargoDensity}>
+              {cargosFiltrados.map((c) => (
+                <Card
+                  key={c.id}
+                  density={cargoDensity}
+                  onClick={canWrite ? () => setCargoModal({ data: c }) : undefined}
+                  icon={<Briefcase size={cargoDensity === "list" ? 12 : 16} />}
+                  title={c.name}
+                  meta={[c.department, c.contract_type].filter(Boolean).join(" · ") || "—"}
+                  menu={canWrite ? <CargoCardMenu onEdit={() => setCargoModal({ data: c })} onDelete={() => handleDeleteCargo(c)} /> : null}
+                  footer={fmtBanda(c.salary_min, c.salary_max)}
+                >
+                  {c.description && (
+                    <div style={{ fontSize: 11, color: "var(--text-dim)", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                      {c.description}
                     </div>
                   )}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
-                  {[c.department, c.contract_type].filter(Boolean).join(" · ") || "—"}
-                </div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: "var(--accent)" }}>
-                  <DollarSign size={13} /> {fmtBanda(c.salary_min, c.salary_max)}
-                </div>
-                {c.description && (
-                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    {c.description}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-            )}
-          </>
-        )
+                </Card>
+              ))}
+            </CardGrid>
+          )}
+        </>
+      ) : loading ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2 flex-wrap">
