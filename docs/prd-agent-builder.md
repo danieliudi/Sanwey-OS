@@ -96,6 +96,27 @@ Ficam como estão. Continuam publicando em `agent_actions` pelo caminho de hoje
 destino — se algum desses 5 se mostrar simples o bastante pra virar uma automação no
 mecanismo novo, a migração é incremental e decidida depois; não é trabalho deste PRD.
 
+### Onde os dados moram: mapeamento módulo → tabela
+
+`evaluateAutomations` hoje só é chamado de dois lugares (`App.jsx` pro CRM,
+`MarketingView.jsx` pro Marketing) e assume um registro "formato lead" (`stage`,
+`stageChangedAt`, `companyId`). Fornecedores de RH não é um board Kanban, não tem
+`stage`, e nenhuma tela chama `evaluateAutomations` hoje ali. Isso separa os dois modos
+de disparo por capacidade real:
+
+- **Por evento** só funciona em boards que já são Kanban (Recrutamento, Onboarding,
+  Treinamentos, Avaliação de Desempenho, Férias — todos sobre `rh_pipeline_stages`) — e
+  mesmo esses exigem plugar uma chamada nova a `evaluateAutomations` na respectiva view,
+  que não existe hoje pra nenhum board de RH.
+- **Agendado** não depende de tela aberta, mas a `agent-runner` precisa saber em que
+  tabela procurar. Em vez de um conector genérico pra "qualquer tabela", um registro
+  pequeno e explícito no código da function (`módulo → tabela + campos permitidos`),
+  com uma entrada adicionada por vez conforme cada módulo é plugado. Primeira entrada:
+  `rh_fornecedores` → `rh_fornecedor_contratos`.
+
+Consequência pro escopo do piloto (seção 2): o caso de uso mais forte de RH (contrato
+vencendo) só é viável pelo caminho agendado.
+
 ### RLS / permissões
 
 Criar ou editar uma automação com `then_action = suggest_with_ai` exige papel de
