@@ -24,6 +24,18 @@ export function FilterBar({ search, filters = [], children, trailing }) {
             padding: "6px 12px",
             flex: "1 1 180px",
             maxWidth: 280,
+            transition: "border-color 150ms, box-shadow 150ms",
+          }}
+          // Foco visível no wrapper (equivalente a :focus-within) — o input
+          // interno tem outline none, então sem isto o foco fica invisível.
+          onFocus={e => {
+            e.currentTarget.style.borderColor = "var(--border-strong)";
+            e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-tint)";
+          }}
+          onBlur={e => {
+            if (e.currentTarget.contains(e.relatedTarget)) return;
+            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.boxShadow = "none";
           }}
         >
           <Search size={13} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
@@ -61,7 +73,15 @@ export function FilterBar({ search, filters = [], children, trailing }) {
           onChange={f.onChange}
           aria-label={f.label}
           className="text-xs rounded-xl border px-3 py-1.5 outline-none cursor-pointer"
-          style={selectStyle}
+          style={{ ...selectStyle, transition: "border-color 150ms, box-shadow 150ms" }}
+          onFocus={e => {
+            e.currentTarget.style.borderColor = "var(--border-strong)";
+            e.currentTarget.style.boxShadow = "0 0 0 3px var(--accent-tint)";
+          }}
+          onBlur={e => {
+            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.boxShadow = "none";
+          }}
         >
           {(f.options || []).map(opt =>
             typeof opt === "string"

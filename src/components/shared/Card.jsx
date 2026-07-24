@@ -18,6 +18,9 @@ export function CardGrid({ density = "grid", children }) {
   );
 }
 
+// `status` ({ color, label }) só tem efeito na densidade "list" — na grade o
+// status vai em `badges`. `headerAction` fica sempre visível (é onde mora o
+// "marcar todos" do seletor — não é affordance progressiva como o kebab).
 export function Card({
   icon,
   iconBg,
@@ -27,6 +30,7 @@ export function Card({
   status,
   footer,
   menu,
+  headerAction,
   onClick,
   interactive = Boolean(onClick),
   density = "grid",
@@ -62,9 +66,15 @@ export function Card({
       }
     : {};
 
+  // onFocus/onBlur = :focus-within — o kebab fica com opacity 0 mas continua
+  // na ordem de tabulação; sem isto o teclado focaria um controle invisível.
   const hoverProps = {
     onMouseEnter: () => setHovered(true),
     onMouseLeave: () => setHovered(false),
+    onFocus: () => setHovered(true),
+    onBlur: (e) => {
+      if (!e.currentTarget.contains(e.relatedTarget)) setHovered(false);
+    },
   };
 
   if (density === "list") {
@@ -100,6 +110,11 @@ export function Card({
         {footer != null && (
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", flexShrink: 0, marginLeft: "auto" }}>
             {footer}
+          </div>
+        )}
+        {headerAction && (
+          <div onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
+            {headerAction}
           </div>
         )}
         {interactive && menu && (
@@ -144,6 +159,14 @@ export function Card({
           <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{title}</div>
           {meta && <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>{meta}</div>}
         </div>
+        {headerAction && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ marginLeft: "auto", flexShrink: 0, marginRight: interactive && menu ? 22 : 0 }}
+          >
+            {headerAction}
+          </div>
+        )}
       </div>
       {badges && <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>{badges}</div>}
       {children}
