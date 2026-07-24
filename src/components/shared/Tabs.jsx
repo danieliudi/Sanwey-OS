@@ -11,7 +11,12 @@ const SIZES = {
   sm: { padding: "4px 10px", fontSize: 11, icon: 12 },
 };
 
-export function Tabs({ tabs, active, onChange, size = "md" }) {
+// `iconOnlyMobile`: esconde o label abaixo do breakpoint `sm`, só ícone —
+// repõe o `hidden sm:inline` que existia na barra própria de TutoriaisView
+// antes da extração (4 abas + label "Perguntar à IA" não cabe em ~375px sem
+// isso). Opt-in: RHFornecedoresView/RHCargosView (2 abas, labels curtos)
+// nunca precisaram e continuam sem passar a prop.
+export function Tabs({ tabs, active, onChange, size = "md", iconOnlyMobile = false }) {
   const sz = SIZES[size] || SIZES.md;
   return (
     <div
@@ -51,7 +56,7 @@ export function Tabs({ tabs, active, onChange, size = "md" }) {
             }}
           >
             {Icon && <Icon size={sz.icon} style={{ flexShrink: 0 }} />}
-            <span>{t.label}</span>
+            <span className={iconOnlyMobile ? "hidden sm:inline" : undefined}>{t.label}</span>
             {t.count != null && (
               <span style={{ fontWeight: 600, opacity: 0.75 }}>({t.count})</span>
             )}

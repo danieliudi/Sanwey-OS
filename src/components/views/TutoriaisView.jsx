@@ -1,6 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { Play, ChevronDown, ChevronUp, BookOpen, LifeBuoy, Zap, Bot, Copy, Check, ChevronRight, ArrowRight, Search } from "lucide-react";
 import { VIDEO_TUTORIALS, FAQ_ITEMS, AUTOMATION_GUIDE, AI_PROMPTS } from "../../data/tutorials";
+import { Tabs } from "../shared/Tabs";
+import { Card, CardGrid } from "../shared/Card";
+import { Badge } from "../ui/Badge";
+import { StatCard } from "../ui/StatCard";
+import { EmptyState } from "../ui/EmptyState";
 
 const ROLE_LABEL = {
   admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor",
@@ -20,56 +25,65 @@ const TABS = [
 function VideoCard({ video, onNavigate }) {
   const hasUrl = Boolean(video.url);
 
+  // Card (Padrão C) tem um slot de ícone 38×38, não um slot de mídia
+  // bleed-to-edge — hoje 100% dos tutoriais são guias rápidos (quickStart),
+  // não vídeos reais (nenhum `url` preenchido em src/data/tutorials.js), e
+  // esse formato cabe bem no ícone+corpo do Card. O branch com thumbnail/
+  // iframe abaixo é mantido funcionalmente idêntico, mas a miniatura vira
+  // `children` (encaixada dentro do padding do card, cantos próprios) em vez
+  // de ocupar a borda do card como no design anterior — ver observação no
+  // relatório da migração sobre esse trade-off.
   if (!hasUrl && video.quickStart) {
     return (
-      <div
-        className="flex flex-col rounded-xl border overflow-hidden"
-        style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
+      <Card
+        icon={<span style={{ fontSize: 18 }}>{video.quickStart.icon}</span>}
+        title={video.title}
+        footer={video.description && onNavigate ? (
+          <button
+            onClick={() => onNavigate(video.description.toLowerCase().replace(/\s+/g, "-"))}
+            className="inline-flex items-center gap-1 font-semibold"
+            style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          >
+            Ir para {video.description} <ArrowRight size={11} />
+          </button>
+        ) : null}
       >
-        <div
-          className="px-4 py-3 flex items-center gap-2 border-b"
-          style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}
-        >
-          <span style={{ fontSize: 18 }}>{video.quickStart.icon}</span>
-          <span className="font-bold text-sm leading-snug" style={{ color: "var(--text)" }}>
-            {video.title}
-          </span>
+        <div className="space-y-1.5">
+          {video.quickStart.steps.map((step, i) => (
+            <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "var(--text)" }}>
+              <span
+                className="shrink-0 flex items-center justify-center rounded-full font-bold"
+                style={{ width: 18, height: 18, minWidth: 18, background: "color-mix(in srgb, var(--accent) 7%, transparent)", color: "var(--accent)", fontSize: 10 }}
+              >
+                {i + 1}
+              </span>
+              <span className="leading-relaxed">{step}</span>
+            </div>
+          ))}
         </div>
-        <div className="p-4 flex-1 flex flex-col gap-2">
-          <div className="space-y-1.5">
-            {video.quickStart.steps.map((step, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "var(--text)" }}>
-                <span
-                  className="shrink-0 flex items-center justify-center rounded-full font-bold"
-                  style={{ width: 18, height: 18, minWidth: 18, background: "color-mix(in srgb, var(--accent) 7%, transparent)", color: "var(--accent)", fontSize: 10 }}
-                >
-                  {i + 1}
-                </span>
-                <span className="leading-relaxed">{step}</span>
-              </div>
-            ))}
-          </div>
-          {video.description && onNavigate && (
-            <button
-              onClick={() => onNavigate(video.description.toLowerCase().replace(/\s+/g, "-"))}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold"
-              style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
-            >
-              Ir para {video.description} <ArrowRight size={11} />
-            </button>
-          )}
-        </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div
-      className="flex flex-col rounded-xl border overflow-hidden"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
+    <Card
+      title={video.title}
+      meta={video.duration || null}
+      badges={!hasUrl ? <Badge variant="neutral">Em breve</Badge> : null}
+      footer={hasUrl ? (
+        <a
+          href={video.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 font-semibold"
+          style={{ fontSize: 12, color: "var(--color-industria)" }}
+        >
+          <Play size={12} /> Assistir
+        </a>
+      ) : null}
     >
       <div
-        className="relative flex items-center justify-center"
+        className="relative flex items-center justify-center rounded-lg overflow-hidden"
         style={{ height: 148, background: hasUrl ? "#1a1a1a" : "#F0EDEA" }}
       >
         {hasUrl ? (
@@ -82,47 +96,18 @@ function VideoCard({ video, onNavigate }) {
             style={{ border: "none" }}
           />
         ) : (
-          <>
-            <div
-              className="flex items-center justify-center rounded-full"
-              style={{ width: 48, height: 48, background: "#E5E7EB" }}
-            >
-              <Play size={20} style={{ color: "var(--text-dim)", marginLeft: 2 }} />
-            </div>
-            <span
-              className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-              style={{ background: "color-mix(in srgb, var(--amber) 13%, transparent)", color: "var(--amber)", border: "1px solid color-mix(in srgb, var(--amber) 27%, transparent)" }}
-            >
-              Em breve
-            </span>
-          </>
-        )}
-      </div>
-      <div className="p-4 flex-1 flex flex-col">
-        <div className="font-semibold text-sm mb-1 leading-snug" style={{ color: "var(--text)" }}>
-          {video.title}
-        </div>
-        <div className="text-xs leading-relaxed flex-1" style={{ color: "var(--text-dim)" }}>
-          {video.description}
-        </div>
-        {video.duration && (
-          <div className="text-xs mt-2 font-medium" style={{ color: "var(--text-dim)" }}>
-            {video.duration}
+          <div
+            className="flex items-center justify-center rounded-full"
+            style={{ width: 48, height: 48, background: "#E5E7EB" }}
+          >
+            <Play size={20} style={{ color: "var(--text-dim)", marginLeft: 2 }} />
           </div>
         )}
-        {hasUrl && (
-          <a
-            href={video.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold"
-            style={{ color: "var(--color-industria)" }}
-          >
-            <Play size={12} /> Assistir
-          </a>
-        )}
       </div>
-    </div>
+      <div className="text-xs leading-relaxed" style={{ color: "var(--text-dim)" }}>
+        {video.description}
+      </div>
+    </Card>
   );
 }
 
@@ -319,28 +304,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl border" style={{ background: "var(--surface-alt)", borderColor: "var(--border)" }}>
-        {TABS.map(tab => {
-          const Icon = tab.icon;
-          const active = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer"
-              style={{
-                background: active ? "var(--surface)" : "transparent",
-                color: active ? "var(--text)" : "var(--text-dim)",
-                boxShadow: active ? "0 1px 3px rgba(0,0,0,0.10)" : "none",
-                border: "none",
-              }}
-            >
-              <Icon size={13} style={{ flexShrink: 0 }} />
-              <span className="hidden sm:inline">{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} iconOnlyMobile />
 
       {/* Tab: Tutoriais */}
       {activeTab === "tutoriais" && (
@@ -370,9 +334,20 @@ export function TutoriaisView({ currentUser, onNavigate }) {
             <h2 className="font-semibold mb-4" style={{ fontSize: 15, color: "var(--text)" }}>
               Vídeos tutoriais
             </h2>
-            <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
-              {videos.map(v => <VideoCard key={v.id} video={v} onNavigate={onNavigate} />)}
+            <div className="grid grid-cols-1 gap-3 mb-4" style={{ maxWidth: 280 }}>
+              <StatCard icon={BookOpen} value={videos.length} label="Guias disponíveis para seu perfil" />
             </div>
+            {videos.length === 0 ? (
+              <EmptyState
+                icon={BookOpen}
+                title="Nenhum guia disponível ainda"
+                description="Ainda não há tutoriais cadastrados para o seu perfil."
+              />
+            ) : (
+              <CardGrid>
+                {videos.map(v => <VideoCard key={v.id} video={v} onNavigate={onNavigate} />)}
+              </CardGrid>
+            )}
             <p className="text-xs mt-3" style={{ color: "var(--text-dim)" }}>
               Os vídeos serão publicados em breve. Quando disponíveis, aparecerão automaticamente nesta tela.
             </p>
