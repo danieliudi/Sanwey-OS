@@ -82,9 +82,9 @@ function CompanyTabs({ selected, onChange, companyIds }) {
 
 function Panel({ title, subtitle, children }) {
   return (
-    <div style={{
+    <div className="p-4 lg:p-5" style={{
       background: "var(--surface)", border: "1px solid var(--border)",
-      borderRadius: 12, padding: "18px 20px",
+      borderRadius: 12,
     }}>
       {(title || subtitle) && (
         <div style={{ marginBottom: 14 }}>

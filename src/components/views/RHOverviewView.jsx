@@ -188,7 +188,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--surface)" }}>
-      <div className="p-4 lg:px-8 lg:py-6" style={{ maxWidth: 1200, margin: "0 auto" }}>
+      <div className="py-4 lg:py-6" style={{ maxWidth: 1200, margin: "0 auto" }}>
 
         <div style={{ marginBottom: 28 }}>
           <h1
@@ -216,9 +216,9 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
         </div>
 
         {/* Stat cards — carrossel de peek abaixo de 1024px (adendo mobile) */}
-        <div className="-mx-4 lg:mx-0 mb-7">
+        <div className="-mx-4 sm:-mx-6 lg:mx-0 mb-7">
           <div
-            className="flex gap-3 overflow-x-auto px-4 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible"
+            className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible"
             style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
           >
             {statCards.map((sc) => (
@@ -273,7 +273,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           className="grid grid-cols-1 lg:grid-cols-3"
           style={{ gap: 20, marginBottom: 20 }}
         >
-          <div style={{ ...card, padding: 20 }}>
+          <div className="p-4 lg:p-5" style={card}>
             <PanelTitle
               title="Vagas em Aberto"
               action="Ver todas"
@@ -349,7 +349,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
             )}
           </div>
 
-          <div style={{ ...card, padding: 20 }}>
+          <div className="p-4 lg:p-5" style={card}>
             <PanelTitle title="Admissões Recentes" />
             {loadingColaboradores ? (
               <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
@@ -403,7 +403,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
             )}
           </div>
 
-          <div style={{ ...card, padding: 20 }}>
+          <div className="p-4 lg:p-5" style={card}>
             <PanelTitle
               title="Férias Pendentes"
               action="Ver todas"
@@ -473,7 +473,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           </div>
         </div>
 
-        <div style={{ ...card, padding: 20 }}>
+        <div className="p-4 lg:p-5" style={card}>
           <PanelTitle title="Distribuição por Departamento" />
           {loadingColaboradores ? (
             <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
