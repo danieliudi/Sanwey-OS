@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePersistentState } from "./use-persistent-state";
 import { STORAGE_KEYS } from "../constants/storage-keys";
+import { NOTIFICATION_TYPE_TO_PREF } from "../constants/user-settings";
 import { getLeadOwnerIds } from "../utils/pipeline-metrics";
 
 const MAX_NOTIFICATIONS = 50;
+
+// Gate central pelos toggles de Configurações > Notificações. Preferência
+// ausente (id novo que o usuário nunca configurou, ou tipo sem toggle) =
+// ligada — só desliga o que está explicitamente `false` nas preferências.
+function isTypeEnabled(prefs, type) {
+  const prefId = NOTIFICATION_TYPE_TO_PREF[type];
+  if (!prefId) return true;
+  return prefs?.[prefId] !== false;
+}
 
 function createNotification({ type, title, body, leadId, companyId }) {
   return {
@@ -18,7 +28,7 @@ function createNotification({ type, title, body, leadId, companyId }) {
   };
 }
 
-export function useNotifications({ currentUser, leads = [] } = {}) {
+export function useNotifications({ currentUser, leads = [], notificationPrefs } = {}) {
   const [notifications, setNotifications] = usePersistentState(
     STORAGE_KEYS.notifications || "crm_notifications",
     []
@@ -56,10 +66,11 @@ export function useNotifications({ currentUser, leads = [] } = {}) {
   }
 
   const push = useCallback((notifData) => {
+    if (!isTypeEnabled(notificationPrefs, notifData?.type)) return;
     const notif = createNotification(notifData);
     setNotifications(prev => [notif, ...prev].slice(0, MAX_NOTIFICATIONS));
     sendDesktopNotification(notif.title, notif.body, { leadId: notif.leadId });
-  }, [setNotifications]);
+  }, [setNotifications, notificationPrefs]);
 
   const markAllRead = useCallback(() => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -76,6 +87,7 @@ export function useNotifications({ currentUser, leads = [] } = {}) {
   // Check for follow-ups due today for this user
   useEffect(() => {
     if (!currentUser || !leads.length) return;
+    if (!isTypeEnabled(notificationPrefs, "followup")) return;
     // getLeadOwnerIds cobre co-responsáveis (owner_ids) — filtrar só pelo
     // owner escalar deixava co-responsável sem aviso de follow-up.
     const myLeads = leads.filter(l => getLeadOwnerIds(l).includes(currentUser.id) && l.nextFollowUp);
@@ -107,7 +119,7 @@ export function useNotifications({ currentUser, leads = [] } = {}) {
         }
       }
     }
-  }, [leads, currentUser, setNotifications]);
+  }, [leads, currentUser, setNotifications, notificationPrefs]);
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 

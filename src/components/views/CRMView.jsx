@@ -578,6 +578,13 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const attemptStageChange = useCallback((leadId, targetStageId) => {
     const lead = scopedLeads.find(l => l.id === leadId) || leads.find(l => l.id === leadId);
     if (!lead) return;
+    // Defesa em profundidade: o menu do card depende só da pré-filtragem de
+    // targets — checar a matriz aqui garante que nenhum caminho fura a
+    // configuração de transições, igual ao handleDrop.
+    if (pipelineTransitions && !pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, targetStageId)) {
+      setStageError(`Não dá pra mover "${lead.company}": transição de etapa não permitida pela configuração do funil.`);
+      return;
+    }
     const fields = stageFields.getFields(lead.companyId, lead.stage);
     const missing = getMissingRequiredFields(fields, lead.customFields || {});
     if (missing.length > 0) {
@@ -591,7 +598,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     }
     setStageError(null);
     onStageChange(leadId, targetStageId);
-  }, [scopedLeads, leads, stageFields, onStageChange]);
+  }, [scopedLeads, leads, stageFields, onStageChange, pipelineTransitions]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3) — mesma fonte
   // de campos/valores do enforcement acima, só que sem bloquear nada.

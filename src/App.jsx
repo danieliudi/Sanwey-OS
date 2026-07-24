@@ -301,7 +301,7 @@ export default function App() {
     clearAll: clearAllNotifications,
     desktopPermission,
     requestDesktopPermission,
-  } = useNotifications({ currentUser, leads });
+  } = useNotifications({ currentUser, leads, notificationPrefs: settings.notifications });
 
   // Notificações de @menção (FASE 4) — ao contrário das acima (só
   // localStorage do próprio navegador), estas são persistidas no banco e

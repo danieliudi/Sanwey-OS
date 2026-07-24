@@ -109,9 +109,11 @@ export function useRHTreinamentos({ userId } = {}) {
   const changeAtribuicaoStage = useCallback(async (atribuicaoId, stage) => {
     const patch = { status: stage, status_changed_at: new Date().toISOString() };
     if (stage === "concluido") patch.data_conclusao = new Date().toISOString();
-    // Voltar pra pendente = zera a conclusão e o certificado (que agora está
-    // obsoleto — a nova rodada emite um novo comprovante).
-    if (stage === "pendente") { patch.data_conclusao = null; patch.certificado_url = null; }
+    // Voltar pra pendente zera só a conclusão — o certificado anexado é
+    // documento do colaborador e não pode se perder num arrasto acidental do
+    // board (a reciclagem intencional, que emite novo comprovante, é o
+    // reciclarAtribuicao abaixo).
+    if (stage === "pendente") { patch.data_conclusao = null; }
     const { error } = await supabase.from("rh_treinamento_atribuicoes").update(patch).eq("id", atribuicaoId);
     if (error) throw new Error(error.message);
     setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, ...patch } : a));

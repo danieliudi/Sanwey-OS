@@ -5,6 +5,7 @@ import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
 } from "../../constants/marketing-pipelines";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
+import { supabase } from "../../lib/supabase";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { usePersonalEvents } from "../../hooks/use-personal-events";
@@ -697,10 +698,32 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const [stageEditorOpen, setStageEditorOpen] = useState(false);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
 
-  const fireAutomations = useCallback((campaign, prev, eventType) => {
+  // Aplica o resultado das automações na campanha (antes os patches eram
+  // descartados: a regra notificava mas mover/definir campo nunca acontecia).
+  // Mesmo contrato do applyAutomationOutcome do App.jsx: só notifica sucesso
+  // das regras cujo patch realmente gravou.
+  const fireAutomations = useCallback(async (campaign, prev, eventType) => {
     if (!evaluateAutomations) return;
-    const { patches: _p, notifications } = evaluateAutomations(campaign, prev, eventType, "marketing");
-    notifications.forEach(n => {
+    const { patches, notifications, sideEffects } = evaluateAutomations(campaign, prev, eventType, "marketing");
+    const failedRuleIds = new Set();
+    for (const p of (patches || [])) {
+      // `badges` (add_badge) não existe em marketing_campaigns — ação ignorada.
+      // `stageChangedAt`/`lastActivity` são cuidados pelo changeStage do hook.
+      const { stage: targetStage, stageChangedAt: _sc, lastActivity: _la, badges: _b, ...rest } = p.patch || {};
+      try {
+        if (targetStage && targetStage !== campaign.stage) {
+          await changeStage(p.leadId, targetStage);
+        }
+        if (Object.keys(rest).length > 0) {
+          await updateCampaign(p.leadId, rest);
+        }
+      } catch (err) {
+        failedRuleIds.add(p.ruleId);
+        console.error(`Automação "${p.ruleName}" falhou ao gravar:`, err);
+      }
+    }
+    (notifications || []).forEach(n => {
+      if (failedRuleIds.has(n.ruleId)) return;
       if (pushNotification) {
         pushNotification({
           type: "automation",
@@ -710,7 +733,25 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         });
       }
     });
-  }, [evaluateAutomations, pushNotification]);
+    for (const effect of (sideEffects || [])) {
+      try {
+        if (effect.type === "create_deliverable") {
+          // O motor monta companyIds a partir de lead.companyId (escalar) —
+          // campanha usa companyIds (array), então cai no fallback abaixo.
+          const companyIds = (effect.companyIds || []).filter(Boolean);
+          await supabase.rpc("crm_create_cross_module_deliverable", {
+            p_title: effect.title,
+            p_company_ids: companyIds.length > 0 ? companyIds : (campaign.companyIds || []),
+            p_description: effect.description,
+            p_priority: effect.priority,
+          });
+        }
+        // enrich_cnpj: campanha não tem CNPJ — ação não se aplica, ignorada.
+      } catch {
+        // Automação não deve travar o fluxo do board de Marketing.
+      }
+    }
+  }, [evaluateAutomations, pushNotification, changeStage, updateCampaign]);
 
   const {
     events:        personalEvents,

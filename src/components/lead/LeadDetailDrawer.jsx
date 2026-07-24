@@ -33,8 +33,6 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
 import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
 
-const STAGE_OPTIONS = DEFAULT_PIPELINE_STAGES.map(s => ({ value: s.id, label: s.name }));
-
 export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions, pipelineTransitions }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("form");
@@ -436,6 +434,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     (!pipelineTransitions || pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, s.id))
   );
 
+  // Opções do select "Etapa do funil" vindas do pipeline real da empresa
+  // (mesma fonte de moveTargets/stageNav) — etapa removida some, renome
+  // aparece. A estática DEFAULT_PIPELINE_STAGES ficava defasada.
+  const stageOptions = companyStages.map(s => ({ value: s.id, label: s.name }));
+
+  const nextAllowed = Boolean(
+    stageNav.next &&
+    (!pipelineTransitions || pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, stageNav.next.id))
+  );
+
   const handleCopyDraft = () => {
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(emailDraft).then(() => {
@@ -447,6 +455,14 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
 
   const handleStageChange = (e) => {
     const newStage = e.target.value;
+    if (!newStage || newStage === lead.stage) return;
+    // Mesma matriz de transições que já bloqueia drag/menu — o select era o
+    // único caminho que ignorava a configuração de "Editar etapas".
+    if (pipelineTransitions && !pipelineTransitions.isTransitionAllowed(lead.companyId, lead.stage, newStage)) {
+      const target = companyStages.find(s => s.id === newStage);
+      setMoveError(`Transição de "${currentStageInfo?.name || lead.stage}" para "${target?.name || newStage}" não é permitida pela configuração do funil.`);
+      return;
+    }
     const missing = getMissingRequiredFields(customDefs, customValuesByKey);
     if (missing.length > 0) {
       setMoveError(`Não dá pra avançar: preencha antes — ${missing.map(f => f.label).join(", ")}.`);
@@ -459,7 +475,13 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     }
     setMoveError(null);
     setStage(newStage);
-    onUpdate(lead.id, { stage: newStage, stageChangedAt: new Date().toISOString() });
+    const nowISO = new Date().toISOString();
+    const patch = { stage: newStage, status: newStage, stageChangedAt: nowISO };
+    if (newStage === "ganho" && lead.stage !== "ganho") {
+      const mergedCF = mergeGanhoDefaults(lead.customFields, lead, nowISO);
+      if (mergedCF) patch.customFields = mergedCF;
+    }
+    onUpdate(lead.id, patch);
   };
 
   // FASE 5: mais de um responsável por card. `owner` (escalar) continua
@@ -1119,7 +1141,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
             <label className="text-xs font-semibold mb-1.5 block" style={{ color: "var(--text-dim)" }}>
               Etapa do funil
             </label>
-            <Select value={stage || ""} onChange={handleStageChange} options={STAGE_OPTIONS} />
+            <Select value={stage || ""} onChange={handleStageChange} options={stageOptions} />
             {moveError && (
               <div className="flex items-start gap-2 p-2.5 mt-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
                 <AlertCircle size={12} className="shrink-0 mt-0.5" />
@@ -1399,7 +1421,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
 
         {/* Mobile sticky footer — Avançar CTA */}
         <div className="lg:hidden shrink-0 border-t px-4 py-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-          {stageNav.next ? (
+          {stageNav.next && nextAllowed ? (
             <button
               onClick={() => moveToStage(stageNav.next.id)}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm cursor-pointer"
@@ -1408,6 +1430,10 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               Avançar para {stageNav.next.name}
               <ArrowRight size={16} />
             </button>
+          ) : stageNav.next ? (
+            <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
+              Avanço direto para {stageNav.next.name} não permitido — use "Mover card para fase".
+            </div>
           ) : (
             <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
               {lead.stage === "ganho" ? "Negócio ganho 🎉" : lead.stage === "perdido" ? "Negócio encerrado" : "Etapa final"}

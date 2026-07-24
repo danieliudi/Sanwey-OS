@@ -626,7 +626,17 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
           setStageError(`Não dá pra mover "${purchase.itemName}" direto pra essa etapa — aprove a solicitação primeiro.`);
           return;
         }
-        await approvePurchase(id, user?.id || null);
+        // Mesmo gate do drawer (canApproveNow): com cotações registradas, a
+        // aprovação exige fornecedor vencedor. O board não tem onde escolher,
+        // então abre o drawer pra decisão em vez de aprovar sem vencedor.
+        const quoted = Array.isArray(purchase.quoteOptions) ? purchase.quoteOptions.filter(q => q?.supplierId) : [];
+        const winnerId = quoted.some(q => q.supplierId === purchase.supplierId) ? purchase.supplierId : null;
+        if (quoted.length > 0 && !winnerId) {
+          setStageError(`"${purchase.itemName}" tem cotações registradas — escolha o fornecedor vencedor no detalhe pra aprovar.`);
+          setSelected(purchase);
+          return;
+        }
+        await approvePurchase(id, user?.id || null, winnerId);
       } else {
         await updatePurchase(id, { stage: toStage });
       }

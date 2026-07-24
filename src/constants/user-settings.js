@@ -119,6 +119,22 @@ export const NOTIFICATION_GROUPS = [
 // Keep NOTIFICATION_PREFS as a flat list for backward compat
 export const NOTIFICATION_PREFS = NOTIFICATION_GROUPS.flatMap(g => g.items);
 
+// Mapa: `type` da notificação gerada (useNotifications/pushNotification) →
+// id do toggle em Configurações > Notificações que a controla. Tipo sem
+// entrada aqui não tem toggle correspondente e permanece sempre ligado.
+export const NOTIFICATION_TYPE_TO_PREF = {
+  followup:               "followup_reminder",
+  lead_assigned:          "new_lead_assigned",
+  lead_won:               "lead_won",
+  lead_lost:              "lead_lost",
+  automation:             "automation_notify",
+  marketing_request:      "new_marketing_request",
+  ferias_solicitada:      "solicitacao_ferias",
+  aniversario:            "aniversario_colaborador",
+  compliance_aso:         "aso_vencendo",
+  compliance_experiencia: "contrato_vencendo",
+};
+
 export const DENSITY_OPTIONS = [
   { value: "comfortable", label: "Confortável" },
   { value: "compact", label: "Compacto" },

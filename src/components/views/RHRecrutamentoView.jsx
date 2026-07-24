@@ -2963,6 +2963,32 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     }
     changeStage(id, newStage);
   };
+  // Bulk "Mover para…" com a MESMA validação do movimento individual
+  // (attemptCandStageChange acima): quem tem campo obrigatório vazio ou
+  // inválido na etapa atual NÃO move e é reportado no toast; os limpos
+  // movem. Os barrados continuam selecionados pra facilitar a correção.
+  const handleBulkMoveStage = async (stageKey) => {
+    const cleared = [];
+    const blocked = [];
+    for (const id of selectedCandIds) {
+      const candidato = candidatos.find((c) => c.id === id);
+      if (!candidato || candidato.stage === stageKey) continue;
+      const fields = candStageFields.getFields(candidato.stage);
+      const hasPendencia =
+        getMissingRequiredFields(fields, candidato.customFields || {}).length > 0 ||
+        getInvalidFields(fields, candidato.customFields || {}).length > 0;
+      if (hasPendencia) blocked.push(candidato);
+      else cleared.push(id);
+    }
+    if (cleared.length > 0) await bulkMoveStage({ aplicacaoIds: cleared, stageKey });
+    if (blocked.length > 0) {
+      setCandMoveError(`${cleared.length} movido(s), ${blocked.length} com campos pendentes: ${blocked.map((c) => c.name).join(", ")}.`);
+      setSelectedCandIds(new Set(blocked.map((c) => c.id)));
+    } else {
+      setCandMoveError(null);
+      setSelectedCandIds(new Set());
+    }
+  };
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
   const getCandCompleteness = (candidato) =>
     getFieldCompleteness(candStageFields.getFields(candidato.stage), candidato.customFields || {});
@@ -3309,8 +3335,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                       onChange={async (e) => {
                         const stageKey = e.target.value;
                         if (!stageKey) return;
-                        await bulkMoveStage({ aplicacaoIds: [...selectedCandIds], stageKey });
-                        setSelectedCandIds(new Set());
+                        await handleBulkMoveStage(stageKey);
                       }}
                       className="text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer"
                       style={{ background: "var(--surface)", color: "var(--text)", borderColor: "var(--border)" }}

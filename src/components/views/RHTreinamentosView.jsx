@@ -343,15 +343,22 @@ function AtribuirModal({ treinamento, colaboradores, onAssign, onClose }) {
 
 // ── Painel de conformidade ────────────────────────────────────────────────────
 
-function computeCompliance(atribuicoes) {
-  let ok = 0, vencidos = 0, pendentes = 0;
+function computeCompliance(atribuicoes, treinamentosById) {
+  let ok = 0, vencidos = 0, pendentes = 0, autodeclarados = 0;
   atribuicoes.forEach((a) => {
     if (a.status === "vencido") vencidos++;
-    else if (a.status === "concluido") ok++;
+    else if (a.status === "concluido") {
+      // Treinamento obrigatório concluído sem comprovante anexado é
+      // autodeclaração — não vale como conforme perante auditoria, então
+      // fica fora do "ok" que puxa a Conformidade %.
+      const obrigatorio = treinamentosById?.get(a.treinamento_id)?.tipo === "obrigatorio";
+      if (obrigatorio && !a.certificado_url) autodeclarados++;
+      else ok++;
+    }
     else pendentes++;
   });
   const total = atribuicoes.length;
-  return { total, ok, vencidos, pendentes, pct: total > 0 ? Math.round((ok / total) * 100) : 100 };
+  return { total, ok, vencidos, pendentes, autodeclarados, pct: total > 0 ? Math.round((ok / total) * 100) : 100 };
 }
 
 function parseAuditDate(str) {
@@ -415,7 +422,7 @@ function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
     });
   }, [atribuicoes, treinamentoFiltro, frenteFiltro, colaboradoresById]);
 
-  const stats = useMemo(() => computeCompliance(filtradas), [filtradas]);
+  const stats = useMemo(() => computeCompliance(filtradas, treinamentosById), [filtradas, treinamentosById]);
 
   const auditDate = useMemo(() => parseAuditDate(auditDateStr), [auditDateStr]);
   const preAudit = useMemo(
@@ -429,15 +436,20 @@ function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
         if (treinamentoFiltro !== "todos" && a.treinamento_id !== treinamentoFiltro) return false;
         return colaboradoresById.get(a.colaborador_id)?.frente === id;
       });
-      return { id, ...computeCompliance(grupo) };
+      return { id, ...computeCompliance(grupo, treinamentosById) };
     }).filter((f) => f.total > 0);
-  }, [atribuicoes, treinamentoFiltro, colaboradoresById]);
+  }, [atribuicoes, treinamentoFiltro, colaboradoresById, treinamentosById]);
 
   if (atribuicoes.length === 0) return null;
 
   const tiles = [
     { label: "Conformidade", value: `${stats.pct}%`, color: stats.pct >= 80 ? "var(--success)" : stats.pct >= 50 ? "var(--warning)" : "var(--danger)" },
-    { label: "Concluídos",   value: stats.ok,         color: "var(--text)" },
+    {
+      label: "Concluídos", value: stats.ok, color: "var(--text)",
+      sub: stats.autodeclarados > 0
+        ? `+${stats.autodeclarados} autodeclarado${stats.autodeclarados !== 1 ? "s" : ""} (obrigatório sem certificado, fora do %)`
+        : null,
+    },
     { label: "Pendentes",    value: stats.pendentes,  color: "var(--text)" },
     { label: "Vencidos",     value: stats.vencidos,   color: stats.vencidos > 0 ? "var(--danger)" : "var(--text)" },
   ];
@@ -505,6 +517,7 @@ function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
           <div key={t.label} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "10px 14px", background: "var(--surface)" }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: t.color, lineHeight: 1 }}>{t.value}</div>
             <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>{t.label}</div>
+            {t.sub && <div style={{ fontSize: 10, fontWeight: 600, color: "var(--amber)", marginTop: 2 }}>{t.sub}</div>}
           </div>
         ))}
       </div>
@@ -1421,12 +1434,16 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
             const t = treinamentos.find(tr => tr.id === a.treinamento_id);
             if (!t) return null;
             const vencido = a.status === "vencido";
+            // Autoatendimento só MARCA concluído — desmarcar (voltar pra
+            // pendente) fica pro RH, senão o colaborador desfaz registro de
+            // conformidade sem rastro.
+            const jaConcluido = a.status === "concluido" && !vencido;
             return (
               <div key={a.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
                 <button
-                  onClick={() => updateAtribuicaoStatus(a.id, a.status === "concluido" && !vencido ? "pendente" : "concluido")}
-                  style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, border: `1.5px solid ${vencido ? "var(--danger)" : a.status === "concluido" ? "var(--success)" : "var(--border-strong)"}`, background: vencido ? "var(--surface)" : a.status === "concluido" ? "var(--success)" : "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                  title={vencido ? "Vencido — clique para revalidar" : undefined}
+                  onClick={() => { if (!jaConcluido) updateAtribuicaoStatus(a.id, "concluido"); }}
+                  style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, border: `1.5px solid ${vencido ? "var(--danger)" : a.status === "concluido" ? "var(--success)" : "var(--border-strong)"}`, background: vencido ? "var(--surface)" : a.status === "concluido" ? "var(--success)" : "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", cursor: jaConcluido ? "default" : "pointer" }}
+                  title={vencido ? "Vencido — clique para revalidar" : jaConcluido ? "Concluído — para desmarcar, fale com o RH" : undefined}
                 >
                   {a.status === "concluido" && !vencido && <Check size={12} color="#FFF" />}
                   {vencido && <AlertTriangle size={11} color="var(--danger)" />}
