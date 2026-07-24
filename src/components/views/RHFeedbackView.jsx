@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  MessageSquare, Plus, X, TrendingUp, Pencil, Settings2, AlertCircle,
+  MessageSquare, Plus, X, TrendingUp, Settings2, AlertCircle,
   LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, BellRing,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -15,8 +15,8 @@ import { useProfiles } from "../../hooks/use-profiles";
 import { nextPendingCycle, addDaysISO, CICLO_TIPOS, avaliacaoDiasParaProxima, cicloTipoLabel } from "../../utils/rh-feedback-cycles";
 import { formatBRL } from "../../utils/currency";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
-import { RHStageListManager } from "../shared/stage-editor/StageListManager";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
+import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
@@ -603,6 +603,87 @@ function HistoricoDrawer({ colaborador, feedbacksDoColaborador, onClose }) {
   );
 }
 
+// ── Nova etapa (local ao arquivo — mesmo molde de EntregasView.jsx/
+// PosVendaView.jsx: "Editar etapas" saiu do header, criar etapa agora é
+// isso aqui, e renomear/recolorir/excluir uma já existente vive dentro de
+// "Editar campos desta etapa") ───────────────────────────────────────────────
+
+const NEW_STAGE_DEFAULTS_COLOR = "#64748B";
+
+function slugifyStageKeyLocal(label) {
+  return (label || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50) || `etapa_${Date.now().toString(36)}`;
+}
+
+function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
+  const [name, setName]   = useState("");
+  const [color, setColor] = useState(NEW_STAGE_DEFAULTS_COLOR);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let key = slugifyStageKeyLocal(name);
+      let suffix = 1;
+      while (existingKeys.includes(key)) key = `${slugifyStageKeyLocal(name)}_${suffix++}`;
+      await onAdd({ stageKey: key, name: name.trim(), color, orderIdx: nextOrderIdx, terminal: false, won: false, lost: false });
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao criar etapa.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "var(--shadow-pop)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova etapa</div>
+          <button type="button" onClick={onClose}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" }}>
+            Nome da etapa
+          </label>
+          <div className="flex items-center gap-2.5" style={{ marginBottom: 18 }}>
+            <StageColorPicker value={color} onChange={setColor} size={38} />
+            <input autoFocus type="text" placeholder="Ex.: Autoavaliação"
+              value={name} onChange={e => setName(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+          </div>
+          {error && (
+            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+          )}
+          <button type="submit" disabled={saving || !name.trim()}
+            className="w-full font-semibold py-2.5 rounded-xl text-sm"
+            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            {saving ? "Criando…" : "Criar etapa"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── Card do Kanban ────────────────────────────────────────────────────────────
 
 function isAtrasado(feedback) {
@@ -646,6 +727,7 @@ function FeedbackKanbanColumn({
   onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteFeedback,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, boardHeight,
+  draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
 }) {
   return (
     <div
@@ -662,27 +744,46 @@ function FeedbackKanbanColumn({
         boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none",
       }}
     >
-      <KanbanColumnHeader
-        color={stage.color}
-        name={stage.name}
-        count={feedbackList.length}
-        bandHeight={4}
-        letterSpacing="normal"
-        nameColor={stage.color}
-        nameFontSize={14}
-        nameFontWeight={700}
-        uppercase={false}
-        countFontSize={12}
-        actions={canWrite && (
-          <button
-            onClick={() => onEditFields(stage)}
-            title="Editar campos desta etapa"
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}
-          >
-            <Settings2 size={13} />
-          </button>
-        )}
-      />
+      {/* Arrastável pra reordenar etapas — canal de drag separado do drop de
+          card acima (onColumnDrop/onColumnDragOver, props já existentes desta
+          coluna, servem exclusivamente o card). draggedColumnKey/
+          onColumnHeaderDragStart/onColumnHeaderDragEnd/onColumnHeaderDrop vêm
+          de RHFeedbackView, que usa handleStageReorderDrop/
+          handleStageReorderDragEnd — nomes diferentes de handleColumnDrop/
+          handleColumnDragOver/handleColumnDragLeave porque essas três já
+          existem no arquivo e servem o drop de card (ver design-spec, seção
+          2.2). stopPropagation nos handlers evita que o drag de reorder vaze
+          pro <div> pai que escuta o drop de card. */}
+      <div
+        draggable={canWrite}
+        onDragStart={() => canWrite && onColumnHeaderDragStart(stage.stageKey)}
+        onDragEnd={onColumnHeaderDragEnd}
+        onDragOver={e => { if (draggedColumnKey) { e.preventDefault(); e.stopPropagation(); } }}
+        onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.stageKey) { e.stopPropagation(); onColumnHeaderDrop(stage.stageKey); } }}
+        style={{ cursor: canWrite ? "grab" : "default" }}
+      >
+        <KanbanColumnHeader
+          color={stage.color}
+          name={stage.name}
+          count={feedbackList.length}
+          bandHeight={4}
+          letterSpacing="normal"
+          nameColor={stage.color}
+          nameFontSize={14}
+          nameFontWeight={700}
+          uppercase={false}
+          countFontSize={12}
+          actions={canWrite && (
+            <button
+              onClick={() => onEditFields(stage)}
+              title="Editar campos desta etapa"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}
+            >
+              <Settings2 size={13} />
+            </button>
+          )}
+        />
+      </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {feedbackList.length === 0 ? (
           <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Nada aqui</div>
@@ -1208,7 +1309,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
   const { createMovimentacao } = useRHMovimentacoes({ userId: currentUser?.id });
-  const { stages, loading: loadingStages } = useRHPipelineStages("feedback");
+  const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("feedback");
   const feedbackStageFields = useRHStageFields("feedback");
   const { users } = useProfiles();
 
@@ -1218,8 +1319,9 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const [autoavaliandoId, setAutoavaliandoId]     = useState(null);
   const [historicoColaboradorId, setHistoricoColaboradorId] = useState(null);
   const [drawerFeedbackId, setDrawerFeedbackId]   = useState(null);
-  const [stageEditorOpen, setStageEditorOpen]     = useState(false);
   const [fieldEditorStage, setFieldEditorStage]   = useState(null);
+  const [addingStage, setAddingStage]             = useState(false);
+  const [draggedColumnKey, setDraggedColumnKey]   = useState(null);
   const [draggedFeedbackId, setDraggedFeedbackId] = useState(null);
   const [dragOverStageKey, setDragOverStageKey]   = useState(null);
   const [moveError, setMoveError]                 = useState(null);
@@ -1385,6 +1487,30 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     setDragOverStageKey(null);
   }, [draggedFeedbackId, feedbacks, handleStageChange]);
 
+  // Canal de drag separado do drop de card acima (draggedColumnKey vs
+  // draggedFeedbackId) — reordena etapas arrastando o cabeçalho da coluna.
+  // Nomeado handleStageReorder* (não handleColumnDragEnd/handleColumnDrop, o
+  // molde do rollout) porque handleColumnDrop/handleColumnDragOver/
+  // handleColumnDragLeave já existem acima e servem exclusivamente o drop de
+  // card — copiar o nome literal do molde sobrescreveria essas três (ver
+  // design-spec-rollout-navegacao-etapas.md, seção 2.2).
+  const handleStageReorderDragEnd = useCallback(() => setDraggedColumnKey(null), []);
+  const handleStageReorderDrop = useCallback((targetStageKey) => {
+    const draggedKey = draggedColumnKey;
+    setDraggedColumnKey(null);
+    if (!draggedKey || draggedKey === targetStageKey) return;
+    const order = stages.map(s => s.stageKey);
+    const fromIdx = order.indexOf(draggedKey);
+    const toIdx   = order.indexOf(targetStageKey);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const nextOrder = [...order];
+    nextOrder.splice(fromIdx, 1);
+    nextOrder.splice(toIdx, 0, draggedKey);
+    const dbIdByKey = new Map(stages.map(s => [s.stageKey, s.id]));
+    const orderedIds = nextOrder.map(k => dbIdByKey.get(k)).filter(Boolean);
+    if (orderedIds.length === nextOrder.length) reorderStages(orderedIds);
+  }, [draggedColumnKey, stages, reorderStages]);
+
   const feedbackByStage = useMemo(() => {
     const map = {};
     const defaultStageKey = stages[0]?.stageKey || "rascunho";
@@ -1495,10 +1621,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
               <ViewToggleButton active={viewMode === "lembretes"} onClick={() => setViewMode("lembretes")} icon={BellRing} label="Lembretes" />
             </div>
             {canWrite && (
-              <>
-                <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
-                <Button size="sm" icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
-              </>
+              <Button size="sm" icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
             )}
           </div>
         </div>
@@ -1554,6 +1677,16 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
             )}
             emptyLabel="Nada aqui"
           />
+          {canWrite && (
+            <button
+              onClick={() => setAddingStage(true)}
+              className="lg:hidden w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+            >
+              <Plus size={13} />
+              Nova etapa
+            </button>
+          )}
           <div className="hidden lg:block">
             <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
               <div className="flex gap-2 h-full" style={{ minWidth: `${stages.length * 280}px` }}>
@@ -1578,8 +1711,25 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                     getCompleteness={getFeedbackCompleteness}
                     getUnread={(f) => hasUnreadRHComment(f, viewedAt, currentUser?.id)}
                     boardHeight={boardHeight}
+                    draggedColumnKey={draggedColumnKey}
+                    onColumnHeaderDragStart={setDraggedColumnKey}
+                    onColumnHeaderDragEnd={handleStageReorderDragEnd}
+                    onColumnHeaderDrop={handleStageReorderDrop}
                   />
                 ))}
+                {canWrite && (
+                  <button
+                    onClick={() => setAddingStage(true)}
+                    title="Nova etapa"
+                    className="flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-xs font-semibold shrink-0"
+                    style={{ width: 140, height: 64, borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                  >
+                    <Plus size={16} />
+                    Nova etapa
+                  </button>
+                )}
               </div>
             </KanbanBoardScrollArea>
           </div>
@@ -1628,23 +1778,23 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
       )}
 
       {canWrite && (
-        <RHStageListManager
-          open={stageEditorOpen}
-          onClose={() => setStageEditorOpen(false)}
-          domain="feedback"
-          domainLabel="Avaliação de Desempenho"
-          records={feedbacks}
-          stageField="status"
-        />
-      )}
-
-      {canWrite && (
         <RHStageFieldsPanel
           open={!!fieldEditorStage}
           onClose={() => setFieldEditorStage(null)}
           domain="feedback"
           stageKey={fieldEditorStage?.stageKey}
           stageName={fieldEditorStage?.name}
+          records={feedbacks}
+          stageField="status"
+        />
+      )}
+
+      {addingStage && (
+        <NewStageModal
+          existingKeys={stages.map(s => s.stageKey)}
+          nextOrderIdx={stages.length}
+          onAdd={addStage}
+          onClose={() => setAddingStage(false)}
         />
       )}
     </div>
