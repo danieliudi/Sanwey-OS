@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
-  Plus, X, ListTodo, ChevronDown, Star, Filter, Pencil, Settings2, AlertCircle,
+  Plus, X, ListTodo, ChevronDown, Star, Filter, Settings2, AlertCircle,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { MarketingTaskDetailDrawer } from "../campaign/MarketingTaskDetailDrawer";
@@ -10,8 +10,8 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
-import { RHStageListManager } from "../shared/stage-editor/StageListManager";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
+import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { localDateInputToISOString } from "../../utils/date";
@@ -255,19 +255,83 @@ function TaskCreateModal({ stageId, stages, currentUser, users, campaigns, onAdd
   );
 }
 
-/* ── View toggle-less header button ──────────────────────────── */
-function ToolbarButton({ onClick, icon: Icon, label, title }) {
+/* ── Nova etapa (criação rápida a partir do fim do Kanban) ──────
+   "Editar etapas" (lista completa) saiu do header — criar uma etapa agora
+   é isso aqui, ou "Opções Avançadas" dentro de "Editar campos desta etapa"
+   pra renomear/recolorir/excluir uma já existente. */
+const NEW_STAGE_DEFAULTS_COLOR = "#64748B";
+
+function slugifyStageKeyLocal(label) {
+  return (label || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50) || `etapa_${Date.now().toString(36)}`;
+}
+
+function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
+  const [name, setName]   = useState("");
+  const [color, setColor] = useState(NEW_STAGE_DEFAULTS_COLOR);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let key = slugifyStageKeyLocal(name);
+      let suffix = 1;
+      while (existingKeys.includes(key)) key = `${slugifyStageKeyLocal(name)}_${suffix++}`;
+      await onAdd({ stageKey: key, name: name.trim(), color, orderIdx: nextOrderIdx, terminal: false, won: false, lost: false });
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao criar etapa.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <button
-      onClick={onClick}
-      title={title || label}
-      style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 500, color: "var(--text-dim)", cursor: "pointer" }}
-      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+    <div
+      style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
     >
-      <Icon size={13} />
-      {label}
-    </button>
+      <div
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "var(--shadow-pop)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova etapa</div>
+          <button type="button" onClick={onClose}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" }}>
+            Nome da etapa
+          </label>
+          <div className="flex items-center gap-2.5" style={{ marginBottom: 18 }}>
+            <StageColorPicker value={color} onChange={setColor} size={38} />
+            <input autoFocus type="text" placeholder="Ex.: Aprovação Jurídica"
+              value={name} onChange={e => setName(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+          </div>
+          {error && (
+            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+          )}
+          <button type="submit" disabled={saving || !name.trim()}
+            className="w-full font-semibold py-2.5 rounded-xl text-sm"
+            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            {saving ? "Criando…" : "Criar etapa"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -289,15 +353,17 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const trailingRef = useRef(null);
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
 
-  // Etapas vêm de rh_pipeline_stages (domain="marketing_tasks"), editáveis
-  // via RHStageListManager — mesmo padrão de EntregasView/RHOnboardingView.
-  const { stages: dbStages, loading: loadingStages } = useRHPipelineStages("marketing_tasks");
+  // Etapas vêm de rh_pipeline_stages (domain="marketing_tasks") — criar/
+  // reordenar via "+ Nova etapa" e drag de coluna, excluir dentro de
+  // "Editar campos desta etapa" (mesmo padrão de EntregasView.jsx).
+  const { stages: dbStages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("marketing_tasks");
   const kanbanStages = useMemo(
     () => dbStages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, sla: s.slaDays, terminal: s.terminal })),
     [dbStages]
   );
-  const [stageEditorOpen, setStageEditorOpen] = useState(false);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
+  const [addingStage, setAddingStage] = useState(false);
+  const [draggedColumnKey, setDraggedColumnKey] = useState(null);
 
   const usersById = useUsersById(users);
 
@@ -384,6 +450,25 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
     setDraggedItem(null); setDragOverStage(null);
   }, [draggedItem, canWrite, attemptStageChange]);
 
+  // Canal de drag separado do drag de card (draggedColumnKey vs draggedItem)
+  // — arrastar o cabeçalho da coluna reordena etapas.
+  const handleColumnDragEnd = useCallback(() => setDraggedColumnKey(null), []);
+  const handleColumnDrop = useCallback((targetStageKey) => {
+    const draggedKey = draggedColumnKey;
+    setDraggedColumnKey(null);
+    if (!draggedKey || draggedKey === targetStageKey) return;
+    const order = kanbanStages.map(s => s.id);
+    const fromIdx = order.indexOf(draggedKey);
+    const toIdx   = order.indexOf(targetStageKey);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const nextOrder = [...order];
+    nextOrder.splice(fromIdx, 1);
+    nextOrder.splice(toIdx, 0, draggedKey);
+    const dbIdByKey = new Map(dbStages.map(s => [s.stageKey, s.id]));
+    const orderedIds = nextOrder.map(k => dbIdByKey.get(k)).filter(Boolean);
+    if (orderedIds.length === nextOrder.length) reorderStages(orderedIds);
+  }, [draggedColumnKey, kanbanStages, dbStages, reorderStages]);
+
   const handleQuickAdd = useCallback(async (item) => { await createTask(item); }, [createTask]);
 
   const handleUpdate = useCallback(async (id, patch) => {
@@ -426,9 +511,6 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de tarefas do dia a dia de Marketing</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {canWrite && (
-            <ToolbarButton onClick={() => setStageEditorOpen(true)} icon={Pencil} label="Editar etapas" title="Editar etapas do Kanban" />
-          )}
           {canWrite && (
             <button
               onClick={() => setQuickAddStage(kanbanStages[0]?.id)}
@@ -600,6 +682,16 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
               </div>
             );
           })}
+          {canWrite && (
+            <button
+              onClick={() => setAddingStage(true)}
+              className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+            >
+              <Plus size={13} />
+              Nova etapa
+            </button>
+          )}
         </div>
 
         {/* Desktop kanban: horizontal scroll */}
@@ -619,37 +711,50 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
                     style={{ width: 272, minWidth: 272, background: "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "100%", flexShrink: 0 }}>
-                    <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
-                    <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                      style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold flex items-center gap-1.5"
-                          style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                          <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
-                          <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({stageItems.length})</span>
+                    {/* Arrastável pra reordenar etapas — canal de drag
+                        separado do card (draggedColumnKey vs draggedItem),
+                        stopPropagation nos handlers pra não vazar pro drag
+                        de card do <div> pai da coluna. */}
+                    <div
+                      draggable={canWrite}
+                      onDragStart={() => canWrite && setDraggedColumnKey(stage.id)}
+                      onDragEnd={handleColumnDragEnd}
+                      onDragOver={e => { if (draggedColumnKey) { e.preventDefault(); e.stopPropagation(); } }}
+                      onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.id) { e.stopPropagation(); handleColumnDrop(stage.id); } }}
+                      style={{ cursor: canWrite ? "grab" : "default" }}
+                    >
+                      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
+                      <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
+                        style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold flex items-center gap-1.5"
+                            style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                            <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
+                            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({stageItems.length})</span>
+                          </div>
+                          {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
                         </div>
-                        {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
+                        {canWrite && (
+                          <button onClick={() => setFieldEditorStage(stage)}
+                            className="flex items-center justify-center rounded-md transition-colors"
+                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                            title="Editar campos desta etapa">
+                            <Settings2 size={13} />
+                          </button>
+                        )}
+                        {canWrite && !stage.terminal && (
+                          <button onClick={() => setQuickAddStage(stage.id)}
+                            className="flex items-center justify-center rounded-md transition-colors"
+                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                            title="Adicionar tarefa">
+                            <Plus size={14} />
+                          </button>
+                        )}
                       </div>
-                      {canWrite && (
-                        <button onClick={() => setFieldEditorStage(stage)}
-                          className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                          title="Editar campos desta etapa">
-                          <Settings2 size={13} />
-                        </button>
-                      )}
-                      {canWrite && !stage.terminal && (
-                        <button onClick={() => setQuickAddStage(stage.id)}
-                          className="flex items-center justify-center rounded-md transition-colors"
-                          style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                          title="Adicionar tarefa">
-                          <Plus size={14} />
-                        </button>
-                      )}
                     </div>
 
                     <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -695,6 +800,19 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                   </div>
                 );
               })}
+              {canWrite && (
+                <button
+                  onClick={() => setAddingStage(true)}
+                  title="Nova etapa"
+                  className="flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-xs font-semibold shrink-0"
+                  style={{ width: 140, height: 64, borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                >
+                  <Plus size={16} />
+                  Nova etapa
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -738,19 +856,10 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
       />
     )}
 
-    {/* Editor de etapas do Kanban (rh_pipeline_stages, domain="marketing_tasks") */}
-    {canWrite && (
-      <RHStageListManager
-        open={stageEditorOpen}
-        onClose={() => setStageEditorOpen(false)}
-        domain="marketing_tasks"
-        domainLabel="Tarefas"
-        records={tasks}
-        stageField="stage"
-      />
-    )}
-
-    {/* Editor de campos customizados por etapa (rh_pipeline_stage_fields) */}
+    {/* Editor de campos customizados por etapa (rh_pipeline_stage_fields) —
+        "Opções Avançadas" dentro dele também cobre renomear/recolorir/SLA/
+        excluir a etapa (records+stageField habilitam a exclusão guardada
+        por registro ativo). Substitui o antigo "Editar etapas" separado. */}
     {canWrite && (
       <RHStageFieldsPanel
         open={!!fieldEditorStage}
@@ -758,6 +867,17 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         domain="marketing_tasks"
         stageKey={fieldEditorStage?.id}
         stageName={fieldEditorStage?.name}
+        records={tasks}
+        stageField="stage"
+      />
+    )}
+
+    {addingStage && (
+      <NewStageModal
+        existingKeys={dbStages.map(s => s.stageKey)}
+        nextOrderIdx={dbStages.length}
+        onAdd={addStage}
+        onClose={() => setAddingStage(false)}
       />
     )}
 
