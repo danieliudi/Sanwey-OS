@@ -5,7 +5,29 @@ Piloto: RH
 
 ## 1. Problema & Decisão
 
-[A escrever]
+A plataforma já tem duas peças de governança de IA que não se conversam. De um lado,
+`automations` (`AutomationsView`) — motor de regra no-code, zero IA, que qualquer
+manager já configura sozinho hoje. Do outro, `agent_actions`/`agent-gateway` — uma
+fila de sugestões de IA com aprovação humana, já com trilha de auditoria e RLS, mas
+hoje alimentada só de fora, via n8n, e só pro CRM. Se um departamento quer "quando X
+acontecer, IA rascunha Y, alguém aprova antes de sair" — o exemplo real que motivou
+este PRD foi um contrato de fornecedor de RH vencendo sem ninguém ser avisado a tempo
+— isso hoje não existe sem um dev escrever código e montar um workflow de n8n. Nenhum
+gerente consegue montar esse tipo de automação sozinho.
+
+**Decisão**: unificar os dois. `automations` ganha um tipo de ação novo
+(`suggest_with_ai`) que gera entradas em `agent_actions` em vez de aplicar um patch
+direto, e a própria tela de Automações ganha um assistente guiado — pensado pra quem
+nunca configurou IA — que qualquer manager/admin de módulo usa pra criar esse tipo de
+agente sozinho. A execução roda internalizada na plataforma (sem depender do n8n),
+usando a chave de IA (BYOLLM) de quem criou o agente.
+
+**Por módulo, não global.** A arquitetura é a mesma pra qualquer módulo (é só um
+registro módulo → tabela, seção 4), mas o lançamento é incremental — cada
+departamento entra quando alguém desenha o caso de uso dele, não todos de uma vez. O
+piloto começa em RH: Fornecedores primeiro (contrato vencendo, gatilho por prazo),
+Recrutamento e Onboarding em seguida (gatilho por etapa, já que são Kanban). Os
+critérios pra decidir se e quando outro departamento entra estão na seção 6.
 
 ## 2. Escopo do piloto — RH primeiro
 
@@ -299,4 +321,34 @@ escrita nessa ação específica. Colaborador comum continua vendo e agindo sobr
 
 ## 6. Critérios de sucesso do piloto & rollout
 
-[A escrever]
+Deliberadamente simples — nada de painel novo (isso está fora de escopo, seção 5).
+
+### Fase 1 (Fornecedores) está pronta pra virar Fase 2 quando:
+
+- Mais de uma pessoa em RH criou um agente sozinha, sem ajuda de dev/TI — prova de que
+  o assistente guiado funciona pra quem não é técnico, não só pra quem ajudou a
+  desenhar.
+- A maioria das sugestões geradas é aprovada ou aprovada-com-edição, não rejeitada ou
+  ignorada. Taxa de rejeição alta é sinal de que o prompt guiado (seção 3) precisa de
+  ajuste antes de expandir pra mais gente.
+- Nenhum agente precisou do teto de 50/dia pra ser contido — se precisou, é sinal de
+  bug na condição, não de sucesso.
+- Ninguém precisou pedir pra um dev mexer em código pra criar, editar ou ajustar um
+  agente depois de publicado.
+
+### Fase 2 (Recrutamento/Onboarding) está pronta pra virar rollout pra outro departamento quando:
+
+- Os mesmos critérios acima valem também pro caminho por evento, não só pro agendado.
+- O trabalho de plugar `evaluateAutomations` nas duas telas de RH (seção 2) não
+  quebrou nenhuma automação existente de campo/etapa que já rodava ali.
+
+### Depois disso: como um novo departamento entra
+
+Não é um projeto novo por departamento — é adicionar uma linha no registro módulo →
+tabela (seção 4) e, se o board for Kanban, plugar `evaluateAutomations` na tela dele
+(mesmo trabalho já feito pra Recrutamento/Onboarding na Fase 2). A ferramenta, o
+assistente guiado, a aprovação em `agent_actions`, o limite diário e a pausa por falha
+de chave já valem pra qualquer módulo sem mudança. Ordem sugerida depois de RH: o
+próximo departamento é decidido por quem tiver o caso de uso mais parecido com
+Fornecedores (gatilho por prazo/data, mais simples de plugar) — Compras tem contratos e
+orçamentos com vencimento no mesmo formato, é candidato natural.
