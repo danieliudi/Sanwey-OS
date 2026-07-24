@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   GraduationCap, Plus, X, Check, ExternalLink, ChevronDown, ChevronRight, Users, AlertTriangle, RefreshCw,
-  LayoutGrid, Pencil, Settings2, AlertCircle, List, CalendarDays as CalendarIcon, ChevronLeft,
+  LayoutGrid, Settings2, AlertCircle, List, CalendarDays as CalendarIcon, ChevronLeft,
 } from "lucide-react";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -12,8 +12,8 @@ import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useMyColaborador } from "../../hooks/use-my-colaborador";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
-import { RHStageListManager } from "../shared/stage-editor/StageListManager";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
+import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
@@ -536,6 +536,98 @@ function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
   );
 }
 
+// ── Nova etapa (local ao arquivo — mesmo molde de RHOnboardingView.jsx/
+// RHFeriasView.jsx: "Editar etapas" saiu do header, criar etapa agora é
+// isso aqui, e renomear/recolorir/excluir uma já existente vive dentro de
+// "Editar campos desta etapa") ─────────────────────────────────────────────
+
+const NEW_STAGE_DEFAULTS_COLOR = "#64748B";
+
+function slugifyStageKeyLocal(label) {
+  return (label || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50) || `etapa_${Date.now().toString(36)}`;
+}
+
+// domain="treinamentos" é compartilhado por TODOS os treinamentos da
+// plataforma (ver comentário em nonDeletableStageKeys/protectedStageKeys
+// mais abaixo) — criar uma etapa aqui a adiciona ao board de qualquer outro
+// treinamento também, não só o que está aberto. Aviso explícito (Daniel,
+// rollout de Treinamentos) pra não confundir com uma etapa "só deste board".
+function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
+  const [name, setName]   = useState("");
+  const [color, setColor] = useState(NEW_STAGE_DEFAULTS_COLOR);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let key = slugifyStageKeyLocal(name);
+      let suffix = 1;
+      while (existingKeys.includes(key)) key = `${slugifyStageKeyLocal(name)}_${suffix++}`;
+      await onAdd({ stageKey: key, name: name.trim(), color, orderIdx: nextOrderIdx, terminal: false, won: false, lost: false });
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao criar etapa.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "var(--shadow-pop)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova etapa</div>
+          <button type="button" onClick={onClose}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" }}>
+            Nome da etapa
+          </label>
+          <div className="flex items-center gap-2.5" style={{ marginBottom: 14 }}>
+            <StageColorPicker value={color} onChange={setColor} size={38} />
+            <input autoFocus type="text" placeholder="Ex.: Em análise"
+              value={name} onChange={e => setName(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--warning-bg)", borderRadius: 10, padding: "8px 12px", marginBottom: 18 }}>
+            <AlertTriangle size={13} style={{ color: "var(--warning)", flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontSize: 11, color: "var(--warning)", lineHeight: 1.4 }}>
+              Esta etapa será adicionada a <b>todos</b> os treinamentos da plataforma, não só a este.
+            </span>
+          </div>
+          {error && (
+            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+          )}
+          <button type="submit" disabled={saving || !name.trim()}
+            className="w-full font-semibold py-2.5 rounded-xl text-sm"
+            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            {saving ? "Criando…" : "Criar etapa"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── Board por treinamento (Kanban) ───────────────────────────────────────────
 // Um board GLOBAL (todos os treinamentos × todas as pessoas) viraria uma
 // bagunça de centenas de cards sem relação entre si — por isso o board é
@@ -558,6 +650,7 @@ function TreinamentoBoardColumn({
   onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteAtribuicao,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, boardHeight,
+  draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
 }) {
   return (
     <div
@@ -567,23 +660,41 @@ function TreinamentoBoardColumn({
       className="flex flex-col rounded-lg transition-all duration-150"
       style={{ width: 272, minWidth: 272, height: boardHeight, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none" }}
     >
-      <KanbanColumnHeader
-        color={stage.color}
-        name={stage.name}
-        count={atribList.length}
-        bandHeight={4}
-        letterSpacing="normal"
-        nameColor={stage.color}
-        nameFontSize={14}
-        nameFontWeight={700}
-        uppercase={false}
-        countFontSize={12}
-        actions={canWrite && (
-          <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
-            <Settings2 size={13} />
-          </button>
-        )}
-      />
+      {/* Arrastável pra reordenar etapas — canal de drag separado do drop de
+          card acima (onColumnDrop/onColumnDragOver/onColumnDragLeave, props
+          já existentes desta coluna, servem exclusivamente o card). Nomes
+          diferentes (draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd,
+          onColumnHeaderDrop) em vez de handleDrop/onColumnDragOver/onColumnDragLeave
+          porque estes últimos já existem no arquivo pro drop de card — mesmo achado de
+          colisão de nomes já resolvido em RHOnboardingView/RHFeriasView.
+          stopPropagation nos handlers evita que o drag de reorder vaze pro
+          div pai que escuta o drop de card. */}
+      <div
+        draggable={canWrite}
+        onDragStart={() => canWrite && onColumnHeaderDragStart(stage.stageKey)}
+        onDragEnd={onColumnHeaderDragEnd}
+        onDragOver={e => { if (draggedColumnKey) { e.preventDefault(); e.stopPropagation(); } }}
+        onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.stageKey) { e.stopPropagation(); onColumnHeaderDrop(stage.stageKey); } }}
+        style={{ cursor: canWrite ? "grab" : "default" }}
+      >
+        <KanbanColumnHeader
+          color={stage.color}
+          name={stage.name}
+          count={atribList.length}
+          bandHeight={4}
+          letterSpacing="normal"
+          nameColor={stage.color}
+          nameFontSize={14}
+          nameFontWeight={700}
+          uppercase={false}
+          countFontSize={12}
+          actions={canWrite && (
+            <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
+              <Settings2 size={13} />
+            </button>
+          )}
+        />
+      </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {atribList.length === 0 ? (
           <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
@@ -995,15 +1106,16 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
 }
 
 function TreinamentoBoardModal({
-  treinamento, atribuicoes, colaboradoresById, canWrite, currentUser, users,
+  treinamento, atribuicoes, allAtribuicoes, colaboradoresById, canWrite, currentUser, users,
   onChangeStage, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onUpdateActivity, onClose, notifyMentions, onDelete,
 }) {
-  const { stages, loading: loadingStages } = useRHPipelineStages("treinamentos");
+  const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("treinamentos");
   const stageFields = useRHStageFields("treinamentos");
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
   const [drawerId, setDrawerId] = useState(null);
-  const [stageEditorOpen, setStageEditorOpen] = useState(false);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
+  const [addingStage, setAddingStage] = useState(false);
+  const [draggedColumnKey, setDraggedColumnKey] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
   const [moveError, setMoveError] = useState(null);
@@ -1078,6 +1190,28 @@ function TreinamentoBoardModal({
     setDragOverStageKey(null);
   };
 
+  // Canal de drag separado do drop de card acima (draggedColumnKey vs
+  // draggedId) — reordena etapas arrastando o cabeçalho da coluna. Nomeado
+  // handleStageReorder* (não handleColumnDragEnd/handleColumnDrop) porque
+  // handleDrop já existe acima e serve exclusivamente o drop de card (mesmo
+  // achado de colisão de nomes já resolvido em RHOnboardingView/RHFeriasView).
+  const handleStageReorderDragEnd = () => setDraggedColumnKey(null);
+  const handleStageReorderDrop = (targetStageKey) => {
+    const draggedKey = draggedColumnKey;
+    setDraggedColumnKey(null);
+    if (!draggedKey || draggedKey === targetStageKey) return;
+    const order = stages.map(s => s.stageKey);
+    const fromIdx = order.indexOf(draggedKey);
+    const toIdx   = order.indexOf(targetStageKey);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const nextOrder = [...order];
+    nextOrder.splice(fromIdx, 1);
+    nextOrder.splice(toIdx, 0, draggedKey);
+    const dbIdByKey = new Map(stages.map(s => [s.stageKey, s.id]));
+    const orderedIds = nextOrder.map(k => dbIdByKey.get(k)).filter(Boolean);
+    if (orderedIds.length === nextOrder.length) reorderStages(orderedIds);
+  };
+
   const drawerAtrib = drawerId ? atribuicoes.find(a => a.id === drawerId) : null;
 
   return (
@@ -1094,9 +1228,6 @@ function TreinamentoBoardModal({
               <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
               <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
             </div>
-            {canWrite && (
-              <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
-            )}
             <button onClick={onClose} style={{ background: "transparent", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-dim)", padding: "8px 10px", borderRadius: 10, display: "flex" }}>
               <X size={16} />
             </button>
@@ -1147,6 +1278,16 @@ function TreinamentoBoardModal({
                 )}
                 emptyLabel="Ninguém aqui"
               />
+              {canWrite && (
+                <button
+                  onClick={() => setAddingStage(true)}
+                  className="lg:hidden w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
+                  style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+                >
+                  <Plus size={13} />
+                  Nova etapa
+                </button>
+              )}
               <div className="hidden lg:block">
                 <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
                   <div className="flex gap-2 h-full" style={{ minWidth: `${stages.length * 280}px` }}>
@@ -1171,8 +1312,25 @@ function TreinamentoBoardModal({
                         getCompleteness={getCompleteness}
                         getUnread={(a) => hasUnreadRHComment(a, viewedAt, currentUser?.id)}
                         boardHeight={boardHeight}
+                        draggedColumnKey={draggedColumnKey}
+                        onColumnHeaderDragStart={setDraggedColumnKey}
+                        onColumnHeaderDragEnd={handleStageReorderDragEnd}
+                        onColumnHeaderDrop={handleStageReorderDrop}
                       />
                     ))}
+                    {canWrite && (
+                      <button
+                        onClick={() => setAddingStage(true)}
+                        title="Nova etapa"
+                        className="flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-xs font-semibold shrink-0"
+                        style={{ width: 140, height: 64, borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                      >
+                        <Plus size={16} />
+                        Nova etapa
+                      </button>
+                    )}
                   </div>
                 </KanbanBoardScrollArea>
               </div>
@@ -1205,12 +1363,13 @@ function TreinamentoBoardModal({
       )}
 
       {canWrite && (
-        <RHStageListManager
-          open={stageEditorOpen}
-          onClose={() => setStageEditorOpen(false)}
+        <RHStageFieldsPanel
+          open={!!fieldEditorStage}
+          onClose={() => setFieldEditorStage(null)}
           domain="treinamentos"
-          domainLabel="Treinamentos"
-          records={atribuicoes}
+          stageKey={fieldEditorStage?.stageKey}
+          stageName={fieldEditorStage?.name}
+          records={allAtribuicoes}
           stageField="status"
           // pendente/concluido/vencido não são "terminal" (não representam um
           // resultado tipo ganho/perdido), mas são lidos direto em código —
@@ -1218,17 +1377,22 @@ function TreinamentoBoardModal({
           // use-rh-treinamentos.js e este arquivo) — pra TODOS os
           // treinamentos da plataforma, não só o board aberto. Apagar
           // qualquer uma quebra essa lógica de compliance silenciosamente.
-          nonDeletableStageKeys={["pendente", "concluido", "vencido"]}
+          // Usa allAtribuicoes (não a `atribuicoes` já filtrada pro
+          // treinamento deste board) porque domain="treinamentos" é
+          // compartilhado por todos os treinamentos — checar só as
+          // atribuições deste board deixaria passar exclusão de uma etapa
+          // ainda em uso por OUTRO treinamento.
+          protectedStageKeys={["pendente", "concluido", "vencido"]}
+          protectedLabel="Treinamentos"
         />
       )}
 
-      {canWrite && (
-        <RHStageFieldsPanel
-          open={!!fieldEditorStage}
-          onClose={() => setFieldEditorStage(null)}
-          domain="treinamentos"
-          stageKey={fieldEditorStage?.stageKey}
-          stageName={fieldEditorStage?.name}
+      {addingStage && (
+        <NewStageModal
+          existingKeys={stages.map(s => s.stageKey)}
+          nextOrderIdx={stages.length}
+          onAdd={addStage}
+          onClose={() => setAddingStage(false)}
         />
       )}
     </div>
@@ -1475,6 +1639,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
         <TreinamentoBoardModal
           treinamento={boardTreinamento}
           atribuicoes={atribuicoesByTreinamento.get(boardTreinamento.id) || []}
+          allAtribuicoes={atribuicoes}
           colaboradoresById={colaboradoresById}
           canWrite={canWrite}
           currentUser={currentUser}
