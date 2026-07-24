@@ -106,11 +106,24 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
 
   const visibleFields = resolveVisibleFields(stageFields.getFields(stageId), customValues);
 
+  // Guarda contra descarte acidental: fechar por clique-fora/ESC/X com o
+  // formulário preenchido pede confirmação. Mesmo padrão do CreateModal de
+  // Compras (ComprasMarketingView.jsx).
+  const initialSnapshotRef = useRef(null);
+  const stateRef = useRef(null);
+  stateRef.current = JSON.stringify({ title, requesterName, department, description, priority, deadline, companyIds, campaignId, customValues });
+  if (initialSnapshotRef.current === null) initialSnapshotRef.current = stateRef.current;
+  const guardedClose = useCallback(() => {
+    if (stateRef.current !== initialSnapshotRef.current
+        && !window.confirm("Descartar os dados preenchidos? As informações não salvas serão perdidas.")) return;
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
-    const h = e => { if (e.key === "Escape") onClose(); };
+    const h = e => { if (e.key === "Escape") guardedClose(); };
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
+  }, [guardedClose]);
 
   const toggleCompany = (id) =>
     setCompanyIds(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
@@ -163,7 +176,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
   return (
     <div
       style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
+      onClick={guardedClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", maxHeight: "90vh", overflowY: "auto" }}
@@ -179,7 +192,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
               </div>
             )}
           </div>
-          <button type="button" onClick={onClose}
+          <button type="button" onClick={guardedClose}
             style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
