@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, Pencil, AlertCircle, ExternalLink, Trash2, Settings } from "lucide-react";
+import { Plus, X, AlertCircle, ExternalLink, Trash2, Settings } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -13,7 +13,7 @@ import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
-import { RHStageListManager } from "../shared/stage-editor/StageListManager";
+import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { usePosvenda } from "../../hooks/use-posvenda";
@@ -257,6 +257,87 @@ function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, onClo
   );
 }
 
+// ── Nova etapa (local ao arquivo — mesmo molde de EntregasView.jsx/
+// MarketingView.jsx: "Editar etapas" saiu do header, criar etapa agora é
+// isso aqui, e renomear/recolorir/excluir uma já existente vive dentro de
+// "Editar campos desta etapa") ───────────────────────────────────────────────
+
+const NEW_STAGE_DEFAULTS_COLOR = "#64748B";
+
+function slugifyStageKeyLocal(label) {
+  return (label || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50) || `etapa_${Date.now().toString(36)}`;
+}
+
+function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
+  const [name, setName]   = useState("");
+  const [color, setColor] = useState(NEW_STAGE_DEFAULTS_COLOR);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let key = slugifyStageKeyLocal(name);
+      let suffix = 1;
+      while (existingKeys.includes(key)) key = `${slugifyStageKeyLocal(name)}_${suffix++}`;
+      await onAdd({ stageKey: key, name: name.trim(), color, orderIdx: nextOrderIdx, terminal: false, won: false, lost: false });
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao criar etapa.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "var(--shadow-pop)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova etapa</div>
+          <button type="button" onClick={onClose}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" }}>
+            Nome da etapa
+          </label>
+          <div className="flex items-center gap-2.5" style={{ marginBottom: 18 }}>
+            <StageColorPicker value={color} onChange={setColor} size={38} />
+            <input autoFocus type="text" placeholder="Ex.: Garantia estendida"
+              value={name} onChange={e => setName(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+          </div>
+          {error && (
+            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+          )}
+          <button type="submit" disabled={saving || !name.trim()}
+            className="w-full font-semibold py-2.5 rounded-xl text-sm"
+            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            {saving ? "Criando…" : "Criar etapa"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── PosVendaView ──────────────────────────────────────────────────────────────
 
 export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, users, onOpenLead }) {
@@ -264,13 +345,18 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const userRoleList = user.roles?.length ? user.roles : (user.role ? [user.role] : []);
   const isManager = userRoleList.includes("gerente") || userRoleList.includes("admin");
   const isConsultor = userRoleList.includes("consultor");
+  // Mesma regra que hoje trava "Editar etapas" na visão agregada de várias
+  // empresas — "+ Nova etapa"/drag de coluna herdam essa condição, não só
+  // isManager, senão um gerente na visão de grupo ganha um jeito de mexer em
+  // etapas que hoje é deliberadamente bloqueado nessa visão.
+  const canManageStages = isManager && !isGroupView;
 
   // user.companies pode ter ids legados que a constraint do banco rejeita —
   // mesma proteção usada em CRMView.
   const firstValidCompany = (user.companies || []).find(c => COMPANY_IDS.includes(c)) || "industria";
   const companyForBoard = isGroupView ? firstValidCompany : activeCompany;
 
-  const { stages } = useRHPipelineStages("posvenda");
+  const { stages, addStage, reorderStages } = useRHPipelineStages("posvenda");
   const { cases, canWrite, createCase, deleteCase, changeStage } = usePosvenda({
     userId: user.id, role: user.role, roles: user.roles,
   });
@@ -315,7 +401,8 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const [dragOverStage, setDragOverStage] = useState(null);
   const [stageError, setStageError] = useState(null);
   const [createModalStage, setCreateModalStage] = useState(null);
-  const [stageEditorOpen, setStageEditorOpen] = useState(false);
+  const [addingStage, setAddingStage] = useState(false);
+  const [draggedColumnKey, setDraggedColumnKey] = useState(null);
   const [editingFieldsStage, setEditingFieldsStage] = useState(null); // { stageKey, name }
   const [selectedCase, setSelectedCase] = useState(null);
 
@@ -341,6 +428,25 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
     setDragOverStage(null);
   }, [draggedCase, attemptStageChange]);
 
+  // Canal de drag separado do drag de card (draggedColumnKey vs
+  // draggedCase) — reordena etapas arrastando o cabeçalho da coluna.
+  const handleColumnDragEnd = useCallback(() => setDraggedColumnKey(null), []);
+  const handleColumnDrop = useCallback((targetStageKey) => {
+    const draggedKey = draggedColumnKey;
+    setDraggedColumnKey(null);
+    if (!draggedKey || draggedKey === targetStageKey) return;
+    const order = stages.map(s => s.stageKey);
+    const fromIdx = order.indexOf(draggedKey);
+    const toIdx   = order.indexOf(targetStageKey);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const nextOrder = [...order];
+    nextOrder.splice(fromIdx, 1);
+    nextOrder.splice(toIdx, 0, draggedKey);
+    const dbIdByKey = new Map(stages.map(s => [s.stageKey, s.id]));
+    const orderedIds = nextOrder.map(k => dbIdByKey.get(k)).filter(Boolean);
+    if (orderedIds.length === nextOrder.length) reorderStages(orderedIds);
+  }, [draggedColumnKey, stages, reorderStages]);
+
   const resolveOwners = useCallback((ownerIds) => (ownerIds || []).map(id => usersById.get(id)).filter(Boolean), [usersById]);
 
   const firstNonTerminalStage = stages.find(s => !s.terminal);
@@ -365,16 +471,6 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {isManager && !isGroupView && (
-                <button
-                  onClick={() => setStageEditorOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-                  style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-                >
-                  <Pencil size={13} />
-                  <span className="hidden sm:inline">Editar etapas</span>
-                </button>
-              )}
               {isManager && accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
                 <Select
                   value={activeCompany}
@@ -430,6 +526,16 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
             </RHKanbanCard>
           )}
         />
+        {canManageStages && (
+          <button
+            onClick={() => setAddingStage(true)}
+            className="lg:hidden w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
+            style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+          >
+            <Plus size={13} />
+            Nova etapa
+          </button>
+        )}
 
         {/* Desktop: colunas horizontais — mesmo enquadramento visual de
             Venda/Entregas (coluna bege, header branco separado, ver
@@ -454,34 +560,48 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none",
                     }}
                   >
-                    <KanbanColumnHeader
-                      color={stage.color}
-                      name={stage.name}
-                      count={bucket.cases.length}
-                      bandHeight={4}
-                      letterSpacing="normal"
-                      nameColor={stage.color}
-                      nameFontSize={14}
-                      nameFontWeight={700}
-                      uppercase={false}
-                      countFontSize={12}
-                      actions={isManager && !stage.terminal && (
-                        <button
-                          onClick={() => setEditingFieldsStage({ stageKey: stage.stageKey, name: stage.name })}
-                          className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
-                          style={{ width: 24, height: 24, flexShrink: 0, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
-                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                          title="Editar fase"
-                        >
-                          <Settings size={13} />
-                        </button>
-                      )}
+                    {/* Arrastável pra reordenar etapas — canal de drag separado do
+                        drag de card (draggedColumnKey vs draggedCase),
+                        stopPropagation nos handlers pra não vazar pro drag de
+                        card do <div> pai da coluna. Só gerente fora da visão
+                        agregada pode reordenar (mesma regra de "+ Nova etapa"). */}
+                    <div
+                      draggable={canManageStages}
+                      onDragStart={() => canManageStages && setDraggedColumnKey(stage.stageKey)}
+                      onDragEnd={handleColumnDragEnd}
+                      onDragOver={e => { if (draggedColumnKey) { e.preventDefault(); e.stopPropagation(); } }}
+                      onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.stageKey) { e.stopPropagation(); handleColumnDrop(stage.stageKey); } }}
+                      style={{ cursor: canManageStages ? "grab" : "default" }}
                     >
-                      <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", fontWeight: 600 }}>
-                        {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}
-                      </div>
-                    </KanbanColumnHeader>
+                      <KanbanColumnHeader
+                        color={stage.color}
+                        name={stage.name}
+                        count={bucket.cases.length}
+                        bandHeight={4}
+                        letterSpacing="normal"
+                        nameColor={stage.color}
+                        nameFontSize={14}
+                        nameFontWeight={700}
+                        uppercase={false}
+                        countFontSize={12}
+                        actions={isManager && (
+                          <button
+                            onClick={() => setEditingFieldsStage({ stageKey: stage.stageKey, name: stage.name })}
+                            className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
+                            style={{ width: 24, height: 24, flexShrink: 0, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                            title="Editar fase"
+                          >
+                            <Settings size={13} />
+                          </button>
+                        )}
+                      >
+                        <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", fontWeight: 600 }}>
+                          {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}
+                        </div>
+                      </KanbanColumnHeader>
+                    </div>
 
                     <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ display: "flex", flexDirection: "column", gap: 6, minHeight: 0 }}>
                       {bucket.cases.length === 0 ? (
@@ -529,6 +649,19 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                   </div>
                 );
               })}
+              {canManageStages && (
+                <button
+                  onClick={() => setAddingStage(true)}
+                  title="Nova etapa"
+                  className="flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-xs font-semibold shrink-0"
+                  style={{ width: 140, height: 64, borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                >
+                  <Plus size={16} />
+                  Nova etapa
+                </button>
+              )}
             </div>
           </KanbanBoardScrollArea>
         </div>
@@ -540,21 +673,14 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
         </div>
       </div>
 
-      <RHStageListManager
-        open={stageEditorOpen}
-        onClose={() => setStageEditorOpen(false)}
-        domain="posvenda"
-        domainLabel="Funil de Pós-venda"
-        records={cases}
-        stageField="stage"
-      />
-
       <RHStageFieldsPanel
         open={!!editingFieldsStage}
         onClose={() => setEditingFieldsStage(null)}
         domain="posvenda"
         stageKey={editingFieldsStage?.stageKey}
         stageName={editingFieldsStage?.name}
+        records={cases}
+        stageField="stage"
       />
 
       {selectedCase && (
@@ -579,6 +705,15 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           users={users}
           onAdd={createCase}
           onClose={() => setCreateModalStage(null)}
+        />
+      )}
+
+      {addingStage && (
+        <NewStageModal
+          existingKeys={stages.map(s => s.stageKey)}
+          nextOrderIdx={stages.length}
+          onAdd={addStage}
+          onClose={() => setAddingStage(false)}
         />
       )}
     </>
