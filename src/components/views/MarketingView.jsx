@@ -529,7 +529,7 @@ function AnalyticsPanel({ campaigns, stages }) {
     // o fallback estático de antes da customização por etapa existir. Sem
     // isso, renomear/criar/excluir uma etapa via "Editar etapas" deixava a
     // Análise mostrando o conjunto antigo de etapas, com dado errado.
-    const nonTerminal = (stages || MARKETING_STAGES).filter(s => !s.terminal);
+    const nonTerminal = (stages?.length ? stages : MARKETING_STAGES).filter(s => !s.terminal);
     return nonTerminal.map(stage => {
       const stageCampaigns = campaigns.filter(c => c.stage === stage.id);
       const count       = stageCampaigns.length;
@@ -691,7 +691,7 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
             <tr><td colSpan={7} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma campanha encontrada.</td></tr>
           )}
           {campaigns.map(c => {
-            const stage = (stages || MARKETING_STAGES).find(s => s.id === c.stage);
+            const stage = (stages?.length ? stages : MARKETING_STAGES).find(s => s.id === c.stage);
             const color = stage?.color || "var(--text-dim)";
             // FASE 5: resolve todos os responsáveis (owner_ids, com fallback
             // pro owner escalar) contra o Map de usuários pro AvatarStack.

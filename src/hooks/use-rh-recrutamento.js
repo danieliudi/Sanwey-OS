@@ -48,7 +48,7 @@ function joinAplicacao(aplicacao, candidatosById) {
   };
 }
 
-export function useRHRecrutamento({ userId } = {}) {
+export function useRHRecrutamento({ userId, enabled = true } = {}) {
   const [vagas, setVagas]           = useState([]);
   const [candidatosPool, setCandidatosPool] = useState([]); // talent pool bruto (rh_candidatos)
   const [aplicacoes, setAplicacoes] = useState([]);
@@ -56,7 +56,7 @@ export function useRHRecrutamento({ userId } = {}) {
   const activeRef = useRef(true);
 
   const fetchAll = useCallback(async () => {
-    if (!isSupabaseConfigured) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !enabled) { setLoading(false); return; }
     setLoading(true);
     try {
       const [{ data: vagasData }, { data: candData }, { data: aplicData }] = await Promise.all([
@@ -71,10 +71,11 @@ export function useRHRecrutamento({ userId } = {}) {
     } finally {
       if (activeRef.current) setLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     activeRef.current = true;
+    if (!enabled) { setLoading(false); return; }
     fetchAll();
     if (!isSupabaseConfigured) return;
     // Realtime: qualquer mudança nas 3 tabelas recarrega tudo. O volume do

@@ -17,4 +17,5 @@ export const STORAGE_KEYS = {
   leadFormConfig: `gs_${V}_lead_form_config`,
   changelogSeen: `gs_${V}_changelog_seen`,
   screenTipsSeen: `gs_${V}_screen_tips_seen`,
+  weeklyDigestLastSent: `gs_${V}_weekly_digest_last_sent`,
 };

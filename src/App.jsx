@@ -39,6 +39,9 @@ import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasPar
 import { avaliacaoDiasParaProxima, cicloTipoLabel } from "./utils/rh-feedback-cycles";
 import { useRHSuppliers } from "./hooks/use-rh-suppliers";
 import { useRHBemEstar } from "./hooks/use-rh-bemestar";
+import { useRHRecrutamento } from "./hooks/use-rh-recrutamento";
+import { isStale, aggregatePipeline, getLeadOwnerIds } from "./utils/pipeline-metrics";
+import { formatK } from "./utils/currency";
 import { sendRhEmail } from "./utils/rh-send-email";
 import { RH_LEAVE_TYPES } from "./constants/rh-config";
 import { useDemoData } from "./hooks/use-demo-data";
@@ -645,6 +648,107 @@ export default function App() {
       });
     }
   }, [despesasParaLembretes, isManagerRole, pushNotification]);
+
+  // Geradores de notificação — stale_lead, cross_sell, weekly_digest,
+  // new_candidato: toggles existiam em Configurações > Notificações desde a
+  // FASE de grupos (#117) sem nenhum gerador correspondente (ligavam a UI mas
+  // nunca disparavam nada — backlog QA da auditoria Zero Bullshit).
+
+  // Lead parado (SLA da etapa estourado) — reusa isStale (já usado em
+  // Dashboard/Painel Executivo/Minhas Tarefas como badge passivo); aqui vira
+  // push ativo pro dono do lead. Guard "1x por dia por lead", mesmo padrão
+  // do lembrete de conformidade acima (dia LOCAL, não UTC).
+  const staleLeadVistoRef = useRef(new Set());
+  useEffect(() => {
+    if (!currentUser) return;
+    const hoje = new Date();
+    const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    const myLeads = leads.filter(l => getLeadOwnerIds(l).includes(currentUser.id));
+    for (const l of myLeads) {
+      if (!isStale(l, pipelines?.[l.companyId])) continue;
+      const key = `${l.id}:${hojeISO}`;
+      if (staleLeadVistoRef.current.has(key)) continue;
+      staleLeadVistoRef.current.add(key);
+      pushNotification({
+        type: "stale_lead",
+        title: "Lead parado",
+        body: `${l.company} está sem atividade há mais tempo que o SLA da etapa.`,
+        leadId: l.id,
+        companyId: l.companyId,
+      });
+    }
+  }, [leads, pipelines, currentUser, pushNotification]);
+
+  // Sugestão de cross-sell — crossReferrals já existe (overlaps reais entre
+  // frentes + sugestões sintéticas, CrossReferralsView.jsx); aqui só avisa
+  // quando uma nova aparece pendente/ativa, mesmo padrão de "vistoRef" das
+  // solicitações de marketing/férias acima (primeira leva só marca como
+  // vista, não notifica retroativo).
+  const crossSellVistoRef = useRef(null);
+  useEffect(() => {
+    if (!hasAnyRole(["vendedor", "consultor", "gerente", "admin"])) return;
+    const pendentes = crossReferrals.filter(c => c.status === "pending" || c.status === "active");
+    if (crossSellVistoRef.current === null) {
+      crossSellVistoRef.current = new Set(pendentes.map(c => c.id));
+      return;
+    }
+    for (const c of pendentes) {
+      if (crossSellVistoRef.current.has(c.id)) continue;
+      crossSellVistoRef.current.add(c.id);
+      pushNotification({
+        type: "cross_sell",
+        title: "Sugestão de cross-sell",
+        body: `${c.companyName}: ${c.reason || "oportunidade entre frentes identificada"}.`,
+      });
+    }
+  }, [crossReferrals, currentUserRoles, pushNotification]);
+
+  // Resumo semanal do pipeline — só gerente/admin (grupo "Gestão"). Guard
+  // persistido (não useRef) porque, ao contrário dos lembretes diários
+  // acima, recarregar a página no mesmo dia da semana não pode reenviar o
+  // mesmo resumo — chave é a segunda-feira da semana corrente.
+  const [weeklyDigestLastSent, setWeeklyDigestLastSent] = usePersistentState(STORAGE_KEYS.weeklyDigestLastSent, null);
+  useEffect(() => {
+    if (!isManagerRole || !leads.length) return;
+    const hoje = new Date();
+    const dia = hoje.getDay();
+    const diffParaSegunda = (dia === 0 ? -6 : 1) - dia;
+    const segunda = new Date(hoje);
+    segunda.setDate(hoje.getDate() + diffParaSegunda);
+    const semanaISO = `${segunda.getFullYear()}-${String(segunda.getMonth() + 1).padStart(2, "0")}-${String(segunda.getDate()).padStart(2, "0")}`;
+    if (weeklyDigestLastSent === semanaISO) return;
+    setWeeklyDigestLastSent(semanaISO);
+    const agg = aggregatePipeline(leads, users);
+    pushNotification({
+      type: "weekly_digest",
+      title: "Resumo semanal do pipeline",
+      body: `${agg.totalLeads} negócios abertos, ${formatK(agg.openValue)} em aberto, ${agg.conversionRate}% de conversão.`,
+    });
+  }, [leads, users, isManagerRole, weeklyDigestLastSent, setWeeklyDigestLastSent, pushNotification]);
+
+  // Novo candidato em processo seletivo — hook só instanciado (fetch +
+  // realtime de rh_vagas/rh_candidatos/rh_aplicacoes) quando há usuário de RH
+  // logado, mesmo `enabled` de useRHFeriasRequests/useRHColaboradores acima.
+  // isRHUser (não isRHManager): grupo "Meus processos" inclui o papel "rh"
+  // puro, não só gerente_rh/admin.
+  const { candidatos: recrutamentoCandidatos } = useRHRecrutamento({ enabled: Boolean(currentUser) && isRHUser });
+  const candidatosVistosRef = useRef(null);
+  useEffect(() => {
+    if (!isRHUser) return;
+    if (candidatosVistosRef.current === null) {
+      candidatosVistosRef.current = new Set(recrutamentoCandidatos.map(c => c.id));
+      return;
+    }
+    for (const c of recrutamentoCandidatos) {
+      if (candidatosVistosRef.current.has(c.id)) continue;
+      candidatosVistosRef.current.add(c.id);
+      pushNotification({
+        type: "new_candidato",
+        title: "Novo candidato em processo seletivo",
+        body: `${c.name} se candidatou.`,
+      });
+    }
+  }, [recrutamentoCandidatos, isRHUser, pushNotification]);
 
   const [activeCompany, setActiveCompany] = useState("all");
   const [selectedSignal, setSelectedSignal] = useState(null);

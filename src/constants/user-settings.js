@@ -133,6 +133,10 @@ export const NOTIFICATION_TYPE_TO_PREF = {
   aniversario:            "aniversario_colaborador",
   compliance_aso:         "aso_vencendo",
   compliance_experiencia: "contrato_vencendo",
+  stale_lead:             "stale_lead",
+  cross_sell:             "cross_sell",
+  weekly_digest:          "weekly_digest",
+  new_candidato:          "new_candidato",
 };
 
 export const DENSITY_OPTIONS = [
