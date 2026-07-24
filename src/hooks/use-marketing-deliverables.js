@@ -13,6 +13,8 @@ function rowToDeliverable(r) {
     title:          r.title,
     requestNumber:  r.request_number ?? null,
     requesterName:  r.requester_name ?? null,
+    requesterEmail: r.requester_email ?? null,
+    emailError:     r.email_error ?? null,
     department:     r.department ?? null,
     description:    r.description ?? null,
     priority:       r.priority ?? "media",
@@ -183,6 +185,25 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     );
   }, [canWrite, deliverables]);
 
+  // Avisa o solicitante por e-mail quando a entrega chega em "entregue", via
+  // edge function — nunca lança: falha de e-mail não pode desfazer uma
+  // mudança de etapa já gravada. Mesmo padrão de sendStatusEmail em
+  // use-marketing-requests.js (P1.7 da auditoria Zero Bullshit).
+  const sendCompleteEmail = useCallback(async (id) => {
+    try {
+      const { data, error: err } = await supabase.functions.invoke("send-deliverable-complete-email", {
+        body: { deliverable_id: id },
+      });
+      const emailError = err ? (err.message || String(err)) : (data?.error || null);
+      setDeliverables(prev => prev.map(d => d.id === id ? { ...d, emailError } : d));
+      return { ok: !emailError, error: emailError };
+    } catch (e) {
+      const emailError = e?.message || String(e);
+      setDeliverables(prev => prev.map(d => d.id === id ? { ...d, emailError } : d));
+      return { ok: false, error: emailError };
+    }
+  }, []);
+
   const toggleStar = useCallback(async (id) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const current = deliverables.find(d => d.id === id);
@@ -202,6 +223,7 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     updateDeliverable,
     deleteDeliverable,
     changeStage,
+    sendCompleteEmail,
     toggleStar,
     refetch: fetchAll,
   };

@@ -4,7 +4,7 @@ import {
   FileText, Activity, Paperclip, CheckSquare,
   Sparkles,
   Upload, File, FileImage, Download, Plus,
-  Check, Loader2, AlertCircle, RotateCcw, Copy,
+  Check, Loader2, AlertCircle, RotateCcw, Copy, RefreshCw,
 } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
@@ -469,10 +469,11 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
 }
 
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, users = [], canWrite, userId, currentUser, notifyMentions }) {
+export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, users = [], canWrite, userId, currentUser, notifyMentions }) {
   const [sideTab,      setSideTab]     = useState("form");
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,    setMoveError]   = useState(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Campos customizados configurados via "Editar campos desta etapa"
   // (rh_pipeline_stage_fields, domain="marketing_deliverables") —
@@ -657,6 +658,16 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
       // automatizadas/headless sem handler de diálogo. Banner inline não
       // bloqueia nada.
       setMoveError(`Não foi possível mover "${item.title}": ${err?.message || "erro desconhecido"}.`);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (!onResendCompleteEmail) return;
+    setSendingEmail(true);
+    try {
+      await onResendCompleteEmail(item.id);
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -856,6 +867,22 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
             <AlertCircle size={12} className="shrink-0 mt-0.5" />
             {moveError}
           </div>
+        )}
+        {item.emailError && (
+          <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF3C7", color: "#92400E" }}>
+            <AlertCircle size={12} className="shrink-0 mt-0.5" />
+            Falha ao avisar o solicitante por e-mail: {item.emailError}
+          </div>
+        )}
+        {canWrite && item.emailError && onResendCompleteEmail && (
+          <button
+            onClick={handleResendEmail}
+            disabled={sendingEmail}
+            className="flex items-center gap-1.5 px-3 py-1.5 mb-2 rounded-lg text-xs font-semibold"
+            style={{ background: "#FEF3C7", color: "#D97706" }}
+          >
+            <RefreshCw size={13} /> {sendingEmail ? "Enviando…" : "Tentar enviar e-mail de novo"}
+          </button>
         )}
         {canWrite && (
           <StageNavigator

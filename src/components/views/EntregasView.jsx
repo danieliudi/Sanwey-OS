@@ -736,7 +736,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const {
     deliverables, loading, canWrite,
     createDeliverable, updateDeliverable, deleteDeliverable,
-    changeStage, toggleStar,
+    changeStage, sendCompleteEmail, toggleStar,
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
@@ -843,8 +843,13 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     }
     setStageError(null);
     await changeStage(itemId, toStage);
+    // Aviso de entrega concluída (P1.7 da auditoria) — dispara depois da
+    // etapa já gravada, sem bloquear a mudança de etapa na falha do e-mail.
+    if (toStage === "entregue" && item.requesterEmail) {
+      sendCompleteEmail(itemId);
+    }
     return true;
-  }, [deliverables, stageFields, changeStage]);
+  }, [deliverables, stageFields, changeStage, sendCompleteEmail]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
   const getItemCompleteness = useCallback((item) => {
@@ -1324,6 +1329,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         onUpdate={handleUpdate}
         onMoveToStage={attemptStageChange}
         onDelete={handleDelete}
+        onResendCompleteEmail={sendCompleteEmail}
         users={Array.from(usersById.values())}
         canWrite={canWrite}
         userId={user?.id}
