@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Calendar, Check, Plus, X, Clock, CalendarCheck, AlertTriangle, AlertCircle, Pencil, Settings2,
+  Calendar, Check, Plus, X, Clock, CalendarCheck, AlertTriangle, AlertCircle, Settings2,
   LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { RH_LEAVE_TYPES } from "../../constants/rh-config";
@@ -9,8 +9,8 @@ import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
-import { RHStageListManager } from "../shared/stage-editor/StageListManager";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
+import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
@@ -95,6 +95,87 @@ function daysInStage(dateStr) {
 
 function findStage(stages, stageKey) {
   return stages.find((s) => s.stageKey === stageKey) || stages[0] || { name: "—", color: "#8A8680", stageKey };
+}
+
+// ── Nova etapa (local ao arquivo — mesmo molde de RHOnboardingView.jsx/
+// RHFeedbackView.jsx: "Editar etapas" saiu do header, criar etapa agora é
+// isso aqui, e renomear/recolorir/excluir uma já existente vive dentro de
+// "Editar campos desta etapa") ─────────────────────────────────────────────
+
+const NEW_STAGE_DEFAULTS_COLOR = "#64748B";
+
+function slugifyStageKeyLocal(label) {
+  return (label || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50) || `etapa_${Date.now().toString(36)}`;
+}
+
+function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
+  const [name, setName]   = useState("");
+  const [color, setColor] = useState(NEW_STAGE_DEFAULTS_COLOR);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      let key = slugifyStageKeyLocal(name);
+      let suffix = 1;
+      while (existingKeys.includes(key)) key = `${slugifyStageKeyLocal(name)}_${suffix++}`;
+      await onAdd({ stageKey: key, name: name.trim(), color, orderIdx: nextOrderIdx, terminal: false, won: false, lost: false });
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Erro ao criar etapa.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "var(--shadow-pop)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova etapa</div>
+          <button type="button" onClick={onClose}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" }}>
+            Nome da etapa
+          </label>
+          <div className="flex items-center gap-2.5" style={{ marginBottom: 18 }}>
+            <StageColorPicker value={color} onChange={setColor} size={38} />
+            <input autoFocus type="text" placeholder="Ex.: Em análise"
+              value={name} onChange={e => setName(e.target.value)}
+              className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+          </div>
+          {error && (
+            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+          )}
+          <button type="submit" disabled={saving || !name.trim()}
+            className="w-full font-semibold py-2.5 rounded-xl text-sm"
+            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            {saving ? "Criando…" : "Criar etapa"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 // ── Kanban/Tabela/Calendário — mesmo padrão de ComprasMarketingView/CRMView ──
@@ -405,6 +486,7 @@ function FeriasKanbanColumn({
   stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteRequest,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, onAprovar, onRecusar, busyId,
+  draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
 }) {
   return (
     <div
@@ -414,23 +496,43 @@ function FeriasKanbanColumn({
       className="flex flex-col rounded-lg transition-all duration-150"
       style={{ width: 272, minWidth: 272, height: "100%", overflow: "hidden", border: "1px solid var(--border)", background: isDragOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}40` : "none" }}
     >
-      <KanbanColumnHeader
-        color={stage.color}
-        name={stage.name}
-        count={reqList.length}
-        bandHeight={4}
-        letterSpacing="normal"
-        nameColor={stage.color}
-        nameFontSize={14}
-        nameFontWeight={700}
-        uppercase={false}
-        countFontSize={12}
-        actions={canWrite && (
-          <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
-            <Settings2 size={13} />
-          </button>
-        )}
-      />
+      {/* Arrastável pra reordenar etapas — canal de drag separado do drop de
+          card acima (onColumnDrop/onColumnDragOver/onColumnDragLeave, props
+          já existentes desta coluna, servem exclusivamente o card).
+          draggedColumnKey/onColumnHeaderDragStart/onColumnHeaderDragEnd/
+          onColumnHeaderDrop vêm de RHFeriasView, que usa
+          handleStageReorderDrop/handleStageReorderDragEnd — nomes diferentes
+          de handleColumnDrop/onColumnDragOver/onColumnDragLeave porque essas
+          já existem no arquivo e servem o drop de card (mesmo achado de
+          colisão de nomes já resolvido em RHOnboardingView/RHFeedbackView).
+          stopPropagation nos handlers evita que o drag de reorder vaze pro
+          <div> pai que escuta o drop de card. */}
+      <div
+        draggable={canWrite}
+        onDragStart={() => canWrite && onColumnHeaderDragStart(stage.stageKey)}
+        onDragEnd={onColumnHeaderDragEnd}
+        onDragOver={e => { if (draggedColumnKey) { e.preventDefault(); e.stopPropagation(); } }}
+        onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.stageKey) { e.stopPropagation(); onColumnHeaderDrop(stage.stageKey); } }}
+        style={{ cursor: canWrite ? "grab" : "default" }}
+      >
+        <KanbanColumnHeader
+          color={stage.color}
+          name={stage.name}
+          count={reqList.length}
+          bandHeight={4}
+          letterSpacing="normal"
+          nameColor={stage.color}
+          nameFontSize={14}
+          nameFontWeight={700}
+          uppercase={false}
+          countFontSize={12}
+          actions={canWrite && (
+            <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
+              <Settings2 size={13} />
+            </button>
+          )}
+        />
+      </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {reqList.length === 0 ? (
           <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Nada aqui</div>
@@ -822,7 +924,7 @@ function FeriasCalendarView({ requests, stages, onPillClick }) {
 
 export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions }) {
   const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, deleteRequest, addActivity, updateActivity } = useRHFeriasRequests({});
-  const { stages, loading: loadingStages } = useRHPipelineStages("ferias");
+  const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("ferias");
   const feriasStageFields = useRHStageFields("ferias");
 
   const [viewMode, setViewMode]           = useState("kanban"); // "kanban" | "table" | "calendar"
@@ -832,8 +934,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const [busyId, setBusyId]               = useState(null);
   const [recusaModal, setRecusaModal]     = useState(null); // { req, resolve }
   const [drawerReqId, setDrawerReqId]     = useState(null);
-  const [stageEditorOpen, setStageEditorOpen] = useState(false);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
+  const [addingStage, setAddingStage]     = useState(false);
+  const [draggedColumnKey, setDraggedColumnKey] = useState(null);
   const [draggedId, setDraggedId]         = useState(null);
   const [dragOverStageKey, setDragOverStageKey] = useState(null);
   // deps precisa incluir os `loading` — o board (e o ref medido) só monta
@@ -960,6 +1063,29 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
     setDragOverStageKey(null);
   }, [draggedId, requests, handleAprovar, handleRecusar, handleMoveToStageGeneric]);
 
+  // Canal de drag separado do drop de card acima (draggedColumnKey vs
+  // draggedId) — reordena etapas arrastando o cabeçalho da coluna. Nomeado
+  // handleStageReorder* (não handleColumnDragEnd/handleColumnDrop, o molde
+  // do rollout) porque handleColumnDrop/onColumnDragOver/onColumnDragLeave
+  // já existem acima e servem exclusivamente o drop de card (colisão de
+  // nomes já resolvida do mesmo jeito em RHOnboardingView/RHFeedbackView).
+  const handleStageReorderDragEnd = useCallback(() => setDraggedColumnKey(null), []);
+  const handleStageReorderDrop = useCallback((targetStageKey) => {
+    const draggedKey = draggedColumnKey;
+    setDraggedColumnKey(null);
+    if (!draggedKey || draggedKey === targetStageKey) return;
+    const order = stages.map(s => s.stageKey);
+    const fromIdx = order.indexOf(draggedKey);
+    const toIdx   = order.indexOf(targetStageKey);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const nextOrder = [...order];
+    nextOrder.splice(fromIdx, 1);
+    nextOrder.splice(toIdx, 0, draggedKey);
+    const dbIdByKey = new Map(stages.map(s => [s.stageKey, s.id]));
+    const orderedIds = nextOrder.map(k => dbIdByKey.get(k)).filter(Boolean);
+    if (orderedIds.length === nextOrder.length) reorderStages(orderedIds);
+  }, [draggedColumnKey, stages, reorderStages]);
+
   const handleMoveToStage = useCallback((id, stageKey) => {
     const req = requests.find(r => r.id === id);
     if (!req) return;
@@ -1019,9 +1145,6 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
               <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
               <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
             </div>
-            {canWrite && (
-              <Button variant="secondary" size="sm" icon={Pencil} onClick={() => setStageEditorOpen(true)}>Editar etapas</Button>
-            )}
             <Button size="sm" icon={Plus} onClick={() => setShowSolicitar(true)}>Solicitar</Button>
           </div>
         </div>
@@ -1097,6 +1220,16 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
             )}
             emptyLabel="Nada aqui"
           />
+          {canWrite && (
+            <button
+              onClick={() => setAddingStage(true)}
+              className="lg:hidden w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
+              style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+            >
+              <Plus size={13} />
+              Nova etapa
+            </button>
+          )}
           <div className="hidden lg:block">
             <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
               <div className="flex gap-2 h-full" style={{ minWidth: `${stages.length * 280}px` }}>
@@ -1122,8 +1255,25 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                     onAprovar={handleAprovar}
                     onRecusar={handleRecusar}
                     busyId={busyId}
+                    draggedColumnKey={draggedColumnKey}
+                    onColumnHeaderDragStart={setDraggedColumnKey}
+                    onColumnHeaderDragEnd={handleStageReorderDragEnd}
+                    onColumnHeaderDrop={handleStageReorderDrop}
                   />
                 ))}
+                {canWrite && (
+                  <button
+                    onClick={() => setAddingStage(true)}
+                    title="Nova etapa"
+                    className="flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed text-xs font-semibold shrink-0"
+                    style={{ width: 140, height: 64, borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-strong)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                  >
+                    <Plus size={16} />
+                    Nova etapa
+                  </button>
+                )}
               </div>
             </KanbanBoardScrollArea>
           </div>
@@ -1165,24 +1315,25 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       )}
 
       {canWrite && (
-        <RHStageListManager
-          open={stageEditorOpen}
-          onClose={() => setStageEditorOpen(false)}
-          domain="ferias"
-          domainLabel="Férias"
-          records={requests}
-          stageField="status"
-          nonDeletableStageKeys={["aprovado", "recusado"]}
-        />
-      )}
-
-      {canWrite && (
         <RHStageFieldsPanel
           open={!!fieldEditorStage}
           onClose={() => setFieldEditorStage(null)}
           domain="ferias"
           stageKey={fieldEditorStage?.stageKey}
           stageName={fieldEditorStage?.name}
+          records={requests}
+          stageField="status"
+          protectedStageKeys={["aprovado", "recusado"]}
+          protectedLabel="Férias"
+        />
+      )}
+
+      {addingStage && (
+        <NewStageModal
+          existingKeys={stages.map(s => s.stageKey)}
+          nextOrderIdx={stages.length}
+          onAdd={addStage}
+          onClose={() => setAddingStage(false)}
         />
       )}
     </div>
