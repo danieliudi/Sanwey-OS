@@ -7,6 +7,7 @@ import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { MarketingTaskDetailDrawer } from "../campaign/MarketingTaskDetailDrawer";
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
+import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
@@ -26,6 +27,9 @@ import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
+import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 
 function isOverdueTask(t) {
   return Boolean(t.deadline) && new Date(t.deadline) < new Date();
@@ -62,11 +66,19 @@ function TaskCreateModal({ stageId, stages, currentUser, users, campaigns, onAdd
 
   const visibleFields = resolveVisibleFields(stageFields.getFields(stageId), customValues);
 
-  useEffect(() => {
-    const h = e => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
+  // Guarda contra descarte acidental: fechar por clique-fora/ESC com o
+  // formulário preenchido pede confirmação — mesmo padrão do CreateModal de
+  // Compras (ComprasMarketingView.jsx).
+  const initialSnapshotRef = useRef(null);
+  const stateRef = useRef(null);
+  stateRef.current = JSON.stringify({ title, description, priority, deadline, companyIds, campaignId, assigneeIds, customValues });
+  if (initialSnapshotRef.current === null) initialSnapshotRef.current = stateRef.current;
+  const guardedClose = useCallback(() => {
+    if (stateRef.current !== initialSnapshotRef.current
+        && !window.confirm("Descartar os dados preenchidos? As informações não salvas serão perdidas.")) return;
+    onClose();
   }, [onClose]);
+  useEscToClose(guardedClose);
 
   const toggleCompany = (id) =>
     setCompanyIds(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
@@ -118,7 +130,7 @@ function TaskCreateModal({ stageId, stages, currentUser, users, campaigns, onAdd
   return (
     <div
       style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
+      onClick={guardedClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", maxHeight: "90vh", overflowY: "auto" }}
@@ -134,7 +146,7 @@ function TaskCreateModal({ stageId, stages, currentUser, users, campaigns, onAdd
               </div>
             )}
           </div>
-          <button type="button" onClick={onClose}
+          <button type="button" onClick={guardedClose}
             style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 6, borderRadius: 8, display: "flex" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
@@ -499,8 +511,9 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
       </AppToast>
     )}
     <div>
+      <KanbanBoardHeader className="mb-4">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
             <ListTodo size={22} style={{ color: "var(--text)" }} />
@@ -527,12 +540,8 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         </div>
       </div>
 
-      {canWrite && (
-        <KanbanFab label="Nova tarefa" onClick={() => setQuickAddStage(kanbanStages[0]?.id)} />
-      )}
-
       {/* Filter toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <button
           onClick={() => setShowFilters(v => !v)}
           style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, border: `1px solid ${showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--border)"}`, background: showFilters || activeFilterCount > 0 ? "var(--surface-alt)" : "var(--surface)", color: showFilters || activeFilterCount > 0 ? "var(--accent)" : "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
@@ -605,6 +614,11 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           </>
         )}
       </div>
+      </KanbanBoardHeader>
+
+      {canWrite && (
+        <KanbanFab label="Nova tarefa" flush onClick={() => setQuickAddStage(kanbanStages[0]?.id)} />
+      )}
 
       {(loading || loadingStages) && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando tarefas…</div>}
 
@@ -695,11 +709,9 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         </div>
 
         {/* Desktop kanban: horizontal scroll */}
-        <div className="hidden lg:block relative">
-          <div className="absolute right-0 top-0 bottom-4 w-16 pointer-events-none z-10"
-            style={{ background: "linear-gradient(to left, var(--bg) 0%, transparent 100%)" }} />
-          <div ref={boardRef} className="overflow-x-auto pb-4" style={{ scrollbarWidth: "thin", height: boardHeight }}>
-            <div className="flex gap-3 h-full" style={{ minWidth: `${kanbanStages.length * 284}px` }}>
+        <div className="hidden lg:block">
+          <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
+            <div className="flex gap-2 h-full" style={{ minWidth: `${kanbanStages.length * 280}px` }}>
               {kanbanStages.map(stage => {
                 const stageItems = filtered.filter(t => t.stage === stage.id);
                 const isOver     = dragOverStage === stage.id;
@@ -709,8 +721,8 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                     onDragOver={e => handleDragOver(e, stage.id)}
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
-                    className="flex flex-col rounded-xl border transition-all duration-150 overflow-hidden"
-                    style={{ width: 272, minWidth: 272, background: "var(--surface-alt)", borderColor: isOver ? stage.color + "70" : "var(--border)", boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "var(--shadow-card)", height: "100%", flexShrink: 0 }}>
+                    className="flex flex-col rounded-lg transition-all duration-150"
+                    style={{ width: 272, minWidth: 272, overflow: "hidden", border: "1px solid var(--border)", background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
                     {/* Arrastável pra reordenar etapas — canal de drag
                         separado do card (draggedColumnKey vs draggedItem),
                         stopPropagation nos handlers pra não vazar pro drag
@@ -723,38 +735,42 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                       onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.id) { e.stopPropagation(); handleColumnDrop(stage.id); } }}
                       style={{ cursor: canWrite ? "grab" : "default" }}
                     >
-                      <div style={{ height: 8, background: stage.color, flexShrink: 0 }} />
-                      <div className="px-3.5 pt-3 pb-2.5 flex items-center justify-between gap-2"
-                        style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold flex items-center gap-1.5"
-                            style={{ color: "var(--text)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                            <span title={stage.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: "0 1 auto" }}>{stage.name}</span>
-                            <span style={{ color: "var(--text-dim)", fontWeight: 500, flexShrink: 0 }}>({stageItems.length})</span>
-                          </div>
-                          {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
-                        </div>
-                        {canWrite && (
-                          <button onClick={() => setFieldEditorStage(stage)}
-                            className="flex items-center justify-center rounded-md transition-colors"
-                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                            title="Editar campos desta etapa">
-                            <Settings2 size={13} />
-                          </button>
-                        )}
-                        {canWrite && !stage.terminal && (
-                          <button onClick={() => setQuickAddStage(stage.id)}
-                            className="flex items-center justify-center rounded-md transition-colors"
-                            style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                            title="Adicionar tarefa">
-                            <Plus size={14} />
-                          </button>
-                        )}
-                      </div>
+                      <KanbanColumnHeader
+                        color={stage.color}
+                        name={stage.name}
+                        count={stageItems.length}
+                        bandHeight={4}
+                        letterSpacing="normal"
+                        nameColor={stage.color}
+                        nameFontSize={14}
+                        nameFontWeight={700}
+                        uppercase={false}
+                        countFontSize={12}
+                        actions={<>
+                          {canWrite && (
+                            <button onClick={() => setFieldEditorStage(stage)}
+                              className="flex items-center justify-center rounded-md transition-colors"
+                              style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                              title="Editar campos desta etapa">
+                              <Settings2 size={13} />
+                            </button>
+                          )}
+                          {canWrite && !stage.terminal && (
+                            <button onClick={() => setQuickAddStage(stage.id)}
+                              className="flex items-center justify-center rounded-md transition-colors"
+                              style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "#F1F3F5"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                              title="Adicionar tarefa">
+                              <Plus size={14} />
+                            </button>
+                          )}
+                        </>}
+                      >
+                        {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
+                      </KanbanColumnHeader>
                     </div>
 
                     <div className="px-2 pt-2 pb-1 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -814,7 +830,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                 </button>
               )}
             </div>
-          </div>
+          </KanbanBoardScrollArea>
         </div>
       </>)}
 
