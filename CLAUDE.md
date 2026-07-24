@@ -34,6 +34,7 @@ Confirmado via grep de uso real no código (não é aspiracional):
 | Formatação de moeda (`formatK`, `formatBRL`) | `src/utils/currency.js` | `formatK`/`formatBRL` já incluem o "R$ " — nunca concatene "R$ " na frente do resultado (foi um bug real, corrigido) |
 | Formatação/cálculo de data (`formatDateBR`, `daysSince`, `closeDateUrgencyStyle`) | `src/utils/date.js` | idem |
 | Debounce de refetch em `postgres_changes` | `src/utils/debounce.js` | todo hook que assina Realtime |
+| Editor de campos por etapa (CRM e RH, um único componente) | `src/components/shared/stage-editor/StageFieldsPanel.jsx` (+ `CRMStageFieldsPanel.jsx`/`RHStageFieldsPanel.jsx` e demais arquivos da pasta) | Pipeline e todos os boards de RH — `StageFieldEditorModal.jsx`/`RHStageFieldEditorModal.jsx` (duas versões separadas, citadas em versões antigas deste arquivo) já foram deletados |
 
 **Tokens de design (CSS custom properties, `src/index.css`)** — 74+ arquivos já
 usam `var(--accent)`; nunca hardcode hex novo pra estado que já tem token:
@@ -57,7 +58,6 @@ lado a lado — uma pra CRM/Pipeline, outra pra RH. Não é mentira dizer que
 
 | Conceito | Versão CRM | Versão RH |
 |---|---|---|
-| Editor de campos por etapa | `src/components/pipeline/StageFieldEditorModal.jsx` | `src/components/rh-pipeline/RHStageFieldEditorModal.jsx` |
 | Input de campo customizado | `src/components/lead/StageFieldInput.jsx` | `src/components/rh-pipeline/RHStageFieldInput.jsx` (switch de tipos idêntico, copiado) |
 | Card do Kanban | `src/components/lead/LeadKanbanCard.jsx` (só Pipeline) | `src/components/rh-pipeline/RHKanbanCard.jsx` (5 boards de RH) — Marketing/Entregas/Compras têm card próprio, inline, nenhum dos dois |
 | Acordeão mobile do board | não existe pro Pipeline | `RHMobileKanbanAccordion.jsx` (só RH) |
@@ -68,6 +68,14 @@ o que você está construindo se parece mais com a família CRM ou a família RH
 e siga essa — nunca crie uma terceira variante do zero. Se perceber que está
 prestes a copiar o mesmo trecho pela 3ª vez (ex.: um módulo novo que não é nem
 CRM nem RH), é o sinal de extrair pra `shared/` — ver regra 4.
+
+**Exceção deliberada, não migrar sem perguntar antes**: Compras
+(`ComprasMarketingView.jsx`) mantém seu próprio modelo hardcoded de etapas
+(`PURCHASE_STAGES`) em vez do `rh_pipeline_stages` configurável usado no resto
+da plataforma (regra 5). Isso foi decisão explícita, não descuido — as
+transições de etapa de Compras são fortemente acopladas a RPCs de aprovação, e
+migrar pro modelo compartilhado significaria reconstruir esse motor sem ganho
+funcional. Não tente "arrumar" isso proativamente.
 
 ## 3. Processo obrigatório pra qualquer mudança de UI/UX genuinamente nova
 
