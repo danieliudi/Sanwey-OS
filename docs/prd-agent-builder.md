@@ -13,7 +13,71 @@ Piloto: RH
 
 ## 3. Ferramenta de criação de agente
 
-[A escrever]
+Premissa que guia toda esta seção: quem vai criar um agente é um gerente de RH, não
+alguém de TI. A régua de qualidade é "impacto positivo já na primeira tentativa" — se
+for confuso ou parecer "coisa de programador", a pessoa abandona e não volta.
+
+### Reaproveita a tela, mas com um modo guiado novo
+
+Continua sendo `AutomationsView` — mesma tabela, mesmo mecanismo de salvar, mesma lista.
+O que muda: quando a ação escolhida é "Sugerir com IA", o modal de criação troca o
+formulário técnico atual (campo cru de trigger, operadores tipo `eq`/`gt`, grupos de
+condição) por um assistente guiado, passo a passo, em linguagem direta. Automações
+comuns (`move_stage`, `set_field` etc.) continuam exatamente como estão hoje — só o
+caminho de criar um agente de IA ganha essa camada nova por cima do mesmo motor.
+
+### Entrada direta pela tela onde o problema mora
+
+Além do link central em "Automações", `RHFornecedoresView` ganha um atalho ("Criar
+agente de IA para este cadastro") que abre o assistente já com a fonte de dados
+pré-selecionada. Ninguém deveria precisar sair de Fornecedores, achar o menu
+"Automações" e entender o que é "módulo" pra chegar no mesmo lugar.
+
+### O assistente, passo a passo
+
+1. **O que observar** — no piloto, uma opção só, já selecionada: "Contratos de
+   fornecedores (RH)". Nada de dropdown fingindo suportar módulos que ainda não existem.
+2. **Quando agir** — pergunta única, em português: "Avisar quantos dias antes do
+   contrato vencer?" (número). Por trás, isso monta o `trigger` do tipo
+   `date_approaching` sobre `vigenciaFim` — o usuário nunca vê esses nomes técnicos.
+   Um link discreto "Adicionar filtro avançado" (colapsado por padrão) expõe
+   `condition_groups` pra quem quiser restringir por tipo de fornecedor ou status —
+   fica fora do caminho de quem só quer o caso simples.
+3. **O que a IA deve preparar** — guiado, não texto livre solto:
+   - Tipo de rascunho (dropdown com opções fixas no piloto: "E-mail pro fornecedor" /
+     "Aviso interno pro time")
+   - Tom (formal / direto / cordial)
+   - Algo específico que a IA deve sempre mencionar (campo curto, opcional)
+   A plataforma monta o prompt final combinando um template fixo por tipo de rascunho +
+   tom + dados do registro (nome do fornecedor, dias até vencer, valor) + o texto
+   opcional do usuário. Ninguém escreve prompt do zero — reduz o problema da "folha em
+   branco" e mantém o resultado consistente entre agentes diferentes.
+4. **Quem aprova** — não é uma pergunta. Reaproveita a regra que `agent_actions` já
+   usa hoje (managers veem tudo, vendedor/colaborador só o que toca ele) — um passo a
+   menos no assistente.
+5. **Testar antes de ativar** — roda o agente contra um registro real (o contrato mais
+   próximo de vencer, ou um exemplo se não houver nenhum) e mostra o rascunho que seria
+   gerado, sem gravar em `agent_actions`. Só depois de ver e aceitar o resultado o botão
+   "Ativar agente" fica disponível. Se o preview vier ruim, volta pro passo 3 e ajusta
+   tom/instrução — não precisa recomeçar do zero.
+6. **Nome** — sugerido automaticamente a partir das escolhas anteriores (ex: "Aviso de
+   renovação — Fornecedores RH"), editável.
+
+### Se não tem chave de IA configurada
+
+O assistente deixa terminar e ativar mesmo assim — nasce com `paused_reason`
+preenchido e um aviso em `--warning`/`--warning-bg` explicando exatamente o que falta
+("Configure sua chave de IA em Configurações → Integrações de IA pra este agente
+começar a rodar"), com atalho direto pra essa tela. Não bloqueia a criação, mas também
+não finge que está tudo certo.
+
+### Depois de criado: "Meus agentes de IA"
+
+Dentro de `AutomationsView`, uma seção separada da lista de automações comuns —
+cartão por agente, mostrando nome, status (ativo / pausado + motivo), quando rodou pela
+última vez, e um link direto pras sugestões que ele já gerou (`AgentActionsView`
+filtrado por `automation_id`). Editar reabre o mesmo assistente guiado com os valores
+já preenchidos; pausar/reativar é um toggle simples.
 
 ## 4. Arquitetura técnica
 
