@@ -9,7 +9,34 @@ Piloto: RH
 
 ## 2. Escopo do piloto — RH primeiro
 
-[A escrever]
+**Quem participa**: sem lista fechada de convidados — qualquer gerente/admin de RH já
+pode criar e testar um agente assim que a feature for ao ar. O que contém o risco nessa
+fase não é restringir quem usa, é restringir o quê dá pra usar.
+
+**O que entra:**
+- Uma fonte de dados só: Contratos de fornecedores (RH) — `rh_fornecedor_contratos`.
+- Só o caminho agendado (sem gatilho por evento neste piloto — Fornecedores não é
+  Kanban, ver seção 4; gatilho por evento é trabalho de quando o rollout alcançar um
+  board de RH que seja Kanban).
+- Assistente guiado dentro de `AutomationsView` + atalho contextual em
+  `RHFornecedoresView`.
+- Dois tipos de rascunho: "e-mail pro fornecedor" e "aviso interno pro time".
+- Preview obrigatório antes de ativar; pausa automática por falha de chave; limite de
+  50 execuções/dia por agente.
+- RLS: só manager/admin de RH cria agente; qualquer manager de RH vê e aprova as
+  sugestões geradas (mesma regra que `agent_actions` já usa hoje).
+
+**Exemplo ponta a ponta** (o caso que motivou este PRD): o contrato do "wellhub" vence
+em 23/07. Um gerente de RH cria um agente "avisar 15 dias antes do vencimento", tipo de
+rascunho "e-mail pro fornecedor", tom cordial. Todo dia, a `agent-runner` verifica os
+contratos ativos; ao entrar na janela dos 15 dias, gera o rascunho e grava uma entrada
+`pending` em `agent_actions`, visível pra qualquer manager de RH em `AgentActionsView`
+pra aprovar, editar ou rejeitar antes de qualquer coisa sair da plataforma.
+
+**Prazo**: sem data de corte fixa — o piloto fica no ar até bater os critérios de
+sucesso da seção 6. O raio de explosão já nasce pequeno (uma fonte de dados, limite
+diário, aprovação humana obrigatória em toda sugestão), então não há urgência em
+encerrar cedo por segurança.
 
 ## 3. Ferramenta de criação de agente
 
