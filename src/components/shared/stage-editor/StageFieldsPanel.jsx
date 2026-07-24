@@ -420,6 +420,8 @@ export function StageFieldsPanel({
   onSaveStage = null,  // async (patch) — habilita "Opções Avançadas"
   onDeleteStage = null, // async () — habilita "Excluir esta etapa" dentro de Opções Avançadas
   showProbability = false,
+  isProtectedStage = false,
+  protectedLabel = "",
 }) {
   const [addingType, setAddingType] = useState(null);
   const [opError, setOpError] = useState(null);
@@ -734,6 +736,8 @@ export function StageFieldsPanel({
           showProbability={showProbability}
           onSave={onSaveStage}
           onDelete={onDeleteStage ? async () => { await onDeleteStage(); onClose(); } : undefined}
+          isProtectedStage={isProtectedStage}
+          protectedLabel={protectedLabel}
         />
       )}
     </>

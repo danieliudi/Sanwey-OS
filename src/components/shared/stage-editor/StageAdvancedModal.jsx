@@ -31,6 +31,8 @@ export function StageAdvancedModal({
   onDelete,
   showProbability = true,
   accent = "var(--accent)",
+  isProtectedStage = false,
+  protectedLabel = "",
 }) {
   const [name, setName]               = useState("");
   const [color, setColor]             = useState("#64748B");
@@ -250,19 +252,37 @@ export function StageAdvancedModal({
           {onDelete && (
             <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
               <div style={SECTION_TITLE}>Excluir etapa</div>
-              <div style={SECTION_HELP}>
-                Remove esta fase do Kanban. Só é possível excluir etapas sem registros ativos.
-              </div>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting || saving}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
-                style={{ borderColor: "#FECACA", color: "#B91C1C", background: "#FEF2F2" }}
-              >
-                <Trash2 size={12} />
-                {deleting ? "Excluindo…" : "Excluir esta etapa"}
-              </button>
+              {isProtectedStage ? (
+                <>
+                  <div style={SECTION_HELP}>
+                    Esta é uma etapa estrutural{protectedLabel ? ` de ${protectedLabel}` : ""} e não pode ser removida.
+                  </div>
+                  <span
+                    title={`Etapa estrutural${protectedLabel ? ` de ${protectedLabel}` : ""} — não pode ser removida`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border"
+                    style={{ borderColor: "var(--border)", color: "var(--border-strong)", background: "var(--surface-alt)", cursor: "not-allowed" }}
+                  >
+                    <Trash2 size={12} />
+                    Excluir esta etapa
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div style={SECTION_HELP}>
+                    Remove esta fase do Kanban. Só é possível excluir etapas sem registros ativos.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting || saving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
+                    style={{ borderColor: "#FECACA", color: "#B91C1C", background: "#FEF2F2" }}
+                  >
+                    <Trash2 size={12} />
+                    {deleting ? "Excluindo…" : "Excluir esta etapa"}
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

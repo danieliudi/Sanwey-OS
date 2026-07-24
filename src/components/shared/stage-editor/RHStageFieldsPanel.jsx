@@ -13,7 +13,10 @@ import { StageFieldsPanel } from "./StageFieldsPanel";
 // na etapa). Sem eles, o comportamento é o de sempre (sem exclusão aqui) —
 // rollout deliberadamente por board (piloto: Entregas), não automático nos
 // outros chamadores deste painel.
-export function RHStageFieldsPanel({ open, onClose, domain, stageKey, stageName, records, stageField }) {
+// `protectedStageKeys`/`protectedLabel` bloqueiam exclusão de etapas
+// estruturais (ex.: "Removido" do Onboarding), independente de contagem —
+// mesma regra do StageListManager.
+export function RHStageFieldsPanel({ open, onClose, domain, stageKey, stageName, records, stageField, protectedStageKeys = [], protectedLabel = "" }) {
   const stageFields = useRHStageFields(domain);
   const { stages, updateStage, deleteStage } = useRHPipelineStages(domain);
 
@@ -22,8 +25,12 @@ export function RHStageFieldsPanel({ open, onClose, domain, stageKey, stageName,
   const stageMeta = stages.find(s => s.stageKey === stageKey)
     || { stageKey, name: stageName, color: "#64748B" };
   const fields = stageFields.getFields(stageKey);
+  const isProtected = protectedStageKeys.includes(stageKey);
 
   const handleDeleteStage = async () => {
+    if (isProtected) {
+      throw new Error(`"${stageMeta.name}" é uma etapa estrutural${protectedLabel ? ` de ${protectedLabel}` : ""} e não pode ser removida.`);
+    }
     const count = (records || []).filter(r => r?.[stageField] === stageKey).length;
     if (count > 0) {
       throw new Error(`Não dá pra excluir "${stageMeta.name}": ${count} registro${count !== 1 ? "s" : ""} ainda está${count !== 1 ? "ão" : ""} nessa etapa. Mova esses registros antes.`);
@@ -45,6 +52,8 @@ export function RHStageFieldsPanel({ open, onClose, domain, stageKey, stageName,
       onDeleteField={(id) => stageFields.deleteField(id)}
       onReorderFields={(ids) => stageFields.reorderFields(stageKey, ids)}
       onRefetch={() => stageFields.refetch()}
+      isProtectedStage={isProtected}
+      protectedLabel={protectedLabel}
     />
   );
 }
