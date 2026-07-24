@@ -249,7 +249,53 @@ escrita nessa ação específica. Colaborador comum continua vendo e agindo sobr
 
 ## 5. Fora de escopo & riscos
 
-[A escrever]
+### Fora de escopo
+
+- **Agentes multi-etapa.** O modelo é sempre 1 condição → 1 chamada de IA → 1
+  aprovação. Encadear múltiplas chamadas ou múltiplas ferramentas (o que o n8n já faz
+  pros 5 agentes atuais) não faz parte deste mecanismo.
+- **Execução automática sem aprovação humana.** Nenhum agente criado por este builder
+  manda e-mail, muda dado ou executa qualquer coisa sozinho — toda sugestão sempre para
+  em `agent_actions` como `pending`.
+- **Templates prontos pra copiar entre usuários.** Cada agente nasce do zero, criado por
+  quem precisa dele. Uma biblioteca de modelos compartilháveis é ideia natural de
+  próxima iteração, não deste PRD.
+- **Migração dos 5 agentes do `agent-gateway`/n8n** (SDR-Q, SCOUT, CADÊNCIA, SENTINELA,
+  CROSS). Ficam exatamente como estão (seção 4).
+- **Conector genérico pra "qualquer tabela".** O registro módulo → tabela continua
+  sendo uma entrada explícita por vez, nunca um sistema que aponta pra uma tabela
+  arbitrária escolhida na hora.
+- **Chave de IA paga pela empresa.** Hoje é sempre a chave pessoal de quem criou o
+  agente. Centralizar isso numa chave/custo da empresa é possibilidade futura (ver
+  risco abaixo), não decisão deste PRD.
+- **Outros módulos além de RH** (Compras, Entregas, um segundo tipo de agente em
+  CRM/Marketing) — isso é rollout, seção 6.
+- **Dashboard de ROI/métricas dos agentes.** Fora de escopo aqui; os critérios de
+  sucesso da seção 6 são deliberadamente simples, não um painel novo.
+
+### Riscos
+
+- **Custo pessoal, benefício coletivo.** A chave de quem criou o agente é debitada por
+  um uso que beneficia o time inteiro — e se essa pessoa sair da empresa ou desativar a
+  chave, o agente que outros dependem para de rodar (vira `paused_reason`, não
+  silencioso, mas ainda assim é uma dependência de pessoa física). Não tem mitigação
+  fechada neste PRD — é para acompanhar durante o piloto e decidir se compensa migrar
+  pra uma chave paga pela empresa depois.
+- **Fadiga de aprovação.** Se um agente gerar sugestões repetitivas ou de baixa
+  qualidade, managers tendem a aprovar sem ler de verdade — esvazia o próprio sentido do
+  human-in-the-loop. O preview obrigatório na criação (seção 3) e o limite de 50/dia
+  (seção 4) reduzem volume, mas não garantem qualidade continuada. Vale medir taxa de
+  rejeição/edição das sugestões como sinal — ver seção 6.
+- **Pausa que ninguém percebe.** Hoje, um agente pausado (chave quebrada ou limite
+  atingido) só aparece pra quem abre a tela de Automações. Se ninguém abrir por semanas,
+  o agente fica parado sem que o time perceba que parou de ajudar. Este PRD não fecha a
+  solução — quem implementar deve avaliar dar mais visibilidade a isso (ex: contagem de
+  agentes pausados em algum lugar de maior tráfego).
+- **Dado indo pra provedor de IA externo.** Prompts de agentes de RH (e depois
+  Recrutamento/Onboarding) carregam dado de fornecedor, candidato ou colaborador pro
+  provedor de LLM configurado (OpenAI/Anthropic/Gemini). Não é risco novo — é o mesmo
+  modelo que já vale hoje pras outras features de IA da plataforma — mas vale ter em
+  mente que o volume de dado sensível passando por esse caminho cresce com o rollout.
 
 ## 6. Critérios de sucesso do piloto & rollout
 
