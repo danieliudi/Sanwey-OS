@@ -16,7 +16,7 @@ function agingStyle(days, slaDays, dangerColor) {
   if (days == null || days <= 0) return null;
   if (slaDays) {
     const ratio = days / slaDays;
-    if (ratio >= 1)   return { bg: "#FEE2E2", text: dangerColor, border: "#FECACA" };
+    if (ratio >= 1)   return { bg: "var(--danger-bg)", text: dangerColor, border: "#FECACA" };
     if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
   }
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };

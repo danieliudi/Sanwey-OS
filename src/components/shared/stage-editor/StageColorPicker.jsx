@@ -30,7 +30,7 @@ export function StageColorPicker({ value, onChange, size = 28 }) {
               key={c}
               onClick={() => { onChange(c); setOpen(false); }}
               className="w-6 h-6 rounded-full cursor-pointer"
-              style={{ background: c, outline: value === c ? "2px solid #1E40AF" : "none", outlineOffset: 1 }}
+              style={{ background: c, outline: value === c ? "2px solid var(--accent)" : "none", outlineOffset: 1 }}
               type="button"
             />
           ))}

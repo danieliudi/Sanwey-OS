@@ -14,7 +14,7 @@ export function Button({
   const ah = accent ? accent : "var(--accent-hover)";
 
   const variants = {
-    primary:   { bg: a,                       color: "#FFFFFF",          border: a },
+    primary:   { bg: a,                       color: "var(--on-accent)", border: a },
     dark:      { bg: "var(--text)",            color: "#FFFFFF",          border: "var(--text)" },
     secondary: { bg: "var(--surface)",         color: "var(--text)",      border: "var(--border-strong)" },
     ghost:     { bg: "transparent",            color: "var(--text-dim)",  border: "transparent" },

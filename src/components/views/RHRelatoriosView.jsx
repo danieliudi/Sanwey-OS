@@ -127,7 +127,7 @@ function ModelosDropdown({ presets, loading, onApply, onDelete }) {
                       <button
                         onClick={() => handleDelete(p.id)}
                         disabled={deletingId === p.id}
-                        style={{ flex: 1, background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: deletingId === p.id ? "default" : "pointer", opacity: deletingId === p.id ? 0.6 : 1 }}
+                        style={{ flex: 1, background: "var(--danger)", color: "var(--on-accent)", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: deletingId === p.id ? "default" : "pointer", opacity: deletingId === p.id ? 0.6 : 1 }}
                       >
                         {deletingId === p.id ? "Excluindo…" : "Excluir"}
                       </button>

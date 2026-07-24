@@ -267,7 +267,7 @@ export function GridListToggle({ value, onChange, labels = { grid: "Cards", list
             border: "none",
             cursor: "pointer",
             background: value === id ? "var(--accent)" : "transparent",
-            color: value === id ? "#FFF" : "var(--text-dim)",
+            color: value === id ? "var(--on-accent)" : "var(--text-dim)",
           }}
         >
           <Icon size={13} /> {label}

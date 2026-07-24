@@ -165,7 +165,7 @@ function StageListCore({
           {/* Aviso */}
           <div
             className="px-5 py-2.5 text-xs border-b"
-            style={{ background: "#FFFBEB", borderColor: "#FDE68A", color: "#92400E" }}
+            style={{ background: "var(--warning-bg)", borderColor: "var(--warning)", color: "var(--warning)" }}
           >
             {warning}
           </div>
@@ -283,7 +283,7 @@ function StageListCore({
                       className="p-1 rounded cursor-pointer"
                       style={{ color: count > 0 ? "var(--border-strong)" : "var(--text-dim)" }}
                       title={count > 0 ? `Não dá pra remover: ${count} registro${count !== 1 ? "s" : ""} aqui` : "Remover etapa"}
-                      onMouseEnter={e => { if (count === 0) { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.background = "#FEF2F2"; } }}
+                      onMouseEnter={e => { if (count === 0) { e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.background = "var(--danger-bg)"; } }}
                       onMouseLeave={e => { e.currentTarget.style.color = count > 0 ? "var(--border-strong)" : "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
                     >
                       <Trash2 size={13} />
@@ -312,7 +312,7 @@ function StageListCore({
                 onClick={onReset}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
                 style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
-                onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.borderColor = "#FECACA"; }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.borderColor = "#FECACA"; }}
                 onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "var(--border)"; }}
               >
                 <RotateCcw size={11} />

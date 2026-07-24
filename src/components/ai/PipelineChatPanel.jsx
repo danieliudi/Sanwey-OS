@@ -96,15 +96,15 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
         style={{
           width: "100%",
           maxWidth: 420,
-          background: "#FFFFFF",
+          background: "var(--surface)",
           boxShadow: "var(--shadow-pop)",
-          borderLeft: "1px solid #E5E7EB",
+          borderLeft: "1px solid var(--border)",
         }}
       >
         {/* Header */}
         <div
           className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
-          style={{ borderColor: "#E5E7EB" }}
+          style={{ borderColor: "var(--border)" }}
         >
           <div className="flex items-center gap-2">
             <Bot size={17} style={{ color: RED }} />
@@ -164,7 +164,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                 <div key={i} className="flex justify-end">
                   <div
                     className="text-sm px-3 py-2 rounded-2xl rounded-tr-sm max-w-[85%]"
-                    style={{ background: RED, color: "#FFFFFF" }}
+                    style={{ background: RED, color: "var(--on-accent)" }}
                   >
                     {content}
                   </div>
@@ -208,11 +208,11 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
         {/* Input area */}
         <div
           className="px-4 py-3 border-t flex-shrink-0"
-          style={{ borderColor: "#E5E7EB", background: "var(--surface-alt)" }}
+          style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
         >
           <div
             className="flex items-end gap-2 rounded-xl border"
-            style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}
+            style={{ borderColor: "var(--border)", background: "var(--surface)" }}
           >
             <textarea
               ref={textareaRef}
@@ -237,7 +237,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
               className="m-1.5 p-2 rounded-lg flex-shrink-0 transition-all active:scale-95"
               style={{
                 background: !isConfigured || !input.trim() || loading ? "var(--surface-alt)" : RED,
-                color: !isConfigured || !input.trim() || loading ? "var(--text-dim)" : "#FFFFFF",
+                color: !isConfigured || !input.trim() || loading ? "var(--text-dim)" : "var(--on-accent)",
                 border: "none",
                 cursor: !isConfigured || !input.trim() || loading ? "not-allowed" : "pointer",
               }}
@@ -270,7 +270,7 @@ function PipelineMiniChart({ type, aggregate }) {
     const data = aggregate.byOwner.slice(0, 8).map(o => ({ name: o.name.split(" ")[0], valor: o.valueWon }));
     if (data.length === 0) return null;
     return (
-      <div className="w-full rounded-xl border p-2" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+      <div className="w-full rounded-xl border p-2" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
         <ResponsiveContainer width="100%" height={Math.max(120, data.length * 28 + 20)}>
           <BarChart data={data} layout="vertical" margin={{ top: 4, right: 40, left: 8, bottom: 0 }}>
             <CartesianGrid stroke="#F3F4F6" horizontal={false} />
@@ -288,7 +288,7 @@ function PipelineMiniChart({ type, aggregate }) {
     const data = aggregate.byStage.map(s => ({ name: s.stage, count: s.count }));
     if (data.length === 0) return null;
     return (
-      <div className="w-full rounded-xl border p-2" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+      <div className="w-full rounded-xl border p-2" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid stroke="#F3F4F6" vertical={false} />

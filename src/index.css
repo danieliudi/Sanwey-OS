@@ -21,6 +21,7 @@
   /* Action — único token white-label */
   --accent:        #37352F;
   --accent-hover:  #2A2925;
+  --on-accent:     #FFFFFF;
 
   /* Semantic status */
   --success:       #15803D;
@@ -89,6 +90,7 @@
   --text-faint:    #8C8882;
   --accent:        #EBEBDF;
   --accent-hover:  #FFFFFF;
+  --on-accent:     #1A1A18;
 
   /* Semantic colors — brighter for dark backgrounds */
   --success:       #4ADE80;

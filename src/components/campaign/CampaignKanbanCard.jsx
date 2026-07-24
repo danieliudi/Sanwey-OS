@@ -102,7 +102,7 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
             {isUrgent && (
               <span
                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-                style={{ fontSize: 10, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA", opacity: terminalAccentOpacity(isTerminal) }}
+                style={{ fontSize: 10, background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid #FECACA", opacity: terminalAccentOpacity(isTerminal) }}
                 title={`Lançamento em ${daysToLaunch}d`}
               >
                 <AlertTriangle size={8} strokeWidth={2.5} />

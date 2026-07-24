@@ -18,7 +18,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
             background: accent ? "rgba(255,255,255,0.15)" : "var(--surface-alt)",
           }}
         >
-          <Icon size={18} style={{ color: accent ? "#FFFFFF" : "var(--text-dim)" }} strokeWidth={2} />
+          <Icon size={18} style={{ color: accent ? "var(--on-accent)" : "var(--text-dim)" }} strokeWidth={2} />
         </div>
         {trend !== undefined && (
           <span
@@ -42,7 +42,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
           fontFamily: "Inter, sans-serif",
           fontWeight: 800,
           fontSize: compact ? 26 : 32,
-          color: accent ? "#FFFFFF" : "var(--text)",
+          color: accent ? "var(--on-accent)" : "var(--text)",
           letterSpacing: "-0.02em",
         }}
       >

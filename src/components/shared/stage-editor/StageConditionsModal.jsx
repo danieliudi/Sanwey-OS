@@ -157,7 +157,7 @@ function ConditionalCard({ entry, fields, accent, busy, onSave, onDelete, startE
                 onClick={() => onDelete(entry)}
                 disabled={busy}
                 className="text-[11px] font-bold px-2 py-1 rounded-md cursor-pointer"
-                style={{ background: "#B91C1C", color: "#FFFFFF", border: "none" }}
+                style={{ background: "var(--danger)", color: "var(--on-accent)", border: "none" }}
               >
                 Remover
               </button>
@@ -167,7 +167,7 @@ function ConditionalCard({ entry, fields, accent, busy, onSave, onDelete, startE
                 disabled={busy}
                 className="p-1.5 rounded-md cursor-pointer"
                 style={{ color: "var(--text-dim)" }}
-                onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
                 onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
                 title="Remover condicional"
               >
@@ -240,7 +240,7 @@ function ConditionalCard({ entry, fields, accent, busy, onSave, onDelete, startE
       </FlowBox>
 
       {error && (
-        <div style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px", marginTop: 10 }}>
+        <div style={{ fontSize: 12, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px", marginTop: 10 }}>
           {error}
         </div>
       )}
