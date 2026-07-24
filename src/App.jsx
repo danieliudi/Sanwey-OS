@@ -102,6 +102,8 @@ import { AppToast } from "./components/shared/AppToast";
 import { useAppUpdate } from "./hooks/use-app-update";
 import { useChangelogNotice } from "./hooks/use-changelog-notice";
 import { useScreenTips } from "./hooks/use-screen-tips";
+import { useAgentsCoachmark } from "./hooks/use-agents-coachmark";
+import { AgentsSidebarCoachmark } from "./components/shell/AgentsSidebarCoachmark";
 
 const INITIAL_SIGNALS = generateMarketSignals();
 
@@ -159,11 +161,21 @@ export default function App() {
     if (currentUser?.id) setOnboardingDoneMap(m => ({ ...m, [currentUser.id]: true }));
   }, [currentUser?.id, setOnboardingDoneMap]);
 
-  // Toast "nova versão disponível" + toast "novidades" — ver
-  // specautoupdatechangelogtoast.md. Quem está vendo o tour de boas-vindas
-  // (showOnboarding) não recebe também o toast de novidades na mesma sessão.
+  // isRHManager precisa existir antes dos hooks de toast/coachmark logo
+  // abaixo (useAgentsCoachmark/useChangelogNotice dependem dele pra decidir
+  // prioridade na cadeia de overlays) — hoisted do bloco de flags de papel
+  // mais abaixo; currentUserRoles/hasAnyRole ficam só aqui, não duplicados.
+  const currentUserRoles  = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
+  const hasAnyRole = (roles) => roles.some(r => currentUserRoles.includes(r));
+  const isRHManager        = hasAnyRole(["gerente_rh", "admin"]);
+
+  // Toast "nova versão disponível" + coachmark "Agentes" (RH) + toast
+  // "novidades" — ver specautoupdatechangelogtoast.md e
+  // docs/design-spec-agents-sidebar-coachmark.md. Quem está vendo o tour de
+  // boas-vindas (showOnboarding) não recebe nenhum dos três na mesma sessão.
   const { needRefresh, updateNow, dismiss: dismissAppUpdate } = useAppUpdate();
-  const { items: changelogItems, dismiss: dismissChangelog } = useChangelogNotice(currentUser, { skip: showOnboarding });
+  const { visible: agentsCoachmarkVisible, dismiss: dismissAgentsCoachmark } = useAgentsCoachmark(currentUser, { isRHManager, skip: showOnboarding || needRefresh });
+  const { items: changelogItems, dismiss: dismissChangelog } = useChangelogNotice(currentUser, { skip: showOnboarding || agentsCoachmarkVisible });
 
   // Multi-cargo (FASE 1): `roles` é a fonte de verdade — um usuário pode
   // acumular mais de um cargo (ex: vendedor + agencia). `role` (escalar)
@@ -171,9 +183,8 @@ export default function App() {
   // page/dashboard padrão quando os cargos empatam em prioridade. Todo
   // profile sempre tem role ∈ roles (garantido pelo trigger
   // profiles_sync_roles), então currentUserRoles nunca fica vazio pra um
-  // usuário válido.
-  const currentUserRoles  = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
-  const hasAnyRole = (roles) => roles.some(r => currentUserRoles.includes(r));
+  // usuário válido. (currentUserRoles/hasAnyRole já foram hoisted acima,
+  // antes dos hooks de toast/coachmark.)
   const rolesSubsetOf = (roles) => currentUserRoles.length > 0 && currentUserRoles.every(r => roles.includes(r));
 
   // Acesso por módulo (Configurações → Usuários → "Acesso por módulo") —
@@ -198,9 +209,8 @@ export default function App() {
   // Papel "portal": login sem nenhum cargo operacional (ex.: Engenharia) —
   // acessa só /meu-rh, mesmo espírito do isAgencia acima (guard total).
   const isPortalOnly       = rolesSubsetOf(["portal"]);
-  // RH roles
+  // RH roles (isRHManager já foi hoisted acima)
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
-  const isRHManager        = hasAnyRole(["gerente_rh", "admin"]);
   const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
   // Diretoria (reunião com o RH, 20/07): vê tudo da plataforma, escreve nada
   // (RLS bloqueia toda escrita — ver migration 20260756_papel_diretoria.sql).
@@ -793,7 +803,7 @@ export default function App() {
   const { tip: screenTip, dismiss: dismissScreenTip } = useScreenTips(
     currentUser,
     SECTION_SCREEN_TIP_KEYS[section],
-    { skip: showOnboarding || needRefresh || changelogItems.length > 0 }
+    { skip: showOnboarding || needRefresh || agentsCoachmarkVisible || changelogItems.length > 0 }
   );
 
   // Destino genérico de uma notificação de @menção — leva pra tela certa
@@ -1895,7 +1905,11 @@ export default function App() {
         />
       )}
 
-      {!needRefresh && changelogItems.length > 0 && (
+      {agentsCoachmarkVisible && (
+        <AgentsSidebarCoachmark visible={agentsCoachmarkVisible} onDismiss={dismissAgentsCoachmark} />
+      )}
+
+      {!needRefresh && !agentsCoachmarkVisible && changelogItems.length > 0 && (
         <AppToast icon={Sparkles} title="Novidades" onDismiss={dismissChangelog}>
           <ul className="list-disc pl-4 space-y-0.5">
             {changelogItems.map((item, i) => <li key={i}>{item}</li>)}

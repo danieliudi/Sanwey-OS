@@ -297,6 +297,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                 {(!isCollapsed || rail) && orderedItems(group).map((item) => (
                   <NavItem
                     key={item.id}
+                    id={item.id}
                     icon={item.icon}
                     label={item.label}
                     badge={item.badge}
@@ -411,7 +412,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
 // é `draggable`, então um clique normal em qualquer outro ponto da linha
 // (inclusive no próprio ícone sem mover) continua navegando na hora, sem
 // nenhum gesto/atraso extra atrapalhando.
-function NavItem({ icon: Icon, label, badge, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
+function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
   const [hovered, setHovered] = useState(false);
   // Âncora do tooltip em coordenadas de viewport. O balão era absolute
   // (left:100%) dentro do <nav>, mas o nav tem overflowX:hidden pro scroll
@@ -421,6 +422,7 @@ function NavItem({ icon: Icon, label, badge, active, onClick, rail, isDragOver, 
   const [tip, setTip] = useState(null);
   return (
     <button
+      data-nav-id={id}
       onClick={onClick}
       onMouseEnter={(e) => {
         const r = e.currentTarget.getBoundingClientRect();
