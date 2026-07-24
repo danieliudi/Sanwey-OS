@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Search, X } from "lucide-react";
 
 // ui/Input e ui/Select não entram por baixo de propósito: Select fixa
@@ -12,6 +12,7 @@ const selectStyle = {
 };
 
 export function FilterBar({ search, filters = [], children, trailing }) {
+  const searchInputRef = useRef(null);
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {search && (
@@ -40,6 +41,7 @@ export function FilterBar({ search, filters = [], children, trailing }) {
         >
           <Search size={13} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
           <input
+            ref={searchInputRef}
             type="text"
             value={search.value}
             onChange={search.onChange}
@@ -57,7 +59,12 @@ export function FilterBar({ search, filters = [], children, trailing }) {
             <button
               // Evento sintético mínimo pra limpar sem exigir um onClear à
               // parte — os chamadores já escrevem e => set(e.target.value).
-              onClick={() => search.onChange({ target: { value: "" } })}
+              // Refoca o input: o X some ao limpar, e remoção do elemento
+              // focado não dispara focusout — o anel do wrapper ficaria preso.
+              onClick={() => {
+                search.onChange({ target: { value: "" } });
+                searchInputRef.current?.focus();
+              }}
               aria-label="Limpar busca"
               style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", padding: 0, display: "flex" }}
             >

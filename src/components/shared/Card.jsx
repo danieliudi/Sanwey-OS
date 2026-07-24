@@ -58,6 +58,10 @@ export function Card({
         tabIndex: 0,
         onClick,
         onKeyDown: (e) => {
+          // Enter/Espaço num botão interno (kebab/headerAction) borbulha até
+          // aqui — sem o filtro, o preventDefault mataria a ativação nativa
+          // do botão e o card abriria no lugar do menu.
+          if (e.target !== e.currentTarget) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             onClick?.(e);
