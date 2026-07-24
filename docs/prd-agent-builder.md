@@ -13,11 +13,17 @@ Piloto: RH
 pode criar e testar um agente assim que a feature for ao ar. O que contém o risco nessa
 fase não é restringir quem usa, é restringir o quê dá pra usar.
 
-**O que entra:**
+O piloto tem duas fases dentro do mesmo "RH primeiro" — não porque uma seja mais
+importante, mas porque usam caminhos de disparo com custo de engenharia diferente (ver
+seção 4). Fase 2 só começa depois que a Fase 1 estiver rodando de verdade.
+
+### Fase 1 — Fornecedores (caminho agendado, baseado em prazo/data)
+
 - Uma fonte de dados só: Contratos de fornecedores (RH) — `rh_fornecedor_contratos`.
-- Só o caminho agendado (sem gatilho por evento neste piloto — Fornecedores não é
-  Kanban, ver seção 4; gatilho por evento é trabalho de quando o rollout alcançar um
-  board de RH que seja Kanban).
+- Gatilho é sempre "baseado em data" (ex: `vigenciaFim` se aproximando) — verificado
+  todo dia pela `agent-runner`, sem depender de ninguém com a tela aberta e sem precisar
+  de board Kanban. **Isso já cobre o caso do prazo de contrato** — não é uma limitação,
+  é o caminho certo pra esse tipo de gatilho.
 - Assistente guiado dentro de `AutomationsView` + atalho contextual em
   `RHFornecedoresView`.
 - Dois tipos de rascunho: "e-mail pro fornecedor" e "aviso interno pro time".
@@ -32,6 +38,27 @@ rascunho "e-mail pro fornecedor", tom cordial. Todo dia, a `agent-runner` verifi
 contratos ativos; ao entrar na janela dos 15 dias, gera o rascunho e grava uma entrada
 `pending` em `agent_actions`, visível pra qualquer manager de RH em `AgentActionsView`
 pra aprovar, editar ou rejeitar antes de qualquer coisa sair da plataforma.
+
+### Fase 2 — Recrutamento e Onboarding (caminho por evento, baseado em etapa)
+
+Diferente de Fornecedores, Recrutamento (`rh_vagas`/`rh_candidatos`/`rh_aplicacoes`) e
+Onboarding rodam sobre `rh_pipeline_stages` — são boards Kanban de verdade. Isso libera
+o caminho por evento (`stage_change`, `time_in_stage`, igual ao motor que o CRM já usa),
+mas exige plugar `evaluateAutomations` nessas duas telas — hoje só CRM e Marketing
+chamam essa função, nenhuma tela de RH chama.
+
+- Mesma ferramenta da Fase 1 (assistente guiado, preview, pausa, limite diário) — o que
+  muda é só o tipo de gatilho disponível no passo 2 do assistente.
+- Registro módulo → tabela (seção 4) ganha duas entradas novas:
+  `rh_recrutamento` → `rh_aplicacoes`, `rh_onboarding` → o registro com
+  `onboarding_stage`.
+- **Exemplo Recrutamento**: quando um candidato se aplica, dispara a mesma triagem que
+  já existe hoje sob o botão manual "Triar com IA" (`RHRecrutamentoView`) — só que
+  automático, com o resultado indo pra aprovação em vez de aparecer direto na tela. Não
+  reinventa o prompt de triagem, reaproveita o que já está em produção.
+- **Exemplo Onboarding**: quando um colaborador entra na etapa "Documentação", IA monta
+  um checklist personalizado com base no cargo, pra aprovação de quem conduz o
+  onboarding.
 
 **Prazo**: sem data de corte fixa — o piloto fica no ar até bater os critérios de
 sucesso da seção 6. O raio de explosão já nasce pequeno (uma fonte de dados, limite
@@ -195,18 +222,22 @@ mecanismo novo, a migração é incremental e decidida depois; não é trabalho 
 `stage`, e nenhuma tela chama `evaluateAutomations` hoje ali. Isso separa os dois modos
 de disparo por capacidade real:
 
-- **Por evento** só funciona em boards que já são Kanban (Recrutamento, Onboarding,
-  Treinamentos, Avaliação de Desempenho, Férias — todos sobre `rh_pipeline_stages`) — e
-  mesmo esses exigem plugar uma chamada nova a `evaluateAutomations` na respectiva view,
-  que não existe hoje pra nenhum board de RH.
-- **Agendado** não depende de tela aberta, mas a `agent-runner` precisa saber em que
-  tabela procurar. Em vez de um conector genérico pra "qualquer tabela", um registro
-  pequeno e explícito no código da function (`módulo → tabela + campos permitidos`),
-  com uma entrada adicionada por vez conforme cada módulo é plugado. Primeira entrada:
-  `rh_fornecedores` → `rh_fornecedor_contratos`.
+- **Por evento** (`stage_change`, `time_in_stage` etc.) só funciona em boards que já são
+  Kanban (Recrutamento, Onboarding, Treinamentos, Avaliação de Desempenho, Férias —
+  todos sobre `rh_pipeline_stages`) — e mesmo esses exigem plugar uma chamada nova a
+  `evaluateAutomations` na respectiva view, que não existe hoje pra nenhum board de RH.
+- **Agendado** (`date_approaching` — baseado em campo de data, não em etapa) não
+  depende de tela aberta nem de Kanban: a `agent-runner` varre a tabela direto todo dia.
+  Precisa saber em que tabela procurar — em vez de um conector genérico pra "qualquer
+  tabela", um registro pequeno e explícito no código da function
+  (`módulo → tabela + campos permitidos`), com uma entrada adicionada por vez conforme
+  cada módulo é plugado. Primeira entrada: `rh_fornecedores` → `rh_fornecedor_contratos`.
 
-Consequência pro escopo do piloto (seção 2): o caso de uso mais forte de RH (contrato
-vencendo) só é viável pelo caminho agendado.
+Os dois caminhos resolvem coisas diferentes, não são "básico vs. avançado": prazo de
+contrato é `date_approaching` (agendado) mesmo depois do rollout completo — não precisa
+de Kanban pra isso nunca. Consequência pro escopo do piloto (seção 2): Fase 1
+(Fornecedores) usa só o caminho agendado; Fase 2 (Recrutamento/Onboarding, que são
+Kanban) é o que introduz o caminho por evento.
 
 ### RLS / permissões
 
