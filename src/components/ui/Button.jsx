@@ -8,7 +8,7 @@ const SIZES = {
 
 export function Button({
   children, onClick, variant = "primary", size = "md", icon: Icon,
-  disabled = false, className = "", accent, type = "button",
+  disabled = false, className = "", accent, type = "button", "aria-label": ariaLabel,
 }) {
   const a = accent || "var(--accent)";
   const ah = accent ? accent : "var(--accent-hover)";
@@ -28,6 +28,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
       className={`
         inline-flex items-center justify-center font-semibold border
         transition-all duration-150 cursor-pointer select-none

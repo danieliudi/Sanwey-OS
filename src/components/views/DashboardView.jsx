@@ -1,26 +1,34 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
-  Target, HandCoins, CheckCircle2, Gauge, RefreshCcw, Download,
-  Clock, CalendarClock, AlertTriangle, CalendarCheck,
+  Target, HandCoins, CheckCircle2, Gauge, RefreshCcw, Download, SlidersHorizontal,
+  Clock, CalendarClock, AlertTriangle, CalendarCheck, LayoutGrid,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
+import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
+import { VISAO_GERAL_WIDGETS } from "../../constants/visao-geral-widgets";
 import { StatCard } from "../ui/StatCard";
 import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
 import { Eyebrow } from "../shared/PanelHeading";
 import { PanelEmptyState } from "../shared/PanelEmptyState";
+import { TaskBucket } from "../shared/TaskBucket";
+import { StageDistributionBar } from "../shared/StageDistributionBar";
+import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, daysSince } from "../../utils/date";
 import { exportLeadsToCSV } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
 import { useUsersById } from "../../hooks/use-users-by-id";
+import { useDashboardWidgetPrefs } from "../../hooks/use-dashboard-widget-prefs";
 import { isStale, daysIdle, getLeadOwnerIds } from "../../utils/pipeline-metrics";
 
 const TERMINAL = new Set(["ganho", "perdido"]);
 const CLOSING_HORIZON_DAYS = 7;
 
-export function DashboardView({ user, activeCompany, leads, users = [], onNavigate, onLeadClick, visibleWidgets, pipelines }) {
+export function DashboardView({ user, activeCompany, leads, users = [], onNavigate, onLeadClick, pipelines }) {
   const usersById = useUsersById(users);
-  const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
+  const { widgetVisible, toggles, zone4Title, save } = useDashboardWidgetPrefs(user.id, "comercial");
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
@@ -120,6 +128,73 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
 
   const totalTasks = tasks.closing.length + tasks.stale.length + tasks.overdue.length + tasks.followUps.length;
 
+  // Zona 3 — reaproveita o cálculo de distribuição por etapa já provado em
+  // ExecutiveDashboard.jsx:143-173 (dedupe de etapas entre empresas em
+  // visão de grupo), aplicado a `scopedLeads` em vez de `filteredLeads`.
+  const funnelStages = useMemo(() => {
+    const presentIds = new Set(scopedLeads.map(l => l.companyId));
+    const extraIds = [...presentIds].filter(id => !COMPANY_IDS.includes(id));
+    const sourceCompanies = presentIds.size > 0
+      ? [...COMPANY_IDS.filter(id => presentIds.has(id)), ...extraIds]
+      : (isGroupView ? COMPANY_IDS : [activeCompany]);
+    const stageMap = new Map();
+    for (const cid of sourceCompanies) {
+      const stages = (pipelines?.[cid] || DEFAULT_PIPELINE_STAGES).filter(s => !s.lost);
+      for (const s of stages) {
+        if (!stageMap.has(s.id)) stageMap.set(s.id, s);
+      }
+    }
+    const counts = Object.create(null);
+    for (const s of stageMap.values()) counts[s.id] = 0;
+    for (const l of scopedLeads) {
+      if (counts[l.stage] != null) counts[l.stage]++;
+    }
+    return Array.from(stageMap.values()).map(stage => ({
+      id: stage.id, name: stage.name, color: stage.color, count: counts[stage.id] || 0,
+    }));
+  }, [scopedLeads, pipelines, isGroupView, activeCompany]);
+
+  const taskBuckets = [
+    {
+      id: "task_overdue", icon: AlertTriangle, tone: "var(--danger)",
+      title: "Fechamento atrasado", empty: "Nenhum vencido", fullCount: tasks.overdue.length,
+      items: tasks.overdue.slice(0, 4).map(({ lead, close }) => ({
+        key: lead.id, primary: lead.company, secondary: `Fechamento ${formatDateBR(close)}`,
+        badge: `${daysSince(close)}d`, onClick: () => onLeadClick(lead),
+      })),
+    },
+    {
+      id: "task_followups", icon: CalendarCheck, tone: "var(--success)",
+      title: "Follow-ups agendados", empty: "Sem follow-up nos próximos 7 dias", fullCount: tasks.followUps.length,
+      items: tasks.followUps.slice(0, 4).map(({ lead, when, isLate }) => ({
+        key: lead.id, primary: lead.company, secondary: `${stageLabel(lead.stage)} · ${formatDateBR(when)}`,
+        badge: isLate ? `${daysSince(when)}d atraso` : formatDateBR(when),
+        badgeTone: isLate ? "var(--danger)" : "var(--success)", onClick: () => onLeadClick(lead),
+      })),
+    },
+    {
+      id: "task_closing", icon: CalendarClock, tone: "#1E3A8A",
+      title: "Fecham nesta semana", empty: "Sem fechamentos próximos", fullCount: tasks.closing.length,
+      items: tasks.closing.slice(0, 4).map(({ lead, close }) => ({
+        key: lead.id, primary: lead.company, secondary: `${formatK(lead.value)} · ${formatDateBR(close)}`,
+        badge: stageLabel(lead.stage), onClick: () => onLeadClick(lead),
+      })),
+    },
+    {
+      id: "task_stale", icon: Clock, tone: "var(--warning)",
+      title: "Leads parados", empty: "Tudo com atividade recente", fullCount: tasks.stale.length,
+      items: tasks.stale.slice(0, 4).map(({ lead, idle }) => ({
+        key: lead.id, primary: lead.company, secondary: `${stageLabel(lead.stage)} · ${formatK(lead.value)}`,
+        badge: `${idle}d sem atividade`, onClick: () => onLeadClick(lead),
+      })),
+    },
+  ];
+  const visibleTaskBuckets = taskBuckets.filter(b => widgetVisible(b.id));
+  const visibleTaskCount = visibleTaskBuckets.reduce((s, b) => s + b.fullCount, 0);
+
+  const zone1Ids = ["leads_count", "pipeline_open", "won_value", "avg_fit"];
+  const zone1VisibleCount = zone1Ids.filter(widgetVisible).length;
+
   return (
     <div className="flex flex-col gap-7">
       {/* Page header */}
@@ -154,47 +229,62 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
               Exportar
             </Button>
           )}
+          <Button
+            variant="secondary"
+            icon={SlidersHorizontal}
+            size="md"
+            className="min-h-touch lg:min-h-0"
+            onClick={() => setPrefsOpen(true)}
+            aria-label="Personalizar"
+          >
+            <span className="hidden lg:inline">Personalizar</span>
+          </Button>
         </div>
       </div>
 
       {/* Stat cards — carrossel de peek abaixo de 1024px (adendo mobile) */}
       <div className="order-2 lg:order-1 -mx-4 sm:-mx-6 lg:mx-0">
-        <div
-          className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible"
-          style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
-        >
-          {widgetVisible("leads_count") && (
-            <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-              <StatCard icon={Target} value={scopedLeads.length}
-                label={isManager ? (isGroupView ? "Leads no grupo" : "Leads da empresa") : "Meus leads"}
-                sublabel={`${stats.fitCount70} com fit ≥ 70`} compact />
-            </div>
-          )}
-          {widgetVisible("pipeline_open") && (
-            <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-              <StatCard icon={HandCoins} value={formatK(stats.pipelineValue)}
-                label="Funil de Vendas aberto"
-                sublabel={`${stats.openCount} oportunidades`} compact />
-            </div>
-          )}
-          {widgetVisible("won_value") && (
-            <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-              <StatCard icon={CheckCircle2} value={formatK(stats.wonValue)}
-                label="Valor ganho" sublabel={`${stats.wonCount} fechados`} accent={accent} compact />
-            </div>
-          )}
-          {widgetVisible("avg_fit") && (
-            <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-              <StatCard icon={Gauge} value={stats.avgFit} label="Fit score médio"
-                sublabel={`${stats.newCount} novos em 48h`} compact
-                tooltip="Pontuação de 0 a 100 que indica o potencial do lead. Acima de 70 é considerado quente." />
-            </div>
-          )}
-        </div>
+        {zone1VisibleCount === 0 ? (
+          <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
+        ) : (
+          <div
+            className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible"
+            style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
+          >
+            {widgetVisible("leads_count") && (
+              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                <StatCard icon={Target} value={scopedLeads.length}
+                  label={isManager ? (isGroupView ? "Leads no grupo" : "Leads da empresa") : "Meus leads"}
+                  sublabel={`${stats.fitCount70} com fit ≥ 70`} compact />
+              </div>
+            )}
+            {widgetVisible("pipeline_open") && (
+              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                <StatCard icon={HandCoins} value={formatK(stats.pipelineValue)}
+                  label="Funil de Vendas aberto"
+                  sublabel={`${stats.openCount} oportunidades`} compact />
+              </div>
+            )}
+            {widgetVisible("won_value") && (
+              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                <StatCard icon={CheckCircle2} value={formatK(stats.wonValue)}
+                  label="Valor ganho" sublabel={`${stats.wonCount} fechados`} accent={accent} compact />
+              </div>
+            )}
+            {widgetVisible("avg_fit") && (
+              <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                <StatCard icon={Gauge} value={stats.avgFit} label="Fit score médio"
+                  sublabel={`${stats.newCount} novos em 48h`} compact
+                  tooltip="Pontuação de 0 a 100 que indica o potencial do lead. Acima de 70 é considerado quente." />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Tarefas e prazos — derivado dos negócios do CRM. Vem antes da faixa
-          de stats no mobile (<1024px): é a ação imediata, não um número frio. */}
+      {/* Zona 2 — Tarefas e prazos, derivado dos negócios do CRM. Vem antes
+          da faixa de stats no mobile (<1024px): é a ação imediata, não um
+          número frio. */}
       <div className="order-1 lg:order-2">
         <Eyebrow action={totalTasks > 0 ? "Abrir pipeline" : undefined} onAction={() => onNavigate("crm")} accent={accent}>
           Tarefas e prazos
@@ -203,7 +293,9 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
           Pendências dos seus negócios · próximos 7 dias e leads parados
         </p>
 
-        {totalTasks === 0 ? (
+        {visibleTaskBuckets.length === 0 ? (
+          <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
+        ) : visibleTaskCount === 0 ? (
           <div
             className="p-5 rounded-xl border text-center text-sm"
             style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
@@ -212,132 +304,53 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <TaskBucket
-              icon={AlertTriangle}
-              tone="var(--danger)"
-              title="Fechamento atrasado"
-              empty="Nenhum vencido"
-              items={tasks.overdue.slice(0, 4).map(({ lead, close }) => ({
-                key: lead.id,
-                lead,
-                primary: lead.company,
-                secondary: `Fechamento ${formatDateBR(close)}`,
-                badge: `${daysSince(close)}d`,
-                onClick: onLeadClick,
-              }))}
-            />
-            <TaskBucket
-              icon={CalendarCheck}
-              tone="var(--success)"
-              title="Follow-ups agendados"
-              empty="Sem follow-up nos próximos 7 dias"
-              items={tasks.followUps.slice(0, 4).map(({ lead, when, isLate }) => ({
-                key: lead.id,
-                lead,
-                primary: lead.company,
-                secondary: `${stageLabel(lead.stage)} · ${formatDateBR(when)}`,
-                badge: isLate ? `${daysSince(when)}d atraso` : formatDateBR(when),
-                badgeTone: isLate ? "var(--danger)" : "var(--success)",
-                onClick: onLeadClick,
-              }))}
-            />
-            <TaskBucket
-              icon={CalendarClock}
-              tone="#1E3A8A"
-              title="Fecham nesta semana"
-              empty="Sem fechamentos próximos"
-              items={tasks.closing.slice(0, 4).map(({ lead, close }) => ({
-                key: lead.id,
-                lead,
-                primary: lead.company,
-                secondary: `${formatK(lead.value)} · ${formatDateBR(close)}`,
-                badge: stageLabel(lead.stage),
-                onClick: onLeadClick,
-              }))}
-            />
-            <TaskBucket
-              icon={Clock}
-              tone="var(--warning)"
-              title="Leads parados"
-              empty="Tudo com atividade recente"
-              items={tasks.stale.slice(0, 4).map(({ lead, idle }) => ({
-                key: lead.id,
-                lead,
-                primary: lead.company,
-                secondary: `${stageLabel(lead.stage)} · ${formatK(lead.value)}`,
-                badge: `${idle}d sem atividade`,
-                onClick: onLeadClick,
-              }))}
-            />
+            {visibleTaskBuckets.map(b => (
+              <TaskBucket key={b.id} icon={b.icon} tone={b.tone} title={b.title} empty={b.empty} items={b.items} />
+            ))}
           </div>
         )}
       </div>
 
-    </div>
-  );
-}
+      {/* Zona 3 — Tendência: distribuição de leads por etapa do funil.
+          order-3 fixo (sem variante lg:) — Zona 3 tem que ficar depois de
+          Zona 1/2 nos dois breakpoints, e como a inversão mobile usa order-1/
+          order-2 nelas, Zona 3 default (order 0) apareceria antes das duas no
+          mobile sem isto. */}
+      <div className="order-3">
+        <div className="p-4 lg:p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12 }}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+              Distribuição por etapa do funil
+            </div>
+          </div>
+          {widgetVisible("stage_distribution") ? (
+            <StageDistributionBar items={funnelStages} total={scopedLeads.length} emptyLabel="Sem leads" />
+          ) : (
+            <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
+          )}
+        </div>
+      </div>
 
-function TaskBucket({ icon: Icon, tone, title, empty, items }) {
-  return (
-    <div
-      className="border"
-      style={{ background: "var(--surface)", borderColor: "var(--border)", borderRadius: "var(--radius-lg)" }}
-    >
-      <div
-        className="px-3.5 py-2.5 flex items-center gap-2"
-        style={{ borderBottom: "1px solid var(--surface-alt)" }}
-      >
-        <div
-          className="rounded-md flex items-center justify-center"
-          style={{ width: 24, height: 24, background: tone + "14", color: tone }}
-        >
-          <Icon size={13} strokeWidth={2.4} />
-        </div>
-        <div className="text-[13px] font-semibold" style={{ color: "var(--text)", letterSpacing: "0.01em" }}>
-          {title}
-        </div>
-        <div className="ml-auto text-xs font-semibold" style={{ color: tone }}>
-          {items.length}
-        </div>
+      {/* Zona 4 — livre. Nesta versão só o título é personalizável (via
+          modal de Personalizar); sem widget real ainda. order-4 fixo pelo
+          mesmo motivo do order-3 da Zona 3 acima. */}
+      <div className="order-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+        <EmptyState
+          icon={LayoutGrid}
+          title={zone4Title || "Sua seção livre"}
+          description="Nesta versão, esta seção ainda não mostra widgets — só o título é personalizável. Mais widgets chegam numa próxima rodada."
+        />
       </div>
-      <div className="p-1.5">
-        {items.length === 0 ? (
-          <PanelEmptyState>{empty}</PanelEmptyState>
-        ) : (
-          items.map(it => (
-            <button
-              key={it.key}
-              onClick={() => it.onClick?.(it.lead)}
-              className="w-full text-left flex items-start gap-2 px-2.5 py-2 rounded-lg transition-colors duration-150"
-              style={{ background: "transparent" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-            >
-              <span
-                className="mt-1.5 shrink-0 rounded-full"
-                style={{ width: 6, height: 6, background: tone }}
-              />
-              <div className="flex-1 min-w-0">
-                <div
-                  className="text-[13px] font-semibold truncate"
-                  style={{ color: "var(--text)" }}
-                >
-                  {it.primary}
-                </div>
-                <div className="text-xs truncate" style={{ color: "var(--text-dim)" }}>
-                  {it.secondary}
-                </div>
-              </div>
-              <span
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0"
-                style={{ background: (it.badgeTone || tone) + "14", color: it.badgeTone || tone }}
-              >
-                {it.badge}
-              </span>
-            </button>
-          ))
-        )}
-      </div>
+
+      <WidgetPrefsModal
+        open={prefsOpen}
+        onClose={() => setPrefsOpen(false)}
+        title="Personalizar Comercial"
+        widgets={VISAO_GERAL_WIDGETS.comercial}
+        toggles={toggles}
+        zone4Title={zone4Title}
+        onSave={save}
+      />
     </div>
   );
 }

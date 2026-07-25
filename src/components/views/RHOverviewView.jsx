@@ -3,22 +3,30 @@ import {
   Users,
   Briefcase,
   Calendar,
-  Clock,
   UserCheck,
   UserMinus,
   TrendingUp,
+  AlertTriangle,
+  SlidersHorizontal,
+  LayoutGrid,
 } from "lucide-react";
 import {
   RH_DESLIGAMENTO_TIPOS,
 } from "../../constants/rh-config";
+import { VISAO_GERAL_WIDGETS } from "../../constants/visao-geral-widgets";
 import { parseDateInput } from "../../utils/date";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { useDashboardWidgetPrefs } from "../../hooks/use-dashboard-widget-prefs";
 import { StatCard } from "../ui/StatCard";
 import { Badge } from "../ui/Badge";
-import { PanelTitle } from "../shared/PanelHeading";
+import { Button } from "../ui/Button";
+import { EmptyState } from "../ui/EmptyState";
+import { Eyebrow, PanelTitle } from "../shared/PanelHeading";
 import { PanelEmptyState } from "../shared/PanelEmptyState";
+import { TaskBucket } from "../shared/TaskBucket";
+import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -93,6 +101,8 @@ function Avatar({ name, bg, size = 34 }) {
 export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { stages: vagaStages } = useRHPipelineStages("vagas");
+  const { widgetVisible, toggles, zone4Title, save } = useDashboardWidgetPrefs(currentUser?.id, "rh");
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const [vagas, setVagas] = useState([]);
   const [ferias, setFerias] = useState([]);
   const [loadingVagas, setLoadingVagas] = useState(true);
@@ -151,7 +161,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
   const exitPorTipo = RH_DESLIGAMENTO_TIPOS
     .map((t) => ({ ...t, n: desligados12m.filter((c) => c.desligamentoTipo === t.id).length }))
     .filter((t) => t.n > 0);
-  const semEntrevista = desligados12m.filter((c) => !c.desligamentoTipo).length;
+  const semEntrevistaList = desligados12m.filter((c) => !c.desligamentoTipo);
 
   const recentAdmissions = [...colaboradores]
     .filter((c) => c.admissionDate)
@@ -172,12 +182,53 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
     .slice(0, 8);
   const maxDept = deptList.length > 0 ? deptList[0][1] : 1;
 
-  const statCards = [
-    { key: "total", label: "Total de Funcionários", value: totalFuncionarios, icon: Users },
-    { key: "ativos", label: "Ativos", value: totalAtivos, icon: UserCheck },
-    { key: "ferias", label: "De Férias", value: totalFerias, icon: Calendar },
-    { key: "afastados", label: "Afastados", value: totalAfastados, icon: UserMinus, accent: totalAfastados > 0 ? "var(--warning)" : undefined },
+  // Zona 2 — "O que fazer": férias/vagas já eram listas soltas; "sem
+  // entrevista" era um aviso estático (`semEntrevista > 0 && ...`) e vira
+  // bucket acionável, listando os desligados específicos.
+  const rhBuckets = [
+    {
+      id: "bucket_ferias_pendentes", icon: Calendar, tone: "var(--amber)",
+      title: "Férias pendentes", empty: "Nenhuma solicitação pendente", fullCount: ferias.length,
+      items: ferias.slice(0, 4).map((req) => {
+        const dias = calcDias(req.start_date, req.end_date);
+        return {
+          key: req.id, primary: req.profiles?.name || "—",
+          secondary: `${leaveTypeLabel(req.type)} · ${fmt(req.start_date)} → ${fmt(req.end_date)}`,
+          badge: dias > 0 ? `${dias}d` : "—", badgeTone: "var(--amber)",
+          onClick: () => onNavigate?.("rh-ferias"),
+        };
+      }),
+    },
+    {
+      id: "bucket_vagas_abertas", icon: Briefcase, tone: "var(--text-dim)",
+      title: "Vagas em aberto", empty: "Nenhuma vaga em aberto", fullCount: vagas.length,
+      items: vagas.slice(0, 4).map((vaga) => {
+        const stage = stageInfo(vagaStages, vaga.stage);
+        return {
+          key: vaga.id, primary: vaga.title || vaga.job_title || "Sem título",
+          secondary: vaga.department || "—",
+          badge: stage.name, badgeTone: stage.color,
+          onClick: () => onNavigate?.("rh-recrutamento"),
+        };
+      }),
+    },
+    {
+      id: "bucket_desligamento_sem_entrevista", icon: AlertTriangle, tone: "var(--danger)",
+      title: "Desligamentos sem entrevista", empty: "Todos os desligamentos têm entrevista registrada",
+      fullCount: semEntrevistaList.length,
+      items: semEntrevistaList.slice(0, 4).map((c) => ({
+        key: c.id, primary: c.fullName || "—",
+        secondary: `${c.department || "—"} · desligado em ${fmt(c.desligamentoDate)}`,
+        badge: "sem entrevista",
+        onClick: () => onNavigate?.("rh-funcionarios"),
+      })),
+    },
   ];
+  const visibleRHBuckets = rhBuckets.filter((b) => widgetVisible(b.id));
+  const visibleRHBucketCount = visibleRHBuckets.reduce((s, b) => s + b.fullCount, 0);
+
+  const zone1Ids = ["stat_total", "stat_ativos", "stat_ferias", "stat_afastados", "stat_desligamentos", "stat_turnover_rate"];
+  const zone1VisibleCount = zone1Ids.filter(widgetVisible).length;
 
   const card = {
     background: "var(--surface)",
@@ -190,361 +241,296 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
     <div style={{ minHeight: "100vh", background: "var(--surface)" }}>
       <div className="py-4 lg:py-6" style={{ maxWidth: 1200, margin: "0 auto" }}>
 
-        <div style={{ marginBottom: 28 }}>
-          <h1
-            style={{
-              fontSize: 26,
-              fontWeight: 800,
-              color: "var(--text)",
-              margin: 0,
-              letterSpacing: "-0.02em",
-              lineHeight: 1.15,
-            }}
-          >
-            Visão Geral — RH
-          </h1>
-          <p
-            style={{
-              fontSize: 13,
-              color: "var(--text-dim)",
-              margin: "4px 0 0",
-              textTransform: "capitalize",
-            }}
-          >
-            {fmtToday()}
-          </p>
-        </div>
-
-        {/* Stat cards — carrossel de peek abaixo de 1024px (adendo mobile) */}
-        <div className="-mx-4 sm:-mx-6 lg:mx-0 mb-7">
-          <div
-            className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible"
-            style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
-          >
-            {statCards.map((sc) => (
-              <div key={sc.key} className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                <StatCard icon={sc.icon} value={sc.value} label={sc.label} accent={sc.accent} compact />
-              </div>
-            ))}
+        <div className="flex items-center justify-between flex-wrap gap-3" style={{ marginBottom: 28 }}>
+          <div>
+            <h1
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                color: "var(--text)",
+                margin: 0,
+                letterSpacing: "-0.02em",
+                lineHeight: 1.15,
+              }}
+            >
+              Visão Geral — RH
+            </h1>
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--text-dim)",
+                margin: "4px 0 0",
+                textTransform: "capitalize",
+              }}
+            >
+              {fmtToday()}
+            </p>
           </div>
+          <Button
+            variant="secondary"
+            icon={SlidersHorizontal}
+            size="md"
+            className="min-h-touch lg:min-h-0"
+            onClick={() => setPrefsOpen(true)}
+            aria-label="Personalizar"
+          >
+            <span className="hidden lg:inline">Personalizar</span>
+          </Button>
         </div>
 
-        {desligados12m.length > 0 && (
-          <div className="p-4 lg:p-5" style={{ ...card, marginBottom: 28 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <UserMinus size={16} color="var(--text-dim)" />
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>Turnover (últimos 12 meses)</span>
-            </div>
-            <div className="-mx-4 lg:mx-0">
-              <div
-                className="flex gap-3 overflow-x-auto px-4 lg:px-0 lg:grid lg:grid-cols-3 lg:overflow-visible"
-                style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}
-              >
+        {/* Zona 1 — Resumo: 6 tiles (carrossel de peek abaixo de 1024px) */}
+        <div className="-mx-4 sm:-mx-6 lg:mx-0 mb-7">
+          {zone1VisibleCount === 0 ? (
+            <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
+          ) : (
+            <div
+              className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:overflow-visible"
+              style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", scrollbarWidth: "none",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))" }}
+            >
+              {widgetVisible("stat_total") && (
                 <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={UserMinus} value={desligados12m.length} label="Desligamentos" compact />
+                  <StatCard icon={Users} value={totalFuncionarios} label="Total de Funcionários" compact />
                 </div>
+              )}
+              {widgetVisible("stat_ativos") && (
                 <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={TrendingUp} value={`${turnoverRate}%`} label="Taxa aproximada"
+                  <StatCard icon={UserCheck} value={totalAtivos} label="Ativos" compact />
+                </div>
+              )}
+              {widgetVisible("stat_ferias") && (
+                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                  <StatCard icon={Calendar} value={totalFerias} label="De Férias" compact />
+                </div>
+              )}
+              {widgetVisible("stat_afastados") && (
+                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                  <StatCard icon={UserMinus} value={totalAfastados} label="Afastados"
+                    accent={totalAfastados > 0 ? "var(--warning)" : undefined} compact />
+                </div>
+              )}
+              {widgetVisible("stat_desligamentos") && (
+                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                  <StatCard icon={UserMinus} value={desligados12m.length} label="Desligamentos (12 meses)" compact />
+                </div>
+              )}
+              {widgetVisible("stat_turnover_rate") && (
+                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
+                  <StatCard icon={TrendingUp} value={`${turnoverRate}%`} label="Taxa de turnover aproximada"
                     accent={turnoverRate >= 20 ? "var(--danger)" : undefined} compact />
                 </div>
-                <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={UserCheck} value={`${voluntariosPct}%`} label="Voluntários" compact />
-                </div>
-              </div>
+              )}
             </div>
-            {exitPorTipo.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
-                {exitPorTipo.map((t) => (
-                  <Badge key={t.id} variant="neutral">
-                    {t.label.split(" (")[0]}: <b style={{ color: "var(--text)" }}>{t.n}</b>
-                  </Badge>
-                ))}
-              </div>
-            )}
-            {semEntrevista > 0 && (
-              <div style={{ fontSize: 11, color: "var(--warning)", fontWeight: 600, marginTop: 10 }}>
-                {semEntrevista} desligamento(s) sem entrevista de saída registrada.
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
-        <div
-          className="grid grid-cols-1 lg:grid-cols-3"
-          style={{ gap: 20, marginBottom: 20 }}
-        >
-          <div className="p-4 lg:p-5" style={card}>
-            <PanelTitle
-              title="Vagas em Aberto"
-              action="Ver todas"
-              onAction={() => onNavigate?.("rh-recrutamento")}
-              actionColor="var(--color-industria)"
-            />
-            {loadingVagas ? (
-              <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
-            ) : vagas.length === 0 ? (
-              <PanelEmptyState>Nenhuma vaga em aberto</PanelEmptyState>
-            ) : (
-              <>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    background: "color-mix(in srgb, var(--color-industria) 10%, transparent)",
-                    color: "var(--color-industria)",
-                    border: `1px solid color-mix(in srgb, var(--color-industria) 20%, transparent)`,
-                    borderRadius: 99,
-                    padding: "2px 10px",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    marginBottom: 14,
-                  }}
-                >
-                  <Briefcase size={11} />
-                  {vagas.length} {vagas.length === 1 ? "vaga" : "vagas"}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {vagas.slice(0, 5).map((vaga) => {
-                    const stage = stageInfo(vagaStages, vaga.stage);
-                    return (
-                      <div
-                        key={vaga.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          justifyContent: "space-between",
-                          gap: 8,
-                        }}
-                      >
-                        <div style={{ minWidth: 0 }}>
-                          <div
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: "var(--text)",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {vaga.title || vaga.job_title || "Sem título"}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              color: "var(--text-dim)",
-                              marginTop: 1,
-                            }}
-                          >
-                            {vaga.department || "—"}
-                          </div>
-                        </div>
-                        <Badge customColor={stage.color}>{stage.name}</Badge>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
+        {/* Zona 2 — O que fazer */}
+        <div style={{ marginBottom: 28 }}>
+          <Eyebrow>Pendências</Eyebrow>
+          <p className="text-xs mb-3" style={{ color: "var(--text-dim)", marginTop: -6 }}>
+            Férias, vagas e desligamentos que precisam de atenção
+          </p>
+          {visibleRHBuckets.length === 0 ? (
+            <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
+          ) : visibleRHBucketCount === 0 ? (
+            <div
+              className="p-5 rounded-xl border text-center text-sm"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+            >
+              Nada urgente por aqui. Seus processos estão em dia.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {visibleRHBuckets.map((b) => (
+                <TaskBucket key={b.id} icon={b.icon} tone={b.tone} title={b.title} empty={b.empty} items={b.items} />
+              ))}
+            </div>
+          )}
+        </div>
 
-          <div className="p-4 lg:p-5" style={card}>
-            <PanelTitle title="Admissões Recentes" />
-            {loadingColaboradores ? (
+        {/* Zona 3 — Tendência */}
+        <div className="p-4 lg:p-5" style={{ ...card, marginBottom: 20 }}>
+          <PanelTitle title="Distribuição por Departamento" />
+          {widgetVisible("panel_departamento") ? (
+            loadingColaboradores ? (
               <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
-            ) : recentAdmissions.length === 0 ? (
-              <PanelEmptyState>Nenhuma admissão registrada</PanelEmptyState>
+            ) : deptList.length === 0 ? (
+              <PanelEmptyState>Sem dados de departamento</PanelEmptyState>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {recentAdmissions.map((c) => (
-                  <div
-                    key={c.id}
-                    style={{ display: "flex", alignItems: "center", gap: 10 }}
-                  >
-                    <Avatar name={c.fullName} size={34} />
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: "var(--text)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {c.fullName || "—"}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "var(--text-dim)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {c.jobTitle || c.department || "—"}
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "var(--text-dim)",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {fmt(c.admissionDate)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 lg:p-5" style={card}>
-            <PanelTitle
-              title="Férias Pendentes"
-              action="Ver todas"
-              onAction={() => onNavigate?.("rh-ferias")}
-              actionColor="var(--color-industria)"
-            />
-            {loadingFerias ? (
-              <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
-            ) : ferias.length === 0 ? (
-              <PanelEmptyState>Nenhuma solicitação pendente</PanelEmptyState>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {ferias.map((req) => {
-                  const employee = req.profiles;
-                  const dias = calcDias(req.start_date, req.end_date);
+              <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: "8px 32px" }}>
+                {deptList.map(([dept, count]) => {
+                  const pct = Math.round((count / maxDept) * 100);
+                  const totalPct =
+                    totalFuncionarios > 0
+                      ? Math.round((count / totalFuncionarios) * 100)
+                      : 0;
                   return (
-                    <div
-                      key={req.id}
-                      style={{
-                        background: "var(--amber-bg)",
-                        border: "1px solid color-mix(in srgb, var(--amber) 20%, transparent)",
-                        borderRadius: 8,
-                        padding: "10px 12px",
-                      }}
-                    >
+                    <div key={dept} style={{ paddingBottom: 4 }}>
                       <div
                         style={{
                           display: "flex",
+                          justifyContent: "space-between",
                           alignItems: "center",
-                          gap: 8,
-                          marginBottom: 4,
+                          marginBottom: 5,
                         }}
                       >
-                        <Clock size={12} color={"var(--amber)"} />
                         <span
                           style={{
-                            fontSize: 13,
-                            fontWeight: 600,
+                            fontSize: 12,
+                            fontWeight: 500,
                             color: "var(--text)",
                           }}
                         >
-                          {employee?.name || "—"}
+                          {dept}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "var(--text-dim)",
+                            display: "flex",
+                            gap: 6,
+                          }}
+                        >
+                          <strong style={{ color: "var(--text)" }}>{count}</strong>
+                          <span>({totalPct}%)</span>
                         </span>
                       </div>
                       <div
-                        style={{ fontSize: 11, color: "var(--text-dim)", lineHeight: 1.5 }}
+                        style={{
+                          height: 6,
+                          background: "var(--border)",
+                          borderRadius: 99,
+                          overflow: "hidden",
+                        }}
                       >
-                        {leaveTypeLabel(req.type)} · {fmt(req.start_date)} →{" "}
-                        {fmt(req.end_date)}
-                        {dias > 0 && (
-                          <span
-                            style={{
-                              marginLeft: 4,
-                              fontWeight: 600,
-                              color: "var(--amber)",
-                            }}
-                          >
-                            ({dias}d)
-                          </span>
-                        )}
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${pct}%`,
+                            background: "var(--color-industria)",
+                            borderRadius: 99,
+                            transition: "width 0.4s ease",
+                          }}
+                        />
                       </div>
                     </div>
                   );
                 })}
               </div>
+            )
+          ) : (
+            <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
+          )}
+        </div>
+
+        <div
+          className="grid grid-cols-1 lg:grid-cols-2"
+          style={{ gap: 20, marginBottom: 20 }}
+        >
+          <div className="p-4 lg:p-5" style={card}>
+            <PanelTitle title="Desligamentos por Tipo" />
+            {widgetVisible("panel_desligamento_tipo") ? (
+              desligados12m.length === 0 ? (
+                <PanelEmptyState>Sem desligamentos nos últimos 12 meses</PanelEmptyState>
+              ) : (
+                <>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
+                    <span style={{ fontSize: 24, fontWeight: 800, color: "var(--text)" }}>{voluntariosPct}%</span>
+                    <span style={{ fontSize: 12, color: "var(--text-dim)" }}>saíram por conta própria (voluntário)</span>
+                  </div>
+                  {exitPorTipo.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {exitPorTipo.map((t) => (
+                        <Badge key={t.id} variant="neutral">
+                          {t.label.split(" (")[0]}: <b style={{ color: "var(--text)" }}>{t.n}</b>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )
+            ) : (
+              <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
+            )}
+          </div>
+
+          <div className="p-4 lg:p-5" style={card}>
+            <PanelTitle title="Admissões Recentes" />
+            {widgetVisible("panel_admissoes_recentes") ? (
+              loadingColaboradores ? (
+                <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
+              ) : recentAdmissions.length === 0 ? (
+                <PanelEmptyState>Nenhuma admissão registrada</PanelEmptyState>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {recentAdmissions.map((c) => (
+                    <div
+                      key={c.id}
+                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <Avatar name={c.fullName} size={34} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "var(--text)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {c.fullName || "—"}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "var(--text-dim)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {c.jobTitle || c.department || "—"}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "var(--text-dim)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {fmt(c.admissionDate)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : (
+              <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
             )}
           </div>
         </div>
 
-        <div className="p-4 lg:p-5" style={card}>
-          <PanelTitle title="Distribuição por Departamento" />
-          {loadingColaboradores ? (
-            <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
-          ) : deptList.length === 0 ? (
-            <PanelEmptyState>Sem dados de departamento</PanelEmptyState>
-          ) : (
-            <div
-              className="grid grid-cols-1 lg:grid-cols-2"
-              style={{ gap: "8px 32px" }}
-            >
-              {deptList.map(([dept, count]) => {
-                const pct = Math.round((count / maxDept) * 100);
-                const totalPct =
-                  totalFuncionarios > 0
-                    ? Math.round((count / totalFuncionarios) * 100)
-                    : 0;
-                return (
-                  <div key={dept} style={{ paddingBottom: 4 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 5,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 500,
-                          color: "var(--text)",
-                        }}
-                      >
-                        {dept}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: "var(--text-dim)",
-                          display: "flex",
-                          gap: 6,
-                        }}
-                      >
-                        <strong style={{ color: "var(--text)" }}>{count}</strong>
-                        <span>({totalPct}%)</span>
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        height: 6,
-                        background: "var(--border)",
-                        borderRadius: 99,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${pct}%`,
-                          background: "var(--color-industria)",
-                          borderRadius: 99,
-                          transition: "width 0.4s ease",
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+        {/* Zona 4 — livre */}
+        <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <EmptyState
+            icon={LayoutGrid}
+            title={zone4Title || "Sua seção livre"}
+            description="Nesta versão, esta seção ainda não mostra widgets — só o título é personalizável. Mais widgets chegam numa próxima rodada."
+          />
         </div>
+
+        <WidgetPrefsModal
+          open={prefsOpen}
+          onClose={() => setPrefsOpen(false)}
+          title="Personalizar RH"
+          widgets={VISAO_GERAL_WIDGETS.rh}
+          toggles={toggles}
+          zone4Title={zone4Title}
+          onSave={save}
+        />
       </div>
     </div>
   );

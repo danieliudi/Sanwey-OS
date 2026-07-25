@@ -1533,7 +1533,6 @@ export default function App() {
                   pipelines={pipelines}
                   onNavigate={setSection}
                   onLeadClick={setSelectedLead}
-                  visibleWidgets={settings.visibleDashboardWidgets}
                 />
               )
           } />

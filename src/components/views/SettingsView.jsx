@@ -11,7 +11,7 @@ import { RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { AI_PROVIDERS, AI_PROVIDER_MAP } from "../../constants/ai-providers";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import {
-  DASHBOARD_WIDGETS, EXECUTIVE_WIDGETS, NOTIFICATION_GROUPS,
+  EXECUTIVE_WIDGETS, NOTIFICATION_GROUPS,
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
@@ -484,15 +484,6 @@ export function SettingsView({
     onUpdate({ enabledCompanies: next });
   }, [settings.enabledCompanies, onUpdate]);
 
-  const toggleWidget = useCallback((id) => {
-    const has = settings.visibleDashboardWidgets.includes(id);
-    onUpdate({
-      visibleDashboardWidgets: has
-        ? settings.visibleDashboardWidgets.filter(w => w !== id)
-        : [...settings.visibleDashboardWidgets, id],
-    });
-  }, [settings.visibleDashboardWidgets, onUpdate]);
-
   const toggleExecutiveWidget = useCallback((id) => {
     const has = settings.visibleExecutiveWidgets.includes(id);
     onUpdate({
@@ -871,24 +862,6 @@ export function SettingsView({
                         </button>
                       );
                     })}
-                  </div>
-                </Section>
-                )}
-
-                {isManager && (
-                <Section
-                  title="Widgets do Dashboard"
-                  description="Quais StatCards aparecem no topo do Dashboard."
-                >
-                  <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
-                    {DASHBOARD_WIDGETS.map(w => (
-                      <ToggleRow
-                        key={w.id}
-                        label={w.label}
-                        checked={settings.visibleDashboardWidgets.includes(w.id)}
-                        onChange={() => toggleWidget(w.id)}
-                      />
-                    ))}
                   </div>
                 </Section>
                 )}

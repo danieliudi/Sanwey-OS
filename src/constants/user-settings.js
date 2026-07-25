@@ -1,13 +1,6 @@
 import { COMPANY_IDS } from "./companies";
 import { DEFAULT_PIPELINE_STAGES } from "./pipelines";
 
-export const DASHBOARD_WIDGETS = [
-  { id: "leads_count", label: "Total de leads" },
-  { id: "pipeline_open", label: "Funil de Vendas aberto" },
-  { id: "won_value", label: "Valor ganho" },
-  { id: "avg_fit", label: "Fit score médio" },
-];
-
 // Painel Executivo é cross-departamento (Comercial + Marketing + RH), não uma
 // tela do Comercial — cada executivo com acesso escolhe o que aparece no
 // próprio painel.
@@ -146,7 +139,6 @@ export const DENSITY_OPTIONS = [
 
 export const DEFAULT_USER_SETTINGS = {
   enabledCompanies: [...COMPANY_IDS],
-  visibleDashboardWidgets: DASHBOARD_WIDGETS.map(w => w.id),
   visibleExecutiveWidgets: EXECUTIVE_WIDGETS.map(w => w.id),
   visibleKanbanStages: DEFAULT_PIPELINE_STAGES.map(s => s.id),
   notifications: NOTIFICATION_PREFS.reduce((acc, n) => {
