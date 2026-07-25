@@ -26,10 +26,10 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
             style={{
               background: accent
                 ? "rgba(255,255,255,0.15)"
-                : (trend > 0 ? "#F0FDF4" : trend < 0 ? "#FEF2F2" : "var(--surface-alt)"),
+                : (trend > 0 ? "var(--success-bg)" : trend < 0 ? "var(--danger-bg)" : "var(--surface-alt)"),
               color: accent
                 ? (trend > 0 ? "#A3E6B4" : "#FFB8B8")
-                : (trend > 0 ? "#15803D" : trend < 0 ? "#B91C1C" : "var(--text-faint)"),
+                : (trend > 0 ? "var(--success)" : trend < 0 ? "var(--danger)" : "var(--text-faint)"),
             }}
           >
             {trend > 0 ? "↑" : trend < 0 ? "↓" : "·"} {Math.abs(trend)}%

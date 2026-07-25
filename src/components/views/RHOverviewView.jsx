@@ -27,6 +27,15 @@ import { Eyebrow, PanelTitle } from "../shared/PanelHeading";
 import { PanelEmptyState } from "../shared/PanelEmptyState";
 import { TaskBucket } from "../shared/TaskBucket";
 import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
+import { StageDistributionBar } from "../shared/StageDistributionBar";
+
+// Paleta categórica pra distinguir departamentos na barra de distribuição —
+// departamento é texto livre (sem cor configurada em tabela, ao contrário das
+// etapas de pipeline), então gira por um índice fixo em vez de token único.
+const DEPT_COLORS = [
+  "#6366F1", "#F59E0B", "#10B981", "#EC4899",
+  "#3B82F6", "#8B5CF6", "#14B8A6", "#F97316",
+];
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -180,7 +189,6 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
   const deptList = Object.entries(deptMap)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
-  const maxDept = deptList.length > 0 ? deptList[0][1] : 1;
 
   // Zona 2 — "O que fazer": férias/vagas já eram listas soltas; "sem
   // entrevista" era um aviso estático (`semEntrevista > 0 && ...`) e vira
@@ -354,69 +362,17 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           {widgetVisible("panel_departamento") ? (
             loadingColaboradores ? (
               <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
-            ) : deptList.length === 0 ? (
-              <PanelEmptyState>Sem dados de departamento</PanelEmptyState>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: "8px 32px" }}>
-                {deptList.map(([dept, count]) => {
-                  const pct = Math.round((count / maxDept) * 100);
-                  const totalPct =
-                    totalFuncionarios > 0
-                      ? Math.round((count / totalFuncionarios) * 100)
-                      : 0;
-                  return (
-                    <div key={dept} style={{ paddingBottom: 4 }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginBottom: 5,
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 500,
-                            color: "var(--text)",
-                          }}
-                        >
-                          {dept}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 12,
-                            color: "var(--text-dim)",
-                            display: "flex",
-                            gap: 6,
-                          }}
-                        >
-                          <strong style={{ color: "var(--text)" }}>{count}</strong>
-                          <span>({totalPct}%)</span>
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          height: 6,
-                          background: "var(--border)",
-                          borderRadius: 99,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div
-                          style={{
-                            height: "100%",
-                            width: `${pct}%`,
-                            background: "var(--color-industria)",
-                            borderRadius: 99,
-                            transition: "width 0.4s ease",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <StageDistributionBar
+                items={deptList.map(([dept, count], i) => ({
+                  id: dept,
+                  name: dept,
+                  color: DEPT_COLORS[i % DEPT_COLORS.length],
+                  count,
+                }))}
+                total={totalFuncionarios}
+                emptyLabel="Sem dados de departamento"
+              />
             )
           ) : (
             <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>

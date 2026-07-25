@@ -282,12 +282,13 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
         )}
       </div>
 
-      {/* Zona 2 — Tarefas e prazos, derivado dos negócios do CRM. Vem antes
-          da faixa de stats no mobile (<1024px): é a ação imediata, não um
-          número frio. */}
+      {/* Zona 2 — Pendências, derivado dos negócios do CRM. Vem antes da
+          faixa de stats no mobile (<1024px): é a ação imediata, não um
+          número frio. Rótulo "Pendências" pra bater com Marketing/RH
+          (mesma zona estrutural, mesmo nome nas 3 telas). */}
       <div className="order-1 lg:order-2">
         <Eyebrow action={totalTasks > 0 ? "Abrir pipeline" : undefined} onAction={() => onNavigate("crm")} accent={accent}>
-          Tarefas e prazos
+          Pendências
         </Eyebrow>
         <p className="text-xs mb-3" style={{ color: "var(--text-dim)", marginTop: -6 }}>
           Pendências dos seus negócios · próximos 7 dias e leads parados
