@@ -5,6 +5,7 @@ import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAutomations } from "../../hooks/use-automations";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { ROUTES } from "../../constants/routes";
+import { friendlyAiErrorMessage } from "../../utils/ai-errors";
 
 // Assistente guiado de 6 passos pra criar/editar um Agente de IA (Agent
 // Builder, PRD docs/prd-agent-builder.md seção 3) — piloto Fornecedores RH.
@@ -43,7 +44,7 @@ const labelSt = { fontSize: 12, fontWeight: 600, color: "var(--text)", display: 
 const inputCls = "w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none";
 const inputSt = { borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" };
 
-export function AgentBuilderWizard({ currentUser, initialRule = null, onClose }) {
+export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, onSaved }) {
   const { addAutomation, updateAutomation } = useAutomations({ userId: currentUser?.id });
   const navigate = useNavigate();
   useEscToClose(onClose);
@@ -147,6 +148,7 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose })
       };
       if (initialRule) await updateAutomation(initialRule.id, rule);
       else await addAutomation(rule);
+      onSaved?.(rule);
       onClose();
     } catch (e) {
       setSaveError(e.message || "Erro ao salvar o agente.");
@@ -399,7 +401,7 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose })
                   style={{ background: "var(--danger-bg)", color: "var(--danger)" }}
                 >
                   <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-                  {preview.error}
+                  {friendlyAiErrorMessage(preview.error)}
                 </div>
               )}
             </div>

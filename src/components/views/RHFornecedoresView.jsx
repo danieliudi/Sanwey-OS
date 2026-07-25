@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Search, Bot,
 } from "lucide-react";
@@ -8,6 +9,7 @@ import { useProfiles } from "../../hooks/use-profiles";
 import { formatK } from "../../utils/currency";
 import { formatDateBR } from "../../utils/date";
 import { contratoFornecedorDiasParaVencer } from "../../utils/rh-compliance-dates";
+import { ROUTES } from "../../constants/routes";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { Tabs } from "../shared/Tabs";
 import { FilterBar } from "../shared/FilterBar";
@@ -16,6 +18,7 @@ import { Badge } from "../ui/Badge";
 import { StatCard } from "../ui/StatCard";
 import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
+import { AppToast } from "../shared/AppToast";
 
 const TIPO_LABELS = {
   convenio_medico: "Convênio médico",
@@ -499,6 +502,7 @@ function ContratosTableView({ contratos, suppliers, users, onRowClick }) {
 }
 
 export function RHFornecedoresView({ currentUser }) {
+  const navigate = useNavigate();
   const { suppliers, contratos, eventos, loading, createSupplier, createContrato, updateContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
   const { users } = useProfiles();
   const [novoOpen, setNovoOpen] = useState(false);
@@ -507,6 +511,10 @@ export function RHFornecedoresView({ currentUser }) {
   const [search, setSearch] = useState("");
   const [density, setDensity] = useState("grid");
   const [agentWizardOpen, setAgentWizardOpen] = useState(false);
+  // Depois de criar um agente aqui, o único lugar pra gerenciá-lo
+  // (editar/pausar/excluir/ver sugestões) é Automações → aba "Agentes de
+  // IA" — sem esse aviso com atalho, ninguém acha o caminho de volta.
+  const [agentCreatedToast, setAgentCreatedToast] = useState(false);
 
   // roles[] cobre cargo adicional — currentUser.role sozinho fica só de
   // fallback (mesmo formato de checagem já usado em AgentActionsView/App.jsx).
@@ -524,17 +532,25 @@ export function RHFornecedoresView({ currentUser }) {
   }, [contratos]);
   const contratosAtivos = useMemo(() => contratos.filter(c => c.status === "ativo").length, [contratos]);
   const vencendo = useMemo(() => {
+    // "Vencendo" = ainda dentro da janela de 30 dias (0-30, inclusive hoje).
+    // "Vencido" = vigência já passou (dias negativo) — outro estado, não o
+    // mesmo rótulo. Antes, `dias <= 30` sem piso incluía contrato já vencido
+    // há dias no mesmo balde de "vencendo em 30 dias".
     const fornecedorIds = new Set();
+    const vencidoFornecedorIds = new Set();
     let total = 0;
     for (const c of contratos) {
       if (c.status !== "ativo") continue;
       const dias = contratoFornecedorDiasParaVencer(c);
-      if (dias != null && dias <= 30) {
+      if (dias == null) continue;
+      if (dias < 0) {
+        vencidoFornecedorIds.add(c.fornecedorId);
+      } else if (dias <= 30) {
         fornecedorIds.add(c.fornecedorId);
         total += 1;
       }
     }
-    return { fornecedorIds, total };
+    return { fornecedorIds, vencidoFornecedorIds, total };
   }, [contratos]);
   const filteredSuppliers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -641,7 +657,8 @@ export function RHFornecedoresView({ currentUser }) {
       ) : (
         <CardGrid density={density}>
           {filteredSuppliers.map(s => {
-            const isVencendo = vencendo.fornecedorIds.has(s.id);
+            const isVencido = vencendo.vencidoFornecedorIds.has(s.id);
+            const isVencendo = !isVencido && vencendo.fornecedorIds.has(s.id);
             return (
               <Card
                 key={s.id}
@@ -650,8 +667,16 @@ export function RHFornecedoresView({ currentUser }) {
                 icon={<span style={{ fontSize: density === "list" ? 12 : 15, fontWeight: 700 }}>{(s.name || "").trim().charAt(0).toUpperCase() || "?"}</span>}
                 title={s.name}
                 meta={TIPO_LABELS[s.tipo] || s.tipo}
-                badges={isVencendo ? <Badge variant="urgent">Contrato vencendo</Badge> : null}
-                status={isVencendo ? { color: "var(--amber)", label: "Vencendo" } : null}
+                badges={
+                  isVencido ? <Badge variant="critical">Contrato vencido</Badge>
+                  : isVencendo ? <Badge variant="urgent">Contrato vencendo</Badge>
+                  : null
+                }
+                status={
+                  isVencido ? { color: "var(--danger)", label: "Vencido" }
+                  : isVencendo ? { color: "var(--amber)", label: "Vencendo" }
+                  : null
+                }
                 footer={`${contratoCountByFornecedor.get(s.id) || 0} contrato(s) ativo(s)`}
               />
             );
@@ -664,7 +689,25 @@ export function RHFornecedoresView({ currentUser }) {
       )}
 
       {agentWizardOpen && (
-        <AgentBuilderWizard currentUser={currentUser} onClose={() => setAgentWizardOpen(false)} />
+        <AgentBuilderWizard
+          currentUser={currentUser}
+          onClose={() => setAgentWizardOpen(false)}
+          onSaved={() => setAgentCreatedToast(true)}
+        />
+      )}
+
+      {agentCreatedToast && (
+        <AppToast
+          icon={Bot}
+          title="Agente de IA criado"
+          onDismiss={() => setAgentCreatedToast(false)}
+          action={{
+            label: "Ver em Automações →",
+            onClick: () => navigate(ROUTES.automations, { state: { initialTab: "agents" } }),
+          }}
+        >
+          Editar, pausar ou ver as sugestões geradas fica na aba "Agentes de IA" de Automações.
+        </AppToast>
       )}
 
       {selected && (

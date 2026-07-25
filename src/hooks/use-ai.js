@@ -39,7 +39,15 @@ async function callViaEdge(provider, model, apiKey, messages, maxTokens) {
   const { data, error } = await supabase.functions.invoke('ai-assistant', {
     body: { provider, model, apiKey, messages, maxTokens },
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // error.message do SDK é genérico ("Edge Function returned a non-2xx
+    // status code") — a function sempre manda o motivo real no corpo JSON
+    // (`{ error: "..." }`), só que `functions.invoke` não lê esse corpo pra
+    // dentro de `data` quando o status não é 2xx. `error.context` é a
+    // Response crua, ainda com o body pra ler.
+    const body = await error.context?.json?.().catch(() => null);
+    throw new Error(body?.error || error.message);
+  }
   if (data?.error) throw new Error(data.error);
   return data?.content || '';
 }

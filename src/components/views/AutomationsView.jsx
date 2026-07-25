@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Zap, Plus, Trash2, ToggleLeft, ToggleRight, ArrowRight,
   AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X, Info,
@@ -92,10 +93,13 @@ const COMPANY_OPTIONS = [
 export function AutomationsView({ leads, pipelines, activeCompany, currentUser, onNavigate }) {
   const { automations, addAutomation, updateAutomation, deleteAutomation, toggleAutomation, stats } = useAutomations({ userId: currentUser?.id });
   const agentRunsSummary = useAgentRunsSummary();
+  const location = useLocation();
   const [showBuilder, setShowBuilder] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [moduleTab, setModuleTab] = useState("all");
-  const [mainTab, setMainTab] = useState("automations"); // "automations" | "agents"
+  // "automations" | "agents" — chega direto em "agents" quando navegado a
+  // partir do atalho "Criar agente de IA" de outra tela (ex.: Fornecedores RH).
+  const [mainTab, setMainTab] = useState(location.state?.initialTab === "agents" ? "agents" : "automations");
   // Quando o usuário clica num template, pré-preenche o builder.
   const [builderInitial, setBuilderInitial] = useState(null);
   // Wizard do Agent Builder (AgentBuilderWizard) — totalmente separado do

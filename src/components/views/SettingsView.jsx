@@ -16,6 +16,7 @@ import {
 import { Button } from "../ui/Button";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { callAI } from "../../hooks/use-ai";
+import { friendlyAiErrorMessage } from "../../utils/ai-errors";
 
 function Section({ title, description, children }) {
   return (
@@ -1170,7 +1171,7 @@ export function SettingsView({
                       }}
                     >
                       {aiTestResult === 'ok' ? <CheckCircle2 size={13} /> : <Zap size={13} />}
-                      <span>{aiTestResult === 'ok' ? `✓ ${aiTestMsg || 'Conexão OK'}` : aiTestMsg}</span>
+                      <span>{aiTestResult === 'ok' ? `✓ ${aiTestMsg || 'Conexão OK'}` : friendlyAiErrorMessage(aiTestMsg)}</span>
                     </div>
                   )}
 
