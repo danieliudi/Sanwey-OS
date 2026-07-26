@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bot, RefreshCw, CheckCircle2, XCircle, EyeOff, ChevronDown, ChevronUp,
   Clock, AlertTriangle, TrendingUp, Mail, Zap, Target, Telescope, Repeat2,
-  Shield, GitMerge, Settings, Info,
+  Shield, GitMerge, Settings, Info, ExternalLink,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { AgentConfigModal } from "../agents/AgentConfigModal";
 import { relativeTime } from "../../utils/date";
+import { ROUTES } from "../../constants/routes";
 
 // ── Agent metadata ─────────────────────────────────────────────────────────
 const AGENTS = {

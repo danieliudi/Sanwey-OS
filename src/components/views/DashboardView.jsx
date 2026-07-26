@@ -16,6 +16,7 @@ import { StageDistributionBar } from "../shared/StageDistributionBar";
 import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, daysSince } from "../../utils/date";
+import { monthBounds, within, pctChange } from "../../utils/trend";
 import { exportLeadsToCSV } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
 import { useUsersById } from "../../hooks/use-users-by-id";
@@ -75,6 +76,24 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
     return { pipelineValue, wonValue, wonCount, openCount, avgFit, fitCount70, newCount };
   }, [scopedLeads]);
 
+  // Zona 1 — mês corrente vs. mês anterior, mesmo recipe do Marketing
+  // (mom.campaigns), aplicado a scopedLeads já carregado.
+  const mom = useMemo(() => {
+    const now = new Date();
+    const [cs, ce] = monthBounds(now);
+    const prev = new Date(now); prev.setMonth(prev.getMonth() - 1);
+    const [ps, pe] = monthBounds(prev);
+    const lc = scopedLeads.filter(l => within(l.createdAt, cs, ce)).length;
+    const lp = scopedLeads.filter(l => within(l.createdAt, ps, pe)).length;
+    const wc = scopedLeads.filter(l => l.stage === "ganho" && within(l.stageChangedAt, cs, ce))
+      .reduce((s, l) => s + l.value, 0);
+    const wp = scopedLeads.filter(l => l.stage === "ganho" && within(l.stageChangedAt, ps, pe))
+      .reduce((s, l) => s + l.value, 0);
+    return {
+      leads: { v: lc, d: pctChange(lc, lp) },
+      won:   { v: wc, d: pctChange(wc, wp) },
+    };
+  }, [scopedLeads]);
 
   // Derived from CRM leads — surfaces what needs attention this week.
   const tasks = useMemo(() => {
@@ -255,7 +274,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
               <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
                 <StatCard icon={Target} value={scopedLeads.length}
                   label={isManager ? (isGroupView ? "Leads no grupo" : "Leads da empresa") : "Meus leads"}
-                  sublabel={`${stats.fitCount70} com fit ≥ 70`} compact />
+                  trend={mom.leads.d} compact />
               </div>
             )}
             {widgetVisible("pipeline_open") && (
@@ -268,7 +287,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
             {widgetVisible("won_value") && (
               <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
                 <StatCard icon={CheckCircle2} value={formatK(stats.wonValue)}
-                  label="Valor ganho" sublabel={`${stats.wonCount} fechados`} accent={accent} compact />
+                  label="Valor ganho" trend={mom.won.d} accent={accent} compact />
               </div>
             )}
             {widgetVisible("avg_fit") && (

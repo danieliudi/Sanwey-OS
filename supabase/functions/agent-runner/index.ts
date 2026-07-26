@@ -46,9 +46,15 @@ const TONE_LABEL: Record<string, string> = {
   cordial: "cordial e amigável, mas profissional",
 };
 
+const SUGGESTED_ACTION_LABEL: Record<string, string> = {
+  iniciar_renovacao: "Iniciar renovação",
+  buscar_cotacao: "Buscar cotação alternativa",
+  so_monitorar: "Só monitorar",
+};
+
 function buildPrompt(draftType: string, tone: string, customInstruction: string, ctx: {
   fornecedorNome: string; fornecedorTipo: string; titulo: string; diasParaVencer: number; vigenciaFim: string; valor: number | null;
-}) {
+}, followUpDays?: number, suggestedAction?: string) {
   const toneLabel = TONE_LABEL[tone] || TONE_LABEL.formal;
   const contexto = [
     `Fornecedor: ${ctx.fornecedorNome}`,
@@ -60,14 +66,15 @@ function buildPrompt(draftType: string, tone: string, customInstruction: string,
   ].filter(Boolean).join("\n");
 
   if (draftType === "aviso_interno") {
+    const actionLabel = SUGGESTED_ACTION_LABEL[suggestedAction || ""] || null;
     return {
-      system: `Você escreve avisos internos curtos em português do Brasil pro time de RH de uma empresa, sobre contratos de fornecedores vencendo. Tom: ${toneLabel}. Responda SOMENTE com um JSON válido no formato {"title": "...", "recommended_action": "..."} — title é uma frase curta (até 80 caracteres), recommended_action é o texto do aviso (2-4 frases, sem saudação).`,
+      system: `Você escreve avisos internos curtos em português do Brasil pro time de RH de uma empresa, sobre contratos de fornecedores vencendo. Tom: ${toneLabel}. Responda SOMENTE com um JSON válido no formato {"title": "...", "recommended_action": "..."} — title é uma frase curta (até 80 caracteres), recommended_action é o texto do aviso (2-4 frases, sem saudação).${actionLabel ? ` Considere que a ação recomendada pelo gerente é "${actionLabel}" — mencione isso claramente em recommended_action, adaptando a redação ao contexto do contrato, sem inventar uma ação diferente.` : ""}`,
       user: contexto,
     };
   }
   // email_fornecedor (default)
   return {
-    system: `Você escreve e-mails profissionais em português do Brasil para fornecedores, avisando sobre renovação de contrato prestes a vencer. Tom: ${toneLabel}. Responda SOMENTE com um JSON válido no formato {"subject": "...", "body": "..."} — body é o corpo do e-mail (sem saudação de fechamento tipo "Atenciosamente, [Nome]", isso é preenchido depois por quem aprovar).`,
+    system: `Você escreve e-mails profissionais em português do Brasil para fornecedores, avisando sobre renovação de contrato prestes a vencer. Tom: ${toneLabel}. Responda SOMENTE com um JSON válido no formato {"subject": "...", "body": "..."} — body é o corpo do e-mail (sem saudação de fechamento tipo "Atenciosamente, [Nome]", isso é preenchido depois por quem aprovar). Feche o e-mail pedindo confirmação em até ${followUpDays ?? 5} dia(s) úteis.`,
     user: contexto,
   };
 }
@@ -116,7 +123,7 @@ function passesConditionGroups(groups: any[], record: Record<string, string>): b
 async function findCandidateContracts(admin: any, conditionGroups: any[]) {
   const { data, error } = await admin
     .from("rh_fornecedor_contratos")
-    .select("*, rh_fornecedores(id, name, tipo)")
+    .select("*, rh_fornecedores(id, name, tipo, contact_name, email, phone)")
     .eq("status", "ativo")
     .not("vigencia_fim", "is", null);
   if (error) throw error;
@@ -200,7 +207,7 @@ async function runSweep(admin: any) {
         diasParaVencer: dias,
         vigenciaFim: contrato.vigencia_fim,
         valor: contrato.valor,
-      });
+      }, action.followUpDays, action.suggestedAction);
 
       try {
         const raw = await callAIProvider({
@@ -232,6 +239,9 @@ async function runSweep(admin: any) {
             source_id: contrato.id,
             fornecedor_id: fornecedor.id,
             fornecedor_nome: fornecedor.name,
+            fornecedor_contact_name: fornecedor.contact_name || null,
+            fornecedor_email: fornecedor.email || null,
+            fornecedor_phone: fornecedor.phone || null,
             dias_para_vencer: dias,
             ...(isEmail
               ? { subject: draft.subject || `Renovação de contrato — ${fornecedor.name}`, draft_email: draft.body || "" }
@@ -272,6 +282,7 @@ async function runPreview(admin: any, body: any, userId: string) {
 
   let usandoExemplo = false;
   let fornecedorNome: string, fornecedorTipo: string, titulo: string, dias: number, vigenciaFim: string, valor: number | null;
+  let fornecedorContactName: string | null, fornecedorEmail: string | null, fornecedorPhone: string | null;
   if (contrato) {
     fornecedorNome = contrato.c.rh_fornecedores?.name || "Fornecedor";
     fornecedorTipo = contrato.c.rh_fornecedores?.tipo || "";
@@ -279,6 +290,9 @@ async function runPreview(admin: any, body: any, userId: string) {
     dias = contrato.dias;
     vigenciaFim = contrato.c.vigencia_fim;
     valor = contrato.c.valor;
+    fornecedorContactName = contrato.c.rh_fornecedores?.contact_name || null;
+    fornecedorEmail = contrato.c.rh_fornecedores?.email || null;
+    fornecedorPhone = contrato.c.rh_fornecedores?.phone || null;
   } else {
     usandoExemplo = true;
     fornecedorNome = "Fornecedor Exemplo Ltda.";
@@ -287,6 +301,9 @@ async function runPreview(admin: any, body: any, userId: string) {
     dias = days;
     vigenciaFim = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
     valor = null;
+    fornecedorContactName = null;
+    fornecedorEmail = null;
+    fornecedorPhone = null;
   }
 
   // Preview usa a chave de QUEM ESTÁ TESTANDO (a sessão autenticada), não a
@@ -299,7 +316,7 @@ async function runPreview(admin: any, body: any, userId: string) {
 
   const { system, user } = buildPrompt(action.draftType, action.tone, action.customInstruction || "", {
     fornecedorNome, fornecedorTipo, titulo, diasParaVencer: dias, vigenciaFim, valor,
-  });
+  }, action.followUpDays, action.suggestedAction);
 
   try {
     const raw = await callAIProvider({
@@ -314,6 +331,9 @@ async function runPreview(admin: any, body: any, userId: string) {
     return json({
       usandoExemplo,
       fornecedorNome,
+      fornecedorContactName,
+      fornecedorEmail,
+      fornecedorPhone,
       diasParaVencer: dias,
       isEmail,
       subject: isEmail ? (draft.subject || "") : undefined,

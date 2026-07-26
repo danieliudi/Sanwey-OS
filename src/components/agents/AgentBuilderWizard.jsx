@@ -34,6 +34,12 @@ const TONES = [
   { id: "cordial", label: "Cordial" },
 ];
 
+const SUGGESTED_ACTIONS = [
+  { id: "iniciar_renovacao", label: "Iniciar renovação" },
+  { id: "buscar_cotacao",    label: "Buscar cotação alternativa" },
+  { id: "so_monitorar",      label: "Só monitorar" },
+];
+
 function suggestedName(draftType) {
   return draftType === "email_fornecedor"
     ? "Aviso de renovação — Fornecedores RH"
@@ -61,6 +67,8 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
   const [draftType, setDraftType] = useState(initialThen.draftType || "email_fornecedor");
   const [tone, setTone] = useState(initialThen.tone || "cordial");
   const [customInstruction, setCustomInstruction] = useState(initialThen.customInstruction || "");
+  const [followUpDays, setFollowUpDays] = useState(initialThen.followUpDays ?? 5);
+  const [suggestedAction, setSuggestedAction] = useState(initialThen.suggestedAction || "iniciar_renovacao");
   const [name, setName] = useState(initialRule?.name || suggestedName(initialThen.draftType || "email_fornecedor"));
   const [nameEdited, setNameEdited] = useState(Boolean(initialRule?.name));
 
@@ -93,7 +101,14 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
   const conditionGroups = tipoFilter
     ? [{ logic: "AND", conditions: [{ field: "tipo", operator: "eq", value: tipoFilter }] }]
     : [];
-  const thenActions = [{ type: "suggest_with_ai", draftType, tone, customInstruction: customInstruction.trim() }];
+  const thenActions = [{
+    type: "suggest_with_ai",
+    draftType,
+    tone,
+    customInstruction: customInstruction.trim(),
+    followUpDays: draftType === "email_fornecedor" ? (Number(followUpDays) || 5) : undefined,
+    suggestedAction: draftType === "aviso_interno" ? suggestedAction : undefined,
+  }];
 
   const canNext = () => {
     if (step === 1) return Number(days) > 0;
@@ -283,12 +298,45 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
                   {DRAFT_TYPES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
                 </select>
               </div>
+              {draftType === "email_fornecedor" && (
+                <div
+                  className="rounded-xl border px-3.5 py-3 flex items-start gap-2.5"
+                  style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
+                >
+                  <Info size={13} style={{ color: "var(--text-dim)", marginTop: 1 }} className="shrink-0" />
+                  <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+                    O e-mail vai usar o contato cadastrado em Fornecedores (nome, e-mail e telefone) —
+                    quem aprovar a sugestão vê pra quem vai antes de confirmar.
+                  </p>
+                </div>
+              )}
               <div>
                 <label style={labelSt}>Tom</label>
                 <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls} style={inputSt}>
                   {TONES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
               </div>
+              {draftType === "email_fornecedor" && (
+                <div>
+                  <label style={labelSt}>Pedir confirmação em até quantos dias?</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={followUpDays}
+                    onChange={e => setFollowUpDays(e.target.value)}
+                    className={inputCls}
+                    style={inputSt}
+                  />
+                </div>
+              )}
+              {draftType === "aviso_interno" && (
+                <div>
+                  <label style={labelSt}>Ação sugerida</label>
+                  <select value={suggestedAction} onChange={e => setSuggestedAction(e.target.value)} className={inputCls} style={inputSt}>
+                    {SUGGESTED_ACTIONS.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
+                  </select>
+                </div>
+              )}
               <div>
                 <label style={labelSt}>Algo específico que a IA deve sempre mencionar (opcional)</label>
                 <input

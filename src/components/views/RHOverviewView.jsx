@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Users,
   Briefcase,
@@ -15,6 +15,7 @@ import {
 } from "../../constants/rh-config";
 import { VISAO_GERAL_WIDGETS } from "../../constants/visao-geral-widgets";
 import { parseDateInput } from "../../utils/date";
+import { monthBounds, within, pctChange } from "../../utils/trend";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
@@ -172,6 +173,35 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
     .filter((t) => t.n > 0);
   const semEntrevistaList = desligados12m.filter((c) => !c.desligamentoTipo);
 
+  // MoM — reconstrói o headcount no início do mês corrente a partir de
+  // admissionDate/desligamentoDate (sem tabela de snapshot histórico) pra
+  // alimentar o trend de "Total de Funcionários". Só usa fatos pontuais e
+  // confiáveis (data de admissão, data de desligamento) — não extrapola
+  // employeeStatus (ferias/afastado) pro passado, ver spec §4.4.
+  const [monthStart] = monthBounds(new Date());
+  const totalAtStartOfMonth = colaboradores.filter((c) => {
+    if (!c.admissionDate) return false;
+    const adm = parseDateInput(c.admissionDate);
+    if (Number.isNaN(adm.getTime()) || adm >= monthStart) return false;
+    if (c.employeeStatus === "desligado" && c.desligamentoDate) {
+      const deslig = parseDateInput(c.desligamentoDate);
+      if (!Number.isNaN(deslig.getTime()) && deslig < monthStart) return false;
+    }
+    return true;
+  }).length;
+
+  // Zona 1 — desligamentos por mês-calendário (fluxo), separado da janela
+  // rolante de 12 meses que o card mostra (ver spec §4.5).
+  const mom = useMemo(() => {
+    const now = new Date();
+    const [cs, ce] = monthBounds(now);
+    const prev = new Date(now); prev.setMonth(prev.getMonth() - 1);
+    const [ps, pe] = monthBounds(prev);
+    const ec = colaboradores.filter(c => c.employeeStatus === "desligado" && within(c.desligamentoDate, cs, ce)).length;
+    const ep = colaboradores.filter(c => c.employeeStatus === "desligado" && within(c.desligamentoDate, ps, pe)).length;
+    return { exits: { v: ec, d: pctChange(ec, ep) } };
+  }, [colaboradores]);
+
   const recentAdmissions = [...colaboradores]
     .filter((c) => c.admissionDate)
     .sort(
@@ -298,34 +328,40 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
             >
               {widgetVisible("stat_total") && (
                 <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={Users} value={totalFuncionarios} label="Total de Funcionários" compact />
+                  <StatCard icon={Users} value={totalFuncionarios} label="Total de Funcionários"
+                    trend={pctChange(totalFuncionarios, totalAtStartOfMonth)} compact />
                 </div>
               )}
               {widgetVisible("stat_ativos") && (
                 <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={UserCheck} value={totalAtivos} label="Ativos" compact />
+                  <StatCard icon={UserCheck} value={totalAtivos} label="Ativos"
+                    sublabel={totalFuncionarios > 0 ? `${Math.round((totalAtivos / totalFuncionarios) * 100)}% do total` : undefined} compact />
                 </div>
               )}
               {widgetVisible("stat_ferias") && (
                 <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={Calendar} value={totalFerias} label="De Férias" compact />
+                  <StatCard icon={Calendar} value={totalFerias} label="De Férias"
+                    sublabel={totalFuncionarios > 0 ? `${Math.round((totalFerias / totalFuncionarios) * 100)}% do total` : undefined} compact />
                 </div>
               )}
               {widgetVisible("stat_afastados") && (
                 <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
                   <StatCard icon={UserMinus} value={totalAfastados} label="Afastados"
-                    accent={totalAfastados > 0 ? "var(--warning)" : undefined} compact />
+                    accent={totalAfastados > 0 ? "var(--warning)" : undefined}
+                    sublabel={totalFuncionarios > 0 ? `${Math.round((totalAfastados / totalFuncionarios) * 100)}% do total` : undefined} compact />
                 </div>
               )}
               {widgetVisible("stat_desligamentos") && (
                 <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
-                  <StatCard icon={UserMinus} value={desligados12m.length} label="Desligamentos (12 meses)" compact />
+                  <StatCard icon={UserMinus} value={desligados12m.length} label="Desligamentos (12 meses)"
+                    trend={mom.exits.d} compact />
                 </div>
               )}
               {widgetVisible("stat_turnover_rate") && (
                 <div className="flex-none w-[132px] lg:w-auto" style={{ scrollSnapAlign: "start" }}>
                   <StatCard icon={TrendingUp} value={`${turnoverRate}%`} label="Taxa de turnover aproximada"
-                    accent={turnoverRate >= 20 ? "var(--danger)" : undefined} compact />
+                    accent={turnoverRate >= 20 ? "var(--danger)" : undefined}
+                    sublabel={desligados12m.length > 0 ? `${voluntariosPct}% voluntário` : undefined} compact />
                 </div>
               )}
             </div>

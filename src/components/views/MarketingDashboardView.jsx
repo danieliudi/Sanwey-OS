@@ -16,6 +16,7 @@ import { MARKETING_STAGES, EXPENSE_CATEGORIES } from "../../constants/marketing-
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatBRL, formatK } from "../../utils/currency";
 import { formatDateBR, daysSince } from "../../utils/date";
+import { monthBounds, within, pctChange } from "../../utils/trend";
 import { StatCard } from "../ui/StatCard";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -28,22 +29,6 @@ import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
 
 // ── Date helpers ────────────────────────────────────────────────────────────────
 
-function monthBounds(date) {
-  const d = new Date(date);
-  return [
-    new Date(d.getFullYear(), d.getMonth(), 1),
-    new Date(d.getFullYear(), d.getMonth() + 1, 1),
-  ];
-}
-function within(date, start, end) {
-  if (!date) return false;
-  const d = new Date(date);
-  return d >= start && d < end;
-}
-function pctChange(curr, prev) {
-  if (prev === 0) return curr > 0 ? 100 : 0;
-  return Math.round(((curr - prev) / prev) * 100);
-}
 function shortMonth(date) {
   return new Date(date).toLocaleString("pt-BR", { month: "short" });
 }
