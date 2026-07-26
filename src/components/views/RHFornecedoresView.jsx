@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Search, Bot,
@@ -507,6 +507,19 @@ export function RHFornecedoresView({ currentUser }) {
   const { users } = useProfiles();
   const [novoOpen, setNovoOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+
+  // "Ver fornecedor" (AgentActionsView, aviso interno do Agent Builder)
+  // navega pra cá e abre o FornecedorDrawer já focado — mesmo padrão de
+  // handoff via sessionStorage já usado por filterAutomationId.
+  useEffect(() => {
+    try {
+      const id = sessionStorage.getItem("rhFornecedoresOpenId");
+      if (id) {
+        sessionStorage.removeItem("rhFornecedoresOpenId");
+        setSelectedId(id);
+      }
+    } catch { /* sessionStorage indisponível — segue sem handoff */ }
+  }, []);
   const [viewMode, setViewMode] = useState("fornecedores"); // "fornecedores" | "contratos"
   const [search, setSearch] = useState("");
   const [density, setDensity] = useState("grid");

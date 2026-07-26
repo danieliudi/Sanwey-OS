@@ -32,7 +32,7 @@ const PRIORITY = {
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 // ── Action card ────────────────────────────────────────────────────────────
-function ActionCard({ action, agent, onResolve, resolving }) {
+function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
   const [expanded, setExpanded] = useState(false);
   const prio = PRIORITY[action.priority] || PRIORITY.normal;
   const payload = action.payload || {};
@@ -114,6 +114,26 @@ function ActionCard({ action, agent, onResolve, resolving }) {
       {/* Expanded payload */}
       {expanded && (payload.draft_email || payload.recommended_action) && (
         <div className="mx-4 mb-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "#F8F9FA" }}>
+          {action.action_type === "email_fornecedor" &&
+            (payload.fornecedor_contact_name || payload.fornecedor_email || payload.fornecedor_phone) && (
+            <div className="px-3 pt-3 pb-1.5 flex items-start gap-2 border-b" style={{ borderColor: "var(--border)" }}>
+              <Mail size={11} style={{ color: agent.color, marginTop: 2 }} className="shrink-0" />
+              <div className="text-xs leading-relaxed">
+                <span className="font-bold" style={{ color: "var(--text-dim)" }}>Destinatário: </span>
+                {payload.fornecedor_contact_name && (
+                  <span style={{ color: "var(--text)" }}>{payload.fornecedor_contact_name}</span>
+                )}
+                {payload.fornecedor_email && (
+                  <span style={{ color: "var(--text-dim)" }}>
+                    {payload.fornecedor_contact_name ? " · " : ""}{payload.fornecedor_email}
+                  </span>
+                )}
+                {payload.fornecedor_phone && (
+                  <span style={{ color: "var(--text-dim)" }}> · {payload.fornecedor_phone}</span>
+                )}
+              </div>
+            </div>
+          )}
           {payload.subject && (
             <div className="px-3 pt-3 pb-1 flex items-center gap-2">
               <Mail size={11} style={{ color: agent.color }} />
@@ -140,6 +160,18 @@ function ActionCard({ action, agent, onResolve, resolving }) {
                 <span className="font-semibold">Próximo passo: </span>
                 {payload.recommended_action}
               </p>
+            </div>
+          )}
+          {action.action_type === "aviso_interno" && payload.fornecedor_id && (
+            <div className="px-3 pb-3">
+              <button
+                onClick={() => onOpenFornecedor(payload.fornecedor_id)}
+                className="flex items-center gap-1.5 text-xs font-semibold"
+                style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                <ExternalLink size={11} />
+                Ver fornecedor{payload.fornecedor_nome ? ` — ${payload.fornecedor_nome}` : ""}
+              </button>
             </div>
           )}
         </div>
@@ -203,7 +235,7 @@ function ActionCard({ action, agent, onResolve, resolving }) {
 }
 
 // ── Agent section ──────────────────────────────────────────────────────────
-function AgentSection({ agentId, actions, onResolve, resolving, metaOverride }) {
+function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, onOpenFornecedor }) {
   const [open, setOpen] = useState(true);
   const meta = metaOverride || AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: "var(--text-dim)", bg: "var(--surface-alt)" };
   const { Icon } = meta;
@@ -258,6 +290,7 @@ function AgentSection({ agentId, actions, onResolve, resolving, metaOverride }) 
               agent={meta}
               onResolve={onResolve}
               resolving={resolving}
+              onOpenFornecedor={onOpenFornecedor}
             />
           ))}
         </div>
@@ -270,6 +303,7 @@ const FILTER_AUTOMATION_STORAGE_KEY = "agentActionsFilterAutomationId";
 
 // ── Main view ──────────────────────────────────────────────────────────────
 export function AgentActionsView({ currentUser, activeCompany, automations, filterAutomationId: filterAutomationIdProp }) {
+  const navigate = useNavigate();
   const [actions, setActions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -368,6 +402,16 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
       setResolving(null);
     }
   }, []);
+
+  // "Ver fornecedor" (ActionCard, aviso interno) navega pra RHFornecedoresView
+  // e abre o FornecedorDrawer já focado — mesmo mecanismo de handoff via
+  // sessionStorage já usado por filterAutomationId/AutomationsView acima.
+  const onOpenFornecedor = useCallback((fornecedorId) => {
+    try {
+      sessionStorage.setItem("rhFornecedoresOpenId", fornecedorId);
+    } catch { /* sessionStorage indisponível (modo privado etc.) — segue sem handoff */ }
+    navigate(ROUTES["rh-fornecedores"]);
+  }, [navigate]);
 
   // ── Group by agent ────────────────────────────────────────────────────────
   const agentOrder = ["cadencia", "sentinela", "sdr_q", "scout", "cross"];
@@ -606,6 +650,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
               agent={sectionMetaOverrides[`automation:${action.automation_id}`] || { color: "var(--accent)" }}
               onResolve={handleResolve}
               resolving={resolving}
+              onOpenFornecedor={onOpenFornecedor}
             />
           ))}
         </div>
@@ -622,6 +667,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
               onResolve={handleResolve}
               resolving={resolving}
               metaOverride={sectionMetaOverrides[agentId]}
+              onOpenFornecedor={onOpenFornecedor}
             />
           ))}
         </div>
