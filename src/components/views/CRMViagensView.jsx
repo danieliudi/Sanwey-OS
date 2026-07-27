@@ -4,6 +4,7 @@ import { CRMViagensPlanejamentoView } from "./CRMViagensPlanejamentoView";
 import { CRMViagensGestorView } from "./CRMViagensGestorView";
 import { CRMViagensRelatoriosView } from "./CRMViagensRelatoriosView";
 import { CRMViagensCalculadoraView } from "./CRMViagensCalculadoraView";
+import { PageHeader } from "../shared/PageHeader";
 import { COMERCIAL_ROLES } from "../../utils/viagens";
 
 const MANAGER_ROLES = new Set(["gerente", "admin"]);
@@ -39,6 +40,11 @@ export function CRMViagensView({ currentUser, leads, users, pushNotification }) 
 
   return (
     <div className="flex flex-col gap-4">
+      <PageHeader
+        icon={Plane}
+        title="Viagens & Reembolsos"
+        subtitle="Planeje visitas, acompanhe aprovações e lance reembolsos do time comercial"
+      />
       {tabs.length > 1 && (
         <div className="max-w-full overflow-x-auto" style={{ display: "flex", gap: 4, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 10, padding: 3, alignSelf: "flex-start" }}>
           {tabs.map((t) => {

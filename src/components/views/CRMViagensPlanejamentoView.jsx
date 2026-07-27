@@ -830,12 +830,7 @@ export function CRMViagensPlanejamentoView({ currentUser, leads = [], pushNotifi
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-bold leading-tight" style={{ fontSize: 24, color: "var(--text)", letterSpacing: "-0.02em" }}>Viagens e visitas</h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Planeje suas visitas do mês e lance despesas de reembolso</p>
-        </div>
+      <div className="flex items-center justify-end">
         <MonthNav mesRef={mesRef} onChange={setMesRef} />
       </div>
 
