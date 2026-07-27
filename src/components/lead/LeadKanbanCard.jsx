@@ -40,7 +40,7 @@ function renderPreviewField(key, lead, { probDisplay, closeStyle, accentOpacity 
   }
 }
 
-function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread, pipelineTransitions, showMoveOptions = true }) {
+function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, onDuplicateCard, completeness, unread, pipelineTransitions, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -130,11 +130,12 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
           <span className="inline-flex" style={{ opacity: terminalAccentOpacity(isTerminal) }}>
             <FitScoreCircle score={lead.fitScore} size={30} />
           </span>
-          {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
+          {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
               onMove={onMoveToStage ? (key) => onMoveToStage(lead.id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(lead.id) : undefined}
+              onDuplicate={onDuplicateCard ? () => onDuplicateCard(lead.id) : undefined}
               onOpenChange={setMenuOpen}
             />
           )}

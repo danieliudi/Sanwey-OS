@@ -11,6 +11,7 @@ import {
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
 import { usePipelines } from "./hooks/use-pipelines";
+import { DEFAULT_PIPELINE_STAGES } from "./constants/pipelines";
 import { ROUTES, sectionFromPath } from "./constants/routes";
 import { useModuleOverrides } from "./hooks/use-module-overrides";
 import { effectiveModules, ALL_MODULE_IDS } from "./utils/module-access";
@@ -250,6 +251,7 @@ export default function App() {
     addLead,
     updateLead: updateLeadRemote,
     deleteLead,
+    duplicateLead,
     toggleStar,
     changeStage,
     addLeadActivity,
@@ -1023,6 +1025,23 @@ export default function App() {
     return saved;
   }, [addLead, evaluateAutomations, processAutomationSideEffects, applyAutomationOutcome]);
 
+  // Duplicar card do Funil de Vendas — cópia sempre nasce na 1ª etapa
+  // não-terminal do pipeline DAQUELA empresa (pipelines[companyId], configurável
+  // por Comercial > Editar etapas), nunca herdando a etapa do lead original.
+  const handleDuplicateLead = useCallback(async (id) => {
+    const source = leads.find(l => l.id === id);
+    if (!source) return;
+    const stagesForCompany = pipelines[source.companyId] || DEFAULT_PIPELINE_STAGES;
+    const firstStage = stagesForCompany.find(s => !s.terminal) || stagesForCompany[0];
+    const created = await duplicateLead(source, firstStage?.id);
+    if (created) {
+      const { patches, notifications: autoNotifs, sideEffects } = evaluateAutomations(created, null, "lead_created");
+      await applyAutomationOutcome(patches, autoNotifs, created.id, created.companyId);
+      if (sideEffects?.length) await processAutomationSideEffects(sideEffects);
+    }
+    return created;
+  }, [leads, pipelines, duplicateLead, evaluateAutomations, processAutomationSideEffects, applyAutomationOutcome]);
+
   // Nudges por tempo: os gatilhos "time_in_stage" e "pending_required_field"
   // não disparam em nenhum evento do CRM (não são mudança de etapa nem
   // criação) — precisam de uma varredura periódica. A própria tela de
@@ -1586,6 +1605,7 @@ export default function App() {
               onStageChange={handleStageChange}
               onAddLead={handleAddLead}
               onDeleteLead={deleteLead}
+              onDuplicateLead={handleDuplicateLead}
               onStarToggle={toggleStar}
               visibleStages={settings.visibleKanbanStages}
               pipelineTransitions={pipelineTransitions}

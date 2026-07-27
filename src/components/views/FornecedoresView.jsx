@@ -9,6 +9,7 @@ import { StatCard } from "../ui/StatCard";
 import { Modal } from "../ui/Modal";
 import { FilterBar } from "../shared/FilterBar";
 import { Card, CardGrid, CardSkeleton, GridListToggle } from "../shared/Card";
+import { PageHeader } from "../shared/PageHeader";
 
 const CATEGORY_LABELS = {
   agencia: "Agência",
@@ -169,22 +170,20 @@ export function FornecedoresView({ user }) {
   const clearFilters = () => { setSearch(""); setCategoryFilter("all"); };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <Truck size={22} style={{ color: "var(--text)" }} />
-          <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>Fornecedores</h1>
-        </div>
-        {canWrite && (
-          <button onClick={() => setEditing("new")} className="flex items-center gap-1.5 font-semibold"
-            style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}>
-            <Plus size={14} /> Novo fornecedor
-          </button>
-        )}
-      </div>
-      <p className="text-sm" style={{ color: "var(--text-dim)", marginTop: -8 }}>
-        Agências, gráficas, confecções e outros parceiros de marketing
-      </p>
+    <div className="space-y-4">
+      <PageHeader
+        icon={Truck}
+        title="Fornecedores"
+        subtitle="Agências, gráficas, confecções e outros parceiros de marketing"
+        actions={
+          canWrite && (
+            <button onClick={() => setEditing("new")} className="flex items-center gap-1.5 font-semibold"
+              style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}>
+              <Plus size={14} /> Novo fornecedor
+            </button>
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard icon={Truck} value={suppliers.length} label="Fornecedores" />

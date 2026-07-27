@@ -352,7 +352,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const location = useLocation();
   const {
     tasks, loading, canWrite,
-    createTask, updateTask, deleteTask,
+    createTask, updateTask, deleteTask, duplicateTask,
     changeStage, toggleStar,
   } = useMarketingTasks({ userId: user?.id, role: user?.role, roles: user?.roles });
 
@@ -489,6 +489,12 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   }, [updateTask]);
 
   const handleDelete = useCallback(async (id) => { await deleteTask(id); }, [deleteTask]);
+
+  const handleDuplicate = useCallback(async (id) => {
+    const source = tasks.find(t => t.id === id);
+    if (!source) return;
+    await duplicateTask(source, kanbanStages[0]?.id);
+  }, [tasks, duplicateTask, kanbanStages]);
 
   const syncSelected = useMemo(() => {
     if (!selected) return null;
@@ -674,6 +680,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                           stages={kanbanStages}
                           onMoveToStage={canWrite ? attemptStageChange : null}
                           onDeleteCard={canWrite ? handleDelete : null}
+                          onDuplicateCard={canWrite ? handleDuplicate : null}
                           onToggleStar={canWrite ? toggleStar : null}
                           completeness={getItemCompleteness(item)}
                           unread={getItemUnread(item)}
@@ -804,6 +811,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                             stages={kanbanStages}
                             onMoveToStage={canWrite ? attemptStageChange : null}
                             onDeleteCard={canWrite ? handleDelete : null}
+                            onDuplicateCard={canWrite ? handleDuplicate : null}
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
                             unread={getItemUnread(item)}

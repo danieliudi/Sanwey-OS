@@ -9,37 +9,7 @@ import { useRHChecklists } from "../../hooks/use-rh-checklists";
 import { useRHStageHistory } from "../../hooks/use-rh-stage-history";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
-
-// ── Tab strip ─────────────────────────────────────────────────────────────────
-
-function RHSideTabs({ tabs, activeTab, onChange }) {
-  return (
-    <div className="flex flex-wrap gap-1">
-      {tabs.map(t => {
-        const active = activeTab === t.id;
-        const Icon = t.icon;
-        return (
-          <button
-            key={t.id}
-            onClick={() => onChange(t.id)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
-            style={{
-              background: active ? "var(--surface)" : "transparent",
-              color: active ? "var(--accent)" : "var(--text-dim)",
-              border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-              cursor: "pointer",
-            }}
-            onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-            onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
-          >
-            <Icon size={11} />
-            {t.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
 
 function PlaceholderPanel({ icon: Icon, title, hint }) {
   return (
@@ -270,7 +240,7 @@ export function RHAttachmentsPanel({ domain, recordId, currentUser, readOnly = f
 
 // ── Checklists ────────────────────────────────────────────────────────────────
 
-function RHChecklistsPanel({ domain, recordId, currentUser }) {
+export function RHChecklistsPanel({ domain, recordId, currentUser }) {
   const { checklists, loading, error, createChecklist, deleteChecklist, addItem, toggleItem, removeItem, renameChecklist } = useRHChecklists(domain, recordId);
   const [newTitle, setNewTitle] = useState("");
   const [creatingTitle, setCreatingTitle] = useState(false);
@@ -634,29 +604,37 @@ export function RHDetailComments({
 
 export function RHDetailDrawerShell({
   domain, recordId, activities = [], onAddActivity, currentUser,
-  users = [], stages,
+  users = [], stages, formContent,
 }) {
   const showChecklists = domain === "vagas" || domain === "candidatos";
 
   const tabs = useMemo(() => {
-    const list = [
+    const list = [];
+    if (formContent) list.push({ id: "form", label: "Form", icon: FileText });
+    list.push(
       { id: "atividades", label: "Atividades", icon: Activity },
       { id: "historico", label: "Histórico", icon: History },
       { id: "anexos", label: "Anexos", icon: Paperclip },
-    ];
+    );
     if (showChecklists) list.push({ id: "checklists", label: "Checklists", icon: ListChecks });
     return list;
-  }, [showChecklists]);
+  }, [showChecklists, formContent]);
 
-  const [tab, setTab] = useState("atividades");
+  const [tab, setTab] = useState(formContent ? "form" : "atividades");
 
   useEffect(() => {
     if (tab === "checklists" && !showChecklists) setTab("atividades");
   }, [showChecklists, tab]);
 
+  useEffect(() => {
+    if (tab === "form" && !formContent) setTab("atividades");
+  }, [formContent, tab]);
+
   return (
     <div className="space-y-4">
-      <RHSideTabs tabs={tabs} activeTab={tab} onChange={setTab} />
+      <DetailDrawerTabs tabs={tabs} activeId={tab} onChange={setTab} />
+
+      {tab === "form" && formContent}
 
       {tab === "atividades" && (
         <RHActivitiesPanel activities={activities} currentUser={currentUser} users={users} />

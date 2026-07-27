@@ -12,6 +12,7 @@ import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
 import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
+import { PageHeader } from "../shared/PageHeader";
 
 const STATUS_CONFIG = {
   pendente:   { label: "Pendente",   color: "#D97706", bg: "#FEF3C7", icon: Clock },
@@ -359,28 +360,24 @@ export function MarketingRequestsView({ user, users }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-bold text-xl" style={{ color: "var(--text)", letterSpacing: "-0.01em" }}>
-            Solicitações
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            Pedidos de material recebidos de outros departamentos
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <CopyPublicLinkButton url={`${window.location.origin}/solicitar-marketing`} label="Copiar link público" title={`${window.location.origin}/solicitar-marketing`} variant="strong" />
-          <div
-            className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-dim)" }}
-          >
-            <AlertCircle size={12} />
-            {counts.pendente} pendente{counts.pendente !== 1 ? "s" : ""}
-          </div>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        icon={Inbox}
+        title="Solicitações"
+        subtitle="Pedidos de material recebidos de outros departamentos"
+        actions={
+          <>
+            <CopyPublicLinkButton url={`${window.location.origin}/solicitar-marketing`} label="Copiar link público" title={`${window.location.origin}/solicitar-marketing`} variant="strong" />
+            <div
+              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-dim)" }}
+            >
+              <AlertCircle size={12} />
+              {counts.pendente} pendente{counts.pendente !== 1 ? "s" : ""}
+            </div>
+          </>
+        }
+      />
 
       {/* Status filter tabs */}
       <div className="flex items-center gap-1 flex-wrap">

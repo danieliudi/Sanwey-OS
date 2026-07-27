@@ -17,7 +17,7 @@ function daysFromDate(dateStr) {
 
 function DeliverableKanbanCardImpl({
   item, users, onClick, onDragStart, onDragEnd,
-  stages, onMoveToStage, onDeleteCard, canWrite, onToggleStar, completeness, unread,
+  stages, onMoveToStage, onDeleteCard, onDuplicateCard, canWrite, onToggleStar, completeness, unread,
   campaignsById, showMoveOptions = true,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -111,11 +111,12 @@ function DeliverableKanbanCardImpl({
           ) : (
             item.starred && <Star size={11} fill="#F59E0B" color="#F59E0B" style={{ opacity: terminalAccentOpacity(isTerminal) }} />
           )}
-          {canWrite && ((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
+          {canWrite && ((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
               onMove={onMoveToStage ? (key) => onMoveToStage(item.id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(item.id) : undefined}
+              onDuplicate={onDuplicateCard ? () => onDuplicateCard(item.id) : undefined}
               onOpenChange={setMenuOpen}
             />
           )}

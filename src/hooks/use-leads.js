@@ -257,6 +257,77 @@ export function useLeads({ userId, role, companies } = {}) {
     }
   }, [setFallbackLeads, fetchAll]);
 
+  // "Duplicar card" — cria um lead NOVO, sempre. Não passa por addLead: ali o
+  // dedupe por CNPJ+companyId devolveria o próprio lead original (ou outro já
+  // existente) em vez de criar a cópia, o que quebraria a garantia de
+  // "duplicar sempre gera um registro novo". `firstStageId` vem de quem chama
+  // (App.jsx conhece pipelines[companyId], configurável por empresa — este
+  // hook não tem acesso a isso, só ao array estático de fallback).
+  //
+  // NÃO copiado: notes/activities (padrão geral), createdAt/createdBy (o
+  // duplicador vira o novo criador), stageChangedAt (timestamp novo),
+  // dateDetected/daysAgo (fato histórico da detecção do lead original, sem
+  // sentido pra um card criado agora), lastActivity, sentToPosvendaAt
+  // (transição específica do original), starred/badges (estado do original,
+  // não "herdado"), nextFollowUp (lembrete agendado pro card antigo),
+  // orderCount (contador não usado em nenhuma tela hoje, tratado como
+  // histórico do cliente, não do card). De customFields (jsonb plano,
+  // ver won-stage-defaults.js) removemos valor_final/data_fechamento — são
+  // preenchidos automaticamente só ao entrar em "ganho" e representariam uma
+  // decisão de fechamento já tomada no lead original.
+  const duplicateLead = useCallback(async (source, firstStageId) => {
+    const { valor_final, data_fechamento, ...restCustomFields } = source.customFields || {};
+    const dup = {
+      companyId: source.companyId,
+      cnpj: source.cnpj,
+      company: `${source.company} (cópia)`,
+      razaoSocial: source.razaoSocial,
+      sector: source.sector,
+      cnae: source.cnae,
+      size: source.size,
+      city: source.city,
+      state: source.state,
+      address: source.address,
+      capitalSocial: source.capitalSocial,
+      contactEmail: source.contactEmail,
+      phone: source.phone,
+      situacao: source.situacao,
+      trigger: source.trigger,
+      triggerLabel: source.triggerLabel,
+      evidence: source.evidence,
+      fitScore: source.fitScore,
+      sku: source.sku,
+      skuName: source.skuName,
+      unitPrice: source.unitPrice,
+      quantity: source.quantity,
+      value: source.value,
+      probability: source.probability,
+      closeDate: source.closeDate,
+      stage: firstStageId,
+      status: firstStageId,
+      owner: source.owner,
+      ownerIds: source.ownerIds,
+      urgency: source.urgency,
+      decisionMaker: source.decisionMaker,
+      clientClassification: source.clientClassification,
+      customFields: restCustomFields,
+      clientId: source.clientId,
+    };
+
+    if (!isSupabaseConfigured) {
+      const created = { ...dup, id: `lead-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, notes: [], activities: [], starred: false, badges: [] };
+      setFallbackLeads(prev => [created, ...prev]);
+      return created;
+    }
+    const row = leadToRow(dup, { created_by: userId, is_demo: Boolean(source.isDemo) });
+    row.id = `lead-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const { data, error: err } = await supabase.from("leads").insert(row).select().single();
+    if (err) { setError(err); throw err; }
+    const created = rowToLead(data);
+    setRemoteLeads(prev => prev.some(l => l.id === created.id) ? prev : [created, ...prev]);
+    return created;
+  }, [setFallbackLeads, userId]);
+
   const toggleStar = useCallback(async (id) => {
     const target = leads.find(l => l.id === id);
     if (!target) return;
@@ -359,6 +430,7 @@ export function useLeads({ userId, role, companies } = {}) {
     addLead,
     updateLead,
     deleteLead,
+    duplicateLead,
     toggleStar,
     changeStage,
     addLeadActivity,
@@ -367,5 +439,5 @@ export function useLeads({ userId, role, companies } = {}) {
     clearDemoLeads,
     refetch: fetchAll,
     canQuery,
-  }), [leads, loading, error, addLead, updateLead, deleteLead, toggleStar, changeStage, addLeadActivity, loadDemoLeads, clearAllLeads, clearDemoLeads, fetchAll, canQuery]);
+  }), [leads, loading, error, addLead, updateLead, deleteLead, duplicateLead, toggleStar, changeStage, addLeadActivity, loadDemoLeads, clearAllLeads, clearDemoLeads, fetchAll, canQuery]);
 }

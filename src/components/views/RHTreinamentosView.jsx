@@ -838,12 +838,14 @@ function AtribuicaoDrawer({
     </div>
   ) : null;
 
-  const left = (certBlock || customBlock) ? (
+  const formContent = (certBlock || customBlock) ? (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {certBlock}
       {customBlock}
     </div>
   ) : null;
+
+  const left = null;
 
   const right = (
     <>
@@ -920,6 +922,7 @@ function AtribuicaoDrawer({
       currentUser={currentUser}
       users={users}
       stages={stages}
+      formContent={formContent}
     />
   );
 

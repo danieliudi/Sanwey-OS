@@ -157,6 +157,33 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     setDeliverables(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d));
   }, [canWrite, deliverables]);
 
+  // "Duplicar card" — mesmo raciocínio de duplicateTask (use-marketing-tasks.js):
+  // cópia nasce sempre na 1ª etapa ("solicitacao", igual ao default de
+  // deliverableToRow acima), nunca herda requestNumber (sequência própria),
+  // stageData (dado específico de cada etapa já percorrida no original —
+  // equivalente a approved_by/rejected_reason de outros domínios), nem
+  // emailError (erro do envio de e-mail da entrega original). requesterEmail
+  // não entra: deliverableToRow não grava esse campo (só é lido de volta) —
+  // não existe como escrever de dentro do app hoje, então não faz sentido
+  // incluir aqui.
+  const duplicateDeliverable = useCallback(async (source) => {
+    return createDeliverable({
+      companyIds:    source.companyIds,
+      campaignId:    source.campaignId,
+      title:         `${source.title} (cópia)`,
+      requesterName: source.requesterName,
+      department:    source.department,
+      description:   source.description,
+      priority:      source.priority,
+      deadline:      source.deadline,
+      stage:         "solicitacao",
+      assigneeIds:   source.assigneeIds,
+      customFields:  source.customFields,
+      // NÃO copiar: requestNumber, emailError, stageData, stageChangedAt,
+      // notes, activities.
+    });
+  }, [createDeliverable]);
+
   const deleteDeliverable = useCallback(async (id) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const { error: err } = await supabase.from(TABLE).delete().eq("id", id);
@@ -222,6 +249,7 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     createDeliverable,
     updateDeliverable,
     deleteDeliverable,
+    duplicateDeliverable,
     changeStage,
     sendCompleteEmail,
     toggleStar,

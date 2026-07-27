@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, FileText, Activity, Paperclip, ListChecks } from "lucide-react";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
@@ -11,6 +11,9 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { AvatarStack } from "../shared/AvatarStack";
+import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { ActivityLog } from "./CampaignDetailDrawer";
+import { RHAttachmentsPanel, RHChecklistsPanel } from "../rh-pipeline/RHDetailDrawerShell";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -79,6 +82,7 @@ export function MarketingTaskDetailDrawer({
   const [formDraft,  setFormDraft]  = useState({});
   const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,  setMoveError]  = useState(null);
+  const [centerTab,  setCenterTab]  = useState("form");
 
   const stageFieldsHook = useRHStageFields("marketing_tasks");
   const customDefs = stageFieldsHook.getFields(item.stage);
@@ -102,6 +106,7 @@ export function MarketingTaskDetailDrawer({
     customDraftRef.current = {};
     setMoveError(null);
     setSaveStatus(null);
+    setCenterTab("form");
     if (formDebounceRef.current) clearTimeout(formDebounceRef.current);
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     return () => {
@@ -347,7 +352,7 @@ export function MarketingTaskDetailDrawer({
     </>
   );
 
-  const center = (
+  const formTabContent = (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
         <SectionLabel>Detalhes da tarefa</SectionLabel>
@@ -440,6 +445,29 @@ export function MarketingTaskDetailDrawer({
         </div>
       )}
     </div>
+  );
+
+  const center = (
+    <>
+      <DetailDrawerTabs
+        tabs={[
+          { id: "form",       label: "Form",       icon: FileText },
+          { id: "atividades", label: "Atividades", icon: Activity },
+          { id: "anexos",     label: "Anexos",     icon: Paperclip },
+          { id: "checklist",  label: "Checklist",  icon: ListChecks },
+        ]}
+        activeId={centerTab}
+        onChange={setCenterTab}
+      />
+      {centerTab === "form" && formTabContent}
+      {centerTab === "atividades" && <ActivityLog activities={item.activities || []} />}
+      {centerTab === "anexos" && (
+        <RHAttachmentsPanel domain="marketing_tasks" recordId={item.id} currentUser={currentUser} />
+      )}
+      {centerTab === "checklist" && (
+        <RHChecklistsPanel domain="marketing_tasks" recordId={item.id} currentUser={currentUser} />
+      )}
+    </>
   );
 
   const right = (

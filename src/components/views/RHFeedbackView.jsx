@@ -939,9 +939,12 @@ function FeedbackDrawer({
     </>
   );
 
-  const center = (
+  const hasCustomFields = visibleCustomDefs.length > 0;
+  const hasConteudoResumo = feedback.status === "concluido" && (feedback.conteudo?.pontos_fortes || feedback.conteudo?.pontos_desenvolvimento);
+
+  const formContent = (hasCustomFields || hasConteudoResumo) ? (
     <>
-      {visibleCustomDefs.length > 0 && (
+      {hasCustomFields && (
         <div>
           <div style={labelSt}>Campos desta etapa</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -959,25 +962,26 @@ function FeedbackDrawer({
         </div>
       )}
 
-      {feedback.status === "concluido" && (feedback.conteudo?.pontos_fortes || feedback.conteudo?.pontos_desenvolvimento) && (
+      {hasConteudoResumo && (
         <div>
           {feedback.conteudo?.pontos_fortes && <div style={{ marginBottom: 6 }}><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>Pontos fortes: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_fortes}</span></div>}
           {feedback.conteudo?.pontos_desenvolvimento && <div><span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)" }}>A desenvolver: </span><span style={{ fontSize: 12, color: "var(--text)" }}>{feedback.conteudo.pontos_desenvolvimento}</span></div>}
         </div>
       )}
-
-      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-        <RHDetailDrawerShell
-          domain="feedback"
-          recordId={feedback.id}
-          activities={feedback.activities || []}
-          onAddActivity={onAddActivity}
-          currentUser={currentUser}
-          users={users}
-          stages={stages}
-        />
-      </div>
     </>
+  ) : null;
+
+  const center = (
+    <RHDetailDrawerShell
+      domain="feedback"
+      recordId={feedback.id}
+      activities={feedback.activities || []}
+      onAddActivity={onAddActivity}
+      currentUser={currentUser}
+      users={users}
+      stages={stages}
+      formContent={formContent}
+    />
   );
 
   const right = (

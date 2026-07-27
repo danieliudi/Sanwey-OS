@@ -19,9 +19,12 @@ import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
+import { exportCampaignsToCSV } from "../../utils/export-csv";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
@@ -456,221 +459,6 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
   );
 }
 
-// ── KPI cards ─────────────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, red }) {
-  return (
-    <div
-      className="rounded-xl border"
-      style={{
-        background: "var(--surface)",
-        borderColor: "var(--border)",
-        padding: "8px 10px",
-        boxShadow: "var(--shadow-card)",
-        minWidth: 140,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 9,
-          fontWeight: 600,
-          color: "var(--text-dim)",
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          marginBottom: 3,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 700,
-          color: red ? "var(--danger)" : "var(--text)",
-          letterSpacing: "-0.02em",
-          lineHeight: 1.1,
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function KpiBar({ campaigns }) {
-  const active      = campaigns.filter(c => !["encerrado"].includes(c.stage)).length;
-  const totalBudget = campaigns.reduce((s, c) => s + (c.budget || 0), 0);
-  const urgent      = campaigns.filter(c => {
-    if (!c.launchDate) return false;
-    const d = Math.floor((new Date(c.launchDate).getTime() - Date.now()) / 86400000);
-    return d <= 7 && d >= 0 && !["ao_vivo", "encerrado", "revisao"].includes(c.stage);
-  }).length;
-
-  return (
-    <div className="flex items-stretch gap-2 flex-wrap mb-3">
-      <KpiCard label="Campanhas ativas" value={String(active)} />
-      <KpiCard label="Orçamento total"     value={formatK(totalBudget)} />
-      <KpiCard label="Urgente"          value={String(urgent)} red={urgent > 0} />
-    </div>
-  );
-}
-
-// ── Analytics dashboard (aba "Análise" do toggle de visualização) ────────────
-// Era um acordeão "Análise das campanhas" escondido embaixo do board — o
-// Daniel pediu (2ª cobrança) pra tirar de lá e virar uma visualização
-// própria ao lado de "Calendário".
-
-function AnalyticsPanel({ campaigns, stages }) {
-  const stageStats = useMemo(() => {
-    // Etapas vivas (DB, editáveis) quando disponíveis — MARKETING_STAGES é só
-    // o fallback estático de antes da customização por etapa existir. Sem
-    // isso, renomear/criar/excluir uma etapa via "Editar etapas" deixava a
-    // Análise mostrando o conjunto antigo de etapas, com dado errado.
-    const nonTerminal = (stages?.length ? stages : MARKETING_STAGES).filter(s => !s.terminal);
-    return nonTerminal.map(stage => {
-      const stageCampaigns = campaigns.filter(c => c.stage === stage.id);
-      const count       = stageCampaigns.length;
-      const totalBudget = stageCampaigns.reduce((sum, c) => sum + (c.budget || 0), 0);
-      const daysArr = stageCampaigns
-        .filter(c => c.stageChangedAt)
-        .map(c => Math.floor((Date.now() - new Date(c.stageChangedAt).getTime()) / (1000 * 60 * 60 * 24)));
-      const avgDays = daysArr.length > 0
-        ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length)
-        : null;
-      return { stage, count, totalBudget, avgDays };
-    });
-  }, [campaigns, stages]);
-
-  const maxCount  = Math.max(...stageStats.map(s => s.count), 1);
-  const maxBudget = Math.max(...stageStats.map(s => s.totalBudget), 1);
-
-  if (campaigns.length === 0) {
-    return (
-      <div
-        className="rounded-2xl border p-8 text-sm text-center"
-        style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
-      >
-        Nenhuma campanha nos filtros atuais — a análise aparece assim que houver campanhas.
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ marginTop: 8 }}>
-      <div
-        className="rounded-2xl border p-5"
-        style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-      >
-          <div className="text-xs font-semibold mb-4" style={{ color: "var(--text-dim)" }}>
-            Distribuição por etapa
-          </div>
-          <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
-          >
-            {stageStats.map(({ stage, count, totalBudget, avgDays }) => (
-              <div key={stage.id}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div
-                    className="text-xs font-semibold flex items-center gap-1.5"
-                    style={{ color: "var(--text)" }}
-                  >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: stage.color,
-                        display: "inline-block",
-                        flexShrink: 0,
-                      }}
-                    />
-                    {stage.name}
-                  </div>
-                  <div className="text-xs" style={{ color: "var(--text-dim)" }}>
-                    {count} · {formatK(totalBudget)}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    height: 6,
-                    background: "#F1F3F5",
-                    borderRadius: 3,
-                    overflow: "hidden",
-                    marginBottom: 6,
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${(count / maxCount) * 100}%`,
-                      background: stage.color,
-                      borderRadius: 3,
-                      transition: "width 0.4s ease",
-                    }}
-                  />
-                </div>
-
-                <div
-                  style={{
-                    height: 3,
-                    background: "#F1F3F5",
-                    borderRadius: 3,
-                    overflow: "hidden",
-                    marginBottom: 5,
-                    opacity: 0.7,
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${(totalBudget / maxBudget) * 100}%`,
-                      background: stage.color,
-                      borderRadius: 3,
-                      transition: "width 0.4s ease",
-                    }}
-                  />
-                </div>
-
-                <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
-                  {avgDays !== null
-                    ? `Média ${avgDays}d nesta etapa`
-                    : count > 0 ? "Sem tempo registrado" : "—"}
-                </div>
-              </div>
-            ))}
-          </div>
-      </div>
-    </div>
-  );
-}
-
-// ── View toggle button ────────────────────────────────────────────────────────
-
-function ViewToggleButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-      style={{
-        background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "#FFFFFF" : "var(--text-dim)",
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-    >
-      <Icon size={13} />
-      <span className="hidden sm:inline">{label}</span>
-    </button>
-  );
-}
-
 // ── Table view ────────────────────────────────────────────────────────────────
 
 function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
@@ -755,6 +543,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     createCampaign,
     updateCampaign,
     deleteCampaign,
+    duplicateCampaign,
     changeStage,
     toggleStar,
     updateChecklist,
@@ -777,6 +566,13 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     () => dbStages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, sla: s.slaDays, terminal: s.terminal })),
     [dbStages]
   );
+  // Etapas vivas (DB) quando disponíveis — MARKETING_STAGES é só o fallback
+  // estático de antes da customização por etapa existir (mesma regra que já
+  // valia dentro do AnalyticsPanel local, antes da extração pro shared).
+  const analyticsStages = useMemo(() => {
+    const src = kanbanStages.length ? kanbanStages : MARKETING_STAGES;
+    return src.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.sla }));
+  }, [kanbanStages]);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
   const [addingStage, setAddingStage] = useState(false);
   const [draggedColumnKey, setDraggedColumnKey] = useState(null);
@@ -901,18 +697,23 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   }, [filteredCampaigns, usersById]);
 
   const exportCampaignsCSV = useCallback(() => {
-    const rows = [
-      ["Nome", "Canal", "Orçamento", "KPI", "Etapa", "Empresas", "Lançamento"].join(","),
-      ...filteredCampaigns.map(c => [
-        `"${c.name}"`, c.channel || "", c.budget, c.kpi || "",
-        c.stage, (c.companyIds || []).join(";"),
-        c.launchDate ? c.launchDate.slice(0, 10) : "",
-      ].join(","))
-    ].join("\n");
-    const blob = new Blob([rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "campanhas.csv"; a.click();
-    URL.revokeObjectURL(url);
+    exportCampaignsToCSV(filteredCampaigns);
+  }, [filteredCampaigns]);
+
+  // Específico da aba Análise (KanbanAnalyticsPanel) — mesma conta que já
+  // existia na antiga KpiBar; "Campanhas ativas" saiu por virar redundante
+  // com o "Total de registros" genérico do painel.
+  const campaignSpecificStats = useMemo(() => {
+    const totalBudget = filteredCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
+    const urgent = filteredCampaigns.filter(c => {
+      if (!c.launchDate) return false;
+      const d = Math.floor((new Date(c.launchDate).getTime() - Date.now()) / 86400000);
+      return d <= 7 && d >= 0 && !["ao_vivo", "encerrado", "revisao"].includes(c.stage);
+    }).length;
+    return [
+      { label: "Orçamento Total", value: formatK(totalBudget) },
+      { label: "Urgente", value: String(urgent), color: urgent > 0 ? "var(--danger)" : undefined },
+    ];
   }, [filteredCampaigns]);
 
   const handleDragStart = useCallback((campaign) => setDraggedCampaign(campaign), []);
@@ -1011,6 +812,13 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     await deleteCampaign(id);
   }, [canWrite, deleteCampaign]);
 
+  const handleDuplicate = useCallback(async (id) => {
+    if (!canWrite) return;
+    const source = campaigns.find(c => c.id === id);
+    if (!source) return;
+    await duplicateCampaign(source);
+  }, [canWrite, campaigns, duplicateCampaign]);
+
   const handleQuickAdd = useCallback(async (campaign) => {
     const created = await createCampaign(campaign);
     if (created) {
@@ -1046,13 +854,18 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <Megaphone size={22} style={{ color: "var(--text)" }} />
+          <div className="flex items-center gap-2.5">
+            <div
+              className="flex items-center justify-center flex-shrink-0"
+              style={{ width: 38, height: 38, borderRadius: 10, background: "var(--surface-alt)", border: "1px solid var(--border)", color: "var(--text)" }}
+            >
+              <Megaphone size={18} />
+            </div>
             <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
               Marketing
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)", marginLeft: 48 }}>
             Kanban de campanhas {isAgencia ? "· acesso de visitante" : ""}
           </p>
         </div>
@@ -1078,24 +891,28 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               onClick={() => setViewMode("kanban")}
               icon={LayoutGrid}
               label="Kanban"
+              iconOnlyMobile
             />
             <ViewToggleButton
               active={viewMode === "table"}
               onClick={() => setViewMode("table")}
               icon={List}
               label="Tabela"
+              iconOnlyMobile
             />
             <ViewToggleButton
               active={viewMode === "calendar"}
               onClick={() => setViewMode("calendar")}
               icon={CalendarIcon}
               label="Calendário"
+              iconOnlyMobile
             />
             <ViewToggleButton
               active={viewMode === "analytics"}
               onClick={() => setViewMode("analytics")}
               icon={TrendingUp}
               label="Análise"
+              iconOnlyMobile
             />
           </div>
           {isManager && (
@@ -1171,10 +988,6 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       {viewMode === "kanban" && canWrite && (
         <KanbanFab label="Nova campanha" onClick={() => setQuickAddStage("briefing")} />
       )}
-
-      {/* KPI bar — também na aba Análise: os stat cards fazem parte do
-          dashboard de dados das campanhas */}
-      {(viewMode === "kanban" || viewMode === "analytics") && <KpiBar campaigns={filteredCampaigns} />}
 
       {/* Loading state */}
       {(loading || loadingStages) && (
@@ -1263,6 +1076,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                           stages={kanbanStages}
                           onMoveToStage={attemptStageChange}
                           onDeleteCard={canWrite ? handleDelete : undefined}
+                          onDuplicateCard={canWrite ? handleDuplicate : undefined}
                           completeness={getCampaignCompleteness(c)}
                           unread={getCampaignUnread(c)}
                         />
@@ -1418,6 +1232,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                             stages={kanbanStages}
                             onMoveToStage={attemptStageChange}
                             onDeleteCard={canWrite ? handleDelete : undefined}
+                            onDuplicateCard={canWrite ? handleDuplicate : undefined}
                             completeness={getCampaignCompleteness(c)}
                             unread={getCampaignUnread(c)}
                             showMoveOptions={false}
@@ -1446,10 +1261,17 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         </div>
       </>)}
 
-      {/* Aba Análise — dashboard dos dados das campanhas (junto com a KpiBar
-          acima). Saiu de baixo do board Kanban a pedido do Daniel. */}
+      {/* Aba Análise — dashboard dos dados das campanhas. Saiu de baixo do
+          board Kanban (acordeão) a pedido do Daniel, e virou visualização
+          própria ao lado de "Calendário". */}
       {!loading && !loadingStages && viewMode === "analytics" && (
-        <AnalyticsPanel campaigns={filteredCampaigns} stages={kanbanStages} />
+        <KanbanAnalyticsPanel
+          stages={analyticsStages}
+          records={filteredCampaigns}
+          getStageKey={c => c.stage}
+          getStageEnteredAt={c => c.stageChangedAt}
+          specificStats={campaignSpecificStats}
+        />
       )}
 
       {!loading && !loadingStages && viewMode === "kanban" && (
