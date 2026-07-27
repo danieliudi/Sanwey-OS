@@ -19,6 +19,7 @@ import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
+import { exportCampaignsToCSV } from "../../utils/export-csv";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
@@ -901,18 +902,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   }, [filteredCampaigns, usersById]);
 
   const exportCampaignsCSV = useCallback(() => {
-    const rows = [
-      ["Nome", "Canal", "Orçamento", "KPI", "Etapa", "Empresas", "Lançamento"].join(","),
-      ...filteredCampaigns.map(c => [
-        `"${c.name}"`, c.channel || "", c.budget, c.kpi || "",
-        c.stage, (c.companyIds || []).join(";"),
-        c.launchDate ? c.launchDate.slice(0, 10) : "",
-      ].join(","))
-    ].join("\n");
-    const blob = new Blob([rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "campanhas.csv"; a.click();
-    URL.revokeObjectURL(url);
+    exportCampaignsToCSV(filteredCampaigns);
   }, [filteredCampaigns]);
 
   const handleDragStart = useCallback((campaign) => setDraggedCampaign(campaign), []);

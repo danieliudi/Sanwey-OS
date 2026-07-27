@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   SlidersHorizontal,
   LayoutGrid,
+  RefreshCcw,
+  Download,
 } from "lucide-react";
 import {
   RH_DESLIGAMENTO_TIPOS,
@@ -29,6 +31,9 @@ import { PanelEmptyState } from "../shared/PanelEmptyState";
 import { TaskBucket } from "../shared/TaskBucket";
 import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
 import { StageDistributionBar } from "../shared/StageDistributionBar";
+import { greetingFor } from "../../utils/greeting";
+import { exportColaboradoresToCSV } from "../../utils/export-csv";
+import { logExport } from "../../utils/log-export";
 
 // Paleta categórica pra distinguir departamentos na barra de distribuição —
 // departamento é texto livre (sem cor configurada em tabela, ao contrário das
@@ -41,15 +46,6 @@ const DEPT_COLORS = [
 function fmt(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("pt-BR");
-}
-
-function fmtToday() {
-  return new Date().toLocaleDateString("pt-BR", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
 }
 
 function calcDias(startDate, endDate) {
@@ -276,10 +272,9 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--surface)" }}>
-      <div className="py-4 lg:py-6" style={{ maxWidth: 1200, margin: "0 auto" }}>
+    <div className="flex flex-col gap-7">
 
-        <div className="flex items-center justify-between flex-wrap gap-3" style={{ marginBottom: 28 }}>
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1
               style={{
@@ -291,33 +286,46 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
                 lineHeight: 1.15,
               }}
             >
-              Visão Geral — RH
+              {greetingFor(currentUser)}
             </h1>
-            <p
-              style={{
-                fontSize: 13,
-                color: "var(--text-dim)",
-                margin: "4px 0 0",
-                textTransform: "capitalize",
-              }}
-            >
-              {fmtToday()}
+            <p style={{ fontSize: 13, color: "var(--text-dim)", margin: "4px 0 0" }}>
+              {totalAtivos} colaborador{totalAtivos !== 1 ? "es" : ""} ativo{totalAtivos !== 1 ? "s" : ""}
             </p>
           </div>
-          <Button
-            variant="secondary"
-            icon={SlidersHorizontal}
-            size="md"
-            className="min-h-touch lg:min-h-0"
-            onClick={() => setPrefsOpen(true)}
-            aria-label="Personalizar"
-          >
-            <span className="hidden lg:inline">Personalizar</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              icon={RefreshCcw}
+              size="md"
+              onClick={() => window.location.reload()}
+            >
+              Atualizar
+            </Button>
+            {canWrite && (
+              <Button
+                variant="secondary"
+                icon={Download}
+                size="md"
+                onClick={() => { exportColaboradoresToCSV(colaboradores); logExport(currentUser?.id, "rh_overview_dashboard", colaboradores.length); }}
+              >
+                Exportar
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              icon={SlidersHorizontal}
+              size="md"
+              className="min-h-touch lg:min-h-0"
+              onClick={() => setPrefsOpen(true)}
+              aria-label="Personalizar"
+            >
+              <span className="hidden lg:inline">Personalizar</span>
+            </Button>
+          </div>
         </div>
 
         {/* Zona 1 — Resumo: 6 tiles (carrossel de peek abaixo de 1024px) */}
-        <div className="-mx-4 sm:-mx-6 lg:mx-0 mb-7">
+        <div className="-mx-4 sm:-mx-6 lg:mx-0">
           {zone1VisibleCount === 0 ? (
             <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
           ) : (
@@ -369,7 +377,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
         </div>
 
         {/* Zona 2 — O que fazer */}
-        <div style={{ marginBottom: 28 }}>
+        <div>
           <Eyebrow>Pendências</Eyebrow>
           <p className="text-xs mb-3" style={{ color: "var(--text-dim)", marginTop: -6 }}>
             Férias, vagas e desligamentos que precisam de atenção
@@ -393,7 +401,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
         </div>
 
         {/* Zona 3 — Tendência */}
-        <div className="p-4 lg:p-5" style={{ ...card, marginBottom: 20 }}>
+        <div className="p-4 lg:p-5" style={card}>
           <PanelTitle title="Distribuição por Departamento" />
           {widgetVisible("panel_departamento") ? (
             loadingColaboradores ? (
@@ -417,7 +425,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
 
         <div
           className="grid grid-cols-1 lg:grid-cols-2"
-          style={{ gap: 20, marginBottom: 20 }}
+          style={{ gap: 20 }}
         >
           <div className="p-4 lg:p-5" style={card}>
             <PanelTitle title="Desligamentos por Tipo" />
@@ -523,7 +531,6 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           zone4Title={zone4Title}
           onSave={save}
         />
-      </div>
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { formatDateBR, daysSince } from "../../utils/date";
 import { monthBounds, within, pctChange } from "../../utils/trend";
 import { exportLeadsToCSV } from "../../utils/export-csv";
 import { logExport } from "../../utils/log-export";
+import { greetingFor } from "../../utils/greeting";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { useDashboardWidgetPrefs } from "../../hooks/use-dashboard-widget-prefs";
 import { isStale, daysIdle, getLeadOwnerIds } from "../../utils/pipeline-metrics";
@@ -387,13 +388,6 @@ const STAGE_LABELS = {
 
 function stageLabel(id) {
   return STAGE_LABELS[id] || id;
-}
-
-function greetingFor(user) {
-  const hour = new Date().getHours();
-  const period = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-  const first = (user?.name || "").split(" ")[0];
-  return first ? `${period}, ${first}` : period;
 }
 
 export default DashboardView;

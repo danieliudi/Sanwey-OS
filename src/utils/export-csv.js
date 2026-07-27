@@ -114,4 +114,34 @@ export function exportLeadsToCSV(leads, { usersById, filename, pipelines } = {})
   triggerDownload(filename || `sanwey-leads-${today}.csv`, csv);
 }
 
+export function exportCampaignsToCSV(campaigns, { filename } = {}) {
+  const header = ["Nome", "Canal", "Orçamento", "KPI", "Etapa", "Empresas", "Lançamento"];
+  const rows = (campaigns || []).map(c => [
+    c.name || "",
+    c.channel || "",
+    formatBRNumber(c.budget),
+    c.kpi || "",
+    c.stage || "",
+    (c.companyIds || []).join(", "),
+    formatDate(c.launchDate),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-campanhas-${today}.csv`, csv);
+}
+
+export function exportColaboradoresToCSV(colaboradores, { filename } = {}) {
+  const header = ["Nome", "Departamento", "Cargo", "Status", "Admissão"];
+  const rows = (colaboradores || []).map(c => [
+    c.fullName || "",
+    c.department || "",
+    c.jobTitle || "",
+    c.employeeStatus || "",
+    formatDate(c.admissionDate),
+  ]);
+  const csv = [csvRow(header), ...rows.map(csvRow)].join("\r\n");
+  const today = new Date().toISOString().slice(0, 10);
+  triggerDownload(filename || `sanwey-colaboradores-${today}.csv`, csv);
+}
+
 export default exportLeadsToCSV;

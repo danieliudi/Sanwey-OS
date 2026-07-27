@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Megaphone, Package, DollarSign, Zap, Award, Clock, AlertTriangle, SlidersHorizontal, LayoutGrid } from "lucide-react";
+import { Megaphone, Package, DollarSign, Zap, Award, Clock, AlertTriangle, SlidersHorizontal, LayoutGrid, RefreshCcw, Download } from "lucide-react";
 import { ROUTES } from "../../constants/routes";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -26,6 +26,9 @@ import { PanelEmptyState } from "../shared/PanelEmptyState";
 import { TaskBucket } from "../shared/TaskBucket";
 import { StageDistributionBar } from "../shared/StageDistributionBar";
 import { WidgetPrefsModal } from "../shared/WidgetPrefsModal";
+import { greetingFor } from "../../utils/greeting";
+import { exportCampaignsToCSV } from "../../utils/export-csv";
+import { logExport } from "../../utils/log-export";
 
 // ── Date helpers ────────────────────────────────────────────────────────────────
 
@@ -476,9 +479,6 @@ export function MarketingDashboardView({ user }) {
     });
   }, [fCampaigns, fDeliverables]);
 
-  const hour     = new Date().getHours();
-  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
-
   // Zona 1 — 7 tiles ao todo (5 sempre + 2 de agência, gate `not_agencia`).
   const zone1Ids = ["kpi_active", "kpi_live", "kpi_budget", "kpi_deliverables", "kpi_score", "kpi_agency_sla", "kpi_agency_leadtime"];
   const zone1VisibleCount = zone1Ids.filter(widgetVisible).length;
@@ -510,15 +510,15 @@ export function MarketingDashboardView({ user }) {
   const visibleMarketingBucketCount = visibleMarketingBuckets.reduce((s, b) => s + b.fullCount, 0);
 
   return (
-    <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+    <div className="flex flex-col gap-7">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between mb-4">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start justify-between gap-3 lg:block">
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--text)",
                          letterSpacing: "-0.02em", lineHeight: 1.15, margin: 0 }}>
-              {greeting}, {user?.name?.split(" ")[0] || "—"}
+              {greetingFor(user)}
             </h1>
             <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-dim)", margin: "4px 0 0" }}>
               Dashboard de Marketing
@@ -539,6 +539,24 @@ export function MarketingDashboardView({ user }) {
         <div className="self-start flex items-center gap-2">
           <Button
             variant="secondary"
+            icon={RefreshCcw}
+            size="md"
+            onClick={() => window.location.reload()}
+          >
+            Atualizar
+          </Button>
+          {!isAgencia && (
+            <Button
+              variant="secondary"
+              icon={Download}
+              size="md"
+              onClick={() => { exportCampaignsToCSV(fCampaigns); logExport(user?.id, "campaigns_dashboard", fCampaigns.length); }}
+            >
+              Exportar
+            </Button>
+          )}
+          <Button
+            variant="secondary"
             icon={SlidersHorizontal}
             size="md"
             className="hidden lg:inline-flex"
@@ -556,7 +574,7 @@ export function MarketingDashboardView({ user }) {
           )}
         </div>
       </div>
-      <div className="mb-5">
+      <div>
         <CompanyTabs
           selected={selectedCompany}
           onChange={setSelectedCompany}
@@ -565,7 +583,7 @@ export function MarketingDashboardView({ user }) {
       </div>
 
       {/* ── Zona 1 — Resumo (7 tiles possíveis: 5 sempre + 2 de agência) ── */}
-      <div className="-mx-4 sm:-mx-6 lg:mx-0 mb-3.5">
+      <div className="-mx-4 sm:-mx-6 lg:mx-0">
         {zone1VisibleCount === 0 ? (
           <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
         ) : (
@@ -623,7 +641,7 @@ export function MarketingDashboardView({ user }) {
       </div>
 
       {/* ── Zona 2 — O que fazer ───────────────────────────────────── */}
-      <div className="mb-5">
+      <div>
         <Eyebrow>Pendências</Eyebrow>
         <p className="text-xs mb-3" style={{ color: "var(--text-dim)", marginTop: -6 }}>
           Entregas com prazo vencido ou travadas na agência
@@ -647,7 +665,7 @@ export function MarketingDashboardView({ user }) {
       </div>
 
       {/* ── Zona 3 — Tendência ─────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-2.5 mb-2.5">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-2.5">
         <Panel title="Atividade mensal" subtitle="Campanhas criadas vs. entregas concluídas (últimos 6 meses)">
           {widgetVisible("panel_monthly_activity")
             ? <MonthlyTrendChart data={trendData} primaryColor={primaryColor} />
@@ -660,7 +678,7 @@ export function MarketingDashboardView({ user }) {
         </Panel>
       </div>
 
-      <div style={{ marginBottom: 10 }}>
+      <div>
         <Panel
           title="Pipeline · distribuição por etapa"
           subtitle={`${fCampaigns.length} campanha${fCampaigns.length !== 1 ? "s" : ""} no total`}
@@ -672,9 +690,9 @@ export function MarketingDashboardView({ user }) {
       </div>
 
       {(widgetVisible("panel_burn_rate") || widgetVisible("panel_category_donut")) && (
-        <div className="mt-5">
+        <div>
           <Eyebrow>Análise financeira</Eyebrow>
-          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr]" style={{ gap: 10, marginBottom: 10 }}>
+          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr]" style={{ gap: 10 }}>
             <Panel title="Burn rate" subtitle="Gasto mensal · últimos 6 meses">
               {widgetVisible("panel_burn_rate")
                 ? <BurnRateChart expenses={fExpenses} primaryColor={primaryColor} />
@@ -689,7 +707,7 @@ export function MarketingDashboardView({ user }) {
         </div>
       )}
 
-      <div className="mt-5">
+      <div>
         <Eyebrow>Top 5 · performance</Eyebrow>
         <Panel>
           {widgetVisible("panel_top_performance")
@@ -699,7 +717,7 @@ export function MarketingDashboardView({ user }) {
       </div>
 
       {/* ── Zona 4 — livre ─────────────────────────────────────────── */}
-      <div className="mt-5 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
         <EmptyState
           icon={LayoutGrid}
           title={zone4Title || "Sua seção livre"}
