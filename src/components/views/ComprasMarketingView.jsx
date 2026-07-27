@@ -662,13 +662,18 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
       <KanbanBoardHeader className="mb-4">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={22} style={{ color: "var(--text)" }} />
+          <div className="flex items-center gap-2.5">
+            <div
+              className="flex items-center justify-center flex-shrink-0"
+              style={{ width: 38, height: 38, borderRadius: 10, background: "var(--surface-alt)", border: "1px solid var(--border)", color: "var(--text)" }}
+            >
+              <ShoppingCart size={18} />
+            </div>
             <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
               Compras de Marketing
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)", marginLeft: 48 }}>
             Solicitações de compra de itens prontos (brindes, uniformes, materiais impressos) executadas pelo Marketing
           </p>
         </div>

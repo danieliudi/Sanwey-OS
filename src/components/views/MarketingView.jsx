@@ -1046,13 +1046,18 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <Megaphone size={22} style={{ color: "var(--text)" }} />
+          <div className="flex items-center gap-2.5">
+            <div
+              className="flex items-center justify-center flex-shrink-0"
+              style={{ width: 38, height: 38, borderRadius: 10, background: "var(--surface-alt)", border: "1px solid var(--border)", color: "var(--text)" }}
+            >
+              <Megaphone size={18} />
+            </div>
             <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
               Marketing
             </h1>
           </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)", marginLeft: 48 }}>
             Kanban de campanhas {isAgencia ? "· acesso de visitante" : ""}
           </p>
         </div>
