@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
-  Sparkles,
+  Sparkles, ChevronRight,
   RotateCcw, Copy, Loader2, AlertCircle, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -27,6 +27,7 @@ import { formatK } from "../../utils/currency";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { EVENT_CHECKLIST_TEMPLATE } from "../../constants/event-checklist-template";
 import { supabase } from "../../lib/supabase";
+import { Modal } from "../ui/Modal";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ACCEPTED_TYPES = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.zip";
@@ -193,11 +194,53 @@ function ApplyEventChecklistButton({ campaign, currentUser }) {
 
   const [applyError, setApplyError] = useState(null);
 
+  const [confirming, setConfirming] = useState(false);
+  // selection[segIdx][itemIdx] = boolean. Inicializado com tudo true toda vez que o modal abre.
+  const [selection, setSelection] = useState(() => EVENT_CHECKLIST_TEMPLATE.map(seg => seg.items.map(() => true)));
+  const [expandedSegments, setExpandedSegments] = useState(() => new Set());
+
+  const openConfirm = () => {
+    if (applying || loading || alreadyApplied) return;
+    setSelection(EVENT_CHECKLIST_TEMPLATE.map(seg => seg.items.map(() => true)));
+    setExpandedSegments(new Set());
+    setApplyError(null);
+    setConfirming(true);
+  };
+
+  function segmentState(segIdx) {
+    const items = selection[segIdx];
+    if (items.every(Boolean)) return "checked";
+    if (items.every(v => !v)) return "unchecked";
+    return "indeterminate";
+  }
+  const taskCount = selection.filter(items => items.some(Boolean)).length;
+  const itemCount = selection.reduce((sum, items) => sum + items.filter(Boolean).length, 0);
+  const allState = taskCount === 0 ? "unchecked" : (itemCount === EVENT_CHECKLIST_TEMPLATE.reduce((s, seg) => s + seg.items.length, 0) ? "checked" : "indeterminate");
+
+  function toggleSegment(segIdx) {
+    const makeChecked = segmentState(segIdx) !== "checked";
+    setSelection(prev => prev.map((items, i) => i === segIdx ? items.map(() => makeChecked) : items));
+  }
+  function toggleItem(segIdx, itemIdx) {
+    setSelection(prev => prev.map((items, i) => i === segIdx ? items.map((v, j) => j === itemIdx ? !v : v) : items));
+  }
+  function toggleAll() {
+    const makeChecked = allState !== "checked";
+    setSelection(EVENT_CHECKLIST_TEMPLATE.map(seg => seg.items.map(() => makeChecked)));
+  }
+  function toggleExpand(segIdx) {
+    setExpandedSegments(prev => { const next = new Set(prev); next.has(segIdx) ? next.delete(segIdx) : next.add(segIdx); return next; });
+  }
+
   // RPC atômica (apply_event_checklist_template, com advisory lock por
   // campanha) no lugar do laço client-side — evita a janela de corrida entre
   // 2 sessões aplicando o checklist quase ao mesmo tempo (achado real de QA).
   const handleApply = async () => {
-    if (applying || loading || alreadyApplied) return;
+    if (applying || loading) return;
+    const segmentsToApply = EVENT_CHECKLIST_TEMPLATE
+      .map((seg, segIdx) => ({ segment: seg.segment, items: seg.items.filter((_, itemIdx) => selection[segIdx][itemIdx]) }))
+      .filter(seg => seg.items.length > 0);
+    if (segmentsToApply.length === 0) return;
     setApplying(true);
     setApplyError(null);
     try {
@@ -205,9 +248,10 @@ function ApplyEventChecklistButton({ campaign, currentUser }) {
         p_campaign_id:  campaign.id,
         p_company_ids:  campaign.companyIds || [],
         p_owner_ids:    campaign.ownerIds || [],
-        p_segments:     EVENT_CHECKLIST_TEMPLATE.map(({ segment, items }) => ({ segment, items })),
+        p_segments:     segmentsToApply,
       });
       if (err) throw err;
+      setConfirming(false);
     } catch (err) {
       setApplyError(err?.message || "Erro ao aplicar checklist de evento.");
     } finally {
@@ -227,7 +271,7 @@ function ApplyEventChecklistButton({ campaign, currentUser }) {
   return (
     <div className="flex flex-col items-start gap-1.5">
       <button
-        onClick={handleApply}
+        onClick={openConfirm}
         disabled={applying || loading}
         className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl"
         style={{
@@ -241,12 +285,101 @@ function ApplyEventChecklistButton({ campaign, currentUser }) {
         <ListChecks size={12} />
         {applying ? "Aplicando…" : "Aplicar checklist de evento"}
       </button>
-      {applyError && (
+      {applyError && !confirming && (
         <div className="text-xs" style={{ color: "var(--danger)" }}>
           {applyError}
         </div>
       )}
+
+      <Modal open={confirming} onClose={() => { if (!applying) { setConfirming(false); setApplyError(null); } }} title="Aplicar checklist de evento" width={480}>
+        <div className="px-6 pt-1 pb-3 text-xs" style={{ color: "var(--text-dim)" }}>
+          Cria um card de tarefa por segmento marcado abaixo, cada um com seu checklist já preenchido. Desmarque o
+          que não se aplica a este evento — dá pra desmarcar o segmento inteiro ou só alguns itens dele.
+        </div>
+
+        <div className="flex items-center justify-between px-6 py-2.5" style={{ background: "var(--surface-alt)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
+          <button onClick={toggleAll} className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text)", background: "none", border: "none", cursor: "pointer" }}>
+            <TriStateCheckbox state={allState} />
+            Selecionar todos
+          </button>
+          <span className="text-xs" style={{ color: "var(--text-dim)" }}>{taskCount} tarefa{taskCount !== 1 ? "s" : ""} · {itemCount} ite{itemCount !== 1 ? "ns" : "m"} selecionado{itemCount !== 1 ? "s" : ""}</span>
+        </div>
+
+        <div className="overflow-y-auto" style={{ maxHeight: 360 }}>
+          {EVENT_CHECKLIST_TEMPLATE.map((seg, segIdx) => (
+            <div key={seg.segment} style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="flex items-start gap-2.5 px-6 py-3 cursor-pointer" onClick={() => toggleExpand(segIdx)}>
+                <button onClick={e => { e.stopPropagation(); toggleSegment(segIdx); }} style={{ background: "none", border: "none", padding: 0, marginTop: 1 }}>
+                  <TriStateCheckbox state={segmentState(segIdx)} />
+                </button>
+                <ChevronRight size={14} style={{ color: "var(--text-faint)", flexShrink: 0, marginTop: 2, transform: expandedSegments.has(segIdx) ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13.5px] font-semibold" style={{ color: segmentState(segIdx) === "unchecked" ? "var(--text-faint)" : "var(--text)" }}>{seg.segment}</div>
+                  <div className="text-[11.5px]" style={{ color: "var(--text-faint)" }}>
+                    {selection[segIdx].filter(Boolean).length}/{seg.items.length} itens selecionados
+                    {segmentState(segIdx) === "unchecked" && " · tarefa não será criada"}
+                  </div>
+                </div>
+              </div>
+              {expandedSegments.has(segIdx) && (
+                <div className="pb-2" style={{ paddingLeft: 60, paddingRight: 24 }}>
+                  {seg.items.map((item, itemIdx) => (
+                    <label key={item} className="flex items-center gap-2.5 py-1 cursor-pointer" style={{ fontSize: 12.5 }}>
+                      <input type="checkbox" checked={selection[segIdx][itemIdx]} onChange={() => toggleItem(segIdx, itemIdx)} style={{ width: 14, height: 14, accentColor: "var(--accent)" }} />
+                      <span style={{ color: selection[segIdx][itemIdx] ? "var(--text-dim)" : "var(--text-faint)", textDecoration: selection[segIdx][itemIdx] ? "none" : "line-through" }}>{item}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-6 py-4" style={{ borderTop: "1px solid var(--border)" }}>
+          <button onClick={() => { setConfirming(false); setApplyError(null); }} disabled={applying} className="px-4 py-2 rounded-lg text-sm font-semibold border" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "transparent" }}>
+            Cancelar
+          </button>
+          <button onClick={handleApply} disabled={applying || taskCount === 0} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: "var(--accent)", color: "#FFF", border: "none", opacity: (applying || taskCount === 0) ? 0.6 : 1, cursor: (applying || taskCount === 0) ? "not-allowed" : "pointer" }}>
+            <ListChecks size={13} />
+            {applying ? "Aplicando…" : `Aplicar (${taskCount})`}
+          </button>
+        </div>
+
+        {applyError && (
+          <div className="px-6 pb-4 text-xs" style={{ color: "var(--danger)" }}>{applyError}</div>
+        )}
+      </Modal>
     </div>
+  );
+}
+
+function TriStateCheckbox({ state }) {
+  const size = 16;
+  if (state === "checked") {
+    return (
+      <span
+        className="inline-flex items-center justify-center rounded-sm flex-shrink-0"
+        style={{ width: size, height: size, background: "var(--accent)", border: "none" }}
+      >
+        <Check size={11} strokeWidth={3} style={{ color: "#FFF" }} />
+      </span>
+    );
+  }
+  if (state === "indeterminate") {
+    return (
+      <span
+        className="inline-flex items-center justify-center rounded-sm flex-shrink-0"
+        style={{ width: size, height: size, background: "transparent", border: "1.5px solid var(--accent)" }}
+      >
+        <span style={{ width: 8, height: 2, background: "var(--accent)", borderRadius: 1 }} />
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded-sm flex-shrink-0"
+      style={{ width: size, height: size, background: "transparent", border: "1.5px solid var(--border-strong)" }}
+    />
   );
 }
 

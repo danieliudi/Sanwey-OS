@@ -1,6 +1,6 @@
 import React, { memo, useMemo, useRef, useState } from "react";
 import { Star } from "lucide-react";
-import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
+import { DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES, CHANNEL_COLORS } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
@@ -134,9 +134,17 @@ function DeliverableKanbanCardImpl({
           CampaignKanbanCard; sem campaign_id, não renderiza nada (sem
           placeholder "Sem campanha"). */}
       {campaign && (
-        <div className="text-[10px] mb-1.5 truncate" style={{ color: "var(--text-dim)" }} title={campaign.name}>
+        <span
+          className="inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-semibold mb-1.5 truncate max-w-full"
+          style={{
+            background: (CHANNEL_COLORS[campaign.channel] || { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" }).bg,
+            color:      (CHANNEL_COLORS[campaign.channel] || { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" }).text,
+            border:     `1px solid ${(CHANNEL_COLORS[campaign.channel] || { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" }).border}`,
+          }}
+          title={campaign.name}
+        >
           {campaign.name}
-        </div>
+        </span>
       )}
 
       {/* Owner avatars + deadline — só ocupa espaço quando há responsável ou
