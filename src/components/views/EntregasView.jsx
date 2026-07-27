@@ -1269,6 +1269,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         onMoveToStage={attemptStageChange}
         onDelete={handleDelete}
         onResendCompleteEmail={sendCompleteEmail}
+        campaigns={campaigns}
         users={Array.from(usersById.values())}
         canWrite={canWrite}
         userId={user?.id}
