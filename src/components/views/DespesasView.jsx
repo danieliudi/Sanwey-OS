@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, AlertCircle, ShoppingCart } from "lucide-react";
+import { Plus, X, DollarSign, Trash2, Pencil, Upload, FileText, ExternalLink, Loader2, AlertCircle, ShoppingCart, Clock, CheckCircle2 } from "lucide-react";
 import { useMarketingExpenses, useMarketingExpenseItems } from "../../hooks/use-marketing-expenses";
 import { EXPENSE_CATEGORIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -9,6 +9,7 @@ import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { supabase } from "../../lib/supabase";
 import { PageHeader } from "../shared/PageHeader";
+import { StatCard } from "../ui/StatCard";
 
 const RECEIPT_BUCKET = "marketing-attachments";
 
@@ -641,30 +642,9 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        {[
-          { label: "Total",    value: totals.all },
-          { label: "Pendente", value: totals.pendente, amber: true },
-          { label: "Pago",     value: totals.pago,     green: true },
-        ].map(k => (
-          <div
-            key={k.label}
-            className="rounded-xl border px-4 py-3"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-          >
-            <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>
-              {k.label}
-            </div>
-            <div
-              className="text-xl font-bold"
-              style={{
-                color: k.amber ? "var(--warning)" : k.green ? "var(--success)" : "var(--text)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              {formatK(k.value)}
-            </div>
-          </div>
-        ))}
+        <StatCard icon={DollarSign}  value={formatK(totals.all)}      label="Total" />
+        <StatCard icon={Clock}       value={formatK(totals.pendente)} label="Pendente" valueColor="var(--warning)" />
+        <StatCard icon={CheckCircle2} value={formatK(totals.pago)}    label="Pago"     valueColor="var(--success)" />
       </div>
 
       <div className="flex items-center gap-2 flex-wrap mb-4">
