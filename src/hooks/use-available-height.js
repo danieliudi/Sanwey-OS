@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 // Mede, ao vivo, o espaço vertical restante da viewport a partir do topo do
 // elemento referenciado (ref) até o rodapé da janela — usado pra limitar a
@@ -21,11 +21,16 @@ import { useEffect, useRef, useState } from "react";
 // depende da altura do próprio board, então usá-la criava um cálculo
 // circular que só piorava a cada resize em vez de convergir.
 export function useAvailableHeight(marginBottom = 16, deps = [], trailingRef = null) {
-  const ref = useRef(null);
+  const [el, setEl] = useState(null);
+  // Callback ref (não `useRef`): dispara de novo toda vez que o nó monta,
+  // não só na montagem do componente pai — corrige o board ficando preso na
+  // altura inicial quando ele nasce no DOM depois de um "Carregando…", ou
+  // quando o board é desmontado/remontado (troca de viewMode) e a versão
+  // antiga do elemento ficava presa numa `ref` que nunca mais disparava.
+  const ref = useCallback((node) => setEl(node), []);
   const [height, setHeight] = useState(480);
 
   useEffect(() => {
-    const el = ref.current;
     if (!el) return;
     const update = () => {
       const top = el.getBoundingClientRect().top;
@@ -45,7 +50,7 @@ export function useAvailableHeight(marginBottom = 16, deps = [], trailingRef = n
       ro.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [marginBottom, ...deps]);
+  }, [el, marginBottom, ...deps]);
 
   return [ref, height];
 }
