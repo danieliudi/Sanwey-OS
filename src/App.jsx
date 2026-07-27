@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart, RefreshCw, Sparkles, ListTodo, Handshake,
+  FileBarChart, RefreshCw, Sparkles, ListTodo, Handshake, Ship,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -67,6 +67,7 @@ import { CRMViagensView } from "./components/views/CRMViagensView";
 import { ExecutiveDashboard } from "./components/views/ExecutiveDashboard";
 import { InsightsView } from "./components/views/InsightsView";
 import { CrossReferralsView } from "./components/views/CrossReferralsView";
+import { ComexView } from "./components/views/ComexView";
 import { UserManagementView } from "./components/views/UserManagementView";
 import { ClientsManager } from "./components/client/ClientsManager";
 import { SettingsView } from "./components/views/SettingsView";
@@ -213,6 +214,10 @@ export default function App() {
   // RH roles (isRHManager já foi hoisted acima)
   const isRHUser           = hasAnyRole(["rh", "gerente_rh", "admin"]);
   const isPureRH           = rolesSubsetOf(["rh", "gerente_rh"]);
+  // Comex (Importação/Exportação Direta): cargo dedicado, sem carve-out pro
+  // time comercial geral — vendedor/gerente/consultor não enxergam por padrão.
+  const isComex            = hasAnyRole(["comex", "admin"]);
+  const isPureComex        = rolesSubsetOf(["comex"]);
   // Diretoria (reunião com o RH, 20/07): vê tudo da plataforma, escreve nada
   // (RLS bloqueia toda escrita — ver migration 20260756_papel_diretoria.sql).
   // A única exceção pedida é interação mais rica no Painel Executivo.
@@ -825,6 +830,8 @@ export default function App() {
     rh_feedback: "rh-feedback",
     rh_ferias: "rh-ferias",
     rh_movimentacoes: "rh-cargos",
+    comex_import_operations: "comex",
+    comex_export_operations: "comex",
   };
   const handleNotificationNavigate = useCallback((link) => {
     // Pesquisas identificadas (RH2-7): a página de resposta vive fora do
@@ -1161,7 +1168,7 @@ export default function App() {
       ],
     });
 
-    if (!isPureMarketing && !isPureRH) {
+    if (!isPureMarketing && !isPureRH && !isPureComex) {
       groups.push({
         label: "Comercial",
         items: [
@@ -1178,7 +1185,15 @@ export default function App() {
           { id: "explorer",     label: "Explorador", icon: Globe2 },
           { id: "crm-viagens",  label: "Viagens & Reembolsos", icon: Plane },
           ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
+          ...(isComex || isDiretoria ? [{ id: "comex", label: "Comex", icon: Ship }] : []),
         ],
+      });
+    } else if (isPureComex) {
+      // Cargo dedicado, sem carve-out pro time comercial geral (decisão do
+      // Daniel) — quem só tem "comex" não vê o resto do menu Comercial.
+      groups.push({
+        label: "Comercial",
+        items: [{ id: "comex", label: "Comex", icon: Ship }],
       });
     }
 
@@ -1287,7 +1302,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isPortalOnly, isDiretoria, allowedModules, automations]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1358,9 +1373,20 @@ export default function App() {
     if (!isRHUser && !isDiretoria && rhSections.includes(section)) {
       setSection("dashboard");
     }
+    // Comex: cargo dedicado, sem carve-out pro time comercial geral —
+    // vendedor/gerente/consultor não acessam mesmo digitando a URL direto.
+    if (!isComex && !isDiretoria && section === "comex") {
+      setSection("dashboard");
+    }
     // Pure RH users shouldn't access CRM sections
     if (isPureRH && crmSections.includes(section)) {
       setSection("rh-overview");
+    }
+    // Pure Comex users shouldn't access general CRM sections either — cargo
+    // dedicado, sem carve-out pro time comercial geral (mesma exclusão já
+    // feita em module-access.js/defaultModulesForRoles).
+    if (isPureComex && crmSections.includes(section)) {
+      setSection("comex");
     }
     // Agência can access marketing routes + their own profile (settings).
     const agenciaBlocked = ["crm", "posvenda", "signals", "explorer", "crm-viagens", "commercial-overview", "marketing-despesas", "marketing-compras", "marketing-tarefas", "dashboard", "tutorials"];
@@ -1702,6 +1728,11 @@ export default function App() {
                 onReject={rejectCross}
               />
             ) : <Navigate to={ROUTES.dashboard} replace />
+          } />
+          <Route path={ROUTES.comex} element={
+            (isComex || isDiretoria)
+              ? <ComexView currentUser={currentUser} users={users} canWrite={isComex} notifyMentions={notifyMentions} />
+              : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.users} element={
             isManager ? <Navigate to={ROUTES.settings} replace /> : <Navigate to={ROUTES.dashboard} replace />

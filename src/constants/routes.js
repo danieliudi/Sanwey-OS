@@ -17,6 +17,7 @@ export const ROUTES = {
   clients:           "/clientes",
   "crm-viagens":     "/viagens",
   crossref:          "/cross-sell",
+  comex:             "/comex",
   agents:            "/agentes",
   executive:         "/executivo",
   insights:          "/insights",

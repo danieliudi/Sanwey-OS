@@ -48,6 +48,9 @@ const ROLE_OPTIONS_ADMIN = [
   // admin concede (mesmo critério do próprio "admin" abaixo, dado o alcance
   // do papel). Ver migration 20260756_papel_diretoria.sql.
   { value: "diretoria", label: "Diretoria" },
+  // Comex (Importação/Exportação Direta): cargo dedicado, só admin atribui —
+  // mesmo critério de "diretoria" acima, dado o alcance do módulo isolado.
+  { value: "comex", label: "Comex" },
   { value: "admin", label: "Admin" },
 ];
 
@@ -61,6 +64,7 @@ function roleLabel(role) {
   if (role === "rh")                return "RH";
   if (role === "gerente_rh")        return "Ger. RH";
   if (role === "diretoria")         return "Diretoria";
+  if (role === "comex")             return "Comex";
   return "Vendedor";
 }
 
@@ -74,6 +78,7 @@ function roleBadgeVariant(role) {
   if (role === "rh")                return "secondary";
   if (role === "gerente_rh")        return "dark";
   if (role === "diretoria")         return "admin";
+  if (role === "comex")             return "primary";
   return "default";
 }
 

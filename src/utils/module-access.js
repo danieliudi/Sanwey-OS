@@ -19,6 +19,7 @@ export const MODULE_GROUPS = [
       { id: "explorer",            label: "Explorador" },
       { id: "crm-viagens",         label: "Viagens & Reembolsos" },
       { id: "crossref",            label: "Cross-sell" },
+      { id: "comex",               label: "Comex" },
     ],
   },
   {
@@ -79,6 +80,8 @@ export function computeRoleFlags(roles) {
     isRH:                hasAnyRole(list, ["rh", "gerente_rh", "admin"]),
     isRHManager:         hasAnyRole(list, ["gerente_rh", "admin"]),
     isPureRH:            rolesSubsetOf(list, ["rh", "gerente_rh"]),
+    isComex:             hasAnyRole(list, ["comex", "admin"]),
+    isPureComex:         rolesSubsetOf(list, ["comex"]),
     isAdmin:             hasAnyRole(list, ["admin"]),
     isInsights:          hasAnyRole(list, ["admin", "rh", "gerente_rh", "marketing", "gerente_marketing"]),
     // Diretoria (reunião com o RH, 20/07): enxerga tudo da plataforma em modo
@@ -105,7 +108,7 @@ export function defaultModulesForRoles(roles) {
     return set;
   }
 
-  if (!f.isPureMarketing && !f.isPureRH) {
+  if (!f.isPureMarketing && !f.isPureRH && !f.isPureComex) {
     ["commercial-overview", "crm", "posvenda", "clients", "signals", "explorer", "crm-viagens"].forEach(m => set.add(m));
     if (f.isManager) set.add("crossref");
   }
@@ -124,6 +127,8 @@ export function defaultModulesForRoles(roles) {
     // avaliação — não é uma tela de gestão de RH.
     ["rh-onboarding", "rh-treinamentos", "rh-feedback"].forEach(m => set.add(m));
   }
+
+  if (f.isComex) set.add("comex");
 
   if (f.isManager || f.isMarketingManager || f.isRHManager) set.add("executive");
   if (f.isInsights) set.add("insights");

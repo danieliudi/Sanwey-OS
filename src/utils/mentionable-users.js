@@ -8,6 +8,7 @@ const DOMAIN_ROLES = {
   crm:       ["vendedor", "consultor", "gerente", "admin"],
   marketing: ["marketing", "gerente_marketing", "admin"],
   rh:        ["rh", "gerente_rh", "admin"],
+  comex:     ["comex", "admin"],
 };
 
 function rolesOf(user) {

@@ -117,3 +117,56 @@ export function formatCurrencyBRForInput(value) {
   if (!Number.isFinite(n)) return "";
   return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+// ── Moeda estrangeira (Comex — Landed Cost) ─────────────────────────────────
+const usdFull = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+// Mesmo tratamento de robustez de formatBRL: PostgREST devolve `numeric` como
+// string, e o campo é preenchido incrementalmente num formulário (valor pode
+// ser null/undefined/NaN a qualquer momento).
+export function formatUSD(value) {
+  const n = typeof value === "string" ? Number(value) : value;
+  if (!Number.isFinite(n)) return "US$ 0,00";
+  return usdFull.format(n);
+}
+
+const currencyFormatterCache = new Map();
+function genericCurrencyFormatter(code) {
+  if (!currencyFormatterCache.has(code)) {
+    currencyFormatterCache.set(code, new Intl.NumberFormat("pt-BR", { style: "currency", currency: code }));
+  }
+  return currencyFormatterCache.get(code);
+}
+
+export function formatCurrency(value, code) {
+  const currencyCode = (code || "BRL").toUpperCase();
+  if (currencyCode === "USD") return formatUSD(value);
+  if (currencyCode === "BRL") return formatBRL(value);
+  const n = typeof value === "string" ? Number(value) : value;
+  if (!Number.isFinite(n)) return `${currencyCode} 0,00`;
+  try {
+    return genericCurrencyFormatter(currencyCode).format(n);
+  } catch {
+    return `${currencyCode} ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+}
+
+// Landed Cost = CIF (FOB + frete + seguro, na moeda estrangeira) convertido
+// pra BRL via PTAX manual, mais impostos/taxas estimados já em BRL — ver
+// docs/design-spec-comex.md. Pura e tolerante a inputs parciais (formulário
+// sendo preenchido incrementalmente), nunca retorna NaN/undefined.
+export function calculateLandedCost({ fobValue, freightValue, insuranceValue, ptaxRate, estimatedTaxesBrl, estimatedFeesBrl } = {}) {
+  const fob       = Number.isFinite(Number(fobValue)) ? Number(fobValue) : 0;
+  const freight   = Number.isFinite(Number(freightValue)) ? Number(freightValue) : 0;
+  const insurance = Number.isFinite(Number(insuranceValue)) ? Number(insuranceValue) : 0;
+  const ptax      = Number.isFinite(Number(ptaxRate)) ? Number(ptaxRate) : 0;
+  const taxes     = Number.isFinite(Number(estimatedTaxesBrl)) ? Number(estimatedTaxesBrl) : 0;
+  const fees      = Number.isFinite(Number(estimatedFeesBrl)) ? Number(estimatedFeesBrl) : 0;
+
+  const cifValueForeign  = fob + freight + insurance;
+  const cifValueBrl      = cifValueForeign * ptax;
+  const totalTaxesFeesBrl = taxes + fees;
+  const landedCostBrl    = cifValueBrl + totalTaxesFeesBrl;
+
+  return { cifValueForeign, cifValueBrl, totalTaxesFeesBrl, landedCostBrl };
+}

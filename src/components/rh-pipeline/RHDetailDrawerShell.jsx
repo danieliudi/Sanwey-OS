@@ -606,7 +606,7 @@ export function RHDetailDrawerShell({
   domain, recordId, activities = [], onAddActivity, currentUser,
   users = [], stages, formContent,
 }) {
-  const showChecklists = domain === "vagas" || domain === "candidatos";
+  const showChecklists = domain === "vagas" || domain === "candidatos" || domain === "comex";
 
   const tabs = useMemo(() => {
     const list = [];
