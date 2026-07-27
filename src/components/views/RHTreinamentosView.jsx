@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   GraduationCap, Plus, X, Check, ExternalLink, ChevronDown, ChevronRight, Users, AlertTriangle, RefreshCw,
-  LayoutGrid, Settings2, AlertCircle, List, CalendarDays as CalendarIcon, ChevronLeft,
+  LayoutGrid, Settings2, AlertCircle, List, CalendarDays as CalendarIcon, ChevronLeft, TrendingUp,
 } from "lucide-react";
 import { RH_DEPARTMENTS } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -29,6 +29,8 @@ import { EmptyState } from "../ui/EmptyState";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 function fmt(dateStr) {
   if (!dateStr) return "—";
@@ -57,27 +59,6 @@ function dayKey(d) {
 }
 function sameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function ViewToggleButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-      style={{
-        background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "#FFFFFF" : "var(--text-dim)",
-        border: "none",
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-    >
-      <Icon size={13} />
-      {label}
-    </button>
-  );
 }
 
 // ── Validade / revalidação ────────────────────────────────────────────────────
@@ -1114,7 +1095,7 @@ function TreinamentoBoardModal({
 }) {
   const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("treinamentos");
   const stageFields = useRHStageFields("treinamentos");
-  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
   const [drawerId, setDrawerId] = useState(null);
   const [fieldEditorStage, setFieldEditorStage] = useState(null);
   const [addingStage, setAddingStage] = useState(false);
@@ -1217,6 +1198,27 @@ function TreinamentoBoardModal({
 
   const drawerAtrib = drawerId ? atribuicoes.find(a => a.id === drawerId) : null;
 
+  const analyticsStages = useMemo(
+    () => stages.filter(s => !s.terminal).map(s => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
+    [stages]
+  );
+
+  const boardSpecificStats = useMemo(() => {
+    const concluido = atribuicoes.filter(a => a.status === "concluido").length;
+    const vencido = atribuicoes.filter(a => a.status === "vencido").length;
+    const decided = concluido + vencido;
+    const taxaConclusao = decided > 0 ? Math.round((concluido / decided) * 100) : null;
+    const certificados = atribuicoes.filter(a => a.certificado_url).length;
+    return [
+      { label: "Taxa de conclusão", value: taxaConclusao !== null ? `${taxaConclusao}%` : "—" },
+      // "no período" (sugerido na spec) não existe aqui — este board não tem
+      // filtro de período (é por treinamento, sem seletor de datas) —
+      // substituído pelo total de certificados emitidos entre as atribuições
+      // já carregadas deste treinamento.
+      { label: "Certificados emitidos", value: String(certificados) },
+    ];
+  }, [atribuicoes]);
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", flexDirection: "column" }} onClick={onClose}>
       <div style={{ background: "var(--surface)", flex: 1, display: "flex", flexDirection: "column", margin: 24, borderRadius: 16, overflow: "hidden", boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
@@ -1230,6 +1232,7 @@ function TreinamentoBoardModal({
               <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
               <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
               <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
             </div>
             <button onClick={onClose} style={{ background: "transparent", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-dim)", padding: "8px 10px", borderRadius: 10, display: "flex" }}>
               <X size={16} />
@@ -1255,6 +1258,14 @@ function TreinamentoBoardModal({
               stages={stages}
               colaboradoresById={colaboradoresById}
               onPillClick={(a) => setDrawerId(a.id)}
+            />
+          ) : viewMode === "analytics" ? (
+            <KanbanAnalyticsPanel
+              stages={analyticsStages}
+              records={atribuicoes}
+              getStageKey={(a) => a.status}
+              getStageEnteredAt={(a) => a.status_changed_at}
+              specificStats={boardSpecificStats}
             />
           ) : (
             <>

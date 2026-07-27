@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Calendar, Check, Plus, X, Clock, CalendarCheck, AlertTriangle, AlertCircle, Settings2,
-  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, TrendingUp,
 } from "lucide-react";
 import { RH_LEAVE_TYPES } from "../../constants/rh-config";
 import { parseDateInput } from "../../utils/date";
@@ -32,6 +32,8 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { AppToast } from "../shared/AppToast";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 // ── Documento obrigatório por tipo de licença ────────────────────────────────
 // Pesquisa de mercado (Convenia/Gusto/Personio) + prática CLT: alguns tipos
@@ -194,26 +196,6 @@ function sameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-function ViewToggleButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-      style={{
-        background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "#FFFFFF" : "var(--text-dim)",
-        border: "none",
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-    >
-      <Icon size={13} />
-      {label}
-    </button>
-  );
-}
 
 async function contarAnexos(recordId) {
   if (!isSupabaseConfigured) return 0;
@@ -926,7 +908,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("ferias");
   const feriasStageFields = useRHStageFields("ferias");
 
-  const [viewMode, setViewMode]           = useState("kanban"); // "kanban" | "table" | "calendar"
+  const [viewMode, setViewMode]           = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
   const [filterStatus, setFilterStatus]   = useState("todas");
   const [onlyMine, setOnlyMine]           = useState(false);
   const [showSolicitar, setShowSolicitar] = useState(false);
@@ -1135,6 +1117,23 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
 
   const drawerReq = drawerReqId ? requests.find(r => r.id === drawerReqId) : null;
 
+  const analyticsStages = useMemo(
+    () => stages.filter((s) => !s.terminal).map((s) => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
+    [stages]
+  );
+
+  const feriasSpecificStats = useMemo(() => {
+    const byType = {};
+    for (const r of filtered) {
+      const label = leaveTypeLabel(r.type);
+      byType[label] = (byType[label] || 0) + 1;
+    }
+    const totalDias = filtered.reduce((sum, r) => sum + calcDias(r.start_date, r.end_date), 0);
+    const stats = Object.entries(byType).map(([label, count]) => ({ label, value: String(count) }));
+    stats.push({ label: "Total de dias afastados", value: `${totalDias}d` });
+    return stats;
+  }, [filtered]);
+
   return (
     <div>
       {boardError && (
@@ -1156,6 +1155,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
               <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
               <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
               <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
             </div>
             <Button size="sm" icon={Plus} onClick={() => setShowSolicitar(true)}>Solicitar</Button>
           </div>
@@ -1207,6 +1207,14 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
         <FeriasTableView requests={filtered} stages={stages} onRowClick={(r) => setDrawerReqId(r.id)} />
       ) : viewMode === "calendar" ? (
         <FeriasCalendarView requests={filtered} stages={stages} onPillClick={(r) => setDrawerReqId(r.id)} />
+      ) : viewMode === "analytics" ? (
+        <KanbanAnalyticsPanel
+          stages={analyticsStages}
+          records={filtered}
+          getStageKey={(r) => r.status}
+          getStageEnteredAt={(r) => r.status_changed_at}
+          specificStats={feriasSpecificStats}
+        />
       ) : (
         <>
           <RHMobileKanbanAccordion

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, AlertCircle, ExternalLink, Trash2, Settings } from "lucide-react";
+import { Plus, X, AlertCircle, ExternalLink, Trash2, Settings, LayoutGrid, TrendingUp } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -15,6 +15,8 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { StageFieldInput } from "../shared/StageFieldInput";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
@@ -483,6 +485,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const [draggedColumnKey, setDraggedColumnKey] = useState(null);
   const [editingFieldsStage, setEditingFieldsStage] = useState(null); // { stageKey, name }
   const [selectedCase, setSelectedCase] = useState(null);
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "analytics"
 
   const trailingRef = useRef(null);
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
@@ -549,6 +552,25 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
 
   const firstNonTerminalStage = stages.find(s => !s.terminal);
 
+  const analyticsStages = useMemo(
+    () => stages.filter(s => !s.terminal).map(s => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
+    [stages]
+  );
+
+  // "Distribuição por tipo de caso" (sugerido na spec) não tem coluna
+  // equivalente em posvenda_cases (ver 20260770_posvenda_kanban.sql — sem
+  // case_type/reason) — substituído por distribuição por empresa, único
+  // agrupamento categórico já carregado sem query nova.
+  const posVendaSpecificStats = useMemo(() => {
+    const stats = [{ label: "Valor Total", value: formatK(summary.total) }];
+    const byCompany = {};
+    for (const c of scopedCases) byCompany[c.companyId] = (byCompany[c.companyId] || 0) + 1;
+    for (const id of Object.keys(byCompany)) {
+      stats.push({ label: COMPANIES[id]?.short || id, value: String(byCompany[id]) });
+    }
+    return stats;
+  }, [scopedCases, summary.total]);
+
   return (
     <>
       {stageError && (
@@ -569,6 +591,10 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+                <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" />
+                <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
+              </div>
               {isManager && accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
                 <Select
                   value={activeCompany}
@@ -581,7 +607,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                   size="sm"
                 />
               )}
-              {firstNonTerminalStage && (
+              {viewMode === "kanban" && firstNonTerminalStage && (
                 <button
                   onClick={() => setCreateModalStage(firstNonTerminalStage)}
                   className="flex items-center gap-1.5 font-semibold"
@@ -595,10 +621,21 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           </div>
         </KanbanBoardHeader>
 
-        {firstNonTerminalStage && (
+        {viewMode === "kanban" && firstNonTerminalStage && (
           <KanbanFab label="Novo caso" flush onClick={() => setCreateModalStage(firstNonTerminalStage)} />
         )}
 
+        {viewMode === "analytics" && (
+          <KanbanAnalyticsPanel
+            stages={analyticsStages}
+            records={scopedCases}
+            getStageKey={c => c.stage}
+            getStageEnteredAt={c => c.stageChangedAt}
+            specificStats={posVendaSpecificStats}
+          />
+        )}
+
+        {viewMode === "kanban" && (<>
         {/* Mobile: acordeão vertical — mesmo padrão dos boards de RH */}
         <RHMobileKanbanAccordion
           stages={stages}
@@ -769,6 +806,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
             Arraste para mover entre etapas · Clique no card para ver detalhes
           </p>
         </div>
+        </>)}
       </div>
 
       <RHStageFieldsPanel

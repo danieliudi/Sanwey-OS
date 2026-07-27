@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ClipboardCheck, Plus, X, Check, Trash2,
   Briefcase, Settings2, AlertCircle, Users,
-  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight,
+  LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, TrendingUp,
 } from "lucide-react";
 import { RH_CONTRACT_TYPES } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -40,6 +40,8 @@ import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 // ── Etapas do onboarding ──────────────────────────────────────────────────────
 // As etapas vêm de rh_pipeline_stages (domain="onboarding") — reordenar é
@@ -202,26 +204,6 @@ function sameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-function ViewToggleButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-      style={{
-        background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "#FFFFFF" : "var(--text-dim)",
-        border: "none",
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-    >
-      <Icon size={13} />
-      {label}
-    </button>
-  );
-}
 
 function InitialsAvatar({ name, size = 32 }) {
   const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
@@ -1138,7 +1120,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const onboardingRemovedStageKey = useMemo(() => stages.find((s) => s.terminal && s.lost)?.stageKey || null, [stages]);
   const onboardingStageFields = useRHStageFields("onboarding");
   const { users } = useProfiles();
-  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
   const [novaTemplateOpen, setNovaTemplateOpen] = useState(false);
   const [bulkTarefaOpen, setBulkTarefaOpen] = useState(false);
   const [addColaboradorStage, setAddColaboradorStage] = useState(null);
@@ -1358,6 +1340,30 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
     [colaboradores, drawerColaboradorId]
   );
 
+  const analyticsStages = useMemo(
+    () => stages.filter((s) => !s.terminal).map((s) => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
+    [stages]
+  );
+
+  // "Tempo médio até Removido": só quando a etapa terminal+lost existe e tem
+  // colaboradores nela — onboardingStageChangedAt (não "stageChangedAt", ver
+  // rowToColaborador em use-rh-colaboradores.js) marca quando entraram nela.
+  const onboardingSpecificStats = useMemo(() => {
+    const stats = [
+      { label: "% médio de checklist concluído", value: dashboardStats.overall != null ? `${dashboardStats.overall}%` : "—" },
+    ];
+    if (onboardingRemovedStageKey) {
+      const removidos = colaboradores.filter(
+        (c) => c.onboardingStage === onboardingRemovedStageKey && c.createdAt && c.onboardingStageChangedAt
+      );
+      const avgDays = removidos.length > 0
+        ? Math.round(removidos.reduce((sum, c) => sum + (new Date(c.onboardingStageChangedAt).getTime() - new Date(c.createdAt).getTime()) / 86400000, 0) / removidos.length)
+        : null;
+      stats.push({ label: "Tempo médio até Removido", value: avgDays !== null ? `${avgDays}d` : "—" });
+    }
+    return stats;
+  }, [dashboardStats.overall, colaboradores, onboardingRemovedStageKey]);
+
   if (!isSupabaseConfigured) {
     return (
       <EmptyState icon={ClipboardCheck} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar este módulo." />
@@ -1406,6 +1412,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
             <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
           </div>
           {canWrite && (
             <>
@@ -1463,6 +1470,14 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           colaboradores={colaboradores}
           stages={stages}
           onPillClick={(c) => setDrawerColaboradorId(c.id)}
+        />
+      ) : viewMode === "analytics" ? (
+        <KanbanAnalyticsPanel
+          stages={analyticsStages}
+          records={colaboradores}
+          getStageKey={(c) => c.onboardingStage}
+          getStageEnteredAt={(c) => c.onboardingStageChangedAt}
+          specificStats={onboardingSpecificStats}
         />
       ) : (
         <>
