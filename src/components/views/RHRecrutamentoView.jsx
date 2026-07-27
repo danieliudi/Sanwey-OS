@@ -1098,7 +1098,7 @@ function VagaDrawer({
     </>
   );
 
-  const center = (
+  const formContent = (
     <>
       {/* Campos customizados desta etapa (RHStageListManager → RHStageFieldsPanel) */}
       {visibleCustomFields.length > 0 && (
@@ -1211,20 +1211,20 @@ function VagaDrawer({
           onClose={() => setManagerModalOpen(false)}
         />
       )}
-
-      {/* Anexos / Checklists / Atividades */}
-      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-        <RHDetailDrawerShell
-          domain="vagas"
-          recordId={vaga.id}
-          activities={vaga.activities || []}
-          onAddActivity={onAddActivity}
-          currentUser={currentUser}
-          users={users}
-          stages={stages}
-        />
-      </div>
     </>
+  );
+
+  const center = (
+    <RHDetailDrawerShell
+      domain="vagas"
+      recordId={vaga.id}
+      activities={vaga.activities || []}
+      onAddActivity={onAddActivity}
+      currentUser={currentUser}
+      users={users}
+      stages={stages}
+      formContent={formContent}
+    />
   );
 
   const right = (
@@ -1878,7 +1878,7 @@ function CandidatoDrawer({
     </>
   );
 
-  const center = (
+  const formContent = (
     <>
       {/* Campos customizados desta etapa (RHStageListManager → RHStageFieldsPanel) */}
       {visibleCustomFields.length > 0 && (
@@ -2032,19 +2032,20 @@ function CandidatoDrawer({
         )}
       </div>
 
-      {/* Anexos / Checklists / Atividades */}
-      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-        <RHDetailDrawerShell
-          domain="candidatos"
-          recordId={candidato.id}
-          activities={candidato.activities || []}
-          onAddActivity={onAddActivity}
-          currentUser={currentUser}
-          users={users}
-          stages={stages}
-        />
-      </div>
     </>
+  );
+
+  const center = (
+    <RHDetailDrawerShell
+      domain="candidatos"
+      recordId={candidato.id}
+      activities={candidato.activities || []}
+      onAddActivity={onAddActivity}
+      currentUser={currentUser}
+      users={users}
+      stages={stages}
+      formContent={formContent}
+    />
   );
 
   const right = (

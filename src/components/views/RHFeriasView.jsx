@@ -656,38 +656,35 @@ function FeriasDrawer({
     </>
   );
 
-  const center = (
-    <>
-      {visibleCustomDefs.length > 0 && (
-        <div>
-          <div style={labelSt}>Campos desta etapa</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {visibleCustomDefs.map((f) => (
-              <div key={f.id}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
-                  {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
-                  {f.label}
-                </label>
-                {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
-                <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
-              </div>
-            ))}
+  const formContent = visibleCustomDefs.length > 0 ? (
+    <div>
+      <div style={labelSt}>Campos desta etapa</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {visibleCustomDefs.map((f) => (
+          <div key={f.id}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
+              {f.effectiveRequired && <span style={{ color: "var(--accent)", marginRight: 4 }}>*</span>}
+              {f.label}
+            </label>
+            {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
+            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
           </div>
-        </div>
-      )}
-
-      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-        <RHDetailDrawerShell
-          domain="ferias"
-          recordId={req.id}
-          activities={req.activities || []}
-          onAddActivity={onAddActivity}
-          currentUser={currentUser}
-          users={users}
-          stages={stages}
-        />
+        ))}
       </div>
-    </>
+    </div>
+  ) : null;
+
+  const center = (
+    <RHDetailDrawerShell
+      domain="ferias"
+      recordId={req.id}
+      activities={req.activities || []}
+      onAddActivity={onAddActivity}
+      currentUser={currentUser}
+      users={users}
+      stages={stages}
+      formContent={formContent}
+    />
   );
 
   const right = (

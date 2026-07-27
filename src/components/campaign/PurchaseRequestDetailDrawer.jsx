@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   CheckCircle2, XCircle, Upload, FileText,
   TrendingUp, TrendingDown, AlertCircle, ExternalLink, Loader2,
+  Activity, Paperclip, ListChecks,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
@@ -15,6 +16,9 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { StageNavigator } from "../shared/StageNavigator";
+import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { ActivityLog } from "./CampaignDetailDrawer";
+import { RHAttachmentsPanel, RHChecklistsPanel } from "../rh-pipeline/RHDetailDrawerShell";
 
 const BUCKET = "marketing-attachments";
 
@@ -183,6 +187,8 @@ export function PurchaseRequestDetailDrawer({
   const [lastPrice,     setLastPrice]     = useState(null);
   const [lastPriceError, setLastPriceError] = useState(null);
 
+  const [centerTab, setCenterTab] = useState("form");
+
   useEffect(() => {
     setSupplierId(purchase.supplierId || "");
     setQuantity(purchase.quantity ?? "");
@@ -210,6 +216,7 @@ export function PurchaseRequestDetailDrawer({
     setActionError(null);
     setUploadError(null);
     setQuotesError(null);
+    setCenterTab("form");
   }, [purchase.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Comparação "valor pago no ano passado" — assim que fornecedor + item
@@ -369,6 +376,10 @@ export function PurchaseRequestDetailDrawer({
     }
     setActionError(null);
     try {
+      // Append de `activities` (stage_change) já acontece dentro de
+      // updatePurchase (hook), não aqui — mesmo update cobre também o
+      // drag-and-drop do board (ComprasMarketingView.attemptStageChange),
+      // que chama updatePurchase direto sem passar por este drawer.
       await onUpdate(purchase.id, { stage: stageId });
       onClose();
       onStageMoved?.(purchase.id);
@@ -514,7 +525,7 @@ export function PurchaseRequestDetailDrawer({
     </>
   );
 
-  const center = (
+  const formTabContent = (
     <>
       {/* Cotação de fornecedores — editável na etapa "Cotação"; recapitulação
           read-only depois (mostra o vencedor destacado). Aposenta o fluxo
@@ -717,6 +728,29 @@ export function PurchaseRequestDetailDrawer({
             <div className="text-xs px-3 py-2 rounded-lg mt-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{uploadError}</div>
           )}
         </div>
+      )}
+    </>
+  );
+
+  const center = (
+    <>
+      <DetailDrawerTabs
+        tabs={[
+          { id: "form",       label: "Form",       icon: FileText },
+          { id: "atividades", label: "Atividades", icon: Activity },
+          { id: "anexos",     label: "Anexos",     icon: Paperclip },
+          { id: "checklist",  label: "Checklist",  icon: ListChecks },
+        ]}
+        activeId={centerTab}
+        onChange={setCenterTab}
+      />
+      {centerTab === "form" && formTabContent}
+      {centerTab === "atividades" && <ActivityLog activities={purchase.activities || []} />}
+      {centerTab === "anexos" && (
+        <RHAttachmentsPanel domain="marketing_purchase_requests" recordId={purchase.id} currentUser={currentUser} />
+      )}
+      {centerTab === "checklist" && (
+        <RHChecklistsPanel domain="marketing_purchase_requests" recordId={purchase.id} currentUser={currentUser} />
       )}
     </>
   );

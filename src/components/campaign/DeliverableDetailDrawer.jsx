@@ -22,6 +22,7 @@ import { AssigneeMultiSelect }        from "../shared/AssigneeMultiSelect";
 import { EditableProtocolNumber }     from "../shared/EditableProtocolNumber";
 import { StageNavigator }             from "../shared/StageNavigator";
 import { SplitPanelDrawer }           from "../shared/SplitPanelDrawer";
+import { DetailDrawerTabs }           from "../shared/DetailDrawerTabs";
 
 /* ── Priority helpers ───────────────────────────────────────── */
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -39,37 +40,6 @@ const SIDE_TABS = [
   { id: "anexos",      label: "Anexos",      icon: Paperclip },
   { id: "checklists",  label: "Checklists",  icon: CheckSquare },
 ];
-
-function SideTabs({ activeId, onChange }) {
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-      {SIDE_TABS.map(t => {
-        const active = t.id === activeId;
-        const Icon = t.icon;
-        return (
-          <button
-            key={t.id}
-            onClick={() => onChange(t.id)}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "4px 10px", fontSize: 11, fontWeight: 600,
-              borderRadius: 9999,
-              background:  active ? "var(--surface)" : "transparent",
-              color:       active ? "var(--accent)" : "var(--text-dim)",
-              border:      `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-              cursor: "pointer", transition: "background 0.1s",
-            }}
-            onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-            onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
-          >
-            <Icon size={11} />
-            {t.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 /* ── Deliverable AI panel ───────────────────────────────────── */
 function DeliverableAIPanel({ item, currentUser }) {
@@ -787,7 +757,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
 
       {/* ── Pill SideTabs ── */}
       <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
-        <SideTabs activeId={sideTab} onChange={setSideTab} />
+        <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
       </div>
 
       {/* ── Tab content ── */}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const TABLE = "marketing_purchase_requests";
@@ -43,6 +43,7 @@ function rowToPurchase(r) {
     invoiceUrl:      r.invoice_url,
     companyIds:      Array.isArray(r.company_ids) ? r.company_ids : [],
     notes:           Array.isArray(r.notes) ? r.notes : [],
+    activities:      Array.isArray(r.activities) ? r.activities : [],
     expenseId:       r.expense_id ?? null,
     createdBy:       r.created_by ?? null,
     createdAt:        r.created_at,
@@ -86,6 +87,7 @@ function purchaseToRow(p) {
   if (p.invoiceUrl !== undefined)     row.invoice_url = p.invoiceUrl || null;
   if (p.companyIds !== undefined)     row.company_ids = p.companyIds || [];
   if (p.notes !== undefined)          row.notes = p.notes || [];
+  if (p.activities !== undefined)     row.activities = p.activities || [];
   if (p.quoteOptions !== undefined)         row.quote_options = p.quoteOptions || [];
   if (p.paymentTerms !== undefined)         row.payment_terms = p.paymentTerms || null;
   if (p.supplierOrderCode !== undefined)    row.supplier_order_code = p.supplierOrderCode || null;
@@ -105,6 +107,8 @@ export function useMarketingPurchaseRequests({ enabled = true } = {}) {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading]     = useState(isSupabaseConfigured && enabled);
   const [error, setError]         = useState(null);
+  const purchasesRef = useRef([]);
+  useEffect(() => { purchasesRef.current = purchases; }, [purchases]);
 
   const fetchAll = useCallback(async () => {
     if (!isSupabaseConfigured || !enabled) return;
@@ -157,10 +161,27 @@ export function useMarketingPurchaseRequests({ enabled = true } = {}) {
     return created;
   }, []);
 
+  // Transições de etapa client-side (fora das RPCs approve/reject, que já
+  // gravam `activities` no banco) precisam do mesmo registro de histórico —
+  // centralizado aqui (não em cada chamador) porque tanto o drawer quanto o
+  // drag-and-drop do board (ComprasMarketingView.attemptStageChange) chamam
+  // updatePurchase direto pra mover de etapa.
   const updatePurchase = useCallback(async (id, patch) => {
     if (!isSupabaseConfigured) return;
-    const row = purchaseToRow(patch);
-    setPurchases(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
+    let effectivePatch = patch;
+    if (patch.stage !== undefined && patch.activities === undefined) {
+      const current = purchasesRef.current.find(p => p.id === id);
+      const stageName = PURCHASE_STAGES.find(s => s.id === patch.stage)?.name || patch.stage;
+      effectivePatch = {
+        ...patch,
+        activities: [
+          ...(current?.activities || []),
+          { type: "stage_change", description: `Movido para ${stageName}`, at: new Date().toISOString() },
+        ],
+      };
+    }
+    const row = purchaseToRow(effectivePatch);
+    setPurchases(prev => prev.map(p => p.id === id ? { ...p, ...effectivePatch } : p));
     const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
     if (err) {
       setError(err.message || String(err));

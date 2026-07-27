@@ -543,7 +543,7 @@ function OnboardingDrawer({
     </div>
   );
 
-  const center = (
+  const formContent = (
     <>
       {visibleCustomDefs.length > 0 && (
         <div>
@@ -630,21 +630,20 @@ function OnboardingDrawer({
           </>
         )}
       </div>
-
-      {/* Atividades / Anexos — adicional ao checklist de integração acima
-          (rh_onboarding_tarefas), que continua intacto. */}
-      <div className="pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-        <RHDetailDrawerShell
-          domain="onboarding"
-          recordId={colaborador.id}
-          activities={colaborador.activities || []}
-          onAddActivity={onAddActivity}
-          currentUser={currentUser}
-          users={users}
-          stages={stages}
-        />
-      </div>
     </>
+  );
+
+  const center = (
+    <RHDetailDrawerShell
+      domain="onboarding"
+      recordId={colaborador.id}
+      activities={colaborador.activities || []}
+      onAddActivity={onAddActivity}
+      currentUser={currentUser}
+      users={users}
+      stages={stages}
+      formContent={formContent}
+    />
   );
 
   const right = (

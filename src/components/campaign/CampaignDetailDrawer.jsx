@@ -18,6 +18,7 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
@@ -52,34 +53,6 @@ const SIDE_TABS = [
   { id: "criativo",    label: "Checklist",   icon: ListChecks },
   { id: "entregas",    label: "Entregas",    icon: Package },
 ];
-
-function SideTabs({ activeId, onChange }) {
-  return (
-    <div className="flex flex-wrap gap-1">
-      {SIDE_TABS.map(t => {
-        const active = t.id === activeId;
-        const Icon   = t.icon;
-        return (
-          <button
-            key={t.id}
-            onClick={() => onChange(t.id)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer"
-            style={{
-              background:  active ? "var(--surface)" : "transparent",
-              color:       active ? "var(--accent)" : "var(--text-dim)",
-              border:      `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-            }}
-            onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-            onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
-          >
-            <Icon size={11} />
-            {t.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 // ── AI panel ──────────────────────────────────────────────────────────────────
 
@@ -423,7 +396,7 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
 
 // ── Activity log ──────────────────────────────────────────────────────────────
 
-function ActivityLog({ activities }) {
+export function ActivityLog({ activities }) {
   if (!activities || activities.length === 0) {
     return <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Sem atividades registradas.</div>;
   }
@@ -1489,7 +1462,7 @@ export function CampaignDetailDrawer({
 
       {/* ── Pill SideTabs ── */}
       <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
-        <SideTabs activeId={sideTab} onChange={setSideTab} />
+        <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
       </div>
 
       {/* ── Tab content ── */}
