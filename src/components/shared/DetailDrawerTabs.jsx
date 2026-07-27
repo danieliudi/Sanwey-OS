@@ -24,6 +24,18 @@ export function DetailDrawerTabs({ tabs, activeId, onChange }) {
           >
             {Icon && <Icon size={11} />}
             {t.label}
+            {t.badge != null && (
+              <span
+                className="inline-flex items-center justify-center rounded-full font-bold"
+                style={{
+                  fontSize: 9, minWidth: 14, height: 14, padding: "0 4px",
+                  background: active ? "var(--accent)" : "var(--surface-alt)",
+                  color: active ? "#FFF" : "var(--text-dim)",
+                }}
+              >
+                {t.badge}
+              </span>
+            )}
           </button>
         );
       })}

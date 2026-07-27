@@ -711,7 +711,7 @@ function DespesaRow({ despesa, onVerComprovante, onRefazer }) {
 
 // ── View principal ────────────────────────────────────────────────────────────
 
-export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreateClient, pushNotification }) {
+export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreateClient, pushNotification, initialSelectedViagemId, onInitialViagemConsumed }) {
   const userId = currentUser?.id;
   const { registros, loading: loadingRegistros, createRegistro, marcarRealizado, marcarNaoRealizado, deleteRegistro } = useCRMViagens({ userId });
   const { despesas, loading: loadingDespesas, createDespesa, deleteDespesa, uploadComprovante, getComprovanteUrl } = useCRMDespesas({ userId });
@@ -728,6 +728,17 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
   // misturar visitas/despesas de outras pessoas nesta tela pessoal.
   const registrosProprios = useMemo(() => registros.filter((r) => r.vendedor_id === userId), [registros, userId]);
   const despesasProprias = useMemo(() => despesas.filter((d) => d.vendedor_id === userId), [despesas, userId]);
+
+  // Busca em `registros` (não `registrosProprios`) porque quem manda o id pode
+  // ser o painel de Conexões do Cliente — a viagem pode ter sido registrada por
+  // outro vendedor. Se não achar (RLS já restringe `registros` a só as próprias
+  // linhas de quem não é gestor/admin), simplesmente não abre nada.
+  useEffect(() => {
+    if (!initialSelectedViagemId || loadingRegistros) return;
+    const registro = registros.find((r) => r.id === initialSelectedViagemId);
+    if (registro) setSelectedRegistro(registro);
+    onInitialViagemConsumed?.();
+  }, [initialSelectedViagemId, loadingRegistros, registros, onInitialViagemConsumed]);
 
   // Avisa o vendedor quando o gestor decide um reembolso — antes só se
   // descobria abrindo o app de novo. Compara contra o último status visto

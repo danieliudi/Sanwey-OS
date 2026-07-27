@@ -1,17 +1,28 @@
 import React, { useMemo, useState } from "react";
-import { Plus, Search, Pencil, Trash2, Users, X, Database, History, ArrowUpRight } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, X, Database, History } from "lucide-react";
 import { Modal } from "../ui/Modal";
+import { EntityProfileModal } from "../shared/EntityProfileModal";
+import { ConnectionsPanel } from "../shared/ConnectionsPanel";
+import { useClientConnections } from "../../hooks/use-client-connections";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { CLIENT_CATEGORIES, clientCategoryLabel, clientCategoryColor } from "../../constants/client-categories";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { formatDateBR } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
+import { STATUS_VISITA } from "../../utils/viagens";
 
 const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
 const EMPTY = { name: "", category: "", city: "", state: "", cnpj: "", companyIds: [], notes: "" };
 
 const STAGE_LABELS = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
+
+const VIAGEM_STATUS_BADGE = {
+  planejado:     { bg: "var(--surface-alt)", color: "var(--text-dim)" },
+  realizado:     { bg: "var(--success-bg)",  color: "var(--success)" },
+  nao_realizado: { bg: "var(--danger-bg)",   color: "var(--danger)" },
+  cancelado:     { bg: "var(--surface-alt)", color: "var(--text-faint)" },
+};
 
 // Data em que o negócio realmente fechou: data_fechamento (custom field da
 // etapa "ganho") tem prioridade, caindo pra stageChangedAt quando o campo
@@ -35,7 +46,7 @@ function CategoryTag({ value }) {
   );
 }
 
-export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport, onOpenLead }) {
+export function ClientsManager({ clients = [], loading, leads = [], onCreate, onUpdate, onDelete, canDelete, onOpenImport, onOpenLead, onOpenViagem }) {
   const [query, setQuery] = useState("");
   const [onlyOpportunities, setOnlyOpportunities] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,7 +54,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
-  const [historyClient, setHistoryClient] = useState(null);
+  const [activeTab, setActiveTab] = useState("dados");
   const [sortCol, setSortCol] = useState(null); // null = ordem natural
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(0);
@@ -144,13 +155,14 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     setPage(0);
   };
 
-  const openNew = () => { setEditing(null); setForm(EMPTY); setModalOpen(true); };
-  const openEdit = (c) => {
+  const openNew = () => { setEditing(null); setForm(EMPTY); setActiveTab("dados"); setModalOpen(true); };
+  const openDetail = (c, tab = "dados") => {
     setEditing(c);
     setForm({
       name: c.name || "", category: c.category || "", city: c.city || "",
       state: c.state || "", cnpj: c.cnpj || "", companyIds: c.companyIds || [], notes: c.notes || "",
     });
+    setActiveTab(tab);
     setModalOpen(true);
   };
 
@@ -275,7 +287,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                   <tr key={c.id} style={{ borderBottom: "1px solid #F1F1F1" }}>
                     <td style={{ padding: "12px", fontSize: 13 }}>
                       {dealCount > 0 ? (
-                        <button onClick={() => setHistoryClient(c)}
+                        <button onClick={() => openDetail(c, "conexoes")}
                           className="font-semibold text-left inline-flex items-center gap-1"
                           style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                           {c.name}
@@ -319,7 +331,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                       {stats?.avgTicket ? formatBRL(stats.avgTicket) : "—"}
                     </td>
                     <td style={{ padding: "12px", textAlign: "right", whiteSpace: "nowrap" }}>
-                      <button onClick={() => openEdit(c)} title="Editar"
+                      <button onClick={() => openDetail(c)} title="Editar"
                         className="p-1.5 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}>
                         <Pencil size={14} />
                       </button>
@@ -347,7 +359,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       {dealCount > 0 ? (
-                        <button onClick={() => setHistoryClient(c)}
+                        <button onClick={() => openDetail(c, "conexoes")}
                           className="font-semibold text-left inline-flex items-center gap-1"
                           style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 14 }}>
                           {c.name}
@@ -361,7 +373,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                       </div>
                     </div>
                     <div className="flex items-center gap-0.5 shrink-0">
-                      <button onClick={() => openEdit(c)} title="Editar"
+                      <button onClick={() => openDetail(c)} title="Editar"
                         className="p-2 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}>
                         <Pencil size={16} />
                       </button>
@@ -439,9 +451,126 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         </>
       )}
 
-      {/* Create / edit modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Editar cliente" : "Novo cliente"} width={480}>
-        <div className="px-6 py-5 space-y-3.5">
+      {/* Perfil do cliente — Dados + Conexões (Negócios, Viagens) */}
+      <ClientDetailModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        editing={editing}
+        form={form}
+        setForm={setForm}
+        saving={saving}
+        onSave={save}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        toggleCompany={toggleCompany}
+        inputStyle={inputStyle}
+        onFocusRed={onFocusRed}
+        onBlurRed={onBlurRed}
+        stats={editing ? statsByClient.get(editing.id) : null}
+        dealsByClient={dealsByClient}
+        onOpenLead={onOpenLead}
+        onOpenViagem={onOpenViagem}
+      />
+
+      {/* Delete confirm */}
+      <Modal open={Boolean(confirmId)} onClose={() => setConfirmId(null)} title="Excluir cliente" width={400}>
+        <div className="px-6 py-5 space-y-4">
+          <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
+            {(() => {
+              const n = dealsByClient.get(confirmId)?.length || 0;
+              return n > 0
+                ? `Tem certeza que deseja excluir este cliente? ${n} negócio${n !== 1 ? "s" : ""} vinculado${n !== 1 ? "s" : ""} vão perder a referência a ele.`
+                : "Tem certeza que deseja excluir este cliente? Não há negócios vinculados a ele.";
+            })()}
+          </p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setConfirmId(null)} className="px-4 py-2 text-sm rounded-lg border"
+              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFFFFF", cursor: "pointer" }}>
+              Cancelar
+            </button>
+            <button onClick={async () => { await onDelete?.(confirmId); setConfirmId(null); }}
+              className="px-4 py-2 text-sm rounded-lg font-semibold text-white"
+              style={{ background: "#DC2626", border: "none", cursor: "pointer" }}>
+              Excluir
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function ClientDetailModal({
+  open, onClose, editing, form, setForm, saving, onSave,
+  activeTab, onTabChange, toggleCompany, inputStyle, onFocusRed, onBlurRed,
+  stats, dealsByClient, onOpenLead, onOpenViagem,
+}) {
+  const { data, loading } = useClientConnections(editing?.id);
+
+  const tabs = editing
+    ? [{ id: "dados", label: "Dados" }, { id: "conexoes", label: "Conexões" }]
+    : [{ id: "dados", label: "Dados" }];
+  const tab = editing ? activeTab : "dados";
+
+  const groups = [
+    {
+      key: "negocios",
+      label: "Negócios (Funil de Vendas)",
+      color: "var(--accent)",
+      items: data?.negocios || [],
+      renderItem: (item) => ({
+        title: item.company || "Negócio sem nome",
+        badgeLabel: STAGE_LABELS[item.stage] || item.stage,
+        meta: formatBRL(item.value || 0),
+      }),
+      // A RPC get_client_connections só devolve colunas parciais (id/company/
+      // stage/value/owner/created_at) — resolve o lead COMPLETO em
+      // dealsByClient (já carregado pelo componente pai a partir de `leads`)
+      // antes de abrir, senão LeadDetailDrawer quebra por falta de
+      // companyId/clientId/customFields/etc.
+      onOpenItem: (item) => {
+        const fullLead = dealsByClient?.get(editing?.id)?.find(l => l.id === item.id);
+        onOpenLead?.(fullLead || item);
+        onClose();
+      },
+      emptyLabel: "Nenhum negócio vinculado a este cliente ainda.",
+    },
+    {
+      key: "viagens",
+      label: "Viagens & Reembolsos",
+      color: "#0891B2",
+      items: data?.viagens || [],
+      renderItem: (item) => {
+        const badge = VIAGEM_STATUS_BADGE[item.status] || VIAGEM_STATUS_BADGE.planejado;
+        return {
+          title: item.destino_planejado || "Viagem sem destino",
+          badgeLabel: STATUS_VISITA[item.status]?.label || item.status,
+          badgeBg: badge.bg,
+          badgeColor: badge.color,
+          meta: formatDateBR(item.data_planejada),
+        };
+      },
+      onOpenItem: (item) => { onOpenViagem?.(item.id); onClose(); },
+      emptyLabel: "Nenhuma viagem vinculada a este cliente ainda.",
+    },
+  ];
+
+  return (
+    <EntityProfileModal
+      open={open}
+      onClose={onClose}
+      avatarLabel={(form.name || "?").trim().charAt(0).toUpperCase() || "?"}
+      avatarColor="var(--color-industria)"
+      title={form.name || (editing ? editing.name : "Novo cliente")}
+      subtitle={[form.city, form.state].filter(Boolean).join(" / ") || (editing ? undefined : "Preencha os dados abaixo")}
+      statusBadge={form.category ? <CategoryTag value={form.category} /> : undefined}
+      tabs={tabs}
+      activeTab={tab}
+      onTabChange={onTabChange}
+      width={560}
+    >
+      {tab === "dados" && (
+        <div className="space-y-3.5">
           <div>
             <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Nome *</label>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -507,91 +636,53 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
               className="w-full rounded-lg border px-3 py-2 text-sm resize-none" style={inputStyle} onFocus={onFocusRed} onBlur={onBlurRed} />
           </div>
 
+          {editing && (
+            stats ? (
+              <div>
+                <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Resumo comercial</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Ticket médio", value: formatBRL(stats.avgTicket) },
+                    { label: "Produtos distintos", value: stats.products.length },
+                    { label: "Empresas atendidas", value: `${stats.companies.size}/${COMPANY_IDS.length}` },
+                    { label: "Último pedido", value: formatDateBR(stats.lastOrder) },
+                  ].map(item => (
+                    <div key={item.label} className="rounded-lg border px-3 py-2" style={{ borderColor: "#E5E7EB" }}>
+                      <div style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
+                      <div className="font-semibold mt-0.5" style={{ fontSize: 14, color: "var(--text)" }}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Resumo comercial</label>
+                <p className="text-xs" style={{ color: "var(--text-faint)" }}>Nenhum negócio ganho ainda pra gerar estatísticas.</p>
+              </div>
+            )
+          )}
+
           <div className="flex justify-end gap-2 pt-1">
-            <button onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm rounded-lg border"
+            <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border"
               style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFFFFF", cursor: "pointer" }}>
               Cancelar
             </button>
-            <button onClick={save} disabled={!form.name.trim() || saving}
+            <button onClick={onSave} disabled={!form.name.trim() || saving}
               className="px-4 py-2 text-sm rounded-lg font-semibold text-white"
               style={{ background: "var(--color-industria)", border: "none", opacity: (!form.name.trim() || saving) ? 0.5 : 1, cursor: (!form.name.trim() || saving) ? "not-allowed" : "pointer" }}>
               {saving ? "Salvando…" : editing ? "Salvar alterações" : "Criar cliente"}
             </button>
           </div>
         </div>
-      </Modal>
+      )}
 
-      {/* Histórico de negócios do cliente */}
-      <Modal open={Boolean(historyClient)} onClose={() => setHistoryClient(null)} title={`Histórico — ${historyClient?.name || ""}`} width={560}>
-        <div className="px-6 py-5">
-          {(dealsByClient.get(historyClient?.id) || [])
-            .slice()
-            .sort((a, b) => new Date(wonDate(b) || b.createdAt || 0) - new Date(wonDate(a) || a.createdAt || 0))
-            .map(l => {
-              const co = COMPANIES[l.companyId];
-              const isWon = l.stage === "ganho";
-              return (
-                <div key={l.id} className="flex items-start justify-between gap-3 py-3" style={{ borderBottom: "1px solid #F1F1F1" }}>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                      {co && (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                          style={{ background: co.primary + "1A", color: co.primary }}>
-                          {co.short}
-                        </span>
-                      )}
-                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                        style={isWon ? { background: "#DCFCE7", color: "#16A34A" } : { background: "#F3F4F6", color: "var(--text-dim)" }}>
-                        {STAGE_LABELS[l.stage] || l.stage}
-                      </span>
-                    </div>
-                    <div className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>
-                      {l.skuName || l.sku || l.company || "Negócio sem nome"}
-                    </div>
-                    <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
-                      {formatBRL(isWon ? wonValue(l) : (l.value || 0))} · {formatDateBR(wonDate(l) || l.createdAt)}
-                    </div>
-                  </div>
-                  {onOpenLead && (
-                    <button onClick={() => { onOpenLead(l); setHistoryClient(null); }} title="Abrir no pipeline"
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold shrink-0"
-                      style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF", cursor: "pointer" }}>
-                      Abrir <ArrowUpRight size={12} />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          {!(dealsByClient.get(historyClient?.id) || []).length && (
-            <p className="text-sm text-center py-6" style={{ color: "var(--text-dim)" }}>Nenhum negócio vinculado a este cliente ainda.</p>
-          )}
-        </div>
-      </Modal>
-
-      {/* Delete confirm */}
-      <Modal open={Boolean(confirmId)} onClose={() => setConfirmId(null)} title="Excluir cliente" width={400}>
-        <div className="px-6 py-5 space-y-4">
-          <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
-            {(() => {
-              const n = dealsByClient.get(confirmId)?.length || 0;
-              return n > 0
-                ? `Tem certeza que deseja excluir este cliente? ${n} negócio${n !== 1 ? "s" : ""} vinculado${n !== 1 ? "s" : ""} vão perder a referência a ele.`
-                : "Tem certeza que deseja excluir este cliente? Não há negócios vinculados a ele.";
-            })()}
-          </p>
-          <div className="flex justify-end gap-2">
-            <button onClick={() => setConfirmId(null)} className="px-4 py-2 text-sm rounded-lg border"
-              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFFFFF", cursor: "pointer" }}>
-              Cancelar
-            </button>
-            <button onClick={async () => { await onDelete?.(confirmId); setConfirmId(null); }}
-              className="px-4 py-2 text-sm rounded-lg font-semibold text-white"
-              style={{ background: "#DC2626", border: "none", cursor: "pointer" }}>
-              Excluir
-            </button>
-          </div>
-        </div>
-      </Modal>
-    </div>
+      {tab === "conexoes" && editing && (
+        <ConnectionsPanel
+          groups={groups}
+          loading={loading}
+          introText="Conexões deste cliente em outras telas da plataforma."
+        />
+      )}
+    </EntityProfileModal>
   );
 }

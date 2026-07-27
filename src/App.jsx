@@ -370,6 +370,15 @@ export default function App() {
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
+  // Mesmo mecanismo, agora pro painel de Conexões (Colaborador/Cliente): cada
+  // grupo de conexão pode trocar de seção e abrir o registro específico na
+  // tela de destino.
+  const [selectedAvaliacaoId, setSelectedAvaliacaoId] = useState(null);
+  const [selectedMovimentacaoId, setSelectedMovimentacaoId] = useState(null);
+  const [selectedTreinamentoAtribuicaoId, setSelectedTreinamentoAtribuicaoId] = useState(null);
+  const [selectedFeriasId, setSelectedFeriasId] = useState(null);
+  const [selectedViagemId, setSelectedViagemId] = useState(null);
+
   const { markViewed: markLeadViewed } = useRecordViews("leads", currentUser?.id);
   useEffect(() => { if (selectedLead?.id) markLeadViewed(selectedLead.id); }, [selectedLead?.id]);
 
@@ -1659,7 +1668,17 @@ export default function App() {
           <Route path={ROUTES["crm-viagens"]} element={
             isAgencia || isPureMarketing || isPureRH
               ? <Navigate to={ROUTES.dashboard} replace />
-              : <CRMViagensView currentUser={currentUser} clients={clients} onCreateClient={createClient} users={users} pushNotification={pushNotification} />
+              : (
+                <CRMViagensView
+                  currentUser={currentUser}
+                  clients={clients}
+                  onCreateClient={createClient}
+                  users={users}
+                  pushNotification={pushNotification}
+                  initialSelectedViagemId={selectedViagemId}
+                  onInitialViagemConsumed={() => setSelectedViagemId(null)}
+                />
+              )
           } />
           <Route path={ROUTES.clients} element={
             isAgencia || isPureMarketing || isPureRH
@@ -1675,6 +1694,7 @@ export default function App() {
                   canDelete={isManager}
                   onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
                   onOpenLead={setSelectedLead}
+                  onOpenViagem={(id) => { setSection("crm-viagens"); setSelectedViagemId(id); }}
                 />
               )
           } />
@@ -1847,6 +1867,10 @@ export default function App() {
                   canWrite={isRHManager}
                   initialSelectedEmployeeId={selectedEmployeeId}
                   onInitialEmployeeConsumed={() => setSelectedEmployeeId(null)}
+                  onOpenAvaliacao={(id) => { setSection("rh-feedback"); setSelectedAvaliacaoId(id); }}
+                  onOpenMovimentacao={(id) => { setSection("rh-cargos"); setSelectedMovimentacaoId(id); }}
+                  onOpenTreinamento={(id) => { setSection("rh-treinamentos"); setSelectedTreinamentoAtribuicaoId(id); }}
+                  onOpenFerias={(id) => { setSection("rh-ferias"); setSelectedFeriasId(id); }}
                 />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
@@ -1869,19 +1893,49 @@ export default function App() {
             <RHOnboardingView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser || isDiretoria} notifyMentions={notifyMentions} />
           } />
           <Route path={ROUTES["rh-treinamentos"]} element={
-            <RHTreinamentosView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser || isDiretoria} users={users} notifyMentions={notifyMentions} />
+            <RHTreinamentosView
+              currentUser={currentUser}
+              canWrite={isRHManager}
+              isRHUser={isRHUser || isDiretoria}
+              users={users}
+              notifyMentions={notifyMentions}
+              initialSelectedTreinamentoAtribuicaoId={selectedTreinamentoAtribuicaoId}
+              onInitialTreinamentoAtribuicaoConsumed={() => setSelectedTreinamentoAtribuicaoId(null)}
+            />
           } />
           <Route path={ROUTES["rh-feedback"]} element={
-            <RHFeedbackView currentUser={currentUser} canWrite={isRHManager} isRHUser={isRHUser || isDiretoria} notifyMentions={notifyMentions} />
+            <RHFeedbackView
+              currentUser={currentUser}
+              canWrite={isRHManager}
+              isRHUser={isRHUser || isDiretoria}
+              notifyMentions={notifyMentions}
+              initialSelectedAvaliacaoId={selectedAvaliacaoId}
+              onInitialAvaliacaoConsumed={() => setSelectedAvaliacaoId(null)}
+            />
           } />
           <Route path={ROUTES["rh-ferias"]} element={
             (isRHUser || isDiretoria)
-              ? <RHFeriasView currentUser={currentUser} users={users} canWrite={isRHManager} notifyMentions={notifyMentions} />
+              ? <RHFeriasView
+                  currentUser={currentUser}
+                  users={users}
+                  canWrite={isRHManager}
+                  notifyMentions={notifyMentions}
+                  initialSelectedFeriasId={selectedFeriasId}
+                  onInitialFeriasConsumed={() => setSelectedFeriasId(null)}
+                />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-cargos"]} element={
             (isRHManager || isDiretoria)
-              ? <RHCargosView currentUser={currentUser} canWrite={isRHManager} isDirector={isAdmin} users={users} notifyMentions={notifyMentions} />
+              ? <RHCargosView
+                  currentUser={currentUser}
+                  canWrite={isRHManager}
+                  isDirector={isAdmin}
+                  users={users}
+                  notifyMentions={notifyMentions}
+                  initialSelectedMovimentacaoId={selectedMovimentacaoId}
+                  onInitialMovimentacaoConsumed={() => setSelectedMovimentacaoId(null)}
+                />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["rh-comunicacao"]} element={
