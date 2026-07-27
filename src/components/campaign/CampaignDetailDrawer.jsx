@@ -10,6 +10,7 @@ import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGE
 import { useMarketingCampaignAttachments } from "../../hooks/use-marketing-campaign-attachments";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
+import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -1314,6 +1315,18 @@ export function CampaignDetailDrawer({
 
   const isAgencia = currentUser?.role === "agencia";
 
+  // Vínculo opcional a um fornecedor de marketing (categoria "agência") —
+  // escopa quem tem role="agencia" e um fornecedor vinculado ao próprio login
+  // a só enxergar esta campanha se for a mesma agência (ver
+  // 20260718_marketing_agencia_supplier_scoping.sql). Só existia na criação
+  // (CampaignCreateModal) até agora — campanhas já criadas não tinham como
+  // ganhar/trocar esse vínculo depois, então nunca apareciam vinculadas.
+  const { suppliers: allSuppliers } = useMarketingSuppliers({});
+  const agencySuppliers = useMemo(
+    () => allSuppliers.filter(s => s.category === "agencia" && s.isActive),
+    [allSuppliers]
+  );
+
   const flushPending = useCallback(() => {
     if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
     const patch = pendingPatch.current;
@@ -1503,6 +1516,20 @@ export function CampaignDetailDrawer({
               {isAgencia ? <ReadValue value={get("endDate") ? formatDateBR(get("endDate")) : null} /> : <EditInput value={get("endDate") ? String(get("endDate")).slice(0, 10) : ""} onChange={v => set("endDate", localDateInputToISOString(v))} type="date" />}
             </Field>
           </div>
+
+          {!isAgencia && agencySuppliers.length > 0 && (
+            <Field
+              label="Fornecedor (Agência)"
+              hint="Vincula esta campanha a uma agência cadastrada — o login dela só verá campanhas/entregas do próprio fornecedor. Sem vínculo, qualquer login de agência enxerga esta campanha."
+            >
+              <EditSelect
+                value={get("supplierId")}
+                onChange={v => set("supplierId", v || null)}
+                options={agencySuppliers.map(s => ({ value: s.id, label: s.name }))}
+                placeholder="Nenhum (visível a todas as agências)"
+              />
+            </Field>
+          )}
 
           {canWrite && !isAgencia && get("channel") === "Evento" && (
             <ApplyEventChecklistButton campaign={campaign} currentUser={currentUser} />
