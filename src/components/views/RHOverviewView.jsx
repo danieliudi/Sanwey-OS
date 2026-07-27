@@ -289,7 +289,9 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
               {greetingFor(currentUser)}
             </h1>
             <p style={{ fontSize: 13, color: "var(--text-dim)", margin: "4px 0 0" }}>
-              {totalAtivos} colaborador{totalAtivos !== 1 ? "es" : ""} ativo{totalAtivos !== 1 ? "s" : ""}
+              {loadingColaboradores
+                ? "Carregando..."
+                : <>{totalAtivos} colaborador{totalAtivos !== 1 ? "es" : ""} ativo{totalAtivos !== 1 ? "s" : ""}</>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -328,6 +330,13 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
         <div className="-mx-4 sm:-mx-6 lg:mx-0">
           {zone1VisibleCount === 0 ? (
             <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
+          ) : loadingColaboradores ? (
+            <div
+              className="p-5 rounded-xl border text-center text-sm"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+            >
+              Carregando...
+            </div>
           ) : (
             <div
               className="flex gap-3 overflow-x-auto px-4 sm:px-6 lg:px-0 lg:grid lg:overflow-visible"
@@ -384,6 +393,13 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           </p>
           {visibleRHBuckets.length === 0 ? (
             <PanelEmptyState>Nenhum item selecionado para esta seção.</PanelEmptyState>
+          ) : (loadingVagas || loadingFerias || loadingColaboradores) ? (
+            <div
+              className="p-5 rounded-xl border text-center text-sm"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}
+            >
+              Carregando...
+            </div>
           ) : visibleRHBucketCount === 0 ? (
             <div
               className="p-5 rounded-xl border text-center text-sm"
@@ -430,7 +446,9 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
           <div className="p-4 lg:p-5" style={card}>
             <PanelTitle title="Desligamentos por Tipo" />
             {widgetVisible("panel_desligamento_tipo") ? (
-              desligados12m.length === 0 ? (
+              loadingColaboradores ? (
+                <div style={{ color: "var(--text-dim)", fontSize: 13 }}>Carregando...</div>
+              ) : desligados12m.length === 0 ? (
                 <PanelEmptyState>Sem desligamentos nos últimos 12 meses</PanelEmptyState>
               ) : (
                 <>
