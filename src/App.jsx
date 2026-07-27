@@ -1659,7 +1659,7 @@ export default function App() {
           <Route path={ROUTES["crm-viagens"]} element={
             isAgencia || isPureMarketing || isPureRH
               ? <Navigate to={ROUTES.dashboard} replace />
-              : <CRMViagensView currentUser={currentUser} leads={leads} users={users} pushNotification={pushNotification} />
+              : <CRMViagensView currentUser={currentUser} clients={clients} onCreateClient={createClient} users={users} pushNotification={pushNotification} />
           } />
           <Route path={ROUTES.clients} element={
             isAgencia || isPureMarketing || isPureRH

@@ -12,7 +12,7 @@ const MANAGER_ROLES = new Set(["gerente", "admin"]);
 // Orquestrador por papel: vendedor/consultor só planejam as próprias
 // viagens; gerente também planeja as próprias E gerencia o time (por isso
 // aparece nas duas abas); admin só gerencia (não tem viagens próprias).
-export function CRMViagensView({ currentUser, leads, users, pushNotification }) {
+export function CRMViagensView({ currentUser, clients, onCreateClient, users, pushNotification }) {
   // roles[] cobre cargo adicional (ex: vendedor como cargo secundário) —
   // currentUser.role sozinho (cargo principal) fica só de fallback.
   const userRoleList = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
@@ -79,7 +79,7 @@ export function CRMViagensView({ currentUser, leads, users, pushNotification }) 
         </div>
       )}
 
-      {activeTab === "minhas" && <CRMViagensPlanejamentoView currentUser={currentUser} leads={leads} pushNotification={pushNotification} />}
+      {activeTab === "minhas" && <CRMViagensPlanejamentoView currentUser={currentUser} clients={clients} onCreateClient={onCreateClient} pushNotification={pushNotification} />}
       {activeTab === "gestao" && <CRMViagensGestorView currentUser={currentUser} users={users} />}
       {activeTab === "relatorios" && <CRMViagensRelatoriosView currentUser={currentUser} users={users} />}
       {activeTab === "calculadora" && <CRMViagensCalculadoraView />}
