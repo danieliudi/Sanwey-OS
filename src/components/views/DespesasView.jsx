@@ -8,6 +8,7 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { supabase } from "../../lib/supabase";
+import { PageHeader } from "../shared/PageHeader";
 
 const RECEIPT_BUCKET = "marketing-attachments";
 
@@ -619,31 +620,25 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
 
   return (
     <div>
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <DollarSign size={22} style={{ color: "var(--text)" }} />
-            <h1 className="font-bold" style={{ fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em" }}>
-              Despesas
-            </h1>
-          </div>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            Controle de gastos e investimentos de marketing · Total filtrado: {formatK(totals.all)}
-          </p>
-        </div>
-        {canWrite && (
-          <button
-            onClick={openNew}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
-          >
-            <Plus size={15} />
-            Nova Despesa
-          </button>
-        )}
-      </div>
+      <PageHeader
+        icon={DollarSign}
+        title="Despesas"
+        subtitle={`Controle de gastos e investimentos de marketing · Total filtrado: ${formatK(totals.all)}`}
+        actions={
+          canWrite && (
+            <button
+              onClick={openNew}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
+            >
+              <Plus size={15} />
+              Nova Despesa
+            </button>
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         {[
