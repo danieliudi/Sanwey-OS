@@ -32,6 +32,8 @@ import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -318,98 +320,6 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
         </form>
       </div>
     </div>
-  );
-}
-
-/* ── Analytics panel ─────────────────────────────────────────── */
-function AnalyticsPanel({ deliverables, stages }) {
-  const [open, setOpen] = useState(false);
-
-  // Etapas vivas (DB, editáveis) quando disponíveis — DELIVERABLE_STAGES é só
-  // o fallback estático de antes da customização por etapa existir. Sem
-  // isso, renomear/criar/excluir uma etapa via "Editar etapas" deixava a
-  // Análise mostrando o conjunto antigo de etapas, com dado errado.
-  const stageStats = useMemo(() => (stages || DELIVERABLE_STAGES).map(stage => {
-    const items   = deliverables.filter(d => d.stage === stage.id);
-    const overdue = items.filter(d => d.deadline && new Date(d.deadline) < new Date()).length;
-    const daysArr = items.filter(d => d.stageChangedAt).map(d => Math.floor((Date.now() - new Date(d.stageChangedAt).getTime()) / 86400000));
-    const avgDays = daysArr.length > 0 ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length) : null;
-    return { stage, count: items.length, overdue, avgDays };
-  }), [deliverables, stages]);
-
-  const maxCount = Math.max(...stageStats.map(s => s.count), 1);
-
-  return (
-    <div style={{ marginTop: 8 }}>
-      <button onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 text-xs font-medium transition-colors duration-150"
-        style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer", padding: "4px 0" }}
-        onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
-        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}>
-        <TrendingUp size={13} strokeWidth={2} />
-        <span>Análise das entregas</span>
-        <ChevronDown size={13} style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
-      </button>
-      {open && (
-        <div className="rounded-2xl border mt-3 p-5" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-          <div className="text-xs font-semibold mb-4" style={{ color: "var(--text-dim)" }}>Distribuição por etapa</div>
-          <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-            {stageStats.map(({ stage, count, overdue, avgDays }) => (
-              <div key={stage.id}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text)" }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, display: "inline-block", flexShrink: 0 }} />
-                    {stage.name}
-                  </div>
-                  <div className="text-xs" style={{ color: overdue > 0 ? "var(--danger)" : "var(--text-dim)" }}>
-                    {count}{overdue > 0 ? ` · ${overdue} atrasada${overdue !== 1 ? "s" : ""}` : ""}
-                  </div>
-                </div>
-                <div style={{ height: 6, background: "#F1F3F5", borderRadius: 3, overflow: "hidden", marginBottom: 6 }}>
-                  <div style={{ height: "100%", width: `${(count / maxCount) * 100}%`, background: stage.color, borderRadius: 3, transition: "width 0.4s ease" }} />
-                </div>
-                <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
-                  {avgDays !== null ? `Média ${avgDays}d · SLA: ${stage.sla ?? "—"}d` : count > 0 ? "Sem tempo registrado" : "—"}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── KPI card ─────────────────────────────────────────────────── */
-function KpiCard({ label, value, color }) {
-  return (
-    <div className="rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)", padding: "12px 16px", boxShadow: "var(--shadow-card)" }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: color || "var(--text)", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{value}</div>
-    </div>
-  );
-}
-
-/* ── View toggle button ──────────────────────────────────────── */
-function ViewToggleButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      style={{
-        display: "flex", alignItems: "center", gap: 5,
-        padding: "6px 12px", fontSize: 12, fontWeight: 500,
-        background: active ? "var(--accent)" : "var(--surface)",
-        color:      active ? "#FFFFFF"  : "var(--text-dim)",
-        border: "none",
-        cursor: "pointer",
-        transition: "all 0.15s",
-      }}
-    >
-      <Icon size={13} />
-      {label}
-    </button>
   );
 }
 
@@ -775,7 +685,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const [stageError,     setStageError]     = useState(null);
   const [quickAddStage,  setQuickAddStage]  = useState(null);
   const [selected,       setSelected]       = useState(null);
-  const [viewMode,       setViewMode]       = useState("kanban"); // "kanban" | "table" | "calendar"
+  const [viewMode,       setViewMode]       = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => {
     const s = new Set(["solicitacao"]);
     if (location.state?.filterStage) s.add(location.state.filterStage);
@@ -976,9 +886,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
 
           {/* View toggle */}
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     />
-            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela"     />
-            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
+            <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban"     iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela"     iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}  label="Análise"    iconOnlyMobile />
           </div>
           {/* Export CSV */}
           <button
@@ -1310,11 +1221,26 @@ export function EntregasView({ user, users = [], notifyMentions }) {
 
       {!loading && !loadingStages && viewMode === "kanban" && (
         <div ref={trailingRef}>
-          {deliverables.length > 0 && <AnalyticsPanel deliverables={deliverables} stages={kanbanStages} />}
           <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
             Arraste para mover · "+" para criar · Clique para ver detalhes
           </p>
         </div>
+      )}
+
+      {!loading && !loadingStages && viewMode === "analytics" && (
+        <KanbanAnalyticsPanel
+          stages={kanbanStages.map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.sla }))}
+          records={filtered}
+          getStageKey={d => d.stage}
+          getStageEnteredAt={d => d.stageChangedAt}
+          specificStats={[
+            {
+              label: "Atrasadas",
+              value: String(filtered.filter(d => d.deadline && new Date(d.deadline) < new Date()).length),
+              color: filtered.some(d => d.deadline && new Date(d.deadline) < new Date()) ? "var(--danger)" : undefined,
+            },
+          ]}
+        />
       )}
     </div>
 

@@ -12,6 +12,8 @@ import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
 import { LeadFormBuilder } from "../lead/LeadFormBuilder";
 import { CRMStageFieldsPanel } from "../shared/stage-editor/CRMStageFieldsPanel";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { PipelineStagesModal } from "../pipeline/PipelineStagesModal";
 import { DynamicField, validateFields } from "../ui/DynamicField";
 import { PipelineCalendarView } from "./PipelineCalendarView";
@@ -310,128 +312,9 @@ function KpiCard({ label, value, sub }) {
   );
 }
 
-// ── Analytics panel (collapsible) ────────────────────────────────────────────
-
-function AnalyticsPanel({ scopedLeads, stages }) {
-  const stageStats = useMemo(() => {
-    const nonTerminal = stages.filter(s => !s.terminal);
-    return nonTerminal.map(stage => {
-      const stageLeads = scopedLeads.filter(l => l.stage === stage.id);
-      const count = stageLeads.length;
-      const total = stageLeads.reduce((sum, l) => sum + l.value, 0);
-      const daysArr = stageLeads
-        .filter(l => l.stageChangedAt)
-        .map(l => Math.floor((Date.now() - new Date(l.stageChangedAt).getTime()) / (1000 * 60 * 60 * 24)));
-      const avgDays = daysArr.length > 0
-        ? Math.round(daysArr.reduce((a, b) => a + b, 0) / daysArr.length)
-        : null;
-      return { stage, count, total, avgDays };
-    });
-  }, [scopedLeads, stages]);
-
-  const maxCount = Math.max(...stageStats.map(s => s.count), 1);
-  const maxTotal = Math.max(...stageStats.map(s => s.total), 1);
-
-  return (
-    <div
-      className="rounded-2xl border p-5"
-      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-    >
-      <div className="flex items-center gap-1.5 mb-4" style={{ color: "var(--text)" }}>
-        <TrendingUp size={15} strokeWidth={2} />
-        <span className="text-sm font-semibold">Análise do funil</span>
-      </div>
-      <div className="text-xs font-semibold mb-4" style={{ color: "var(--text-dim)" }}>
-        Distribuição por etapa
-      </div>
-      <div
-        className="grid gap-4"
-        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}
-      >
-        {stageStats.map(({ stage, count, total, avgDays }) => (
-              <div key={stage.id}>
-                {/* Stage name + counts */}
-                <div className="flex items-center justify-between mb-1.5">
-                  <div
-                    className="text-xs font-semibold flex items-center gap-1.5"
-                    style={{ color: "var(--text)" }}
-                  >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: stage.color,
-                        display: "inline-block",
-                        flexShrink: 0,
-                      }}
-                    />
-                    {stage.name}
-                  </div>
-                  <div className="text-xs" style={{ color: "var(--text-dim)" }}>
-                    {count} · {formatK(total)}
-                  </div>
-                </div>
-
-                {/* Count bar */}
-                <div
-                  style={{
-                    height: 6,
-                    background: "var(--surface-alt)",
-                    borderRadius: 3,
-                    overflow: "hidden",
-                    marginBottom: 6,
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${(count / maxCount) * 100}%`,
-                      background: stage.color,
-                      borderRadius: 3,
-                      transition: "width 0.4s ease",
-                    }}
-                  />
-                </div>
-
-                {/* Value bar (lighter) */}
-                <div
-                  style={{
-                    height: 3,
-                    background: "var(--surface-alt)",
-                    borderRadius: 3,
-                    overflow: "hidden",
-                    marginBottom: 5,
-                    opacity: 0.7,
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${(total / maxTotal) * 100}%`,
-                      background: stage.color,
-                      borderRadius: 3,
-                      transition: "width 0.4s ease",
-                    }}
-                  />
-                </div>
-
-                {/* Avg days */}
-                <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
-                  {avgDays !== null
-                    ? `Média ${avgDays}d nesta etapa`
-                    : count > 0 ? "Sem tempo registrado" : "—"}
-                </div>
-              </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── CRMView ───────────────────────────────────────────────────────────────────
 
-export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage }) {
+export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyChange, leads, pipelines, users, onLeadClick, onStageChange, onAddLead, onDeleteLead, onDuplicateLead, visibleStages, pipelineTransitions, onViewExistingLead, clients, onCreateClient, autoOpenCreate, onAutoOpenHandled, onOpenImport, onReplacePipeline, onResetPipeline, onStarToggle, onUpdateStage }) {
   const isGroupView = activeCompany === "all";
   // roles[] cobre cargo adicional (ex: gerente como cargo secundário) —
   // user.role sozinho (cargo principal) fica só de fallback.
@@ -707,24 +590,28 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               onClick={() => setViewMode("kanban")}
               icon={LayoutGrid}
               label="Kanban"
+              iconOnlyMobile
             />
             <ViewToggleButton
               active={viewMode === "table"}
               onClick={() => setViewMode("table")}
               icon={List}
               label="Tabela"
+              iconOnlyMobile
             />
             <ViewToggleButton
               active={viewMode === "calendar"}
               onClick={() => setViewMode("calendar")}
               icon={CalendarIcon}
               label="Calendário"
+              iconOnlyMobile
             />
             <ViewToggleButton
               active={viewMode === "analise"}
               onClick={() => setViewMode("analise")}
               icon={TrendingUp}
               label="Análise"
+              iconOnlyMobile
             />
           </div>
           <button
@@ -828,7 +715,12 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           isGroupView={isGroupView}
         />
       ) : viewMode === "analise" ? (
-        <AnalyticsPanel scopedLeads={scopedLeads} stages={stages} />
+        <KanbanAnalyticsPanel
+          stages={stages.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.slaDays }))}
+          records={scopedLeads}
+          getStageKey={l => l.stage}
+          getStageEnteredAt={l => l.stageChangedAt}
+        />
       ) : (<>
       {/* Mobile kanban: vertical collapsible stages */}
       <div className="lg:hidden space-y-1.5 pb-24">
@@ -872,6 +764,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         stages={stages}
                         onMoveToStage={attemptStageChange}
                         onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
+                        onDuplicateCard={onDuplicateLead ? () => onDuplicateLead(lead.id) : undefined}
                         completeness={getLeadCompleteness(lead)}
                         unread={getLeadUnread(lead)}
                         pipelineTransitions={pipelineTransitions}
@@ -1002,6 +895,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                         stages={stages}
                         onMoveToStage={attemptStageChange}
                         onDeleteCard={canDeleteLead(lead) ? () => onDeleteLead(lead.id) : undefined}
+                        onDuplicateCard={onDuplicateLead ? () => onDuplicateLead(lead.id) : undefined}
                         completeness={getLeadCompleteness(lead)}
                         unread={getLeadUnread(lead)}
                         pipelineTransitions={pipelineTransitions}
@@ -1455,26 +1349,6 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
       </table>
     </div>
     </>
-  );
-}
-
-function ViewToggleButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-      style={{
-        background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "#FFFFFF" : "var(--text-dim)",
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-    >
-      <Icon size={13} />
-      <span className="hidden sm:inline">{label}</span>
-    </button>
   );
 }
 

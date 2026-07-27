@@ -3,14 +3,18 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const TABLE = "marketing_purchase_requests";
 
+// slaDays: estimativas razoáveis pro fluxo de compras (decisão de produto,
+// não técnica — docs/design-spec-analise-generica-kanbans.md §1.3), usadas
+// só pela Análise genérica do board; trocar os números não exige outra
+// mudança de código.
 export const PURCHASE_STAGES = [
-  { id: "solicitado",         name: "Solicitado" },
-  { id: "cotacao",            name: "Cotação" },
-  { id: "aprovado",           name: "Aprovado" },
-  { id: "pedido_fornecedor",  name: "Pedido ao Fornecedor" },
-  { id: "entrega_parcial",    name: "Entrega Parcial" },
-  { id: "entregue",           name: "Entregue" },
-  { id: "pago",               name: "Pago", terminal: true },
+  { id: "solicitado",         name: "Solicitado",          slaDays: 2 },
+  { id: "cotacao",            name: "Cotação",             slaDays: 5 },
+  { id: "aprovado",           name: "Aprovado",             slaDays: 3 },
+  { id: "pedido_fornecedor",  name: "Pedido ao Fornecedor", slaDays: 10 },
+  { id: "entrega_parcial",    name: "Entrega Parcial",      slaDays: 7 },
+  { id: "entregue",           name: "Entregue",             slaDays: 3 },
+  { id: "pago",               name: "Pago", terminal: true, slaDays: 5 },
 ];
 
 // "Rejeitado" existe no banco mas não aparece como coluna do kanban — só é
@@ -190,6 +194,43 @@ export function useMarketingPurchaseRequests({ enabled = true } = {}) {
     }
   }, [fetchAll]);
 
+  // "Duplicar card" (menu "..." dos boards) — mesmo raciocínio de
+  // duplicateTask (use-marketing-tasks.js): cria uma solicitação NOVA, sempre
+  // na 1ª etapa (PURCHASE_STAGES[0] = "solicitado"), nunca herdando nada do
+  // ciclo de vida da compra original (requestNumber é sequência própria,
+  // aprovação/rejeição e nota fiscal não fazem sentido numa solicitação que
+  // ainda nem foi cotada). Também não copia quoteOptions/supplierOrderCode/
+  // deliveryDeadline/partial* — são progresso de um ciclo de cotação/entrega
+  // específico daquela solicitação, não do item em si.
+  const duplicatePurchase = useCallback(async (source, requestedBy) => {
+    return createPurchase({
+      itemName:       `${source.itemName} (cópia)`,
+      description:    source.description,
+      quantity:       source.quantity,
+      unitPrice:      source.unitPrice,
+      totalValue:     source.totalValue,
+      requesterName:  source.requesterName,
+      requesterEmail: source.requesterEmail,
+      requesterPhone: source.requesterPhone,
+      requestedBy:    requestedBy ?? null,
+      responsibleId:  source.responsibleId,
+      responsibleIds: source.responsibleIds,
+      dueDate:        source.dueDate,
+      companyIds:     source.companyIds,
+      stage:          "solicitado",
+      // NÃO copiar: notes, activities, requestNumber, approvedBy/approvedAt/
+      // rejectedReason, invoiceDate/invoiceUrl/invoiceNumber/expenseId/
+      // paymentControlNumber, deliveredAt/receivedBy, quoteOptions,
+      // supplierOrderCode, deliveryDeadline, partialDeliveredQty/
+      // partialRemainingQty/partialNewDeadline/partialNotes.
+      // NÃO copiar supplierId/paymentTerms: são o resultado de uma cotação
+      // já concluída do ciclo original — sem quoteOptions (não copiado), a
+      // cópia teria fornecedor pré-preenchido sem nenhuma cotação avaliada,
+      // e approve_purchase_request reaprovaria esse fornecedor em silêncio
+      // se ninguém trocar antes de aprovar (achado real de QA).
+    });
+  }, [createPurchase]);
+
   const deletePurchase = useCallback(async (id) => {
     if (!isSupabaseConfigured) return;
     const { error: err } = await supabase.from(TABLE).delete().eq("id", id);
@@ -240,6 +281,7 @@ export function useMarketingPurchaseRequests({ enabled = true } = {}) {
     createPurchase,
     updatePurchase,
     deletePurchase,
+    duplicatePurchase,
     approvePurchase,
     rejectPurchase,
     getLastPurchasePrice,
