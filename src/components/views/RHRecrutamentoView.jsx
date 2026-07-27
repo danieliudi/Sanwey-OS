@@ -26,6 +26,7 @@ import {
   CalendarDays as CalendarIcon,
   Mail,
   ShieldCheck,
+  TrendingUp,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -72,6 +73,8 @@ import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 // ── Ciclo de vida da vaga / candidatos ──────────────────────────────────────
 // As etapas (nome/cor/ordem) agora são administráveis via
@@ -400,27 +403,6 @@ function dayKey(d) {
 }
 function sameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function ViewToggleButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-      style={{
-        background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "#FFFFFF" : "var(--text-dim)",
-        border: "none",
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-    >
-      <Icon size={13} />
-      {label}
-    </button>
-  );
 }
 
 // ── Avatar circle ─────────────────────────────────────────────────────────────
@@ -2656,7 +2638,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const { users: profileUsers } = useProfiles();
 
   const [viewMode, setViewMode]             = useState("vagas"); // "vagas" | "candidatos"
-  const [boardMode, setBoardMode]           = useState("kanban"); // "kanban" | "table" | "calendar" — ortogonal ao viewMode acima
+  const [boardMode, setBoardMode]           = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics" — ortogonal ao viewMode acima
   const [frenteFilter, setFrenteFilter]     = useState("todas"); // "todas" | RH_FRENTES[number]
   const [selectedVaga, setSelectedVaga]     = useState("todas");
   const [selectedCandidatoId, setSelectedCandidatoId] = useState(null);
@@ -2989,6 +2971,58 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     return map;
   }, [vagasFrenteFiltradas, vagaStages]);
 
+  const analyticsVagaStages = useMemo(
+    () => vagaStages.filter((s) => !s.terminal).map((s) => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
+    [vagaStages]
+  );
+  const analyticsCandStages = useMemo(
+    () => candStages.filter((s) => !s.terminal).map((s) => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
+    [candStages]
+  );
+
+  // Tempo médio de vaga aberta / faixa salarial: só entre as vagas ainda
+  // abertas (não-terminais) — vagas encerradas não têm mais "runway" nem
+  // representam a faixa salarial atualmente ofertada.
+  const vagaSpecificStats = useMemo(() => {
+    const open = vagasFrenteFiltradas.filter((v) => !vagaStages.find((s) => s.stageKey === v.stage)?.terminal);
+    const withDeadline = open.filter((v) => v.hiring_deadline);
+    const avgDaysToDeadline = withDeadline.length > 0
+      ? Math.round(withDeadline.reduce((sum, v) => sum + (new Date(v.hiring_deadline).getTime() - Date.now()) / 86400000, 0) / withDeadline.length)
+      : null;
+    const withSalary = open.filter((v) => v.salary_min != null || v.salary_max != null);
+    const avgMin = withSalary.length > 0 ? withSalary.reduce((s, v) => s + (Number(v.salary_min) || 0), 0) / withSalary.length : null;
+    const avgMax = withSalary.length > 0 ? withSalary.reduce((s, v) => s + (Number(v.salary_max) || 0), 0) / withSalary.length : null;
+    return [
+      {
+        label: "Prazo médio p/ contratação",
+        value: avgDaysToDeadline !== null ? `${avgDaysToDeadline}d` : "—",
+        color: avgDaysToDeadline !== null && avgDaysToDeadline < 0 ? "var(--danger)" : undefined,
+      },
+      { label: "Faixa salarial média", value: withSalary.length > 0 ? fmtSalaryRange(avgMin, avgMax) : "—" },
+    ];
+  }, [vagasFrenteFiltradas, vagaStages]);
+
+  // Funil de conversão: % de candidatos que já chegaram a cada etapa
+  // não-terminal ou além (orderIdx da etapa atual >= orderIdx da etapa do
+  // funil) — sem histórico de transições, "chegou em" é aproximado pela
+  // posição corrente; candidatos numa etapa "lost" (reprovado) não contam
+  // como tendo avançado além do ponto em que saíram.
+  const candSpecificStats = useMemo(() => {
+    const total = filteredCandidatos.length;
+    if (total === 0 || candStages.length === 0) return [];
+    const orderByKey = new Map(candStages.map((s) => [s.stageKey, s.orderIdx]));
+    const nonTerminal = candStages.filter((s) => !s.terminal);
+    return nonTerminal.map((stage) => {
+      const reached = filteredCandidatos.filter((c) => {
+        const cs = candStages.find((s) => s.stageKey === c.stage);
+        if (!cs || cs.lost) return false;
+        return (orderByKey.get(c.stage) ?? -1) >= stage.orderIdx;
+      }).length;
+      const rate = Math.round((reached / total) * 100);
+      return { label: `Chegou em ${stage.name}`, value: `${rate}%` };
+    });
+  }, [filteredCandidatos, candStages]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {candMoveError && (
@@ -3049,6 +3083,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
             <ViewToggleButton active={boardMode === "kanban"}   onClick={() => setBoardMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
             <ViewToggleButton active={boardMode === "table"}    onClick={() => setBoardMode("table")}    icon={List}         label="Tabela" />
             <ViewToggleButton active={boardMode === "calendar"} onClick={() => setBoardMode("calendar")} icon={CalendarIcon} label="Calendário" />
+            <ViewToggleButton active={boardMode === "analytics"} onClick={() => setBoardMode("analytics")} icon={TrendingUp} label="Análise" />
           </div>
 
           {canWrite && (
@@ -3101,6 +3136,14 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
             vagas={vagasFrenteFiltradas}
             stages={vagaStages}
             onPillClick={(v) => setVagaDrawerId(v.id)}
+          />
+        ) : boardMode === "analytics" ? (
+          <KanbanAnalyticsPanel
+            stages={analyticsVagaStages}
+            records={vagasFrenteFiltradas}
+            getStageKey={(v) => v.stage}
+            getStageEnteredAt={(v) => v.stage_changed_at}
+            specificStats={vagaSpecificStats}
           />
         ) : (
           <>
@@ -3285,6 +3328,14 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
               candidatos={filteredCandidatos}
               stages={candStages}
               onPillClick={(c) => setSelectedCandidatoId(c.id)}
+            />
+          ) : boardMode === "analytics" ? (
+            <KanbanAnalyticsPanel
+              stages={analyticsCandStages}
+              records={filteredCandidatos}
+              getStageKey={(c) => c.stage}
+              getStageEnteredAt={(c) => c.stage_changed_at}
+              specificStats={candSpecificStats}
             />
           ) : (
             <>

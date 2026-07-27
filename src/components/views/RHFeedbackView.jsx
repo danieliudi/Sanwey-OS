@@ -37,6 +37,8 @@ import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 // Avaliadores elegíveis (FASE 5) — mesmo critério admin/RH usado pela ramificação
 // de acesso amplo da RLS rh_avaliacoes_read (admin/gerente_rh/rh enxergam tudo).
@@ -83,27 +85,6 @@ function dayKey(d) {
 }
 function sameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function ViewToggleButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-      style={{
-        background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "#FFFFFF" : "var(--text-dim)",
-        border: "none",
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-    >
-      <Icon size={13} />
-      {label}
-    </button>
-  );
 }
 
 function tipoLabel(id) {
@@ -1317,7 +1298,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   const feedbackStageFields = useRHStageFields("feedback");
   const { users } = useProfiles();
 
-  const [viewMode, setViewMode]                   = useState("kanban"); // "kanban" | "table" | "calendar" | "lembretes"
+  const [viewMode, setViewMode]                   = useState("kanban"); // "kanban" | "table" | "calendar" | "lembretes" | "analytics"
   const [novoOpen, setNovoOpen]                   = useState(false);
   const [completandoId, setCompletandoId]         = useState(null);
   const [autoavaliandoId, setAutoavaliandoId]     = useState(null);
@@ -1522,6 +1503,26 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     return map;
   }, [feedbacks, stages]);
 
+  const analyticsStages = useMemo(
+    () => stages.filter((s) => !s.terminal).map((s) => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
+    [stages]
+  );
+
+  // "Nota média do período" (spec) não tem seletor de período nesta tela
+  // (Lembretes/Kanban/Tabela/Calendário mostram sempre `feedbacks` inteiro,
+  // sem filtro de data) — substituído pela nota média de todos os ciclos
+  // concluídos já carregados, mesma conta de AvaliacaoStats.media acima.
+  const feedbackSpecificStats = useMemo(() => {
+    const concluidos = feedbacks.filter((f) => f.status === "concluido");
+    const notas = concluidos.map((f) => f.final_rating).filter((n) => typeof n === "number");
+    const media = notas.length > 0 ? notas.reduce((a, b) => a + b, 0) / notas.length : null;
+    const promovidos = feedbacks.filter((f) => f.desfecho === "promovido").length;
+    return [
+      { label: "Nota média", value: media !== null ? media.toFixed(1) : "—" },
+      { label: "Resultaram em promoção", value: String(promovidos) },
+    ];
+  }, [feedbacks]);
+
   const completandoFeedback = completandoId ? feedbacks.find(f => f.id === completandoId) : null;
   const autoavaliandoFeedback = autoavaliandoId ? feedbacks.find(f => f.id === autoavaliandoId) : null;
   const historicoColaborador = historicoColaboradorId ? colaboradoresById.get(historicoColaboradorId) : null;
@@ -1623,6 +1624,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
               <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
               <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
               <ViewToggleButton active={viewMode === "lembretes"} onClick={() => setViewMode("lembretes")} icon={BellRing} label="Lembretes" />
+              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
             </div>
             {canWrite && (
               <Button size="sm" icon={Plus} onClick={() => setNovoOpen(true)}>Novo feedback</Button>
@@ -1655,6 +1657,14 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           colaboradores={colaboradores}
           feedbacks={feedbacks}
           onRowClick={(c) => setHistoricoColaboradorId(c.id)}
+        />
+      ) : viewMode === "analytics" ? (
+        <KanbanAnalyticsPanel
+          stages={analyticsStages}
+          records={feedbacks}
+          getStageKey={(f) => f.status}
+          getStageEnteredAt={(f) => f.status_changed_at}
+          specificStats={feedbackSpecificStats}
         />
       ) : (
         <>

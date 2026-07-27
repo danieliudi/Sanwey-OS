@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ShoppingCart, Plus, LayoutGrid, List, CalendarDays as CalendarIcon,
+  ShoppingCart, Plus, LayoutGrid, List, CalendarDays as CalendarIcon, TrendingUp,
   ChevronLeft, ChevronRight, X, XCircle, MessageCircle,
 } from "lucide-react";
 import { useMarketingPurchaseRequests, PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-marketing-purchase-requests";
@@ -22,6 +22,8 @@ import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 const STAGE_COLORS = {
   solicitado:        "#D97706",
@@ -51,28 +53,6 @@ function dayKey(d) {
 }
 function sameDay(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-/* ── View toggle button (Kanban/Tabela/Calendário) ───────────────────── */
-function ViewToggleButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      onClick={onClick}
-      role="tab"
-      aria-selected={active}
-      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-      style={{
-        background: active ? "var(--accent)" : "var(--surface)",
-        color: active ? "#FFFFFF" : "var(--text-dim)",
-        border: "none",
-      }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-alt)"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
-    >
-      <Icon size={13} />
-      {label}
-    </button>
-  );
 }
 
 /* ── Kanban card ──────────────────────────────────────────────────────── */
@@ -558,7 +538,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
 
   const { suppliers } = useMarketingSuppliers({ userId: user?.id, role: user?.role, roles: user?.roles });
 
-  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar"
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
   const [showCreate, setShowCreate] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -674,6 +654,26 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
     if (item.stage !== toStage) await attemptStageChange(item.id, toStage);
   }, [draggedItem, attemptStageChange]);
 
+  const analyticsStages = useMemo(
+    () => PURCHASE_STAGES.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: STAGE_COLORS[s.id], slaDays: s.slaDays })),
+    []
+  );
+
+  // Tempo médio de aprovação: created_at (nasce em "solicitado") → approved_at
+  // (gravado só por approvePurchase/RPC) — só entram solicitações que já
+  // passaram por aprovação, "solicitado"/"cotação" ainda abertas não contam.
+  const purchaseSpecificStats = useMemo(() => {
+    const totalValue = visiblePurchases.reduce((s, p) => s + (p.totalValue || 0), 0);
+    const approvedWithDates = visiblePurchases.filter(p => p.approvedAt && p.createdAt);
+    const avgApprovalDays = approvedWithDates.length > 0
+      ? Math.round(approvedWithDates.reduce((s, p) => s + (new Date(p.approvedAt).getTime() - new Date(p.createdAt).getTime()) / 86400000, 0) / approvedWithDates.length)
+      : null;
+    return [
+      { label: "Valor Total", value: formatK(totalValue) },
+      { label: "Tempo médio de aprovação", value: avgApprovalDays !== null ? `${avgApprovalDays}d` : "—" },
+    ];
+  }, [visiblePurchases]);
+
   return (
     <div>
       <KanbanBoardHeader className="mb-4">
@@ -700,6 +700,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
             <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}  label="Kanban" />
             <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}        label="Tabela" />
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
+            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
           </div>
           <button
             onClick={() => setShowCreate(true)}
@@ -783,6 +784,14 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
         </>
       ) : viewMode === "table" ? (
         <TableView purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} onRowClick={setSelected} />
+      ) : viewMode === "analytics" ? (
+        <KanbanAnalyticsPanel
+          stages={analyticsStages}
+          records={visiblePurchases}
+          getStageKey={p => p.stage}
+          getStageEnteredAt={p => p.stageChangedAt}
+          specificStats={purchaseSpecificStats}
+        />
       ) : (
         <CalendarView purchases={visiblePurchases} onPillClick={setSelected} />
       )}

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
-  Plus, X, ListTodo, ChevronDown, Star, Filter, Settings2, AlertCircle,
+  Plus, X, ListTodo, ChevronDown, Star, Filter, Settings2, AlertCircle, LayoutGrid, TrendingUp,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { MarketingTaskDetailDrawer } from "../campaign/MarketingTaskDetailDrawer";
@@ -30,6 +30,8 @@ import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
+import { ViewToggleButton } from "../shared/ViewToggleButton";
+import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 
 function isOverdueTask(t) {
   return Boolean(t.deadline) && new Date(t.deadline) < new Date();
@@ -384,6 +386,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const [stageError,    setStageError]    = useState(null);
   const [quickAddStage, setQuickAddStage] = useState(null);
   const [selected,      setSelected]      = useState(null);
+  const [viewMode,      setViewMode]      = useState("kanban"); // "kanban" | "analytics"
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => {
     const s = new Set(["a_fazer"]);
     if (location.state?.filterStage) s.add(location.state.filterStage);
@@ -422,6 +425,23 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
     if (deadlineFilter === "no_deadline") list = list.filter(t => !t.deadline);
     return list;
   }, [tasks, ownerFilter, priorityFilter, companyFilter, starredOnly, campaignFilter, deadlineFilter]);
+
+  const analyticsStages = useMemo(
+    () => kanbanStages.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.sla })),
+    [kanbanStages]
+  );
+
+  const taskSpecificStats = useMemo(() => {
+    const byPriority = { baixa: 0, media: 0, alta: 0 };
+    for (const t of filtered) if (byPriority[t.priority] !== undefined) byPriority[t.priority]++;
+    const overdue = filtered.filter(isOverdueTask).length;
+    return [
+      { label: "Prioridade baixa", value: String(byPriority.baixa) },
+      { label: "Prioridade média", value: String(byPriority.media) },
+      { label: "Prioridade alta", value: String(byPriority.alta), color: byPriority.alta > 0 ? "var(--danger)" : undefined },
+      { label: "Atrasadas", value: String(overdue), color: overdue > 0 ? "var(--danger)" : undefined },
+    ];
+  }, [filtered]);
 
   const handleDragStart = useCallback((item) => setDraggedItem(item), []);
   const handleDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
@@ -530,7 +550,11 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de tarefas do dia a dia de Marketing</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {canWrite && (
+          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
+            <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" />
+            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
+          </div>
+          {canWrite && viewMode === "kanban" && (
             <button
               onClick={() => setQuickAddStage(kanbanStages[0]?.id)}
               className="flex items-center gap-1.5 font-semibold"
@@ -622,13 +646,23 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
       </div>
       </KanbanBoardHeader>
 
-      {canWrite && (
+      {canWrite && viewMode === "kanban" && (
         <KanbanFab label="Nova tarefa" flush onClick={() => setQuickAddStage(kanbanStages[0]?.id)} />
       )}
 
       {(loading || loadingStages) && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando tarefas…</div>}
 
-      {!loading && !loadingStages && (<>
+      {!loading && !loadingStages && viewMode === "analytics" && (
+        <KanbanAnalyticsPanel
+          stages={analyticsStages}
+          records={filtered}
+          getStageKey={t => t.stage}
+          getStageEnteredAt={t => t.stageChangedAt}
+          specificStats={taskSpecificStats}
+        />
+      )}
+
+      {!loading && !loadingStages && viewMode === "kanban" && (<>
         {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
           {kanbanStages.map(stage => {
@@ -842,7 +876,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         </div>
       </>)}
 
-      {!loading && !loadingStages && (
+      {!loading && !loadingStages && viewMode === "kanban" && (
         <div ref={trailingRef}>
           <p className="text-xs text-center mt-3" style={{ color: "var(--text-dim)" }}>
             Arraste para mover · "+" para criar · Clique para ver detalhes
