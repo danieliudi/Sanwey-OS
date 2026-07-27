@@ -1,6 +1,6 @@
 import React from "react";
 
-export function StatCard({ icon: Icon, value, label, sublabel, accent, compact = false, trend, tooltip }) {
+export function StatCard({ icon: Icon, value, label, sublabel, accent, compact = false, trend, tooltip, valueColor }) {
   return (
     <div
       className="p-5 rounded-lg border transition-all duration-150 hover:shadow-md cursor-default"
@@ -42,7 +42,7 @@ export function StatCard({ icon: Icon, value, label, sublabel, accent, compact =
           fontFamily: "Inter, sans-serif",
           fontWeight: 800,
           fontSize: compact ? 26 : 32,
-          color: accent ? "var(--on-accent)" : "var(--text)",
+          color: accent ? "var(--on-accent)" : (valueColor || "var(--text)"),
           letterSpacing: "-0.02em",
         }}
       >

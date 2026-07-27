@@ -1229,7 +1229,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
 
       {!loading && !loadingStages && viewMode === "analytics" && (
         <KanbanAnalyticsPanel
-          stages={kanbanStages.map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.sla }))}
+          stages={kanbanStages.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.sla }))}
           records={filtered}
           getStageKey={d => d.stage}
           getStageEnteredAt={d => d.stageChangedAt}

@@ -185,7 +185,7 @@ export function FornecedoresView({ user }) {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3" style={{ maxWidth: 280 }}>
         <StatCard icon={Truck} value={suppliers.length} label="Fornecedores" />
       </div>
 
