@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MoreVertical, ArrowRight, Trash2 } from "lucide-react";
+import { MoreVertical, ArrowRight, Trash2, Copy } from "lucide-react";
 
 // Botão "…" + dropdown "Mover para" compartilhado por todos os Kanbans
 // (Entregas, Campanhas, Leads, RH). O dropdown é renderizado via portal em
@@ -27,6 +27,7 @@ import { MoreVertical, ArrowRight, Trash2 } from "lucide-react";
 // `targets`/`onMove` e mantém o menu completo — ver LeadKanbanCard/RHKanbanCard.
 export function MoveStageMenu({
   targets = [], onMove, onOpenChange, onDelete, deleteLabel = "Excluir card",
+  onDuplicate, duplicateLabel = "Duplicar card",
   // Mensagem do passo de confirmação (2º clique) — sobrescrevível por chamador
   // que precisa deixar claro que "Excluir" aqui não é uma exclusão física
   // (ex.: Onboarding de RH, ver RHOnboardingView). Default cobre o caso comum
@@ -35,6 +36,7 @@ export function MoveStageMenu({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const [pos, setPos] = useState(null); // { top | bottom, left } em coordenadas de viewport
   const wrapRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -78,12 +80,26 @@ export function MoveStageMenu({
   }, [menuOpen, targets.length, confirmingDelete]);
 
   const hasMoveTargets = Boolean(targets?.length && onMove);
-  if (!hasMoveTargets && !onDelete) return null;
+  const hasDuplicate = Boolean(onDuplicate);
+  if (!hasMoveTargets && !onDelete && !hasDuplicate) return null;
 
-  // Sem opções de "mover para" (board desktop, drag-and-drop já cobre isso):
-  // o gatilho vira direto a lixeira, e o clique já abre no passo de
-  // confirmação — sem dropdown de uma linha só no meio do caminho.
-  const deleteOnly = !hasMoveTargets && Boolean(onDelete);
+  // Sem opções de "mover para" e sem duplicar (board desktop, drag-and-drop já
+  // cobre mover): o gatilho vira direto a lixeira, e o clique já abre no
+  // passo de confirmação — sem dropdown de uma linha só no meio do caminho.
+  // Some com esse atalho assim que houver 2+ ações no menu.
+  const deleteOnly = !hasMoveTargets && !hasDuplicate && Boolean(onDelete);
+
+  const handleDuplicate = async (e) => {
+    e.stopPropagation();
+    if (duplicating) return;
+    setDuplicating(true);
+    try {
+      await onDuplicate();
+      setMenuOpen(false);
+    } finally {
+      setDuplicating(false);
+    }
+  };
 
   return (
     <div ref={wrapRef} style={{ position: "relative" }}>
@@ -167,9 +183,28 @@ export function MoveStageMenu({
                   ))}
                 </>
               )}
-              {onDelete && (
+              {hasDuplicate && (
                 <>
                   {hasMoveTargets && <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />}
+                  <button
+                    onClick={handleDuplicate}
+                    disabled={duplicating}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+                      background: "transparent", border: "none", cursor: duplicating ? "default" : "pointer",
+                      fontSize: 13, color: "var(--text)", textAlign: "left", opacity: duplicating ? 0.6 : 1,
+                    }}
+                    onMouseEnter={e => { if (!duplicating) e.currentTarget.style.background = "var(--surface-alt)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <Copy size={13} style={{ flexShrink: 0 }} />
+                    {duplicating ? "Duplicando…" : duplicateLabel}
+                  </button>
+                </>
+              )}
+              {onDelete && (
+                <>
+                  {(hasMoveTargets || hasDuplicate) && <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />}
                   <button
                     onClick={e => { e.stopPropagation(); setConfirmingDelete(true); }}
                     style={{

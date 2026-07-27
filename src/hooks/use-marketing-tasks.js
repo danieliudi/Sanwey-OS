@@ -141,6 +141,24 @@ export function useMarketingTasks({ userId, role, roles, campaignId } = {}) {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
   }, [canWrite, tasks]);
 
+  // "Duplicar card" — cópia nasce sempre na 1ª etapa do seed
+  // (20260764_marketing_tasks.sql:82 = "a_fazer"), nunca herda activities/
+  // notes/stageChangedAt nem campaignStageKey (rollup calculado a partir da
+  // campanha, não faz sentido herdar de outro card).
+  const duplicateTask = useCallback(async (source, firstStageId) => {
+    return createTask({
+      companyIds:   source.companyIds,
+      campaignId:   source.campaignId,
+      title:        `${source.title} (cópia)`,
+      description:  source.description,
+      priority:     source.priority,
+      deadline:     source.deadline,
+      stage:        firstStageId,
+      assigneeIds:  source.assigneeIds,
+      customFields: source.customFields,
+    });
+  }, [createTask]);
+
   const deleteTask = useCallback(async (id) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const { error: err } = await supabase.from(TABLE).delete().eq("id", id);
@@ -187,6 +205,7 @@ export function useMarketingTasks({ userId, role, roles, campaignId } = {}) {
     createTask,
     updateTask,
     deleteTask,
+    duplicateTask,
     changeStage,
     toggleStar,
     refetch: fetchAll,

@@ -8,7 +8,7 @@ function stageKeyOf(s) {
   return s?.stageKey ?? s?.id;
 }
 
-function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, deleteLabel, deleteConfirmMessage, agingDays, completeness, unread, children, showMoveOptions = true }) {
+function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, onDuplicateCard, deleteLabel, deleteConfirmMessage, agingDays, completeness, unread, children, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -71,11 +71,12 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
             completenessSize={26}
             muted={isTerminal}
           />
-          {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
+          {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: stageKeyOf(s), name: s.name, color: s.color }))}
               onMove={onMoveToStage ? (key) => onMoveToStage(id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(id) : undefined}
+              onDuplicate={onDuplicateCard ? () => onDuplicateCard(id) : undefined}
               deleteLabel={deleteLabel}
               confirmMessage={deleteConfirmMessage}
               onOpenChange={setMenuOpen}

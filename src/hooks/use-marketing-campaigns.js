@@ -151,6 +151,34 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   }, [canWrite, campaigns]);
 
+  // "Duplicar card" — mesmo raciocínio de duplicateTask (use-marketing-tasks.js):
+  // cópia nasce sempre na 1ª etapa (MARKETING_STAGES[0] = "briefing"), nunca
+  // herda approvalChecklist (específico daquele planejamento de campanha) nem
+  // performanceScore (resultado medido da campanha original, não faz sentido
+  // numa campanha que ainda não rodou).
+  const duplicateCampaign = useCallback(async (source) => {
+    return createCampaign({
+      companyIds:     source.companyIds,
+      name:           `${source.name} (cópia)`,
+      channel:        source.channel,
+      budget:         source.budget,
+      kpi:            source.kpi,
+      launchDate:     source.launchDate,
+      endDate:        source.endDate,
+      stage:          MARKETING_STAGES[0].id,
+      ownerIds:       source.ownerIds,
+      agencyName:     source.agencyName,
+      supplierId:     source.supplierId,
+      utmUrl:         source.utmUrl,
+      customFields:   source.customFields,
+      // NÃO copiar: approvalChecklist, performanceScore, starred, notes,
+      // activities, stageChangedAt. driveFolderUrl/driveFolderId também
+      // ficam de fora — uploads da campanha (use-marketing-campaign-
+      // attachments.js) usam esse ID como destino; herdar apontaria os
+      // anexos futuros da cópia pra dentro da pasta da campanha original.
+    });
+  }, [createCampaign]);
+
   const deleteCampaign = useCallback(async (id) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const { error: err } = await supabase.from(TABLE).delete().eq("id", id);
@@ -208,6 +236,7 @@ export function useMarketingCampaigns({ userId, role, roles, enabled = true } = 
     createCampaign,
     updateCampaign,
     deleteCampaign,
+    duplicateCampaign,
     changeStage,
     toggleStar,
     updateChecklist,

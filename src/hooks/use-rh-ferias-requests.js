@@ -59,6 +59,26 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
     setRequests(prev => prev.map(r => r.id === id ? { ...r, custom_fields: customFields } : r));
   }, []);
 
+  // "Duplicar card" — cria uma NOVA solicitação para o mesmo colaborador
+  // (user_id é quem o afastamento é PARA, não um autor/criador — precisa ir
+  // junto, senão a cópia não tem dono). Sem campo de título/nome nesse
+  // domínio (o card mostra o nome do colaborador, vindo do join com
+  // `profiles`, não uma coluna própria) — não há onde aplicar o sufixo
+  // "(cópia)" da regra geral. `firstStatus` vem de quem chama
+  // (RHFeriasView conhece as etapas de rh_pipeline_stages, domain "ferias").
+  const duplicateRequest = useCallback(async (source, firstStatus) => {
+    return createRequest({
+      user_id: source.user_id,
+      type: source.type,
+      start_date: source.start_date,
+      end_date: source.end_date,
+      notes: source.notes,
+      custom_fields: source.custom_fields || {},
+      status: firstStatus,
+      // NÃO copiar: approved_by, approved_at, status_changed_at, activities.
+    });
+  }, [createRequest]);
+
   const deleteRequest = useCallback(async (id) => {
     const { error } = await supabase.from(TABLE).delete().eq("id", id);
     if (error) throw new Error(error.message);
@@ -84,5 +104,5 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
     setRequests(prev => prev.map(r => r.id === id ? { ...r, activities: nextActivities } : r));
   }, [requests]);
 
-  return { requests, loading, createRequest, changeStatus, updateCustomFields, deleteRequest, addActivity, updateActivity, refetch: fetchAll };
+  return { requests, loading, createRequest, changeStatus, updateCustomFields, duplicateRequest, deleteRequest, addActivity, updateActivity, refetch: fetchAll };
 }

@@ -484,7 +484,7 @@ function FeriasCardBody({ req, canWrite, onAprovar, onRecusar, busy }) {
 }
 
 function FeriasKanbanColumn({
-  stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteRequest,
+  stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteRequest, onDuplicateRequest,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, onAprovar, onRecusar, busyId,
   draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
@@ -549,6 +549,7 @@ function FeriasKanbanColumn({
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteRequest : undefined}
+              onDuplicateCard={canWrite ? onDuplicateRequest : undefined}
               showMoveOptions={false}
               agingDays={daysInStage(req.status_changed_at)}
               completeness={getCompleteness?.(req)}
@@ -921,7 +922,7 @@ function FeriasCalendarView({ requests, stages, onPillClick }) {
 // ── Main View ─────────────────────────────────────────────────────────────────
 
 export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions }) {
-  const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, deleteRequest, addActivity, updateActivity } = useRHFeriasRequests({});
+  const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, duplicateRequest, deleteRequest, addActivity, updateActivity } = useRHFeriasRequests({});
   const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("ferias");
   const feriasStageFields = useRHStageFields("ferias");
 
@@ -1048,6 +1049,13 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       setBusyId(null);
     }
   }, [changeStatus, getStageBlockMessage]);
+
+  const handleDuplicateRequest = useCallback(async (id) => {
+    const source = requests.find((r) => r.id === id);
+    if (!source) return;
+    const firstStage = stages.find((s) => !s.terminal) || stages[0];
+    await duplicateRequest(source, firstStage?.stageKey);
+  }, [requests, stages, duplicateRequest]);
 
   const handleColumnDrop = useCallback((stageKey) => {
     if (draggedId) {
@@ -1215,6 +1223,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                 onDragEnd={canWrite ? () => { setDraggedId(null); setDragOverStageKey(null); } : undefined}
                 onMoveToStage={canWrite ? handleMoveToStage : undefined}
                 onDeleteCard={canWrite ? deleteRequest : undefined}
+                onDuplicateCard={canWrite ? handleDuplicateRequest : undefined}
                 agingDays={daysInStage(req.status_changed_at)}
                 completeness={getReqCompleteness?.(req)}
                 unread={hasUnreadRHComment(req, viewedAt, currentUser?.id)}
@@ -1248,6 +1257,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                     onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
                     onMoveToStage={handleMoveToStage}
                     onDeleteRequest={canWrite ? deleteRequest : undefined}
+                    onDuplicateRequest={canWrite ? handleDuplicateRequest : undefined}
                     isDragOver={dragOverStageKey === stage.stageKey}
                     onColumnDragOver={(e, key) => { e.preventDefault(); setDragOverStageKey(key); }}
                     onColumnDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStageKey(null); }}

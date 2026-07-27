@@ -735,7 +735,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const location = useLocation();
   const {
     deliverables, loading, canWrite,
-    createDeliverable, updateDeliverable, deleteDeliverable,
+    createDeliverable, updateDeliverable, deleteDeliverable, duplicateDeliverable,
     changeStage, sendCompleteEmail, toggleStar,
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
 
@@ -896,6 +896,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   }, [updateDeliverable]);
 
   const handleDelete = useCallback(async (id) => { await deleteDeliverable(id); }, [deleteDeliverable]);
+
+  const handleDuplicate = useCallback(async (id) => {
+    const source = deliverables.find(d => d.id === id);
+    if (!source) return;
+    await duplicateDeliverable(source);
+  }, [deliverables, duplicateDeliverable]);
 
   const syncSelected = useMemo(() => {
     if (!selected) return null;
@@ -1119,6 +1125,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                           stages={kanbanStages}
                           onMoveToStage={canWrite ? attemptStageChange : null}
                           onDeleteCard={canWrite ? handleDelete : null}
+                          onDuplicateCard={canWrite ? handleDuplicate : null}
                           onToggleStar={canWrite ? toggleStar : null}
                           completeness={getItemCompleteness(item)}
                           unread={getItemUnread(item)}
@@ -1252,6 +1259,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                             stages={kanbanStages}
                             onMoveToStage={canWrite ? attemptStageChange : null}
                             onDeleteCard={canWrite ? handleDelete : null}
+                            onDuplicateCard={canWrite ? handleDuplicate : null}
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
                             unread={getItemUnread(item)}

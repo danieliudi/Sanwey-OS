@@ -910,7 +910,7 @@ function VagaCard({ vaga, candidatosCount, usersById }) {
 
 function VagaKanbanColumn({
   stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
-  onMoveToStage, onDeleteVaga, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
+  onMoveToStage, onDeleteVaga, onDuplicateVaga, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
   getCompleteness, getUnread, onAddVaga, usersById, boardHeight,
 }) {
   return (
@@ -979,6 +979,7 @@ function VagaKanbanColumn({
               onDragEnd={canWrite ? onDragEnd : undefined}
               onMoveToStage={canWrite ? onMoveToStage : undefined}
               onDeleteCard={canWrite ? onDeleteVaga : undefined}
+              onDuplicateCard={canWrite ? onDuplicateVaga : undefined}
               showMoveOptions={false}
               agingDays={daysInStage(v.stage_changed_at)}
               completeness={getCompleteness?.(v)}
@@ -2641,7 +2642,7 @@ function addDays(base, days) {
 export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }) {
   const {
     vagas, candidatos, talentPool, aplicacoesRaw, loading,
-    createVaga, updateVaga, changeVagaStage, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
+    createVaga, updateVaga, changeVagaStage, duplicateVaga, deleteVaga, deleteAplicacao, createCandidato, changeStage, bulkReprovarComEmail, bulkMoveStage, updateAplicacao, addNote, changeRating, markHired, attachTriagemToVaga,
   } = useRHRecrutamento({ userId: user?.id });
   const { cargos, createCargo, deleteCargo } = useRHCargoTemplates({ userId: user?.id });
   const { createColaborador } = useRHColaboradores({ userId: user?.id });
@@ -2764,6 +2765,12 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleCreateVaga = async (data) => { await createVaga(data); };
+  const handleDuplicateVaga = async (id) => {
+    const source = vagas.find((v) => v.id === id);
+    if (!source) return;
+    const firstStage = vagaStages.find((s) => !s.terminal) || vagaStages[0];
+    await duplicateVaga(source, firstStage?.stageKey);
+  };
   const handleUpdateVaga = async (data) => {
     if (!editingVaga) return;
     await updateVaga(editingVaga.id, data);
@@ -3111,6 +3118,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                   onDragEnd={canWrite ? handleVagaDragEnd : undefined}
                   onMoveToStage={canWrite ? attemptVagaStageChange : undefined}
                   onDeleteCard={canWrite ? (id) => deleteVaga(id) : undefined}
+                  onDuplicateCard={canWrite ? handleDuplicateVaga : undefined}
                   agingDays={daysInStage(v.stage_changed_at)}
                   completeness={getVagaCompleteness?.(v)}
                   unread={hasUnreadRHComment(v, vagaViewedAt, user?.id)}
@@ -3136,6 +3144,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                       onCardClick={(v) => setVagaDrawerId(v.id)}
                       onMoveToStage={attemptVagaStageChange}
                       onDeleteVaga={(id) => deleteVaga(id)}
+                      onDuplicateVaga={canWrite ? handleDuplicateVaga : undefined}
                       onDragStart={handleVagaDragStart}
                       onDragEnd={handleVagaDragEnd}
                       isDragOver={dragOverVagaStage === stage.stageKey}

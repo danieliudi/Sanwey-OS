@@ -18,7 +18,7 @@ function daysUntilDate(dateStr) {
   return Math.floor((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, completeness, unread, showMoveOptions = true }) {
+function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, onDuplicateCard, completeness, unread, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const cardRef = useRef(null);
 
@@ -113,11 +113,12 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
           {campaign.starred && (
             <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B", opacity: terminalAccentOpacity(isTerminal) }} />
           )}
-          {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard) && (
+          {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
               onMove={onMoveToStage ? (key) => onMoveToStage(campaign.id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(campaign.id) : undefined}
+              onDuplicate={onDuplicateCard ? () => onDuplicateCard(campaign.id) : undefined}
               onOpenChange={setMenuOpen}
             />
           )}

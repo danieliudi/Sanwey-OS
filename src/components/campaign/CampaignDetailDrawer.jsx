@@ -9,6 +9,7 @@ import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { useMarketingCampaignAttachments } from "../../hooks/use-marketing-campaign-attachments";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
+import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -24,6 +25,8 @@ import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
+import { EVENT_CHECKLIST_TEMPLATE } from "../../constants/event-checklist-template";
+import { supabase } from "../../lib/supabase";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ACCEPTED_TYPES = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.zip";
@@ -163,6 +166,84 @@ function CampaignAIPanel({ campaign, currentUser }) {
               {copied ? "Copiado!" : "Copiar"}
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Checklist de evento (5 segmentos → 5 marketing_tasks + rh_checklists) ────
+
+function ApplyEventChecklistButton({ campaign, currentUser }) {
+  const { tasks, loading } = useMarketingTasks({
+    userId: currentUser?.id,
+    roles: currentUser?.roles,
+    campaignId: campaign.id,
+  });
+  const [applying, setApplying] = useState(false);
+
+  // Idempotência real (não só estado local da sessão do drawer): tasks já vem
+  // filtrado por campaignId, então isso continua correto ao fechar e reabrir
+  // o drawer, sem precisar de flag própria. `loading` trava o clique
+  // enquanto essa checagem ainda não voltou do banco (senão dava pra clicar
+  // duas vezes antes do fetch inicial confirmar que já tinha sido aplicado).
+  const alreadyApplied = tasks.some(t =>
+    EVENT_CHECKLIST_TEMPLATE.some(seg => seg.segment === t.title)
+  );
+
+  const [applyError, setApplyError] = useState(null);
+
+  // RPC atômica (apply_event_checklist_template, com advisory lock por
+  // campanha) no lugar do laço client-side — evita a janela de corrida entre
+  // 2 sessões aplicando o checklist quase ao mesmo tempo (achado real de QA).
+  const handleApply = async () => {
+    if (applying || loading || alreadyApplied) return;
+    setApplying(true);
+    setApplyError(null);
+    try {
+      const { error: err } = await supabase.rpc("apply_event_checklist_template", {
+        p_campaign_id:  campaign.id,
+        p_company_ids:  campaign.companyIds || [],
+        p_owner_ids:    campaign.ownerIds || [],
+        p_segments:     EVENT_CHECKLIST_TEMPLATE.map(({ segment, items }) => ({ segment, items })),
+      });
+      if (err) throw err;
+    } catch (err) {
+      setApplyError(err?.message || "Erro ao aplicar checklist de evento.");
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  if (alreadyApplied && !applying) {
+    return (
+      <div className="text-xs" style={{ color: "var(--text-dim)" }}>
+        <Check size={11} style={{ display: "inline", marginRight: 4, verticalAlign: -1 }} />
+        Checklist de evento já aplicado — veja em Tarefas
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <button
+        onClick={handleApply}
+        disabled={applying || loading}
+        className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl"
+        style={{
+          background: "var(--accent)",
+          color: "#FFF",
+          border: "none",
+          cursor: (applying || loading) ? "not-allowed" : "pointer",
+          opacity: (applying || loading) ? 0.7 : 1,
+        }}
+      >
+        <ListChecks size={12} />
+        {applying ? "Aplicando…" : "Aplicar checklist de evento"}
+      </button>
+      {applyError && (
+        <div className="text-xs" style={{ color: "var(--danger)" }}>
+          {applyError}
         </div>
       )}
     </div>
@@ -1289,6 +1370,10 @@ export function CampaignDetailDrawer({
               {isAgencia ? <ReadValue value={get("endDate") ? formatDateBR(get("endDate")) : null} /> : <EditInput value={get("endDate") ? String(get("endDate")).slice(0, 10) : ""} onChange={v => set("endDate", localDateInputToISOString(v))} type="date" />}
             </Field>
           </div>
+
+          {canWrite && !isAgencia && get("channel") === "Evento" && (
+            <ApplyEventChecklistButton campaign={campaign} currentUser={currentUser} />
+          )}
 
           <Field label="Responsável interno">
             {isAgencia

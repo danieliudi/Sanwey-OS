@@ -81,7 +81,7 @@ function ViewToggleButton({ active, onClick, icon: Icon, label }) {
 // dropdown intermediário (ver MoveStageMenu). O acordeão mobile, sem
 // drag-and-drop, continua passando showMoveOptions=true (default), único
 // jeito de mover um card lá.
-function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, unread, showMoveOptions = true }) {
+function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onDragStart, onDragEnd, stages, onMoveToStage, onDeleteCard, onDuplicateCard, unread, showMoveOptions = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const responsibleIds = purchase.responsibleIds?.length ? purchase.responsibleIds : (purchase.responsibleId ? [purchase.responsibleId] : []);
   const resolvedResponsible = responsibleIds.map(id => users?.find(u => u.id === id)).filter(Boolean);
@@ -130,12 +130,13 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
           {purchase.totalValue != null && (
             <span className="text-xs font-bold" style={{ color: terminalTextColor(isTerminal) }}>{formatK(purchase.totalValue)}</span>
           )}
-          {((onMoveToStage && moveTargets.length > 0) || onDeleteCard) && (
+          {((onMoveToStage && moveTargets.length > 0) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
               targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: STAGE_COLORS[s.id] }))}
               onMove={onMoveToStage ? (key) => onMoveToStage(purchase.id, key) : undefined}
               onOpenChange={setMenuOpen}
               onDelete={onDeleteCard ? () => onDeleteCard(purchase.id) : undefined}
+              onDuplicate={onDuplicateCard ? () => onDuplicateCard(purchase.id) : undefined}
             />
           )}
         </div>
@@ -285,7 +286,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
 }
 
 /* ── Kanban view ──────────────────────────────────────────────────────── */
-function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop, getUnread }) {
+function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, onDuplicateCard, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop, getUnread }) {
   const [boardRef, boardHeight] = useAvailableHeight(16);
   return (
     <div className="hidden lg:block relative">
@@ -341,6 +342,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
                         onDragEnd={onDragEnd}
                         onMoveToStage={onMoveToStage}
                         onDeleteCard={onDeleteCard}
+                        onDuplicateCard={onDuplicateCard}
                         showMoveOptions={false}
                         unread={getUnread?.(p)}
                       />
@@ -356,7 +358,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
   );
 }
 
-function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick, onMoveToStage, onDeleteCard, getUnread }) {
+function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick, onMoveToStage, onDeleteCard, onDuplicateCard, getUnread }) {
   const [expanded, setExpanded] = useState(() => new Set(["solicitado"]));
   const toggle = (id) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   return (
@@ -377,7 +379,7 @@ function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick,
                 {items.length === 0
                   ? <div className="text-center py-3 text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma solicitação</div>
                   : items.map(p => (
-                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} users={users} onClick={onCardClick} onMoveToStage={onMoveToStage} onDeleteCard={onDeleteCard} unread={getUnread?.(p)} />
+                    <PurchaseKanbanCard key={p.id} purchase={p} supplier={suppliersById.get(p.supplierId)} users={users} onClick={onCardClick} onMoveToStage={onMoveToStage} onDeleteCard={onDeleteCard} onDuplicateCard={onDuplicateCard} unread={getUnread?.(p)} />
                   ))}
               </div>
             )}
@@ -550,7 +552,7 @@ function CalendarView({ purchases, onPillClick }) {
 export function ComprasMarketingView({ user, users = [], notifyMentions }) {
   const {
     purchases, loading, error,
-    createPurchase, updatePurchase, deletePurchase,
+    createPurchase, updatePurchase, deletePurchase, duplicatePurchase,
     approvePurchase, rejectPurchase, getLastPurchasePrice,
   } = useMarketingPurchaseRequests();
 
@@ -603,6 +605,21 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
       setStageError(err?.message || "Não foi possível excluir a solicitação.");
     }
   }, [deletePurchase]);
+
+  // Duplicar direto pelo card (menu "..." → Duplicar) — cópia nasce em
+  // "solicitado" (1ª etapa), com o usuário atual como novo solicitante; board
+  // não abre o drawer da cópia, só some do modal e o card novo aparece na
+  // 1ª coluna, igual criação manual.
+  const handleDuplicatePurchase = useCallback(async (id) => {
+    setStageError(null);
+    const source = purchasesRef.current.find(p => p.id === id);
+    if (!source) return;
+    try {
+      await duplicatePurchase(source, user?.id || null);
+    } catch (err) {
+      setStageError(err?.message || "Não foi possível duplicar a solicitação.");
+    }
+  }, [duplicatePurchase, user?.id]);
 
   // "Solicitado" só avança pra "Cotação" (comparar fornecedores, plain
   // update); "Cotação" só avança pra "Aprovado" via approvePurchase (RPC) —
@@ -749,13 +766,14 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
         <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando solicitações…</div>
       ) : viewMode === "kanban" ? (
         <>
-          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} onDeleteCard={handleDeletePurchase} getUnread={getPurchaseUnread} />
+          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} onDeleteCard={handleDeletePurchase} onDuplicateCard={handleDuplicatePurchase} getUnread={getPurchaseUnread} />
           <KanbanBoard
             purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             onMoveToStage={attemptStageChange}
             onDeleteCard={handleDeletePurchase}
+            onDuplicateCard={handleDuplicatePurchase}
             dragOverStage={dragOverStage}
             onColumnDragOver={handleColumnDragOver}
             onColumnDragLeave={handleColumnDragLeave}

@@ -123,6 +123,37 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
     await updateVaga(id, { stage: newStage, stage_changed_at: new Date().toISOString() });
   }, [updateVaga]);
 
+  // "Duplicar card" (só Vagas — Candidatos tem constraint única
+  // candidate_id+vaga_id em rh_aplicacoes, ver RHRecrutamentoView, então uma
+  // 2ª aplicação do mesmo candidato pra mesma vaga não é representável e o
+  // duplicar fica de fora desse board). `vagas` aqui já é a linha crua do
+  // banco (snake_case, sem rowTo* — só rh_aplicacoes passa por joinAplicacao
+  // acima), então createVaga aceita o mesmo shape de volta sem tradução.
+  // `firstStageKey` vem de quem chama (RHRecrutamentoView conhece
+  // vagaStages, domain "vagas" em rh_pipeline_stages).
+  const duplicateVaga = useCallback(async (source, firstStageKey) => {
+    return createVaga({
+      title:              `${source.title} (cópia)`,
+      company_ids:        source.company_ids,
+      department:         source.department,
+      job_title:          source.job_title,
+      cargo_template_id:  source.cargo_template_id,
+      contract_type:      source.contract_type,
+      salary_min:         source.salary_min,
+      salary_max:         source.salary_max,
+      benefits:           source.benefits,
+      schedule_blocks:    source.schedule_blocks,
+      escala:             source.escala,
+      hiring_deadline:    source.hiring_deadline,
+      priority:           source.priority,
+      description:        source.description,
+      custom_fields:      source.custom_fields,
+      responsible_ids:    source.responsible_ids,
+      stage:              firstStageKey,
+      // NÃO copiar: link_slug (regenerado), activities, stage_changed_at.
+    });
+  }, [createVaga]);
+
   // Exclui a vaga (card do Kanban de Vagas) — o banco cascateia (ON DELETE
   // CASCADE em rh_aplicacoes.vaga_id) e remove junto as candidaturas ligadas
   // a ela; refletimos os dois lados no estado local pra não depender só do
@@ -310,6 +341,7 @@ export function useRHRecrutamento({ userId, enabled = true } = {}) {
     createVaga,
     updateVaga,
     changeVagaStage,
+    duplicateVaga,
     deleteVaga,
     deleteAplicacao,
     createCandidato,
