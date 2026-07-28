@@ -7,6 +7,7 @@ import { RH_LEAVE_TYPES } from "../../constants/rh-config";
 import { parseDateInput } from "../../utils/date";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
+import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
@@ -213,11 +214,11 @@ async function contarAnexos(recordId) {
 // (changeStatus) já está persistida quando isso roda, então uma falha aqui
 // não deve travar o fluxo, só avisar quem aprovou/recusou que o e-mail não
 // saiu.
-async function sendRhEmail(type, req, extraVars = {}) {
+async function sendRhEmail(type, req, colaborador, extraVars = {}) {
   try {
-    let toEmail = req.profiles?.email || null;
-    if (!toEmail && req.user_id) {
-      const { data: profile } = await supabase.from("profiles").select("email").eq("id", req.user_id).single();
+    let toEmail = colaborador?.email || null;
+    if (!toEmail && colaborador?.profileId) {
+      const { data: profile } = await supabase.from("profiles").select("email").eq("id", colaborador.profileId).single();
       toEmail = profile?.email || null;
     }
     if (!toEmail) return false;
@@ -226,7 +227,7 @@ async function sendRhEmail(type, req, extraVars = {}) {
         type,
         to: toEmail,
         variables: {
-          EMPLOYEE_NAME: req.profiles?.name || "",
+          EMPLOYEE_NAME: colaborador?.fullName || "",
           LEAVE_TYPE:    leaveTypeLabel(req.type),
           START_DATE:    fmt(req.start_date),
           END_DATE:      fmt(req.end_date),
@@ -262,14 +263,14 @@ function UserAvatar({ user, size = 30 }) {
 // Motivo da recusa em modal estilizado (idioma do RejectModal de
 // MarketingRequestsView, casca ui/Modal) — substitui o window.prompt()
 // nativo. Motivo continua obrigatório: o botão só habilita com texto.
-function RecusarFeriasModal({ req, busy, onConfirm, onClose }) {
+function RecusarFeriasModal({ req, colaborador, busy, onConfirm, onClose }) {
   const [motivo, setMotivo] = useState("");
   const motivoLimpo = motivo.trim();
   return (
     <Modal open onClose={onClose} title="Recusar solicitação" width={440}>
       <div style={{ padding: "16px 24px 24px" }}>
         <p style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5, marginBottom: 12 }}>
-          {leaveTypeLabel(req.type)} de <b style={{ color: "var(--text)" }}>{req.profiles?.name || "colaborador"}</b> · {fmt(req.start_date)} – {fmt(req.end_date)}. O motivo será enviado ao colaborador por e-mail e registrado no histórico do card.
+          {leaveTypeLabel(req.type)} de <b style={{ color: "var(--text)" }}>{colaborador?.fullName || "colaborador"}</b> · {fmt(req.start_date)} – {fmt(req.end_date)}. O motivo será enviado ao colaborador por e-mail e registrado no histórico do card.
         </p>
         <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
           Motivo da recusa *
@@ -426,16 +427,16 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
 
 // ── Card do Kanban ────────────────────────────────────────────────────────────
 
-function FeriasCardBody({ req, canWrite, onAprovar, onRecusar, busy }) {
+function FeriasCardBody({ req, colaborador, canWrite, onAprovar, onRecusar, busy }) {
   const dias = calcDias(req.start_date, req.end_date);
   const docExigido = DOCUMENTO_OBRIGATORIO_POR_TIPO[req.type];
   return (
     <>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
-        <UserAvatar user={req.profiles} size={28} />
+        <UserAvatar user={{ name: colaborador?.fullName }} size={28} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {req.profiles?.name || "Desconhecido"}
+            {colaborador?.fullName || "Desconhecido"}
           </div>
           <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{leaveTypeLabel(req.type)} · {dias}d</div>
         </div>
@@ -466,7 +467,7 @@ function FeriasCardBody({ req, canWrite, onAprovar, onRecusar, busy }) {
 }
 
 function FeriasKanbanColumn({
-  stage, stages, reqList, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteRequest, onDuplicateRequest,
+  stage, stages, reqList, colaboradoresById, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteRequest, onDuplicateRequest,
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, onAprovar, onRecusar, busyId,
   draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
@@ -537,7 +538,7 @@ function FeriasKanbanColumn({
               completeness={getCompleteness?.(req)}
               unread={getUnread?.(req)}
             >
-              <FeriasCardBody req={req} canWrite={canWrite} onAprovar={onAprovar} onRecusar={onRecusar} busy={busyId === req.id} />
+              <FeriasCardBody req={req} colaborador={colaboradoresById.get(req.user_id)} canWrite={canWrite} onAprovar={onAprovar} onRecusar={onRecusar} busy={busyId === req.id} />
             </RHKanbanCard>
           ))
         )}
@@ -549,7 +550,7 @@ function FeriasKanbanColumn({
 // ── Drawer de detalhe ──────────────────────────────────────────────────────────
 
 function FeriasDrawer({
-  req, canWrite, stages, users, currentUser,
+  req, colaborador, canWrite, stages, users, currentUser,
   onAprovar, onRecusar, onMoveToStage, onUpdateCustomFields, onAddActivity, onUpdateActivity, onClose, onMoved, busy, notifyMentions, onDelete, onEditFields,
 }) {
   useEffect(() => {
@@ -603,9 +604,9 @@ function FeriasDrawer({
 
   const header = (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 12, minWidth: 0 }}>
-      <UserAvatar user={req.profiles} size={40} />
+      <UserAvatar user={{ name: colaborador?.fullName }} size={40} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{req.profiles?.name || "Desconhecido"}</div>
+        <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "Desconhecido"}</div>
         <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{leaveTypeLabel(req.type)} · {fmt(req.start_date)} – {fmt(req.end_date)} · {dias}d</div>
         <div style={{ marginTop: 8 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
@@ -710,7 +711,7 @@ function FeriasDrawer({
         users={users}
         notifyMentions={notifyMentions}
         mentionLink={{ module: "rh_ferias", id: req.id }}
-        mentionContextLabel={req.profiles?.name}
+        mentionContextLabel={colaborador?.fullName}
       />
 
       {canWrite && onEditFields && (
@@ -748,7 +749,7 @@ function FeriasDrawer({
 // Início/fim + dias (calcDias já existente acima) — os campos mais claros
 // deste domínio.
 
-function FeriasTableView({ requests, stages, onRowClick }) {
+function FeriasTableView({ requests, stages, colaboradoresById, onRowClick }) {
   return (
     <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
@@ -768,14 +769,15 @@ function FeriasTableView({ requests, stages, onRowClick }) {
           {requests.map((req) => {
             const st = findStage(stages, req.status);
             const dias = calcDias(req.start_date, req.end_date);
+            const colaborador = colaboradoresById.get(req.user_id);
             return (
               <tr key={req.id} onClick={() => onRowClick(req)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <UserAvatar user={req.profiles} size={26} />
-                    <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{req.profiles?.name || "Desconhecido"}</span>
+                    <UserAvatar user={{ name: colaborador?.fullName }} size={26} />
+                    <span className="text-sm font-medium" style={{ color: "var(--text)" }}>{colaborador?.fullName || "Desconhecido"}</span>
                   </div>
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{leaveTypeLabel(req.type)}</td>
@@ -799,7 +801,7 @@ function FeriasTableView({ requests, stages, onRowClick }) {
 // ── Calendário ───────────────────────────────────────────────────────────────
 // Agrupa por start_date — data de início do afastamento.
 
-function FeriasCalendarView({ requests, stages, onPillClick }) {
+function FeriasCalendarView({ requests, stages, colaboradoresById, onPillClick }) {
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -880,12 +882,13 @@ function FeriasCalendarView({ requests, stages, onPillClick }) {
               <div className="flex flex-col gap-0.5">
                 {items.slice(0, 3).map((req) => {
                   const st = findStage(stages, req.status);
+                  const colaborador = colaboradoresById.get(req.user_id);
                   return (
                     <span key={req.id} onClick={() => onPillClick(req)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
                       style={{ background: st.color + "18", color: st.color }}
-                      title={`${req.profiles?.name || "Desconhecido"} · ${leaveTypeLabel(req.type)}`}>
-                      {req.profiles?.name || leaveTypeLabel(req.type)}
+                      title={`${colaborador?.fullName || "Desconhecido"} · ${leaveTypeLabel(req.type)}`}>
+                      {colaborador?.fullName || leaveTypeLabel(req.type)}
                     </span>
                   );
                 })}
@@ -903,8 +906,9 @@ function FeriasCalendarView({ requests, stages, onPillClick }) {
 
 // ── Main View ─────────────────────────────────────────────────────────────────
 
-export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions }) {
+export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions, initialSelectedFeriasId, onInitialFeriasConsumed }) {
   const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, duplicateRequest, deleteRequest, addActivity, updateActivity } = useRHFeriasRequests({});
+  const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("ferias");
   const feriasStageFields = useRHStageFields("ferias");
 
@@ -929,12 +933,23 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   // abaixo do espaço real disponível — só um toggle manual de viewMode
   // forçava o recálculo. Mesmo padrão de correção já usado em
   // RHFeedbackView.jsx/RHRecrutamentoView.jsx.
-  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, loadingRequests, loadingStages]);
+  const [boardRef, boardHeight] = useAvailableHeight(16, [viewMode, loadingRequests, loadingColaboradores, loadingStages]);
 
   const { viewedAt, markViewed } = useRecordViews("rh_ferias", currentUser?.id);
   useEffect(() => { if (drawerReqId) markViewed(drawerReqId); }, [drawerReqId]);
 
-  const loading = loadingRequests || loadingStages;
+  // Vem do painel de Conexões do Colaborador (Cmd-K/App.jsx). Se o registro
+  // não estiver na lista carregada (filtro ativo esconde), simplesmente não
+  // abre — sem tratamento especial.
+  useEffect(() => {
+    if (!initialSelectedFeriasId) return;
+    setDrawerReqId(initialSelectedFeriasId);
+    onInitialFeriasConsumed?.();
+  }, [initialSelectedFeriasId, onInitialFeriasConsumed]);
+
+  const loading = loadingRequests || loadingColaboradores || loadingStages;
+
+  const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
 
   // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
   // (estático ou condicional) vazio/inválido antes de qualquer transição —
@@ -961,23 +976,24 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
     const blockMsg = getStageBlockMessage(req);
     if (blockMsg) { (onBlocked || alert)(blockMsg); return false; }
     const docExigido = DOCUMENTO_OBRIGATORIO_POR_TIPO[req.type];
+    const colaborador = colaboradoresById.get(req.user_id);
     setBusyId(req.id);
     try {
       if (docExigido) {
         const totalAnexos = await contarAnexos(req.id);
         if (totalAnexos === 0) {
-          (onBlocked || alert)(`Não dá pra aprovar "${req.profiles?.name || "essa solicitação"}": anexe o(a) ${docExigido} antes (abra o card → aba Anexos).`);
+          (onBlocked || alert)(`Não dá pra aprovar "${colaborador?.fullName || "essa solicitação"}": anexe o(a) ${docExigido} antes (abra o card → aba Anexos).`);
           return false;
         }
       }
       await changeStatus(req.id, "aprovado", { approved_by: currentUser?.id, approved_at: new Date().toISOString() });
-      const sent = await sendRhEmail("ferias_aprovadas", req, { APPROVED_BY: currentUser?.name || currentUser?.email || "" });
-      if (!sent) alert(`Aprovação registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
+      const sent = await sendRhEmail("ferias_aprovadas", req, colaborador, { APPROVED_BY: currentUser?.name || currentUser?.email || "" });
+      if (!sent) alert(`Aprovação registrada, mas o e-mail de notificação não pôde ser enviado a ${colaborador?.fullName || "o colaborador"}.`);
       return true;
     } finally {
       setBusyId(null);
     }
-  }, [changeStatus, currentUser, getStageBlockMessage]);
+  }, [changeStatus, currentUser, getStageBlockMessage, colaboradoresById]);
 
   // Captura o MOTIVO da recusa antes de confirmar — antes recusava no
   // primeiro clique e o e-mail mandava req.notes (as observações do PRÓPRIO
@@ -995,6 +1011,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const confirmarRecusa = useCallback(async (motivo) => {
     if (!recusaModal) return;
     const { req, resolve } = recusaModal;
+    const colaborador = colaboradoresById.get(req.user_id);
     setBusyId(req.id);
     try {
       await changeStatus(req.id, "recusado");
@@ -1005,8 +1022,8 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
         by: currentUser?.name || currentUser?.email || "",
         at: new Date().toISOString(),
       }).catch(() => {});
-      const sent = await sendRhEmail("ferias_rejeitadas", req, { REASON: motivo, MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
-      if (!sent) setBoardError(`Recusa registrada, mas o e-mail de notificação não pôde ser enviado a ${req.profiles?.name || "o colaborador"}.`);
+      const sent = await sendRhEmail("ferias_rejeitadas", req, colaborador, { REASON: motivo, MANAGER_NAME: currentUser?.name || currentUser?.email || "" });
+      if (!sent) setBoardError(`Recusa registrada, mas o e-mail de notificação não pôde ser enviado a ${colaborador?.fullName || "o colaborador"}.`);
       resolve(true);
     } catch (e) {
       setBoardError(`Erro ao recusar: ${e?.message || "tente novamente."}`);
@@ -1015,7 +1032,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       setBusyId(null);
       setRecusaModal(null);
     }
-  }, [recusaModal, changeStatus, addActivity, currentUser]);
+  }, [recusaModal, changeStatus, addActivity, currentUser, colaboradoresById]);
 
   // Mover genérico pra qualquer etapa do pipeline dinâmico de férias (além
   // dos atalhos Aprovar/Recusar) — cobre pipelines com mais de
@@ -1204,9 +1221,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       ) : !isSupabaseConfigured ? (
         <EmptyState icon={Calendar} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar este módulo." />
       ) : viewMode === "table" ? (
-        <FeriasTableView requests={filtered} stages={stages} onRowClick={(r) => setDrawerReqId(r.id)} />
+        <FeriasTableView requests={filtered} stages={stages} colaboradoresById={colaboradoresById} onRowClick={(r) => setDrawerReqId(r.id)} />
       ) : viewMode === "calendar" ? (
-        <FeriasCalendarView requests={filtered} stages={stages} onPillClick={(r) => setDrawerReqId(r.id)} />
+        <FeriasCalendarView requests={filtered} stages={stages} colaboradoresById={colaboradoresById} onPillClick={(r) => setDrawerReqId(r.id)} />
       ) : viewMode === "analytics" ? (
         <KanbanAnalyticsPanel
           stages={analyticsStages}
@@ -1236,7 +1253,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                 completeness={getReqCompleteness?.(req)}
                 unread={hasUnreadRHComment(req, viewedAt, currentUser?.id)}
               >
-                <FeriasCardBody req={req} canWrite={canWrite} onAprovar={handleAprovar} onRecusar={handleRecusar} busy={busyId === req.id} />
+                <FeriasCardBody req={req} colaborador={colaboradoresById.get(req.user_id)} canWrite={canWrite} onAprovar={handleAprovar} onRecusar={handleRecusar} busy={busyId === req.id} />
               </RHKanbanCard>
             )}
             emptyLabel="Nada aqui"
@@ -1260,6 +1277,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                     stage={stage}
                     stages={stages}
                     reqList={reqByStage[stage.stageKey] || []}
+                    colaboradoresById={colaboradoresById}
                     onCardClick={(r) => setDrawerReqId(r.id)}
                     onDragStart={setDraggedId}
                     onDragEnd={() => { setDraggedId(null); setDragOverStageKey(null); }}
@@ -1308,6 +1326,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       {recusaModal && (
         <RecusarFeriasModal
           req={recusaModal.req}
+          colaborador={colaboradoresById.get(recusaModal.req.user_id)}
           busy={busyId === recusaModal.req.id}
           onConfirm={confirmarRecusa}
           onClose={() => { recusaModal.resolve(false); setRecusaModal(null); }}
@@ -1317,6 +1336,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
       {drawerReq && (
         <FeriasDrawer
           req={drawerReq}
+          colaborador={colaboradoresById.get(drawerReq.user_id)}
           canWrite={canWrite}
           stages={stages}
           users={users}

@@ -1286,7 +1286,7 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions }) {
+export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions, initialSelectedAvaliacaoId, onInitialAvaliacaoConsumed }) {
   const {
     feedbacks, loading: loadingFeedbacks, createFeedback, createPendingCycle, completeFeedback,
     submitSelfRating, changeFeedbackStage, updateFeedbackCustomFields, updateFeedbackEvaluators, deleteFeedback, addFeedbackActivity, updateFeedbackActivity,
@@ -1324,6 +1324,15 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
 
   const { viewedAt, markViewed } = useRecordViews("rh_feedback", currentUser?.id);
   useEffect(() => { if (drawerFeedbackId) markViewed(drawerFeedbackId); }, [drawerFeedbackId]);
+
+  // Vem do painel de Conexões do Colaborador (Cmd-K/App.jsx). Se o registro
+  // não estiver na lista carregada (filtro ativo esconde), simplesmente não
+  // abre — sem tratamento especial.
+  useEffect(() => {
+    if (!initialSelectedAvaliacaoId) return;
+    setDrawerFeedbackId(initialSelectedAvaliacaoId);
+    onInitialAvaliacaoConsumed?.();
+  }, [initialSelectedAvaliacaoId, onInitialAvaliacaoConsumed]);
 
   useEffect(() => {
     setMoveError(null);

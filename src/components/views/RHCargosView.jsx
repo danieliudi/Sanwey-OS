@@ -553,7 +553,7 @@ function CargoCardMenu({ onEdit, onDelete }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function RHCargosView({ currentUser, canWrite, isDirector, users = [], notifyMentions }) {
+export function RHCargosView({ currentUser, canWrite, isDirector, users = [], notifyMentions, initialSelectedMovimentacaoId, onInitialMovimentacaoConsumed }) {
   const { cargos, loading: loadingCargos, createCargo, updateCargo, deleteCargo } = useRHCargoTemplates({ userId: currentUser?.id });
   const { movimentacoes, loading: loadingMov, createMovimentacao, aprovar, recusar } = useRHMovimentacoes({ userId: currentUser?.id });
   const { colaboradores } = useRHColaboradores({ userId: currentUser?.id });
@@ -600,6 +600,16 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
 
   const pendentes = useMemo(() => movimentacoesFiltradas.filter((m) => m.status === "pendente"), [movimentacoesFiltradas]);
   const decididas = useMemo(() => movimentacoesFiltradas.filter((m) => m.status !== "pendente"), [movimentacoesFiltradas]);
+
+  // Movimentação não tem drawer/modal de detalhe próprio — o card já mostra
+  // tudo inline. "Abrir" aqui significa só trocar pra aba Movimentações (os
+  // filtros padrão começam em "all", então o card já aparece na lista).
+  useEffect(() => {
+    if (!initialSelectedMovimentacaoId || loadingMov) return;
+    const mov = movimentacoes.find((m) => m.id === initialSelectedMovimentacaoId);
+    if (mov) setTab("movimentacoes");
+    onInitialMovimentacaoConsumed?.();
+  }, [initialSelectedMovimentacaoId, loadingMov, movimentacoes, onInitialMovimentacaoConsumed]);
 
   const directorIds = useMemo(
     () => (users || []).filter((u) => (u.roles?.length ? u.roles : [u.role]).includes("admin")).map((u) => u.id),

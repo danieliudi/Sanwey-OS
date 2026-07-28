@@ -26,6 +26,8 @@ import { STATUS_VISITA, STATUS_REEMBOLSO, fmtMoney } from "../../utils/viagens";
 import { Badge } from "../ui/Badge";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
+import { ClientSelector } from "../client/ClientSelector";
+import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
 
 const MAX_FILE_MB = 10;
 const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
@@ -132,33 +134,21 @@ function VisitaCard({ registro, onClick }) {
 
 // ── Nova visita ───────────────────────────────────────────────────────────────
 
-function NovaVisitaModal({ leads, onSave, onClose }) {
+function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
   useEscToClose(onClose);
   const [destino, setDestino] = useState("");
   const [dataPlanejada, setDataPlanejada] = useState("");
   const [objetivo, setObjetivo] = useState("");
-  const [clienteInput, setClienteInput] = useState("");
-  const [selectedLead, setSelectedLead] = useState(null);
-  const [showSugestoes, setShowSugestoes] = useState(false);
+  const [clientId, setClientId] = useState(null);
+  const [quickCreateName, setQuickCreateName] = useState(null); // string | null — abre o mini-cadastro quando != null
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const sugestoes = useMemo(() => {
-    const q = clienteInput.trim().toLowerCase();
-    if (!q) return [];
-    return (leads || []).filter((l) => l.company?.toLowerCase().includes(q)).slice(0, 6);
-  }, [clienteInput, leads]);
+  const selectedClient = (clients || []).find((c) => c.id === clientId) || null;
 
-  const handleClienteChange = (v) => {
-    setClienteInput(v);
-    setSelectedLead(null);
-    setShowSugestoes(true);
-  };
-
-  const handleSelectLead = (lead) => {
-    setSelectedLead(lead);
-    setClienteInput(lead.company);
-    setShowSugestoes(false);
+  const handleClientCreated = (client) => {
+    setClientId(client.id);
+    setQuickCreateName(null);
   };
 
   const handleSubmit = async (e) => {
@@ -172,8 +162,8 @@ function NovaVisitaModal({ leads, onSave, onClose }) {
         destino_planejado: destino.trim(),
         data_planejada: dataPlanejada,
         objetivo: objetivo.trim() || null,
-        lead_id: selectedLead ? selectedLead.id : null,
-        cliente_nome: clienteInput.trim() || null,
+        client_id: clientId || null,
+        cliente_nome: selectedClient?.name || null,
       });
       onClose();
     } catch (err) {
@@ -205,38 +195,14 @@ function NovaVisitaModal({ leads, onSave, onClose }) {
               <label style={LABEL_ST}>Data planejada *</label>
               <input type="date" value={dataPlanejada} onChange={(e) => setDataPlanejada(e.target.value)} className={INPUT_CLS} style={INPUT_ST} />
             </div>
-            <div style={{ position: "relative" }}>
+            <div>
               <label style={LABEL_ST}>Cliente</label>
-              <input
-                type="text"
-                value={clienteInput}
-                onChange={(e) => handleClienteChange(e.target.value)}
-                onFocus={() => setShowSugestoes(true)}
-                onBlur={() => setTimeout(() => setShowSugestoes(false), 120)}
-                placeholder="Buscar lead ou digitar nome livre"
-                className={INPUT_CLS}
-                style={INPUT_ST}
+              <ClientSelector
+                value={clientId}
+                clients={clients || []}
+                onChange={setClientId}
+                onCreate={onCreateClient ? (query) => setQuickCreateName(query || "") : undefined}
               />
-              {showSugestoes && sugestoes.length > 0 && (
-                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, marginTop: 4, boxShadow: "var(--shadow-pop)", overflow: "hidden" }}>
-                  {sugestoes.map((lead) => (
-                    <div
-                      key={lead.id}
-                      onClick={() => handleSelectLead(lead)}
-                      style={{ padding: "8px 12px", fontSize: 12, color: "var(--text)", cursor: "pointer" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                    >
-                      {lead.company}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {selectedLead && (
-                <div style={{ fontSize: 10, color: "var(--success)", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                  <Check size={10} /> Vinculado ao lead "{selectedLead.company}"
-                </div>
-              )}
             </div>
             <div>
               <label style={LABEL_ST}>Objetivo</label>
@@ -256,6 +222,16 @@ function NovaVisitaModal({ leads, onSave, onClose }) {
           </div>
         </form>
       </div>
+
+      {quickCreateName !== null && (
+        <ClientQuickCreateModal
+          initialName={quickCreateName}
+          clients={clients || []}
+          onCreate={onCreateClient}
+          onDone={handleClientCreated}
+          onClose={() => setQuickCreateName(null)}
+        />
+      )}
     </div>
   );
 }
@@ -735,7 +711,7 @@ function DespesaRow({ despesa, onVerComprovante, onRefazer }) {
 
 // ── View principal ────────────────────────────────────────────────────────────
 
-export function CRMViagensPlanejamentoView({ currentUser, leads = [], pushNotification }) {
+export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreateClient, pushNotification, initialSelectedViagemId, onInitialViagemConsumed }) {
   const userId = currentUser?.id;
   const { registros, loading: loadingRegistros, createRegistro, marcarRealizado, marcarNaoRealizado, deleteRegistro } = useCRMViagens({ userId });
   const { despesas, loading: loadingDespesas, createDespesa, deleteDespesa, uploadComprovante, getComprovanteUrl } = useCRMDespesas({ userId });
@@ -752,6 +728,17 @@ export function CRMViagensPlanejamentoView({ currentUser, leads = [], pushNotifi
   // misturar visitas/despesas de outras pessoas nesta tela pessoal.
   const registrosProprios = useMemo(() => registros.filter((r) => r.vendedor_id === userId), [registros, userId]);
   const despesasProprias = useMemo(() => despesas.filter((d) => d.vendedor_id === userId), [despesas, userId]);
+
+  // Busca em `registros` (não `registrosProprios`) porque quem manda o id pode
+  // ser o painel de Conexões do Cliente — a viagem pode ter sido registrada por
+  // outro vendedor. Se não achar (RLS já restringe `registros` a só as próprias
+  // linhas de quem não é gestor/admin), simplesmente não abre nada.
+  useEffect(() => {
+    if (!initialSelectedViagemId || loadingRegistros) return;
+    const registro = registros.find((r) => r.id === initialSelectedViagemId);
+    if (registro) setSelectedRegistro(registro);
+    onInitialViagemConsumed?.();
+  }, [initialSelectedViagemId, loadingRegistros, registros, onInitialViagemConsumed]);
 
   // Avisa o vendedor quando o gestor decide um reembolso — antes só se
   // descobria abrindo o app de novo. Compara contra o último status visto
@@ -903,7 +890,7 @@ export function CRMViagensPlanejamentoView({ currentUser, leads = [], pushNotifi
       </div>
 
       {showNovaVisita && (
-        <NovaVisitaModal leads={leads} onSave={handleCreateVisita} onClose={() => setShowNovaVisita(false)} />
+        <NovaVisitaModal clients={clients} onCreateClient={onCreateClient} onSave={handleCreateVisita} onClose={() => setShowNovaVisita(false)} />
       )}
 
       {showNovaDespesa && (

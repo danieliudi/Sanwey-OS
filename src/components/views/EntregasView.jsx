@@ -1135,7 +1135,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                           )}
                         </>}
                       >
-                        {stage.sla && <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>SLA {stage.sla}d</div>}
+                        {/* Sempre renderizada (mesmo sem stage.sla, só oculta via
+                            visibility) — senão a coluna sem SLA fica com header mais
+                            baixo que as vizinhas que têm essa linha extra. */}
+                        <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", visibility: stage.sla ? "visible" : "hidden" }}>
+                          SLA {stage.sla || 0}d
+                        </div>
                       </KanbanColumnHeader>
                     </div>
 
@@ -1264,6 +1269,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         onMoveToStage={attemptStageChange}
         onDelete={handleDelete}
         onResendCompleteEmail={sendCompleteEmail}
+        campaigns={campaigns}
         users={Array.from(usersById.values())}
         canWrite={canWrite}
         userId={user?.id}

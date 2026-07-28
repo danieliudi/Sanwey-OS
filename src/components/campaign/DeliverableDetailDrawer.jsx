@@ -439,7 +439,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
 }
 
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, users = [], canWrite, userId, currentUser, notifyMentions }) {
+export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], canWrite, userId, currentUser, notifyMentions }) {
   const [sideTab,      setSideTab]     = useState("form");
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,    setMoveError]   = useState(null);
@@ -800,6 +800,28 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           <ReadValue value={resolvedAssignees.map(u => u.name).join(", ") || null} />
         )}
       </FieldRow>
+
+      {campaigns.length > 0 && (
+        <FieldRow
+          label="Campanha relacionada"
+          hint="Só era possível vincular ao criar a entrega — agora dá pra vincular/trocar depois."
+        >
+          {canWrite ? (
+            <select
+              value={item.campaignId || ""}
+              onChange={e => onUpdate(item.id, { campaignId: e.target.value || null })}
+              style={{ ...inputBase }}
+              onFocus={focusBorder}
+              onBlur={blurBorder}
+            >
+              <option value="">Nenhuma</option>
+              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          ) : (
+            <ReadValue value={campaigns.find(c => c.id === item.campaignId)?.name || null} />
+          )}
+        </FieldRow>
+      )}
 
       {/* Campos configurados via "Editar campos desta etapa"
           (rh_pipeline_stage_fields) — única fonte do formulário por etapa. */}

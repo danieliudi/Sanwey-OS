@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { debounce } from "../utils/debounce";
 
 const TABLE = "rh_ferias";
-const SELECT = "*, profiles:user_id(id, name, initials, email), approver:approved_by(name)";
+const SELECT = "*, approver:approved_by(name)";
 
 export function useRHFeriasRequests({ enabled = true } = {}) {
   const [requests, setRequests] = useState([]);
@@ -62,9 +62,9 @@ export function useRHFeriasRequests({ enabled = true } = {}) {
   // "Duplicar card" — cria uma NOVA solicitação para o mesmo colaborador
   // (user_id é quem o afastamento é PARA, não um autor/criador — precisa ir
   // junto, senão a cópia não tem dono). Sem campo de título/nome nesse
-  // domínio (o card mostra o nome do colaborador, vindo do join com
-  // `profiles`, não uma coluna própria) — não há onde aplicar o sufixo
-  // "(cópia)" da regra geral. `firstStatus` vem de quem chama
+  // domínio (o card mostra o nome do colaborador, resolvido client-side via
+  // useRHColaboradores, não uma coluna própria) — não há onde aplicar o
+  // sufixo "(cópia)" da regra geral. `firstStatus` vem de quem chama
   // (RHFeriasView conhece as etapas de rh_pipeline_stages, domain "ferias").
   const duplicateRequest = useCallback(async (source, firstStatus) => {
     return createRequest({

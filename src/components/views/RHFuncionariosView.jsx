@@ -10,7 +10,6 @@ import {
   ChevronsRight,
   ChevronsLeft,
   Briefcase,
-  BarChart2,
   Plus,
   ArrowUpDown,
   ArrowUp,
@@ -28,12 +27,14 @@ import {
   RH_APRENDIZ_COTA_ALVO,
   RH_DESLIGAMENTO_TIPOS,
   RH_ENTREVISTA_SAIDA_PERGUNTAS,
+  RH_LEAVE_TYPES,
 } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHBeneficios } from "../../hooks/use-rh-beneficios";
 import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
+import { useColaboradorConnections } from "../../hooks/use-colaborador-connections";
 import { RHAttachmentsPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { EmptyState } from "../ui/EmptyState";
@@ -41,11 +42,14 @@ import { Badge } from "../ui/Badge";
 import { Modal } from "../ui/Modal";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AppToast } from "../shared/AppToast";
+import { EntityProfileModal } from "../shared/EntityProfileModal";
+import { ConnectionsPanel } from "../shared/ConnectionsPanel";
 import { csvRow, triggerDownload, formatDate as formatCSVDate } from "../../utils/export-csv";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
 import { formatDateBR } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
 import { matchDocumentToColaborador } from "../../utils/rh-document-matching";
+import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
 
 const BENEFICIO_STATUS_COLORS = {
   solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
@@ -762,6 +766,41 @@ function contractLabel(typeId) {
   return RH_CONTRACT_TYPES.find((c) => c.id === typeId)?.label || typeId || "—";
 }
 
+// Rótulos/cores de status já-em-português usados por Cargos & Salários
+// (rh_movimentacoes), Solicitações de Atualização e Férias — enums fixos,
+// diferente de Avaliação/Treinamentos, que rodam sobre etapa configurável
+// (rh_pipeline_stages) e por isso não têm um enum estável pra mapear aqui.
+const GENERIC_STATUS_LABELS = {
+  concluido: "Concluído", rascunho: "Rascunho", pendente: "Pendente", aprovado: "Aprovado",
+  recusado: "Recusado", rejeitado: "Rejeitado", solicitado: "Solicitado", ativo: "Ativo", cancelado: "Cancelado",
+};
+const GENERIC_STATUS_TONE = {
+  concluido:  { bg: "var(--success-bg)", color: "var(--success)" },
+  aprovado:   { bg: "var(--success-bg)", color: "var(--success)" },
+  ativo:      { bg: "var(--success-bg)", color: "var(--success)" },
+  pendente:   { bg: "var(--warning-bg)", color: "var(--warning)" },
+  solicitado: { bg: "var(--warning-bg)", color: "var(--warning)" },
+  rascunho:   { bg: "var(--warning-bg)", color: "var(--warning)" },
+  recusado:   { bg: "var(--danger-bg)",  color: "var(--danger)" },
+  rejeitado:  { bg: "var(--danger-bg)",  color: "var(--danger)" },
+  cancelado:  { bg: "var(--surface-alt)", color: "var(--text-dim)" },
+};
+function genericStatusBadge(value) {
+  if (!value) return { label: "—", bg: "var(--surface-alt)", color: "var(--text-dim)" };
+  const label = GENERIC_STATUS_LABELS[value] || value.replace(/_/g, " ").replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+  const tone = GENERIC_STATUS_TONE[value] || { bg: "var(--surface-alt)", color: "var(--text-dim)" };
+  return { label, ...tone };
+}
+
+// Mesma regra de 3 baldes já usada em RHTreinamentosView (atribuicaoStatusInfo)
+// pro status de rh_treinamento_atribuicoes — vencido/concluído têm cor própria,
+// qualquer outra etapa configurável cai em "Pendente".
+function treinamentoStatusBadge(status) {
+  if (status === "vencido") return { label: "Vencido", bg: "var(--danger-bg)", color: "var(--danger)" };
+  if (status === "concluido") return { label: "Concluído", bg: "var(--success-bg)", color: "var(--success)" };
+  return { label: "Pendente", bg: "var(--warning-bg)", color: "var(--warning)" };
+}
+
 // ── sub-components ────────────────────────────────────────────────────────────
 
 function Avatar({ user, size = 36 }) {
@@ -812,7 +851,11 @@ function StatusBadge({ statusId }) {
 
 // ── Employee Detail Modal ─────────────────────────────────────────────────────
 
-function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, onClose, currentUser }) {
+function EmployeeDetailModal({
+  user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, onClose, currentUser,
+  onOpenAvaliacao, onOpenMovimentacao, onOpenTreinamento, onOpenFerias,
+}) {
+  const [activeTab, setActiveTab] = useState("dados");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState(null);
@@ -859,18 +902,108 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
     ? avisoPrevioEstimadoDias(colaboradorRow.admissionDate, colaboradorRow.desligamentoDate)
     : null;
 
-  useEffect(() => {
-    const h = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
-
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
-  const userLeads = useMemo(
-    () => leads.filter((l) => l.owner === user.id),
-    [leads, user.id]
-  );
+  const connections = useColaboradorConnections(colaboradorRow?.id);
+
+  const connectionGroups = useMemo(() => {
+    const d = connections.data || {};
+    return [
+      {
+        key: "avaliacoes",
+        label: "Avaliação de Desempenho",
+        color: "#7C3AED",
+        items: d.avaliacoes || [],
+        renderItem: (item) => {
+          const badge = genericStatusBadge(item.status);
+          const periodo = `${fmt(item.period_start)} – ${fmt(item.period_end)}`;
+          const nota = item.final_rating != null ? ` · Nota final: ${item.final_rating}` : "";
+          return {
+            title: cicloTipoLabel(item.tipo) || item.cycle || "Avaliação",
+            badgeLabel: badge.label, badgeBg: badge.bg, badgeColor: badge.color,
+            meta: `${periodo}${nota}`,
+          };
+        },
+        onOpenItem: (item) => onOpenAvaliacao?.(item.id),
+      },
+      {
+        key: "movimentacoes",
+        label: "Cargos & Salários",
+        color: "#D97706",
+        items: d.movimentacoes || [],
+        renderItem: (item) => {
+          const badge = genericStatusBadge(item.status);
+          return {
+            title: item.cargo_novo ? `${item.tipo} → ${item.cargo_novo}` : item.tipo,
+            badgeLabel: badge.label, badgeBg: badge.bg, badgeColor: badge.color,
+            meta: fmt(item.effective_date),
+          };
+        },
+        onOpenItem: (item) => onOpenMovimentacao?.(item.id),
+      },
+      {
+        key: "treinamentos",
+        label: "Treinamentos",
+        color: "#2563EB",
+        items: d.treinamentos || [],
+        renderItem: (item) => {
+          const badge = treinamentoStatusBadge(item.status);
+          return {
+            title: item.titulo,
+            badgeLabel: badge.label, badgeBg: badge.bg, badgeColor: badge.color,
+            meta: item.data_conclusao ? fmt(item.data_conclusao) : "Em andamento",
+          };
+        },
+        onOpenItem: (item) => onOpenTreinamento?.(item.id),
+      },
+      {
+        key: "beneficios",
+        label: "Benefícios",
+        color: "#16A34A",
+        items: d.beneficios || [],
+        renderItem: (item) => {
+          const tone = BENEFICIO_STATUS_COLORS[item.status] || { bg: "var(--surface-alt)", text: "var(--text-dim)" };
+          return {
+            title: item.nome,
+            badgeLabel: BENEFICIO_STATUS_LABELS[item.status] || item.status || "—",
+            badgeBg: tone.bg, badgeColor: tone.text,
+            meta: item.valor != null ? formatBRL(item.valor) : null,
+          };
+        },
+        onOpenItem: () => setActiveTab("beneficios"),
+      },
+      {
+        key: "solicitacoes",
+        label: "Solicitações de Atualização",
+        color: "#64748B",
+        items: d.solicitacoes || [],
+        renderItem: (item) => {
+          const badge = genericStatusBadge(item.status);
+          return {
+            title: UPDATE_REQUEST_FIELD_LABELS[item.field] || item.field,
+            badgeLabel: badge.label, badgeBg: badge.bg, badgeColor: badge.color,
+            meta: fmt(item.created_at),
+          };
+        },
+        onOpenItem: () => setActiveTab("solicitacoes"),
+      },
+      {
+        key: "ferias",
+        label: "Férias & Licenças",
+        color: "#EA580C",
+        items: d.ferias || [],
+        renderItem: (item) => {
+          const badge = genericStatusBadge(item.status);
+          return {
+            title: RH_LEAVE_TYPES.find((t) => t.id === item.type)?.label || item.type || "Férias",
+            badgeLabel: badge.label, badgeBg: badge.bg, badgeColor: badge.color,
+            meta: `${fmt(item.start_date)} – ${fmt(item.end_date)}`,
+          };
+        },
+        onOpenItem: (item) => onOpenFerias?.(item.id),
+      },
+    ];
+  }, [connections.data, onOpenAvaliacao, onOpenMovimentacao, onOpenTreinamento, onOpenFerias]);
 
   const handleSave = async () => {
     for (const [key, label] of REQUIRED_FIELDS) {
@@ -967,100 +1100,66 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
   const focusBlue = (e) => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = (e) => { e.target.style.borderColor = "var(--border-strong)"; };
 
+  const initials =
+    user.initials ||
+    (user.name || "")
+      .split(" ")
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+
+  const tabs = [
+    { id: "dados", label: "Dados" },
+    { id: "beneficios", label: "Benefícios" },
+    { id: "assinatura", label: "Assinatura" },
+    { id: "solicitacoes", label: "Solicitações" },
+    { id: "conexoes", label: "Conexões" },
+  ];
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "var(--overlay-scrim)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: "var(--surface)",
-          borderRadius: 16,
-          width: "100%",
-          maxWidth: 560,
-          boxShadow: "var(--shadow-pop)",
-          maxHeight: "90vh",
-          overflowY: "auto",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
+    <EntityProfileModal
+      open
+      onClose={onClose}
+      avatarLabel={initials}
+      avatarColor={user.avatarBg || "var(--color-industria)"}
+      title={user.name || user.email}
+      subtitle={user.email}
+      statusBadge={
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <StatusBadge statusId={user.employee_status || "ativo"} />
+          <FrenteBadge frente={user.frente} />
+        </div>
+      }
+      headerExtra={canWrite && !editing && (
+        <button
+          onClick={() => setEditing(true)}
           style={{
-            padding: "20px 24px 16px",
-            borderBottom: "1px solid var(--border)",
+            background: "var(--accent-tint)",
+            border: "none",
+            color: "var(--accent)",
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 14,
+            gap: 5,
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 16%, transparent)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent-tint)"; }}
         >
-          <Avatar user={user} size={48} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>
-              {user.name || user.email}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>
-              {user.email}
-            </div>
-            <div style={{ marginTop: 6, display: "flex", gap: 6, alignItems: "center" }}>
-              <StatusBadge statusId={user.employee_status || "ativo"} />
-              <FrenteBadge frente={user.frente} />
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {canWrite && !editing && (
-              <button
-                onClick={() => setEditing(true)}
-                style={{
-                  background: "var(--accent-tint)",
-                  border: "none",
-                  color: "var(--accent)",
-                  borderRadius: 8,
-                  padding: "6px 12px",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 16%, transparent)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent-tint)"; }}
-              >
-                <Pencil size={13} /> Editar
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                color: "var(--text-dim)",
-                padding: 6,
-                borderRadius: 8,
-                display: "flex",
-                alignItems: "center",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div style={{ padding: "20px 24px 24px" }}>
+          <Pencil size={13} /> Editar
+        </button>
+      )}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      width={560}
+    >
+      {activeTab === "dados" && (
+        <>
           {/* HR Fields */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
@@ -1286,54 +1385,7 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
           </div>
 
           {colaboradorRow && (
-            <BeneficiosSection colaboradorId={colaboradorRow.id} canWrite={canWrite} currentUser={currentUser} />
-          )}
-
-          {colaboradorRow && (
-            <SignatureSection colaboradorRow={colaboradorRow} canWrite={canWrite} />
-          )}
-
-          {colaboradorRow && (
-            <SolicitacoesAtualizacaoSection colaboradorId={colaboradorRow.id} canWrite={canWrite} />
-          )}
-
-          {colaboradorRow && (
             <DocumentosSection colaboradorId={colaboradorRow.id} canWrite={canWrite} currentUser={currentUser} />
-          )}
-
-          {/* CRM metrics */}
-          {userLeads.length > 0 && (
-            <div
-              style={{
-                borderRadius: 12,
-                border: "1px solid var(--border)",
-                padding: "14px 16px",
-                background: "var(--surface-alt)",
-                marginBottom: 20,
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: 12, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                <BarChart2 size={13} /> Métricas CRM
-              </div>
-              <div style={{ display: "flex", gap: 24 }}>
-                <div>
-                  <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
-                    Leads atribuídos
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
-                    {userLeads.length}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 10, color: "var(--text-dim)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
-                    Em andamento
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>
-                    {userLeads.filter((l) => !["perdido", "ganho"].includes(l.stage)).length}
-                  </div>
-                </div>
-              </div>
-            </div>
           )}
 
           {error && (
@@ -1389,9 +1441,39 @@ function EmployeeDetailModal({ user, leads = [], canWrite, onUpdateUser, colabor
               </button>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+
+      {activeTab === "beneficios" && (
+        colaboradorRow
+          ? <BeneficiosSection colaboradorId={colaboradorRow.id} canWrite={canWrite} currentUser={currentUser} />
+          : <div className="text-xs" style={{ color: "var(--text-faint)" }}>Nenhum colaborador vinculado.</div>
+      )}
+
+      {activeTab === "assinatura" && (
+        colaboradorRow
+          ? <SignatureSection colaboradorRow={colaboradorRow} canWrite={canWrite} />
+          : <div className="text-xs" style={{ color: "var(--text-faint)" }}>Nenhum colaborador vinculado.</div>
+      )}
+
+      {activeTab === "solicitacoes" && (
+        colaboradorRow
+          ? <SolicitacoesAtualizacaoSection colaboradorId={colaboradorRow.id} canWrite={canWrite} />
+          : <div className="text-xs" style={{ color: "var(--text-faint)" }}>Nenhum colaborador vinculado.</div>
+      )}
+
+      {activeTab === "conexoes" && (
+        colaboradorRow
+          ? (
+            <ConnectionsPanel
+              groups={connectionGroups}
+              loading={connections.loading}
+              introText="Tudo que está vinculado a este colaborador em outras telas da plataforma."
+            />
+          )
+          : <div className="text-xs" style={{ color: "var(--text-faint)" }}>Nenhum colaborador vinculado.</div>
+      )}
+    </EntityProfileModal>
   );
 }
 
@@ -1405,6 +1487,10 @@ export function RHFuncionariosView({
   canWrite,
   initialSelectedEmployeeId,
   onInitialEmployeeConsumed,
+  onOpenAvaliacao,
+  onOpenMovimentacao,
+  onOpenTreinamento,
+  onOpenFerias,
 }) {
   const { colaboradores, loading, createColaborador, updateColaborador } = useRHColaboradores({ userId: currentUser?.id });
   const [search, setSearch]         = useState("");
@@ -2086,6 +2172,10 @@ export function RHFuncionariosView({
           onUpdateColaborador={updateColaborador}
           onClose={() => setSelected(null)}
           currentUser={currentUser}
+          onOpenAvaliacao={onOpenAvaliacao}
+          onOpenMovimentacao={onOpenMovimentacao}
+          onOpenTreinamento={onOpenTreinamento}
+          onOpenFerias={onOpenFerias}
         />
       )}
 

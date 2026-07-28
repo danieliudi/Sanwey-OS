@@ -1092,6 +1092,7 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
 function TreinamentoBoardModal({
   treinamento, atribuicoes, allAtribuicoes, colaboradoresById, canWrite, currentUser, users,
   onChangeStage, onUpdateCustomFields, onUpdateCertificado, onReciclar, onAddActivity, onUpdateActivity, onClose, notifyMentions, onDelete,
+  initialDrawerId, onInitialDrawerIdConsumed,
 }) {
   const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("treinamentos");
   const stageFields = useRHStageFields("treinamentos");
@@ -1130,6 +1131,12 @@ function TreinamentoBoardModal({
     setMoveError(null);
     if (drawerId) markViewed(drawerId);
   }, [drawerId]);
+
+  useEffect(() => {
+    if (!initialDrawerId) return;
+    setDrawerId(initialDrawerId);
+    onInitialDrawerIdConsumed?.();
+  }, [initialDrawerId, onInitialDrawerIdConsumed]);
 
   const byStage = useMemo(() => {
     const map = {};
@@ -1415,7 +1422,7 @@ function TreinamentoBoardModal({
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = [], notifyMentions }) {
+export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = [], notifyMentions, initialSelectedTreinamentoAtribuicaoId, onInitialTreinamentoAtribuicaoConsumed }) {
   const {
     treinamentos, atribuicoes, loading: loadingTreinamentos, createTreinamento, updateTreinamento,
     assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado,
@@ -1427,6 +1434,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
   const [editingTreinamento, setEditingTreinamento] = useState(null);
   const [atribuindoTo, setAtribuindoTo] = useState(null);
   const [boardTreinamento, setBoardTreinamento] = useState(null);
+  const [boardInitialDrawerId, setBoardInitialDrawerId] = useState(null);
   const [expanded, setExpanded]         = useState(new Set());
   const [catalogQuery, setCatalogQuery] = useState("");
 
@@ -1447,6 +1455,21 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
     () => meuColaborador ? atribuicoes.filter(a => a.colaborador_id === meuColaborador.id) : [],
     [atribuicoes, meuColaborador]
   );
+
+  // Vem do painel de Conexões do Colaborador — a atribuição vive dentro do
+  // quadro do treinamento, não solta na tela principal. Abre o quadro do
+  // treinamento dono da atribuição e pede pra ele abrir o drawer dela assim
+  // que montar (ver TreinamentoBoardModal abaixo).
+  useEffect(() => {
+    if (!initialSelectedTreinamentoAtribuicaoId || loadingTreinamentos) return;
+    const atrib = atribuicoes.find(a => a.id === initialSelectedTreinamentoAtribuicaoId);
+    const treinamento = atrib ? treinamentos.find(t => t.id === atrib.treinamento_id) : null;
+    if (treinamento) {
+      setBoardTreinamento(treinamento);
+      setBoardInitialDrawerId(atrib.id);
+    }
+    onInitialTreinamentoAtribuicaoConsumed?.();
+  }, [initialSelectedTreinamentoAtribuicaoId, loadingTreinamentos, atribuicoes, treinamentos, onInitialTreinamentoAtribuicaoConsumed]);
 
   const filteredTreinamentos = useMemo(() => {
     const q = catalogQuery.trim().toLowerCase();
@@ -1664,9 +1687,11 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           onReciclar={reciclarAtribuicao}
           onAddActivity={addAtribuicaoActivity}
           onUpdateActivity={updateAtribuicaoActivity}
-          onClose={() => setBoardTreinamento(null)}
+          onClose={() => { setBoardTreinamento(null); setBoardInitialDrawerId(null); }}
           notifyMentions={notifyMentions}
           onDelete={deleteAtribuicao}
+          initialDrawerId={boardInitialDrawerId}
+          onInitialDrawerIdConsumed={() => setBoardInitialDrawerId(null)}
         />
       )}
     </div>

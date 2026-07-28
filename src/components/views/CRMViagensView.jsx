@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Plane, Users, BarChart3, Calculator } from "lucide-react";
 import { CRMViagensPlanejamentoView } from "./CRMViagensPlanejamentoView";
 import { CRMViagensGestorView } from "./CRMViagensGestorView";
@@ -12,7 +12,7 @@ const MANAGER_ROLES = new Set(["gerente", "admin"]);
 // Orquestrador por papel: vendedor/consultor só planejam as próprias
 // viagens; gerente também planeja as próprias E gerencia o time (por isso
 // aparece nas duas abas); admin só gerencia (não tem viagens próprias).
-export function CRMViagensView({ currentUser, leads, users, pushNotification }) {
+export function CRMViagensView({ currentUser, clients, onCreateClient, users, pushNotification, initialSelectedViagemId, onInitialViagemConsumed }) {
   // roles[] cobre cargo adicional (ex: vendedor como cargo secundário) —
   // currentUser.role sozinho (cargo principal) fica só de fallback.
   const userRoleList = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
@@ -29,6 +29,21 @@ export function CRMViagensView({ currentUser, leads, users, pushNotification }) 
 
   const [tab, setTab] = useState(tabs[0]?.id || null);
   const activeTab = tabs.some((t) => t.id === tab) ? tab : tabs[0]?.id;
+
+  // Vem do painel de Conexões do Cliente — uma viagem pode ter sido registrada
+  // por qualquer vendedor, não só o usuário logado. Gestor tem "Gestão" (vê o
+  // time inteiro) e é quem consome o id aqui mesmo, já que essa aba não abre
+  // detalhe por id; vendedor comum só tem "Minhas viagens", que consome o id
+  // por conta própria (e simplesmente não acha se for de outro vendedor).
+  useEffect(() => {
+    if (!initialSelectedViagemId) return;
+    if (isGestor) {
+      setTab("gestao");
+      onInitialViagemConsumed?.();
+    } else if (podePlanejarPropria) {
+      setTab("minhas");
+    }
+  }, [initialSelectedViagemId]);
 
   if (tabs.length === 0) {
     return (
@@ -79,7 +94,16 @@ export function CRMViagensView({ currentUser, leads, users, pushNotification }) 
         </div>
       )}
 
-      {activeTab === "minhas" && <CRMViagensPlanejamentoView currentUser={currentUser} leads={leads} pushNotification={pushNotification} />}
+      {activeTab === "minhas" && (
+        <CRMViagensPlanejamentoView
+          currentUser={currentUser}
+          clients={clients}
+          onCreateClient={onCreateClient}
+          pushNotification={pushNotification}
+          initialSelectedViagemId={initialSelectedViagemId}
+          onInitialViagemConsumed={onInitialViagemConsumed}
+        />
+      )}
       {activeTab === "gestao" && <CRMViagensGestorView currentUser={currentUser} users={users} />}
       {activeTab === "relatorios" && <CRMViagensRelatoriosView currentUser={currentUser} users={users} />}
       {activeTab === "calculadora" && <CRMViagensCalculadoraView />}
