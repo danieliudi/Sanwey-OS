@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, AlertCircle, ExternalLink, Trash2, Settings, LayoutGrid, TrendingUp } from "lucide-react";
+import { Plus, X, AlertCircle, ExternalLink, Trash2, Settings, LayoutGrid, TrendingUp, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -342,6 +342,229 @@ function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, users
   );
 }
 
+// ── Tabela (mesmo molde de DeliverableTableView em EntregasView.jsx) ────────
+
+function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Cliente", "Valor", "Etapa", "Responsáveis", "Há quanto tempo na etapa"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {cases.length === 0 && (
+            <tr><td colSpan={5} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhum caso encontrado.</td></tr>
+          )}
+          {cases.map(kase => {
+            const stage  = stages.find(s => s.stageKey === kase.stage);
+            const color  = stage?.color || "var(--text-dim)";
+            const owners = (kase.ownerIds || []).map(id => usersById.get(id)).filter(Boolean);
+            const days   = daysInStage(kase.stageChangedAt);
+            return (
+              <tr key={kase.id} onClick={() => onRowClick(kase)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)", maxWidth: 220 }}>
+                  <div className="truncate">{kase.clientName}</div>
+                </td>
+                <td className="px-4 py-3 text-xs font-semibold" style={{ color: "#15803D" }}>{formatK(kase.value)}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                    {stage?.name || kase.stage}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  {owners.length > 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <AvatarStack users={owners} size={20} max={3} />
+                      <span className="text-xs truncate" style={{ color: "var(--text-dim)", maxWidth: 100 }}>{owners[0].name}</span>
+                    </div>
+                  ) : <span className="text-xs" style={{ color: "var(--text-dim)" }}>—</span>}
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
+                  {kase.stageChangedAt ? `${days} dia${days !== 1 ? "s" : ""}` : "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Calendário (mesmo molde de DeliverableCalendarView em EntregasView.jsx) ──
+
+const CAL_MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const CAL_DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const CAL_MAX_VISIBLE = 3;
+
+function calStartOfDay(d) {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+function calAddDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+function calDayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Pós-venda não tem prazo próprio (ver use-posvenda.js — só value/companyId/
+// ownerIds/stage/stageChangedAt) — cada caso é posicionado no dia em que
+// entrou na etapa atual (stageChangedAt), decisão já fechada com o Daniel.
+function PosVendaCalendarView({ cases, stages, onSelect }) {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const today = useMemo(() => calStartOfDay(new Date()), []);
+
+  const prevMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  const goToday   = () => { const n = new Date(); setCurrentMonth(new Date(n.getFullYear(), n.getMonth(), 1)); };
+
+  const weeks = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay  = new Date(year, month + 1, 0);
+    const gridStart = new Date(firstDay);
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+    const weeksArr = [];
+    let curr = new Date(gridStart);
+    while (curr <= lastDay || weeksArr.length < 4) {
+      const week = [];
+      for (let i = 0; i < 7; i++) { week.push(new Date(curr)); curr = calAddDays(curr, 1); }
+      weeksArr.push(week);
+      if (weeksArr.length >= 6) break;
+    }
+    return weeksArr;
+  }, [currentMonth]);
+
+  const { byDay, noDateCount } = useMemo(() => {
+    const map = new Map();
+    let noDate = 0;
+    cases.forEach(kase => {
+      if (!kase.stageChangedAt) { noDate++; return; }
+      const key = calDayKey(calStartOfDay(new Date(kase.stageChangedAt)));
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(kase);
+    });
+    return { byDay: map, noDateCount: noDate };
+  }, [cases]);
+
+  const currentMonthNum = currentMonth.getMonth();
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="font-bold" style={{ fontSize: 20, color: "var(--text)", letterSpacing: "-0.01em" }}>
+            {CAL_MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+          </h2>
+          <button onClick={goToday} className="text-xs px-2.5 py-1 rounded-lg border font-medium"
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}>
+            Hoje
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={prevMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={nextMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+        <div className="grid grid-cols-7" style={{ borderBottom: "1px solid var(--border)" }}>
+          {CAL_DAY_SHORT.map((d, i) => (
+            <div key={d} className="text-center py-2 text-xs font-semibold" style={{ color: "var(--text-dim)", borderRight: i < 6 ? "1px solid var(--border)" : "none" }}>
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7" style={{ borderBottom: wi < weeks.length - 1 ? "1px solid var(--border)" : "none" }}>
+            {week.map((day, di) => {
+              const isCurrentMonth = day.getMonth() === currentMonthNum;
+              const isToday = day.getTime() === today.getTime();
+              const isWeekend = di === 0 || di === 6;
+              const items = byDay.get(calDayKey(day)) || [];
+              const visible = items.slice(0, CAL_MAX_VISIBLE);
+              const overflow = items.length - visible.length;
+              return (
+                <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
+                  <div className="flex justify-center mb-1">
+                    <span className="flex items-center justify-center text-xs font-semibold select-none"
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      {day.getDate()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {visible.map(kase => {
+                      const stage = stages.find(s => s.stageKey === kase.stage);
+                      const color = stage?.color || "var(--text-dim)";
+                      return (
+                        <button
+                          key={kase.id}
+                          onClick={() => onSelect(kase)}
+                          title={kase.clientName}
+                          className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                        >
+                          {kase.clientName}
+                        </button>
+                      );
+                    })}
+                    {overflow > 0 && (
+                      <span style={{ fontSize: 10, color: "var(--text-dim)", paddingLeft: 4 }}>+{overflow} mais</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
+        <span className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>Etapas:</span>
+        {stages.map(s => (
+          <div key={s.stageKey} className="flex items-center gap-1.5">
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
+            <span className="text-xs" style={{ color: "var(--text-dim)" }}>{s.name}</span>
+          </div>
+        ))}
+      </div>
+
+      {noDateCount > 0 && (
+        <p className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
+          {noDateCount} caso{noDateCount > 1 ? "s" : ""} sem data de entrada na etapa não {noDateCount > 1 ? "aparecem" : "aparece"} nesta visão — confira na Tabela ou no Kanban.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── Nova etapa (local ao arquivo — mesmo molde de EntregasView.jsx/
 // MarketingView.jsx: "Editar etapas" saiu do header, criar etapa agora é
 // isso aqui, e renomear/recolorir/excluir uma já existente vive dentro de
@@ -491,7 +714,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const [draggedColumnKey, setDraggedColumnKey] = useState(null);
   const [editingFieldsStage, setEditingFieldsStage] = useState(null); // { stageKey, name }
   const [selectedCase, setSelectedCase] = useState(null);
-  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "analytics"
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
 
   const trailingRef = useRef(null);
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
@@ -601,6 +824,8 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
             <div className="flex items-center gap-2 flex-wrap">
               <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
                 <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" />
+                <ViewToggleButton active={viewMode === "table"} onClick={() => setViewMode("table")} icon={List} label="Tabela" />
+                <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
                 <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
               </div>
               {isManager && accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
@@ -631,6 +856,23 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
 
         {viewMode === "kanban" && firstNonTerminalStage && (
           <KanbanFab label="Novo caso" flush onClick={() => setCreateModalStage(firstNonTerminalStage)} />
+        )}
+
+        {viewMode === "table" && (
+          <PosVendaTableView
+            cases={scopedCases}
+            stages={stages}
+            usersById={usersById}
+            onRowClick={setSelectedCase}
+          />
+        )}
+
+        {viewMode === "calendar" && (
+          <PosVendaCalendarView
+            cases={scopedCases}
+            stages={stages}
+            onSelect={setSelectedCase}
+          />
         )}
 
         {viewMode === "analytics" && (

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Package, Globe2, Plus, X, Settings2, LayoutGrid, List, TrendingUp,
-  Calculator, AlertCircle, Check, DollarSign,
+  Calculator, AlertCircle, Check, DollarSign, CalendarDays, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useComexImportOperations } from "../../hooks/use-comex-import-operations";
@@ -592,6 +592,171 @@ function ComexTableView({ operations, stages, columns, onRowClick }) {
   );
 }
 
+// ── Calendário (mesmo molde de DeliverableCalendarView em EntregasView.jsx —
+// Comex não tem data-limite própria hoje, então cada operação é posicionada
+// no dia em que entrou na etapa atual, stageChangedAt) ─────────────────────
+
+const CAL_MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const CAL_DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const CAL_MAX_VISIBLE = 3;
+
+function calStartOfDay(d) {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+function calAddDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+function calDayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function ComexCalendarView({ operations, stages, onSelect }) {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const today = useMemo(() => calStartOfDay(new Date()), []);
+
+  const prevMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  const goToday   = () => { const n = new Date(); setCurrentMonth(new Date(n.getFullYear(), n.getMonth(), 1)); };
+
+  const weeks = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay  = new Date(year, month + 1, 0);
+    const gridStart = new Date(firstDay);
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+    const weeksArr = [];
+    let curr = new Date(gridStart);
+    while (curr <= lastDay || weeksArr.length < 4) {
+      const week = [];
+      for (let i = 0; i < 7; i++) { week.push(new Date(curr)); curr = calAddDays(curr, 1); }
+      weeksArr.push(week);
+      if (weeksArr.length >= 6) break;
+    }
+    return weeksArr;
+  }, [currentMonth]);
+
+  const { byDay, noDateCount } = useMemo(() => {
+    const map = new Map();
+    let noDate = 0;
+    operations.forEach(op => {
+      if (!op.stageChangedAt) { noDate++; return; }
+      const key = calDayKey(calStartOfDay(new Date(op.stageChangedAt)));
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(op);
+    });
+    return { byDay: map, noDateCount: noDate };
+  }, [operations]);
+
+  const currentMonthNum = currentMonth.getMonth();
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="font-bold" style={{ fontSize: 20, color: "var(--text)", letterSpacing: "-0.01em" }}>
+            {CAL_MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+          </h2>
+          <button onClick={goToday} className="text-xs px-2.5 py-1 rounded-lg border font-medium"
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}>
+            Hoje
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={prevMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={nextMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+        <div className="grid grid-cols-7" style={{ borderBottom: "1px solid var(--border)" }}>
+          {CAL_DAY_SHORT.map((d, i) => (
+            <div key={d} className="text-center py-2 text-xs font-semibold" style={{ color: "var(--text-dim)", borderRight: i < 6 ? "1px solid var(--border)" : "none" }}>
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7" style={{ borderBottom: wi < weeks.length - 1 ? "1px solid var(--border)" : "none" }}>
+            {week.map((day, di) => {
+              const isCurrentMonth = day.getMonth() === currentMonthNum;
+              const isToday = day.getTime() === today.getTime();
+              const isWeekend = di === 0 || di === 6;
+              const items = byDay.get(calDayKey(day)) || [];
+              const visible = items.slice(0, CAL_MAX_VISIBLE);
+              const overflow = items.length - visible.length;
+              return (
+                <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
+                  <div className="flex justify-center mb-1">
+                    <span className="flex items-center justify-center text-xs font-semibold select-none"
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      {day.getDate()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {visible.map(op => {
+                      const stage = findStage(stages, op.stage);
+                      const color = stage.color;
+                      return (
+                        <button
+                          key={op.id}
+                          onClick={() => onSelect(op)}
+                          title={op.title}
+                          className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                        >
+                          {op.title}
+                        </button>
+                      );
+                    })}
+                    {overflow > 0 && (
+                      <span style={{ fontSize: 10, color: "var(--text-dim)", paddingLeft: 4 }}>+{overflow} mais</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
+        <span className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>Etapas:</span>
+        {stages.map(s => (
+          <div key={s.id} className="flex items-center gap-1.5">
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
+            <span className="text-xs" style={{ color: "var(--text-dim)" }}>{s.name}</span>
+          </div>
+        ))}
+      </div>
+
+      {noDateCount > 0 && (
+        <p className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
+          {noDateCount} operaç{noDateCount > 1 ? "ões" : "ão"} sem data de mudança de etapa não {noDateCount > 1 ? "aparecem" : "aparece"} nesta visão — confira na Tabela ou no Kanban.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── Drawer de detalhe (genérico — parametrizado por renderLeftFields/
 // renderFormExtra, únicos pontos onde import/export realmente divergem) ────
 
@@ -867,7 +1032,7 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
   const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages(config.domain);
   const stageFieldsHook = useRHStageFields(config.domain);
 
-  const [viewMode, setViewMode]     = useState("kanban"); // "kanban" | "table" | "analytics"
+  const [viewMode, setViewMode]     = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
   const [showCreate, setShowCreate] = useState(false);
   const [busyId, setBusyId]         = useState(null);
   const [boardError, setBoardError] = useState(null);
@@ -1015,9 +1180,10 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-              <ViewToggleButton active={viewMode === "kanban"}    onClick={() => setViewMode("kanban")}    icon={LayoutGrid} label="Kanban" />
-              <ViewToggleButton active={viewMode === "table"}     onClick={() => setViewMode("table")}     icon={List}       label="Tabela" />
-              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
+              <ViewToggleButton active={viewMode === "kanban"}    onClick={() => setViewMode("kanban")}    icon={LayoutGrid}    label="Kanban" />
+              <ViewToggleButton active={viewMode === "table"}     onClick={() => setViewMode("table")}     icon={List}          label="Tabela" />
+              <ViewToggleButton active={viewMode === "calendar"}  onClick={() => setViewMode("calendar")}  icon={CalendarDays}  label="Calendário" />
+              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}    label="Análise" />
             </div>
             {canWrite && <Button size="sm" icon={Plus} onClick={() => setShowCreate(true)}>Nova operação</Button>}
           </div>
@@ -1048,6 +1214,8 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
         <EmptyState icon={Icon} title="Supabase não configurado" description="Configure as variáveis de ambiente para usar este módulo." />
       ) : viewMode === "table" ? (
         <ComexTableView operations={operations} stages={stages} columns={config.tableColumns} onRowClick={(o) => setDrawerOpId(o.id)} />
+      ) : viewMode === "calendar" ? (
+        <ComexCalendarView operations={operations} stages={stages} onSelect={(o) => setDrawerOpId(o.id)} />
       ) : viewMode === "analytics" ? (
         <KanbanAnalyticsPanel
           stages={analyticsStages}

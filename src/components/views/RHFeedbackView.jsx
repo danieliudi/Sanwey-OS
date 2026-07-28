@@ -101,40 +101,6 @@ function ratingColor(r) {
   return r >= 7 ? "var(--success)" : r >= 4 ? "var(--warning)" : "var(--danger)";
 }
 
-// Resumo no topo — mesmo padrão do ComplianceStats de Treinamentos, que
-// não tinha equivalente aqui (inconsistência de densidade informacional
-// entre as duas telas de RH mais correlatas).
-function AvaliacaoStats({ feedbacks }) {
-  const stats = useMemo(() => {
-    const ativos = feedbacks.filter((f) => f.status !== "concluido");
-    const atrasados = ativos.filter(isAtrasado);
-    const concluidos = feedbacks.filter((f) => f.status === "concluido");
-    const notas = concluidos.map((f) => f.final_rating).filter((n) => typeof n === "number");
-    const media = notas.length ? notas.reduce((a, b) => a + b, 0) / notas.length : null;
-    return { ativos: ativos.length, atrasados: atrasados.length, concluidos: concluidos.length, media };
-  }, [feedbacks]);
-
-  if (feedbacks.length === 0) return null;
-
-  const tiles = [
-    { label: "Ciclos ativos", value: stats.ativos, color: "var(--text)" },
-    { label: "Atrasados",     value: stats.atrasados, color: stats.atrasados > 0 ? "var(--danger)" : "var(--text)" },
-    { label: "Concluídos",    value: stats.concluidos, color: "var(--text)" },
-    { label: "Nota média",    value: stats.media != null ? stats.media.toFixed(1) : "—", color: ratingColor(stats.media) },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-      {tiles.map((t) => (
-        <div key={t.label} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "10px 14px", background: "var(--surface)" }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: t.color, lineHeight: 1 }}>{t.value}</div>
-          <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>{t.label}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function ratingScaleLabel(r) {
   if (r == null) return null;
   const n = Number(r);
@@ -1525,11 +1491,18 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
   // sem filtro de data) — substituído pela nota média de todos os ciclos
   // concluídos já carregados, mesma conta de AvaliacaoStats.media acima.
   const feedbackSpecificStats = useMemo(() => {
+    // Antes vivia numa faixa fixa acima do board (AvaliacaoStats, visível em
+    // toda view) — achado do vídeo, movido pra cá por decisão do Daniel.
+    const ativos = feedbacks.filter((f) => f.status !== "concluido");
+    const atrasados = ativos.filter(isAtrasado);
     const concluidos = feedbacks.filter((f) => f.status === "concluido");
     const notas = concluidos.map((f) => f.final_rating).filter((n) => typeof n === "number");
     const media = notas.length > 0 ? notas.reduce((a, b) => a + b, 0) / notas.length : null;
     const promovidos = feedbacks.filter((f) => f.desfecho === "promovido").length;
     return [
+      { label: "Ciclos ativos", value: String(ativos.length) },
+      { label: "Atrasados", value: String(atrasados.length) },
+      { label: "Concluídos", value: String(concluidos.length) },
       { label: "Nota média", value: media !== null ? media.toFixed(1) : "—" },
       { label: "Resultaram em promoção", value: String(promovidos) },
     ];
@@ -1644,8 +1617,6 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           </div>
         </div>
       </KanbanBoardHeader>
-
-      <AvaliacaoStats feedbacks={feedbacks} />
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
