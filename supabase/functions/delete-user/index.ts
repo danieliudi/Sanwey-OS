@@ -63,7 +63,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    await supabase.from("profiles").delete().eq("id", user_id);
+    const { error: profileErr } = await supabase.from("profiles").delete().eq("id", user_id);
+    if (profileErr) {
+      // FK sem ON DELETE (achado real: alguns created_by/changed_by de RH
+      // bloqueavam a exclusão aqui, e o erro era descartado — a função
+      // seguia pro auth.admin.deleteUser e reportava "success" mesmo com o
+      // profile intacto, deixando o usuário "meio-excluído" pra sempre.
+      const isFkViolation = profileErr.code === "23503" || /foreign key/i.test(profileErr.message || "");
+      return new Response(JSON.stringify({
+        error: isFkViolation
+          ? "Este usuário tem registros vinculados que impedem a exclusão. Tente novamente após a correção de schema, ou avise o time técnico."
+          : profileErr.message,
+      }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Remove também a conta no Supabase Auth — sem isso o e-mail fica "preso"
     // (o GoTrue recusa reenviar convite pra quem já tem conta, mesmo sem profile).

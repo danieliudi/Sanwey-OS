@@ -858,7 +858,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   nameFontWeight={700}
                   uppercase={false}
                   countFontSize={12}
-                  actions={isManager && !stage.terminal && (
+                  actions={isManager && (
                     <button
                       onClick={() => setEditingStage({ stage, companyId: colCompanyId })}
                       className="flex items-center justify-center rounded-md cursor-pointer transition-colors"

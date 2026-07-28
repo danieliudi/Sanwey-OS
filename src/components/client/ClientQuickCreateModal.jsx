@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { X, Building2, AlertTriangle } from "lucide-react";
 import { isValidCnpj } from "../../utils/field-validation";
+import { findClientByCnpj, DuplicateClientError } from "../../utils/client-dedup";
 
 // Mini-cadastro de cliente pra fluxos que só precisam de nome (+ CNPJ
 // opcional pra dedupe) — diferente do formulário completo de
@@ -13,21 +14,22 @@ import { isValidCnpj } from "../../utils/field-validation";
 //
 // Props:
 //   initialName    texto já digitado na busca do ClientSelector (opcional)
+//   initialCnpj    CNPJ já conhecido no contexto de origem (ex: lead.cnpj) —
+//                  pré-preenche e já dispara a checagem de duplicata na hora
+//   extra          campos extras a incluir na criação sem expor input pra
+//                  eles (ex: {city, state} vindos do lead de origem)
 //   clients        lista completa de clientes (pra checar duplicata)
-//   onCreate({name, cnpj}) -> Promise<client>  cria de fato (createClient do use-clients.js)
+//   onCreate({name, cnpj, ...extra}) -> Promise<client>  cria de fato (createClient do use-clients.js)
 //   onDone(client) chamado com o cliente resultante (criado OU já existente escolhido)
 //   onClose
-export function ClientQuickCreateModal({ initialName = "", clients = [], onCreate, onDone, onClose }) {
+export function ClientQuickCreateModal({ initialName = "", initialCnpj = "", extra = {}, clients = [], onCreate, onDone, onClose }) {
   const [name, setName] = useState(initialName);
-  const [cnpj, setCnpj] = useState("");
+  const [cnpj, setCnpj] = useState(initialCnpj);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   const cnpjDigits = cnpj.replace(/\D/g, "");
-  const duplicateMatch = useMemo(() => {
-    if (cnpjDigits.length !== 14) return null;
-    return clients.find(c => (c.cnpj || "").replace(/\D/g, "") === cnpjDigits) || null;
-  }, [cnpjDigits, clients]);
+  const duplicateMatch = useMemo(() => findClientByCnpj(clients, cnpjDigits), [cnpjDigits, clients]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,9 +39,10 @@ export function ClientQuickCreateModal({ initialName = "", clients = [], onCreat
     setSaving(true);
     setError(null);
     try {
-      const created = await onCreate({ name: name.trim(), cnpj: cnpjDigits || null });
+      const created = await onCreate({ name: name.trim(), cnpj: cnpjDigits || null, ...extra });
       onDone(created);
     } catch (err) {
+      if (err instanceof DuplicateClientError) { onDone(err.existingClient); return; }
       setError(err?.message || "Erro ao cadastrar cliente.");
     } finally {
       setSaving(false);
