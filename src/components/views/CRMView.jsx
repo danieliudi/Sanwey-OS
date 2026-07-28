@@ -7,7 +7,7 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
-import { Select } from "../ui/Select";
+import { Combobox } from "../shared/Combobox";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
 import { LeadFormBuilder } from "../lead/LeadFormBuilder";
@@ -641,17 +641,17 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           )}
           {isManager && (
             <div className="flex gap-2 w-full sm:w-auto">
-              <Select
+              <Combobox
                 value={ownerFilter}
-                onChange={e => setOwnerFilter(e.target.value)}
+                onChange={setOwnerFilter}
                 options={ownerOptions}
                 className="flex-1 min-w-0 sm:w-44"
                 size="sm"
               />
               {accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
-                <Select
+                <Combobox
                   value={activeCompany}
-                  onChange={e => onCompanyChange(e.target.value)}
+                  onChange={onCompanyChange}
                   options={[
                     { value: "all", label: "Todas as empresas" },
                     ...accessibleCompanies.filter(id => id !== "all").map(id => ({

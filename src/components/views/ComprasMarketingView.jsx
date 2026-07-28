@@ -112,7 +112,11 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
           )}
           {((onMoveToStage && moveTargets.length > 0) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
-              targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: STAGE_COLORS[s.id] }))}
+              targets={moveTargets.map(s => {
+                const list = stages || PURCHASE_STAGES;
+                const dir = list.findIndex(x => x.id === s.id) < list.findIndex(x => x.id === purchase.stage) ? "before" : "after";
+                return { key: s.id, name: s.name, color: STAGE_COLORS[s.id], direction: dir };
+              })}
               onMove={onMoveToStage ? (key) => onMoveToStage(purchase.id, key) : undefined}
               onOpenChange={setMenuOpen}
               onDelete={onDeleteCard ? () => onDeleteCard(purchase.id) : undefined}

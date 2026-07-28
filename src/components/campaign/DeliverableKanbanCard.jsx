@@ -113,7 +113,11 @@ function DeliverableKanbanCardImpl({
           )}
           {canWrite && ((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
-              targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
+              targets={moveTargets.map(s => {
+                const list = stages || DELIVERABLE_STAGES;
+                const dir = list.findIndex(x => x.id === s.id) < list.findIndex(x => x.id === item.stage) ? "before" : "after";
+                return { key: s.id, name: s.name, color: s.color, direction: dir };
+              })}
               onMove={onMoveToStage ? (key) => onMoveToStage(item.id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(item.id) : undefined}
               onDuplicate={onDuplicateCard ? () => onDuplicateCard(item.id) : undefined}
