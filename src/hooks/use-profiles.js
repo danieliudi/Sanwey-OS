@@ -152,7 +152,15 @@ export function useProfiles({ enabled = true } = {}) {
     if (err) {
       setError(err);
       fetchAll();
-      throw err;
+      // supabase-js não expõe o corpo JSON da edge function em err.message
+      // (só "Edge Function returned a non-2xx status code") — sem isso, o
+      // motivo real (ex: FK bloqueando a exclusão) nunca chegava no alert.
+      let message = err.message;
+      try {
+        const body = await err.context?.json?.();
+        if (body?.error) message = body.error;
+      } catch { /* mantém a mensagem genérica se o corpo não vier como JSON */ }
+      throw new Error(message);
     }
   }, [setFallbackUsers, fetchAll]);
 
