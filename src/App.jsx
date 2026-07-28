@@ -35,6 +35,7 @@ import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
 import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
+import { useMyColaborador } from "./hooks/use-my-colaborador";
 import { useCRMDespesas } from "./hooks/use-crm-despesas";
 import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim, contratoFornecedorDiasParaVencer } from "./utils/rh-compliance-dates";
 import { avaliacaoDiasParaProxima, cicloTipoLabel } from "./utils/rh-feedback-cycles";
@@ -445,14 +446,39 @@ export default function App() {
   // colaborador quando o prazo (period_end) do ciclo pendente está a até 3
   // dias de vencer (ou já venceu) e ele ainda não preencheu a nota dele.
   const { feedbacks: meusCiclosFeedback } = useRHFeedback({ enabled: Boolean(currentUser) });
-  const [meuColaboradorId, setMeuColaboradorId] = useState(null);
+  // A única policy de leitura em rh_colaboradores é RH-only + diretoria — não
+  // existe self-select desde 20260713_fix_rh_colaboradores_self_select_scope.sql
+  // (vazava salary/notes/document_path). Um select direto aqui sempre voltaria
+  // vazio pro colaborador comum; get_my_colaborador() (SECURITY DEFINER, lista
+  // de colunas fechada) é o único caminho que funciona — onboarding_stage foi
+  // adicionado a ela em 20260789_get_my_colaborador_onboarding_stage.sql
+  // exatamente pra decidir se o item "Onboarding" ainda faz sentido no menu de
+  // quem não é RH (ver bloco de navGroups mais abaixo).
+  const { meuColaborador } = useMyColaborador(currentUser);
+  const meuColaboradorId = meuColaborador?.id || null;
+  const meuOnboardingStage = meuColaborador?.onboardingStage || null;
+  // Etapas do domínio "onboarding" só pra saber quais stage_key são
+  // terminais (concluído/removido) — não é usado por quem já vê o Kanban de
+  // RH (que carrega isso por conta própria dentro de RHOnboardingView).
+  const [onboardingTerminalStageKeys, setOnboardingTerminalStageKeys] = useState(null);
   useEffect(() => {
-    if (!currentUser?.id || !isSupabaseConfigured) return;
+    if (!currentUser?.id || !isSupabaseConfigured || isRHUser || isDiretoria) return;
     let active = true;
-    supabase.from("rh_colaboradores").select("id").eq("profile_id", currentUser.id).maybeSingle()
-      .then(({ data }) => { if (active) setMeuColaboradorId(data?.id || null); });
+    supabase.from("rh_pipeline_stages").select("stage_key, terminal").eq("domain", "onboarding")
+      .then(({ data }) => {
+        if (!active) return;
+        setOnboardingTerminalStageKeys(new Set((data || []).filter((s) => s.terminal).map((s) => s.stage_key)));
+      });
     return () => { active = false; };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, isRHUser, isDiretoria]);
+  // true = onboarding concluído/removido, some do menu; false = ainda em
+  // andamento; null = não é onboarding (nunca teve cadastro de colaborador,
+  // ex.: usuário sem rh_colaboradores) ou dado ainda carregando — nesses
+  // casos o item continua visível (mesmo comportamento de hoje) pra não
+  // piscar/sumir por engano antes da resposta chegar.
+  const meuOnboardingConcluido = meuOnboardingStage && onboardingTerminalStageKeys
+    ? onboardingTerminalStageKeys.has(meuOnboardingStage)
+    : false;
   const feedbackPrazoVistoRef = useRef(new Set());
   useEffect(() => {
     if (!meuColaboradorId) return;
@@ -1254,7 +1280,11 @@ export default function App() {
       groups.push({
         label: "Meu Desenvolvimento",
         items: [
-          { id: "rh-onboarding",   label: "Onboarding",   icon: ClipboardCheck },
+          // Some sozinho quando a trilha do colaborador chega numa etapa
+          // terminal (concluído ou removido) — ver meuOnboardingConcluido
+          // acima. Enquanto não sabemos (carregando, ou nunca teve
+          // rh_colaboradores) o item continua visível, igual hoje.
+          ...(meuOnboardingConcluido ? [] : [{ id: "rh-onboarding", label: "Onboarding", icon: ClipboardCheck }]),
           { id: "rh-treinamentos", label: "Treinamentos", icon: GraduationCap },
           { id: "rh-feedback",     label: "Avaliação de Desempenho", icon: MessageSquareText },
         ],
@@ -1311,7 +1341,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuOnboardingConcluido]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {

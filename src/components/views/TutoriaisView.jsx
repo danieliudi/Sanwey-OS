@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Play, ChevronDown, ChevronUp, BookOpen, LifeBuoy, Zap, Bot, Copy, Check, ChevronRight, ArrowRight, Search } from "lucide-react";
 import { VIDEO_TUTORIALS, FAQ_ITEMS, AUTOMATION_GUIDE, AI_PROMPTS } from "../../data/tutorials";
+import { ROUTES } from "../../constants/routes";
 import { Tabs } from "../shared/Tabs";
 import { Card, CardGrid } from "../shared/Card";
 import { Badge } from "../ui/Badge";
@@ -11,6 +12,7 @@ const ROLE_LABEL = {
   admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor",
   marketing: "Marketing", gerente_marketing: "Gerente de Marketing",
   agencia: "Agência", rh: "RH", gerente_rh: "Gerente de RH",
+  comex: "Comex", diretoria: "Diretoria", portal: "Colaborador",
 };
 
 const TABS = [
@@ -38,9 +40,9 @@ function VideoCard({ video, onNavigate }) {
       <Card
         icon={<span style={{ fontSize: 18 }}>{video.quickStart.icon}</span>}
         title={video.title}
-        footer={video.description && onNavigate ? (
+        footer={video.description && video.routeId && ROUTES[video.routeId] && onNavigate ? (
           <button
-            onClick={() => onNavigate(video.description.toLowerCase().replace(/\s+/g, "-"))}
+            onClick={() => onNavigate(video.routeId)}
             className="inline-flex items-center gap-1 font-semibold"
             style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
@@ -275,8 +277,31 @@ function PromptCategorySection({ category }) {
 // ── Main view ─────────────────────────────────────────────────────────────────
 
 export function TutoriaisView({ currentUser, onNavigate }) {
-  const role = currentUser?.role || "vendedor";
-  const videos = VIDEO_TUTORIALS[role] || VIDEO_TUTORIALS.vendedor;
+  // Mesmo padrão de outras telas multi-cargo (AgentActionsView.jsx,
+  // CRMViagensView.jsx, RHFornecedoresView.jsx): `roles` é a fonte real desde
+  // a fundação de múltiplos cargos por usuário, `role` fica só de fallback.
+  const userRoleList = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
+  // Une os guias de TODOS os cargos do usuário, deduplicando por id — antes
+  // só o primeiro cargo era considerado. Sem fallback pra "vendedor": um
+  // papel sem bucket próprio (ex.: diretoria, portal) fica com a lista vazia
+  // de propósito — melhor mostrar "nenhum guia ainda" do que instrução pra
+  // uma tela que esse papel nem acessa (era o caso antes, ex. comex recebendo
+  // conteúdo de vendedor).
+  const videos = useMemo(() => {
+    const seen = new Set();
+    const merged = [];
+    for (const r of userRoleList) {
+      for (const v of (VIDEO_TUTORIALS[r] || [])) {
+        if (seen.has(v.id)) continue;
+        seen.add(v.id);
+        merged.push(v);
+      }
+    }
+    return merged;
+  }, [userRoleList]);
+  const roleLabel = userRoleList.length
+    ? userRoleList.map((r) => ROLE_LABEL[r] || r).join(" + ")
+    : "seu perfil";
   const [activeTab, setActiveTab] = useState("tutoriais");
   const [faqSearch, setFaqSearch] = useState("");
 
@@ -299,7 +324,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
           </h1>
         </div>
         <p className="text-sm" style={{ color: "var(--text-dim)" }}>
-          Conteúdo para <strong style={{ color: "var(--text)" }}>{ROLE_LABEL[role] || role}</strong> — aprenda a usar o CRM e a IA no seu dia a dia.
+          Conteúdo para <strong style={{ color: "var(--text)" }}>{roleLabel}</strong> — aprenda a usar o CRM e a IA no seu dia a dia.
         </p>
       </div>
 
@@ -434,7 +459,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
                 Pronto para criar sua primeira automação?
               </p>
               <p className="text-xs" style={{ color: "var(--text-dim)" }}>
-                Acesse o menu Automações para começar. Disponível para Gerentes e Admins.
+                Acesse o menu Automações para começar. Disponível para Gerentes, Admins e Gerentes de RH (no módulo de RH).
               </p>
             </div>
             <ChevronRight size={18} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
@@ -456,7 +481,7 @@ export function TutoriaisView({ currentUser, onNavigate }) {
                   Como usar o assistente de IA
                 </p>
                 <p className="text-sm leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                  Na tela de Negócios, clique em <strong style={{ color: "var(--text)" }}>"Perguntar à IA"</strong> para abrir o chat.
+                  Na tela do Funil de Vendas, clique em <strong style={{ color: "var(--text)" }}>"Perguntar à IA"</strong> para abrir o chat.
                   O assistente lê seu pipeline em tempo real e responde em linguagem natural.
                   Copie qualquer pergunta abaixo e cole no chat para começar.
                 </p>

@@ -913,19 +913,26 @@ function BulkTarefaModal({ colaboradores, onApply, onClose }) {
 function MeuChecklist({ colaborador, tarefas, onStatusChange }) {
   const total = tarefas.length;
   const done = tarefas.filter((t) => t.status === "concluida").length;
-  const progresso = total > 0 ? Math.round((done / total) * 100) : 0;
+  // Sem tarefa nenhuma não é "0%" (que fica preso pra sempre e nunca vira
+  // verde) — é "sem tarefas", igual ao card do RH (:286) e à tabela (:983).
+  // A barra/percentual só aparecem quando total > 0.
+  const progresso = total > 0 ? Math.round((done / total) * 100) : null;
 
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
       <div style={{ padding: "12px 16px", background: "var(--surface-alt)", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>{colaborador.fullName}</div>
-          <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{done}/{total} tarefas concluídas</div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{total > 0 ? `${done}/${total} tarefas concluídas` : "Sem tarefas"}</div>
         </div>
-        <div style={{ width: 80, height: 6, borderRadius: 99, background: "var(--border)", overflow: "hidden", flexShrink: 0 }}>
-          <div style={{ width: `${progresso}%`, height: "100%", background: progresso === 100 ? "var(--success)" : "var(--accent)" }} />
-        </div>
-        <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700, flexShrink: 0 }}>{progresso}%</span>
+        {total > 0 && (
+          <>
+            <div style={{ width: 80, height: 6, borderRadius: 99, background: "var(--border)", overflow: "hidden", flexShrink: 0 }}>
+              <div style={{ width: `${progresso}%`, height: "100%", background: progresso === 100 ? "var(--success)" : "var(--accent)" }} />
+            </div>
+            <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 700, flexShrink: 0 }}>{progresso}%</span>
+          </>
+        )}
       </div>
       <div style={{ padding: "4px 16px 8px" }}>
         {tarefas.map((t) => (
@@ -1372,6 +1379,15 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
 
   // ── Colaborador comum (sem acesso de RH): só o próprio checklist ──────────
   if (!isRHUser) {
+    // `colaboradores` (useRHColaboradores) não serve aqui: a única policy de
+    // leitura em rh_colaboradores é RH-only + diretoria, então pro
+    // colaborador comum esse array sempre vem vazio (não existe self-select
+    // desde 20260713_fix_rh_colaboradores_self_select_scope.sql). Por isso
+    // onboarding_stage foi adicionado à lista fechada de colunas de
+    // get_my_colaborador() (20260789_get_my_colaborador_onboarding_stage.sql)
+    // — vem direto em meuColaborador.
+    const minhaEtapa = meuColaborador ? findStage(stages, meuColaborador.onboardingStage) : null;
+    const onboardingConcluido = Boolean(minhaEtapa?.terminal);
     return (
       <div>
         <div className="flex items-center gap-2 mb-4">
@@ -1382,6 +1398,12 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
         ) : !meuColaborador ? (
           <EmptyState icon={ClipboardCheck} title="Nenhum checklist de onboarding pra você" description="Quando você entrar em um processo de onboarding, seu checklist aparecerá aqui." />
+        ) : onboardingConcluido ? (
+          // Etapa terminal (concluído ou removido) — o item já saiu do menu
+          // (ver navGroups em App.jsx), mas a rota continua acessível por
+          // link direto, então precisa de um estado próprio em vez de
+          // continuar mostrando a trilha como se ainda estivesse em curso.
+          <EmptyState icon={Check} title="Onboarding concluído" description="Sua trilha de onboarding já foi concluída — nada pendente por aqui." />
         ) : (
           <MeuChecklist
             colaborador={meuColaborador}

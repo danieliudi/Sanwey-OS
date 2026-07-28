@@ -4,8 +4,10 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 // Lê a própria linha de rh_colaboradores (a do profile logado) via a função
 // SECURITY DEFINER get_my_colaborador() — lista de colunas fechada de
 // propósito (sem salary/notes/document_path/desligamento_*, ver migration
-// 20260740_colaborador_portal_role.sql). Usado tanto pelas telas "próprias"
-// de onboarding/treinamentos/avaliação quanto pelo painel do colaborador.
+// 20260740_colaborador_portal_role.sql; onboarding_stage adicionado em
+// 20260789_get_my_colaborador_onboarding_stage.sql). Usado tanto pelas telas
+// "próprias" de onboarding/treinamentos/avaliação quanto pelo painel do
+// colaborador.
 export function useMyColaborador(currentUser) {
   const [meuColaborador, setMeuColaborador] = useState(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
@@ -40,6 +42,7 @@ export function useMyColaborador(currentUser) {
       employeeStatus: row.employee_status,
       frente: row.frente,
       profileId: row.profile_id,
+      onboardingStage: row.onboarding_stage,
     } : null);
     setLoading(false);
   }, [currentUser?.id]);

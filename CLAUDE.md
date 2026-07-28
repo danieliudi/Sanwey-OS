@@ -168,3 +168,33 @@ de decisão" no doc pra racional completo): densidade de card é toggle
 grade/lista controlado pelo usuário, não fixo por página nem única pra tudo;
 faixa de resumo (`StatCard`) no topo de toda página de catálogo com métrica
 óbvia; catálogo e seletor são uma variante só do mesmo componente de card.
+
+## 7. Ajuda & Tutoriais — atualizar junto, não depois
+
+Auditoria de 28/07/2026 achou `src/data/tutorials.js`/`TutoriaisView.jsx` bem
+atrás da plataforma: nenhum dos 30 botões "Ir para X" funcionava (derivava a
+rota do texto em português em vez de usar uma chave real), 3 guias mandavam
+pra telas que já tinham sido absorvidas por outra (Usuários, Construtor de
+pipeline, Histórico do funil), e 23 dos ~34 módulos não tinham guia nenhum.
+Causa raiz: nada no processo obriga atualizar tutorial quando uma tela nasce
+ou muda de nome — e `scripts/extract-changelog.mjs` (trailer `Changelog:` nos
+commits) só foi usado em 2 commits na história inteira, por isso o
+`src/data/changelog.js` também vive atrasado.
+
+**Regra**: toda tela nova, renomeada, ou com o fluxo principal mudado
+precisa, no mesmo commit:
+
+1. Ter (ou ganhar) uma entrada em `VIDEO_TUTORIALS` (`src/data/tutorials.js`)
+   com `routeId` apontando pra uma chave real de `src/constants/routes.js` —
+   nunca derive a rota do texto do título/descrição (foi exatamente esse bug
+   que deixou os 30 botões mortos).
+2. Se a tela substituiu outra (ex.: virou aba dentro de uma tela maior),
+   **reescrever** o guia antigo pro caminho novo — não deixar apontando pro
+   que não existe mais.
+3. Usar o trailer `Changelog: <frase em linguagem de usuário>` no commit —
+   é o que `scripts/extract-changelog.mjs` lê pra montar `src/data/changelog.js`
+   sem precisar curar à mão depois.
+
+Não é preciso escrever o guia com o mesmo capricho de uma spec de design —
+o objetivo é não regredir (nenhum guia órfão, nenhum botão morto), não
+cobertura perfeita a cada PR.
