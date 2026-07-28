@@ -1442,6 +1442,26 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
 
+  // Lista de atribuíveis do modal "Atribuir" — dois achados da auditoria de
+  // QA aqui: (1) a mesma pessoa aparecia 2x (um registro legado com
+  // profile_id NULL criado antes do trigger de sincronização, mais o
+  // registro sincronizado de verdade — dedup por nome+e-mail, preferindo o
+  // que tem profileId); (2) usuários com role "agencia" (Visitante) também
+  // ganham um rh_colaboradores pelo mesmo trigger e apareciam como opção
+  // atribuível, mas Visitante não deveria entrar em nada de funcionário.
+  const usersById = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
+  const assignableColaboradores = useMemo(() => {
+    const seen = new Map();
+    for (const c of colaboradores) {
+      const role = c.profileId ? usersById.get(c.profileId)?.role : null;
+      if (role === "agencia") continue;
+      const key = `${(c.fullName || "").trim().toLowerCase()}|${(c.email || "").trim().toLowerCase()}`;
+      const existing = seen.get(key);
+      if (!existing || (!existing.profileId && c.profileId)) seen.set(key, c);
+    }
+    return [...seen.values()];
+  }, [colaboradores, usersById]);
+
   const atribuicoesByTreinamento = useMemo(() => {
     const map = new Map();
     atribuicoes.forEach(a => {
@@ -1671,7 +1691,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           onClose={() => setEditingTreinamento(null)}
         />
       )}
-      {atribuindoTo && <AtribuirModal treinamento={atribuindoTo} colaboradores={colaboradores} onAssign={assignToUsers} onClose={() => setAtribuindoTo(null)} />}
+      {atribuindoTo && <AtribuirModal treinamento={atribuindoTo} colaboradores={assignableColaboradores} onAssign={assignToUsers} onClose={() => setAtribuindoTo(null)} />}
       {boardTreinamento && (
         <TreinamentoBoardModal
           treinamento={boardTreinamento}

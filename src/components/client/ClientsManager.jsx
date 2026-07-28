@@ -301,16 +301,16 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                   return (
                   <tr key={c.id} style={{ borderBottom: "1px solid #F1F1F1" }}>
                     <td style={{ padding: "12px", fontSize: 13 }}>
-                      {dealCount > 0 ? (
-                        <button onClick={() => openDetail(c, "conexoes")}
-                          className="font-semibold text-left inline-flex items-center gap-1"
-                          style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                          {c.name}
-                          <History size={12} />
-                        </button>
-                      ) : (
-                        <span className="font-semibold" style={{ color: "var(--text)" }}>{c.name}</span>
-                      )}
+                      {/* Nome sempre clicável, com ou sem negócio — antes só
+                          abria o perfil quando dealCount>0, deixando cliente
+                          sem negócio ainda sem nenhuma forma de abrir o
+                          próprio cadastro pelo nome (achado de usabilidade). */}
+                      <button onClick={() => openDetail(c, dealCount > 0 ? "conexoes" : "dados")}
+                        className="font-semibold text-left inline-flex items-center gap-1"
+                        style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                        {c.name}
+                        {dealCount > 0 && <History size={12} />}
+                      </button>
                     </td>
                     <td style={{ padding: "12px" }}><CategoryTag value={c.category} /></td>
                     <td style={{ padding: "12px", fontSize: 13, color: "var(--text)" }}>
@@ -373,16 +373,12 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                 <div key={c.id} className="rounded-lg border p-3" style={{ borderColor: "#E5E7EB" }}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      {dealCount > 0 ? (
-                        <button onClick={() => openDetail(c, "conexoes")}
-                          className="font-semibold text-left inline-flex items-center gap-1"
-                          style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 14 }}>
-                          {c.name}
-                          <History size={12} />
-                        </button>
-                      ) : (
-                        <div className="font-semibold" style={{ color: "var(--text)", fontSize: 14 }}>{c.name}</div>
-                      )}
+                      <button onClick={() => openDetail(c, dealCount > 0 ? "conexoes" : "dados")}
+                        className="font-semibold text-left inline-flex items-center gap-1"
+                        style={{ color: "var(--color-industria)", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 14 }}>
+                        {c.name}
+                        {dealCount > 0 && <History size={12} />}
+                      </button>
                       <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)" }}>
                         {[c.city, c.state].filter(Boolean).join(" / ") || "—"}
                       </div>

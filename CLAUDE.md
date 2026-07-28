@@ -79,16 +79,21 @@ funcional. Não tente "arrumar" isso proativamente.
 
 ## 3. Processo obrigatório pra qualquer mudança de UI/UX genuinamente nova
 
-**Mockup antes de mexer em produção.** Decidido com o Daniel em 28/07/2026:
-qualquer sugestão de mudança que altere algo **visualmente e/ou
-estruturalmente** na plataforma — reposicionar item de menu, redesenhar um
-componente, mudar layout de card/drawer, alterar como um dado é organizado
-na tela — precisa ser mostrada como mockup (Artifact ou imagem) **antes** de
-qualquer implementação, pra aprovação explícita. Vale tanto pra pedido
-espontâneo do Daniel quanto pra sugestão proativa da sessão. Bug fix puro
-(algo que já deveria funcionar e não funciona — filtro vazio que devia listar
-opções, etapa que não aparece onde deveria) não precisa de mockup; mudança de
-como algo se parece ou se organiza, precisa.
+**Mockup antes de mexer em produção.** Decidido com o Daniel em 28/07/2026,
+reforçado em 28/07/2026 ("Me mostre Mockup para TUDO"): qualquer sugestão de
+mudança que altere algo **visualmente e/ou estruturalmente** na plataforma —
+reposicionar item de menu, redesenhar um componente, mudar layout de
+card/drawer, alterar como um dado é organizado na tela — precisa ser mostrada
+como mockup (Artifact ou imagem) **antes** de qualquer implementação, pra
+aprovação explícita do Daniel. Vale tanto pra pedido espontâneo do Daniel
+quanto pra sugestão proativa da sessão. Na dúvida se algo conta como mudança
+visual/estrutural, o padrão é mostrar mockup — não decidir sozinho que "é
+pequeno o bastante pra pular". Bug fix puro (algo que já deveria funcionar e
+não funciona — filtro vazio que devia listar opções, etapa que não aparece
+onde deveria) não precisa de mockup por não mudar nada visível que já não
+fosse esse o comportamento esperado; mudança de como algo se parece ou se
+organiza, sempre precisa, mesmo que pareça pequena ou reaproveite um
+componente já existente.
 
 Pra tudo que não está nas listas acima (regra de negócio nova, tela nova,
 campo/comportamento específico do departamento) — siga o fluxo de 3 papéis
@@ -179,3 +184,24 @@ de decisão" no doc pra racional completo): densidade de card é toggle
 grade/lista controlado pelo usuário, não fixo por página nem única pra tudo;
 faixa de resumo (`StatCard`) no topo de toda página de catálogo com métrica
 óbvia; catálogo e seletor são uma variante só do mesmo componente de card.
+
+## 7. Nunca pausar por mensagem que chega no meio do trabalho
+
+Instrução do Daniel (28/07/2026), permanente pra toda sessão futura: quando
+uma mensagem nova chegar **no meio** de um trabalho já em andamento, a sessão
+nunca para o que está fazendo nem pausa esperando confirmação. Duas opções,
+na ordem de preferência:
+
+1. Se der pra paralelizar (agente em background, ou uma edição rápida e
+   independente que não conflita com o que já está em andamento — como
+   atualizar este próprio arquivo), fazer em paralelo, sem soltar o fio do
+   que já estava em curso.
+2. Se não der pra paralelizar sem risco de conflito, colocar o pedido na fila
+   e continuar o trabalho atual até um ponto de corte natural, aí sim tratar
+   o que chegou.
+
+Isso vale pra qualquer mensagem nova — pedido de feature, bug reportado,
+pergunta — não só pra itens já enfileirados explicitamente como "faça em
+paralelo". Só interromper de verdade quando a mensagem for uma correção de
+rumo do que já está em andamento (ex.: "não, faça diferente") ou pedir
+explicitamente pra parar.

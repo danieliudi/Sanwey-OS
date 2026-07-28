@@ -1532,12 +1532,19 @@ export function RHFuncionariosView({
     [colaboradores]
   );
 
+  // Visitante (role "agencia") não é funcionário — não deve ser listado nem
+  // contado aqui, mesmo tendo profile/acesso.
+  const employeeUsers = useMemo(
+    () => users.filter((u) => u.role !== "agencia" && !(u.roles || []).includes("agencia")),
+    [users]
+  );
+
   const stats = useMemo(() => {
     const statusOf = (e) => e.employeeStatus || e.employee_status || "ativo";
     // Aprendiz pode estar num profile (snake_case) ou num colaborador sem
     // acesso (camelCase) — cobrir os dois nomes de campo.
     const contractOf = (e) => e.contractType || e.contract_type || "";
-    const all = [...users, ...colaboradoresSemAcesso];
+    const all = [...employeeUsers, ...colaboradoresSemAcesso];
     return {
       total:      all.length,
       ativos:     all.filter((e) => statusOf(e) === "ativo").length,
@@ -1545,12 +1552,12 @@ export function RHFuncionariosView({
       desligados: all.filter((e) => statusOf(e) === "desligado").length,
       aprendizes: all.filter((e) => statusOf(e) === "ativo" && contractOf(e) === "aprendiz").length,
     };
-  }, [users, colaboradoresSemAcesso]);
+  }, [employeeUsers, colaboradoresSemAcesso]);
 
   // Lista única com todo mundo — colaborador sem login carrega _hasAccess:
   // false e um selo inline na tabela, em vez de uma seção separada.
   const unifiedRows = useMemo(() => {
-    const withAccess = users.map((u) => ({
+    const withAccess = employeeUsers.map((u) => ({
       _hasAccess: true,
       _raw: u,
       id: u.id,
@@ -1577,7 +1584,7 @@ export function RHFuncionariosView({
       admission_date: c.admissionDate,
     }));
     return [...withAccess, ...withoutAccess];
-  }, [users, colaboradoresSemAcesso]);
+  }, [employeeUsers, colaboradoresSemAcesso]);
 
   const filtered = useMemo(() => {
     const arr = unifiedRows.filter((u) => {
