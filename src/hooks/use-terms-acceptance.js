@@ -16,13 +16,17 @@ export function useTermsAcceptance(currentUser) {
       return;
     }
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("terms_acceptances")
       .select("id")
       .eq("profile_id", currentUser.id)
       .eq("version", CURRENT_TERMS_VERSION)
       .maybeSingle();
-    setAccepted(Boolean(data));
+    // Falha de rede (comum em conexão de celular instável) não pode virar
+    // "não aceitou" — isso reabre o gate pra quem já aceitou antes, e o
+    // próximo passo (accept()) esbarraria na constraint única (ver abaixo).
+    // Só atualiza o estado quando a leitura realmente respondeu.
+    if (!error) setAccepted(Boolean(data));
     setLoading(false);
   }, [currentUser?.id]);
 
@@ -34,7 +38,15 @@ export function useTermsAcceptance(currentUser) {
       profile_id: currentUser.id,
       version: CURRENT_TERMS_VERSION,
     });
-    if (!error) setAccepted(true);
+    // 23505 = unique_violation (profile_id, version) — já existe aceite
+    // registrado (ex.: o check() acima leu "não aceitou" só por uma falha de
+    // rede transitória, e o gate reapareceu pra quem já tinha aceitado).
+    // Tratar como sucesso em vez de erro sem saída, que era o bug real
+    // reportado (mobile preso em "Tente de novo" indefinidamente).
+    if (!error || error.code === "23505") {
+      setAccepted(true);
+      return null;
+    }
     return error;
   }, [currentUser?.id]);
 
