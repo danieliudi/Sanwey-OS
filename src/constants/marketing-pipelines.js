@@ -41,6 +41,20 @@ export const MARKETING_KPIS = [
   "Alcance", "Conversões", "Leads", "Awareness", "Engajamento", "ROI",
 ];
 
+// Antes disso, o tooltip de Performance era um texto fixo genérico
+// ("combine com o KPI") sem nenhuma ligação real com o KPI escolhido — o
+// campo virava puramente decorativo. Agora o critério sugerido muda de
+// verdade conforme o KPI da campanha.
+export const PERFORMANCE_HINT_BY_KPI = {
+  "Alcance":     "0–100. Baseie-se no alcance obtido vs. a meta da campanha.",
+  "Conversões":  "0–100. Baseie-se na taxa de conversão obtida vs. a meta.",
+  "Leads":       "0–100. Baseie-se no volume de leads gerados vs. a meta.",
+  "Awareness":   "0–100. Baseie-se em impressões/reconhecimento vs. a meta.",
+  "Engajamento": "0–100. Baseie-se em curtidas, comentários e compartilhamentos vs. a meta.",
+  "ROI":         "0–100. Baseie-se no retorno sobre o investimento vs. a meta.",
+};
+export const DEFAULT_PERFORMANCE_HINT = "0–100. Escolha um KPI acima para ver o critério sugerido pra essa nota.";
+
 export const CHANNEL_COLORS = {
   "Email":     { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
   "Social":    { bg: "#FDF4FF", text: "#7C3AED", border: "#E9D5FF" },

@@ -6,7 +6,7 @@ import {
   RotateCcw, Copy, Loader2, AlertCircle, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
-import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
+import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES, PERFORMANCE_HINT_BY_KPI, DEFAULT_PERFORMANCE_HINT } from "../../constants/marketing-pipelines";
 import { useMarketingCampaignAttachments } from "../../hooks/use-marketing-campaign-attachments";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
@@ -637,9 +637,17 @@ export function ActivityLog({ activities }) {
 function Field({ label, children, hint }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>{label}</div>
+      <div className="flex items-center gap-1 mb-1">
+        <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>{label}</div>
+        {hint && (
+          <span title={hint} style={{ cursor: "help", opacity: 0.5, display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+            </svg>
+          </span>
+        )}
+      </div>
       {children}
-      {hint && <div className="text-[11px] mt-1" style={{ color: "var(--text-faint)" }}>{hint}</div>}
     </div>
   );
 }
@@ -1506,7 +1514,7 @@ export function CampaignDetailDrawer({
                 />
               )}
             </Field>
-            <Field label="Performance" hint="Nota de 0 a 100 — combine com o KPI da campanha pra manter um critério consistente entre campanhas.">
+            <Field label="Performance" hint={PERFORMANCE_HINT_BY_KPI[get("kpi")] || DEFAULT_PERFORMANCE_HINT}>
               {isAgencia ? <ReadValue value={get("performanceScore") > 0 ? String(get("performanceScore")) : null} /> : <EditInput value={get("performanceScore") || ""} onChange={v => set("performanceScore", parseInt(v) || 0)} type="number" placeholder="0–100" />}
             </Field>
             <Field label="Lançamento">
@@ -1520,7 +1528,7 @@ export function CampaignDetailDrawer({
           {!isAgencia && agencySuppliers.length > 0 && (
             <Field
               label="Fornecedor (Agência)"
-              hint="Vincula esta campanha a uma agência cadastrada — o login dela só verá campanhas/entregas do próprio fornecedor. Sem vínculo, qualquer login de agência enxerga esta campanha."
+              hint="Login da agência vinculada só vê as próprias campanhas/entregas. Sem fornecedor, qualquer agência enxerga esta campanha."
             >
               <EditSelect
                 value={get("supplierId")}
