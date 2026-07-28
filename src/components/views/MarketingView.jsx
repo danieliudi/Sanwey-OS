@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, List, Calendar as CalendarIcon, Settings2, AlertCircle } from "lucide-react";
+import { Plus, X, Megaphone, Star, ChevronDown, TrendingUp, Download, LayoutGrid, List, Calendar as CalendarIcon, Settings2, AlertCircle, GripVertical } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import {
   MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, CHANNEL_COLORS,
@@ -92,7 +92,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose, stag
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) { setError("Nome da campanha é obrigatório."); return; }
     if (companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
     const missing = getMissingRequiredFields(visibleFields, customValues);
     if (missing.length > 0) {
@@ -370,9 +370,9 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose, stag
 
           <button
             type="submit"
-            disabled={saving || !name.trim()}
+            disabled={saving}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--color-industria)", color: "#FFF", opacity: saving || !name.trim() ? 0.5 : 1, border: "none", cursor: saving || !name.trim() ? "default" : "pointer" }}
+            style={{ background: "var(--color-industria)", color: "#FFF", opacity: saving ? 0.5 : 1, border: "none", cursor: saving ? "default" : "pointer" }}
           >
             {saving ? "Criando…" : "Criar campanha"}
           </button>
@@ -755,15 +755,16 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   // fricção de 18/07).
   const attemptStageChange = useCallback(async (campaignId, toStage) => {
     const campaign = campaigns.find(c => c.id === campaignId);
-    if (!campaign) return;
+    if (!campaign) return false;
     const fields = stageFields.getFields(campaign.stage);
     const missing = getMissingRequiredFields(fields, campaign.customFields || {});
     if (missing.length > 0) {
       setStageError(`Não dá pra mover "${campaign.name}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
-      return;
+      return false;
     }
     setStageError(null);
     await handleStageChange(campaignId, toStage);
+    return true;
   }, [campaigns, stageFields, handleStageChange]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
@@ -1156,17 +1157,20 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "none",
                     }}
                   >
-                    {/* Arrastável pra reordenar etapas — canal de drag
-                        separado do drag de card (draggedColumnKey vs
-                        draggedCampaign), stopPropagation nos handlers pra não
-                        vazar pro drag de card do <div> pai da coluna. */}
+                    {/* Reordenar etapas — canal de drag separado do drag de
+                        card (draggedColumnKey vs draggedCampaign). Antes o
+                        cabeçalho INTEIRO era draggable, competindo com o
+                        drag nativo dos cards pelo mesmo container que também
+                        é drop-target de card — duas regiões draggable
+                        sobrepostas no mesmo pai é instável em Chrome/Firefox
+                        (achado BUG-02 da auditoria de QA: maioria das
+                        tentativas de mover card falhava silenciosamente).
+                        Fix: só a alcinha (GripVertical) abaixo é draggable;
+                        o cabeçalho em si só aceita o drop de reordenação,
+                        sem iniciar um drag próprio. */}
                     <div
-                      draggable={canWrite}
-                      onDragStart={() => canWrite && setDraggedColumnKey(stage.id)}
-                      onDragEnd={handleColumnDragEnd}
                       onDragOver={e => { if (draggedColumnKey) { e.preventDefault(); e.stopPropagation(); } }}
                       onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.id) { e.stopPropagation(); handleColumnDrop(stage.id); } }}
-                      style={{ cursor: canWrite ? "grab" : "default" }}
                     >
                       <KanbanColumnHeader
                         color={stage.color}
@@ -1180,6 +1184,18 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                         uppercase={false}
                         countFontSize={12}
                         actions={<>
+                          {canWrite && (
+                            <span
+                              draggable
+                              onDragStart={() => setDraggedColumnKey(stage.id)}
+                              onDragEnd={handleColumnDragEnd}
+                              title="Arrastar para reordenar etapa"
+                              className="flex items-center justify-center rounded-md"
+                              style={{ width: 20, height: 26, color: "var(--text-faint)", flexShrink: 0, cursor: "grab" }}
+                            >
+                              <GripVertical size={14} />
+                            </span>
+                          )}
                           {canWrite && !stage.terminal && (
                             <button
                               onClick={() => setQuickAddStage(stage.id)}
@@ -1306,6 +1322,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           onClose={() => setSelected(null)}
           onStageMoved={reopenCampaignAfterMove}
           onUpdate={handleUpdate}
+          onMoveToStage={attemptStageChange}
           onDelete={handleDelete}
           users={Array.from(usersById.values())}
           canWrite={canWrite}

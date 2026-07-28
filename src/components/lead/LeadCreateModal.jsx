@@ -286,6 +286,13 @@ export function LeadCreateModal({
   );
 
   // Focus first input when modal opens
+  //
+  // Dependência é `currentUser?.id`, não o objeto `currentUser` inteiro —
+  // mesmo com o objeto já memoizado em use-supabase-auth.js, o profile
+  // ainda troca de referência legitimamente quando o refetch assíncrono
+  // resolve (mesmo usuário, dado preenchido depois do mount). Antes disso,
+  // o formulário zerava sozinho ~1-2s após abrir, mesmo com o usuário já
+  // digitando (BUG-03 da auditoria de QA).
   React.useEffect(() => {
     if (open) {
       setValues({ owner: currentUser?.id ? [currentUser.id] : [], sector: currentUser?.sectors?.[0] || "", contactEmail: "" });
@@ -297,7 +304,8 @@ export function LeadCreateModal({
       setSubmitAttempted(false);
       setTimeout(() => firstRef.current?.focus(), 80);
     }
-  }, [open, currentUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, currentUser?.id]);
 
   // Debounced match lookup on company name OR CNPJ change.
   // Procura clientes já cadastrados em qualquer empresa acessível.

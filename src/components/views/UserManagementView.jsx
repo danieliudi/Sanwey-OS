@@ -29,7 +29,7 @@ const EMPTY_FORM = {
   sectors: [], supervisorId: "", supplierId: "",
 };
 
-const EMPTY_INVITE = { email: "", role: "vendedor", companies: [], sectors: [], supervisorId: "", supplierId: "" };
+const EMPTY_INVITE = { email: "", name: "", role: "vendedor", companies: [], sectors: [], supervisorId: "", supplierId: "" };
 
 const ROLE_OPTIONS_BASE = [
   { value: "consultor",         label: "Consultor" },
@@ -244,6 +244,10 @@ export function UserManagementView({
   const submitInvite = useCallback(async () => {
     const email = inviteForm.email.trim().toLowerCase();
     if (!isValidEmail(email)) { setInviteError("Informe um e-mail válido."); return; }
+    // Nome real capturado desde o convite, em vez de depender do fallback
+    // do trigger (local-part do e-mail, ex.: "iudiyano") — achado BUG-08/10
+    // da auditoria de QA.
+    if (!inviteForm.name.trim()) { setInviteError("Informe o nome da pessoa."); return; }
     if ((inviteForm.role === "vendedor" || inviteForm.role === "consultor") && inviteForm.companies.length === 0) {
       setInviteError("Selecione ao menos uma empresa para vendedor/consultor."); return;
     }
@@ -256,7 +260,7 @@ export function UserManagementView({
     setInviting(true);
     setInviteError(null);
     try {
-      const result = await onCreateInvitation({ email, role: inviteForm.role, companies: inviteForm.companies, sectors: inviteForm.sectors || [], supervisorId: inviteForm.supervisorId || null, supplierId: inviteForm.supplierId || null, invitedBy: currentUser?.id });
+      const result = await onCreateInvitation({ email, name: inviteForm.name.trim(), role: inviteForm.role, companies: inviteForm.companies, sectors: inviteForm.sectors || [], supervisorId: inviteForm.supervisorId || null, supplierId: inviteForm.supplierId || null, invitedBy: currentUser?.id });
       if (result?.alreadyRegistered) {
         setInviteError(`${email} já possui uma conta ativa no Supabase Auth. Peça para a pessoa entrar normalmente ou usar "Esqueci minha senha" — nenhum e-mail de convite é enviado nesse caso.`);
       } else {
@@ -364,10 +368,24 @@ export function UserManagementView({
     return map;
   }, [users, leads]);
 
-  // Summary stats
-  const totalUsers = users.length;
-  const managerCount = users.filter(u => u.role === "gerente" || u.role === "admin").length;
-  const sellerCount = users.filter(u => u.role === "vendedor" || u.role === "consultor").length;
+  // Convite ainda não aceito (auth.users/profiles já existe desde o envio
+  // do convite, não só na aceitação — sem essa exclusão, o card de
+  // estatística contava convite pendente como usuário ativo de verdade
+  // (achado BUG-10 da auditoria de QA).
+  const pendingInviteEmails = useMemo(
+    () => new Set(invitations.map(i => (i.email || "").toLowerCase())),
+    [invitations]
+  );
+  const isPendingInviteUser = useCallback(
+    (u) => pendingInviteEmails.has((u.email || "").toLowerCase()),
+    [pendingInviteEmails]
+  );
+
+  // Summary stats — exclui convites ainda não aceitos.
+  const confirmedUsers = useMemo(() => users.filter(u => !isPendingInviteUser(u)), [users, isPendingInviteUser]);
+  const totalUsers = confirmedUsers.length;
+  const managerCount = confirmedUsers.filter(u => u.role === "gerente" || u.role === "admin").length;
+  const sellerCount = confirmedUsers.filter(u => u.role === "vendedor" || u.role === "consultor").length;
 
   // Filter
   const q = search.trim().toLowerCase();
@@ -513,6 +531,7 @@ export function UserManagementView({
           {filteredUsers.map(u => {
             const stats = userStats[u.id] || { total: 0, won: 0, open: 0 };
             const pending = (u.role === "vendedor" || u.role === "consultor") && (!u.companies || u.companies.length === 0);
+            const pendingInvite = isPendingInviteUser(u);
             const isSelf = u.id === currentUser?.id;
             const editable = canEdit(u);
             const deletable = canDelete(u);
@@ -532,7 +551,9 @@ export function UserManagementView({
                 title={u.name}
                 meta={u.email || "—"}
                 status={
-                  pending
+                  pendingInvite
+                    ? { color: "var(--text-dim)", label: "Convite pendente" }
+                    : pending
                     ? { color: "var(--amber)", label: "Sem empresa" }
                     : { color: "var(--text-dim)", label: roleLabel(u.role) }
                 }
@@ -547,6 +568,11 @@ export function UserManagementView({
                         Você
                       </span>
                     )}
+                    {/* Convite ainda não aceito — antes essa linha da lista
+                        geral (não só a seção separada "Convites pendentes")
+                        era indistinguível de um usuário com acesso já
+                        confirmado (achado BUG-10 da auditoria de QA). */}
+                    {pendingInvite && <Badge variant="urgent" size="sm">Convite pendente</Badge>}
                     {pending && <Badge variant="urgent" size="sm">Sem empresa</Badge>}
                     {Array.isArray(u.sectors) && u.sectors.map(s => (
                       <span key={s} className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "#EEF2FF", color: "#3730A3" }}>
@@ -760,6 +786,10 @@ export function UserManagementView({
       {/* ── Invite modal ── */}
       <Modal open={inviteOpen} onClose={closeInvite} title="Convidar usuário" width={560}>
         <div className="p-6 space-y-4">
+          <div>
+            <FieldLabel>Nome *</FieldLabel>
+            <Input value={inviteForm.name} onChange={e => setInviteForm(prev => ({ ...prev, name: e.target.value }))} placeholder="Nome completo" icon={User} />
+          </div>
           <div>
             <FieldLabel>E-mail *</FieldLabel>
             <Input value={inviteForm.email} onChange={e => setInviteForm(prev => ({ ...prev, email: e.target.value }))} placeholder="email@sanwey.com.br" icon={Mail} type="email" />

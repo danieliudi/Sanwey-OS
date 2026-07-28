@@ -620,10 +620,20 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   <Trash2 size={16} />
                 </button>
               )}
+              {/* Mesmo texto/par de botões do header desktop (e do
+                  SplitPanelDrawer compartilhado, usado por Campanhas) —
+                  antes essa versão mobile só tinha "Excluir" sem "Cancelar",
+                  divergindo do resto da plataforma (BUG-06 da auditoria
+                  de QA: 3 padrões de confirmação de exclusão distintos). */}
               {canDelete && confirmDelete && (
-                <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "#B91C1C", color: "#FFFFFF", border: "none" }}>
-                  {deleting ? "…" : "Excluir"}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "#B91C1C", color: "#FFFFFF", border: "none" }}>
+                    {deleting ? "Excluindo…" : "Confirmar exclusão"}
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)} className="px-2 py-1 rounded-lg text-xs cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
+                    Cancelar
+                  </button>
+                </div>
               )}
             </div>
           </div>

@@ -1303,6 +1303,7 @@ export function CampaignDetailDrawer({
   onClose,
   onStageMoved,
   onUpdate,
+  onMoveToStage,
   onDelete,
   users = [],
   canWrite,
@@ -1370,13 +1371,24 @@ export function CampaignDetailDrawer({
   const stageIdx = effectiveStages.findIndex(s => s.id === get("stage"));
   const stage    = effectiveStages[stageIdx] || null;
 
-  const moveToStage = useCallback((toStageId) => {
+  const moveToStage = useCallback(async (toStageId) => {
     if (!campaign || !toStageId) return;
+    // Passa pela mesma validação de campo obrigatório (estático + dinâmico)
+    // do drag-and-drop/"Mover para" do board — antes esse botão chamava
+    // onUpdate direto e contornava a checagem por completo (achado BUG-11
+    // da auditoria de QA: só Campanhas tinha esse bypass, Tarefas/Entregas
+    // já tinham sido corrigidos).
+    if (onMoveToStage) {
+      const ok = await onMoveToStage(campaign.id, toStageId);
+      if (ok === false) return;
+      if (onStageMoved) { onClose?.(); onStageMoved(campaign.id); }
+      return;
+    }
     onUpdate?.(campaign.id, { stage: toStageId, stageChangedAt: new Date().toISOString() });
     // Fecha o drawer agora (sinal visual de que moveu) e reabre já na etapa
     // nova — em vez de só trocar o conteúdo por baixo do drawer aberto.
     if (onStageMoved) { onClose?.(); onStageMoved(campaign.id); }
-  }, [campaign, onUpdate, onStageMoved, onClose]);
+  }, [campaign, onUpdate, onMoveToStage, onStageMoved, onClose]);
 
   // FASE 5: mais de um responsável por campanha — resolve owner_ids (com
   // fallback pro owner escalar em campanhas legadas) contra a lista de
