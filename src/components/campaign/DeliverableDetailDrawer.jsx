@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   X, Trash2,
-  FileText, Activity, Paperclip, CheckSquare,
+  FileText, Activity, Paperclip, CheckSquare, History,
   Sparkles,
   Upload, File, FileImage, Download, Plus,
   Check, Loader2, AlertCircle, RotateCcw, Copy, RefreshCw,
@@ -23,6 +23,7 @@ import { EditableProtocolNumber }     from "../shared/EditableProtocolNumber";
 import { StageNavigator }             from "../shared/StageNavigator";
 import { SplitPanelDrawer }           from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs }           from "../shared/DetailDrawerTabs";
+import { RHStageHistoryPanel }        from "../rh-pipeline/RHDetailDrawerShell";
 
 /* ── Priority helpers ───────────────────────────────────────── */
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -36,6 +37,7 @@ const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mo
 const SIDE_TABS = [
   { id: "form",        label: "Form",        icon: FileText },
   { id: "atividades",  label: "Atividades",  icon: Activity },
+  { id: "historico",   label: "Histórico",   icon: History },
   { id: "ia",          label: "IA",          icon: Sparkles },
   { id: "anexos",      label: "Anexos",      icon: Paperclip },
   { id: "checklists",  label: "Checklists",  icon: CheckSquare },
@@ -641,12 +643,25 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
   };
 
-  // ── Left tab content ──────────────────────────────────────────────────────
-  function LeftTabContent() {
+  // ── Center tab content ────────────────────────────────────────────────────
+  function CenterTabContent() {
     if (sideTab === "form") {
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <SectionLabel>Formulário Inicial</SectionLabel>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <SectionLabel>Formulário Inicial</SectionLabel>
+            {saveStatus && (
+              <span
+                style={{
+                  fontSize: 10, marginLeft: "auto",
+                  color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
+                  fontWeight: saveStatus === "error" ? 700 : 400,
+                }}
+              >
+                {saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "✗ Falha ao salvar — tente de novo" : "✓ Salvo"}
+              </span>
+            )}
+          </div>
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Nº da Solicitação</div>
             <EditableProtocolNumber
@@ -678,18 +693,60 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
               : <ReadValue value={null} />}
           </div>
 
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #E5E7EB" }}>
-            <SectionLabel>Histórico de Etapas</SectionLabel>
-            {(item.activities || []).filter(a => a.type === "stage_change").length === 0
-              ? <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Nenhuma transição registrada.</div>
-              : [...(item.activities || [])].filter(a => a.type === "stage_change").reverse().map((a, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 11 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", marginTop: 4, flexShrink: 0 }} />
-                  <div>
-                    <div style={{ color: "var(--text)" }}>{a.description}</div>
-                    <div style={{ color: "var(--text-dim)", fontSize: 10 }}>{new Date(a.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
-                  </div>
-                </div>
+          <FieldRow label="Responsáveis">
+            {canWrite ? (
+              <AssigneeMultiSelect
+                value={assigneeIds}
+                onChange={handleAssigneeChange}
+                options={users}
+                placeholder="Selecionar responsáveis…"
+              />
+            ) : (
+              <ReadValue value={resolvedAssignees.map(u => u.name).join(", ") || null} />
+            )}
+          </FieldRow>
+
+          {campaigns.length > 0 && (
+            <FieldRow
+              label="Campanha relacionada"
+              hint="Só era possível vincular ao criar a entrega — agora dá pra vincular/trocar depois."
+            >
+              {canWrite ? (
+                <select
+                  value={item.campaignId || ""}
+                  onChange={e => onUpdate(item.id, { campaignId: e.target.value || null })}
+                  style={{ ...inputBase }}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                >
+                  <option value="">Nenhuma</option>
+                  {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              ) : (
+                <ReadValue value={campaigns.find(c => c.id === item.campaignId)?.name || null} />
+              )}
+            </FieldRow>
+          )}
+
+          {/* Campos configurados via "Editar campos desta etapa"
+              (rh_pipeline_stage_fields) — única fonte do formulário por etapa. */}
+          <div style={{ marginTop: 8, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+            <SectionLabel>Campos desta etapa</SectionLabel>
+            {visibleCustomDefs.length === 0
+              ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
+              : visibleCustomDefs.map(f => (
+                <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
+                  {canWrite ? (
+                    <RHStageFieldInput
+                      field={f}
+                      value={getCustomValue(f.fieldKey)}
+                      onChange={val => handleCustomChange(f.fieldKey, val)}
+                      users={users}
+                    />
+                  ) : (
+                    <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
+                  )}
+                </FieldRow>
               ))
             }
           </div>
@@ -697,6 +754,9 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
       );
     }
     if (sideTab === "atividades")  return <AtividadesTab activities={item.activities} />;
+    if (sideTab === "historico")   return (
+      <RHStageHistoryPanel domain="marketing_deliverables" recordId={item.id} stages={DELIVERABLE_STAGES} currentUser={currentUser} users={users} />
+    );
     if (sideTab === "ia")          return <DeliverableAIPanel item={item} currentUser={currentUser} />;
     if (sideTab === "anexos")      return <AnexosTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
     if (sideTab === "checklists")  return <ChecklistsTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
@@ -754,98 +814,14 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           </div>
         )}
       </div>
-
-      {/* ── Pill SideTabs ── */}
-      <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
-        <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
-      </div>
-
-      {/* ── Tab content ── */}
-      <div>
-        <LeftTabContent />
-      </div>
     </>
   );
 
   const center = (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-        <SectionLabel>Fase atual</SectionLabel>
-        {stageInfo && (
-          <span style={{ fontSize: 11, fontWeight: 600, color: stageInfo.color, background: stageInfo.color + "18", border: `1px solid ${stageInfo.color}40`, borderRadius: 5, padding: "2px 8px", marginTop: -14 }}>
-            {stageInfo.name}
-          </span>
-        )}
-        {saveStatus && (
-          <span
-            style={{
-              fontSize: 10, marginTop: -14, marginLeft: "auto",
-              color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
-              fontWeight: saveStatus === "error" ? 700 : 400,
-            }}
-          >
-            {saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "✗ Falha ao salvar — tente de novo" : "✓ Salvo"}
-          </span>
-        )}
-      </div>
-      <FieldRow label="Responsáveis">
-        {canWrite ? (
-          <AssigneeMultiSelect
-            value={assigneeIds}
-            onChange={handleAssigneeChange}
-            options={users}
-            placeholder="Selecionar responsáveis…"
-          />
-        ) : (
-          <ReadValue value={resolvedAssignees.map(u => u.name).join(", ") || null} />
-        )}
-      </FieldRow>
-
-      {campaigns.length > 0 && (
-        <FieldRow
-          label="Campanha relacionada"
-          hint="Só era possível vincular ao criar a entrega — agora dá pra vincular/trocar depois."
-        >
-          {canWrite ? (
-            <select
-              value={item.campaignId || ""}
-              onChange={e => onUpdate(item.id, { campaignId: e.target.value || null })}
-              style={{ ...inputBase }}
-              onFocus={focusBorder}
-              onBlur={blurBorder}
-            >
-              <option value="">Nenhuma</option>
-              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          ) : (
-            <ReadValue value={campaigns.find(c => c.id === item.campaignId)?.name || null} />
-          )}
-        </FieldRow>
-      )}
-
-      {/* Campos configurados via "Editar campos desta etapa"
-          (rh_pipeline_stage_fields) — única fonte do formulário por etapa. */}
-      <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-        <SectionLabel>Campos desta etapa</SectionLabel>
-        {visibleCustomDefs.length === 0
-          ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
-          : visibleCustomDefs.map(f => (
-            <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
-              {canWrite ? (
-                <RHStageFieldInput
-                  field={f}
-                  value={getCustomValue(f.fieldKey)}
-                  onChange={val => handleCustomChange(f.fieldKey, val)}
-                  users={users}
-                />
-              ) : (
-                <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
-              )}
-            </FieldRow>
-          ))
-        }
-      </div>
-    </div>
+    <>
+      <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
+      {CenterTabContent()}
+    </>
   );
 
   const right = (

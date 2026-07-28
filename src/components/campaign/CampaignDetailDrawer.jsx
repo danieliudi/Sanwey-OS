@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
-  Sparkles, ChevronRight,
+  Sparkles, ChevronRight, History,
   RotateCcw, Copy, Loader2, AlertCircle, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -21,6 +21,7 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { RHStageHistoryPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { useAI } from "../../hooks/use-ai";
 import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
@@ -53,6 +54,7 @@ function humanSize(bytes) {
 const SIDE_TABS = [
   { id: "form",        label: "Form",        icon: FileText },
   { id: "atividades",  label: "Atividades",  icon: Activity },
+  { id: "historico",   label: "Histórico",   icon: History },
   { id: "ia",          label: "IA",          icon: Sparkles },
   { id: "arquivos",    label: "Arquivos",    icon: Paperclip },
   { id: "criativo",    label: "Checklist",   icon: ListChecks },
@@ -1455,8 +1457,8 @@ export function CampaignDetailDrawer({
 
   if (!campaign) return null;
 
-  // ── Render left tab content ─────────────────────────────────────────────────
-  function LeftTabContent() {
+  // ── Render center tab content ───────────────────────────────────────────────
+  function CenterTabContent() {
     if (sideTab === "form") {
       return (
         <div className="space-y-3">
@@ -1617,12 +1619,89 @@ export function CampaignDetailDrawer({
                 />
               )}
           </div>
-          <ActivityLog activities={campaign.activities || []} />
+
+          {/* Campos específicos da etapa atual */}
+          {stage?.id === "briefing" && (
+            <BriefingFields
+              getCf={getCf}
+              setCf={setCf}
+              users={users}
+              disabled={!canWrite || isAgencia}
+              onOpenAttachments={() => setSideTab("arquivos")}
+            />
+          )}
+          {stage?.id === "aprovacao" && (
+            <AprovacaoFields
+              getCf={getCf}
+              setCf={setCf}
+              users={users}
+              disabled={!canWrite || isAgencia}
+            />
+          )}
+          {stage?.id === "producao" && (
+            <ProducaoFields
+              getCf={getCf}
+              setCf={setCf}
+              users={users}
+              disabled={!canWrite || isAgencia}
+            />
+          )}
+          {stage?.id === "revisao" && (
+            <RevisaoFields
+              getCf={getCf}
+              setCf={setCf}
+              users={users}
+              disabled={!canWrite || isAgencia}
+            />
+          )}
+
+          {/* Campos adicionais configurados via "Editar campos desta
+              etapa" (rh_pipeline_stage_fields) — além dos campos fixos
+              acima, que continuam intactos. */}
+          {visibleCustomDefs.length > 0 && (
+            <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
+              <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                Campos adicionais da etapa
+              </div>
+              {visibleCustomDefs.map(f => (
+                <div key={f.id}>
+                  <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+                    {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
+                    {f.label}
+                  </div>
+                  {f.helpText && (
+                    <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>{f.helpText}</div>
+                  )}
+                  {(!canWrite || isAgencia) ? (
+                    <ReadValue value={formatCustomFieldValue(getCf(f.fieldKey))} />
+                  ) : (
+                    <RHStageFieldInput
+                      field={f}
+                      value={getCf(f.fieldKey)}
+                      onChange={val => setCf(f.fieldKey, val)}
+                      users={users}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
     if (sideTab === "atividades") {
       return <ActivityLog activities={campaign.activities || []} />;
+    }
+    if (sideTab === "historico") {
+      return (
+        <RHStageHistoryPanel
+          domain="marketing"
+          recordId={campaign.id}
+          stages={effectiveStages}
+          currentUser={currentUser}
+          users={users}
+        />
+      );
     }
     if (sideTab === "ia") {
       return (
@@ -1712,87 +1791,13 @@ export function CampaignDetailDrawer({
           })}
         </div>
       )}
-
-      {/* ── Pill SideTabs ── */}
-      <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
-        <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
-      </div>
-
-      {/* ── Tab content ── */}
-      <div>
-        {LeftTabContent()}
-      </div>
     </>
   );
 
   const center = (
     <>
-      {/* Stage-specific fields */}
-      {stage?.id === "briefing" && (
-        <BriefingFields
-          getCf={getCf}
-          setCf={setCf}
-          users={users}
-          disabled={!canWrite || isAgencia}
-          onOpenAttachments={() => setSideTab("arquivos")}
-        />
-      )}
-      {stage?.id === "aprovacao" && (
-        <AprovacaoFields
-          getCf={getCf}
-          setCf={setCf}
-          users={users}
-          disabled={!canWrite || isAgencia}
-        />
-      )}
-      {stage?.id === "producao" && (
-        <ProducaoFields
-          getCf={getCf}
-          setCf={setCf}
-          users={users}
-          disabled={!canWrite || isAgencia}
-        />
-      )}
-      {stage?.id === "revisao" && (
-        <RevisaoFields
-          getCf={getCf}
-          setCf={setCf}
-          users={users}
-          disabled={!canWrite || isAgencia}
-        />
-      )}
-
-      {/* Campos adicionais configurados via "Editar campos desta
-          etapa" (rh_pipeline_stage_fields) — além dos campos fixos
-          acima, que continuam intactos. */}
-      {visibleCustomDefs.length > 0 && (
-        <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
-          <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
-            Campos adicionais da etapa
-          </div>
-          {visibleCustomDefs.map(f => (
-            <div key={f.id}>
-              <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-                {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
-                {f.label}
-              </div>
-              {f.helpText && (
-                <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>{f.helpText}</div>
-              )}
-              {(!canWrite || isAgencia) ? (
-                <ReadValue value={formatCustomFieldValue(getCf(f.fieldKey))} />
-              ) : (
-                <RHStageFieldInput
-                  field={f}
-                  value={getCf(f.fieldKey)}
-                  onChange={val => setCf(f.fieldKey, val)}
-                  users={users}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
+      {CenterTabContent()}
     </>
   );
 

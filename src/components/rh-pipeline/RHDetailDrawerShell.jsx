@@ -462,7 +462,7 @@ function stageLabel(key, stages) {
   return found?.name || key;
 }
 
-function RHStageHistoryPanel({ domain, recordId, stages, currentUser, users }) {
+export function RHStageHistoryPanel({ domain, recordId, stages, currentUser, users }) {
   const { entries, loading } = useRHStageHistory(domain, recordId);
 
   if (loading) {
