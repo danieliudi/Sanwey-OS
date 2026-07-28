@@ -16,6 +16,7 @@ import { FitScoreCircle } from "../ui/FitScoreCircle";
 import { Select } from "../ui/Select";
 import { Button } from "../ui/Button";
 import { formatK, formatBRL } from "../../utils/currency";
+import { getLeadOwnerIds } from "../../utils/pipeline-metrics";
 import { formatDateBR, closeDateUrgencyStyle } from "../../utils/date";
 import { useStageFields } from "../../hooks/use-stage-fields";
 import { useSingleLeadHistory } from "../../hooks/use-single-lead-history";
@@ -260,8 +261,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   // avatarBg/initials), não {value,label}.
   const sellerOptions = useMemo(() => {
     if (!lead) return [];
-    return (users || [])
+    const inScope = (users || [])
       .filter(u => (u.role === "vendedor" || u.role === "consultor") && Array.isArray(u.companies) && u.companies.includes(lead.companyId));
+    // Item 4a: um responsável já atribuído (ex. gerente/admin colocado como
+    // dono manualmente) precisa continuar aparecendo como chip mesmo fora do
+    // escopo padrão vendedor/consultor — senão o AssigneeMultiSelect descarta
+    // silenciosamente o id (options.find não acha) e o card parece "sem
+    // responsável" pra quem só olha o card fechado.
+    const assignedIds = getLeadOwnerIds(lead);
+    const extra = (users || []).filter(u => assignedIds.includes(u.id) && !inScope.some(x => x.id === u.id));
+    return [...inScope, ...extra];
   }, [lead, users]);
 
   // Quem pode ser @mencionado nos comentários deste lead — mesmo escopo do
@@ -875,8 +884,9 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   {lead.value > 0 && <CaptureRow label="Valor" value={formatBRL(lead.value)} />}
                   {lead.owner && (
                     <CaptureRow
-                      label="Responsável"
+                      label="Responsável na criação"
                       value={(users || []).find(u => u.id === lead.owner)?.name || "—"}
+                      hint="Somente leitura — quem edita é “Responsáveis”, ao lado."
                     />
                   )}
                 </dl>
@@ -1060,7 +1070,10 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 Este cliente também está ativo em:
               </div>
               {overlaps.map(o => {
-                const u = users.find(x => x.id === o.owner);
+                // FASE 5: overlap precisa considerar todo responsável do
+                // outro negócio, não só o `owner` escalar (que pode estar
+                // desatualizado se o negócio ganhou co-responsáveis depois).
+                const names = getLeadOwnerIds(o).map(id => users.find(x => x.id === id)?.name).filter(Boolean);
                 return (
                   <div
                     key={o.id}
@@ -1069,7 +1082,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   >
                     <div className="flex items-center gap-2">
                       <CompanyTag companyId={o.companyId} />
-                      <span style={{ color: "var(--text)" }}>{u?.name || "—"}</span>
+                      <span style={{ color: "var(--text)" }}>{names.length ? names.join(", ") : "—"}</span>
                     </div>
                     <span className="font-mono" style={{ color: "var(--text-dim)" }}>
                       {formatK(o.value)} · {o.stage}
@@ -2142,7 +2155,7 @@ function PlaceholderPanel({ icon: Icon, title, hint }) {
   );
 }
 
-function CaptureRow({ label, value, mono, link, badge }) {
+function CaptureRow({ label, value, mono, link, badge, hint }) {
   const dim = value === null || value === undefined || value === "";
   const priorityColor = badge && value === "Alta" ? "#DC2626"
     : badge && value === "Média" ? "#E8920A"
@@ -2162,6 +2175,7 @@ function CaptureRow({ label, value, mono, link, badge }) {
           </span>
         ) : value}
       </dd>
+      {hint && <div className="text-[11px] mt-0.5" style={{ color: "var(--text-faint)" }}>{hint}</div>}
     </div>
   );
 }
