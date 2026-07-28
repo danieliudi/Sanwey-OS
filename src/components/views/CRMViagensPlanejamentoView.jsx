@@ -26,6 +26,7 @@ import { STATUS_VISITA, STATUS_REEMBOLSO, fmtMoney } from "../../utils/viagens";
 import { Badge } from "../ui/Badge";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
+import { usePlacesAutocomplete } from "../../hooks/use-places-autocomplete";
 import { ClientSelector } from "../client/ClientSelector";
 import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
 
@@ -159,6 +160,8 @@ function VisitaCard({ registro, onClick }) {
 function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
   useEscToClose(onClose);
   const [destino, setDestino] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const { suggestions, search: searchDestino, clear: clearDestinoSuggestions } = usePlacesAutocomplete();
   const [dataPlanejada, setDataPlanejada] = useState("");
   const [objetivo, setObjetivo] = useState("");
   const [clientId, setClientId] = useState(null);
@@ -209,9 +212,53 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
         </div>
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           <div className="flex flex-col gap-3">
-            <div>
+            <div style={{ position: "relative" }}>
               <label style={LABEL_ST}>Destino *</label>
-              <input type="text" autoFocus value={destino} onChange={(e) => setDestino(e.target.value)} placeholder="Ex: Campinas, SP" className={INPUT_CLS} style={INPUT_ST} />
+              <input
+                type="text"
+                autoFocus
+                value={destino}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDestino(v);
+                  setShowSuggestions(true);
+                  searchDestino(v);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder="Ex: Campinas, SP"
+                className={INPUT_CLS}
+                style={{ ...INPUT_ST, paddingRight: destino.trim() ? 30 : undefined }}
+              />
+              {destino.trim() && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destino.trim())}`}
+                  target="_blank" rel="noopener noreferrer"
+                  onMouseDown={(e) => e.preventDefault()}
+                  title="Abrir no Google Maps"
+                  style={{ position: "absolute", right: 8, top: 33, color: "var(--text-faint)", display: "flex" }}
+                >
+                  <MapPin size={14} />
+                </a>
+              )}
+              {showSuggestions && suggestions.length > 0 && (
+                <div style={{ position: "absolute", left: 0, right: 0, top: "100%", marginTop: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, boxShadow: "var(--shadow-pop)", overflow: "hidden", zIndex: 20 }}>
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.placeId || s.description}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setDestino(s.description); clearDestinoSuggestions(); setShowSuggestions(false); }}
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px", border: "none", background: "none", cursor: "pointer", borderBottom: "1px solid var(--border)" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{s.mainText}</div>
+                      {s.secondaryText && <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{s.secondaryText}</div>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label style={LABEL_ST}>Data planejada *</label>
