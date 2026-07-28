@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom";
 import {
   Plus, X, ListTodo, ChevronDown, Star, Filter, Settings2, AlertCircle, LayoutGrid, TrendingUp,
+  List, CalendarDays, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { MarketingTaskDetailDrawer } from "../campaign/MarketingTaskDetailDrawer";
@@ -15,7 +16,8 @@ import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { StageColorPicker } from "../shared/stage-editor/StageColorPicker";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
-import { localDateInputToISOString } from "../../utils/date";
+import { localDateInputToISOString, formatDateBR, parseDateInput } from "../../utils/date";
+import { AvatarStack } from "../shared/AvatarStack";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -32,6 +34,9 @@ import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
+import { KanbanSortSelect } from "../shared/KanbanSortSelect";
+import { useKanbanSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 
 function isOverdueTask(t) {
   return Boolean(t.deadline) && new Date(t.deadline) < new Date();
@@ -41,6 +46,225 @@ function isDueSoon(t) {
   if (!t.deadline) return false;
   const diffMs = new Date(t.deadline).getTime() - Date.now();
   return diffMs >= 0 && diffMs <= 7 * 86400000;
+}
+
+/* ── Tabela (item 9/11: padronização de views — mesmo padrão de EntregasView.jsx) ── */
+function TaskTableView({ tasks, stages, usersById, campaignsById, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Título", "Campanha", "Prioridade", "Etapa", "Responsável", "Prazo"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.length === 0 && (
+            <tr><td colSpan={6} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma tarefa encontrada.</td></tr>
+          )}
+          {tasks.map(item => {
+            const stage = (stages || []).find(s => s.id === item.stage);
+            const color = stage?.color || "var(--text-dim)";
+            const pri = DELIVERABLE_PRIORITIES.find(p => p.id === item.priority);
+            const resolvedOwners = (item.assigneeIds || []).map(id => usersById.get(id)).filter(Boolean);
+            const campaign = item.campaignId ? campaignsById.get(item.campaignId) : null;
+            const isOverdue = isOverdueTask(item);
+            return (
+              <tr key={item.id} onClick={() => onRowClick(item)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)", maxWidth: 220 }}>
+                  <div className="truncate">{item.title}</div>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)", maxWidth: 140 }}>
+                  {campaign ? <span className="truncate block" title={campaign.name}>{campaign.name}</span> : "—"}
+                </td>
+                <td className="px-4 py-3">
+                  {pri ? (
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: pri.color + "18", color: pri.color, border: `1px solid ${pri.color}40` }}>
+                      {pri.label}
+                    </span>
+                  ) : "—"}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                    {stage?.name || item.stage}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  {resolvedOwners.length > 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <AvatarStack users={resolvedOwners} size={20} max={3} />
+                      <span className="text-xs truncate" style={{ color: "var(--text-dim)", maxWidth: 100 }}>{resolvedOwners[0].name}</span>
+                    </div>
+                  ) : <span className="text-xs" style={{ color: "var(--text-dim)" }}>—</span>}
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: isOverdue ? "var(--danger)" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
+                  {item.deadline ? formatDateBR(item.deadline) : "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ── Calendário (mesmo grid de EntregasView.jsx — tarefa tem prazo de um dia só) ── */
+const CAL_MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const CAL_DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const CAL_MAX_VISIBLE = 3;
+
+function calStartOfDay(d) { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; }
+function calAddDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+function calDayKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+
+function TaskCalendarView({ tasks, stages, onSelect }) {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const today = useMemo(() => calStartOfDay(new Date()), []);
+
+  const prevMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  const goToday   = () => { const n = new Date(); setCurrentMonth(new Date(n.getFullYear(), n.getMonth(), 1)); };
+
+  const weeks = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay  = new Date(year, month + 1, 0);
+    const gridStart = new Date(firstDay);
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+    const weeksArr = [];
+    let curr = new Date(gridStart);
+    while (curr <= lastDay || weeksArr.length < 4) {
+      const week = [];
+      for (let i = 0; i < 7; i++) { week.push(new Date(curr)); curr = calAddDays(curr, 1); }
+      weeksArr.push(week);
+      if (weeksArr.length >= 6) break;
+    }
+    return weeksArr;
+  }, [currentMonth]);
+
+  const { byDay, noDeadlineCount } = useMemo(() => {
+    const map = new Map();
+    let noDeadline = 0;
+    tasks.forEach(item => {
+      if (!item.deadline) { noDeadline++; return; }
+      const key = calDayKey(calStartOfDay(parseDateInput(item.deadline)));
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(item);
+    });
+    return { byDay: map, noDeadlineCount: noDeadline };
+  }, [tasks]);
+
+  const currentMonthNum = currentMonth.getMonth();
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="font-bold" style={{ fontSize: 20, color: "var(--text)", letterSpacing: "-0.01em" }}>
+            {CAL_MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+          </h2>
+          <button onClick={goToday} className="text-xs px-2.5 py-1 rounded-lg border font-medium"
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}>
+            Hoje
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={prevMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={nextMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+        <div className="grid grid-cols-7" style={{ borderBottom: "1px solid var(--border)" }}>
+          {CAL_DAY_SHORT.map((d, i) => (
+            <div key={d} className="text-center py-2 text-xs font-semibold" style={{ color: "var(--text-dim)", borderRight: i < 6 ? "1px solid var(--border)" : "none" }}>
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7" style={{ borderBottom: wi < weeks.length - 1 ? "1px solid var(--border)" : "none" }}>
+            {week.map((day, di) => {
+              const isCurrentMonth = day.getMonth() === currentMonthNum;
+              const isToday = day.getTime() === today.getTime();
+              const isWeekend = di === 0 || di === 6;
+              const items = byDay.get(calDayKey(day)) || [];
+              const visible = items.slice(0, CAL_MAX_VISIBLE);
+              const overflow = items.length - visible.length;
+              return (
+                <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
+                  <div className="flex justify-center mb-1">
+                    <span className="flex items-center justify-center text-xs font-semibold select-none"
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      {day.getDate()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {visible.map(item => {
+                      const stage = (stages || []).find(s => s.id === item.stage);
+                      const color = stage?.color || "var(--text-dim)";
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => onSelect(item)}
+                          title={item.title}
+                          className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                        >
+                          {item.title}
+                        </button>
+                      );
+                    })}
+                    {overflow > 0 && (
+                      <span style={{ fontSize: 10, color: "var(--text-dim)", paddingLeft: 4 }}>+{overflow} mais</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
+        <span className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>Etapas:</span>
+        {(stages || []).map(s => (
+          <div key={s.id} className="flex items-center gap-1.5">
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
+            <span className="text-xs" style={{ color: "var(--text-dim)" }}>{s.name}</span>
+          </div>
+        ))}
+      </div>
+
+      {noDeadlineCount > 0 && (
+        <p className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
+          {noDeadlineCount} tarefa{noDeadlineCount > 1 ? "s" : ""} sem prazo definido não {noDeadlineCount > 1 ? "aparecem" : "aparece"} nesta visão — confira na Tabela ou no Kanban.
+        </p>
+      )}
+    </div>
+  );
 }
 
 /* ── Create modal ────────────────────────────────────────────── */
@@ -386,7 +610,8 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const [stageError,    setStageError]    = useState(null);
   const [quickAddStage, setQuickAddStage] = useState(null);
   const [selected,      setSelected]      = useState(null);
-  const [viewMode,      setViewMode]      = useState("kanban"); // "kanban" | "analytics"
+  const [viewMode,      setViewMode]      = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
+  const [sortCriteria,  setSortCriteria]  = useKanbanSort("marketing-tarefas");
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => {
     const s = new Set(["a_fazer"]);
     if (location.state?.filterStage) s.add(location.state.filterStage);
@@ -425,6 +650,13 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
     if (deadlineFilter === "no_deadline") list = list.filter(t => !t.deadline);
     return list;
   }, [tasks, ownerFilter, priorityFilter, companyFilter, starredOnly, campaignFilter, deadlineFilter]);
+
+  // Item 6: ordenar cards dentro de cada coluna do Kanban.
+  const sortedFiltered = useMemo(() => sortKanbanItems(filtered, sortCriteria, {
+    deadline: t => t.deadline,
+    name: t => t.title,
+    createdAt: t => t.createdAt,
+  }), [filtered, sortCriteria]);
 
   const analyticsStages = useMemo(
     () => kanbanStages.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.sla })),
@@ -552,8 +784,13 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
             <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" />
+            <ViewToggleButton active={viewMode === "table"} onClick={() => setViewMode("table")} icon={List} label="Tabela" />
+            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
           </div>
+          {viewMode === "kanban" && (
+            <KanbanSortSelect value={sortCriteria} onChange={setSortCriteria} include={["deadline", "alpha"]} className="w-40" />
+          )}
           {canWrite && viewMode === "kanban" && (
             <button
               onClick={() => setQuickAddStage(kanbanStages[0]?.id)}
@@ -652,6 +889,20 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
 
       {(loading || loadingStages) && <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando tarefas…</div>}
 
+      {!loading && !loadingStages && viewMode === "table" && (
+        <TaskTableView
+          tasks={filtered}
+          stages={kanbanStages}
+          usersById={usersById}
+          campaignsById={campaignsById}
+          onRowClick={setSelected}
+        />
+      )}
+
+      {!loading && !loadingStages && viewMode === "calendar" && (
+        <TaskCalendarView tasks={filtered} stages={kanbanStages} onSelect={setSelected} />
+      )}
+
       {!loading && !loadingStages && viewMode === "analytics" && (
         <KanbanAnalyticsPanel
           stages={analyticsStages}
@@ -666,7 +917,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
           {kanbanStages.map(stage => {
-            const stageItems = filtered.filter(t => t.stage === stage.id);
+            const stageItems = sortedFiltered.filter(t => t.stage === stage.id);
             const expanded = expandedMobileStages.has(stage.id);
             return (
               <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
@@ -754,7 +1005,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-2 h-full" style={{ minWidth: `${kanbanStages.length * 280}px` }}>
               {kanbanStages.map(stage => {
-                const stageItems = filtered.filter(t => t.stage === stage.id);
+                const stageItems = sortedFiltered.filter(t => t.stage === stage.id);
                 const isOver     = dragOverStage === stage.id;
 
                 return (
