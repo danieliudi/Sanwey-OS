@@ -767,7 +767,7 @@ export function PurchaseRequestDetailDrawer({
           gerente_marketing/admin (só aprovar/rejeitar exige). */}
       {isSolicitado && (
         <div>
-          <SectionLabel>Mover para etapa</SectionLabel>
+          <SectionLabel>Mover para</SectionLabel>
           <StageNavigator
             targets={[{ id: "cotacao", name: "Cotação", color: STAGE_COLORS.cotacao }]}
             onMove={handleMoveStage}
@@ -866,7 +866,7 @@ export function PurchaseRequestDetailDrawer({
 
       {!isRejected && !isPending && movableStages.length > 0 && (
         <div>
-          <SectionLabel>Mover para etapa</SectionLabel>
+          <SectionLabel>Mover para</SectionLabel>
           <StageNavigator targets={movableStages} onMove={handleMoveStage} getKey={s => s.id} />
         </div>
       )}

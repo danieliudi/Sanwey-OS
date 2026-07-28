@@ -518,7 +518,10 @@ function ComexKanbanColumn({
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {opList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Nada aqui</div>
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5, display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ opacity: 0.5 }}>Nenhuma operação nesta etapa</span>
+            {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>}
+          </div>
         ) : (
           opList.map((op) => (
             <RHKanbanCard

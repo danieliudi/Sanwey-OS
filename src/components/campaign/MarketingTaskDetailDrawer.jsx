@@ -462,8 +462,8 @@ export function MarketingTaskDetailDrawer({
   const right = (
     <>
       <div>
-        <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-          Mover tarefa para etapa
+        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" }}>
+          Mover para
         </div>
         {moveError && (
           <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>

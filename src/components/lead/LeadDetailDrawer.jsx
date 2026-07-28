@@ -432,7 +432,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const isWonStage = Boolean(currentStageInfo?.won);
   const alreadySentToPosvenda = Boolean(lead.sentToPosvendaAt) || posvendaSent;
 
-  // Restringe "Mover card para fase" às transições configuradas em Comercial
+  // Restringe "Mover para" às transições configuradas em Comercial
   // > Editar etapas (mesma regra que já bloqueia o drag-and-drop no Kanban,
   // ver CRMView.jsx) — sem regra configurada pra empresa/etapa, permanece
   // aberto (todas as etapas), preservando o comportamento anterior.
@@ -1454,7 +1454,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
             </button>
           ) : stageNav.next ? (
             <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
-              Avanço direto para {stageNav.next.name} não permitido — use "Mover card para fase".
+              Avanço direto para {stageNav.next.name} não permitido — use "Mover para".
             </div>
           ) : (
             <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
@@ -1577,8 +1577,8 @@ function MoveAndCommentsPanel({
 }) {
   return (
     <>
-      <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-        Mover card para fase
+      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" }}>
+        Mover para
       </div>
       {moveError && (
         <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>

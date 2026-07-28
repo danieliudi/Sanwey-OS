@@ -1821,8 +1821,8 @@ export function CampaignDetailDrawer({
     <>
       {canWrite && (
         <div>
-          <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-            Mover campanha para etapa
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" }}>
+            Mover para
           </div>
           <StageNavigator
             targets={effectiveStages.filter(s => s.id !== stage?.id)}

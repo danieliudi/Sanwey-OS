@@ -755,7 +755,10 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                           {isOver ? (
                             <><Plus size={16} style={{ opacity: 0.5 }} /><span>Soltar aqui</span></>
                           ) : (
-                            <span style={{ opacity: 0.5 }}>Nenhum caso nesta etapa</span>
+                            <>
+                              <span style={{ opacity: 0.5 }}>Nenhum caso nesta etapa</span>
+                              {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>}
+                            </>
                           )}
                         </div>
                       ) : (

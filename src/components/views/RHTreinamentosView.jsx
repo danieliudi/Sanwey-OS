@@ -678,7 +678,13 @@ function TreinamentoBoardColumn({
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {atribList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5, display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ opacity: 0.5 }}>Nenhuma atribuição nesta etapa</span>
+            {/* "Criar" aqui é atribuir um colaborador já existente ao treinamento
+                (não criar registro novo do zero) — texto reflete isso, não o
+                genérico "crie um novo" usado nos outros kanbans. */}
+            {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou atribua alguém</span>}
+          </div>
         ) : (
           atribList.map((a) => (
             <RHKanbanCard
