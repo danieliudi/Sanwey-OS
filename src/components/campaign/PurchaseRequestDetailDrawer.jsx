@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   CheckCircle2, XCircle, Upload, FileText,
   TrendingUp, TrendingDown, AlertCircle, ExternalLink, Loader2,
-  Activity, Paperclip, ListChecks, History,
+  Activity, Paperclip, ListChecks, History, Sparkles,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
@@ -17,6 +17,8 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { StageNavigator } from "../shared/StageNavigator";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { RecordAIPanel } from "../shared/RecordAIPanel";
+import { genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { ActivityLog } from "./CampaignDetailDrawer";
 import { RHAttachmentsPanel, RHChecklistsPanel, RHStageHistoryPanel } from "../rh-pipeline/RHDetailDrawerShell";
 
@@ -739,6 +741,7 @@ export function PurchaseRequestDetailDrawer({
           { id: "form",       label: "Form",       icon: FileText },
           { id: "atividades", label: "Atividades", icon: Activity },
           { id: "historico",  label: "Histórico",  icon: History },
+          { id: "ia",         label: "IA",         icon: Sparkles },
           { id: "anexos",     label: "Anexos",     icon: Paperclip },
           { id: "checklist",  label: "Checklist",  icon: ListChecks },
         ]}
@@ -749,6 +752,24 @@ export function PurchaseRequestDetailDrawer({
       {centerTab === "atividades" && <ActivityLog activities={purchase.activities || []} />}
       {centerTab === "historico" && (
         <RHStageHistoryPanel domain="marketing_purchase_requests" recordId={purchase.id} stages={PURCHASE_STAGES} currentUser={currentUser} users={users} />
+      )}
+      {centerTab === "ia" && (
+        <RecordAIPanel
+          currentUser={currentUser}
+          features={[{
+            id: "summary",
+            label: "Resumo & Próximo passo",
+            buildMessages: () => genericCardSummaryPrompt({
+              title: purchase.itemName,
+              domainLabel: "Compras",
+              stageName: stageInfo?.name || purchase.stage,
+              daysInStage: purchase.stageChangedAt
+                ? Math.floor((Date.now() - new Date(purchase.stageChangedAt)) / 86400000)
+                : 0,
+            }),
+          }]}
+          defaultFeatureId="summary"
+        />
       )}
       {centerTab === "anexos" && (
         <RHAttachmentsPanel domain="marketing_purchase_requests" recordId={purchase.id} currentUser={currentUser} />

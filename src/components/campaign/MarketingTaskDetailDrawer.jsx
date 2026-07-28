@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, FileText, Activity, Paperclip, ListChecks, History } from "lucide-react";
+import { AlertCircle, FileText, Activity, Paperclip, ListChecks, History, Sparkles } from "lucide-react";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
@@ -12,6 +12,8 @@ import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { AvatarStack } from "../shared/AvatarStack";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { RecordAIPanel } from "../shared/RecordAIPanel";
+import { genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { ActivityLog } from "./CampaignDetailDrawer";
 import { RHAttachmentsPanel, RHChecklistsPanel, RHStageHistoryPanel } from "../rh-pipeline/RHDetailDrawerShell";
 
@@ -439,6 +441,7 @@ export function MarketingTaskDetailDrawer({
           { id: "form",       label: "Form",       icon: FileText },
           { id: "atividades", label: "Atividades", icon: Activity },
           { id: "historico",  label: "Histórico",  icon: History },
+          { id: "ia",         label: "IA",         icon: Sparkles },
           { id: "anexos",     label: "Anexos",     icon: Paperclip },
           { id: "checklist",  label: "Checklist",  icon: ListChecks },
         ]}
@@ -449,6 +452,24 @@ export function MarketingTaskDetailDrawer({
       {centerTab === "atividades" && <ActivityLog activities={item.activities || []} />}
       {centerTab === "historico" && (
         <RHStageHistoryPanel domain="marketing_tasks" recordId={item.id} stages={stages} currentUser={currentUser} users={users} />
+      )}
+      {centerTab === "ia" && (
+        <RecordAIPanel
+          currentUser={currentUser}
+          features={[{
+            id: "summary",
+            label: "Resumo & Próximo passo",
+            buildMessages: () => genericCardSummaryPrompt({
+              title: item.title,
+              domainLabel: "Tarefas de Marketing",
+              stageName: stageInfo?.name || item.stage,
+              daysInStage: item.stageChangedAt
+                ? Math.floor((Date.now() - new Date(item.stageChangedAt)) / 86400000)
+                : 0,
+            }),
+          }]}
+          defaultFeatureId="summary"
+        />
       )}
       {centerTab === "anexos" && (
         <RHAttachmentsPanel domain="marketing_tasks" recordId={item.id} currentUser={currentUser} />

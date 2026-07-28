@@ -910,6 +910,9 @@ function AtribuicaoDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...atribuicao, stage: atribuicao.status, stageChangedAt: atribuicao.status_changed_at }}
+      recordTitle={[colaborador?.fullName, treinamento?.titulo].filter(Boolean).join(" · ")}
+      domainLabel="Treinamentos"
     />
   );
 

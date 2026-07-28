@@ -671,6 +671,9 @@ function FeriasDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...req, stage: req.status, stageChangedAt: req.status_changed_at }}
+      recordTitle={colaborador?.fullName}
+      domainLabel="Férias"
     />
   );
 

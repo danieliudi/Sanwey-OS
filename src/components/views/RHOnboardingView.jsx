@@ -629,6 +629,9 @@ function OnboardingDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...colaborador, stage: colaborador.onboardingStage, stageChangedAt: colaborador.onboardingStageChangedAt }}
+      recordTitle={colaborador.fullName}
+      domainLabel="Onboarding"
     />
   );
 

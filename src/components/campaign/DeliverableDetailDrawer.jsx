@@ -4,7 +4,7 @@ import {
   FileText, Activity, Paperclip, CheckSquare, History,
   Sparkles,
   Upload, File, FileImage, Download, Plus,
-  Check, Loader2, AlertCircle, RotateCcw, Copy, RefreshCw,
+  Check, Loader2, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
@@ -14,8 +14,8 @@ import { useDeliverableChecklists }   from "../../hooks/use-deliverable-checklis
 import { useRHStageFields }           from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput }          from "../rh-pipeline/RHStageFieldInput";
 import { resolveVisibleFields }       from "../../utils/field-conditions";
-import { useAI }                      from "../../hooks/use-ai";
-import { deliverableStageSuggestionPrompt } from "../../constants/ai-prompts";
+import { RecordAIPanel }              from "../shared/RecordAIPanel";
+import { deliverableStageSuggestionPrompt, genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { CommentsPanel }              from "../shared/CommentsPanel";
 import { getMentionableUsers }        from "../../utils/mentionable-users";
 import { AssigneeMultiSelect }        from "../shared/AssigneeMultiSelect";
@@ -45,110 +45,34 @@ const SIDE_TABS = [
 
 /* ── Deliverable AI panel ───────────────────────────────────── */
 function DeliverableAIPanel({ item, currentUser }) {
-  const { complete, isConfigured } = useAI(currentUser);
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null);
-  const [error,   setError]   = useState(null);
-  const [copied,  setCopied]  = useState(false);
+  const daysInStage = item.stageChangedAt
+    ? Math.floor((Date.now() - new Date(item.stageChangedAt)) / 86400000)
+    : 0;
 
-  const handleGenerate = async () => {
-    if (!isConfigured) return;
-    setLoading(true);
-    setResult(null);
-    setError(null);
-    setCopied(false);
-    try {
-      const text = await complete(deliverableStageSuggestionPrompt(item));
-      setResult(text);
-    } catch (err) {
-      setError(err.message || "Erro ao gerar resposta.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCopy = () => {
-    if (!result || !navigator.clipboard?.writeText) return;
-    navigator.clipboard.writeText(result).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+  const features = [
+    {
+      id: "summary",
+      label: "Resumo & Próximo passo",
+      buildMessages: () => genericCardSummaryPrompt({
+        title: item.title,
+        domainLabel: "Entregas",
+        stageName: item.stage,
+        daysInStage,
+      }),
+    },
+    {
+      id: "stage-suggestion",
+      label: "Sugestão de etapa",
+      buildMessages: () => deliverableStageSuggestionPrompt(item),
+    },
+  ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ padding: 12, borderRadius: 12, border: "1px solid #DDD6FE", background: "#F5F3FF" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <Sparkles size={13} style={{ color: PURPLE }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: PURPLE }}>Sugestão de próxima etapa</span>
-          {!isConfigured && (
-            <span style={{ fontSize: 10, fontWeight: 500, padding: "1px 8px", borderRadius: 9999, background: "#FEF3C7", color: "#92400E", marginLeft: "auto" }}>
-              configure nas Configurações
-            </span>
-          )}
-        </div>
-        <p style={{ fontSize: 11, color: "#5B21B6", marginBottom: 10, lineHeight: 1.5 }}>
-          A IA analisa etapa, prazo, prioridade e progresso para recomendar a próxima ação.
-        </p>
-        <button
-          onClick={handleGenerate}
-          disabled={loading || !isConfigured}
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "6px 14px", borderRadius: 9999, fontSize: 11, fontWeight: 600,
-            background: !isConfigured ? "#E5E7EB" : PURPLE,
-            color: !isConfigured ? "var(--text-dim)" : "#FFFFFF",
-            border: "none", cursor: loading || !isConfigured ? "not-allowed" : "pointer",
-            opacity: loading ? 0.8 : 1, transition: "all 0.15s",
-          }}
-          title={!isConfigured ? "Configure sua LLM nas Configurações → Integrações de IA" : undefined}
-          onMouseEnter={e => { if (!loading && isConfigured) e.currentTarget.style.filter = "brightness(0.9)"; }}
-          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-        >
-          {loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-          {loading ? "Analisando…" : "Analisar entrega"}
-        </button>
-      </div>
-
-      {error && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 12px", borderRadius: 10, background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA", fontSize: 11 }}>
-          <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {result && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 11, lineHeight: 1.6, whiteSpace: "pre-line", padding: 12, borderRadius: 10, border: "1px solid #DDD6FE", background: "#FFFFFF", color: "var(--text)" }}>
-            {result}
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={handleGenerate}
-              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 9999, border: "1px solid #E5E7EB", background: "#FFFFFF", color: "var(--text-dim)", cursor: "pointer" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = PURPLE; e.currentTarget.style.color = PURPLE; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = "var(--text-dim)"; }}
-            >
-              <RotateCcw size={10} />
-              Regenerar
-            </button>
-            <button
-              onClick={handleCopy}
-              style={{
-                display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, padding: "4px 10px",
-                borderRadius: 9999, border: `1px solid ${copied ? "#BBF7D0" : "#E5E7EB"}`,
-                background: copied ? "#F0FDF4" : "#FFFFFF", color: copied ? "#16A34A" : "var(--text-dim)", cursor: "pointer",
-              }}
-              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = "var(--text-dim)"; } }}
-            >
-              {copied ? <Check size={10} /> : <Copy size={10} />}
-              {copied ? "Copiado!" : "Copiar"}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <RecordAIPanel
+      currentUser={currentUser}
+      features={features}
+      defaultFeatureId="summary"
+    />
   );
 }
 

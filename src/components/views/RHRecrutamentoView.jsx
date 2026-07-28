@@ -1214,6 +1214,9 @@ function VagaDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...vaga, stageChangedAt: vaga.stage_changed_at }}
+      recordTitle={vaga.title}
+      domainLabel="Recrutamento"
     />
   );
 
@@ -2037,6 +2040,9 @@ function CandidatoDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...candidato, stageChangedAt: candidato.stage_changed_at }}
+      recordTitle={candidato.name}
+      domainLabel="Recrutamento"
     />
   );
 

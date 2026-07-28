@@ -860,6 +860,9 @@ function ComexDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={op}
+      recordTitle={op.title}
+      domainLabel="Comex"
     />
   );
 

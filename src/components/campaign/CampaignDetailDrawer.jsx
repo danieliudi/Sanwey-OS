@@ -3,7 +3,7 @@ import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
   Sparkles, ChevronRight, History,
-  RotateCcw, Copy, Loader2, AlertCircle, Package,
+  Loader2, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES, PERFORMANCE_HINT_BY_KPI, DEFAULT_PERFORMANCE_HINT } from "../../constants/marketing-pipelines";
@@ -23,8 +23,8 @@ import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
 import { RHStageHistoryPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields } from "../../utils/field-conditions";
-import { useAI } from "../../hooks/use-ai";
-import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
+import { RecordAIPanel } from "../shared/RecordAIPanel";
+import { campaignStageSuggestionPrompt, genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { EVENT_CHECKLIST_TEMPLATE } from "../../constants/event-checklist-template";
@@ -64,115 +64,34 @@ const SIDE_TABS = [
 // ── AI panel ──────────────────────────────────────────────────────────────────
 
 function CampaignAIPanel({ campaign, currentUser }) {
-  const { complete, isConfigured } = useAI(currentUser);
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null);
-  const [error,   setError]   = useState(null);
-  const [copied,  setCopied]  = useState(false);
+  const daysInStage = campaign.stageChangedAt
+    ? Math.floor((Date.now() - new Date(campaign.stageChangedAt)) / 86400000)
+    : 0;
 
-  const handleGenerate = async () => {
-    if (!isConfigured) return;
-    setLoading(true);
-    setResult(null);
-    setError(null);
-    setCopied(false);
-    try {
-      const text = await complete(campaignStageSuggestionPrompt(campaign));
-      setResult(text);
-    } catch (err) {
-      setError(err.message || "Erro ao gerar resposta.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCopy = () => {
-    if (!result || !navigator.clipboard?.writeText) return;
-    navigator.clipboard.writeText(result).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+  const features = [
+    {
+      id: "summary",
+      label: "Resumo & Próximo passo",
+      buildMessages: () => genericCardSummaryPrompt({
+        title: campaign.name,
+        domainLabel: "Campanhas",
+        stageName: campaign.stage,
+        daysInStage,
+      }),
+    },
+    {
+      id: "stage-suggestion",
+      label: "Sugestão de etapa",
+      buildMessages: () => campaignStageSuggestionPrompt(campaign),
+    },
+  ];
 
   return (
-    <div className="space-y-3">
-      <div className="p-3 rounded-xl border" style={{ background: "#F5F3FF", borderColor: "#DDD6FE" }}>
-        <div className="flex items-center gap-2 mb-1.5">
-          <Sparkles size={13} style={{ color: PURPLE }} />
-          <span className="text-xs font-semibold" style={{ color: PURPLE }}>Sugestão de próxima etapa</span>
-          {!isConfigured && (
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full ml-auto"
-              style={{ background: "#FEF3C7", color: "#92400E" }}>
-              configure nas Configurações
-            </span>
-          )}
-        </div>
-        <p className="text-[11px] mb-2.5 leading-relaxed" style={{ color: "#5B21B6" }}>
-          A IA analisa etapa, SLA, checklist e datas para recomendar se é hora de avançar.
-        </p>
-        <button
-          onClick={handleGenerate}
-          disabled={loading || !isConfigured}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
-          style={{
-            background: !isConfigured ? "var(--border)" : PURPLE,
-            color:      !isConfigured ? "var(--text-dim)" : "#FFFFFF",
-            border: "none",
-            cursor: loading || !isConfigured ? "not-allowed" : "pointer",
-            opacity: loading ? 0.8 : 1,
-          }}
-          title={!isConfigured ? "Configure sua LLM nas Configurações → Integrações de IA" : undefined}
-          onMouseEnter={e => { if (!loading && isConfigured) e.currentTarget.style.filter = "brightness(0.9)"; }}
-          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-        >
-          {loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-          {loading ? "Analisando…" : "Analisar campanha"}
-        </button>
-      </div>
-
-      {error && (
-        <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-xl"
-          style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }}>
-          <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {result && (
-        <div className="space-y-2">
-          <div className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-xl border"
-            style={{ background: "var(--surface)", borderColor: "#DDD6FE", color: "var(--text)" }}>
-            {result}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleGenerate}
-              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer"
-              style={{ background: "var(--surface)", color: "var(--text-dim)", borderColor: "var(--border)" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = PURPLE; e.currentTarget.style.color = PURPLE; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; }}
-            >
-              <RotateCcw size={10} />
-              Regenerar
-            </button>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer"
-              style={{
-                background: copied ? "#F0FDF4" : "var(--surface)",
-                color:      copied ? "var(--success)" : "var(--text-dim)",
-                borderColor: copied ? "#BBF7D0" : "var(--border)",
-              }}
-              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; } }}
-            >
-              {copied ? <Check size={10} /> : <Copy size={10} />}
-              {copied ? "Copiado!" : "Copiar"}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <RecordAIPanel
+      currentUser={currentUser}
+      features={features}
+      defaultFeatureId="summary"
+    />
   );
 }
 

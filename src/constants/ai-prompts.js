@@ -3,6 +3,51 @@ const SYSTEM_BASE = `Você é um assistente de vendas B2B especializado.
 Responda sempre em português brasileiro. Seja conciso, direto e prático.
 Nunca use jargões vazios. Foque em ações concretas e contextualizadas.`;
 
+// Recurso padrão universal (Frente 10, item 2): roda em QUALQUER Kanban da
+// plataforma, mesmo os que não têm nenhum prompt de domínio próprio — só usa
+// dado que todo card de todo board já tem (etapa, SLA, campos configurados
+// por etapa, comentários). Ver docs/mockup "Padrão universal de IA por
+// Kanban" — este é o prompt-builder que RecordAIPanel.jsx chama por padrão.
+export function genericCardSummaryPrompt({ title, domainLabel, stageName, slaDays, daysInStage, customFields = [], recentComments = [] }) {
+  const fieldLines = customFields.length
+    ? customFields.map(f => `- ${f.label}: ${f.value ?? '—'}`).join('\n')
+    : '- Nenhum campo específico preenchido nesta etapa';
+
+  const commentLines = recentComments.length
+    ? recentComments.slice(-5).map(c => `- ${c}`).join('\n')
+    : '- Nenhum comentário/atividade registrada';
+
+  const slaLine = slaDays
+    ? `${daysInStage}d (SLA desta etapa: ${slaDays}d)${daysInStage > slaDays ? ' — ACIMA DO SLA' : ''}`
+    : `${daysInStage}d (sem SLA configurado para esta etapa)`;
+
+  return [
+    {
+      role: 'system',
+      content: `Você é um assistente de gestão de fluxo de trabalho (Kanban) genérico — não conhece o domínio específico deste registro além do que for informado abaixo. Responda sempre em português brasileiro, de forma concisa e prática. Baseie-se só nos dados fornecidos, nunca invente contexto que não esteja ali.`,
+    },
+    {
+      role: 'user',
+      content: `Analise este card${domainLabel ? ` de um Kanban de ${domainLabel}` : ' de um Kanban'}:
+
+**Título/registro:** ${title || '—'}
+**Etapa atual:** ${stageName || '—'}
+**Tempo nesta etapa:** ${slaLine}
+
+**Campos preenchidos nesta etapa:**
+${fieldLines}
+
+**Últimos comentários/atividades:**
+${commentLines}
+
+Responda com exatamente 3 blocos, cada um com o título em negrito markdown:
+**Situação** (1-2 frases resumindo o estado atual)
+**Risco ou bloqueio** (1-2 frases — SLA estourado, campo importante vazio, sem responsável, sem atividade recente; se não houver nenhum, diga "Nenhum risco aparente")
+**Sugestão de próximo passo** (1 frase, ação concreta)`,
+    },
+  ];
+}
+
 export function briefingPrompt(lead, activities, linkedEmails) {
   const recentActivities = (activities || [])
     .slice(-5)

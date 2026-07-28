@@ -931,6 +931,9 @@ function FeedbackDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...feedback, stage: feedback.status, stageChangedAt: feedback.status_changed_at }}
+      recordTitle={colaborador?.fullName}
+      domainLabel="Avaliação de Desempenho"
     />
   );
 
