@@ -1,80 +1,39 @@
-// Template padrão de checklist de evento (planilha real do Daniel), aplicado
-// via botão manual no drawer da campanha — ver docs/design-spec-checklist-evento.md.
-// Hardcoded de propósito (mesmo precedente de PURCHASE_STAGES em
-// use-marketing-purchase-requests.js): não foi pedido um editor de template
-// configurável; editar isto é código, não UI.
+// Template padrão de checklist de evento (lista fornecida pelo Daniel em
+// 28/07/2026, substitui a versão anterior de 5 segmentos), aplicado via
+// botão manual no drawer da campanha. Hardcoded de propósito (mesmo
+// precedente de PURCHASE_STAGES em use-marketing-purchase-requests.js): não
+// foi pedido um editor de template configurável; editar isto é código, não
+// UI. Cada item desta lista vira 1 tarefa (marketing_tasks) ao aplicar; os
+// sub-passos de cada item viram o checklist (rh_checklists) daquela tarefa
+// — item sem sub-passo na lista original usa o próprio título como único
+// item do checklist, pra nunca gerar um checklist vazio.
 export const EVENT_CHECKLIST_TEMPLATE = [
-  {
-    segment: "Documentação e Acessos",
-    items: [
-      "Verificar Contrato",
-      "Localização do Stand",
-      "Requisitos do Manual do Expositor",
-      "Crachá",
-      "Credencial convidado VIP",
-      "Segurança",
-      "Coletor de dados",
-      "Energia Elétrica",
-      "Autorização da montadora",
-      "Funcionamento feira virtual e presencial",
-      "Acessar material de divulgação da Organizadora",
-      "e-commerce",
-    ],
-  },
-  {
-    segment: "Preparação e Divulgação",
-    items: [
-      "Verificar o projeto Stand",
-      "Banner do stand",
-      "Vídeo arquivo Pen Drive",
-      "Limpeza",
-      "Schedule pessoal e comercial",
-      "Schedule pessoal de outros departamentos",
-      "Orientar os colaboradores",
-      "Mailing de divulgação da feira",
-      "Convidar cliente e prospects",
-      "Estacionamento",
-      "Cartão de visitas",
-      "Contratação Seguro",
-    ],
-  },
-  {
-    segment: "Montagem e Amostras",
-    items: [
-      "Acompanhamento montagem",
-      "Acompanhamento desmontagem",
-      "Providenciar as amostras",
-      "Verificar modelo para exposição",
-      "Fabricação da amostra",
-      "Montagem da amostra no stand",
-    ],
-  },
-  {
-    segment: "Materiais e Logística",
-    items: [
-      "Verificar estoque de material impresso",
-      "Análise e definição dos vídeos a serem utilizados na feira",
-      "Verificar estoque de brindes",
-      "Sacola Sanwey",
-      "Copos descartáveis, saco de lixo e material para limpeza",
-      "Separar kit escritório",
-      "Alimentos",
-      "Bebidas",
-      "Máquina de chopp",
-      "Máquina de café",
-      "Extintor de incêndio",
-      "Emissão de nota fiscal",
-      "Transporte para levar material para feira",
-      "Levar o material e organizar o stand",
-      "Revisar folders",
-    ],
-  },
-  {
-    segment: "Pós-evento",
-    items: [
-      "Dados do coletor de dados",
-      "Coleta de dados com a equipe",
-      "Relatório",
-    ],
-  },
+  { segment: "Alinhamento", items: ["Preparar apresentação", "agendar reunião"] },
+  { segment: "Contrato", items: ["Contrato"] },
+  { segment: "Planta", items: ["Planta"] },
+  { segment: "Manual", items: ["Manual"] },
+  { segment: "Extintor", items: ["Verificar contrato", "Se necessário contratar", "CP", "NF"] },
+  { segment: "Coletor de dados", items: ["Ver manual", "Contratar", "CP", "NF", "Baixar leads", "compartilhar"] },
+  { segment: "Energia Elétrica", items: ["Contatado Verificar adicional necessário", "Contratar", "CP", "NF"] },
+  { segment: "Credenciais", items: ["Verificar quantidade e definir escala"] },
+  { segment: "Convite VIP", items: ["Verificar", "Definir convidados", "Envio do convite"] },
+  { segment: "Seguro", items: ["Verificar no manual se é necessário", "contratar"] },
+  { segment: "Autorização da Montadora", items: ["Autorização da Montadora"] },
+  { segment: "Segurança", items: ["Verificar Manual", "cotar", "aprovar", "NF", "CP"] },
+  { segment: "Limpeza", items: ["Ver manual", "Cotação", "confirmação de serviço", "NF", "CP"] },
+  { segment: "Banner Stand", items: ["Definir", "solicitar à agência", "Analisar/aprovar", "Enviar à montadora"] },
+  { segment: "Totem", items: ["Totem"] },
+  { segment: "Tela de Led", items: ["Verificar, Cotar, contratar, NF, CP"] },
+  { segment: "Alinhamento", items: ["Alinhamento"] },
+  { segment: "Vídeos", items: ["Verificar necessidade de atualizações", "Definir vídeos", "salvar em pen drive"] },
+  { segment: "Amostras de Produtos", items: ["Definir modelos e quantidades", "Solicitação em sistema", "Conferência física", "emissão de nota fiscal saída", "NF Retorno"] },
+  { segment: "Material impresso", items: ["Verificar necessidade de criação", "Verificar Estoque", "Cotação", "Pedido", "Entrega NF", "CP"] },
+  { segment: "Cartão de Visitas", items: ["Levantar necessidade", "Cotar", "confirmar pedido", "NF", "CP"] },
+  { segment: "Kit mídia convite", items: ["Kit mídia convite"] },
+  { segment: "Chopeira", items: ["Definir, Cotar, Contratar, Entrega NF, CP"] },
+  { segment: "Máquina de Café", items: ["Definir", "Cotar", "Contratar", "NF", "CP"] },
+  { segment: "Brindes", items: ["Verificar Estoque", "Pedido", "entrega"] },
+  { segment: "Buffet", items: ["Definir", "cotar", "Pedido", "entrega NF", "CP"] },
+  { segment: "Descartáveis", items: ["Verificar estoque", "levantar necessidade", "compra", "preparar embalagens"] },
+  { segment: "Fechamento", items: ["preparar relatório"] },
 ];

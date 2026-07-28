@@ -174,7 +174,7 @@ function CampaignAIPanel({ campaign, currentUser }) {
   );
 }
 
-// ── Checklist de evento (5 segmentos → 5 marketing_tasks + rh_checklists) ────
+// ── Checklist de evento (N segmentos → N marketing_tasks + rh_checklists) ────
 
 function ApplyEventChecklistButton({ campaign, currentUser }) {
   const { tasks, loading } = useMarketingTasks({
