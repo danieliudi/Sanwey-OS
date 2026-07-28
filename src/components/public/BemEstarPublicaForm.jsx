@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, AlertCircle, HeartHandshake, CheckCircle2, Clock } from "lucide-react";
+import { Loader2, AlertCircle, HeartHandshake, CheckCircle2, Clock, Check } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
 
@@ -29,6 +29,10 @@ export default function BemEstarPublicaForm() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmado, setConfirmado] = useState(null); // { horario }
   const [error, setError] = useState(null);
+  // Passo 1 (dados de contato) precisa ser preenchido e validado antes do
+  // passo 2 (horário) aparecer — o link só "libera" a agenda depois de nome
+  // completo + e-mail + celular, pedido explícito do Daniel.
+  const [step, setStep] = useState("contato"); // "contato" | "horario"
 
   useEffect(() => { document.title = "Bem-estar — Grupo Sanwey"; }, []);
 
@@ -49,13 +53,23 @@ export default function BemEstarPublicaForm() {
     return () => { active = false; };
   }, [id]);
 
-  const canSubmit = nome.trim().length >= 2 && Boolean(horarioEscolhido) && (email.trim() || whatsapp.trim()) && !submitting;
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const canAdvance = nome.trim().length >= 2 && EMAIL_RE.test(email.trim()) && whatsapp.trim().length >= 8;
+  const canSubmit = canAdvance && Boolean(horarioEscolhido) && !submitting;
+
+  const handleAdvance = (e) => {
+    e.preventDefault();
+    if (nome.trim().length < 2) { setError("Digite seu nome completo."); return; }
+    if (!EMAIL_RE.test(email.trim())) { setError("Digite um e-mail válido."); return; }
+    if (whatsapp.trim().length < 8) { setError("Digite seu celular."); return; }
+    setError(null);
+    setStep("horario");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (nome.trim().length < 2) { setError("Digite seu nome."); return; }
     if (!horarioEscolhido) { setError("Escolha um horário."); return; }
-    if (!email.trim() && !whatsapp.trim()) { setError("Informe e-mail ou WhatsApp pra receber a confirmação."); return; }
     setSubmitting(true); setError(null);
     try {
       const { data, error: err } = await supabase.rpc("submit_bemestar_agendamento", {
@@ -111,67 +125,108 @@ export default function BemEstarPublicaForm() {
         {sessao.descricao && <p style={{ color: "#5c5f60", fontSize: 14, margin: "0 0 8px", lineHeight: 1.55 }}>{sessao.descricao}</p>}
       </header>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <div>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 8 }}>Escolha um horário *</label>
-          {!temHorariosLivres ? (
-            <div style={{ fontSize: 13, color: "#5c5f60" }}>Nenhum horário livre no momento.</div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(76px, 1fr))", gap: 8 }}>
-              {horarios.map((h) => {
-                const label = (h.horario || "").slice(0, 5);
-                const active = horarioEscolhido === h.horario;
-                return (
-                  <button key={h.horario} type="button" disabled={!h.disponivel} onClick={() => setHorarioEscolhido(h.horario)}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                      padding: "10px 0", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: h.disponivel ? "pointer" : "not-allowed",
-                      border: `1.5px solid ${active ? ACCENT : h.disponivel ? "#D1D5DB" : "#E5E7EB"}`,
-                      background: active ? ACCENT : h.disponivel ? "#FFF" : "#F3F4F6",
-                      color: active ? "#FFF" : h.disponivel ? "#201a1a" : "#9CA3AF",
-                    }}>
-                    <Clock size={11} /> {label}
-                  </button>
-                );
-              })}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
+        <StepPill n={1} label="Seus dados" active={step === "contato"} done={step === "horario"} />
+        <div style={{ width: 16, height: 1, background: "#E5E7EB" }} />
+        <StepPill n={2} label="Horário" active={step === "horario"} done={false} />
+      </div>
+
+      {step === "contato" ? (
+        <form onSubmit={handleAdvance} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <p style={{ fontSize: 13, color: "#5c5f60", margin: "-8px 0 0" }}>Informe seu nome completo e e-mail pra liberar os horários disponíveis.</p>
+          <div>
+            <label htmlFor="bemestar-nome" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Nome completo *</label>
+            <input id="bemestar-nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como o RH vai te chamar" style={input} autoFocus />
+          </div>
+          <div>
+            <label htmlFor="bemestar-email" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>E-mail *</label>
+            <input id="bemestar-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@empresa.com" style={input} />
+          </div>
+          <div>
+            <label htmlFor="bemestar-whatsapp" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Celular *</label>
+            <input id="bemestar-whatsapp" type="text" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="(11) 99999-9999" style={input} />
+          </div>
+          <div className="grid grid-cols-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label htmlFor="bemestar-ramal" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Ramal</label>
+              <input id="bemestar-ramal" type="text" value={ramal} onChange={(e) => setRamal(e.target.value)} style={input} />
+            </div>
+            <div>
+              <label htmlFor="bemestar-unidade" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Unidade</label>
+              <select id="bemestar-unidade" value={unidade} onChange={(e) => setUnidade(e.target.value)} style={input}>
+                {UNIDADES.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
+              </select>
+            </div>
+          </div>
+          {error && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: 12, borderRadius: 8, background: "#FEF2F2", color: "#B91C1C", fontSize: 13, border: "1px solid #FECACA" }}>
+              <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 2 }} /><span>{error}</span>
             </div>
           )}
-        </div>
-        <div>
-          <label htmlFor="bemestar-nome" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Seu nome *</label>
-          <input id="bemestar-nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como o RH vai te chamar" style={input} />
-        </div>
-        <div className="grid grid-cols-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <button type="submit" disabled={!canAdvance}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, background: canAdvance ? ACCENT : "#D1D5DB", color: "#FFF", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 700, cursor: canAdvance ? "pointer" : "not-allowed" }}>
+            Ver horários disponíveis →
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label htmlFor="bemestar-ramal" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Ramal</label>
-            <input id="bemestar-ramal" type="text" value={ramal} onChange={(e) => setRamal(e.target.value)} style={input} />
+            <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 8 }}>Escolha um horário livre *</label>
+            {!temHorariosLivres ? (
+              <div style={{ fontSize: 13, color: "#5c5f60" }}>Nenhum horário livre no momento.</div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(76px, 1fr))", gap: 8 }}>
+                {horarios.map((h) => {
+                  const label = (h.horario || "").slice(0, 5);
+                  const active = horarioEscolhido === h.horario;
+                  return (
+                    <button key={h.horario} type="button" disabled={!h.disponivel} onClick={() => setHorarioEscolhido(h.horario)}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                        padding: "10px 0", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: h.disponivel ? "pointer" : "not-allowed",
+                        border: `1.5px solid ${active ? ACCENT : h.disponivel ? "#D1D5DB" : "#E5E7EB"}`,
+                        background: active ? ACCENT : h.disponivel ? "#FFF" : "#F3F4F6",
+                        color: active ? "#FFF" : h.disponivel ? "#201a1a" : "#9CA3AF",
+                      }}>
+                      <Clock size={11} /> {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div>
-            <label htmlFor="bemestar-unidade" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>Unidade</label>
-            <select id="bemestar-unidade" value={unidade} onChange={(e) => setUnidade(e.target.value)} style={input}>
-              {UNIDADES.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
-            </select>
+          {error && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: 12, borderRadius: 8, background: "#FEF2F2", color: "#B91C1C", fontSize: 13, border: "1px solid #FECACA" }}>
+              <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 2 }} /><span>{error}</span>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" onClick={() => { setError(null); setStep("contato"); }}
+              style={{ padding: "12px 16px", borderRadius: 8, fontSize: 14, fontWeight: 700, border: "1px solid #D1D5DB", background: "#FFF", color: "#5c5f60", cursor: "pointer" }}>
+              ← Voltar
+            </button>
+            <button type="submit" disabled={!canSubmit}
+              style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, background: canSubmit ? ACCENT : "#D1D5DB", color: "#FFF", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 700, cursor: canSubmit ? "pointer" : "not-allowed" }}>
+              {submitting && <Loader2 size={14} className="animate-spin" />} {submitting ? "Reservando…" : "Reservar horário"}
+            </button>
           </div>
-        </div>
-        <div>
-          <label htmlFor="bemestar-email" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>E-mail</label>
-          <input id="bemestar-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Pra receber a confirmação" style={input} />
-        </div>
-        <div>
-          <label htmlFor="bemestar-whatsapp" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 6 }}>WhatsApp <span style={{ fontWeight: 400, color: "#9CA3AF" }}>(preferencial)</span></label>
-          <input id="bemestar-whatsapp" type="text" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="(11) 99999-9999" style={input} />
-        </div>
-        {error && (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: 12, borderRadius: 8, background: "#FEF2F2", color: "#B91C1C", fontSize: 13, border: "1px solid #FECACA" }}>
-            <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 2 }} /><span>{error}</span>
-          </div>
-        )}
-        <button type="submit" disabled={!canSubmit}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, background: canSubmit ? ACCENT : "#D1D5DB", color: "#FFF", border: "none", borderRadius: 8, padding: "12px 20px", fontSize: 14, fontWeight: 700, cursor: canSubmit ? "pointer" : "not-allowed" }}>
-          {submitting && <Loader2 size={14} className="animate-spin" />} {submitting ? "Reservando…" : "Reservar horário"}
-        </button>
-      </form>
+        </form>
+      )}
     </Shell>
+  );
+}
+
+function StepPill({ n, label, active, done }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: active ? "#201a1a" : "#9CA3AF" }}>
+      <span style={{
+        width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10,
+        background: active || done ? ACCENT : "#F3F4F6", color: active || done ? "#FFF" : "#9CA3AF", border: active || done ? "none" : "1px solid #E5E7EB",
+      }}>
+        {done ? <Check size={11} /> : n}
+      </span>
+      {label}
+    </div>
   );
 }
 

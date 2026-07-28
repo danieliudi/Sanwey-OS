@@ -143,8 +143,10 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 
 // ── Modal de criação de operação (mínima — resto se preenche no drawer) ────
 
-function CreateOperationModal({ title, fields, onSave, onClose }) {
+function CreateOperationModal({ title, fields, users, onSave, onClose }) {
   const [values, setValues] = useState(() => Object.fromEntries(fields.map(f => [f.key, ""])));
+  const [companyIds, setCompanyIds] = useState([]);
+  const [ownerIds, setOwnerIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -156,12 +158,18 @@ function CreateOperationModal({ title, fields, onSave, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const missing = fields.find(f => f.required && !String(values[f.key] || "").trim());
-    if (missing) { setError(`Informe "${missing.label}".`); return; }
+    // Junta todos os campos faltando de uma vez (padrão RH Vaga), em vez de
+    // parar no primeiro — achado da spec de melhoria do form.
+    const missingLabels = [
+      ...fields.filter(f => f.required && !String(values[f.key] || "").trim()).map(f => f.label),
+      ...(companyIds.length === 0 ? ["Empresa"] : []),
+      ...(ownerIds.length === 0 ? ["Responsáveis"] : []),
+    ];
+    if (missingLabels.length > 0) { setError(`Informe: ${missingLabels.join(", ")}.`); return; }
     setSaving(true);
     setError(null);
     try {
-      await onSave(values);
+      await onSave({ ...values, companyIds, ownerIds });
       onClose();
     } catch (err) {
       setError(err?.message || "Erro ao criar operação.");
@@ -194,6 +202,14 @@ function CreateOperationModal({ title, fields, onSave, onClose }) {
               />
             </div>
           ))}
+          <div>
+            <label style={labelSt}>Empresa *</label>
+            <CompanyPillSelect value={companyIds} onChange={setCompanyIds} />
+          </div>
+          <div>
+            <label style={labelSt}>Responsáveis *</label>
+            <AssigneeMultiSelect value={ownerIds} onChange={setOwnerIds} options={users} placeholder="Selecionar responsáveis…" />
+          </div>
           {error && (
             <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>
           )}
@@ -753,7 +769,7 @@ const IMPORT_CONFIG = {
     { key: "title", label: "Título", required: true, placeholder: "Ex.: PO #123 — Fornecedor XYZ" },
     { key: "supplierName", label: "Fornecedor", placeholder: "Nome do fornecedor" },
   ],
-  buildCreatePayload: (values) => ({ title: values.title.trim(), supplierName: values.supplierName?.trim() || null }),
+  buildCreatePayload: (values) => ({ title: values.title.trim(), supplierName: values.supplierName?.trim() || null, companyIds: values.companyIds, ownerIds: values.ownerIds }),
   renderCardBody: (op, users) => <ImportCardBody op={op} users={users} />,
   tableColumns: [
     { key: "title", label: "Título" },
@@ -808,7 +824,7 @@ const EXPORT_CONFIG = {
     { key: "title", label: "Título", required: true, placeholder: "Ex.: PI #456 — Comprador ABC (México)" },
     { key: "buyerName", label: "Comprador", placeholder: "Nome do comprador" },
   ],
-  buildCreatePayload: (values) => ({ title: values.title.trim(), buyerName: values.buyerName?.trim() || null }),
+  buildCreatePayload: (values) => ({ title: values.title.trim(), buyerName: values.buyerName?.trim() || null, companyIds: values.companyIds, ownerIds: values.ownerIds }),
   renderCardBody: (op, users) => <ExportCardBody op={op} users={users} />,
   tableColumns: [
     { key: "title", label: "Título" },
@@ -1127,6 +1143,7 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
         <CreateOperationModal
           title={config.createTitle}
           fields={config.createFields}
+          users={users}
           onSave={handleCreate}
           onClose={() => setShowCreate(false)}
         />

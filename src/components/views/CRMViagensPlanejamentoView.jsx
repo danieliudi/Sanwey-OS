@@ -101,6 +101,28 @@ function MonthNav({ mesRef, onChange }) {
   );
 }
 
+// Ícone discreto que abre o endereço no Google Maps em nova aba — é só um
+// link (sem chave de API), `stopPropagation` pra não disparar o onClick do
+// card/detalhe por baixo dele.
+function MapsLinkButton({ address, size = 13 }) {
+  if (!address) return null;
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      title="Abrir no Google Maps"
+      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--text-faint)", flexShrink: 0 }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-faint)"; }}
+    >
+      <MapPin size={size} />
+    </a>
+  );
+}
+
 // ── Card de visita ────────────────────────────────────────────────────────────
 
 function VisitaCard({ registro, onClick }) {
@@ -114,7 +136,7 @@ function VisitaCard({ registro, onClick }) {
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-          <MapPin size={13} style={{ color: "var(--text-faint)", flexShrink: 0 }} />
+          <MapsLinkButton address={registro.destino_planejado} />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{registro.destino_planejado}</span>
         </div>
         <Badge variant={info.variant}>{info.label}</Badge>
@@ -298,7 +320,10 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
       <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{registro.destino_planejado}</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>{registro.destino_planejado}</span>
+              <MapsLinkButton address={registro.destino_realizado || registro.destino_planejado} size={14} />
+            </div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{formatDateBR(registro.data_planejada)}{registro.cliente_nome && ` · ${registro.cliente_nome}`}</div>
             <div style={{ marginTop: 8 }}><Badge variant={info.variant}>{info.label}</Badge></div>
           </div>

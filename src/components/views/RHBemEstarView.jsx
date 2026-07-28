@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  HeartHandshake, Plus, X, Trash2, Check, UserX, Clock,
+  HeartHandshake, Plus, X, Trash2, Check, UserX, Clock, Pencil, AlertTriangle,
 } from "lucide-react";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHBemEstar } from "../../hooks/use-rh-bemestar";
@@ -28,13 +28,18 @@ const FILA_STATUS = {
   faltou:   { label: "Faltou",    color: "var(--danger)",   bg: "#FEE2E2" },
 };
 
-function NovaSessaoModal({ onSave, onClose }) {
-  const [titulo, setTitulo] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [data, setData] = useState("");
-  const [horarioInicio, setHorarioInicio] = useState("09:00");
-  const [horarioFim, setHorarioFim] = useState("17:00");
-  const [slotMinutos, setSlotMinutos] = useState(30);
+// Serve tanto pra criação quanto pra edição de sessão — passar `sessao` com
+// valores existentes vira "Editar sessão" (inclusive a única forma hoje de
+// corrigir sessões antigas do modelo de fila FIFO, que nasceram sem janela
+// de horário e por isso não geram nenhum horário disponível pro público).
+function SessaoFormModal({ sessao, onSave, onClose }) {
+  const isEdit = Boolean(sessao);
+  const [titulo, setTitulo] = useState(sessao?.titulo || "");
+  const [descricao, setDescricao] = useState(sessao?.descricao || "");
+  const [data, setData] = useState(sessao?.data || "");
+  const [horarioInicio, setHorarioInicio] = useState(sessao?.horario_inicio?.slice(0, 5) || "09:00");
+  const [horarioFim, setHorarioFim] = useState(sessao?.horario_fim?.slice(0, 5) || "17:00");
+  const [slotMinutos, setSlotMinutos] = useState(sessao?.slot_minutos || 30);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -52,7 +57,7 @@ function NovaSessaoModal({ onSave, onClose }) {
     try {
       await onSave({ titulo: titulo.trim(), descricao: descricao.trim() || null, data: data || null, horarioInicio, horarioFim, slotMinutos: Number(slotMinutos) });
       onClose();
-    } catch (e) { setError(e?.message || "Erro ao criar sessão."); }
+    } catch (e) { setError(e?.message || "Erro ao salvar sessão."); }
     finally { setSaving(false); }
   };
 
@@ -60,10 +65,16 @@ function NovaSessaoModal({ onSave, onClose }) {
     <div style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
       <div style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 440, boxShadow: "var(--shadow-pop)" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>Nova sessão de bem-estar</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{isEdit ? "Editar sessão" : "Nova sessão de bem-estar"}</div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex" }}><X size={18} /></button>
         </div>
         <div style={{ padding: "20px 24px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {isEdit && !sessao.horario_inicio && (
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: "var(--warning-bg)", color: "var(--warning)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
+              <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+              <span>Esta sessão é do modelo antigo (fila) e nunca teve janela de horário — por isso o link público mostrava "nenhum horário livre". Preencha início/fim/duração abaixo pra corrigir.</span>
+            </div>
+          )}
           <div>
             <label style={labelSt}>Título *</label>
             <input type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Massagem express" className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt} autoFocus />
@@ -96,7 +107,7 @@ function NovaSessaoModal({ onSave, onClose }) {
           {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
-              {saving ? "Salvando…" : "Criar sessão"}
+              {saving ? "Salvando…" : isEdit ? "Salvar alterações" : "Criar sessão"}
             </button>
             <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
           </div>
@@ -151,8 +162,9 @@ function AgendaSessao({ sessao, fila, canWrite, onSetStatus, origin }) {
 }
 
 export function RHBemEstarView({ currentUser, canWrite }) {
-  const { sessoes, fila, loading, criarSessao, setSessaoStatus, deletarSessao, setFilaStatus } = useRHBemEstar({ userId: currentUser?.id });
+  const { sessoes, fila, loading, criarSessao, atualizarSessao, setSessaoStatus, deletarSessao, setFilaStatus } = useRHBemEstar({ userId: currentUser?.id });
   const [novaOpen, setNovaOpen] = useState(false);
+  const [editSessao, setEditSessao] = useState(null);
   const [expanded, setExpanded] = useState(() => new Set());
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -201,6 +213,11 @@ export function RHBemEstarView({ currentUser, canWrite }) {
                       {reservados} reserva{reservados !== 1 ? "s" : ""}
                     </div>
                   </button>
+                  {!s.horario_inicio && (
+                    <span title="Sessão sem janela de horário — o link público não mostra nenhum horário livre até isso ser corrigido." style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: "var(--warning)", background: "var(--warning-bg)", borderRadius: 99, padding: "2px 10px", flexShrink: 0 }}>
+                      <AlertTriangle size={11} /> Sem horário
+                    </span>
+                  )}
                   <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "#DCFCE7" : "var(--surface)", borderRadius: 99, padding: "2px 10px" }}>
                     {aberta ? "Aberta" : "Encerrada"}
                   </span>
@@ -223,6 +240,9 @@ export function RHBemEstarView({ currentUser, canWrite }) {
                       </div>
                     ) : (
                       <>
+                        <button onClick={() => setEditSessao(s)} title="Editar sessão" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", display: "flex", padding: 4, flexShrink: 0 }}>
+                          <Pencil size={14} />
+                        </button>
                         <button onClick={() => setSessaoStatus(s.id, aberta ? "encerrada" : "aberta")} style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}>
                           {aberta ? "Encerrar" : "Reabrir"}
                         </button>
@@ -242,7 +262,14 @@ export function RHBemEstarView({ currentUser, canWrite }) {
         </div>
       )}
 
-      {novaOpen && <NovaSessaoModal onSave={criarSessao} onClose={() => setNovaOpen(false)} />}
+      {novaOpen && <SessaoFormModal onSave={criarSessao} onClose={() => setNovaOpen(false)} />}
+      {editSessao && (
+        <SessaoFormModal
+          sessao={editSessao}
+          onSave={(data) => atualizarSessao(editSessao.id, data)}
+          onClose={() => setEditSessao(null)}
+        />
+      )}
     </div>
   );
 }
