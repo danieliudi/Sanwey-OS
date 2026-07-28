@@ -166,8 +166,19 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     setModalOpen(true);
   };
 
+  // Dedup por CNPJ ao criar (não ao editar — aí o form já é o próprio
+  // duplicateMatch) — mesma checagem já usada em ClientQuickCreateModal.jsx
+  // e LeadCreateModal.jsx; só faltava aqui, no cadastro "de verdade" de
+  // Clientes, que por isso deixava duplicar (achado real: Quimidrol
+  // duplicado ao cadastrar puxando de um Sinal).
+  const cnpjDigits = form.cnpj.replace(/\D/g, "");
+  const duplicateMatch = useMemo(() => {
+    if (editing || cnpjDigits.length !== 14) return null;
+    return clients.find(c => (c.cnpj || "").replace(/\D/g, "") === cnpjDigits) || null;
+  }, [editing, cnpjDigits, clients]);
+
   const save = async () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || duplicateMatch) return;
     setSaving(true);
     try {
       if (editing) await onUpdate?.(editing.id, form);
@@ -460,6 +471,8 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
         setForm={setForm}
         saving={saving}
         onSave={save}
+        duplicateMatch={duplicateMatch}
+        onUseDuplicate={(c) => { setModalOpen(false); openDetail(c); }}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         toggleCompany={toggleCompany}
@@ -502,6 +515,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
 
 function ClientDetailModal({
   open, onClose, editing, form, setForm, saving, onSave,
+  duplicateMatch, onUseDuplicate,
   activeTab, onTabChange, toggleCompany, inputStyle, onFocusRed, onBlurRed,
   stats, dealsByClient, onOpenLead, onOpenViagem,
 }) {
@@ -591,9 +605,25 @@ function ClientDetailModal({
               <label className="block mb-1.5" style={{ fontSize: 11, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>CNPJ</label>
               <input value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))}
                 placeholder="00.000.000/0000-00"
-                className="w-full rounded-lg border px-3 py-2 text-sm" style={inputStyle} onFocus={onFocusRed} onBlur={onBlurRed} />
+                className="w-full rounded-lg border px-3 py-2 text-sm" style={{ ...inputStyle, borderColor: duplicateMatch ? "var(--danger)" : inputStyle.borderColor }} onFocus={onFocusRed} onBlur={onBlurRed} />
             </div>
           </div>
+
+          {duplicateMatch && (
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "10px 12px", fontSize: 12, display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <span style={{ flexShrink: 0 }}>⚠</span>
+              <div>
+                Já existe um cliente com esse CNPJ: <b>{duplicateMatch.name}</b>.
+                <button
+                  type="button"
+                  onClick={() => onUseDuplicate(duplicateMatch)}
+                  style={{ display: "block", marginTop: 6, background: "none", border: "none", padding: 0, color: "var(--accent)", fontWeight: 700, cursor: "pointer", fontSize: 12 }}
+                >
+                  Abrir "{duplicateMatch.name}" em vez de criar outro
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2">
@@ -667,9 +697,9 @@ function ClientDetailModal({
               style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFFFFF", cursor: "pointer" }}>
               Cancelar
             </button>
-            <button onClick={onSave} disabled={!form.name.trim() || saving}
+            <button onClick={onSave} disabled={!form.name.trim() || saving || !!duplicateMatch}
               className="px-4 py-2 text-sm rounded-lg font-semibold text-white"
-              style={{ background: "var(--color-industria)", border: "none", opacity: (!form.name.trim() || saving) ? 0.5 : 1, cursor: (!form.name.trim() || saving) ? "not-allowed" : "pointer" }}>
+              style={{ background: "var(--color-industria)", border: "none", opacity: (!form.name.trim() || saving || duplicateMatch) ? 0.5 : 1, cursor: (!form.name.trim() || saving || duplicateMatch) ? "not-allowed" : "pointer" }}>
               {saving ? "Salvando…" : editing ? "Salvar alterações" : "Criar cliente"}
             </button>
           </div>
