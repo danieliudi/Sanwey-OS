@@ -10,6 +10,7 @@ import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { formatDateBR } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
 import { STATUS_VISITA } from "../../utils/viagens";
+import { findClientByCnpj, DuplicateClientError } from "../../utils/client-dedup";
 
 const BR_STATES = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -167,15 +168,12 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
   };
 
   // Dedup por CNPJ ao criar (não ao editar — aí o form já é o próprio
-  // duplicateMatch) — mesma checagem já usada em ClientQuickCreateModal.jsx
-  // e LeadCreateModal.jsx; só faltava aqui, no cadastro "de verdade" de
-  // Clientes, que por isso deixava duplicar (achado real: Quimidrol
-  // duplicado ao cadastrar puxando de um Sinal).
-  const cnpjDigits = form.cnpj.replace(/\D/g, "");
-  const duplicateMatch = useMemo(() => {
-    if (editing || cnpjDigits.length !== 14) return null;
-    return clients.find(c => (c.cnpj || "").replace(/\D/g, "") === cnpjDigits) || null;
-  }, [editing, cnpjDigits, clients]);
+  // duplicateMatch) — mesma checagem já usada em ClientQuickCreateModal.jsx;
+  // só faltava aqui, no cadastro "de verdade" de Clientes, que por isso
+  // deixava duplicar (achado real: Quimidrol duplicado ao cadastrar puxando
+  // de um Sinal). O guard real vive em use-clients.js/createClient — isto
+  // aqui só dá o aviso inline antes de tentar salvar.
+  const duplicateMatch = useMemo(() => (editing ? null : findClientByCnpj(clients, form.cnpj)), [editing, form.cnpj, clients]);
 
   const save = async () => {
     if (!form.name.trim() || duplicateMatch) return;
@@ -184,6 +182,12 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
       if (editing) await onUpdate?.(editing.id, form);
       else await onCreate?.(form);
       setModalOpen(false);
+    } catch (err) {
+      if (err instanceof DuplicateClientError) {
+        setForm(f => ({ ...f, cnpj: err.existingClient.cnpj || f.cnpj }));
+      } else {
+        throw err;
+      }
     } finally {
       setSaving(false);
     }

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   X, MapPin, Network, Package, Users, Sparkles, Copy, Send,
-  Calendar, ExternalLink, Linkedin, Newspaper, MessageSquareWarning, Search,
+  Calendar, Linkedin, Newspaper, MessageSquareWarning, Search,
   Check, Trash2, Mail, ChevronDown, ChevronUp,
   Clock, GitBranch, CalendarClock, ArrowRight, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
@@ -26,6 +26,7 @@ import { LeadAIPanel } from "../ai/LeadAIPanel";
 import { ProposalPanel } from "./ProposalPanel";
 import { StageFieldInput } from "./StageFieldInput";
 import { ClientSelector } from "../client/ClientSelector";
+import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields, EMAIL_PATTERN } from "../../utils/field-validation";
 import { CommentsPanel } from "../shared/CommentsPanel";
@@ -47,6 +48,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const [contactEmailDraft, setContactEmailDraft] = useState("");
   const [contactEmailError, setContactEmailError] = useState(null);
   const [emailsOpen, setEmailsOpen] = useState(true);
+  const [quickCreateName, setQuickCreateName] = useState(null); // string | null — abre o mini-cadastro (com checagem de duplicata) quando != null
   const [noteText, setNoteText] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
   const [moveError, setMoveError] = useState(null);
@@ -379,10 +381,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const company = lead ? COMPANIES[lead.companyId] : null;
   const decisionMakerName = lead?.decisionMaker?.name || "—";
   const decisionMakerRole = lead?.decisionMaker?.role || "—";
-  const decisionMakerInitials = useMemo(() => {
-    if (!decisionMakerName || decisionMakerName === "—") return "—";
-    return decisionMakerName.split(" ").map(n => n[0]).filter(Boolean).join("").slice(0, 2);
-  }, [decisionMakerName]);
   const firstName = (decisionMakerName && decisionMakerName !== "—") ? decisionMakerName.split(" ")[0] : "time";
 
   // Normalize probability for display (handle both 0–1 and 0–100 formats)
@@ -723,16 +721,22 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 value={lead.clientId}
                 clients={clients}
                 onChange={(id) => onUpdate(lead.id, { clientId: id })}
-                onCreate={onCreateClient ? async (name) => {
-                  const created = await onCreateClient({
-                    name: name || lead.company || "Novo cliente",
-                    cnpj: lead.cnpj || null,
-                    city: lead.city || null,
-                    state: lead.state || null,
-                  });
-                  if (created?.id) onUpdate(lead.id, { clientId: created.id });
-                } : undefined}
+                onCreate={onCreateClient ? (query) => setQuickCreateName(query || "") : undefined}
               />
+              {quickCreateName !== null && (
+                <ClientQuickCreateModal
+                  initialName={quickCreateName || lead.company || ""}
+                  initialCnpj={lead.cnpj || ""}
+                  extra={{ city: lead.city || null, state: lead.state || null }}
+                  clients={clients}
+                  onCreate={onCreateClient}
+                  onDone={(created) => {
+                    if (created?.id) onUpdate(lead.id, { clientId: created.id });
+                    setQuickCreateName(null);
+                  }}
+                  onClose={() => setQuickCreateName(null)}
+                />
+              )}
               {!lead.clientId && (
                 <div className="flex items-center gap-1.5 text-xs flex-wrap mt-2" style={{ color: "var(--text-dim)" }}>
                   <span>Lead:</span>
@@ -741,6 +745,165 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   {lead.city && <span className="flex items-center gap-1">· <MapPin size={11} />{lead.city}</span>}
                 </div>
               )}
+
+              {/* E-mail do contato — morava no painel central; agora fica
+                  junto do bloco Cliente, aqui na lateral. */}
+              <div className="mt-3 p-3 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text-dim)" }}>
+                    <Mail size={13} />
+                    E-mail do contato
+                  </div>
+                  {!editingContactEmail && (
+                    <button
+                      onClick={handleStartEditContactEmail}
+                      className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
+                      style={{ color: company.primary, background: company.light }}
+                      onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+                    >
+                      {lead.contactEmail ? "Alterar" : "Adicionar"}
+                    </button>
+                  )}
+                </div>
+
+                {lead.contactEmail && !editingContactEmail && (
+                  <div className="text-sm mt-1 break-all" style={{ color: "var(--text)" }}>
+                    {lead.contactEmail}
+                  </div>
+                )}
+
+                {!lead.contactEmail && !editingContactEmail && (
+                  <div className="text-xs mt-1 italic" style={{ color: "var(--text-dim)" }}>
+                    Nenhum e-mail cadastrado
+                  </div>
+                )}
+
+                {editingContactEmail && (
+                  <div className="mt-2">
+                    <input
+                      type="email"
+                      value={contactEmailDraft}
+                      onChange={e => { setContactEmailDraft(e.target.value); setContactEmailError(null); }}
+                      placeholder="contato@empresa.com.br"
+                      className="w-full text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
+                      style={{ borderColor: contactEmailError ? "var(--danger)" : "var(--border)", color: "var(--text)", background: "var(--surface)" }}
+                      onFocus={e => { if (!contactEmailError) e.currentTarget.style.borderColor = company.primary; }}
+                      onBlur={e => { if (!contactEmailError) e.currentTarget.style.borderColor = "var(--border)"; }}
+                      onKeyDown={e => { if (e.key === "Enter") handleSaveContactEmail(); if (e.key === "Escape") handleCancelContactEmail(); }}
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2 mt-2">
+                      <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveContactEmail}>
+                        Salvar
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleCancelContactEmail}>
+                        Cancelar
+                      </Button>
+                    </div>
+                    {contactEmailError && (
+                      <div className="text-xs mt-1" style={{ color: "var(--danger)" }}>{contactEmailError}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* E-mails vinculados */}
+              <div className="mt-2 rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                <button
+                  onClick={() => setEmailsOpen(v => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 transition-colors cursor-pointer"
+                  style={{ background: "var(--surface)", border: "none" }}
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text)" }}>
+                    <Mail size={13} style={{ color: "var(--text-dim)" }} />
+                    E-mails vinculados
+                    {(lead.linkedEmails || []).length > 0 && (
+                      <span
+                        className="inline-flex items-center justify-center rounded-full text-xs font-bold px-1.5 py-0.5 ml-1"
+                        style={{ background: company.primary + "22", color: company.primary, fontSize: 10, minWidth: 18 }}
+                      >
+                        {lead.linkedEmails.length}
+                      </span>
+                    )}
+                  </div>
+                  {emailsOpen ? <ChevronUp size={14} style={{ color: "var(--text-dim)" }} /> : <ChevronDown size={14} style={{ color: "var(--text-dim)" }} />}
+                </button>
+
+                {emailsOpen && (
+                  <div style={{ background: "var(--surface-alt)" }}>
+                    {(!lead.linkedEmails || lead.linkedEmails.length === 0) ? (
+                      <div className="px-3 pb-3 pt-1 text-xs" style={{ color: "var(--text-dim)" }}>
+                        Nenhum e-mail vinculado ainda. Quando e-mails do Outlook forem detectados para{" "}
+                        <span style={{ color: "var(--text)", fontWeight: 600 }}>
+                          {lead.contactEmail || "o e-mail do contato"}
+                        </span>
+                        , aparecerão aqui.
+                      </div>
+                    ) : (
+                      <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                        {lead.linkedEmails.map((email, idx) => (
+                          <div key={email.id || idx} className="px-3 py-2.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                                <span
+                                  className="text-xs font-bold"
+                                  style={{ color: email.direction === "sent" ? company.primary : "var(--text)" }}
+                                  title={email.direction === "sent" ? "Enviado" : "Recebido"}
+                                >
+                                  {email.direction === "sent" ? "→" : "←"}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
+                                  {email.subject || "(sem assunto)"}
+                                </div>
+                                <div className="text-xs mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>
+                                  {email.direction === "sent" ? `Para: ${email.to}` : `De: ${email.from}`}
+                                </div>
+                              </div>
+                              <div className="text-xs shrink-0" style={{ color: "var(--text-dim)" }}>
+                                {email.date ? formatDateBR(email.date) : "—"}
+                              </div>
+                            </div>
+                            {idx < lead.linkedEmails.length - 1 && (
+                              <div className="mt-2" style={{ borderTop: "1px solid var(--border)" }} />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Pesquisar empresa — junto do bloco Cliente, não mais no
+                  painel central da etapa. */}
+              <div className="mt-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)", letterSpacing: "0.06em" }}>
+                  Pesquisar empresa
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {researchLinks.map(l => {
+                    const Icon = l.icon;
+                    return (
+                      <a
+                        key={l.id}
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={l.label}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-150 cursor-pointer"
+                        style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text-dim)" }}
+                        onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow-pop)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "var(--border)"; }}
+                      >
+                        <Icon size={14} strokeWidth={2} />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Responsáveis — FASE 5: mais de um responsável por card */}
@@ -784,19 +947,10 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               </div>
             </div>
 
-            {/* Decisor + infos do cliente */}
-            <div className="flex items-center gap-3">
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white shrink-0 text-sm"
-                style={{ background: company.primary }}
-              >
-                {decisionMakerInitials}
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{decisionMakerName}</div>
-                <div className="text-xs truncate" style={{ color: "var(--text-dim)" }}>{decisionMakerRole}</div>
-              </div>
-              <FitScoreCircle score={lead.fitScore} size={48} />
+            {/* Decisor */}
+            <div className="min-w-0">
+              <div className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{decisionMakerName}</div>
+              <div className="text-xs truncate" style={{ color: "var(--text-dim)" }}>{decisionMakerRole}</div>
             </div>
             {(lead.size || lead.phone) && (
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "var(--text-dim)" }}>
@@ -1163,139 +1317,6 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
             )}
           </div>
 
-          {/* E-mail do contato */}
-          <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text-dim)" }}>
-                <Mail size={13} />
-                E-mail do contato
-              </div>
-              {!editingContactEmail && (
-                <button
-                  onClick={handleStartEditContactEmail}
-                  className="text-xs font-semibold px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer"
-                  style={{ color: company.primary, background: company.light }}
-                  onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.95)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-                >
-                  {lead.contactEmail ? "Alterar" : "Adicionar"}
-                </button>
-              )}
-            </div>
-
-            {lead.contactEmail && !editingContactEmail && (
-              <div className="text-sm mt-1" style={{ color: "var(--text)" }}>
-                {lead.contactEmail}
-              </div>
-            )}
-
-            {!lead.contactEmail && !editingContactEmail && (
-              <div className="text-xs mt-1 italic" style={{ color: "var(--text-dim)" }}>
-                Nenhum e-mail cadastrado
-              </div>
-            )}
-
-            {editingContactEmail && (
-              <div className="mt-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="email"
-                    value={contactEmailDraft}
-                    onChange={e => { setContactEmailDraft(e.target.value); setContactEmailError(null); }}
-                    placeholder="contato@empresa.com.br"
-                    className="flex-1 text-sm rounded-lg border px-3 py-2 outline-none transition-colors"
-                    style={{ borderColor: contactEmailError ? "var(--danger)" : "var(--border)", color: "var(--text)", background: "var(--surface)" }}
-                    onFocus={e => { if (!contactEmailError) e.currentTarget.style.borderColor = company.primary; }}
-                    onBlur={e => { if (!contactEmailError) e.currentTarget.style.borderColor = "var(--border)"; }}
-                    onKeyDown={e => { if (e.key === "Enter") handleSaveContactEmail(); if (e.key === "Escape") handleCancelContactEmail(); }}
-                    autoFocus
-                  />
-                  <Button variant="primary" size="sm" accent={company.primary} icon={Check} onClick={handleSaveContactEmail}>
-                    Salvar
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={handleCancelContactEmail}>
-                    Cancelar
-                  </Button>
-                </div>
-                {contactEmailError && (
-                  <div className="text-xs mt-1" style={{ color: "var(--danger)" }}>{contactEmailError}</div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* E-mails vinculados */}
-          <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-            <button
-              onClick={() => setEmailsOpen(v => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 transition-colors cursor-pointer"
-              style={{ background: "var(--surface-alt)", border: "none" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
-            >
-              <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text)" }}>
-                <Mail size={13} style={{ color: "var(--text-dim)" }} />
-                E-mails vinculados
-                {(lead.linkedEmails || []).length > 0 && (
-                  <span
-                    className="inline-flex items-center justify-center rounded-full text-xs font-bold px-1.5 py-0.5 ml-1"
-                    style={{ background: company.primary + "22", color: company.primary, fontSize: 10, minWidth: 18 }}
-                  >
-                    {lead.linkedEmails.length}
-                  </span>
-                )}
-              </div>
-              {emailsOpen ? <ChevronUp size={14} style={{ color: "var(--text-dim)" }} /> : <ChevronDown size={14} style={{ color: "var(--text-dim)" }} />}
-            </button>
-
-            {emailsOpen && (
-              <div style={{ background: "var(--surface-alt)" }}>
-                {(!lead.linkedEmails || lead.linkedEmails.length === 0) ? (
-                  <div className="px-4 pb-4 pt-1 text-xs" style={{ color: "var(--text-dim)" }}>
-                    Nenhum e-mail vinculado ainda. Quando e-mails do Outlook forem detectados para{" "}
-                    <span style={{ color: "var(--text)", fontWeight: 600 }}>
-                      {lead.contactEmail || "o e-mail do contato"}
-                    </span>
-                    , aparecerão aqui.
-                  </div>
-                ) : (
-                  <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                    {lead.linkedEmails.map((email, idx) => (
-                      <div key={email.id || idx} className="px-4 py-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                            <span
-                              className="text-xs font-bold"
-                              style={{ color: email.direction === "sent" ? company.primary : "var(--text)" }}
-                              title={email.direction === "sent" ? "Enviado" : "Recebido"}
-                            >
-                              {email.direction === "sent" ? "→" : "←"}
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>
-                              {email.subject || "(sem assunto)"}
-                            </div>
-                            <div className="text-xs mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>
-                              {email.direction === "sent" ? `Para: ${email.to}` : `De: ${email.from}`}
-                            </div>
-                          </div>
-                          <div className="text-xs shrink-0" style={{ color: "var(--text-dim)" }}>
-                            {email.date ? formatDateBR(email.date) : "—"}
-                          </div>
-                        </div>
-                        {idx < lead.linkedEmails.length - 1 && (
-                          <div className="mt-3" style={{ borderTop: "1px solid var(--border)" }} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-
           {/* Follow-up inline */}
           <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
             <div className="flex items-center justify-between mb-1">
@@ -1343,39 +1364,12 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
             )}
           </div>
 
-          {/* Actions */}
-          <div className="pt-1 space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="primary" icon={Send} accent={company.primary} onClick={handleStartOutreach}>
-                Iniciar abordagem
-              </Button>
-            </div>
-            <div>
-              <div className="text-xs font-semibold mb-2" style={{ color: "var(--text-dim)" }}>
-                Pesquisar empresa em
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {researchLinks.map(l => {
-                  const Icon = l.icon;
-                  return (
-                    <a
-                      key={l.id}
-                      href={l.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-150 cursor-pointer"
-                      style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
-                      onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--shadow-pop)"; e.currentTarget.style.borderColor = "var(--border-strong)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "var(--border)"; }}
-                    >
-                      <Icon size={12} strokeWidth={2} />
-                      {l.label}
-                      <ExternalLink size={10} style={{ color: "var(--text-dim)" }} />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
+          {/* Actions — e-mail/links de pesquisa moraram aqui antes; agora
+              ficam junto do bloco Cliente, na lateral. */}
+          <div className="pt-1">
+            <Button variant="primary" size="sm" icon={Send} accent={company.primary} onClick={handleStartOutreach}>
+              Enviar e-mail de abordagem
+            </Button>
           </div>
           </main>
 

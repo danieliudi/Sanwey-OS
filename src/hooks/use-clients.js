@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import { usePersistentState } from "./use-persistent-state";
+import { findClientByCnpj, DuplicateClientError } from "../utils/client-dedup";
+
+export { DuplicateClientError };
 
 // Chave local usada apenas no modo offline (sem Supabase configurado).
 const LOCAL_KEY = "sanwey.clients";
@@ -99,7 +102,17 @@ export function useClients({ userId } = {}) {
 
   const clients = isSupabaseConfigured ? remoteClients : fallbackClients;
 
+  // Guard central contra duplicata por CNPJ — vale pra todo caminho de
+  // criação (ClientsManager, ClientQuickCreateModal, LeadDetailDrawer via
+  // Sinais etc.), não só quem lembrar de checar antes de chamar. Usa ref
+  // pra não recriar createClient a cada mudança da lista.
+  const clientsRef = useRef(clients);
+  useEffect(() => { clientsRef.current = clients; }, [clients]);
+
   const createClient = useCallback(async (client) => {
+    const dup = findClientByCnpj(clientsRef.current, client.cnpj);
+    if (dup) throw new DuplicateClientError(dup);
+
     if (!isSupabaseConfigured) {
       const local = { ...client, id: `local-${Date.now()}`, createdAt: new Date().toISOString() };
       setFallbackClients(prev => [...prev, local].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
