@@ -115,7 +115,11 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
           )}
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
-              targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
+              targets={moveTargets.map(s => {
+                const list = stages || MARKETING_STAGES;
+                const dir = list.findIndex(x => x.id === s.id) < list.findIndex(x => x.id === campaign.stage) ? "before" : "after";
+                return { key: s.id, name: s.name, color: s.color, direction: dir };
+              })}
               onMove={onMoveToStage ? (key) => onMoveToStage(campaign.id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(campaign.id) : undefined}
               onDuplicate={onDuplicateCard ? () => onDuplicateCard(campaign.id) : undefined}

@@ -132,7 +132,7 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
           </span>
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
-              targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color }))}
+              targets={moveTargets.map(s => ({ key: s.id, name: s.name, color: s.color, direction: stages.findIndex(x => x.id === s.id) < stages.findIndex(x => x.id === lead.stage) ? "before" : "after" }))}
               onMove={onMoveToStage ? (key) => onMoveToStage(lead.id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(lead.id) : undefined}
               onDuplicate={onDuplicateCard ? () => onDuplicateCard(lead.id) : undefined}

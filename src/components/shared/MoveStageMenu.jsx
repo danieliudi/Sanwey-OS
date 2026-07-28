@@ -1,6 +1,25 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MoreVertical, ArrowRight, Trash2, Copy } from "lucide-react";
+import { MoreVertical, ArrowRight, ArrowLeft, Trash2, Copy } from "lucide-react";
+
+function MoveTargetItem({ stage, onMove, setMenuOpen, icon: Icon, faded = false }) {
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); onMove(stage.key); setMenuOpen(false); }}
+      style={{
+        width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+        background: "transparent", border: "none", cursor: "pointer", fontSize: 13,
+        color: "var(--text)", textAlign: "left", transition: "background 0.1s",
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
+    >
+      <span style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
+      {stage.name}
+      <Icon size={11} style={{ marginLeft: "auto", opacity: faded ? 0.4 : 0.6 }} />
+    </button>
+  );
+}
 
 // Botão "…" + dropdown "Mover para" compartilhado por todos os Kanbans
 // (Entregas, Campanhas, Leads, RH). O dropdown é renderizado via portal em
@@ -164,23 +183,37 @@ export function MoveStageMenu({
                   <div style={{ padding: "6px 12px 4px", fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                     Mover para
                   </div>
-                  {targets.map(s => (
-                    <button
-                      key={s.key}
-                      onClick={e => { e.stopPropagation(); onMove(s.key); setMenuOpen(false); }}
-                      style={{
-                        width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
-                        background: "transparent", border: "none", cursor: "pointer", fontSize: 13,
-                        color: "var(--text)", textAlign: "left", transition: "background 0.1s",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text)"; }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
-                      {s.name}
-                      <ArrowRight size={11} style={{ marginLeft: "auto", opacity: 0.4 }} />
-                    </button>
-                  ))}
+                  {/* Agrupa por direção (etapa anterior/próxima no pipeline) —
+                      antes tudo vinha numa lista só com a mesma seta decorativa
+                      pra qualquer destino, sem indicar se era avançar ou
+                      retroceder. `direction` é opcional: sem ele (chamador que
+                      não anotou), cai no fallback flat de sempre. */}
+                  {targets.some(s => s.direction) ? (
+                    <>
+                      {targets.filter(s => s.direction === "before").length > 0 && (
+                        <div style={{ padding: "4px 12px 2px", fontSize: 9.5, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4 }}>
+                          <ArrowLeft size={9} />
+                          Etapas anteriores
+                        </div>
+                      )}
+                      {targets.filter(s => s.direction === "before").map(s => (
+                        <MoveTargetItem key={s.key} stage={s} onMove={onMove} setMenuOpen={setMenuOpen} icon={ArrowLeft} />
+                      ))}
+                      {targets.filter(s => s.direction === "after").length > 0 && (
+                        <div style={{ padding: "8px 12px 2px", fontSize: 9.5, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 4 }}>
+                          <ArrowRight size={9} />
+                          Próximas etapas
+                        </div>
+                      )}
+                      {targets.filter(s => s.direction === "after").map(s => (
+                        <MoveTargetItem key={s.key} stage={s} onMove={onMove} setMenuOpen={setMenuOpen} icon={ArrowRight} />
+                      ))}
+                    </>
+                  ) : (
+                    targets.map(s => (
+                      <MoveTargetItem key={s.key} stage={s} onMove={onMove} setMenuOpen={setMenuOpen} icon={ArrowRight} faded />
+                    ))
+                  )}
                 </>
               )}
               {hasDuplicate && (

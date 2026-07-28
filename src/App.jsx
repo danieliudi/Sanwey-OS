@@ -1182,6 +1182,10 @@ export default function App() {
         label: "Comercial",
         items: [
           { id: "commercial-overview", label: "Visão Geral", icon: LayoutDashboard },
+          // Ordem "jornada do cliente" (decidido com o Daniel em 28/07/2026):
+          // sinal de interesse → funil ativo → pós-venda → base de clientes →
+          // expansão → prospecção/apoio.
+          { id: "signals",      label: "Sinais",     icon: Bell },
           { id: "crm",          label: "Funil de Vendas",   icon: Layers },
           // Logo abaixo de "Funil de Vendas" (pedido explícito do usuário) — conectado
           // ao Kanban do Funil de Vendas igual Recrutamento é conectado a Onboarding:
@@ -1190,10 +1194,9 @@ export default function App() {
           // continua existindo no Funil de Vendas.
           { id: "posvenda",     label: "Funil de Pós-venda", icon: Handshake },
           { id: "clients",      label: "Clientes",   icon: Users },
-          { id: "signals",      label: "Sinais",     icon: Bell },
+          ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
           { id: "explorer",     label: "Explorador", icon: Globe2 },
           { id: "crm-viagens",  label: "Viagens & Reembolsos", icon: Plane },
-          ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
           ...(isComex || isDiretoria ? [{ id: "comex", label: "Comex", icon: Ship }] : []),
         ],
       });

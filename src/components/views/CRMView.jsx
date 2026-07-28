@@ -7,7 +7,10 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
-import { Select } from "../ui/Select";
+import { Combobox } from "../shared/Combobox";
+import { KanbanSortSelect } from "../shared/KanbanSortSelect";
+import { useKanbanSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
 import { LeadFormBuilder } from "../lead/LeadFormBuilder";
@@ -349,6 +352,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [starredOnly, setStarredOnly] = useState(false);
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "calendar"
+  const [sortCriteria, setSortCriteria] = useKanbanSort("crm-pipeline");
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
@@ -426,19 +430,35 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         bucket[l.stage].total += l.value;
       }
     }
-    return bucket;
-  }, [stages, scopedLeads]);
-
-  const ownerOptions = useMemo(() => {
-    const idSet = new Set();
-    for (const l of companyScopedLeads) {
-      for (const id of getLeadOwnerIds(l)) idSet.add(id);
+    // Item 6: ordenar cards dentro de cada coluna — antes só existia a ordem
+    // de chegada (created_at desc), sem opção nenhuma de trocar.
+    for (const s of stages) {
+      bucket[s.id].leads = sortKanbanItems(bucket[s.id].leads, sortCriteria, {
+        deadline: l => l.closeDate,
+        value: l => l.value,
+        name: l => l.company,
+        createdAt: l => l.createdAt,
+      });
     }
+    return bucket;
+  }, [stages, scopedLeads, sortCriteria]);
+
+  // Roster de vendedores/consultores/gerentes/admin da empresa ativa — não
+  // "donos dos leads já visíveis" (bug real: com poucos leads atribuídos,
+  // o filtro listava só 1 vendedor mesmo com o time inteiro cadastrado).
+  // Mesmo escopo de papel usado em QuickAddForm:ownerOptions (:75-80).
+  const ownerOptions = useMemo(() => {
+    const scoped = (users || [])
+      .filter(u =>
+        (isGroupView || u.companies?.includes(activeCompany)) &&
+        (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
+      )
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     return [
       { value: "all", label: "Todos os vendedores" },
-      ...Array.from(idSet).map(id => ({ value: id, label: usersById.get(id)?.name || id })),
+      ...scoped.map(u => ({ value: u.id, label: u.name || u.id })),
     ];
-  }, [companyScopedLeads, usersById]);
+  }, [users, activeCompany, isGroupView]);
 
   const summary = useMemo(() => {
     let pipelineValue = 0, won = 0, lost = 0;
@@ -621,6 +641,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             <Star size={11} fill={starredOnly ? "#F59E0B" : "none"} />
             Só favoritos
           </button>
+          {viewMode === "kanban" && (
+            <KanbanSortSelect value={sortCriteria} onChange={setSortCriteria} className="w-40" />
+          )}
           {isManager && !isGroupView && (
             <button
               onClick={() => setStageManagerOpen(true)}
@@ -635,17 +658,17 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           )}
           {isManager && (
             <div className="flex gap-2 w-full sm:w-auto">
-              <Select
+              <Combobox
                 value={ownerFilter}
-                onChange={e => setOwnerFilter(e.target.value)}
+                onChange={setOwnerFilter}
                 options={ownerOptions}
                 className="flex-1 min-w-0 sm:w-44"
                 size="sm"
               />
               {accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
-                <Select
+                <Combobox
                   value={activeCompany}
-                  onChange={e => onCompanyChange(e.target.value)}
+                  onChange={onCompanyChange}
                   options={[
                     { value: "all", label: "Todas as empresas" },
                     ...accessibleCompanies.filter(id => id !== "all").map(id => ({

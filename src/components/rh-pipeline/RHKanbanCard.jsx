@@ -73,7 +73,10 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
           />
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
-              targets={moveTargets.map(s => ({ key: stageKeyOf(s), name: s.name, color: s.color }))}
+              targets={moveTargets.map(s => {
+                const dir = stages.findIndex(x => stageKeyOf(x) === stageKeyOf(s)) < stages.findIndex(x => stageKeyOf(x) === stage) ? "before" : "after";
+                return { key: stageKeyOf(s), name: s.name, color: s.color, direction: dir };
+              })}
               onMove={onMoveToStage ? (key) => onMoveToStage(id, key) : undefined}
               onDelete={onDeleteCard ? () => onDeleteCard(id) : undefined}
               onDuplicate={onDuplicateCard ? () => onDuplicateCard(id) : undefined}
