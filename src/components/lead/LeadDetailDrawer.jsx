@@ -947,11 +947,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               </div>
             </div>
 
-            {/* Decisor */}
-            <div className="min-w-0">
-              <div className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{decisionMakerName}</div>
-              <div className="text-xs truncate" style={{ color: "var(--text-dim)" }}>{decisionMakerRole}</div>
-            </div>
+            {/* Decisor — só ocupa espaço quando há dado real; sem isso
+                sobravam duas linhas de "—" sem utilidade (achado do Daniel). */}
+            {decisionMakerName !== "—" && (
+              <div className="min-w-0">
+                <div className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{decisionMakerName}</div>
+                {decisionMakerRole !== "—" && (
+                  <div className="text-xs truncate" style={{ color: "var(--text-dim)" }}>{decisionMakerRole}</div>
+                )}
+              </div>
+            )}
             {(lead.size || lead.phone) && (
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "var(--text-dim)" }}>
                 {lead.size && <span>Porte: <span style={{ color: "var(--text)", fontWeight: 600 }}>{lead.size}</span></span>}
