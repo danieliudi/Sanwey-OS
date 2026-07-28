@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   X, Trash2, ChevronUp, ChevronDown, Plus, Check,
-  GitBranch, ShieldCheck, Settings2, SlidersHorizontal, Zap,
+  GitBranch, ShieldCheck, Settings2, SlidersHorizontal, Zap, List,
 } from "lucide-react";
 import { FIELD_TYPES, TYPE_ICON, OPTION_FIELD_TYPES } from "../../../constants/field-types";
 import { VALIDATION_PRESETS, VALIDATION_RULE_TYPES } from "../../../utils/field-validation";
@@ -214,18 +214,33 @@ function AddFieldForm({ presetType, onAdd, onCancel, accent, busy }) {
 
 // ── FieldRow ──────────────────────────────────────────────────────────────────
 
-function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, onMoveUp, onMoveDown, onToggleRequired, onSaveValidation, onOpenConditions }) {
+function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, onMoveUp, onMoveDown, onToggleRequired, onSaveValidation, onSaveOptions, onOpenConditions }) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [editingLabel, setEditingLabel] = useState(false);
   const [labelDraft, setLabelDraft] = useState(field.label);
   const [showValidation, setShowValidation] = useState(false);
   const [validationRule, setValidationRule] = useState(field.validationRule);
+  const [showOptionsEditor, setShowOptionsEditor] = useState(false);
+  const [optionsDraft, setOptionsDraft] = useState((field.options || []).join("\n"));
 
   const Icon = TYPE_ICON[field.fieldType] || Settings2;
   const typeMeta = FIELD_TYPES.find(t => t.value === field.fieldType);
   const hasConditions = Boolean(field.visibleIf || field.requiredIf);
   const hasValidation = Boolean(field.validationRule);
-  const showOptionsPreview = OPTION_FIELD_TYPES.includes(field.fieldType) && field.options?.length > 0;
+  const isOptionsType = OPTION_FIELD_TYPES.includes(field.fieldType);
+  const showOptionsPreview = isOptionsType && field.options?.length > 0;
+
+  const commitOptions = () => {
+    const parsed = optionsDraft.split("\n").map(s => s.trim()).filter(Boolean);
+    onSaveOptions(field.id, parsed);
+    setShowOptionsEditor(false);
+  };
+
+  const toggleOptionsEditor = () => {
+    if (showOptionsEditor) { setShowOptionsEditor(false); return; }
+    setOptionsDraft((field.options || []).join("\n"));
+    setShowOptionsEditor(true);
+  };
 
   const commitRename = () => {
     const trimmed = labelDraft.trim();
@@ -288,6 +303,22 @@ function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, on
 
         {/* Ações */}
         <div className="flex items-center gap-1 shrink-0">
+          {isOptionsType && (
+            <button
+              onClick={toggleOptionsEditor}
+              title="Editar opções"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: "3px 5px", borderRadius: 4, cursor: "pointer", flexShrink: 0,
+                border: `1px solid ${showOptionsEditor ? accent + "60" : "var(--border)"}`,
+                background: showOptionsEditor ? accent + "12" : "transparent",
+                color: showOptionsEditor ? accent : "var(--text-dim)",
+              }}
+            >
+              <List size={12} />
+            </button>
+          )}
+
           <button
             onClick={() => !busy && onToggleRequired(field.id, !field.required)}
             title={field.required ? "Remover obrigatoriedade" : "Tornar obrigatório"}
@@ -389,6 +420,38 @@ function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, on
             </button>
             <button
               onClick={() => setShowValidation(false)}
+              disabled={busy}
+              style={{ fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: busy ? "not-allowed" : "pointer" }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showOptionsEditor && (
+        <div className="mt-2 rounded-lg" style={{ border: "1px solid var(--border)", padding: "10px 12px", background: "var(--surface-alt)" }}>
+          <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-dim)", marginBottom: 4 }}>
+            Opções <span style={{ fontWeight: 400 }}>(uma por linha)</span>
+          </label>
+          <textarea
+            autoFocus
+            value={optionsDraft}
+            onChange={e => setOptionsDraft(e.target.value)}
+            rows={5}
+            style={{ ...INPUT_BASE, resize: "vertical", fontFamily: "inherit" }}
+            onFocus={focusStyle} onBlur={blurStyle}
+          />
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <button
+              onClick={commitOptions}
+              disabled={busy}
+              style={{ flex: 1, fontSize: 12, fontWeight: 700, padding: "6px 10px", borderRadius: 6, border: "none", background: busy ? "#9CA3AF" : accent, color: "#FFF", cursor: busy ? "not-allowed" : "pointer" }}
+            >
+              Salvar opções
+            </button>
+            <button
+              onClick={() => setShowOptionsEditor(false)}
               disabled={busy}
               style={{ fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: busy ? "not-allowed" : "pointer" }}
             >
@@ -706,6 +769,7 @@ export function StageFieldsPanel({
                       onRename={(id, label) => mergePatch(id, { label })}
                       onToggleRequired={(id, required) => mergePatch(id, { required, ...(required ? { requiredIf: null } : {}) })}
                       onSaveValidation={(id, validationRule) => mergePatch(id, { validationRule: validationRule ?? null })}
+                      onSaveOptions={(id, options) => mergePatch(id, { options })}
                       onOpenConditions={() => setConditionsOpen(true)}
                       onMoveUp={() => handleMove(idx, -1)}
                       onMoveDown={() => handleMove(idx, 1)}

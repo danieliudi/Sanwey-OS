@@ -163,13 +163,20 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
       });
   }, [scopedLeads, byLead, snapshots, classFilter]);
 
+  // Roster de vendedores/consultores/gerentes/admin da empresa ativa — não
+  // "donos dos leads já visíveis" (mesmo bug corrigido em CRMView.jsx).
   const ownerOptions = useMemo(() => {
-    const ids = Array.from(new Set(leads.map(l => l.owner).filter(Boolean)));
+    const scoped = (users || [])
+      .filter(u =>
+        (isGroupView || u.companies?.includes(activeCompany)) &&
+        (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
+      )
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     return [
       { value: "all", label: "Todos os vendedores" },
-      ...ids.map(id => ({ value: id, label: usersById.get(id)?.name || id })),
+      ...scoped.map(u => ({ value: u.id, label: u.name || u.id })),
     ];
-  }, [leads, usersById]);
+  }, [users, activeCompany, isGroupView]);
 
   return (
     <div className="space-y-5">

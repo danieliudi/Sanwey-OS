@@ -79,6 +79,17 @@ funcional. Não tente "arrumar" isso proativamente.
 
 ## 3. Processo obrigatório pra qualquer mudança de UI/UX genuinamente nova
 
+**Mockup antes de mexer em produção.** Decidido com o Daniel em 28/07/2026:
+qualquer sugestão de mudança que altere algo **visualmente e/ou
+estruturalmente** na plataforma — reposicionar item de menu, redesenhar um
+componente, mudar layout de card/drawer, alterar como um dado é organizado
+na tela — precisa ser mostrada como mockup (Artifact ou imagem) **antes** de
+qualquer implementação, pra aprovação explícita. Vale tanto pra pedido
+espontâneo do Daniel quanto pra sugestão proativa da sessão. Bug fix puro
+(algo que já deveria funcionar e não funciona — filtro vazio que devia listar
+opções, etapa que não aparece onde deveria) não precisa de mockup; mudança de
+como algo se parece ou se organiza, precisa.
+
 Pra tudo que não está nas listas acima (regra de negócio nova, tela nova,
 campo/comportamento específico do departamento) — siga o fluxo de 3 papéis
 abaixo. Não pule etapas mesmo em mudanças que pareçam triviais: os bugs de

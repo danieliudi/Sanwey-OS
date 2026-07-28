@@ -429,16 +429,22 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     return bucket;
   }, [stages, scopedLeads]);
 
+  // Roster de vendedores/consultores/gerentes/admin da empresa ativa — não
+  // "donos dos leads já visíveis" (bug real: com poucos leads atribuídos,
+  // o filtro listava só 1 vendedor mesmo com o time inteiro cadastrado).
+  // Mesmo escopo de papel usado em QuickAddForm:ownerOptions (:75-80).
   const ownerOptions = useMemo(() => {
-    const idSet = new Set();
-    for (const l of companyScopedLeads) {
-      for (const id of getLeadOwnerIds(l)) idSet.add(id);
-    }
+    const scoped = (users || [])
+      .filter(u =>
+        (isGroupView || u.companies?.includes(activeCompany)) &&
+        (u.role === "vendedor" || u.role === "consultor" || u.role === "gerente" || u.role === "admin")
+      )
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     return [
       { value: "all", label: "Todos os vendedores" },
-      ...Array.from(idSet).map(id => ({ value: id, label: usersById.get(id)?.name || id })),
+      ...scoped.map(u => ({ value: u.id, label: u.name || u.id })),
     ];
-  }, [companyScopedLeads, usersById]);
+  }, [users, activeCompany, isGroupView]);
 
   const summary = useMemo(() => {
     let pipelineValue = 0, won = 0, lost = 0;

@@ -358,7 +358,7 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
               onChange={handleChange}
               onKeyDown={handleKeyDown}
               placeholder="Escreva um comentário… use @ para mencionar"
-              rows={1}
+              rows={3}
               className="flex-1 text-xs rounded-2xl border px-3.5 py-2.5 outline-none resize-none"
               style={{ borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text)", lineHeight: 1.4 }}
               onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
