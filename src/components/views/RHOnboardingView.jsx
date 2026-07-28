@@ -545,6 +545,7 @@ function OnboardingDrawer({
                   value={getCustomValue(f.fieldKey)}
                   onChange={(val) => handleCustomChange(f.fieldKey, val)}
                   users={users}
+                  touched={Boolean(moveError)}
                 />
               </div>
             ))}

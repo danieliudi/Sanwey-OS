@@ -217,11 +217,12 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
 function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, users, onClose, onMove, onDelete, onOpenLead, onUpdateCustomFields }) {
   const st = stages.find(s => s.stageKey === kase.stage) || { name: "—", color: "#8A8680" };
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [attemptedMove, setAttemptedMove] = useState(false);
 
   const stageFields = useRHStageFields("posvenda");
   const customDefs = stageFields.getFields(kase.stage);
   const [customDraft, setCustomDraft] = useState({});
-  React.useEffect(() => { setCustomDraft({}); }, [kase.id]);
+  React.useEffect(() => { setCustomDraft({}); setAttemptedMove(false); }, [kase.id]);
 
   const getCustomValue = (fieldKey) =>
     fieldKey in customDraft ? customDraft[fieldKey] : (kase.customFields?.[fieldKey] ?? "");
@@ -294,6 +295,7 @@ function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, users
                     value={getCustomValue(f.fieldKey)}
                     onChange={val => canWrite && handleCustomChange(f.fieldKey, val)}
                     users={users}
+                    touched={attemptedMove}
                   />
                 </div>
               ))}
@@ -305,7 +307,11 @@ function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, users
               <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)" }}>Mover para</div>
               <StageNavigator
                 targets={stages.filter(s => s.stageKey !== kase.stage)}
-                onMove={(stageKey) => { onMove(stageKey); onClose(); }}
+                onMove={async (stageKey) => {
+                  const ok = await onMove(stageKey);
+                  if (ok === false) { setAttemptedMove(true); return; }
+                  onClose();
+                }}
               />
             </div>
           )}
@@ -507,19 +513,21 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
       const missing = getMissingRequiredFields(fields, customValues);
       if (missing.length > 0) {
         setStageError(`Não dá pra mover "${kase.clientName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
-        return;
+        return false;
       }
       const invalid = getInvalidFields(fields, customValues);
       if (invalid.length > 0) {
         setStageError(`Não dá pra mover "${kase.clientName}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
-        return;
+        return false;
       }
     }
     try {
       await changeStage(id, stageKey);
       setStageError(null);
+      return true;
     } catch (e) {
       setStageError(e?.message || "Não foi possível mover o caso.");
+      return false;
     }
   }, [cases, stageFields, changeStage]);
 

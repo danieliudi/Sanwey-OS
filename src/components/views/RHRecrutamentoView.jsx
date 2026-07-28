@@ -705,6 +705,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
                       value={customValues[f.fieldKey]}
                       onChange={(val) => setCustomValues((prev) => ({ ...prev, [f.fieldKey]: val }))}
                       users={users}
+                      touched={Boolean(error)}
                     />
                   </div>
                 ))}
@@ -1101,6 +1102,7 @@ function VagaDrawer({
                   value={vaga.custom_fields?.[field.fieldKey]}
                   onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
                   users={users}
+                  touched={Boolean(moveError)}
                 />
               </div>
             ))}
@@ -1670,6 +1672,7 @@ function NovoCandidatoModal({ defaultStage, defaultVagaId, vagas, stages, onSave
                       value={customValues[f.fieldKey]}
                       onChange={(val) => setCustomValues((prev) => ({ ...prev, [f.fieldKey]: val }))}
                       users={users}
+                      touched={Boolean(error)}
                     />
                   </div>
                 ))}
@@ -1881,6 +1884,7 @@ function CandidatoDrawer({
                   value={candidato.customFields?.[field.fieldKey]}
                   onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
                   users={users}
+                  touched={Boolean(moveError)}
                 />
               </div>
             ))}

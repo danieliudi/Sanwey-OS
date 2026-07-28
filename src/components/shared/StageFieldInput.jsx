@@ -14,18 +14,19 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 // papel de venda (vendedor/consultor/gerente/admin). Sem `companyId` (RH,
 // Marketing) o tipo "user" lista todos os usuários recebidos — não existe
 // conceito de "empresa" ou papel de venda nesses domínios.
-export function StageFieldInput({ field, value, onChange, users, companyId, touched = true }) {
+export function StageFieldInput({ field, value, onChange, users, companyId, touched = false }) {
   const input = renderInput({ field, value, onChange, users, companyId });
   // Validação de formato (camada 2, além de presença/obrigatoriedade) — só
   // mostra o erro quando há valor preenchido; campo vazio é responsabilidade
   // do required, não desta camada.
   const error = validateFieldFormat(field.validationRule, value);
   const hasValue = !(value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0));
-  // Destaque de obrigatório vazio — antes só aparecia como alert() ao tentar
-  // mudar de etapa; aqui já sinaliza inline, sem precisar tentar mover o card.
-  // `touched` (default true) deixa quem chama decidir se o sinalizador só
-  // deve valer depois de blur/tentativa de submit (criação) ou sempre
-  // (edição de card já existente, onde pendência deve aparecer de cara).
+  // Destaque de obrigatório vazio. `touched` (default false, achado de
+  // auditoria via vídeo — antes era `true`) nunca sinaliza vermelho antes de
+  // alguma interação real: nem card já existente com pendência antiga, nem
+  // campo de etapa recém-alcançada devem "nascer" vermelhos. Quem chama passa
+  // `touched` ligado à tentativa de mover/salvar que já falhou (mesmo sinal
+  // que dispara a mensagem de campo faltando) — é aí que o destaque aparece.
   const isMissingRequired = touched && (field.effectiveRequired ?? field.required) && !hasValue;
 
   return (

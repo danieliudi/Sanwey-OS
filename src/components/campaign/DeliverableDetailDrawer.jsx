@@ -742,6 +742,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
                       value={getCustomValue(f.fieldKey)}
                       onChange={val => handleCustomChange(f.fieldKey, val)}
                       users={users}
+                      touched={Boolean(moveError)}
                     />
                   ) : (
                     <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />

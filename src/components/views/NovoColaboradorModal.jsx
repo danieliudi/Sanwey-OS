@@ -511,6 +511,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
                         value={customValues[f.fieldKey]}
                         onChange={(val) => setCustomValues((prev) => ({ ...prev, [f.fieldKey]: val }))}
                         users={users}
+                        touched={Boolean(error)}
                       />
                     </div>
                   ))}

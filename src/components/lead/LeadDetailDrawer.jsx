@@ -1172,6 +1172,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                       onChange={(val) => handleCustomChange(f.fieldKey, val)}
                       users={users}
                       companyId={lead.companyId}
+                      touched={Boolean(moveError)}
                     />
                   </div>
                 ))}

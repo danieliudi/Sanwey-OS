@@ -1321,6 +1321,7 @@ export function CampaignDetailDrawer({
   const effectiveStages = stages?.length ? stages : MARKETING_STAGES;
   const [sideTab, setSideTab]           = useState("form");
   const [draft, setDraft]               = useState({});
+  const [attemptedMove, setAttemptedMove] = useState(false);
   const saveTimeout  = useRef(null);
   const pendingPatch = useRef({});
 
@@ -1350,6 +1351,7 @@ export function CampaignDetailDrawer({
   useEffect(() => {
     setDraft({});
     setSideTab("form");
+    setAttemptedMove(false);
     pendingPatch.current = {};
   }, [campaign?.id]);
 
@@ -1380,7 +1382,8 @@ export function CampaignDetailDrawer({
     // já tinham sido corrigidos).
     if (onMoveToStage) {
       const ok = await onMoveToStage(campaign.id, toStageId);
-      if (ok === false) return;
+      if (ok === false) { setAttemptedMove(true); return; }
+      setAttemptedMove(false);
       if (onStageMoved) { onClose?.(); onStageMoved(campaign.id); }
       return;
     }
@@ -1692,6 +1695,7 @@ export function CampaignDetailDrawer({
                       value={getCf(f.fieldKey)}
                       onChange={val => setCf(f.fieldKey, val)}
                       users={users}
+                      touched={attemptedMove}
                     />
                   )}
                 </div>
