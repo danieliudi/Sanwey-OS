@@ -8,6 +8,9 @@ import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { Combobox } from "../shared/Combobox";
+import { KanbanSortSelect } from "../shared/KanbanSortSelect";
+import { useKanbanSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
 import { LeadFormBuilder } from "../lead/LeadFormBuilder";
@@ -349,6 +352,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [starredOnly, setStarredOnly] = useState(false);
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "calendar"
+  const [sortCriteria, setSortCriteria] = useKanbanSort("crm-pipeline");
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
@@ -426,8 +430,18 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
         bucket[l.stage].total += l.value;
       }
     }
+    // Item 6: ordenar cards dentro de cada coluna — antes só existia a ordem
+    // de chegada (created_at desc), sem opção nenhuma de trocar.
+    for (const s of stages) {
+      bucket[s.id].leads = sortKanbanItems(bucket[s.id].leads, sortCriteria, {
+        deadline: l => l.closeDate,
+        value: l => l.value,
+        name: l => l.company,
+        createdAt: l => l.createdAt,
+      });
+    }
     return bucket;
-  }, [stages, scopedLeads]);
+  }, [stages, scopedLeads, sortCriteria]);
 
   // Roster de vendedores/consultores/gerentes/admin da empresa ativa — não
   // "donos dos leads já visíveis" (bug real: com poucos leads atribuídos,
@@ -627,6 +641,9 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             <Star size={11} fill={starredOnly ? "#F59E0B" : "none"} />
             Só favoritos
           </button>
+          {viewMode === "kanban" && (
+            <KanbanSortSelect value={sortCriteria} onChange={setSortCriteria} className="w-40" />
+          )}
           {isManager && !isGroupView && (
             <button
               onClick={() => setStageManagerOpen(true)}

@@ -33,6 +33,9 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
+import { KanbanSortSelect } from "../shared/KanbanSortSelect";
+import { useKanbanSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { AvatarStack } from "../shared/AvatarStack";
 import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
@@ -672,6 +675,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const [filterStarred, setFilterStarred]     = useState(false);
   const [ownerFilter, setOwnerFilter]         = useState("all");
   const [viewMode, setViewMode]               = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
+  const [sortCriteria, setSortCriteria]       = useKanbanSort("marketing-campanhas");
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["briefing"]));
   const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -684,6 +688,16 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
       return true;
     });
   }, [campaigns, filterCompany, filterChannel, filterStarred, ownerFilter, isManager]);
+
+  // Item 6: ordenar cards dentro de cada coluna do Kanban — ordenar a lista
+  // toda antes de filtrar por etapa preserva a ordem escolhida dentro de
+  // cada coluna, sem precisar de um sort por coluna separado.
+  const sortedCampaigns = useMemo(() => sortKanbanItems(filteredCampaigns, sortCriteria, {
+    deadline: c => c.launchDate,
+    value: c => c.budget,
+    name: c => c.name,
+    createdAt: c => c.createdAt,
+  }), [filteredCampaigns, sortCriteria]);
 
   const ownerOptions = useMemo(() => {
     const idSet = new Set();
@@ -982,6 +996,9 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           <Star size={11} fill={filterStarred ? "#F59E0B" : "none"} />
           Destaques
         </button>
+        {viewMode === "kanban" && (
+          <KanbanSortSelect value={sortCriteria} onChange={setSortCriteria} className="w-40" />
+        )}
       </div>
       </KanbanBoardHeader>
 
@@ -1028,7 +1045,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
           {kanbanStages.map(stage => {
-            const stageCampaigns = filteredCampaigns.filter(c => c.stage === stage.id);
+            const stageCampaigns = sortedCampaigns.filter(c => c.stage === stage.id);
             const expanded = expandedMobileStages.has(stage.id);
             const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
             return (
@@ -1117,7 +1134,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               style={{ minWidth: `${kanbanStages.length * 280}px` }}
             >
               {kanbanStages.map(stage => {
-                const stageCampaigns = filteredCampaigns.filter(c => c.stage === stage.id);
+                const stageCampaigns = sortedCampaigns.filter(c => c.stage === stage.id);
                 const count       = stageCampaigns.length;
                 const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
                 const isOver      = dragOverStage === stage.id;
