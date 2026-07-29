@@ -26,7 +26,8 @@ export const DELIVERABLE_PRIORITIES = [
 
 export const DELIVERABLE_REQUEST_TYPES = [
   "Design", "Vídeo", "Copywriting", "Social Media", "Email Marketing",
-  "Apresentação", "Landing Page", "Outro",
+  "Apresentação", "Landing Page", "Impressos", "Divulgação Interna",
+  "Brinde/Merchandising", "Outro",
 ];
 
 export const EXPENSE_CATEGORIES = [
