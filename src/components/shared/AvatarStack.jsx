@@ -18,7 +18,7 @@ export function AvatarStack({ users = [], size = 20, max = 3 }) {
           title={u.name}
           className="flex items-center justify-center rounded-full font-bold shrink-0"
           style={{
-            width: size, height: size, fontSize: size * 0.42,
+            width: size, height: size, fontSize: size * 0.42, lineHeight: 1,
             background: u.avatarBg || "#1D4ED8", color: "#FFF",
             border: "1.5px solid var(--surface)",
             marginLeft: i === 0 ? 0 : -size * 0.35,

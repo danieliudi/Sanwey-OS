@@ -55,13 +55,17 @@ export const PERFORMANCE_HINT_BY_KPI = {
 };
 export const DEFAULT_PERFORMANCE_HINT = "0–100. Escolha um KPI acima para ver o critério sugerido pra essa nota.";
 
+// Cada canal tinha hex fixo (sem versão dark) — virava um retângulo quase
+// branco dentro de um card escuro (achado real, reportado pelo Daniel).
+// Agora aponta pros tokens em index.css (com override em [data-theme="dark"]),
+// mesma técnica já usada por --success/--warning/--danger/--amber.
 export const CHANNEL_COLORS = {
-  "Email":     { bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
-  "Social":    { bg: "#FDF4FF", text: "#7C3AED", border: "#E9D5FF" },
-  "Conteúdo":  { bg: "#F0FDF4", text: "#15803D", border: "#BBF7D0" },
-  "Digital":   { bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
-  "Outdoor":   { bg: "#F5F3FF", text: "#5B21B6", border: "#DDD6FE" },
-  "Evento":    { bg: "#FFF1F2", text: "#BE123C", border: "#FECDD3" },
+  "Email":     { bg: "var(--channel-email-bg)",    text: "var(--channel-email-text)",    border: "var(--channel-email-border)" },
+  "Social":    { bg: "var(--channel-social-bg)",   text: "var(--channel-social-text)",   border: "var(--channel-social-border)" },
+  "Conteúdo":  { bg: "var(--channel-conteudo-bg)", text: "var(--channel-conteudo-text)", border: "var(--channel-conteudo-border)" },
+  "Digital":   { bg: "var(--channel-digital-bg)",  text: "var(--channel-digital-text)",  border: "var(--channel-digital-border)" },
+  "Outdoor":   { bg: "var(--channel-outdoor-bg)",  text: "var(--channel-outdoor-text)",  border: "var(--channel-outdoor-border)" },
+  "Evento":    { bg: "var(--channel-evento-bg)",   text: "var(--channel-evento-text)",   border: "var(--channel-evento-border)" },
 };
 
 export const MARKETING_ROLE_LABELS = {

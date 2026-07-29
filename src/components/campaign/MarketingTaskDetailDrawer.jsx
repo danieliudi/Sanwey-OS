@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, FileText, Activity, Paperclip, ListChecks, History, Sparkles } from "lucide-react";
+import { AlertCircle, FileText, Activity, Paperclip, ListChecks, History, Sparkles, Layers } from "lucide-react";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
@@ -22,11 +22,11 @@ const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
 
 const inputBase = {
   width: "100%", fontSize: 13, borderRadius: 6,
-  border: "1px solid #D1D5DB", padding: "7px 10px",
+  border: "1px solid var(--border-strong)", padding: "7px 10px",
   background: "var(--surface)", color: "var(--text)", outline: "none",
 };
 const focusBorder = e => { e.target.style.borderColor = "var(--accent)"; };
-const blurBorder  = e => { e.target.style.borderColor = "#D1D5DB"; };
+const blurBorder  = e => { e.target.style.borderColor = "var(--border-strong)"; };
 
 function SectionLabel({ children }) {
   return (
@@ -84,7 +84,7 @@ export function MarketingTaskDetailDrawer({
   const [formDraft,  setFormDraft]  = useState({});
   const [saveStatus, setSaveStatus] = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,  setMoveError]  = useState(null);
-  const [centerTab,  setCenterTab]  = useState("form");
+  const [centerTab,  setCenterTab]  = useState("fase");
 
   const stageFieldsHook = useRHStageFields("marketing_tasks");
   const customDefs = stageFieldsHook.getFields(item.stage);
@@ -108,7 +108,7 @@ export function MarketingTaskDetailDrawer({
     customDraftRef.current = {};
     setMoveError(null);
     setSaveStatus(null);
-    setCenterTab("form");
+    setCenterTab("fase");
     if (formDebounceRef.current) clearTimeout(formDebounceRef.current);
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     return () => {
@@ -409,11 +409,20 @@ export function MarketingTaskDetailDrawer({
         </>
       )}
 
-      {/* Campos adicionais configurados via "Editar campos desta etapa"
-          (rh_pipeline_stage_fields, domain="marketing_tasks"). */}
-      {visibleCustomDefs.length > 0 && (
-        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-          <SectionLabel>Campos adicionais da etapa</SectionLabel>
+    </div>
+  );
+
+  // "Fase atual" abre por padrão — só os campos configuráveis da etapa
+  // (rh_pipeline_stage_fields, domain="marketing_tasks"). Título/descrição/
+  // prioridade/prazo/responsáveis (persistentes, não mudam por etapa)
+  // ficam na aba "Form" ao lado.
+  const faseTabContent = (
+    <div>
+      {visibleCustomDefs.length === 0 ? (
+        <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo adicional para esta etapa.</div>
+      ) : (
+        <>
+          <SectionLabel>Campos desta etapa</SectionLabel>
           {visibleCustomDefs.map(f => (
             <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
               {canWrite ? (
@@ -429,7 +438,7 @@ export function MarketingTaskDetailDrawer({
               )}
             </FieldRow>
           ))}
-        </div>
+        </>
       )}
     </div>
   );
@@ -438,6 +447,7 @@ export function MarketingTaskDetailDrawer({
     <>
       <DetailDrawerTabs
         tabs={[
+          { id: "fase",       label: "Fase atual", icon: Layers },
           { id: "form",       label: "Form",       icon: FileText },
           { id: "atividades", label: "Atividades", icon: Activity },
           { id: "historico",  label: "Histórico",  icon: History },
@@ -448,6 +458,7 @@ export function MarketingTaskDetailDrawer({
         activeId={centerTab}
         onChange={setCenterTab}
       />
+      {centerTab === "fase" && faseTabContent}
       {centerTab === "form" && formTabContent}
       {centerTab === "atividades" && <ActivityLog activities={item.activities || []} />}
       {centerTab === "historico" && (

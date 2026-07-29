@@ -55,9 +55,9 @@ function RHKanbanCardImpl({ id, stage, stages, onClick, onDragStart, onDragEnd, 
         <div className="flex items-center shrink-0">
           {isTerminal && (
             currentStage.won
-              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A", opacity: terminalAccentOpacity(isTerminal) }} />
+              ? <Check size={13} strokeWidth={3} style={{ color: "var(--success)", opacity: terminalAccentOpacity(isTerminal) }} />
               : currentStage.lost
-                ? <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626", opacity: terminalAccentOpacity(isTerminal) }} />
+                ? <XIcon size={13} strokeWidth={3} style={{ color: "var(--danger)", opacity: terminalAccentOpacity(isTerminal) }} />
                 : null
           )}
         </div>

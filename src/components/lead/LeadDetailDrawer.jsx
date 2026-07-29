@@ -5,7 +5,7 @@ import {
   Check, Trash2, Mail, ChevronDown, ChevronUp,
   Clock, GitBranch, CalendarClock, ArrowRight, History,
   FileText, Activity, Paperclip, ListChecks, FileDown, Plus, Upload, Download,
-  File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake,
+  File, FileImage, FileSpreadsheet, AlertCircle, Pencil, Handshake, Layers,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
@@ -37,7 +37,7 @@ import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
 
 export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions, pipelineTransitions }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
-  const [sideTab, setSideTab] = useState("form");
+  const [sideTab, setSideTab] = useState("fase");
   const [mobileTab, setMobileTab] = useState("info");
   const [followUpDate, setFollowUpDate] = useState("");
   const [showFollowUpInput, setShowFollowUpInput] = useState(false);
@@ -1035,7 +1035,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               (320px, apertada) e coloca no centro, junto do formulário. */}
           <SideTabs activeTab={sideTab} onChange={setSideTab} />
 
-          {/* ── Tab: Form ── */}
+          {/* ── Tab: Form (só o Formulário Inicial — snapshot da criação) ── */}
           {sideTab === "form" && (
           <>
           {/* Formulário Inicial — dados preenchidos na criação do card */}
@@ -1105,7 +1105,14 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               )}
             </div>
           )}
+          </>
+          )}
 
+          {/* ── Tab: Fase atual (aberta por padrão) — tudo que é acionável
+              agora: overlap, campos da etapa, produto, mover etapa,
+              follow-up, abordagem. Form guarda só o snapshot da criação. ── */}
+          {sideTab === "fase" && (
+          <>
           {/* Overlap (gerente) */}
           {isManager && overlaps.length > 0 && (
             <div
@@ -1531,6 +1538,7 @@ const SIDE_TAB_HINTS = {
 };
 
 const SIDE_TABS = [
+  { id: "fase",         label: "Fase atual",  icon: Layers },
   { id: "form",         label: "Form",        icon: FileText },
   { id: "atividades",   label: "Atividades",  icon: Activity },
   { id: "historico",    label: "Histórico",   icon: History },

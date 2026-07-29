@@ -21,7 +21,7 @@ function daysFromDate(dateStr) {
 function renderPreviewField(key, lead, { probDisplay, closeStyle, accentOpacity }) {
   switch (key) {
     case "value":
-      return lead.value > 0 ? { text: formatK(lead.value), color: "#15803D", weight: 600, opacity: accentOpacity } : null;
+      return lead.value > 0 ? { text: formatK(lead.value), color: "var(--success)", weight: 600, opacity: accentOpacity } : null;
     case "probability":
       return Number.isFinite(lead.probability) ? { text: `${probDisplay}%`, color: "var(--text-dim)" } : null;
     case "closeDate":
@@ -112,8 +112,8 @@ function LeadKanbanCardImpl({ lead, users, showOwnerFooter, isGroupView, onClick
         <div className="font-semibold text-[13px] leading-snug flex-1 flex items-start gap-1.5" style={{ color: terminalTextColor(isTerminal), minHeight: 34 }}>
           {isTerminal && (
             currentStage.won
-              ? <Check size={13} strokeWidth={3} style={{ color: "#16A34A", flexShrink: 0, marginTop: 1, opacity: terminalAccentOpacity(isTerminal) }} />
-              : <XIcon size={13} strokeWidth={3} style={{ color: "#DC2626", flexShrink: 0, marginTop: 1, opacity: terminalAccentOpacity(isTerminal) }} />
+              ? <Check size={13} strokeWidth={3} style={{ color: "var(--success)", flexShrink: 0, marginTop: 1, opacity: terminalAccentOpacity(isTerminal) }} />
+              : <XIcon size={13} strokeWidth={3} style={{ color: "var(--danger)", flexShrink: 0, marginTop: 1, opacity: terminalAccentOpacity(isTerminal) }} />
           )}
           <span className="line-clamp-2">{lead.company}</span>
         </div>

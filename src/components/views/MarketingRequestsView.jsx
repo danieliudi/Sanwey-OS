@@ -101,7 +101,14 @@ function RejectModal({ request, onConfirm, onClose }) {
 }
 
 /* ── Approve Modal ────────────────────────────────────────────────── */
+// Destino escolhido pelo aprovador: Entrega (agência externa, fluxo
+// original) ou Tarefa (equipe interna, sem passar por fornecedor) — pedido
+// do Daniel, mockup aprovado. marketing_tasks não tem colunas próprias de
+// requester_name/email/department, então esses dados entram formatados no
+// topo da descrição da tarefa (approve_marketing_request_as_task) — mesma
+// solução já usada hoje pras observações internas.
 function ApproveModal({ request, onConfirm, onClose }) {
+  const [destination, setDestination] = useState("entrega");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   useEscToClose(onClose);
@@ -113,10 +120,55 @@ function ApproveModal({ request, onConfirm, onClose }) {
     >
       <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-1" style={{ color: "var(--text)" }}>Aprovar solicitação</h3>
-        <p className="text-xs mb-1" style={{ color: "var(--text-dim)" }}>"{request.title}"</p>
-        <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "#DCFCE7", color: "#15803D" }}>
-          Uma entrega será criada automaticamente em <strong>Entregas</strong> para a agência externa.
-        </p>
+        <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>"{request.title}"</p>
+
+        <div className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-faint)" }}>
+          Criar como
+        </div>
+        <div className="flex flex-col gap-2 mb-4">
+          {[
+            { id: "entrega", title: "Entrega — para agência externa", desc: "Vai pro board de Entregas, visível pra agência/fornecedor cuidar da produção." },
+            { id: "tarefa",  title: "Tarefa — equipe interna",         desc: "Vai pro board de Tarefas de Marketing, sem passar por fornecedor." },
+          ].map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setDestination(opt.id)}
+              className="flex items-start gap-2.5 text-left p-3 rounded-lg border transition-colors"
+              style={{
+                borderColor: destination === opt.id ? "var(--accent)" : "var(--border)",
+                background: destination === opt.id ? "color-mix(in srgb, var(--accent) 6%, var(--surface-alt))" : "var(--surface-alt)",
+              }}
+            >
+              <span
+                className="mt-0.5 rounded-full shrink-0"
+                style={{
+                  width: 16, height: 16, border: `1.5px solid ${destination === opt.id ? "var(--accent)" : "var(--border-strong)"}`,
+                  background: "var(--surface)", position: "relative",
+                }}
+              >
+                {destination === opt.id && (
+                  <span className="absolute rounded-full" style={{ inset: 3, background: "var(--accent)" }} />
+                )}
+              </span>
+              <span>
+                <div className="text-[13.5px] font-bold" style={{ color: "var(--text)" }}>{opt.title}</div>
+                <div className="text-[11.5px] leading-snug" style={{ color: "var(--text-dim)" }}>{opt.desc}</div>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {destination === "entrega" ? (
+          <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
+            Uma entrega será criada automaticamente em <strong>Entregas</strong>, com os dados do solicitante preservados.
+          </p>
+        ) : (
+          <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
+            Uma tarefa será criada em <strong>Tarefas de Marketing</strong>. Nome/e-mail/departamento do solicitante entram na descrição da tarefa.
+          </p>
+        )}
+
         <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
           Observações internas (opcional)
         </label>
@@ -137,12 +189,12 @@ function ApproveModal({ request, onConfirm, onClose }) {
             Cancelar
           </button>
           <button
-            onClick={async () => { setSaving(true); await onConfirm(notes); }}
+            onClick={async () => { setSaving(true); await onConfirm(notes, destination); }}
             disabled={saving}
             className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "#16A34A", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
+            style={{ background: destination === "entrega" ? "var(--success)" : "var(--warning)", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
           >
-            {saving ? "Aprovando…" : "Aprovar e criar entrega"}
+            {saving ? "Aprovando…" : destination === "entrega" ? "Aprovar e criar entrega" : "Aprovar e criar tarefa"}
           </button>
         </div>
       </div>
@@ -239,6 +291,12 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
           </span>
         )}
 
+        {request.status === "aprovado" && request.taskId && (
+          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "#FEF3C7", color: "#B45309" }}>
+            Tarefa criada
+          </span>
+        )}
+
         {canWrite && request.status !== "pendente" && request.emailError && (
           <button
             onClick={() => onResendEmail(request)}
@@ -296,7 +354,7 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
 export function MarketingRequestsView({ user, users }) {
   const {
     requests, loading, error, canWrite,
-    approveAndCreateDeliverable, rejectRequest, sendStatusEmail, updateRequest,
+    approveAndCreateDeliverable, approveAndCreateTask, rejectRequest, sendStatusEmail, updateRequest,
   } = useMarketingRequests({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const [statusFilter, setStatusFilter]   = useState("pendente");
@@ -316,17 +374,20 @@ export function MarketingRequestsView({ user, users }) {
     rejeitado: requests.filter(r => r.status === "rejeitado").length,
   }), [requests]);
 
-  const handleApproveConfirm = async (notes) => {
+  const handleApproveConfirm = async (notes, destination) => {
     if (!approvingReq) return;
     setActionError(null);
     try {
-      // Cria a entrega em Entregas e marca a solicitação como aprovada numa
-      // única transação no banco (approve_marketing_request) — antes eram 2
-      // escritas separadas do cliente, com risco de deliverable órfão se a
-      // 2ª falhasse (achado da auditoria completa). Em seguida avisa o
-      // solicitante por e-mail — falha no envio não desfaz a aprovação, só
-      // fica visível no card com opção de tentar de novo.
-      const res = await approveAndCreateDeliverable(approvingReq.id, notes);
+      // Cria a entrega (ou tarefa, escolha do aprovador) e marca a
+      // solicitação como aprovada numa única transação no banco
+      // (approve_marketing_request / approve_marketing_request_as_task) —
+      // evita registro órfão se a 2ª escrita falhasse (achado da auditoria
+      // completa). Em seguida avisa o solicitante por e-mail — falha no
+      // envio não desfaz a aprovação, só fica visível no card com opção de
+      // tentar de novo.
+      const res = destination === "tarefa"
+        ? await approveAndCreateTask(approvingReq.id, notes)
+        : await approveAndCreateDeliverable(approvingReq.id, notes);
       if (res?.error) setActionError(`Solicitação aprovada, mas o e-mail não pôde ser enviado: ${res.error}`);
     } catch (e) {
       setActionError(e.message || "Erro ao aprovar solicitação.");

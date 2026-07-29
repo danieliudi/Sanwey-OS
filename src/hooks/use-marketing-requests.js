@@ -22,6 +22,7 @@ function rowToRequest(r) {
     approvedAt:      r.approved_at ?? null,
     approvedBy:      r.approved_by ?? null,
     deliverableId:   r.deliverable_id ?? null,
+    taskId:          r.task_id ?? null,
     emailError:      r.email_error ?? null,
     isDemo:          r.is_demo ?? false,
     createdAt:       r.created_at ?? null,
@@ -185,6 +186,26 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     return { deliverableId: data, ...emailResult };
   }, [canWrite, userId, sendStatusEmail]);
 
+  // Mesmo padrão de approveAndCreateDeliverable, mas cria uma tarefa interna
+  // (marketing_tasks) em vez de uma entrega pra agência — escolha do
+  // aprovador no momento de aprovar (ver approve_marketing_request_as_task).
+  const approveAndCreateTask = useCallback(async (id, notes) => {
+    if (!isSupabaseConfigured || !canWrite) return null;
+    const { data, error: err } = await supabase.rpc("approve_marketing_request_as_task", {
+      p_request_id: id,
+      p_notes: notes || null,
+    });
+    if (err) throw err;
+    const now = new Date().toISOString();
+    setRequests(prev => prev.map(r =>
+      r.id === id
+        ? { ...r, status: "aprovado", approvedAt: now, approvedBy: userId ?? null, taskId: data ?? null }
+        : r
+    ));
+    const emailResult = await sendStatusEmail(id);
+    return { taskId: data, ...emailResult };
+  }, [canWrite, userId, sendStatusEmail]);
+
   const rejectRequest = useCallback(async (id, reason) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const patch = {
@@ -224,6 +245,7 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     updateRequest,
     deleteRequest,
     approveAndCreateDeliverable,
+    approveAndCreateTask,
     rejectRequest,
     sendStatusEmail,
     loadDemoRequests,

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
-  Sparkles, ChevronRight, History,
+  Sparkles, ChevronRight, History, Layers,
   Loader2, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
@@ -52,6 +52,7 @@ function humanSize(bytes) {
 // ── Pill SideTabs ─────────────────────────────────────────────────────────────
 
 const SIDE_TABS = [
+  { id: "fase",        label: "Fase atual",  icon: Layers },
   { id: "form",        label: "Form",        icon: FileText },
   { id: "atividades",  label: "Atividades",  icon: Activity },
   { id: "historico",   label: "Histórico",   icon: History },
@@ -1241,7 +1242,7 @@ export function CampaignDetailDrawer({
   // dessas 6 — enquanto o Kanban ao lado já mostrava a etapa nova certinho.
   // Achado da auditoria de fricção de 18/07.
   const effectiveStages = stages?.length ? stages : MARKETING_STAGES;
-  const [sideTab, setSideTab]           = useState("form");
+  const [sideTab, setSideTab]           = useState("fase");
   const [draft, setDraft]               = useState({});
   const [attemptedMove, setAttemptedMove] = useState(false);
   const saveTimeout  = useRef(null);
@@ -1272,7 +1273,7 @@ export function CampaignDetailDrawer({
 
   useEffect(() => {
     setDraft({});
-    setSideTab("form");
+    setSideTab("fase");
     setAttemptedMove(false);
     pendingPatch.current = {};
   }, [campaign?.id]);
@@ -1563,7 +1564,16 @@ export function CampaignDetailDrawer({
                 />
               )}
           </div>
-
+        </div>
+      );
+    }
+    if (sideTab === "fase") {
+      const hasFixedStageFields = ["briefing", "aprovacao", "producao", "revisao"].includes(stage?.id);
+      if (!hasFixedStageFields && visibleCustomDefs.length === 0) {
+        return <div className="text-xs" style={{ color: "var(--text-dim)" }}>Nenhum campo adicional para esta etapa.</div>;
+      }
+      return (
+        <div className="space-y-3">
           {/* Campos específicos da etapa atual */}
           {stage?.id === "briefing" && (
             <BriefingFields

@@ -77,8 +77,20 @@ function DeliverableKanbanCardImpl({
           (aging, completude, domínio, utilitários) dos outros cards do
           Kanban; antes ficava dividido entre topo e rodapé do card. */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="font-semibold text-[13px] leading-snug min-w-0 flex-1 line-clamp-2" style={{ color: terminalTextColor(isTerminal) }}>
-          {item.requestNumber ? `${item.requestNumber} ${item.title}` : item.title}
+        <div className="min-w-0 flex-1">
+          {/* Protocolo em linha própria — concatenado no mesmo texto
+              clampado, ele quebrava no meio do número quando os chips à
+              direita sobravam pouco espaço (achado real, reportado pelo
+              Daniel). Mesmo padrão já usado em ComprasMarketingView.jsx:
+              protocolo nunca entra no texto que pode quebrar/truncar. */}
+          {item.requestNumber && (
+            <div className="font-mono font-bold text-[11px]" style={{ color: "var(--accent)", opacity: terminalAccentOpacity(isTerminal) }}>
+              {item.requestNumber}
+            </div>
+          )}
+          <div className="font-semibold text-[13px] leading-snug line-clamp-2" style={{ color: terminalTextColor(isTerminal) }}>
+            {item.title}
+          </div>
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
           <KanbanCardStatusChips
@@ -102,14 +114,14 @@ function DeliverableKanbanCardImpl({
               onClick={e => { e.stopPropagation(); onToggleStar?.(item.id); }}
               title={item.starred ? "Remover dos favoritos" : "Favoritar"}
               className="flex items-center justify-center rounded-md p-1 transition-colors"
-              style={{ color: item.starred ? "#F59E0B" : "var(--text-dim)", background: "transparent", border: "none", opacity: terminalAccentOpacity(isTerminal) }}
+              style={{ color: item.starred ? "var(--amber)" : "var(--text-dim)", background: "transparent", border: "none", opacity: terminalAccentOpacity(isTerminal) }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
-              <Star size={12} fill={item.starred ? "#F59E0B" : "none"} />
+              <Star size={12} fill={item.starred ? "var(--amber)" : "none"} />
             </button>
           ) : (
-            item.starred && <Star size={11} fill="#F59E0B" color="#F59E0B" style={{ opacity: terminalAccentOpacity(isTerminal) }} />
+            item.starred && <Star size={11} fill="var(--amber)" color="var(--amber)" style={{ opacity: terminalAccentOpacity(isTerminal) }} />
           )}
           {canWrite && ((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
@@ -161,7 +173,7 @@ function DeliverableKanbanCardImpl({
           : <span />
         }
         {item.deadline && (
-          <span style={{ color: isOverdue ? "#DC2626" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
+          <span style={{ color: isOverdue ? "var(--danger)" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
             {formatDateBR(item.deadline)}
           </span>
         )}

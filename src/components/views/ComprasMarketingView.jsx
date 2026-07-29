@@ -135,7 +135,7 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
           // atual (new Date()) fazia o item acender vermelho ~21h da véspera
           // (meia-noite UTC vira 21h BRT) e durante todo o próprio dia de
           // vencimento. Agora compara início-do-dia local. Achado da auditoria.
-          <span style={{ color: parseDateInput(purchase.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) ? "#DC2626" : "var(--text-dim)", fontWeight: 500, opacity: terminalAccentOpacity(isTerminal) }}>
+          <span style={{ color: parseDateInput(purchase.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) ? "var(--danger)" : "var(--text-dim)", fontWeight: 500, opacity: terminalAccentOpacity(isTerminal) }}>
             {formatDateBR(purchase.dueDate)}
           </span>
         )}
