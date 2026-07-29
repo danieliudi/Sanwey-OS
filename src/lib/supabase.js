@@ -19,6 +19,14 @@ const REMEMBER_KEY = "sanwey-remember-me";
 const rememberPref = typeof window !== "undefined" ? window.localStorage.getItem(REMEMBER_KEY) : null;
 const authStorage = rememberPref === "false" ? window.sessionStorage : undefined;
 
+// Captura ANTES do supabase-js consumir/limpar o hash (detectSessionInUrl,
+// abaixo) — link de convite do GoTrue chega com "type=invite" no hash, mas
+// não existe evento dedicado pra isso em onAuthStateChange (só PASSWORD_RECOVERY
+// pra "type=recovery"; convite dispara SIGNED_IN normal, indistinguível de
+// login comum). É por isso que hoje quem aceita convite cai direto no painel
+// de trabalho sem nunca definir senha — ver use-supabase-auth.js.
+export const cameFromInviteLink = typeof window !== "undefined" && /type=invite/.test(window.location.hash);
+
 // Safe to export `null` when not configured — screens check `isSupabaseConfigured`
 // before calling any method, and show a setup banner instead.
 export const supabase = isSupabaseConfigured

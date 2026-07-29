@@ -150,6 +150,7 @@ export default function App() {
     resetPasswordWithToken,
     refreshProfile,
     isPasswordRecovery,
+    isInviteAcceptance,
     configured: supabaseEnabled,
   } = useSupabaseAuth();
 
@@ -1449,6 +1450,14 @@ export default function App() {
 
   if (supabaseEnabled && isPasswordRecovery) {
     return <PasswordResetScreen onReset={resetPasswordWithToken} />;
+  }
+
+  // Convite não dispara PASSWORD_RECOVERY (só "type=recovery" faz isso) — sem
+  // isto, quem aceita convite era autenticado em silêncio e caía direto no
+  // painel de trabalho sem nunca definir senha (achado real, reportado pelo
+  // Daniel: "eles não sabem o que fazer depois" de clicar no e-mail).
+  if (supabaseEnabled && isInviteAcceptance) {
+    return <PasswordResetScreen onReset={resetPasswordWithToken} variant="invite" />;
   }
 
   if (!currentUser) {

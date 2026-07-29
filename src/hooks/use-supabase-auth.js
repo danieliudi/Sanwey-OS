@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { supabase, isSupabaseConfigured, cameFromInviteLink } from "../lib/supabase";
 
 // Loads the current user's profile row (role, companies, avatarBg, initials).
 // Expects a `profiles` table keyed by auth.users.id — see README for SQL.
@@ -19,6 +19,11 @@ export function useSupabaseAuth() {
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState(null);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  // Link de convite não dispara PASSWORD_RECOVERY (só "type=recovery" faz
+  // isso) — sem isso, quem aceita convite cai direto no painel de trabalho
+  // sem nunca definir senha. cameFromInviteLink já foi lido de forma
+  // síncrona em lib/supabase.js, antes do supabase-js consumir o hash.
+  const [isInviteAcceptance, setIsInviteAcceptance] = useState(cameFromInviteLink);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -120,6 +125,7 @@ export function useSupabaseAuth() {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) throw error;
     setIsPasswordRecovery(false);
+    setIsInviteAcceptance(false);
   }, []);
 
   // Shapes the profile + auth user in the format the rest of the app expects
@@ -167,6 +173,7 @@ export function useSupabaseAuth() {
     resetPasswordWithToken,
     refreshProfile,
     isPasswordRecovery,
+    isInviteAcceptance,
     configured: isSupabaseConfigured,
   };
 }
