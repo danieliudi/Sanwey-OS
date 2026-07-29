@@ -204,12 +204,12 @@ export function SettingsView({
   leadsCount = 0, onLoadDemoLeads, onClearAllLeads,
   onLoadAllDemoData, demoDataLoading = false, demoDataCounts = null,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
-  usersPanel, isManager = false, isMarketingManager = false, isRHManager = false, isAdmin = false,
+  usersPanel, isManager = false, isMarketingManager = false, isRHManager = false, isComexManager = false, isAdmin = false,
 }) {
   // Painel Executivo não é mais exclusivo do gerente Comercial — gerente de
-  // Marketing/RH também acessa a aba Preferências, só que só enxerga (e só
-  // mexe n)o próprio recorte de widgets do Painel Executivo lá dentro.
-  const canSeeExecutive = isManager || isMarketingManager || isRHManager;
+  // Marketing/RH/Comex também acessa a aba Preferências, só que só enxerga
+  // (e só mexe n)o próprio recorte de widgets do Painel Executivo lá dentro.
+  const canSeeExecutive = isManager || isMarketingManager || isRHManager || isComexManager;
   const [activeTab, setActiveTab] = useState("perfil");
   const tabs = useMemo(() => {
     if (!isManager && !canSeeExecutive) return PERSONAL_TABS;
@@ -880,7 +880,8 @@ export function SettingsView({
                         .filter(w =>
                           (w.dept === "comercial" && isManager) ||
                           (w.dept === "marketing" && isMarketingManager) ||
-                          (w.dept === "rh" && isRHManager))
+                          (w.dept === "rh" && isRHManager) ||
+                          (w.dept === "comex" && isComexManager))
                         .map(w => (
                           <ToggleRow
                             key={w.id}
