@@ -5,6 +5,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
+import { AvatarCropModal } from "../shared/AvatarCropModal";
 import { supabase } from "../../lib/supabase";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
 import { RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
@@ -277,6 +278,7 @@ export function SettingsView({
   const [passwordForm, setPasswordForm] = useState({ newPassword: "", confirmPassword: "" });
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState(null);
+  const [croppingSrc, setCroppingSrc] = useState(null);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -298,8 +300,9 @@ export function SettingsView({
       return;
     }
     const reader = new FileReader();
-    reader.onload = (ev) => setProfileForm(f => ({ ...f, avatarUrl: ev.target.result }));
+    reader.onload = (ev) => setCroppingSrc(ev.target.result);
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handleProfileSave = async () => {
@@ -1801,6 +1804,15 @@ export function SettingsView({
           </div>
         </div>
       </Modal>
+
+      <AvatarCropModal
+        imageSrc={croppingSrc}
+        onSave={(croppedDataUrl) => {
+          setProfileForm(f => ({ ...f, avatarUrl: croppedDataUrl }));
+          setCroppingSrc(null);
+        }}
+        onCancel={() => setCroppingSrc(null)}
+      />
     </div>
   );
 }
