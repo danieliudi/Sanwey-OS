@@ -136,6 +136,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (!deadline) { setError("Informe o prazo da entrega."); return; }
     if (companyIds.length === 0) { setError("Selecione ao menos uma empresa."); return; }
     const missing = getMissingRequiredFields(visibleFields, customValues);
     if (missing.length > 0) {
@@ -242,7 +243,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <div>
-              <label style={labelSt}>Prazo</label>
+              <label style={labelSt}>* Prazo</label>
               <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
                 className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
                 style={inputSt} onFocus={focusBlue} onBlur={blurGray} />
@@ -316,9 +317,9 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
             <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
 
-          <button type="submit" disabled={saving || !title.trim()}
+          <button type="submit" disabled={saving || !title.trim() || !deadline}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !title.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !title.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !title.trim() || !deadline) ? 0.5 : 1, border: "none", cursor: (saving || !title.trim() || !deadline) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar novo card"}
           </button>
         </form>
@@ -650,7 +651,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const {
     deliverables, loading, canWrite,
     createDeliverable, updateDeliverable, deleteDeliverable, duplicateDeliverable,
-    changeStage, sendCompleteEmail, toggleStar,
+    changeStage, sendCompleteEmail, sendSupplierNotifyEmail, toggleStar,
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
@@ -810,7 +811,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     if (orderedIds.length === nextOrder.length) reorderStages(orderedIds);
   }, [draggedColumnKey, kanbanStages, dbStages, reorderStages]);
 
-  const handleQuickAdd = useCallback(async (item) => { await createDeliverable(item); }, [createDeliverable]);
+  const handleQuickAdd = useCallback(async (item) => {
+    const created = await createDeliverable(item);
+    if (created?.id) sendSupplierNotifyEmail(created.id);
+  }, [createDeliverable, sendSupplierNotifyEmail]);
 
   const handleUpdate = useCallback(async (id, patch) => {
     await updateDeliverable(id, patch);
