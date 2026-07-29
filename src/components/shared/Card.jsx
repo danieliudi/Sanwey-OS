@@ -41,6 +41,13 @@ export function Card({
 
   const shell = {
     position: "relative",
+    // Sem isto, o dropdown do menu (kebab) de uma linha/card fica atrás do
+    // próximo vizinho na lista — todos são position:relative sem z-index
+    // próprio, então pintam na ordem do DOM, e o de baixo sempre vence,
+    // tornando "Excluir" ilegível e inclicável assim que o menu abre (achado
+    // real, reportado pelo Daniel). Levantar só quem está em hover/foco
+    // resolve sem precisar saber, aqui em Card.jsx, se o menu está aberto.
+    zIndex: hovered ? 2 : "auto",
     background: "var(--surface)",
     border: `1px solid ${lifted ? "var(--border-strong)" : "var(--border)"}`,
     borderRadius: "var(--radius-lg)",
