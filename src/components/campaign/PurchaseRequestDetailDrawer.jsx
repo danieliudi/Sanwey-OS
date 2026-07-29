@@ -17,6 +17,7 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { StageNavigator } from "../shared/StageNavigator";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { EditableTitle } from "../shared/EditableTitle";
 import { RecordAIPanel } from "../shared/RecordAIPanel";
 import { genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { ActivityLog } from "./CampaignDetailDrawer";
@@ -493,9 +494,11 @@ export function PurchaseRequestDetailDrawer({
           {stageInfo?.name || purchase.stage}
         </span>
       </div>
-      <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
-        {purchase.itemName}
-      </h2>
+      <EditableTitle
+        value={purchase.itemName}
+        canWrite={canApprove}
+        onSave={(v) => onUpdate(purchase.id, { itemName: v })}
+      />
     </div>
   );
 

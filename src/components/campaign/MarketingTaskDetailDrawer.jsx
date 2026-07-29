@@ -12,6 +12,7 @@ import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { AvatarStack } from "../shared/AvatarStack";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { EditableTitle } from "../shared/EditableTitle";
 import { RecordAIPanel } from "../shared/RecordAIPanel";
 import { genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { ActivityLog } from "./CampaignDetailDrawer";
@@ -292,9 +293,11 @@ export function MarketingTaskDetailDrawer({
           </span>
         )}
       </div>
-      <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
-        {getValue("title") || item.title}
-      </h2>
+      <EditableTitle
+        value={getValue("title") || item.title}
+        canWrite={canWrite}
+        onSave={(v) => handleFieldChange("title", v)}
+      />
     </div>
   );
 
