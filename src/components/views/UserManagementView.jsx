@@ -540,7 +540,7 @@ export function UserManagementView({
               <Card
                 key={u.id}
                 density={density}
-                interactive={editable}
+                interactive={editable || deletable}
                 onClick={editable ? () => startEdit(u) : undefined}
                 icon={
                   u.avatarUrl

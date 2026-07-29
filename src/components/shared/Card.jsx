@@ -122,10 +122,7 @@ export function Card({
           </div>
         )}
         {interactive && menu && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ opacity: hovered ? 1 : 0, transition: "opacity 120ms", flexShrink: 0 }}
-          >
+          <div onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
             {menu}
           </div>
         )}
@@ -140,10 +137,7 @@ export function Card({
       style={{ ...shell, display: "flex", flexDirection: "column", gap: 8, padding: 16 }}
     >
       {interactive && menu && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{ position: "absolute", top: 10, right: 10, opacity: hovered ? 1 : 0, transition: "opacity 120ms" }}
-        >
+        <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: 10, right: 10 }}>
           {menu}
         </div>
       )}
