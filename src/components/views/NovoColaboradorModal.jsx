@@ -252,7 +252,6 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
     <>
     <div
       style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={guardedClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 620, boxShadow: "var(--shadow-pop)", maxHeight: "92vh", overflowY: "auto" }}

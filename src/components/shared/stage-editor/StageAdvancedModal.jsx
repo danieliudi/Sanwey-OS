@@ -106,7 +106,6 @@ export function StageAdvancedModal({
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       style={{ background: "var(--overlay-scrim)" }}
-      onClick={onClose}
     >
       <div
         className="rounded-2xl shadow-2xl w-full max-w-md flex flex-col"

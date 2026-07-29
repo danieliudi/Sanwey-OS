@@ -10,7 +10,7 @@ import { COMPANIES } from "../../constants/companies";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
 import { AUTOMATION_TEMPLATES } from "../../constants/automation-templates";
-import { MARKETING_AUTOMATION_TEMPLATES } from "../../constants/marketing-pipelines";
+import { MARKETING_AUTOMATION_TEMPLATES, MARKETING_STAGES } from "../../constants/marketing-pipelines";
 import { useAutomations } from "../../hooks/use-automations";
 import { useAgentRunsSummary } from "../../hooks/use-agent-runs-summary";
 import { relativeTime } from "../../utils/date";
@@ -45,6 +45,16 @@ const LEAD_FIELDS = [
   { id: "fitScore", label: "FitScore" },
   { id: "owner",    label: "Responsável" },
   { id: "urgency",  label: "Urgência" },
+];
+
+// Campos de campanha (module="marketing") — antes o wizard usava LEAD_FIELDS
+// pra qualquer módulo, então uma automação de Marketing só conseguia
+// referenciar campos de lead que campanha nem tem (FitScore, Urgência).
+const MARKETING_FIELDS = [
+  { id: "budget",           label: "Orçamento (R$)" },
+  { id: "kpi",              label: "KPI" },
+  { id: "performanceScore", label: "Performance" },
+  { id: "channel",          label: "Canal" },
 ];
 
 // Único enum reconhecido pelo UrgencyTag (src/components/ui/UrgencyTag.jsx) —
@@ -155,7 +165,11 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser, 
     enabled: aiAgents.filter(a => a.enabled && !a.pausedReason).length,
   }), [aiAgents]);
 
-  const allStages = useMemo(() => {
+  // Etapas do CRM (funil de vendas, por empresa) — é o que o builder usa pra
+  // uma automação module="crm"/"universal". Mantido separado de MARKETING_STAGES
+  // porque o wizard (StepTrigger/StepActions) precisa mostrar só as etapas do
+  // módulo escolhido em "Identificação", não uma lista misturada.
+  const crmStages = useMemo(() => {
     const p = pipelines || defaultPipelines();
     const seen = new Map();
     for (const stages of Object.values(p)) {
@@ -165,6 +179,18 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser, 
     }
     return Array.from(seen.values());
   }, [pipelines]);
+
+  // Lista combinada (CRM + Marketing) só pra resolver nome de etapa em
+  // exibição de automações já salvas (AutomationRow/AutomationDetail), que
+  // não sabem de antemão qual módulo cada regra pertence. Os ids de CRM e
+  // Marketing não colidem, então o merge é seguro.
+  const allStages = useMemo(() => {
+    const seen = new Map(crmStages.map(s => [s.id, s]));
+    for (const s of MARKETING_STAGES) {
+      if (!seen.has(s.id)) seen.set(s.id, s);
+    }
+    return Array.from(seen.values());
+  }, [crmStages]);
 
   return (
     <div className="space-y-6">
@@ -340,7 +366,7 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser, 
       {/* Builder modal (automações comuns) */}
       {showBuilder && (
         <AutomationBuilder
-          allStages={allStages}
+          crmStages={crmStages}
           initialRule={builderInitial}
           onSave={(rule) => { addAutomation(rule); closeBuilder(); }}
           onClose={closeBuilder}
@@ -805,7 +831,7 @@ const EMPTY_RULE = {
   elseActions: [],
 };
 
-function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
+function AutomationBuilder({ crmStages, initialRule, onSave, onClose }) {
   // initialRule vem dos templates (clique em "Usar template") ou de uma regra
   // antiga com `action` singular — normaliza pro shape novo (thenActions[]).
   const [rule, setRule] = useState(() => {
@@ -847,11 +873,15 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
 
   const setTrigger = (patch) => setRule(r => ({ ...r, trigger: { ...r.trigger, ...patch } }));
 
+  // Etapas do módulo escolhido em "Identificação" — antes disso o wizard
+  // sempre usava as etapas do CRM (funil de vendas), mesmo pra module="marketing"
+  // (bug real: escolher Marketing não trocava as opções de "De/Para etapa").
+  const moduleStages = rule.module === "marketing" ? MARKETING_STAGES : crmStages;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "var(--overlay-scrim)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         className="w-full max-w-xl rounded-2xl shadow-2xl flex flex-col"
@@ -910,13 +940,13 @@ function AutomationBuilder({ allStages, initialRule, onSave, onClose }) {
             <StepIdentification rule={rule} setRule={setRule} />
           )}
           {step === 1 && (
-            <StepTrigger rule={rule} allStages={allStages} setTrigger={setTrigger} />
+            <StepTrigger rule={rule} allStages={moduleStages} setTrigger={setTrigger} />
           )}
           {step === 2 && (
             <StepConditions rule={rule} setRule={setRule} />
           )}
           {step === 3 && (
-            <StepActions rule={rule} allStages={allStages} setRule={setRule} hasConditions={hasConditions} />
+            <StepActions rule={rule} allStages={moduleStages} setRule={setRule} hasConditions={hasConditions} />
           )}
         </div>
 
@@ -1032,6 +1062,7 @@ function StepIdentification({ rule, setRule }) {
 
 function StepTrigger({ rule, allStages, setTrigger }) {
   const t = rule.trigger;
+  const fields = rule.module === "marketing" ? MARKETING_FIELDS : LEAD_FIELDS;
 
   return (
     <div className="space-y-4">
@@ -1109,7 +1140,7 @@ function StepTrigger({ rule, allStages, setTrigger }) {
               style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
             >
               <option value="">Selecionar campo...</option>
-              {LEAD_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              {fields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -1221,6 +1252,7 @@ function StepTrigger({ rule, allStages, setTrigger }) {
 
 function StepConditions({ rule, setRule }) {
   const groups = rule.conditionGroups;
+  const fields = rule.module === "marketing" ? MARKETING_FIELDS : LEAD_FIELDS;
 
   const addGroup = () => setRule(r => ({
     ...r,
@@ -1300,7 +1332,7 @@ function StepConditions({ rule, setRule }) {
                 style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
               >
                 <option value="">Campo...</option>
-                {LEAD_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                {fields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
               </select>
               <select
                 value={c.operator}
@@ -1361,6 +1393,7 @@ function StepConditions({ rule, setRule }) {
 function StepActions({ rule, allStages, setRule, hasConditions }) {
   const patchThen = (updater) => setRule(r => ({ ...r, thenActions: updater(r.thenActions) }));
   const patchElse = (updater) => setRule(r => ({ ...r, elseActions: updater(r.elseActions || []) }));
+  const fields = rule.module === "marketing" ? MARKETING_FIELDS : LEAD_FIELDS;
 
   return (
     <div className="space-y-5">
@@ -1369,6 +1402,7 @@ function StepActions({ rule, allStages, setRule, hasConditions }) {
         actions={rule.thenActions}
         setActions={patchThen}
         allStages={allStages}
+        fields={fields}
         allowEmpty={false}
       />
 
@@ -1379,6 +1413,7 @@ function StepActions({ rule, allStages, setRule, hasConditions }) {
             actions={rule.elseActions || []}
             setActions={patchElse}
             allStages={allStages}
+            fields={fields}
             allowEmpty
           />
         </div>
@@ -1387,7 +1422,7 @@ function StepActions({ rule, allStages, setRule, hasConditions }) {
   );
 }
 
-function ActionListEditor({ title, actions, setActions, allStages, allowEmpty }) {
+function ActionListEditor({ title, actions, setActions, allStages, fields, allowEmpty }) {
   const addAction = () => setActions(list => [...list, { ...EMPTY_ACTION }]);
   const removeAction = (i) => setActions(list => list.filter((_, j) => j !== i));
   const patchAction = (i, patch) => setActions(list => list.map((a, j) => j === i ? { ...a, ...patch } : a));
@@ -1453,14 +1488,14 @@ function ActionListEditor({ title, actions, setActions, allStages, allowEmpty })
             })}
           </div>
 
-          <ActionConfig action={action} allStages={allStages} setAction={(patch) => patchAction(i, patch)} />
+          <ActionConfig action={action} allStages={allStages} fields={fields} setAction={(patch) => patchAction(i, patch)} />
         </div>
       ))}
     </div>
   );
 }
 
-function ActionConfig({ action: a, allStages, setAction }) {
+function ActionConfig({ action: a, allStages, fields, setAction }) {
   if (a.type === "move_stage") {
     return (
       <div>
@@ -1490,7 +1525,7 @@ function ActionConfig({ action: a, allStages, setAction }) {
             style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" }}
           >
             <option value="">Selecionar campo...</option>
-            {LEAD_FIELDS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+            {fields.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
           </select>
         </div>
         <div>

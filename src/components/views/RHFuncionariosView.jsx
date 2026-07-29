@@ -457,7 +457,6 @@ function BulkDocumentUploadModal({ colaboradores, currentUser, onClose }) {
   return (
     <div
       style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 720, maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflow: "hidden" }}

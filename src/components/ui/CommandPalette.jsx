@@ -267,7 +267,6 @@ export function CommandPalette({
     <div
       className="fixed inset-0 z-50 flex items-start justify-center"
       style={{ paddingTop: 80, background: "rgba(44,44,43,0.5)", backdropFilter: "blur(4px)" }}
-      onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="Busca global"

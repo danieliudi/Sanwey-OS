@@ -126,7 +126,7 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }}>
       <div
         className="rounded-2xl w-full max-w-md"
         style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}
@@ -642,7 +642,6 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
   return (
     <div
       style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "var(--shadow-pop)" }}

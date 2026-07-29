@@ -225,7 +225,6 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "var(--overlay-scrim)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         className="w-full max-w-xl rounded-2xl shadow-2xl flex flex-col"

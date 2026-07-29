@@ -104,7 +104,6 @@ export function DocumentCaptureModal({ onCapture, onClose, title = "Capturar doc
   return (
     <div
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "var(--shadow-pop)", overflow: "hidden" }}

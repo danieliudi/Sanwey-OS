@@ -420,7 +420,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
   };
 
   return (
-    <div style={overlayStyle} onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+    <div style={overlayStyle}>
       <div style={cardStyle}>
         {/* Header */}
         <div
