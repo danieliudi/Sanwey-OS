@@ -24,7 +24,9 @@ const POSITIONS = {
 
 export function AppToast({
   icon: Icon,
+  iconBadge = false,
   title,
+  description,
   children,
   onDismiss,
   action,
@@ -47,18 +49,38 @@ export function AppToast({
         boxShadow: "var(--shadow-pop)",
       }}
     >
-      {Icon && <Icon size={15} className="shrink-0 mt-0.5" style={{ color: v.iconColor }} />}
+      {Icon && (
+        iconBadge ? (
+          <span className="shrink-0 flex items-center justify-center" style={{ width: 26, height: 26, borderRadius: 8, background: "var(--accent-tint)", color: "var(--accent)" }}>
+            <Icon size={14} />
+          </span>
+        ) : (
+          <Icon size={15} className="shrink-0 mt-0.5" style={{ color: v.iconColor }} />
+        )
+      )}
       <div className="flex-1 min-w-0">
         {title && <div className="text-sm font-semibold mb-0.5">{title}</div>}
+        {description && <div className="text-xs" style={{ color: "var(--text-dim)" }}>{description}</div>}
         {children && <div className="text-xs" style={{ color: variant === "danger" ? v.color : "var(--text-dim)" }}>{children}</div>}
         {action && (
-          <button
-            onClick={action.onClick}
-            className="text-xs font-semibold mt-2 cursor-pointer"
-            style={{ color: "var(--accent)", background: "none", border: "none", padding: 0 }}
-          >
-            {action.label}
-          </button>
+          action.solid ? (
+            <button
+              onClick={action.onClick}
+              className="inline-flex items-center gap-1.5 text-xs font-bold mt-2 cursor-pointer"
+              style={{ color: "#FFF", background: "var(--accent)", border: "none", borderRadius: 7, padding: "6px 12px" }}
+            >
+              {action.icon && <action.icon size={11} />}
+              {action.label}
+            </button>
+          ) : (
+            <button
+              onClick={action.onClick}
+              className="text-xs font-semibold mt-2 cursor-pointer"
+              style={{ color: "var(--accent)", background: "none", border: "none", padding: 0 }}
+            >
+              {action.label}
+            </button>
+          )
         )}
       </div>
       {onDismiss && (
