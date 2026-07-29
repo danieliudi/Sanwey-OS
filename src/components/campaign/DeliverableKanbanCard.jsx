@@ -114,14 +114,14 @@ function DeliverableKanbanCardImpl({
               onClick={e => { e.stopPropagation(); onToggleStar?.(item.id); }}
               title={item.starred ? "Remover dos favoritos" : "Favoritar"}
               className="flex items-center justify-center rounded-md p-1 transition-colors"
-              style={{ color: item.starred ? "#F59E0B" : "var(--text-dim)", background: "transparent", border: "none", opacity: terminalAccentOpacity(isTerminal) }}
+              style={{ color: item.starred ? "var(--amber)" : "var(--text-dim)", background: "transparent", border: "none", opacity: terminalAccentOpacity(isTerminal) }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
-              <Star size={12} fill={item.starred ? "#F59E0B" : "none"} />
+              <Star size={12} fill={item.starred ? "var(--amber)" : "none"} />
             </button>
           ) : (
-            item.starred && <Star size={11} fill="#F59E0B" color="#F59E0B" style={{ opacity: terminalAccentOpacity(isTerminal) }} />
+            item.starred && <Star size={11} fill="var(--amber)" color="var(--amber)" style={{ opacity: terminalAccentOpacity(isTerminal) }} />
           )}
           {canWrite && ((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu
@@ -173,7 +173,7 @@ function DeliverableKanbanCardImpl({
           : <span />
         }
         {item.deadline && (
-          <span style={{ color: isOverdue ? "#DC2626" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
+          <span style={{ color: isOverdue ? "var(--danger)" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
             {formatDateBR(item.deadline)}
           </span>
         )}

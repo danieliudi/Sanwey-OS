@@ -18,7 +18,7 @@ function CompletenessBadgeImpl({ filled, total, size = 30 }) {
       title={complete ? "Campos obrigatórios completos" : `${filled}/${total} campos obrigatórios preenchidos`}
     >
       <svg width={size} height={size} className="absolute inset-0 -rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#E5E5E5" strokeWidth="3" />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth="3" />
         <circle
           cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth="3"
           strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"

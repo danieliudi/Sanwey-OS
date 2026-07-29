@@ -22,11 +22,11 @@ const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
 
 const inputBase = {
   width: "100%", fontSize: 13, borderRadius: 6,
-  border: "1px solid #D1D5DB", padding: "7px 10px",
+  border: "1px solid var(--border-strong)", padding: "7px 10px",
   background: "var(--surface)", color: "var(--text)", outline: "none",
 };
 const focusBorder = e => { e.target.style.borderColor = "var(--accent)"; };
-const blurBorder  = e => { e.target.style.borderColor = "#D1D5DB"; };
+const blurBorder  = e => { e.target.style.borderColor = "var(--border-strong)"; };
 
 function SectionLabel({ children }) {
   return (

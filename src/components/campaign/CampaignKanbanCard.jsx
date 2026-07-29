@@ -102,7 +102,7 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
             {isUrgent && (
               <span
                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-bold"
-                style={{ fontSize: 10, background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid #FECACA", opacity: terminalAccentOpacity(isTerminal) }}
+                style={{ fontSize: 10, background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", opacity: terminalAccentOpacity(isTerminal) }}
                 title={`Lançamento em ${daysToLaunch}d`}
               >
                 <AlertTriangle size={8} strokeWidth={2.5} />
@@ -111,7 +111,7 @@ function CampaignKanbanCardImpl({ campaign, users, onClick, onDragStart, onDragE
             )}
           </KanbanCardStatusChips>
           {campaign.starred && (
-            <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B", opacity: terminalAccentOpacity(isTerminal) }} />
+            <Star size={13} style={{ color: "var(--amber)", fill: "var(--amber)", opacity: terminalAccentOpacity(isTerminal) }} />
           )}
           {((moveTargets.length > 0 && onMoveToStage) || onDeleteCard || onDuplicateCard) && (
             <MoveStageMenu

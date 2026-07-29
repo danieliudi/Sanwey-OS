@@ -56,6 +56,17 @@
   --danger-bg:     #FEF2F2;
   --warning-bg:    #FEF3C7;
 
+  /* Canal de marketing (badge de campanha/entrega) — eram hex fixo direto em
+     CHANNEL_COLORS (marketing-pipelines.js), sem versão dark; viravam um
+     retângulo quase branco dentro de card escuro (achado real, reportado
+     pelo Daniel). Vira token igual ao resto do sistema de cores. */
+  --channel-email-bg:     #EFF6FF; --channel-email-text:     #1D4ED8; --channel-email-border:     #BFDBFE;
+  --channel-social-bg:    #FDF4FF; --channel-social-text:    #7C3AED; --channel-social-border:    #E9D5FF;
+  --channel-conteudo-bg:  #F0FDF4; --channel-conteudo-text:  #15803D; --channel-conteudo-border:  #BBF7D0;
+  --channel-digital-bg:   #FFF7ED; --channel-digital-text:   #C2410C; --channel-digital-border:   #FED7AA;
+  --channel-outdoor-bg:   #F5F3FF; --channel-outdoor-text:   #5B21B6; --channel-outdoor-border:   #DDD6FE;
+  --channel-evento-bg:    #FFF1F2; --channel-evento-text:    #BE123C; --channel-evento-border:    #FECDD3;
+
   /* Tinted accent for active/hover states */
   --accent-tint:   color-mix(in srgb, var(--accent) 8%, transparent);
 
@@ -103,6 +114,15 @@
   --success-bg:    rgba(74, 222, 128, 0.12);
   --danger-bg:     rgba(248, 113, 113, 0.12);
   --warning-bg:    rgba(251, 191, 36, 0.12);
+
+  /* Canal de marketing — mesma técnica dos status acima: hue mais claro +
+     fundo translúcido em vez de pastel sólido claro. */
+  --channel-email-bg:     rgba(96, 165, 250, 0.14);  --channel-email-text:     #60A5FA; --channel-email-border:     rgba(96, 165, 250, 0.32);
+  --channel-social-bg:    rgba(167, 139, 250, 0.14); --channel-social-text:    #A78BFA; --channel-social-border:    rgba(167, 139, 250, 0.32);
+  --channel-conteudo-bg:  rgba(74, 222, 128, 0.14);  --channel-conteudo-text:  #4ADE80; --channel-conteudo-border:  rgba(74, 222, 128, 0.32);
+  --channel-digital-bg:   rgba(251, 146, 60, 0.14);  --channel-digital-text:   #FB923C; --channel-digital-border:   rgba(251, 146, 60, 0.32);
+  --channel-outdoor-bg:   rgba(196, 181, 253, 0.14); --channel-outdoor-text:   #C4B5FD; --channel-outdoor-border:   rgba(196, 181, 253, 0.32);
+  --channel-evento-bg:    rgba(251, 113, 133, 0.14); --channel-evento-text:    #FB7185; --channel-evento-border:    rgba(251, 113, 133, 0.32);
 
   /* Tinted accent for active/hover states */
   --accent-tint:   color-mix(in srgb, var(--accent) 10%, transparent);

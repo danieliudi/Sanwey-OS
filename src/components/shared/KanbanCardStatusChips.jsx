@@ -16,8 +16,8 @@ function agingStyle(days, slaDays, dangerColor) {
   if (days == null || days <= 0) return null;
   if (slaDays) {
     const ratio = days / slaDays;
-    if (ratio >= 1)   return { bg: "var(--danger-bg)", text: dangerColor, border: "#FECACA" };
-    if (ratio >= 0.7) return { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" };
+    if (ratio >= 1)   return { bg: "var(--danger-bg)", text: dangerColor, border: "color-mix(in srgb, var(--danger) 35%, transparent)" };
+    if (ratio >= 0.7) return { bg: "var(--amber-bg)", text: "var(--amber)", border: "color-mix(in srgb, var(--amber) 35%, transparent)" };
   }
   return { bg: "var(--surface-alt)", text: "var(--text-dim)", border: "var(--border)" };
 }
@@ -65,7 +65,7 @@ export function KanbanCardStatusChips({
         <span
           title="Comentário novo"
           className="inline-flex items-center justify-center rounded-full"
-          style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF", opacity: accentOpacity }}
+          style={{ width: 16, height: 16, background: "var(--accent)", color: "var(--on-accent)", opacity: accentOpacity }}
         >
           <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
         </span>
