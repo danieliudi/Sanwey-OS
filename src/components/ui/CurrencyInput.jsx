@@ -76,9 +76,24 @@ export function CurrencyInput({
         name={name}
         aria-label={ariaLabel}
         className={className}
-        style={{ ...(style || {}), ...(prefix ? { paddingLeft: 30 } : {}) }}
+        style={{ ...(style || {}), ...(prefix ? { paddingLeft: 30 } : {}), paddingRight: 26 }}
         {...rest}
       />
+      {/* Pista visual do padrão "centavos deslizantes" — antes o usuário só
+          descobria o comportamento ao errar o valor (achado BUG-09 da
+          auditoria de QA). Mesmo padrão de ícone "?" com tooltip nativo já
+          usado em StatCard.jsx/CampaignDetailDrawer.jsx. */}
+      <span
+        title="Digite só os números — os 2 últimos dígitos sempre viram centavos."
+        style={{
+          position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+          cursor: "help", opacity: 0.5, display: "inline-flex", alignItems: "center", pointerEvents: "auto",
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: "var(--text-dim)" }}>
+          <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+        </svg>
+      </span>
     </div>
   );
 }

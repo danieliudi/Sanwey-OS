@@ -678,7 +678,13 @@ function TreinamentoBoardColumn({
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {atribList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5, display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ opacity: 0.5 }}>Nenhuma atribuição nesta etapa</span>
+            {/* "Criar" aqui é atribuir um colaborador já existente ao treinamento
+                (não criar registro novo do zero) — texto reflete isso, não o
+                genérico "crie um novo" usado nos outros kanbans. */}
+            {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou atribua alguém</span>}
+          </div>
         ) : (
           atribList.map((a) => (
             <RHKanbanCard
@@ -812,7 +818,7 @@ function AtribuicaoDrawer({
               {f.label}
             </label>
             {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
-            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
+            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} touched={Boolean(moveError)} />
           </div>
         ))}
       </div>
@@ -904,6 +910,9 @@ function AtribuicaoDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...atribuicao, stage: atribuicao.status, stageChangedAt: atribuicao.status_changed_at }}
+      recordTitle={[colaborador?.fullName, treinamento?.titulo].filter(Boolean).join(" · ")}
+      domainLabel="Treinamentos"
     />
   );
 
@@ -1442,6 +1451,26 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
 
+  // Lista de atribuíveis do modal "Atribuir" — dois achados da auditoria de
+  // QA aqui: (1) a mesma pessoa aparecia 2x (um registro legado com
+  // profile_id NULL criado antes do trigger de sincronização, mais o
+  // registro sincronizado de verdade — dedup por nome+e-mail, preferindo o
+  // que tem profileId); (2) usuários com role "agencia" (Visitante) também
+  // ganham um rh_colaboradores pelo mesmo trigger e apareciam como opção
+  // atribuível, mas Visitante não deveria entrar em nada de funcionário.
+  const usersById = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
+  const assignableColaboradores = useMemo(() => {
+    const seen = new Map();
+    for (const c of colaboradores) {
+      const role = c.profileId ? usersById.get(c.profileId)?.role : null;
+      if (role === "agencia") continue;
+      const key = `${(c.fullName || "").trim().toLowerCase()}|${(c.email || "").trim().toLowerCase()}`;
+      const existing = seen.get(key);
+      if (!existing || (!existing.profileId && c.profileId)) seen.set(key, c);
+    }
+    return [...seen.values()];
+  }, [colaboradores, usersById]);
+
   const atribuicoesByTreinamento = useMemo(() => {
     const map = new Map();
     atribuicoes.forEach(a => {
@@ -1671,7 +1700,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
           onClose={() => setEditingTreinamento(null)}
         />
       )}
-      {atribuindoTo && <AtribuirModal treinamento={atribuindoTo} colaboradores={colaboradores} onAssign={assignToUsers} onClose={() => setAtribuindoTo(null)} />}
+      {atribuindoTo && <AtribuirModal treinamento={atribuindoTo} colaboradores={assignableColaboradores} onAssign={assignToUsers} onClose={() => setAtribuindoTo(null)} />}
       {boardTreinamento && (
         <TreinamentoBoardModal
           treinamento={boardTreinamento}

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   CheckCircle2, XCircle, Upload, FileText,
   TrendingUp, TrendingDown, AlertCircle, ExternalLink, Loader2,
-  Activity, Paperclip, ListChecks,
+  Activity, Paperclip, ListChecks, History, Sparkles,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
@@ -17,8 +17,10 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { StageNavigator } from "../shared/StageNavigator";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { RecordAIPanel } from "../shared/RecordAIPanel";
+import { genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { ActivityLog } from "./CampaignDetailDrawer";
-import { RHAttachmentsPanel, RHChecklistsPanel } from "../rh-pipeline/RHDetailDrawerShell";
+import { RHAttachmentsPanel, RHChecklistsPanel, RHStageHistoryPanel } from "../rh-pipeline/RHDetailDrawerShell";
 
 const BUCKET = "marketing-attachments";
 
@@ -437,6 +439,44 @@ export function PurchaseRequestDetailDrawer({
     .map(s => ({ ...s, color: STAGE_COLORS[s.id] || "var(--text-dim)" }));
   const quoteOptions = Array.isArray(purchase.quoteOptions) ? purchase.quoteOptions : [];
 
+  // Compras não usa rh_pipeline_stage_fields (PURCHASE_STAGES é hardcoded —
+  // exceção deliberada, regra 2 do CLAUDE.md), então não há de onde derivar
+  // os campos por etapa: esta lista espelha à mão o formulário "Execução da
+  // compra" logo abaixo, com os mesmos gates de progressão.
+  //
+  // MANUTENÇÃO: campo novo no formulário abaixo precisa ser acrescentado
+  // aqui também, senão a IA deixa de enxergá-lo em silêncio. É o preço de
+  // Compras não ter campos configuráveis; some sozinho no dia que migrar.
+  const aiStageFields = [
+    { label: "Fornecedor",         value: suppliers.find(s => s.id === supplierId)?.name },
+    { label: "Responsáveis",       value: responsibleIds.map(id => users.find(u => u.id === id)?.name).filter(Boolean).join(", ") },
+    { label: "Quantidade",         value: quantity === "" || quantity == null ? null : String(quantity) },
+    { label: "Preço unitário",     value: unitPrice === "" || unitPrice == null ? null : formatBRL(Number(unitPrice)) },
+    { label: "Valor total",        value: totalValue === "" || totalValue == null ? null : formatBRL(Number(totalValue)) },
+    { label: "Prazo de pagamento", value: paymentTerms },
+    ...(reachedPedido ? [
+      { label: "Código de pedido do fornecedor", value: supplierOrderCode },
+      { label: "Prazo de entrega",               value: deliveryDeadline ? formatDateBR(deliveryDeadline) : null },
+    ] : []),
+    ...(reachedEntregaParcial ? [
+      { label: "Quantidade entregue",   value: partialDeliveredQty === "" || partialDeliveredQty == null ? null : String(partialDeliveredQty) },
+      { label: "Quanto falta entregar", value: partialRemainingQty === "" || partialRemainingQty == null ? null : String(partialRemainingQty) },
+      { label: "Novo prazo de entrega", value: partialNewDeadline ? formatDateBR(partialNewDeadline) : null },
+      { label: "Detalhes extras",       value: partialNotes },
+    ] : []),
+    ...(reachedEntregue ? [
+      { label: "Número da nota fiscal", value: invoiceNumber },
+      { label: "Data da nota fiscal",   value: invoiceDate ? formatDateBR(invoiceDate) : null },
+      { label: "Número da CP",          value: paymentControlNumber },
+      { label: "Data da entrega",       value: deliveredAt ? formatDateBR(deliveredAt) : null },
+      { label: "Quem recebeu",          value: receivedBy },
+    ] : []),
+  ].filter(f => f.value !== null && f.value !== undefined && f.value !== "");
+
+  const aiRecentComments = (purchase.notes || [])
+    .filter(n => !n.deletedAt && n.text)
+    .map(n => n.text);
+
   const currentTotal = totalValue === "" ? null : Number(totalValue);
   const priceDiff = lastPrice && currentTotal != null ? currentTotal - Number(lastPrice.total_value) : null;
 
@@ -738,6 +778,8 @@ export function PurchaseRequestDetailDrawer({
         tabs={[
           { id: "form",       label: "Form",       icon: FileText },
           { id: "atividades", label: "Atividades", icon: Activity },
+          { id: "historico",  label: "Histórico",  icon: History },
+          { id: "ia",         label: "IA",         icon: Sparkles },
           { id: "anexos",     label: "Anexos",     icon: Paperclip },
           { id: "checklist",  label: "Checklist",  icon: ListChecks },
         ]}
@@ -746,6 +788,30 @@ export function PurchaseRequestDetailDrawer({
       />
       {centerTab === "form" && formTabContent}
       {centerTab === "atividades" && <ActivityLog activities={purchase.activities || []} />}
+      {centerTab === "historico" && (
+        <RHStageHistoryPanel domain="marketing_purchase_requests" recordId={purchase.id} stages={PURCHASE_STAGES} currentUser={currentUser} users={users} />
+      )}
+      {centerTab === "ia" && (
+        <RecordAIPanel
+          currentUser={currentUser}
+          features={[{
+            id: "summary",
+            label: "Resumo & Próximo passo",
+            buildMessages: () => genericCardSummaryPrompt({
+              title: purchase.itemName,
+              domainLabel: "Compras",
+              stageName: stageInfo?.name || purchase.stage,
+              slaDays: stageInfo?.slaDays,
+              daysInStage: purchase.stageChangedAt
+                ? Math.floor((Date.now() - new Date(purchase.stageChangedAt)) / 86400000)
+                : 0,
+              customFields: aiStageFields,
+              recentComments: aiRecentComments,
+            }),
+          }]}
+          defaultFeatureId="summary"
+        />
+      )}
       {centerTab === "anexos" && (
         <RHAttachmentsPanel domain="marketing_purchase_requests" recordId={purchase.id} currentUser={currentUser} />
       )}
@@ -763,7 +829,7 @@ export function PurchaseRequestDetailDrawer({
           gerente_marketing/admin (só aprovar/rejeitar exige). */}
       {isSolicitado && (
         <div>
-          <SectionLabel>Mover para etapa</SectionLabel>
+          <SectionLabel>Mover para</SectionLabel>
           <StageNavigator
             targets={[{ id: "cotacao", name: "Cotação", color: STAGE_COLORS.cotacao }]}
             onMove={handleMoveStage}
@@ -862,7 +928,7 @@ export function PurchaseRequestDetailDrawer({
 
       {!isRejected && !isPending && movableStages.length > 0 && (
         <div>
-          <SectionLabel>Mover para etapa</SectionLabel>
+          <SectionLabel>Mover para</SectionLabel>
           <StageNavigator targets={movableStages} onMove={handleMoveStage} getKey={s => s.id} />
         </div>
       )}

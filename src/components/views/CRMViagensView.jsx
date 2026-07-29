@@ -16,7 +16,10 @@ export function CRMViagensView({ currentUser, clients, onCreateClient, users, pu
   // roles[] cobre cargo adicional (ex: vendedor como cargo secundário) —
   // currentUser.role sozinho (cargo principal) fica só de fallback.
   const userRoleList = currentUser?.roles?.length ? currentUser.roles : (currentUser?.role ? [currentUser.role] : []);
-  const podePlanejarPropria = userRoleList.some(r => COMERCIAL_ROLES.has(r));
+  // Admin também precisa poder registrar viagem/despesa própria (pedido do
+  // Daniel) — sem entrar em COMERCIAL_ROLES, que é reaproveitado noutras
+  // telas como lista de vendedores com cota (não deve ganhar o admin junto).
+  const podePlanejarPropria = userRoleList.some(r => COMERCIAL_ROLES.has(r)) || userRoleList.includes("admin");
   const isGestor = userRoleList.some(r => MANAGER_ROLES.has(r));
 
   const tabs = [];

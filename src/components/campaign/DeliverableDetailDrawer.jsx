@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   X, Trash2,
-  FileText, Activity, Paperclip, CheckSquare,
+  FileText, Activity, Paperclip, CheckSquare, History,
   Sparkles,
   Upload, File, FileImage, Download, Plus,
-  Check, Loader2, AlertCircle, RotateCcw, Copy, RefreshCw,
+  Check, Loader2, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { NEUTRAL, COMPANIES } from "../../constants/companies";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
@@ -14,8 +14,8 @@ import { useDeliverableChecklists }   from "../../hooks/use-deliverable-checklis
 import { useRHStageFields }           from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput }          from "../rh-pipeline/RHStageFieldInput";
 import { resolveVisibleFields }       from "../../utils/field-conditions";
-import { useAI }                      from "../../hooks/use-ai";
-import { deliverableStageSuggestionPrompt } from "../../constants/ai-prompts";
+import { RecordAIPanel }              from "../shared/RecordAIPanel";
+import { deliverableStageSuggestionPrompt, genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { CommentsPanel }              from "../shared/CommentsPanel";
 import { getMentionableUsers }        from "../../utils/mentionable-users";
 import { AssigneeMultiSelect }        from "../shared/AssigneeMultiSelect";
@@ -23,6 +23,7 @@ import { EditableProtocolNumber }     from "../shared/EditableProtocolNumber";
 import { StageNavigator }             from "../shared/StageNavigator";
 import { SplitPanelDrawer }           from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs }           from "../shared/DetailDrawerTabs";
+import { RHStageHistoryPanel }        from "../rh-pipeline/RHDetailDrawerShell";
 
 /* ── Priority helpers ───────────────────────────────────────── */
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
@@ -36,117 +37,45 @@ const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mo
 const SIDE_TABS = [
   { id: "form",        label: "Form",        icon: FileText },
   { id: "atividades",  label: "Atividades",  icon: Activity },
+  { id: "historico",   label: "Histórico",   icon: History },
   { id: "ia",          label: "IA",          icon: Sparkles },
   { id: "anexos",      label: "Anexos",      icon: Paperclip },
   { id: "checklists",  label: "Checklists",  icon: CheckSquare },
 ];
 
 /* ── Deliverable AI panel ───────────────────────────────────── */
-function DeliverableAIPanel({ item, currentUser }) {
-  const { complete, isConfigured } = useAI(currentUser);
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null);
-  const [error,   setError]   = useState(null);
-  const [copied,  setCopied]  = useState(false);
+function DeliverableAIPanel({ item, currentUser, stage, stageFields = [], recentComments = [] }) {
+  const daysInStage = item.stageChangedAt
+    ? Math.floor((Date.now() - new Date(item.stageChangedAt)) / 86400000)
+    : 0;
 
-  const handleGenerate = async () => {
-    if (!isConfigured) return;
-    setLoading(true);
-    setResult(null);
-    setError(null);
-    setCopied(false);
-    try {
-      const text = await complete(deliverableStageSuggestionPrompt(item));
-      setResult(text);
-    } catch (err) {
-      setError(err.message || "Erro ao gerar resposta.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCopy = () => {
-    if (!result || !navigator.clipboard?.writeText) return;
-    navigator.clipboard.writeText(result).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+  const features = [
+    {
+      id: "summary",
+      label: "Resumo & Próximo passo",
+      buildMessages: () => genericCardSummaryPrompt({
+        title: item.title,
+        domainLabel: "Entregas",
+        stageName: stage?.name || item.stage,
+        slaDays: stage?.sla,
+        daysInStage,
+        customFields: stageFields,
+        recentComments,
+      }),
+    },
+    {
+      id: "stage-suggestion",
+      label: "Sugestão de etapa",
+      buildMessages: () => deliverableStageSuggestionPrompt(item),
+    },
+  ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ padding: 12, borderRadius: 12, border: "1px solid #DDD6FE", background: "#F5F3FF" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <Sparkles size={13} style={{ color: PURPLE }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: PURPLE }}>Sugestão de próxima etapa</span>
-          {!isConfigured && (
-            <span style={{ fontSize: 10, fontWeight: 500, padding: "1px 8px", borderRadius: 9999, background: "#FEF3C7", color: "#92400E", marginLeft: "auto" }}>
-              configure nas Configurações
-            </span>
-          )}
-        </div>
-        <p style={{ fontSize: 11, color: "#5B21B6", marginBottom: 10, lineHeight: 1.5 }}>
-          A IA analisa etapa, prazo, prioridade e progresso para recomendar a próxima ação.
-        </p>
-        <button
-          onClick={handleGenerate}
-          disabled={loading || !isConfigured}
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "6px 14px", borderRadius: 9999, fontSize: 11, fontWeight: 600,
-            background: !isConfigured ? "#E5E7EB" : PURPLE,
-            color: !isConfigured ? "var(--text-dim)" : "#FFFFFF",
-            border: "none", cursor: loading || !isConfigured ? "not-allowed" : "pointer",
-            opacity: loading ? 0.8 : 1, transition: "all 0.15s",
-          }}
-          title={!isConfigured ? "Configure sua LLM nas Configurações → Integrações de IA" : undefined}
-          onMouseEnter={e => { if (!loading && isConfigured) e.currentTarget.style.filter = "brightness(0.9)"; }}
-          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-        >
-          {loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-          {loading ? "Analisando…" : "Analisar entrega"}
-        </button>
-      </div>
-
-      {error && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 12px", borderRadius: 10, background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA", fontSize: 11 }}>
-          <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {result && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 11, lineHeight: 1.6, whiteSpace: "pre-line", padding: 12, borderRadius: 10, border: "1px solid #DDD6FE", background: "#FFFFFF", color: "var(--text)" }}>
-            {result}
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={handleGenerate}
-              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 9999, border: "1px solid #E5E7EB", background: "#FFFFFF", color: "var(--text-dim)", cursor: "pointer" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = PURPLE; e.currentTarget.style.color = PURPLE; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = "var(--text-dim)"; }}
-            >
-              <RotateCcw size={10} />
-              Regenerar
-            </button>
-            <button
-              onClick={handleCopy}
-              style={{
-                display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 500, padding: "4px 10px",
-                borderRadius: 9999, border: `1px solid ${copied ? "#BBF7D0" : "#E5E7EB"}`,
-                background: copied ? "#F0FDF4" : "#FFFFFF", color: copied ? "#16A34A" : "var(--text-dim)", cursor: "pointer",
-              }}
-              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.color = "var(--text-dim)"; } }}
-            >
-              {copied ? <Check size={10} /> : <Copy size={10} />}
-              {copied ? "Copiado!" : "Copiar"}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <RecordAIPanel
+      currentUser={currentUser}
+      features={features}
+      defaultFeatureId="summary"
+    />
   );
 }
 
@@ -507,6 +436,13 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   const customValuesByKey = { ...(item.customFields || {}), ...customDraft };
   const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
 
+  const aiStageFields = visibleCustomDefs
+    .map(f => ({ label: f.label, value: formatCustomFieldValue(getCustomValue(f.fieldKey)) }))
+    .filter(f => f.value !== null);
+  const aiRecentComments = (item.notes || [])
+    .filter(n => !n.deletedAt && n.text)
+    .map(n => n.text);
+
   const assigneeIds = assigneeDraft !== null
     ? assigneeDraft
     : (item.assigneeIds?.length ? item.assigneeIds : (item.assignee ? [item.assignee] : []));
@@ -641,12 +577,25 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
   };
 
-  // ── Left tab content ──────────────────────────────────────────────────────
-  function LeftTabContent() {
+  // ── Center tab content ────────────────────────────────────────────────────
+  function CenterTabContent() {
     if (sideTab === "form") {
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <SectionLabel>Formulário Inicial</SectionLabel>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <SectionLabel>Formulário Inicial</SectionLabel>
+            {saveStatus && (
+              <span
+                style={{
+                  fontSize: 10, marginLeft: "auto",
+                  color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
+                  fontWeight: saveStatus === "error" ? 700 : 400,
+                }}
+              >
+                {saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "✗ Falha ao salvar — tente de novo" : "✓ Salvo"}
+              </span>
+            )}
+          </div>
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Nº da Solicitação</div>
             <EditableProtocolNumber
@@ -678,18 +627,61 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
               : <ReadValue value={null} />}
           </div>
 
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #E5E7EB" }}>
-            <SectionLabel>Histórico de Etapas</SectionLabel>
-            {(item.activities || []).filter(a => a.type === "stage_change").length === 0
-              ? <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Nenhuma transição registrada.</div>
-              : [...(item.activities || [])].filter(a => a.type === "stage_change").reverse().map((a, i) => (
-                <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 11 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", marginTop: 4, flexShrink: 0 }} />
-                  <div>
-                    <div style={{ color: "var(--text)" }}>{a.description}</div>
-                    <div style={{ color: "var(--text-dim)", fontSize: 10 }}>{new Date(a.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
-                  </div>
-                </div>
+          <FieldRow label="Responsáveis">
+            {canWrite ? (
+              <AssigneeMultiSelect
+                value={assigneeIds}
+                onChange={handleAssigneeChange}
+                options={users}
+                placeholder="Selecionar responsáveis…"
+              />
+            ) : (
+              <ReadValue value={resolvedAssignees.map(u => u.name).join(", ") || null} />
+            )}
+          </FieldRow>
+
+          {campaigns.length > 0 && (
+            <FieldRow
+              label="Campanha relacionada"
+              hint="Só era possível vincular ao criar a entrega — agora dá pra vincular/trocar depois."
+            >
+              {canWrite ? (
+                <select
+                  value={item.campaignId || ""}
+                  onChange={e => onUpdate(item.id, { campaignId: e.target.value || null })}
+                  style={{ ...inputBase }}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                >
+                  <option value="">Nenhuma</option>
+                  {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              ) : (
+                <ReadValue value={campaigns.find(c => c.id === item.campaignId)?.name || null} />
+              )}
+            </FieldRow>
+          )}
+
+          {/* Campos configurados via "Editar campos desta etapa"
+              (rh_pipeline_stage_fields) — única fonte do formulário por etapa. */}
+          <div style={{ marginTop: 8, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+            <SectionLabel>Campos desta etapa</SectionLabel>
+            {visibleCustomDefs.length === 0
+              ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
+              : visibleCustomDefs.map(f => (
+                <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
+                  {canWrite ? (
+                    <RHStageFieldInput
+                      field={f}
+                      value={getCustomValue(f.fieldKey)}
+                      onChange={val => handleCustomChange(f.fieldKey, val)}
+                      users={users}
+                      touched={Boolean(moveError)}
+                    />
+                  ) : (
+                    <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
+                  )}
+                </FieldRow>
               ))
             }
           </div>
@@ -697,7 +689,18 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
       );
     }
     if (sideTab === "atividades")  return <AtividadesTab activities={item.activities} />;
-    if (sideTab === "ia")          return <DeliverableAIPanel item={item} currentUser={currentUser} />;
+    if (sideTab === "historico")   return (
+      <RHStageHistoryPanel domain="marketing_deliverables" recordId={item.id} stages={DELIVERABLE_STAGES} currentUser={currentUser} users={users} />
+    );
+    if (sideTab === "ia")          return (
+      <DeliverableAIPanel
+        item={item}
+        currentUser={currentUser}
+        stage={stageInfo}
+        stageFields={aiStageFields}
+        recentComments={aiRecentComments}
+      />
+    );
     if (sideTab === "anexos")      return <AnexosTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
     if (sideTab === "checklists")  return <ChecklistsTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
     return null;
@@ -754,98 +757,14 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           </div>
         )}
       </div>
-
-      {/* ── Pill SideTabs ── */}
-      <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
-        <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
-      </div>
-
-      {/* ── Tab content ── */}
-      <div>
-        <LeftTabContent />
-      </div>
     </>
   );
 
   const center = (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-        <SectionLabel>Fase atual</SectionLabel>
-        {stageInfo && (
-          <span style={{ fontSize: 11, fontWeight: 600, color: stageInfo.color, background: stageInfo.color + "18", border: `1px solid ${stageInfo.color}40`, borderRadius: 5, padding: "2px 8px", marginTop: -14 }}>
-            {stageInfo.name}
-          </span>
-        )}
-        {saveStatus && (
-          <span
-            style={{
-              fontSize: 10, marginTop: -14, marginLeft: "auto",
-              color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
-              fontWeight: saveStatus === "error" ? 700 : 400,
-            }}
-          >
-            {saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "✗ Falha ao salvar — tente de novo" : "✓ Salvo"}
-          </span>
-        )}
-      </div>
-      <FieldRow label="Responsáveis">
-        {canWrite ? (
-          <AssigneeMultiSelect
-            value={assigneeIds}
-            onChange={handleAssigneeChange}
-            options={users}
-            placeholder="Selecionar responsáveis…"
-          />
-        ) : (
-          <ReadValue value={resolvedAssignees.map(u => u.name).join(", ") || null} />
-        )}
-      </FieldRow>
-
-      {campaigns.length > 0 && (
-        <FieldRow
-          label="Campanha relacionada"
-          hint="Só era possível vincular ao criar a entrega — agora dá pra vincular/trocar depois."
-        >
-          {canWrite ? (
-            <select
-              value={item.campaignId || ""}
-              onChange={e => onUpdate(item.id, { campaignId: e.target.value || null })}
-              style={{ ...inputBase }}
-              onFocus={focusBorder}
-              onBlur={blurBorder}
-            >
-              <option value="">Nenhuma</option>
-              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          ) : (
-            <ReadValue value={campaigns.find(c => c.id === item.campaignId)?.name || null} />
-          )}
-        </FieldRow>
-      )}
-
-      {/* Campos configurados via "Editar campos desta etapa"
-          (rh_pipeline_stage_fields) — única fonte do formulário por etapa. */}
-      <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-        <SectionLabel>Campos desta etapa</SectionLabel>
-        {visibleCustomDefs.length === 0
-          ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
-          : visibleCustomDefs.map(f => (
-            <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
-              {canWrite ? (
-                <RHStageFieldInput
-                  field={f}
-                  value={getCustomValue(f.fieldKey)}
-                  onChange={val => handleCustomChange(f.fieldKey, val)}
-                  users={users}
-                />
-              ) : (
-                <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
-              )}
-            </FieldRow>
-          ))
-        }
-      </div>
-    </div>
+    <>
+      <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
+      {CenterTabContent()}
+    </>
   );
 
   const right = (

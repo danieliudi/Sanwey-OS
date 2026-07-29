@@ -26,6 +26,7 @@ import { STATUS_VISITA, STATUS_REEMBOLSO, fmtMoney } from "../../utils/viagens";
 import { Badge } from "../ui/Badge";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
+import { usePlacesAutocomplete } from "../../hooks/use-places-autocomplete";
 import { ClientSelector } from "../client/ClientSelector";
 import { ClientQuickCreateModal } from "../client/ClientQuickCreateModal";
 
@@ -101,6 +102,28 @@ function MonthNav({ mesRef, onChange }) {
   );
 }
 
+// Ícone discreto que abre o endereço no Google Maps em nova aba — é só um
+// link (sem chave de API), `stopPropagation` pra não disparar o onClick do
+// card/detalhe por baixo dele.
+function MapsLinkButton({ address, size = 13 }) {
+  if (!address) return null;
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      title="Abrir no Google Maps"
+      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--text-faint)", flexShrink: 0 }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-faint)"; }}
+    >
+      <MapPin size={size} />
+    </a>
+  );
+}
+
 // ── Card de visita ────────────────────────────────────────────────────────────
 
 function VisitaCard({ registro, onClick }) {
@@ -114,7 +137,7 @@ function VisitaCard({ registro, onClick }) {
     >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-          <MapPin size={13} style={{ color: "var(--text-faint)", flexShrink: 0 }} />
+          <MapsLinkButton address={registro.destino_planejado} />
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{registro.destino_planejado}</span>
         </div>
         <Badge variant={info.variant}>{info.label}</Badge>
@@ -137,6 +160,8 @@ function VisitaCard({ registro, onClick }) {
 function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
   useEscToClose(onClose);
   const [destino, setDestino] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const { suggestions, search: searchDestino, clear: clearDestinoSuggestions } = usePlacesAutocomplete();
   const [dataPlanejada, setDataPlanejada] = useState("");
   const [objetivo, setObjetivo] = useState("");
   const [clientId, setClientId] = useState(null);
@@ -187,9 +212,53 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
         </div>
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px 24px" }}>
           <div className="flex flex-col gap-3">
-            <div>
+            <div style={{ position: "relative" }}>
               <label style={LABEL_ST}>Destino *</label>
-              <input type="text" autoFocus value={destino} onChange={(e) => setDestino(e.target.value)} placeholder="Ex: Campinas, SP" className={INPUT_CLS} style={INPUT_ST} />
+              <input
+                type="text"
+                autoFocus
+                value={destino}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDestino(v);
+                  setShowSuggestions(true);
+                  searchDestino(v);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder="Ex: Campinas, SP"
+                className={INPUT_CLS}
+                style={{ ...INPUT_ST, paddingRight: destino.trim() ? 30 : undefined }}
+              />
+              {destino.trim() && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destino.trim())}`}
+                  target="_blank" rel="noopener noreferrer"
+                  onMouseDown={(e) => e.preventDefault()}
+                  title="Abrir no Google Maps"
+                  style={{ position: "absolute", right: 8, top: 33, color: "var(--text-faint)", display: "flex" }}
+                >
+                  <MapPin size={14} />
+                </a>
+              )}
+              {showSuggestions && suggestions.length > 0 && (
+                <div style={{ position: "absolute", left: 0, right: 0, top: "100%", marginTop: 4, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, boxShadow: "var(--shadow-pop)", overflow: "hidden", zIndex: 20 }}>
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.placeId || s.description}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setDestino(s.description); clearDestinoSuggestions(); setShowSuggestions(false); }}
+                      style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 12px", border: "none", background: "none", cursor: "pointer", borderBottom: "1px solid var(--border)" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{s.mainText}</div>
+                      {s.secondaryText && <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{s.secondaryText}</div>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label style={LABEL_ST}>Data planejada *</label>
@@ -298,7 +367,10 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
       <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 100vw)", background: "var(--surface)", zIndex: 1000, display: "flex", flexDirection: "column", boxShadow: "var(--shadow-pop)", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{registro.destino_planejado}</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>{registro.destino_planejado}</span>
+              <MapsLinkButton address={registro.destino_realizado || registro.destino_planejado} size={14} />
+            </div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{formatDateBR(registro.data_planejada)}{registro.cliente_nome && ` · ${registro.cliente_nome}`}</div>
             <div style={{ marginTop: 8 }}><Badge variant={info.variant}>{info.label}</Badge></div>
           </div>

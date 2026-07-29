@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useBodyScrollLock } from "../../hooks/use-body-scroll-lock";
 
@@ -12,7 +13,13 @@ export function Modal({ open, onClose, title, children, width = 560 }) {
   }, [open, onClose]);
 
   if (!open) return null;
-  return (
+  // Portal pra document.body — sem isso o modal fica aninhado dentro de
+  // .app-content-shell, junto do TopBar sticky (z-30). Nenhum ancestral no
+  // caminho cria stacking context próprio, então os dois brigam no mesmo
+  // nível raiz e o TopBar (sticky, "grudado" no topo) pode pintar por cima
+  // do scrim mesmo com z-index nominalmente menor — bug conhecido de
+  // sticky vs. fixed no mesmo stacking context. Portal resolve na raiz.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(4px)" }}
@@ -49,7 +56,8 @@ export function Modal({ open, onClose, title, children, width = 560 }) {
         </div>
         <div className="overflow-y-auto">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

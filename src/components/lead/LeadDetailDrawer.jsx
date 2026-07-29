@@ -432,7 +432,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
   const isWonStage = Boolean(currentStageInfo?.won);
   const alreadySentToPosvenda = Boolean(lead.sentToPosvendaAt) || posvendaSent;
 
-  // Restringe "Mover card para fase" às transições configuradas em Comercial
+  // Restringe "Mover para" às transições configuradas em Comercial
   // > Editar etapas (mesma regra que já bloqueia o drag-and-drop no Kanban,
   // ver CRMView.jsx) — sem regra configurada pra empresa/etapa, permanece
   // aberto (todas as etapas), preservando o comportamento anterior.
@@ -620,10 +620,20 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   <Trash2 size={16} />
                 </button>
               )}
+              {/* Mesmo texto/par de botões do header desktop (e do
+                  SplitPanelDrawer compartilhado, usado por Campanhas) —
+                  antes essa versão mobile só tinha "Excluir" sem "Cancelar",
+                  divergindo do resto da plataforma (BUG-06 da auditoria
+                  de QA: 3 padrões de confirmação de exclusão distintos). */}
               {canDelete && confirmDelete && (
-                <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "#B91C1C", color: "#FFFFFF", border: "none" }}>
-                  {deleting ? "…" : "Excluir"}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "#B91C1C", color: "#FFFFFF", border: "none" }}>
+                    {deleting ? "Excluindo…" : "Confirmar exclusão"}
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)} className="px-2 py-1 rounded-lg text-xs cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
+                    Cancelar
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -947,11 +957,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               </div>
             </div>
 
-            {/* Decisor */}
-            <div className="min-w-0">
-              <div className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{decisionMakerName}</div>
-              <div className="text-xs truncate" style={{ color: "var(--text-dim)" }}>{decisionMakerRole}</div>
-            </div>
+            {/* Decisor — só ocupa espaço quando há dado real; sem isso
+                sobravam duas linhas de "—" sem utilidade (achado do Daniel). */}
+            {decisionMakerName !== "—" && (
+              <div className="min-w-0">
+                <div className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>{decisionMakerName}</div>
+                {decisionMakerRole !== "—" && (
+                  <div className="text-xs truncate" style={{ color: "var(--text-dim)" }}>{decisionMakerRole}</div>
+                )}
+              </div>
+            )}
             {(lead.size || lead.phone) && (
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "var(--text-dim)" }}>
                 {lead.size && <span>Porte: <span style={{ color: "var(--text)", fontWeight: 600 }}>{lead.size}</span></span>}
@@ -1010,205 +1025,86 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               </div>
             )}
 
-            {/* Tabs */}
-            <SideTabs activeTab={sideTab} onChange={setSideTab} />
-
-            {/* ── Tab: Form ── */}
-            {sideTab === "form" && (
-            <>
-            {/* Formulário Inicial — dados preenchidos na criação do card */}
-            {!customValues.capture_customer_name && (
-              <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                <div className="text-xs font-semibold mb-3" style={{ color: company.primary }}>
-                  Formulário Inicial
-                </div>
-                <dl className="space-y-2.5 text-sm">
-                  <CaptureRow label="Empresa" value={lead.company} />
-                  {lead.cnpj && <CaptureRow label="CNPJ" value={lead.cnpj} mono />}
-                  {lead.razaoSocial && <CaptureRow label="Razão Social" value={lead.razaoSocial} />}
-                  {lead.contactEmail && (
-                    <CaptureRow label="E-mail do Contato" value={lead.contactEmail}
-                      link={`mailto:${lead.contactEmail}`} />
-                  )}
-                  {lead.phone && <CaptureRow label="Telefone" value={lead.phone} mono />}
-                  {lead.state && <CaptureRow label="Estado (UF)" value={lead.state} />}
-                  {lead.city && <CaptureRow label="Cidade" value={lead.city} />}
-                  {lead.sector && <CaptureRow label="Setor" value={lead.sector} />}
-                  {lead.size && <CaptureRow label="Porte" value={lead.size} />}
-                  {lead.value > 0 && <CaptureRow label="Valor" value={formatBRL(lead.value)} />}
-                  {lead.owner && (
-                    <CaptureRow
-                      label="Responsável na criação"
-                      value={(users || []).find(u => u.id === lead.owner)?.name || "—"}
-                      hint="Somente leitura — quem edita é “Responsáveis”, ao lado."
-                    />
-                  )}
-                </dl>
-                {lead.notes && !Array.isArray(lead.notes) && (
-                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
-                    <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Observações</div>
-                    <div className="text-sm whitespace-pre-line" style={{ color: "var(--text)" }}>{lead.notes}</div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Formulário Inicial (vindo de captura pública) */}
-            {customValues.capture_customer_name && (
-              <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
-                    Formulário Inicial
-                  </div>
-                  {customValues.capture_source && (
-                    <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
-                      style={{ background: "var(--surface-alt)", color: "var(--text-dim)", letterSpacing: "0.08em" }}>
-                      via {customValues.capture_source}
-                    </span>
-                  )}
-                </div>
-                <dl className="space-y-2.5 text-sm">
-                  <CaptureRow label="Nome do Cliente" value={customValues.capture_customer_name} />
-                  <CaptureRow label="Contato" value={customValues.capture_contact_phone} mono />
-                  <CaptureRow label="E-mail" value={customValues.capture_contact_email} link={customValues.capture_contact_email ? `mailto:${customValues.capture_contact_email}` : null} />
-                  <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
-                  <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
-                  <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
-                </dl>
-                {customValues.capture_notes && (
-                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
-                    <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Mensagem</div>
-                    <div className="text-sm whitespace-pre-line" style={{ color: "var(--text)" }}>{customValues.capture_notes}</div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Histórico de etapas */}
-            {stageHistory.length > 0 && (
-              <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-                <div className="flex items-center gap-1.5 mb-3" style={{ color: "var(--text-dim)" }}>
-                  <History size={13} />
-                  <span className="text-xs font-semibold">Histórico</span>
-                </div>
-                <ol className="space-y-2.5 relative" style={{ paddingLeft: 18 }}>
-                  <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 1, background: "var(--border)" }} />
-                  {stageHistory.slice(0, 8).map((h, i) => {
-                    const toStage = DEFAULT_PIPELINE_STAGES.find(s => s.id === h.toStage);
-                    const fromStage = h.fromStage ? DEFAULT_PIPELINE_STAGES.find(s => s.id === h.fromStage) : null;
-                    return (
-                      <li key={i} className="relative">
-                        <div style={{
-                          position: "absolute", left: -16, top: 3,
-                          width: 9, height: 9, borderRadius: "50%",
-                          background: toStage?.color || "var(--text-dim)",
-                          border: "2px solid var(--surface)", boxShadow: "0 0 0 1px var(--border)",
-                        }} />
-                        <div className="text-xs" style={{ color: "var(--text)" }}>
-                          {fromStage ? (
-                            <>{fromStage.name} <span style={{ color: "var(--text-dim)" }}>→</span> <strong>{toStage?.name || h.toStage}</strong></>
-                          ) : (
-                            <strong>{toStage?.name || h.toStage}</strong>
-                          )}
-                        </div>
-                        <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
-                          {new Date(h.changedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                        </div>
-                      </li>
-                    );
-                  })}
-                  {stageHistory.length > 8 && (
-                    <li className="text-[11px]" style={{ color: "var(--text-dim)" }}>
-                      +{stageHistory.length - 8} eventos anteriores
-                    </li>
-                  )}
-                </ol>
-              </div>
-            )}
-            </>
-            )}
-
-            {/* ── Tab: Atividades ── */}
-            {sideTab === "atividades" && (
-              <ActivitiesPanel
-                stageHistory={stageHistory}
-                activities={lead.activities || []}
-                users={users}
-              />
-            )}
-
-            {/* ── Tab: IA ── */}
-            {sideTab === "ia" && (
-              <div className="space-y-4">
-                <LeadAIPanel
-                  lead={lead}
-                  currentUser={currentUser}
-                  activities={lead.activities || []}
-                  linkedEmails={lead.linkedEmails || []}
-                  onUpdate={onUpdate}
-                  onAddActivity={onAddActivity}
-                />
-
-                {/* Rascunho de abordagem */}
-                <div className="p-4 rounded-xl" style={{ background: company.dark, color: "#FFFFFF" }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "#FFE9A8" }}>
-                      <Sparkles size={12} />Rascunho de abordagem
-                    </div>
-                    <button
-                      onClick={handleCopyDraft}
-                      className="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all duration-150"
-                      style={{ background: "rgba(255,255,255,0.12)", color: copied ? "#A3E6B4" : "rgba(255,255,255,0.8)", border: "none", cursor: "pointer" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
-                    >
-                      {copied ? <Check size={11} /> : <Copy size={11} />}
-                      {copied ? "Copiado!" : "Copiar"}
-                    </button>
-                  </div>
-                  <div
-                    className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-lg"
-                    style={{ background: "rgba(0,0,0,0.18)", color: "rgba(255,255,255,0.92)" }}
-                  >
-                    {emailDraft}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Tab: Anexos ── */}
-            {sideTab === "anexos" && (
-              <AttachmentsPanel
-                leadId={lead.id}
-                companyId={lead.companyId}
-                currentUser={currentUser}
-                companyColor={company.primary}
-              />
-            )}
-
-            {/* ── Tab: Checklists ── */}
-            {sideTab === "checklists" && (
-              <ChecklistsPanel
-                leadId={lead.id}
-                companyId={lead.companyId}
-                currentUser={currentUser}
-                companyColor={company.primary}
-              />
-            )}
-
-            {/* ── Tab: PDF ── */}
-            {/* Mantido montado (display:none) quando a aba não está ativa pra
-                não perder o rascunho da proposta ao trocar de aba; key={lead.id}
-                reseta ao navegar pra outro lead. Achado da 2ª auditoria. */}
-            <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
-              <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} />
-            </div>
           </aside>
 
           {/* ───── CENTER ─────────────────────────────────────────────── */}
           <main className={`flex-1 min-w-0 overflow-y-auto p-5 space-y-4 pb-20 lg:pb-5${mobileTab !== "stage" ? " hidden lg:block" : ""}`}>
 
+          {/* Tabs — mesma posição/padrão da família RH (Onboarding,
+              Recrutamento etc.): tira strip de aba da lateral esquerda
+              (320px, apertada) e coloca no centro, junto do formulário. */}
+          <SideTabs activeTab={sideTab} onChange={setSideTab} />
 
+          {/* ── Tab: Form ── */}
+          {sideTab === "form" && (
+          <>
+          {/* Formulário Inicial — dados preenchidos na criação do card */}
+          {!customValues.capture_customer_name && (
+            <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <div className="text-xs font-semibold mb-3" style={{ color: company.primary }}>
+                Formulário Inicial
+              </div>
+              <dl className="space-y-2.5 text-sm">
+                <CaptureRow label="Empresa" value={lead.company} />
+                {lead.cnpj && <CaptureRow label="CNPJ" value={lead.cnpj} mono />}
+                {lead.razaoSocial && <CaptureRow label="Razão Social" value={lead.razaoSocial} />}
+                {lead.contactEmail && (
+                  <CaptureRow label="E-mail do Contato" value={lead.contactEmail}
+                    link={`mailto:${lead.contactEmail}`} />
+                )}
+                {lead.phone && <CaptureRow label="Telefone" value={lead.phone} mono />}
+                {lead.state && <CaptureRow label="Estado (UF)" value={lead.state} />}
+                {lead.city && <CaptureRow label="Cidade" value={lead.city} />}
+                {lead.sector && <CaptureRow label="Setor" value={lead.sector} />}
+                {lead.size && <CaptureRow label="Porte" value={lead.size} />}
+                {lead.value > 0 && <CaptureRow label="Valor" value={formatBRL(lead.value)} />}
+                {lead.owner && (
+                  <CaptureRow
+                    label="Responsável na criação"
+                    value={(users || []).find(u => u.id === lead.owner)?.name || "—"}
+                    hint="Somente leitura — quem edita é “Responsáveis”, ao lado."
+                  />
+                )}
+              </dl>
+              {lead.notes && !Array.isArray(lead.notes) && (
+                <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
+                  <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Observações</div>
+                  <div className="text-sm whitespace-pre-line" style={{ color: "var(--text)" }}>{lead.notes}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Formulário Inicial (vindo de captura pública) */}
+          {customValues.capture_customer_name && (
+            <div className="p-4 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: company.primary }}>
+                  Formulário Inicial
+                </div>
+                {customValues.capture_source && (
+                  <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+                    style={{ background: "var(--surface-alt)", color: "var(--text-dim)", letterSpacing: "0.08em" }}>
+                    via {customValues.capture_source}
+                  </span>
+                )}
+              </div>
+              <dl className="space-y-2.5 text-sm">
+                <CaptureRow label="Nome do Cliente" value={customValues.capture_customer_name} />
+                <CaptureRow label="Contato" value={customValues.capture_contact_phone} mono />
+                <CaptureRow label="E-mail" value={customValues.capture_contact_email} link={customValues.capture_contact_email ? `mailto:${customValues.capture_contact_email}` : null} />
+                <CaptureRow label="Produto de Interesse" value={customValues.capture_product_interest} />
+                <CaptureRow label="Prioridade" value={customValues.capture_priority} badge />
+                <CaptureRow label="Data de Prospecção" value={customValues.capture_prospect_date ? formatDateBR(customValues.capture_prospect_date) : null} />
+              </dl>
+              {customValues.capture_notes && (
+                <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
+                  <div className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-dim)" }}>Mensagem</div>
+                  <div className="text-sm whitespace-pre-line" style={{ color: "var(--text)" }}>{customValues.capture_notes}</div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Overlap (gerente) */}
           {isManager && overlaps.length > 0 && (
@@ -1276,6 +1172,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                       onChange={(val) => handleCustomChange(f.fieldKey, val)}
                       users={users}
                       companyId={lead.companyId}
+                      touched={Boolean(moveError)}
                     />
                   </div>
                 ))}
@@ -1371,6 +1268,129 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               Enviar e-mail de abordagem
             </Button>
           </div>
+          </>
+          )}
+
+          {/* ── Tab: Atividades ── */}
+          {sideTab === "atividades" && (
+            <ActivitiesPanel
+              stageHistory={stageHistory}
+              activities={lead.activities || []}
+              users={users}
+            />
+          )}
+
+          {/* ── Tab: Histórico ── */}
+          {/* Antes ficava embutido dentro da aba Form; promovido a aba
+              própria pra bater com o padrão da família RH (Onboarding,
+              Recrutamento etc.), onde Histórico já é uma aba de verdade —
+              mesmo dado (lead_stage_history via useSingleLeadHistory), só
+              muda onde aparece. */}
+          {sideTab === "historico" && (
+            stageHistory.length === 0 ? (
+              <div className="text-xs text-center py-4" style={{ color: "var(--text-dim)" }}>Nenhuma transição registrada.</div>
+            ) : (
+              <ol className="space-y-2.5 relative" style={{ paddingLeft: 18 }}>
+                <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 1, background: "var(--border)" }} />
+                {stageHistory.map((h, i) => {
+                  const toStage = DEFAULT_PIPELINE_STAGES.find(s => s.id === h.toStage);
+                  const fromStage = h.fromStage ? DEFAULT_PIPELINE_STAGES.find(s => s.id === h.fromStage) : null;
+                  return (
+                    <li key={i} className="relative">
+                      <div style={{
+                        position: "absolute", left: -16, top: 3,
+                        width: 9, height: 9, borderRadius: "50%",
+                        background: toStage?.color || "var(--text-dim)",
+                        border: "2px solid var(--surface)", boxShadow: "0 0 0 1px var(--border)",
+                      }} />
+                      <div className="text-xs" style={{ color: "var(--text)" }}>
+                        {fromStage ? (
+                          <>{fromStage.name} <span style={{ color: "var(--text-dim)" }}>→</span> <strong>{toStage?.name || h.toStage}</strong></>
+                        ) : (
+                          <strong>{toStage?.name || h.toStage}</strong>
+                        )}
+                      </div>
+                      <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                        {new Date(h.changedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )
+          )}
+
+          {/* ── Tab: IA ── */}
+          {sideTab === "ia" && (
+            <div className="space-y-4">
+              <LeadAIPanel
+                lead={lead}
+                currentUser={currentUser}
+                activities={lead.activities || []}
+                linkedEmails={lead.linkedEmails || []}
+                onUpdate={onUpdate}
+                onAddActivity={onAddActivity}
+                stageName={currentStageInfo?.name}
+                slaDays={currentStageInfo?.slaDays}
+                stageFieldValues={visibleCustomDefs
+                  .map(f => ({ label: f.label, value: customValuesByKey[f.fieldKey] }))
+                  .filter(f => f.value !== undefined && f.value !== null && f.value !== "")}
+              />
+
+              {/* Rascunho de abordagem */}
+              <div className="p-4 rounded-xl" style={{ background: company.dark, color: "#FFFFFF" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "#FFE9A8" }}>
+                    <Sparkles size={12} />Rascunho de abordagem
+                  </div>
+                  <button
+                    onClick={handleCopyDraft}
+                    className="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all duration-150"
+                    style={{ background: "rgba(255,255,255,0.12)", color: copied ? "#A3E6B4" : "rgba(255,255,255,0.8)", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; }}
+                  >
+                    {copied ? <Check size={11} /> : <Copy size={11} />}
+                    {copied ? "Copiado!" : "Copiar"}
+                  </button>
+                </div>
+                <div
+                  className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-lg"
+                  style={{ background: "rgba(0,0,0,0.18)", color: "rgba(255,255,255,0.92)" }}
+                >
+                  {emailDraft}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Tab: Anexos ── */}
+          {sideTab === "anexos" && (
+            <AttachmentsPanel
+              leadId={lead.id}
+              companyId={lead.companyId}
+              currentUser={currentUser}
+              companyColor={company.primary}
+            />
+          )}
+
+          {/* ── Tab: Checklists ── */}
+          {sideTab === "checklists" && (
+            <ChecklistsPanel
+              leadId={lead.id}
+              companyId={lead.companyId}
+              currentUser={currentUser}
+              companyColor={company.primary}
+            />
+          )}
+
+          {/* ── Tab: PDF ── */}
+          {/* Mantido montado (display:none) quando a aba não está ativa pra
+              não perder o rascunho da proposta ao trocar de aba; key={lead.id}
+              reseta ao navegar pra outro lead. Achado da 2ª auditoria. */}
+          <div style={{ display: sideTab === "pdf" ? undefined : "none" }}>
+            <ProposalPanel key={lead.id} lead={lead} currentUser={currentUser} allLeads={allLeads} />
+          </div>
           </main>
 
           {/* ───── MOBILE: aba "Ações" — mesmo conteúdo da aside direita
@@ -1439,7 +1459,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
             </button>
           ) : stageNav.next ? (
             <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
-              Avanço direto para {stageNav.next.name} não permitido — use "Mover card para fase".
+              Avanço direto para {stageNav.next.name} não permitido — use "Mover para".
             </div>
           ) : (
             <div className="text-xs text-center py-3" style={{ color: "var(--text-dim)" }}>
@@ -1513,6 +1533,7 @@ const SIDE_TAB_HINTS = {
 const SIDE_TABS = [
   { id: "form",         label: "Form",        icon: FileText },
   { id: "atividades",   label: "Atividades",  icon: Activity },
+  { id: "historico",    label: "Histórico",   icon: History },
   { id: "ia",           label: "IA",          icon: Sparkles },
   { id: "anexos",       label: "Anexos",      icon: Paperclip },
   { id: "checklists",   label: "Checklists",  icon: ListChecks },
@@ -1561,8 +1582,8 @@ function MoveAndCommentsPanel({
 }) {
   return (
     <>
-      <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-        Mover card para fase
+      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" }}>
+        Mover para
       </div>
       {moveError && (
         <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>

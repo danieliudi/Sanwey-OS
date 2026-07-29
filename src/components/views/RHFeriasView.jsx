@@ -519,7 +519,10 @@ function FeriasKanbanColumn({
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {reqList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Nada aqui</div>
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5, display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ opacity: 0.5 }}>Nenhuma solicitação nesta etapa</span>
+            {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>}
+          </div>
         ) : (
           reqList.map((req) => (
             <RHKanbanCard
@@ -651,7 +654,7 @@ function FeriasDrawer({
               {f.label}
             </label>
             {f.helpText && <div style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 6 }}>{f.helpText}</div>}
-            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} />
+            <RHStageFieldInput field={f} value={getCustomValue(f.fieldKey)} onChange={(val) => handleCustomChange(f.fieldKey, val)} users={users} touched={Boolean(moveError)} />
           </div>
         ))}
       </div>
@@ -668,6 +671,9 @@ function FeriasDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...req, stage: req.status, stageChangedAt: req.status_changed_at }}
+      recordTitle={colaborador?.fullName}
+      domainLabel="Férias"
     />
   );
 

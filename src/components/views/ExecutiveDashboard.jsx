@@ -495,7 +495,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
               onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; }}
             >
               <RotateCcw size={11} />
-              Regenerar
+              Gerar novamente
             </button>
             <button
               onClick={handleCopy}

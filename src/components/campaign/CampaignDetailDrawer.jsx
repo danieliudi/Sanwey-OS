@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2, Star, ExternalLink, Upload, File, FileImage, FileText,
   Download, Link, Check, Plus, FolderOpen, Activity, Paperclip, ListChecks,
-  Sparkles, ChevronRight,
-  RotateCcw, Copy, Loader2, AlertCircle, Package,
+  Sparkles, ChevronRight, History,
+  Loader2, Package,
 } from "lucide-react";
 import { COMPANIES, COMPANY_IDS, NEUTRAL } from "../../constants/companies";
-import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
+import { MARKETING_STAGES, MARKETING_CHANNELS, MARKETING_KPIS, DELIVERABLE_STAGES, DELIVERABLE_PRIORITIES, PERFORMANCE_HINT_BY_KPI, DEFAULT_PERFORMANCE_HINT } from "../../constants/marketing-pipelines";
 import { useMarketingCampaignAttachments } from "../../hooks/use-marketing-campaign-attachments";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
@@ -21,9 +21,10 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { RHStageHistoryPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields } from "../../utils/field-conditions";
-import { useAI } from "../../hooks/use-ai";
-import { campaignStageSuggestionPrompt } from "../../constants/ai-prompts";
+import { RecordAIPanel } from "../shared/RecordAIPanel";
+import { campaignStageSuggestionPrompt, genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { formatK } from "../../utils/currency";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { EVENT_CHECKLIST_TEMPLATE } from "../../constants/event-checklist-template";
@@ -53,6 +54,7 @@ function humanSize(bytes) {
 const SIDE_TABS = [
   { id: "form",        label: "Form",        icon: FileText },
   { id: "atividades",  label: "Atividades",  icon: Activity },
+  { id: "historico",   label: "Histórico",   icon: History },
   { id: "ia",          label: "IA",          icon: Sparkles },
   { id: "arquivos",    label: "Arquivos",    icon: Paperclip },
   { id: "criativo",    label: "Checklist",   icon: ListChecks },
@@ -61,116 +63,38 @@ const SIDE_TABS = [
 
 // ── AI panel ──────────────────────────────────────────────────────────────────
 
-function CampaignAIPanel({ campaign, currentUser }) {
-  const { complete, isConfigured } = useAI(currentUser);
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null);
-  const [error,   setError]   = useState(null);
-  const [copied,  setCopied]  = useState(false);
+function CampaignAIPanel({ campaign, currentUser, stage, stageFields = [], recentComments = [] }) {
+  const daysInStage = campaign.stageChangedAt
+    ? Math.floor((Date.now() - new Date(campaign.stageChangedAt)) / 86400000)
+    : 0;
 
-  const handleGenerate = async () => {
-    if (!isConfigured) return;
-    setLoading(true);
-    setResult(null);
-    setError(null);
-    setCopied(false);
-    try {
-      const text = await complete(campaignStageSuggestionPrompt(campaign));
-      setResult(text);
-    } catch (err) {
-      setError(err.message || "Erro ao gerar resposta.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCopy = () => {
-    if (!result || !navigator.clipboard?.writeText) return;
-    navigator.clipboard.writeText(result).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+  const features = [
+    {
+      id: "summary",
+      label: "Resumo & Próximo passo",
+      buildMessages: () => genericCardSummaryPrompt({
+        title: campaign.name,
+        domainLabel: "Campanhas",
+        stageName: stage?.name || campaign.stage,
+        slaDays: stage?.sla,
+        daysInStage,
+        customFields: stageFields,
+        recentComments,
+      }),
+    },
+    {
+      id: "stage-suggestion",
+      label: "Sugestão de etapa",
+      buildMessages: () => campaignStageSuggestionPrompt(campaign),
+    },
+  ];
 
   return (
-    <div className="space-y-3">
-      <div className="p-3 rounded-xl border" style={{ background: "#F5F3FF", borderColor: "#DDD6FE" }}>
-        <div className="flex items-center gap-2 mb-1.5">
-          <Sparkles size={13} style={{ color: PURPLE }} />
-          <span className="text-xs font-semibold" style={{ color: PURPLE }}>Sugestão de próxima etapa</span>
-          {!isConfigured && (
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full ml-auto"
-              style={{ background: "#FEF3C7", color: "#92400E" }}>
-              configure nas Configurações
-            </span>
-          )}
-        </div>
-        <p className="text-[11px] mb-2.5 leading-relaxed" style={{ color: "#5B21B6" }}>
-          A IA analisa etapa, SLA, checklist e datas para recomendar se é hora de avançar.
-        </p>
-        <button
-          onClick={handleGenerate}
-          disabled={loading || !isConfigured}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95"
-          style={{
-            background: !isConfigured ? "var(--border)" : PURPLE,
-            color:      !isConfigured ? "var(--text-dim)" : "#FFFFFF",
-            border: "none",
-            cursor: loading || !isConfigured ? "not-allowed" : "pointer",
-            opacity: loading ? 0.8 : 1,
-          }}
-          title={!isConfigured ? "Configure sua LLM nas Configurações → Integrações de IA" : undefined}
-          onMouseEnter={e => { if (!loading && isConfigured) e.currentTarget.style.filter = "brightness(0.9)"; }}
-          onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
-        >
-          {loading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-          {loading ? "Analisando…" : "Analisar campanha"}
-        </button>
-      </div>
-
-      {error && (
-        <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-xl"
-          style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }}>
-          <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {result && (
-        <div className="space-y-2">
-          <div className="text-xs leading-relaxed whitespace-pre-line p-3 rounded-xl border"
-            style={{ background: "var(--surface)", borderColor: "#DDD6FE", color: "var(--text)" }}>
-            {result}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleGenerate}
-              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer"
-              style={{ background: "var(--surface)", color: "var(--text-dim)", borderColor: "var(--border)" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = PURPLE; e.currentTarget.style.color = PURPLE; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; }}
-            >
-              <RotateCcw size={10} />
-              Regenerar
-            </button>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer"
-              style={{
-                background: copied ? "#F0FDF4" : "var(--surface)",
-                color:      copied ? "var(--success)" : "var(--text-dim)",
-                borderColor: copied ? "#BBF7D0" : "var(--border)",
-              }}
-              onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
-              onMouseLeave={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; } }}
-            >
-              {copied ? <Check size={10} /> : <Copy size={10} />}
-              {copied ? "Copiado!" : "Copiar"}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <RecordAIPanel
+      currentUser={currentUser}
+      features={features}
+      defaultFeatureId="summary"
+    />
   );
 }
 
@@ -637,9 +561,17 @@ export function ActivityLog({ activities }) {
 function Field({ label, children, hint }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>{label}</div>
+      <div className="flex items-center gap-1 mb-1">
+        <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>{label}</div>
+        {hint && (
+          <span title={hint} style={{ cursor: "help", opacity: 0.5, display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+            </svg>
+          </span>
+        )}
+      </div>
       {children}
-      {hint && <div className="text-[11px] mt-1" style={{ color: "var(--text-faint)" }}>{hint}</div>}
     </div>
   );
 }
@@ -1293,6 +1225,7 @@ export function CampaignDetailDrawer({
   onClose,
   onStageMoved,
   onUpdate,
+  onMoveToStage,
   onDelete,
   users = [],
   canWrite,
@@ -1310,6 +1243,7 @@ export function CampaignDetailDrawer({
   const effectiveStages = stages?.length ? stages : MARKETING_STAGES;
   const [sideTab, setSideTab]           = useState("form");
   const [draft, setDraft]               = useState({});
+  const [attemptedMove, setAttemptedMove] = useState(false);
   const saveTimeout  = useRef(null);
   const pendingPatch = useRef({});
 
@@ -1339,6 +1273,7 @@ export function CampaignDetailDrawer({
   useEffect(() => {
     setDraft({});
     setSideTab("form");
+    setAttemptedMove(false);
     pendingPatch.current = {};
   }, [campaign?.id]);
 
@@ -1360,13 +1295,25 @@ export function CampaignDetailDrawer({
   const stageIdx = effectiveStages.findIndex(s => s.id === get("stage"));
   const stage    = effectiveStages[stageIdx] || null;
 
-  const moveToStage = useCallback((toStageId) => {
+  const moveToStage = useCallback(async (toStageId) => {
     if (!campaign || !toStageId) return;
+    // Passa pela mesma validação de campo obrigatório (estático + dinâmico)
+    // do drag-and-drop/"Mover para" do board — antes esse botão chamava
+    // onUpdate direto e contornava a checagem por completo (achado BUG-11
+    // da auditoria de QA: só Campanhas tinha esse bypass, Tarefas/Entregas
+    // já tinham sido corrigidos).
+    if (onMoveToStage) {
+      const ok = await onMoveToStage(campaign.id, toStageId);
+      if (ok === false) { setAttemptedMove(true); return; }
+      setAttemptedMove(false);
+      if (onStageMoved) { onClose?.(); onStageMoved(campaign.id); }
+      return;
+    }
     onUpdate?.(campaign.id, { stage: toStageId, stageChangedAt: new Date().toISOString() });
     // Fecha o drawer agora (sinal visual de que moveu) e reabre já na etapa
     // nova — em vez de só trocar o conteúdo por baixo do drawer aberto.
     if (onStageMoved) { onClose?.(); onStageMoved(campaign.id); }
-  }, [campaign, onUpdate, onStageMoved, onClose]);
+  }, [campaign, onUpdate, onMoveToStage, onStageMoved, onClose]);
 
   // FASE 5: mais de um responsável por campanha — resolve owner_ids (com
   // fallback pro owner escalar em campanhas legadas) contra a lista de
@@ -1384,6 +1331,13 @@ export function CampaignDetailDrawer({
   const stageFieldsHook = useRHStageFields("marketing");
   const customDefs = stageFieldsHook.getFields(get("stage"));
   const visibleCustomDefs = resolveVisibleFields(customDefs, get("customFields") || {});
+
+  const aiStageFields = visibleCustomDefs
+    .map(f => ({ label: f.label, value: formatCustomFieldValue(getCf(f.fieldKey)) }))
+    .filter(f => f.value !== null);
+  const aiRecentComments = (campaign?.notes || [])
+    .filter(n => !n.deletedAt && n.text)
+    .map(n => n.text);
 
   // Quem pode ser @mencionado nos comentários desta campanha — mesmo padrão
   // usado no LeadDetailDrawer, mas com escopo "marketing" e incluindo a
@@ -1447,8 +1401,8 @@ export function CampaignDetailDrawer({
 
   if (!campaign) return null;
 
-  // ── Render left tab content ─────────────────────────────────────────────────
-  function LeftTabContent() {
+  // ── Render center tab content ───────────────────────────────────────────────
+  function CenterTabContent() {
     if (sideTab === "form") {
       return (
         <div className="space-y-3">
@@ -1506,7 +1460,7 @@ export function CampaignDetailDrawer({
                 />
               )}
             </Field>
-            <Field label="Performance" hint="Nota de 0 a 100 — combine com o KPI da campanha pra manter um critério consistente entre campanhas.">
+            <Field label="Performance" hint={PERFORMANCE_HINT_BY_KPI[get("kpi")] || DEFAULT_PERFORMANCE_HINT}>
               {isAgencia ? <ReadValue value={get("performanceScore") > 0 ? String(get("performanceScore")) : null} /> : <EditInput value={get("performanceScore") || ""} onChange={v => set("performanceScore", parseInt(v) || 0)} type="number" placeholder="0–100" />}
             </Field>
             <Field label="Lançamento">
@@ -1520,7 +1474,7 @@ export function CampaignDetailDrawer({
           {!isAgencia && agencySuppliers.length > 0 && (
             <Field
               label="Fornecedor (Agência)"
-              hint="Vincula esta campanha a uma agência cadastrada — o login dela só verá campanhas/entregas do próprio fornecedor. Sem vínculo, qualquer login de agência enxerga esta campanha."
+              hint="Login da agência vinculada só vê as próprias campanhas/entregas. Sem fornecedor, qualquer agência enxerga esta campanha."
             >
               <EditSelect
                 value={get("supplierId")}
@@ -1609,18 +1563,99 @@ export function CampaignDetailDrawer({
                 />
               )}
           </div>
-          <ActivityLog activities={campaign.activities || []} />
+
+          {/* Campos específicos da etapa atual */}
+          {stage?.id === "briefing" && (
+            <BriefingFields
+              getCf={getCf}
+              setCf={setCf}
+              users={users}
+              disabled={!canWrite || isAgencia}
+              onOpenAttachments={() => setSideTab("arquivos")}
+            />
+          )}
+          {stage?.id === "aprovacao" && (
+            <AprovacaoFields
+              getCf={getCf}
+              setCf={setCf}
+              users={users}
+              disabled={!canWrite || isAgencia}
+            />
+          )}
+          {stage?.id === "producao" && (
+            <ProducaoFields
+              getCf={getCf}
+              setCf={setCf}
+              users={users}
+              disabled={!canWrite || isAgencia}
+            />
+          )}
+          {stage?.id === "revisao" && (
+            <RevisaoFields
+              getCf={getCf}
+              setCf={setCf}
+              users={users}
+              disabled={!canWrite || isAgencia}
+            />
+          )}
+
+          {/* Campos adicionais configurados via "Editar campos desta
+              etapa" (rh_pipeline_stage_fields) — além dos campos fixos
+              acima, que continuam intactos. */}
+          {visibleCustomDefs.length > 0 && (
+            <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
+              <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                Campos adicionais da etapa
+              </div>
+              {visibleCustomDefs.map(f => (
+                <div key={f.id}>
+                  <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+                    {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
+                    {f.label}
+                  </div>
+                  {f.helpText && (
+                    <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>{f.helpText}</div>
+                  )}
+                  {(!canWrite || isAgencia) ? (
+                    <ReadValue value={formatCustomFieldValue(getCf(f.fieldKey))} />
+                  ) : (
+                    <RHStageFieldInput
+                      field={f}
+                      value={getCf(f.fieldKey)}
+                      onChange={val => setCf(f.fieldKey, val)}
+                      users={users}
+                      touched={attemptedMove}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
     if (sideTab === "atividades") {
       return <ActivityLog activities={campaign.activities || []} />;
     }
+    if (sideTab === "historico") {
+      return (
+        <RHStageHistoryPanel
+          domain="marketing"
+          recordId={campaign.id}
+          stages={effectiveStages}
+          currentUser={currentUser}
+          users={users}
+        />
+      );
+    }
     if (sideTab === "ia") {
       return (
         <CampaignAIPanel
           campaign={{ ...campaign, ...draft }}
           currentUser={currentUser}
+          stage={stage}
+          stageFields={aiStageFields}
+          recentComments={aiRecentComments}
         />
       );
     }
@@ -1704,87 +1739,13 @@ export function CampaignDetailDrawer({
           })}
         </div>
       )}
-
-      {/* ── Pill SideTabs ── */}
-      <div className="pt-1 border-t" style={{ borderColor: "var(--border)" }}>
-        <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
-      </div>
-
-      {/* ── Tab content ── */}
-      <div>
-        {LeftTabContent()}
-      </div>
     </>
   );
 
   const center = (
     <>
-      {/* Stage-specific fields */}
-      {stage?.id === "briefing" && (
-        <BriefingFields
-          getCf={getCf}
-          setCf={setCf}
-          users={users}
-          disabled={!canWrite || isAgencia}
-          onOpenAttachments={() => setSideTab("arquivos")}
-        />
-      )}
-      {stage?.id === "aprovacao" && (
-        <AprovacaoFields
-          getCf={getCf}
-          setCf={setCf}
-          users={users}
-          disabled={!canWrite || isAgencia}
-        />
-      )}
-      {stage?.id === "producao" && (
-        <ProducaoFields
-          getCf={getCf}
-          setCf={setCf}
-          users={users}
-          disabled={!canWrite || isAgencia}
-        />
-      )}
-      {stage?.id === "revisao" && (
-        <RevisaoFields
-          getCf={getCf}
-          setCf={setCf}
-          users={users}
-          disabled={!canWrite || isAgencia}
-        />
-      )}
-
-      {/* Campos adicionais configurados via "Editar campos desta
-          etapa" (rh_pipeline_stage_fields) — além dos campos fixos
-          acima, que continuam intactos. */}
-      {visibleCustomDefs.length > 0 && (
-        <div className="border-t pt-4 space-y-4" style={{ borderColor: "var(--border)" }}>
-          <div className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
-            Campos adicionais da etapa
-          </div>
-          {visibleCustomDefs.map(f => (
-            <div key={f.id}>
-              <div className="text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-                {f.effectiveRequired && <span style={{ color: "var(--accent)" }}>* </span>}
-                {f.label}
-              </div>
-              {f.helpText && (
-                <div className="text-xs mb-1.5" style={{ color: "var(--text-faint)" }}>{f.helpText}</div>
-              )}
-              {(!canWrite || isAgencia) ? (
-                <ReadValue value={formatCustomFieldValue(getCf(f.fieldKey))} />
-              ) : (
-                <RHStageFieldInput
-                  field={f}
-                  value={getCf(f.fieldKey)}
-                  onChange={val => setCf(f.fieldKey, val)}
-                  users={users}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <DetailDrawerTabs tabs={SIDE_TABS} activeId={sideTab} onChange={setSideTab} />
+      {CenterTabContent()}
     </>
   );
 
@@ -1792,8 +1753,8 @@ export function CampaignDetailDrawer({
     <>
       {canWrite && (
         <div>
-          <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-            Mover campanha para etapa
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" }}>
+            Mover para
           </div>
           <StageNavigator
             targets={effectiveStages.filter(s => s.id !== stage?.id)}

@@ -33,6 +33,12 @@ export default defineConfig({
         // Bundle principal ainda não é code-split (~3MB) — eleva o teto
         // padrão de 2MB do workbox pra ele continuar sendo pré-cacheado.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        // clientsClaim só é injetado automaticamente quando registerType é
+        // "autoUpdate" — com "prompt" (linha acima) ficava faltando, e sem
+        // isso o SW novo nunca assume a aba já aberta: o SKIP_WAITING do
+        // clique em "Atualizar agora" ativa o worker em segundo plano, mas
+        // "controllerchange" nunca dispara, então o reload nunca acontece.
+        clientsClaim: true,
       },
       manifest: {
         name: "Gestão Sanwey",

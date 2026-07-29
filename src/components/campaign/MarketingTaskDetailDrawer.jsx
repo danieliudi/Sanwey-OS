@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, FileText, Activity, Paperclip, ListChecks } from "lucide-react";
+import { AlertCircle, FileText, Activity, Paperclip, ListChecks, History, Sparkles } from "lucide-react";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
@@ -12,8 +12,10 @@ import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { AvatarStack } from "../shared/AvatarStack";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { RecordAIPanel } from "../shared/RecordAIPanel";
+import { genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { ActivityLog } from "./CampaignDetailDrawer";
-import { RHAttachmentsPanel, RHChecklistsPanel } from "../rh-pipeline/RHDetailDrawerShell";
+import { RHAttachmentsPanel, RHChecklistsPanel, RHStageHistoryPanel } from "../rh-pipeline/RHDetailDrawerShell";
 
 const PRIORITY_LABELS = { baixa: "Baixa", media: "Média", alta: "Alta" };
 const PRIORITY_COLORS = { baixa: "#16A34A", media: "#D97706", alta: "#DC2626" };
@@ -333,22 +335,6 @@ export function MarketingTaskDetailDrawer({
           <ReadValue value={campaign.name} />
         </div>
       )}
-
-      <div style={{ paddingTop: 4, borderTop: "1px solid var(--border)" }}>
-        <SectionLabel>Histórico de Etapas</SectionLabel>
-        {(item.activities || []).filter(a => a.type === "stage_change").length === 0
-          ? <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Nenhuma transição registrada.</div>
-          : [...(item.activities || [])].filter(a => a.type === "stage_change").reverse().map((a, i) => (
-            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 11 }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", marginTop: 4, flexShrink: 0 }} />
-              <div>
-                <div style={{ color: "var(--text)" }}>{a.description}</div>
-                <div style={{ color: "var(--text-dim)", fontSize: 10 }}>{new Date(a.at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</div>
-              </div>
-            </div>
-          ))
-        }
-      </div>
     </>
   );
 
@@ -436,6 +422,7 @@ export function MarketingTaskDetailDrawer({
                   value={getCustomValue(f.fieldKey)}
                   onChange={val => handleCustomChange(f.fieldKey, val)}
                   users={users}
+                  touched={Boolean(moveError)}
                 />
               ) : (
                 <ReadValue value={formatCustomFieldValue(getCustomValue(f.fieldKey))} />
@@ -453,6 +440,8 @@ export function MarketingTaskDetailDrawer({
         tabs={[
           { id: "form",       label: "Form",       icon: FileText },
           { id: "atividades", label: "Atividades", icon: Activity },
+          { id: "historico",  label: "Histórico",  icon: History },
+          { id: "ia",         label: "IA",         icon: Sparkles },
           { id: "anexos",     label: "Anexos",     icon: Paperclip },
           { id: "checklist",  label: "Checklist",  icon: ListChecks },
         ]}
@@ -461,6 +450,34 @@ export function MarketingTaskDetailDrawer({
       />
       {centerTab === "form" && formTabContent}
       {centerTab === "atividades" && <ActivityLog activities={item.activities || []} />}
+      {centerTab === "historico" && (
+        <RHStageHistoryPanel domain="marketing_tasks" recordId={item.id} stages={stages} currentUser={currentUser} users={users} />
+      )}
+      {centerTab === "ia" && (
+        <RecordAIPanel
+          currentUser={currentUser}
+          features={[{
+            id: "summary",
+            label: "Resumo & Próximo passo",
+            buildMessages: () => genericCardSummaryPrompt({
+              title: item.title,
+              domainLabel: "Tarefas de Marketing",
+              stageName: stageInfo?.name || item.stage,
+              slaDays: stageInfo?.sla,
+              daysInStage: item.stageChangedAt
+                ? Math.floor((Date.now() - new Date(item.stageChangedAt)) / 86400000)
+                : 0,
+              customFields: visibleCustomDefs
+                .map(f => ({ label: f.label, value: formatCustomFieldValue(getCustomValue(f.fieldKey)) }))
+                .filter(f => f.value !== null),
+              recentComments: (item.notes || [])
+                .filter(n => !n.deletedAt && n.text)
+                .map(n => n.text),
+            }),
+          }]}
+          defaultFeatureId="summary"
+        />
+      )}
       {centerTab === "anexos" && (
         <RHAttachmentsPanel domain="marketing_tasks" recordId={item.id} currentUser={currentUser} />
       )}
@@ -473,8 +490,8 @@ export function MarketingTaskDetailDrawer({
   const right = (
     <>
       <div>
-        <div className="text-xs font-semibold mb-3" style={{ color: "var(--text)", letterSpacing: "0.02em" }}>
-          Mover tarefa para etapa
+        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" }}>
+          Mover para
         </div>
         {moveError && (
           <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>

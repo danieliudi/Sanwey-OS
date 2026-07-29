@@ -58,6 +58,23 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
     return nova;
   }, [userId]);
 
+  // Edita a janela de horário de uma sessão já criada — cobre tanto sessões
+  // novas (ajustar depois de errar) quanto as antigas do modelo de fila FIFO
+  // (horario_inicio/fim nulos pra sempre, migradas via backfill mas sem UI
+  // pra corrigir manualmente até este ponto).
+  const atualizarSessao = useCallback(async (id, data) => {
+    const patch = {
+      titulo: data.titulo,
+      descricao: data.descricao || null,
+      horario_inicio: data.horarioInicio || null,
+      horario_fim: data.horarioFim || null,
+      slot_minutos: data.slotMinutos || 30,
+    };
+    const { error } = await supabase.from("rh_bemestar_sessoes").update(patch).eq("id", id);
+    if (error) throw new Error(error.message);
+    setSessoes(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
+  }, []);
+
   const setSessaoStatus = useCallback(async (id, status) => {
     const { error } = await supabase.from("rh_bemestar_sessoes").update({ status }).eq("id", id);
     if (error) throw new Error(error.message);
@@ -86,7 +103,7 @@ export function useRHBemEstar({ userId, enabled = true } = {}) {
 
   return useMemo(() => ({
     sessoes, fila, loading,
-    criarSessao, setSessaoStatus, deletarSessao, setFilaStatus, marcarLembreteEnviado,
+    criarSessao, atualizarSessao, setSessaoStatus, deletarSessao, setFilaStatus, marcarLembreteEnviado,
     refetch: fetchAll,
-  }), [sessoes, fila, loading, criarSessao, setSessaoStatus, deletarSessao, setFilaStatus, marcarLembreteEnviado, fetchAll]);
+  }), [sessoes, fila, loading, criarSessao, atualizarSessao, setSessaoStatus, deletarSessao, setFilaStatus, marcarLembreteEnviado, fetchAll]);
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 // Loads the current user's profile row (role, companies, avatarBg, initials).
@@ -124,27 +124,36 @@ export function useSupabaseAuth() {
 
   // Shapes the profile + auth user in the format the rest of the app expects
   // (same keys the mock DEFAULT_USERS had).
-  const currentUser = session && profile
-    ? {
-        id: profile.id,
-        name: profile.name || session.user.email,
-        email: session.user.email,
-        role: profile.role || "vendedor",
-        roles: Array.isArray(profile.roles) && profile.roles.length ? profile.roles : (profile.role ? [profile.role] : ["vendedor"]),
-        companies: profile.companies || [],
-        initials: profile.initials || (profile.name || session.user.email).slice(0, 2).toUpperCase(),
-        avatarBg: profile.avatar_bg || "#1D4ED8",
-        avatarUrl: profile.avatar_url || null,
-        sectors: Array.isArray(profile.sectors) ? profile.sectors : [],
-        supervisorId: profile.supervisor_id || null,
-        calendarToken: profile.calendar_token || null,
-        // Só aqui — este fetch é escopado à própria linha (eq("id", userId)),
-        // diferente do roster de useProfiles() (não deve expor ai_config de
-        // ninguém além do próprio dono). Sem isso, o Provider/Model/Chave
-        // salvos em Configurações nunca recarregavam após um refresh.
-        aiConfig: profile.ai_config || null,
-      }
-    : null;
+  //
+  // Memoizado por [session, profile]: sem isso, este objeto era recriado em
+  // TODO render (mesmo sem session/profile mudarem de verdade), e qualquer
+  // efeito rio abaixo com `currentUser` nas deps (ex.: o reset de formulário
+  // do LeadCreateModal) disparava de novo a cada re-render alheio — inclusive
+  // o refetch assíncrono do profile que resolve ~1-2s após o mount. Achado
+  // da auditoria de QA (BUG-03: "Novo card" se autoapagava sozinho).
+  const currentUser = useMemo(() => (
+    session && profile
+      ? {
+          id: profile.id,
+          name: profile.name || session.user.email,
+          email: session.user.email,
+          role: profile.role || "vendedor",
+          roles: Array.isArray(profile.roles) && profile.roles.length ? profile.roles : (profile.role ? [profile.role] : ["vendedor"]),
+          companies: profile.companies || [],
+          initials: profile.initials || (profile.name || session.user.email).slice(0, 2).toUpperCase(),
+          avatarBg: profile.avatar_bg || "#1D4ED8",
+          avatarUrl: profile.avatar_url || null,
+          sectors: Array.isArray(profile.sectors) ? profile.sectors : [],
+          supervisorId: profile.supervisor_id || null,
+          calendarToken: profile.calendar_token || null,
+          // Só aqui — este fetch é escopado à própria linha (eq("id", userId)),
+          // diferente do roster de useProfiles() (não deve expor ai_config de
+          // ninguém além do próprio dono). Sem isso, o Provider/Model/Chave
+          // salvos em Configurações nunca recarregavam após um refresh.
+          aiConfig: profile.ai_config || null,
+        }
+      : null
+  ), [session, profile]);
 
   return {
     session,

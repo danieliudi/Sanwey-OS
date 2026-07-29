@@ -596,12 +596,26 @@ export default function App() {
     if (!isRHManager) return;
     const hoje = new Date();
     const hojeISO = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    const todayStr = hoje.toDateString();
     for (const c of contratosParaLembretes) {
       if (c.status !== "ativo") continue;
       const dias = contratoFornecedorDiasParaVencer(c, hoje);
       if (dias == null || dias > 30) continue;
       const key = `${c.id}:${hojeISO}`;
       if (contratoVistoRef.current.has(key)) continue;
+      // Guard contra o array JÁ PERSISTIDO (localStorage), não só o ref em
+      // memória — o ref zera a cada remount/reload da página, mas as
+      // notificações já gravadas continuam lá; sem essa checagem, cada
+      // reload reinseria o lote inteiro de contratos vencidos (achado
+      // BUG-12 da auditoria de QA: contador subindo de 8 pra 24 sem ação
+      // do usuário). Mesmo padrão de guard que o gerador de "followup" já
+      // usa (checa o array persistido antes de empurrar).
+      const alreadyExists = notifications.some(n =>
+        n.type === "contrato_fornecedor_vencendo" &&
+        n.body?.startsWith(`${c.titulo}:`) &&
+        new Date(n.createdAt).toDateString() === todayStr
+      );
+      if (alreadyExists) { contratoVistoRef.current.add(key); continue; }
       contratoVistoRef.current.add(key);
 
       const dueLabel = dias < 0 ? `venceu há ${Math.abs(dias)} dia(s)` : dias === 0 ? "vence hoje" : `vence em ${dias} dia(s)`;
@@ -619,7 +633,7 @@ export default function App() {
         });
       }
     }
-  }, [contratosParaLembretes, isRHManager, users, pushNotification]);
+  }, [contratosParaLembretes, isRHManager, users, pushNotification, notifications]);
 
   // Lembrete de bem-estar chegando perto — reunião com o RH (20/07): "recebe
   // e-mail avisando... e quando estiver próximo". Roda enquanto um RH tem a

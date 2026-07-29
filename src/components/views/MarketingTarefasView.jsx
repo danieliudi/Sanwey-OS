@@ -471,6 +471,7 @@ function TaskCreateModal({ stageId, stages, currentUser, users, campaigns, onAdd
                       value={customValues[f.fieldKey]}
                       onChange={val => setCustomValues(prev => ({ ...prev, [f.fieldKey]: val }))}
                       users={users}
+                      touched={Boolean(error)}
                     />
                   </div>
                 ))}

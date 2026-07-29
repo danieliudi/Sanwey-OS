@@ -341,6 +341,15 @@ function TopPerformanceList({ campaigns, primaryColor, stages }) {
                   {c.name}
                 </span>
                 {stage && <Badge customColor={stage.color}>{stage.name}</Badge>}
+                {c.kpi && (
+                  <span style={{
+                    fontSize: 9.5, fontWeight: 700, padding: "2px 7px", borderRadius: 999,
+                    background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)",
+                    flexShrink: 0,
+                  }}>
+                    {c.kpi}
+                  </span>
+                )}
               </div>
               <span style={{ fontSize: 14, fontWeight: 800, color: col,
                              fontVariantNumeric: "tabular-nums", flexShrink: 0, marginLeft: 8 }}>

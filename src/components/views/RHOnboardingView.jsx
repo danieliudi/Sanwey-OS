@@ -5,7 +5,7 @@ import {
   LayoutGrid, List, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, TrendingUp,
 } from "lucide-react";
 import { RH_CONTRACT_TYPES } from "../../constants/rh-config";
-import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
+import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { isSupabaseConfigured } from "../../lib/supabase";
 import { useRHOnboarding } from "../../hooks/use-rh-onboarding";
@@ -375,7 +375,10 @@ function OnboardingKanbanColumn({
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {colaboradoresList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>Ninguém aqui</div>
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5, display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ opacity: 0.5 }}>Nenhum colaborador nesta etapa</span>
+            {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>}
+          </div>
         ) : (
           colaboradoresList.map((c) => (
             <RHKanbanCard
@@ -545,6 +548,7 @@ function OnboardingDrawer({
                   value={getCustomValue(f.fieldKey)}
                   onChange={(val) => handleCustomChange(f.fieldKey, val)}
                   users={users}
+                  touched={Boolean(moveError)}
                 />
               </div>
             ))}
@@ -625,6 +629,9 @@ function OnboardingDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...colaborador, stage: colaborador.onboardingStage, stageChangedAt: colaborador.onboardingStageChangedAt }}
+      recordTitle={colaborador.fullName}
+      domainLabel="Onboarding"
     />
   );
 
@@ -1351,6 +1358,12 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   const onboardingSpecificStats = useMemo(() => {
     const stats = [
       { label: "% médio de checklist concluído", value: dashboardStats.overall != null ? `${dashboardStats.overall}%` : "—" },
+      // Antes vivia numa faixa fixa acima do board (visível em toda view, não
+      // só na Análise) — achado do vídeo, movido pra cá por decisão do Daniel.
+      ...dashboardStats.porFrente.map((f) => ({
+        label: `Progresso — ${RH_FRENTE_LABELS[f.id]}`,
+        value: f.media != null ? `${f.media}%` : "—",
+      })),
     ];
     if (onboardingRemovedStageKey) {
       const removidos = colaboradores.filter(
@@ -1362,7 +1375,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
       stats.push({ label: "Tempo médio até Removido", value: avgDays !== null ? `${avgDays}d` : "—" });
     }
     return stats;
-  }, [dashboardStats.overall, colaboradores, onboardingRemovedStageKey]);
+  }, [dashboardStats.overall, dashboardStats.porFrente, colaboradores, onboardingRemovedStageKey]);
 
   if (!isSupabaseConfigured) {
     return (
@@ -1431,30 +1444,6 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
         </div>
       </div>
       </KanbanBoardHeader>
-
-      {!loading && colaboradores.length > 0 && (
-        <div className="flex items-stretch gap-3 flex-wrap mb-4">
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "10px 16px", minWidth: 140 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Progresso geral</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", marginTop: 2 }}>
-              {dashboardStats.overall != null ? `${dashboardStats.overall}%` : "—"}
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
-              {dashboardStats.total} colaborador{dashboardStats.total !== 1 ? "es" : ""}
-              {dashboardStats.semTarefas > 0 && ` · ${dashboardStats.semTarefas} sem checklist`}
-            </div>
-          </div>
-          {dashboardStats.porFrente.map((f) => (
-            <div key={f.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "10px 16px", minWidth: 140 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: RH_FRENTE_COLORS[f.id], textTransform: "uppercase", letterSpacing: "0.06em" }}>{RH_FRENTE_LABELS[f.id]}</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", marginTop: 2 }}>
-                {f.media != null ? `${f.media}%` : "—"}
-              </div>
-              <div style={{ fontSize: 11, color: "var(--text-dim)" }}>{f.total} colaborador{f.total !== 1 ? "es" : ""}</div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>

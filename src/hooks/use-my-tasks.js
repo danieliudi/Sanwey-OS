@@ -2,9 +2,12 @@ import { useMemo } from "react";
 import {
   AlertTriangle, Clock, Layers, Megaphone, Package, ShoppingCart, Truck,
   Inbox, CalendarClock, MessageSquareText, BriefcaseBusiness, Users, Gift,
+  Handshake,
 } from "lucide-react";
 import { useLeads } from "./use-leads";
 import { usePipelines } from "./use-pipelines";
+import { usePosvenda } from "./use-posvenda";
+import { useRHPipelineStages } from "./use-rh-pipeline-stages";
 import { useMarketingCampaigns } from "./use-marketing-campaigns";
 import { useMarketingDeliverables } from "./use-marketing-deliverables";
 import { useMarketingPurchaseRequests, PURCHASE_STAGES } from "./use-marketing-purchase-requests";
@@ -98,6 +101,8 @@ export function useMyTasks({ currentUser } = {}) {
   // channel) — reused as-is rather than approximating staleness, since the
   // real per-company SLA config was readily available here.
   const { pipelines } = usePipelines();
+  const { cases: posvendaCases, loading: posvendaLoading } = usePosvenda({ userId, role, roles });
+  const { stages: posvendaStages } = useRHPipelineStages("posvenda");
   const { campaigns, loading: campaignsLoading } = useMarketingCampaigns({ userId, role, roles });
   const { deliverables, loading: deliverablesLoading } = useMarketingDeliverables({ userId, role, roles });
   const { purchases, loading: purchasesLoading } = useMarketingPurchaseRequests({});
@@ -112,7 +117,13 @@ export function useMyTasks({ currentUser } = {}) {
 
   const loading = leadsLoading || campaignsLoading || deliverablesLoading || purchasesLoading
     || quotesLoading || marketingRequestsLoading || feedbacksLoading || feriasLoading
-    || recrutamentoLoading || colaboradoresLoading || beneficiosLoading || treinamentosLoading;
+    || recrutamentoLoading || colaboradoresLoading || beneficiosLoading || treinamentosLoading
+    || posvendaLoading;
+
+  const posvendaStagesByKey = useMemo(
+    () => new Map((posvendaStages || []).map(s => [s.stageKey, s])),
+    [posvendaStages],
+  );
 
   const isRHManagerUser = hasAnyRole(currentUser, ["admin", "gerente_rh"]);
 
@@ -256,6 +267,27 @@ export function useMyTasks({ currentUser } = {}) {
       });
     }
 
+    for (const kase of (posvendaCases || [])) {
+      const stageInfo = posvendaStagesByKey.get(kase.stage);
+      if (stageInfo?.terminal) continue;
+      if (!(kase.ownerIds || []).includes(userId)) continue;
+      const agingDays = kase.stageChangedAt ? Math.floor((Date.now() - new Date(kase.stageChangedAt).getTime()) / 86400000) : 0;
+      out.push({
+        id: `resp-posvenda-${kase.id}`,
+        bucket: "responsibility",
+        module: "posvenda",
+        moduleLabel: "Pós-venda",
+        icon: Handshake,
+        title: kase.clientName,
+        subtitle: stageInfo?.name || kase.stage,
+        badge: formatK(kase.value),
+        badgeTone: "var(--text-dim)",
+        urgencyRank: -agingDays,
+        section: "posvenda",
+        raw: kase,
+      });
+    }
+
     // ── Aguardando minha aprovação ───────────────────────────────────────
     // Role gates below mirror the real frontend gates: PurchaseRequestDetailDrawer.jsx
     // (`canApprove` = admin/marketing/gerente_marketing — ampliado, ver
@@ -370,6 +402,31 @@ export function useMyTasks({ currentUser } = {}) {
         section: "crm",
         lead,
         raw: lead,
+      });
+    }
+
+    // Stale pós-venda cases owned by the current user — same SLA-window
+    // idea as stale leads above, using the stage's own `slaDays` config.
+    for (const kase of (posvendaCases || [])) {
+      const stageInfo = posvendaStagesByKey.get(kase.stage);
+      if (stageInfo?.terminal) continue;
+      if (!(kase.ownerIds || []).includes(userId)) continue;
+      if (!stageInfo?.slaDays || !kase.stageChangedAt) continue;
+      const agingDays = Math.floor((Date.now() - new Date(kase.stageChangedAt).getTime()) / 86400000);
+      if (agingDays < stageInfo.slaDays) continue;
+      out.push({
+        id: `alert-posvenda-${kase.id}`,
+        bucket: "alert",
+        module: "posvenda",
+        moduleLabel: "Pós-venda parado",
+        icon: Clock,
+        title: kase.clientName,
+        subtitle: stageInfo?.name || kase.stage,
+        badge: `${agingDays}d na etapa`,
+        badgeTone: "var(--warning)",
+        urgencyRank: -agingDays,
+        section: "posvenda",
+        raw: kase,
       });
     }
 

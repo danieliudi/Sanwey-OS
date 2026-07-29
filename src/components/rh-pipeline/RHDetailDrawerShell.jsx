@@ -1,15 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, Paperclip, ListChecks, History, ArrowRight,
+  Activity, Paperclip, ListChecks, History, ArrowRight, Sparkles,
   Plus, Upload, Download, Trash2, Check, X,
   File, FileImage, FileSpreadsheet, FileText, AlertCircle,
 } from "lucide-react";
 import { useRHAttachments } from "../../hooks/use-rh-attachments";
 import { useRHChecklists } from "../../hooks/use-rh-checklists";
 import { useRHStageHistory } from "../../hooks/use-rh-stage-history";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { resolveVisibleFields } from "../../utils/field-conditions";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { RecordAIPanel } from "../shared/RecordAIPanel";
+import { genericCardSummaryPrompt } from "../../constants/ai-prompts";
 
 function PlaceholderPanel({ icon: Icon, title, hint }) {
   return (
@@ -462,7 +466,7 @@ function stageLabel(key, stages) {
   return found?.name || key;
 }
 
-function RHStageHistoryPanel({ domain, recordId, stages, currentUser, users }) {
+export function RHStageHistoryPanel({ domain, recordId, stages, currentUser, users }) {
   const { entries, loading } = useRHStageHistory(domain, recordId);
 
   if (loading) {
@@ -604,9 +608,13 @@ export function RHDetailComments({
 
 export function RHDetailDrawerShell({
   domain, recordId, activities = [], onAddActivity, currentUser,
-  users = [], stages, formContent,
+  users = [], stages, formContent, record, recordTitle, domainLabel, fieldsDomain,
 }) {
   const showChecklists = domain === "vagas" || domain === "candidatos" || domain === "comex";
+
+  // Comex é o único módulo em que o domínio dos campos por etapa
+  // (comex_importacao/comex_exportacao) não é o mesmo `domain` do shell.
+  const stageFieldsHook = useRHStageFields(fieldsDomain || domain);
 
   const tabs = useMemo(() => {
     const list = [];
@@ -614,11 +622,12 @@ export function RHDetailDrawerShell({
     list.push(
       { id: "atividades", label: "Atividades", icon: Activity },
       { id: "historico", label: "Histórico", icon: History },
-      { id: "anexos", label: "Anexos", icon: Paperclip },
     );
+    if (record) list.push({ id: "ia", label: "IA", icon: Sparkles });
+    list.push({ id: "anexos", label: "Anexos", icon: Paperclip });
     if (showChecklists) list.push({ id: "checklists", label: "Checklists", icon: ListChecks });
     return list;
-  }, [showChecklists, formContent]);
+  }, [showChecklists, formContent, record]);
 
   const [tab, setTab] = useState(formContent ? "form" : "atividades");
 
@@ -629,6 +638,10 @@ export function RHDetailDrawerShell({
   useEffect(() => {
     if (tab === "form" && !formContent) setTab("atividades");
   }, [formContent, tab]);
+
+  useEffect(() => {
+    if (tab === "ia" && !record) setTab("atividades");
+  }, [record, tab]);
 
   return (
     <div className="space-y-4">
@@ -642,6 +655,46 @@ export function RHDetailDrawerShell({
 
       {tab === "historico" && (
         <RHStageHistoryPanel domain={domain} recordId={recordId} stages={stages} currentUser={currentUser} users={users} />
+      )}
+
+      {tab === "ia" && record && (
+        <RecordAIPanel
+          currentUser={currentUser}
+          features={[{
+            id: "summary",
+            label: "Resumo & Próximo passo",
+            buildMessages: () => {
+              const currentStage = stages?.find(s => (s.stageKey ?? s.id) === record.stage);
+              const daysInStage = record.stageChangedAt
+                ? Math.floor((Date.now() - new Date(record.stageChangedAt)) / 86400000)
+                : 0;
+              const recentComments = (activities || []).slice(-5).map(a => a.body).filter(Boolean);
+              // Enviar os campos de etapa de RH (que podem conter dado
+              // sensível) ao provedor de IA foi decisão explícita do Daniel
+              // em 29/07/2026, não descuido.
+              const recordValues = record.customFields || record.custom_fields || {};
+              const customFields = resolveVisibleFields(stageFieldsHook.getFields(record.stage), recordValues)
+                .map(f => {
+                  const v = recordValues[f.fieldKey];
+                  if (v === null || v === undefined || v === "") return null;
+                  if (Array.isArray(v)) return v.length ? { label: f.label, value: v.join(", ") } : null;
+                  if (typeof v === "boolean") return { label: f.label, value: v ? "Sim" : "Não" };
+                  return { label: f.label, value: String(v) };
+                })
+                .filter(Boolean);
+              return genericCardSummaryPrompt({
+                title: recordTitle,
+                domainLabel,
+                stageName: currentStage?.name,
+                slaDays: currentStage?.slaDays,
+                daysInStage,
+                customFields,
+                recentComments,
+              });
+            },
+          }]}
+          defaultFeatureId="summary"
+        />
       )}
 
       {tab === "anexos" && (

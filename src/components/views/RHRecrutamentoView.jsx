@@ -705,6 +705,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
                       value={customValues[f.fieldKey]}
                       onChange={(val) => setCustomValues((prev) => ({ ...prev, [f.fieldKey]: val }))}
                       users={users}
+                      touched={Boolean(error)}
                     />
                   </div>
                 ))}
@@ -946,8 +947,13 @@ function VagaKanbanColumn({
       />
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {vagasList.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
-            {isDragOver ? "Soltar aqui" : "Nenhuma vaga"}
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5, display: "flex", flexDirection: "column", gap: 2 }}>
+            {isDragOver ? <span style={{ opacity: 0.5 }}>Soltar aqui</span> : (
+              <>
+                <span style={{ opacity: 0.5 }}>Nenhuma vaga nesta etapa</span>
+                {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>}
+              </>
+            )}
           </div>
         ) : (
           vagasList.map((v) => (
@@ -1101,6 +1107,7 @@ function VagaDrawer({
                   value={vaga.custom_fields?.[field.fieldKey]}
                   onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
                   users={users}
+                  touched={Boolean(moveError)}
                 />
               </div>
             ))}
@@ -1207,6 +1214,9 @@ function VagaDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...vaga, stageChangedAt: vaga.stage_changed_at }}
+      recordTitle={vaga.title}
+      domainLabel="Recrutamento"
     />
   );
 
@@ -1670,6 +1680,7 @@ function NovoCandidatoModal({ defaultStage, defaultVagaId, vagas, stages, onSave
                       value={customValues[f.fieldKey]}
                       onChange={(val) => setCustomValues((prev) => ({ ...prev, [f.fieldKey]: val }))}
                       users={users}
+                      touched={Boolean(error)}
                     />
                   </div>
                 ))}
@@ -1881,6 +1892,7 @@ function CandidatoDrawer({
                   value={candidato.customFields?.[field.fieldKey]}
                   onChange={(val) => onCustomFieldChange(field.fieldKey, val)}
                   users={users}
+                  touched={Boolean(moveError)}
                 />
               </div>
             ))}
@@ -2028,6 +2040,9 @@ function CandidatoDrawer({
       users={users}
       stages={stages}
       formContent={formContent}
+      record={{ ...candidato, stageChangedAt: candidato.stage_changed_at }}
+      recordTitle={candidato.name}
+      domainLabel="Recrutamento"
     />
   );
 
@@ -2403,8 +2418,13 @@ function KanbanColumn({
       {/* Cards */}
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
         {candidatos.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5 }}>
-            {isDragOver ? "Soltar aqui" : "Nenhum candidato"}
+          <div style={{ textAlign: "center", padding: "20px 8px", color: "var(--text-dim)", fontSize: 11, opacity: 0.5, display: "flex", flexDirection: "column", gap: 2 }}>
+            {isDragOver ? <span style={{ opacity: 0.5 }}>Soltar aqui</span> : (
+              <>
+                <span style={{ opacity: 0.5 }}>Nenhum candidato nesta etapa</span>
+                {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>}
+              </>
+            )}
           </div>
         ) : (
           candidatos.map((c) => (

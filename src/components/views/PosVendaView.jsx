@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, AlertCircle, ExternalLink, Trash2, Settings, LayoutGrid, TrendingUp } from "lucide-react";
+import { Plus, X, AlertCircle, ExternalLink, Settings, LayoutGrid, TrendingUp, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -18,6 +18,9 @@ import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { StageFieldInput } from "../shared/StageFieldInput";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
+import { getMentionableUsers } from "../../utils/mentionable-users";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { usePosvenda } from "../../hooks/use-posvenda";
@@ -211,17 +214,16 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
   );
 }
 
-// ── Detalhe do caso (modal leve — nada comparável ao drawer de 3 painéis de
-// Venda/RH ainda, "começa simples" por pedido explícito do usuário) ─────────
+// ── Detalhe do caso (drawer de 3 painéis — mesmo shell de Venda/RH/Comex) ───
 
-function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, users, onClose, onMove, onDelete, onOpenLead, onUpdateCustomFields }) {
+function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, users, currentUser, onClose, onMove, onDelete, onOpenLead, onUpdateCustomFields, onAddActivity, onUpdateActivity }) {
   const st = stages.find(s => s.stageKey === kase.stage) || { name: "—", color: "#8A8680" };
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [moveError, setMoveError] = useState(null);
 
   const stageFields = useRHStageFields("posvenda");
   const customDefs = stageFields.getFields(kase.stage);
   const [customDraft, setCustomDraft] = useState({});
-  React.useEffect(() => { setCustomDraft({}); }, [kase.id]);
+  React.useEffect(() => { setCustomDraft({}); setMoveError(null); }, [kase.id]);
 
   const getCustomValue = (fieldKey) =>
     fieldKey in customDraft ? customDraft[fieldKey] : (kase.customFields?.[fieldKey] ?? "");
@@ -233,105 +235,366 @@ function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, users
 
   const customValuesByKey = { ...(kase.customFields || {}), ...customDraft };
   const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
+  const days = daysInStage(kase.stageChangedAt);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }} onClick={onClose}>
-      <div
-        className="rounded-2xl w-full max-w-md flex flex-col"
-        style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)", maxHeight: "88vh" }}
-        onClick={e => e.stopPropagation()}
+  const header = (
+    <div className="min-w-0">
+      <div className="font-bold text-base truncate" style={{ color: "var(--text)" }}>{kase.clientName}</div>
+      <span
+        className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+        style={{ background: `${st.color}18`, color: st.color, border: `1px solid ${st.color}40` }}
       >
-        <div className="px-5 py-4 border-b flex items-start justify-between gap-3" style={{ borderColor: "var(--border)" }}>
-          <div className="min-w-0">
-            <div className="font-bold text-base truncate" style={{ color: "var(--text)" }}>{kase.clientName}</div>
-            <span
-              className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold"
-              style={{ background: `${st.color}18`, color: st.color, border: `1px solid ${st.color}40` }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color }} />
-              {st.name}
-            </span>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer flex-shrink-0" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
-            <X size={16} />
-          </button>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color }} />
+        {st.name}
+      </span>
+    </div>
+  );
+
+  const left = (
+    <>
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Valor</div>
+        <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{formatK(kase.value)}</div>
+      </div>
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Responsáveis</div>
+        {owners.length > 0 ? <AvatarStack users={owners} size={22} max={4} /> : <span className="text-sm" style={{ color: "var(--text-dim)" }}>—</span>}
+      </div>
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Empresa</div>
+        <div className="text-sm" style={{ color: "var(--text)" }}>{COMPANIES[kase.companyId]?.short || kase.companyId || "—"}</div>
+      </div>
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Nesta etapa há</div>
+        <div className="text-sm" style={{ color: "var(--text)" }}>
+          {kase.stageChangedAt ? `${days} dia${days !== 1 ? "s" : ""}` : "—"}
         </div>
+      </div>
+      {sourceLead && (
+        <button
+          onClick={() => { onOpenLead?.(sourceLead); onClose(); }}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"
+          style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}
+        >
+          <ExternalLink size={13} />
+          Ver negócio de origem em Venda
+        </button>
+      )}
+    </>
+  );
 
-        <div className="px-5 py-4 space-y-4 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Valor</div>
-              <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{formatK(kase.value)}</div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Responsáveis</div>
-              {owners.length > 0 ? <AvatarStack users={owners} size={22} max={4} /> : <span className="text-sm" style={{ color: "var(--text-dim)" }}>—</span>}
-            </div>
-          </div>
-
-          {sourceLead && (
-            <button
-              onClick={() => { onOpenLead?.(sourceLead); onClose(); }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"
-              style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}
-            >
-              <ExternalLink size={13} />
-              Ver negócio de origem em Venda
-            </button>
-          )}
-
-          {visibleCustomDefs.length > 0 && (
-            <div className="pt-3 border-t space-y-3" style={{ borderColor: "var(--border)" }}>
-              <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>Campos desta etapa</div>
-              {visibleCustomDefs.map(f => (
-                <div key={f.id}>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-                    {f.effectiveRequired && <span style={{ color: "var(--danger)" }}>* </span>}
-                    {f.label}
-                  </label>
-                  <StageFieldInput
-                    field={f}
-                    value={getCustomValue(f.fieldKey)}
-                    onChange={val => canWrite && handleCustomChange(f.fieldKey, val)}
-                    users={users}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {canWrite && (
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)" }}>Mover para</div>
-              <StageNavigator
-                targets={stages.filter(s => s.stageKey !== kase.stage)}
-                onMove={(stageKey) => { onMove(stageKey); onClose(); }}
+  const formContent = (
+    <div className="space-y-3">
+      {visibleCustomDefs.length > 0 ? (
+        <>
+          <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>Campos desta etapa</div>
+          {visibleCustomDefs.map(f => (
+            <div key={f.id}>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+                {f.effectiveRequired && <span style={{ color: "var(--danger)" }}>* </span>}
+                {f.label}
+              </label>
+              <StageFieldInput
+                field={f}
+                value={getCustomValue(f.fieldKey)}
+                onChange={val => canWrite && handleCustomChange(f.fieldKey, val)}
+                users={users}
+                touched={Boolean(moveError)}
               />
             </div>
+          ))}
+        </>
+      ) : (
+        <div className="text-xs italic" style={{ color: "var(--text-dim)" }}>
+          Nenhum campo configurado para esta etapa ainda.
+        </div>
+      )}
+    </div>
+  );
+
+  const center = (
+    <RHDetailDrawerShell
+      domain="posvenda"
+      recordId={kase.id}
+      activities={kase.notes || []}
+      onAddActivity={canWrite ? onAddActivity : undefined}
+      currentUser={currentUser}
+      users={users}
+      stages={stages}
+      formContent={formContent}
+      record={kase}
+      recordTitle={kase.clientName}
+      domainLabel="Pós-venda"
+    />
+  );
+
+  const right = (
+    <>
+      {canWrite && moveError && (
+        <div className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+          <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+          {moveError}
+        </div>
+      )}
+
+      {canWrite && (
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)" }}>Mover para</div>
+          <StageNavigator
+            targets={stages.filter(s => s.stageKey !== kase.stage)}
+            onMove={async (stageKey) => {
+              const ok = await onMove(stageKey, setMoveError);
+              if (ok === false) return;
+              onClose();
+            }}
+          />
+        </div>
+      )}
+
+      <RHDetailComments
+        activities={kase.notes || []}
+        onAddActivity={canWrite ? onAddActivity : undefined}
+        onUpdateActivity={canWrite ? onUpdateActivity : undefined}
+        currentUser={currentUser}
+        users={users}
+        mentionableUsers={getMentionableUsers(users, { domain: "crm", companyId: kase.companyId })}
+        mentionContextLabel={kase.clientName}
+      />
+    </>
+  );
+
+  return (
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+      onDelete={canWrite && onDelete ? onDelete : undefined}
+      deleteLabel="Excluir caso"
+    />
+  );
+}
+
+// ── Tabela (mesmo molde de DeliverableTableView em EntregasView.jsx) ────────
+
+function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
+  return (
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
+            {["Cliente", "Valor", "Etapa", "Responsáveis", "Há quanto tempo na etapa"].map(h => (
+              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {cases.length === 0 && (
+            <tr><td colSpan={5} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhum caso encontrado.</td></tr>
           )}
+          {cases.map(kase => {
+            const stage  = stages.find(s => s.stageKey === kase.stage);
+            const color  = stage?.color || "var(--text-dim)";
+            const owners = (kase.ownerIds || []).map(id => usersById.get(id)).filter(Boolean);
+            const days   = daysInStage(kase.stageChangedAt);
+            return (
+              <tr key={kase.id} onClick={() => onRowClick(kase)} style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)", maxWidth: 220 }}>
+                  <div className="truncate">{kase.clientName}</div>
+                </td>
+                <td className="px-4 py-3 text-xs font-semibold" style={{ color: "#15803D" }}>{formatK(kase.value)}</td>
+                <td className="px-4 py-3">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                    {stage?.name || kase.stage}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  {owners.length > 0 ? (
+                    <div className="flex items-center gap-1.5">
+                      <AvatarStack users={owners} size={20} max={3} />
+                      <span className="text-xs truncate" style={{ color: "var(--text-dim)", maxWidth: 100 }}>{owners[0].name}</span>
+                    </div>
+                  ) : <span className="text-xs" style={{ color: "var(--text-dim)" }}>—</span>}
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>
+                  {kase.stageChangedAt ? `${days} dia${days !== 1 ? "s" : ""}` : "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Calendário (mesmo molde de DeliverableCalendarView em EntregasView.jsx) ──
+
+const CAL_MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+const CAL_DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const CAL_MAX_VISIBLE = 3;
+
+function calStartOfDay(d) {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+function calAddDays(d, n) {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+function calDayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Pós-venda não tem prazo próprio (ver use-posvenda.js — só value/companyId/
+// ownerIds/stage/stageChangedAt) — cada caso é posicionado no dia em que
+// entrou na etapa atual (stageChangedAt), decisão já fechada com o Daniel.
+function PosVendaCalendarView({ cases, stages, onSelect }) {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const today = useMemo(() => calStartOfDay(new Date()), []);
+
+  const prevMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  const goToday   = () => { const n = new Date(); setCurrentMonth(new Date(n.getFullYear(), n.getMonth(), 1)); };
+
+  const weeks = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay  = new Date(year, month + 1, 0);
+    const gridStart = new Date(firstDay);
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+    const weeksArr = [];
+    let curr = new Date(gridStart);
+    while (curr <= lastDay || weeksArr.length < 4) {
+      const week = [];
+      for (let i = 0; i < 7; i++) { week.push(new Date(curr)); curr = calAddDays(curr, 1); }
+      weeksArr.push(week);
+      if (weeksArr.length >= 6) break;
+    }
+    return weeksArr;
+  }, [currentMonth]);
+
+  const { byDay, noDateCount } = useMemo(() => {
+    const map = new Map();
+    let noDate = 0;
+    cases.forEach(kase => {
+      if (!kase.stageChangedAt) { noDate++; return; }
+      const key = calDayKey(calStartOfDay(new Date(kase.stageChangedAt)));
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(kase);
+    });
+    return { byDay: map, noDateCount: noDate };
+  }, [cases]);
+
+  const currentMonthNum = currentMonth.getMonth();
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="font-bold" style={{ fontSize: 20, color: "var(--text)", letterSpacing: "-0.01em" }}>
+            {CAL_MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+          </h2>
+          <button onClick={goToday} className="text-xs px-2.5 py-1 rounded-lg border font-medium"
+            style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}>
+            Hoje
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={prevMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={nextMonth} className="flex items-center justify-center rounded-lg border"
+            style={{ width: 32, height: 32, background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+        <div className="grid grid-cols-7" style={{ borderBottom: "1px solid var(--border)" }}>
+          {CAL_DAY_SHORT.map((d, i) => (
+            <div key={d} className="text-center py-2 text-xs font-semibold" style={{ color: "var(--text-dim)", borderRight: i < 6 ? "1px solid var(--border)" : "none" }}>
+              {d}
+            </div>
+          ))}
         </div>
 
-        {canWrite && (
-          <div className="px-5 py-3 border-t" style={{ borderColor: "var(--border)" }}>
-            {confirmingDelete ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs flex-1" style={{ color: "var(--text)" }}>Excluir este caso? Não pode ser desfeito.</span>
-                <button onClick={() => { onDelete(); onClose(); }} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "#B91C1C", color: "#FFFFFF", border: "none" }}>Excluir</button>
-                <button onClick={() => setConfirmingDelete(false)} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}>Cancelar</button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmingDelete(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
-                style={{ color: "#B91C1C", background: "none", border: "none" }}
-              >
-                <Trash2 size={13} />
-                Excluir caso
-              </button>
-            )}
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7" style={{ borderBottom: wi < weeks.length - 1 ? "1px solid var(--border)" : "none" }}>
+            {week.map((day, di) => {
+              const isCurrentMonth = day.getMonth() === currentMonthNum;
+              const isToday = day.getTime() === today.getTime();
+              const isWeekend = di === 0 || di === 6;
+              const items = byDay.get(calDayKey(day)) || [];
+              const visible = items.slice(0, CAL_MAX_VISIBLE);
+              const overflow = items.length - visible.length;
+              return (
+                <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
+                  <div className="flex justify-center mb-1">
+                    <span className="flex items-center justify-center text-xs font-semibold select-none"
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      {day.getDate()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {visible.map(kase => {
+                      const stage = stages.find(s => s.stageKey === kase.stage);
+                      const color = stage?.color || "var(--text-dim)";
+                      return (
+                        <button
+                          key={kase.id}
+                          onClick={() => onSelect(kase)}
+                          title={kase.clientName}
+                          className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                        >
+                          {kase.clientName}
+                        </button>
+                      );
+                    })}
+                    {overflow > 0 && (
+                      <span style={{ fontSize: 10, color: "var(--text-dim)", paddingLeft: 4 }}>+{overflow} mais</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        ))}
       </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
+        <span className="text-xs font-semibold" style={{ color: "var(--text-dim)" }}>Etapas:</span>
+        {stages.map(s => (
+          <div key={s.stageKey} className="flex items-center gap-1.5">
+            <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
+            <span className="text-xs" style={{ color: "var(--text-dim)" }}>{s.name}</span>
+          </div>
+        ))}
+      </div>
+
+      {noDateCount > 0 && (
+        <p className="text-xs mt-2" style={{ color: "var(--text-dim)" }}>
+          {noDateCount} caso{noDateCount > 1 ? "s" : ""} sem data de entrada na etapa não {noDateCount > 1 ? "aparecem" : "aparece"} nesta visão — confira na Tabela ou no Kanban.
+        </p>
+      )}
     </div>
   );
 }
@@ -484,8 +747,8 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const [addingStage, setAddingStage] = useState(false);
   const [draggedColumnKey, setDraggedColumnKey] = useState(null);
   const [editingFieldsStage, setEditingFieldsStage] = useState(null); // { stageKey, name }
-  const [selectedCase, setSelectedCase] = useState(null);
-  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "analytics"
+  const [selectedCaseId, setSelectedCaseId] = useState(null);
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
 
   const trailingRef = useRef(null);
   const [boardRef, boardHeight] = useAvailableHeight(16, [], trailingRef);
@@ -499,27 +762,33 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   // bloqueia sair da etapa atual com campo obrigatório (estático ou
   // condicional) vazio, ou com valor em formato inválido, antes de gravar a
   // transição.
-  const attemptStageChange = useCallback(async (id, stageKey) => {
+  // onBlocked: quando o chamador já mostra o erro por conta própria (drawer,
+  // que exibe inline na coluna direita), o toast global não dispara junto.
+  const attemptStageChange = useCallback(async (id, stageKey, onBlocked) => {
+    const reportBlock = (msg) => { if (onBlocked) onBlocked(msg); else setStageError(msg); };
     const kase = cases.find(c => c.id === id);
     if (kase) {
       const fields = stageFields.getFields(kase.stage);
       const customValues = kase.customFields || {};
       const missing = getMissingRequiredFields(fields, customValues);
       if (missing.length > 0) {
-        setStageError(`Não dá pra mover "${kase.clientName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
-        return;
+        reportBlock(`Não dá pra mover "${kase.clientName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+        return false;
       }
       const invalid = getInvalidFields(fields, customValues);
       if (invalid.length > 0) {
-        setStageError(`Não dá pra mover "${kase.clientName}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
-        return;
+        reportBlock(`Não dá pra mover "${kase.clientName}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+        return false;
       }
     }
     try {
       await changeStage(id, stageKey);
       setStageError(null);
+      if (onBlocked) onBlocked(null);
+      return true;
     } catch (e) {
-      setStageError(e?.message || "Não foi possível mover o caso.");
+      reportBlock(e?.message || "Não foi possível mover o caso.");
+      return false;
     }
   }, [cases, stageFields, changeStage]);
 
@@ -549,6 +818,23 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   }, [draggedColumnKey, stages, reorderStages]);
 
   const resolveOwners = useCallback((ownerIds) => (ownerIds || []).map(id => usersById.get(id)).filter(Boolean), [usersById]);
+
+  // Lido sempre da lista (não de um snapshot em estado) pra que comentário
+  // novo e mudança de etapa apareçam no drawer sem precisar reabrir.
+  const selectedCase = selectedCaseId ? cases.find(c => c.id === selectedCaseId) : null;
+
+  const handleAddActivity = useCallback(async (entry) => {
+    const current = cases.find(c => c.id === selectedCaseId);
+    if (!current) return;
+    await updateCase(current.id, { notes: [...(current.notes || []), entry] });
+  }, [cases, selectedCaseId, updateCase]);
+
+  const handleUpdateActivity = useCallback(async (activityId, patch) => {
+    const current = cases.find(c => c.id === selectedCaseId);
+    if (!current) return;
+    const next = (current.notes || []).map(a => (a.id === activityId ? { ...a, ...patch } : a));
+    await updateCase(current.id, { notes: next });
+  }, [cases, selectedCaseId, updateCase]);
 
   const firstNonTerminalStage = stages.find(s => !s.terminal);
 
@@ -593,6 +879,8 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
             <div className="flex items-center gap-2 flex-wrap">
               <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
                 <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" />
+                <ViewToggleButton active={viewMode === "table"} onClick={() => setViewMode("table")} icon={List} label="Tabela" />
+                <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
                 <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
               </div>
               {isManager && accessibleCompanies && accessibleCompanies.filter(id => id !== "all").length > 1 && (
@@ -625,6 +913,23 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           <KanbanFab label="Novo caso" flush onClick={() => setCreateModalStage(firstNonTerminalStage)} />
         )}
 
+        {viewMode === "table" && (
+          <PosVendaTableView
+            cases={scopedCases}
+            stages={stages}
+            usersById={usersById}
+            onRowClick={kase => setSelectedCaseId(kase.id)}
+          />
+        )}
+
+        {viewMode === "calendar" && (
+          <PosVendaCalendarView
+            cases={scopedCases}
+            stages={stages}
+            onSelect={kase => setSelectedCaseId(kase.id)}
+          />
+        )}
+
         {viewMode === "analytics" && (
           <KanbanAnalyticsPanel
             stages={analyticsStages}
@@ -649,7 +954,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
               id={kase.id}
               stage={kase.stage}
               stages={stages}
-              onClick={() => setSelectedCase(kase)}
+              onClick={() => setSelectedCaseId(kase.id)}
               onMoveToStage={canWrite ? attemptStageChange : undefined}
               onDeleteCard={canWrite ? deleteCase : undefined}
               deleteLabel="Excluir caso"
@@ -747,7 +1052,10 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                           {isOver ? (
                             <><Plus size={16} style={{ opacity: 0.5 }} /><span>Soltar aqui</span></>
                           ) : (
-                            <span style={{ opacity: 0.5 }}>Nenhum caso nesta etapa</span>
+                            <>
+                              <span style={{ opacity: 0.5 }}>Nenhum caso nesta etapa</span>
+                              {!stage.terminal && <span style={{ opacity: 0.4, fontSize: 10 }}>Arraste um card aqui ou crie um novo</span>}
+                            </>
                           )}
                         </div>
                       ) : (
@@ -757,7 +1065,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                             id={kase.id}
                             stage={kase.stage}
                             stages={stages}
-                            onClick={() => setSelectedCase(kase)}
+                            onClick={() => setSelectedCaseId(kase.id)}
                             onDragStart={canWrite ? handleDragStart : undefined}
                             onDragEnd={canWrite ? handleDragEnd : undefined}
                             onDeleteCard={canWrite ? deleteCase : undefined}
@@ -820,17 +1128,20 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
       />
 
       {selectedCase && (
-        <PosVendaDetailModal
+        <PosVendaDetailDrawer
           kase={selectedCase}
           stages={stages}
           owners={resolveOwners(selectedCase.ownerIds)}
           sourceLead={leadsById.get(selectedCase.leadId)}
           canWrite={canWrite}
           users={users}
-          onClose={() => setSelectedCase(null)}
-          onMove={(stageKey) => attemptStageChange(selectedCase.id, stageKey)}
+          currentUser={user}
+          onClose={() => setSelectedCaseId(null)}
+          onMove={(stageKey, onBlocked) => attemptStageChange(selectedCase.id, stageKey, onBlocked)}
           onDelete={() => deleteCase(selectedCase.id)}
           onUpdateCustomFields={(merged) => updateCase(selectedCase.id, { customFields: merged })}
+          onAddActivity={handleAddActivity}
+          onUpdateActivity={handleUpdateActivity}
           onOpenLead={onOpenLead}
         />
       )}

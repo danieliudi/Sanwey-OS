@@ -86,8 +86,13 @@ Deno.serve(async (req) => {
     }
 
     // Envia convite via Supabase Auth (magic-link de cadastro)
+    // `name`: handle_new_user já lê raw_user_meta_data->>'name' antes de
+    // cair no fallback local-part do e-mail (ex.: "iudiyano") — só faltava
+    // o convite de fato capturar e repassar o nome (achado BUG-08/10 da
+    // auditoria de QA).
     const { error: authErr } = await supabase.auth.admin.inviteUserByEmail(inv.email, {
       data: {
+        name: inv.name || undefined,
         role: inv.role,
         companies: inv.companies,
         invited_by_name: invitedByName,
