@@ -279,7 +279,6 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
         justifyContent: "center",
         padding: 16,
       }}
-      onClick={onClose}
     >
       <div
         style={{

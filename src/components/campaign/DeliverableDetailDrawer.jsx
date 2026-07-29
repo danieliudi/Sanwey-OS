@@ -6,7 +6,7 @@ import {
   Upload, File, FileImage, Download, Plus,
   Check, Loader2, AlertCircle, RefreshCw,
 } from "lucide-react";
-import { NEUTRAL, COMPANIES } from "../../constants/companies";
+import { NEUTRAL, marketingUnitLabel } from "../../constants/companies";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
 import { useDeliverableAttachments }  from "../../hooks/use-deliverable-attachments";
@@ -369,7 +369,13 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
 }
 
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], canWrite, userId, currentUser, notifyMentions }) {
+export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], stages = [], canWrite, userId, currentUser, notifyMentions }) {
+  // Etapas reais (rh_pipeline_stages, domain="marketing_deliverables"), com
+  // fallback pro catálogo fixo só enquanto o fetch não resolveu — sem isso,
+  // etapa custom criada pelo usuário (ex.: "Encaminhado à Agência") nunca
+  // aparecia em "Mover entrega para fase" nem no Histórico, porque os dois
+  // liam direto DELIVERABLE_STAGES (hardcoded, nunca atualizado).
+  const effectiveStages = stages?.length ? stages : DELIVERABLE_STAGES;
   const [sideTab,      setSideTab]     = useState("fase");
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,    setMoveError]   = useState(null);
@@ -529,11 +535,11 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
   }, [item, onUpdate, currentUser, notifyMentions]);
 
-  const stageInfo  = DELIVERABLE_STAGES.find(s => s.id === item.stage);
+  const stageInfo  = effectiveStages.find(s => s.id === item.stage);
 
   const priorityColor = PRIORITY_COLORS[item.priority] || NEUTRAL.slate;
   const priorityLabel = PRIORITY_LABELS[item.priority] || item.priority;
-  const companyLabels = (item.companyIds || []).map(id => COMPANIES[id]?.short || id).join(", ");
+  const companyLabels = (item.companyIds || []).map(marketingUnitLabel).join(", ");
 
   const handleMoveStage = async (stageId) => {
     // Passa pela mesma validação de campo obrigatório (estático + dinâmico)
@@ -547,7 +553,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
       onStageMoved?.(item.id);
       return;
     }
-    const stageName = DELIVERABLE_STAGES.find(s => s.id === stageId)?.name || stageId;
+    const stageName = effectiveStages.find(s => s.id === stageId)?.name || stageId;
     try {
       await onUpdate(item.id, {
         stage:          stageId,
@@ -696,7 +702,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
     if (sideTab === "atividades")  return <AtividadesTab activities={item.activities} />;
     if (sideTab === "historico")   return (
-      <RHStageHistoryPanel domain="marketing_deliverables" recordId={item.id} stages={DELIVERABLE_STAGES} currentUser={currentUser} users={users} />
+      <RHStageHistoryPanel domain="marketing_deliverables" recordId={item.id} stages={effectiveStages} currentUser={currentUser} users={users} />
     );
     if (sideTab === "ia")          return (
       <DeliverableAIPanel
@@ -803,7 +809,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
         )}
         {canWrite && (
           <StageNavigator
-            targets={DELIVERABLE_STAGES.filter(s => s.id !== item.stage)}
+            targets={effectiveStages.filter(s => s.id !== item.stage)}
             onMove={handleMoveStage}
             getKey={(s) => s.id}
           />

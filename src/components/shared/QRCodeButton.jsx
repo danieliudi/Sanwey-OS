@@ -48,7 +48,6 @@ export function QRCodeButton({ url, title, buttonLabel = "QR code", compact = fa
       {open && (
         <div
           style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1100, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-          onClick={() => setOpen(false)}
         >
           <div
             style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 340, boxShadow: "var(--shadow-pop)", padding: 24 }}

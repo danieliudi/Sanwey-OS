@@ -62,7 +62,6 @@ function RejectModal({ request, onConfirm, onClose }) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "var(--overlay-scrim)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-1" style={{ color: "var(--text)" }}>Rejeitar solicitação</h3>
@@ -116,7 +115,6 @@ function ApproveModal({ request, onConfirm, onClose }) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "var(--overlay-scrim)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-1" style={{ color: "var(--text)" }}>Aprovar solicitação</h3>

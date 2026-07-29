@@ -182,7 +182,6 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
   return (
     <div
       style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={guardedClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", maxHeight: "90vh", overflowY: "auto" }}
@@ -607,7 +606,6 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
   return (
     <div
       style={{ position: "fixed", inset: 0, background: "var(--overlay-scrim)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 380, boxShadow: "var(--shadow-pop)" }}
@@ -1289,6 +1287,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         onDelete={handleDelete}
         onResendCompleteEmail={sendCompleteEmail}
         campaigns={campaigns}
+        stages={kanbanStages}
         users={Array.from(usersById.values())}
         canWrite={canWrite}
         userId={user?.id}

@@ -90,7 +90,6 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
   return (
     <div
       style={{ position: "fixed", inset: 0, zIndex: 1100, background: "var(--overlay-scrim)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "var(--shadow-pop)", overflow: "hidden" }}
@@ -183,7 +182,6 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
   return (
     <div
       style={{ position: "fixed", inset: 0, zIndex: 1100, background: "var(--overlay-scrim)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-      onClick={onClose}
     >
       <div
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", overflow: "hidden" }}

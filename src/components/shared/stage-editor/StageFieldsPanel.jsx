@@ -554,7 +554,6 @@ export function StageFieldsPanel({
       <div
         className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         style={{ background: "var(--overlay-scrim)", backdropFilter: "blur(3px)" }}
-        onClick={onClose}
       >
         <div
           className="w-full sm:max-w-4xl flex flex-col overflow-hidden"
