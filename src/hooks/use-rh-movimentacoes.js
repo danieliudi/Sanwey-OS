@@ -80,12 +80,19 @@ export function useRHMovimentacoes({ userId } = {}) {
     return updated;
   }, []);
 
+  const deleteMovimentacao = useCallback(async (id) => {
+    const { error } = await supabase.from("rh_movimentacoes").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    setMovimentacoes(prev => prev.filter(m => m.id !== id));
+  }, []);
+
   return useMemo(() => ({
     movimentacoes,
     loading,
     createMovimentacao,
     aprovar,
     recusar,
+    deleteMovimentacao,
     refetch: fetchAll,
-  }), [movimentacoes, loading, createMovimentacao, aprovar, recusar, fetchAll]);
+  }), [movimentacoes, loading, createMovimentacao, aprovar, recusar, deleteMovimentacao, fetchAll]);
 }

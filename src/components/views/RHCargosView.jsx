@@ -407,7 +407,7 @@ function MovimentacaoModal({ colaboradores, cargos, onCreate, onClose }) {
 
 // ── Card de movimentação ──────────────────────────────────────────────────────
 
-function MovimentacaoCard({ mov, colaborador, isDirector, onAprovar, onRecusar, busy }) {
+function MovimentacaoCard({ mov, colaborador, isDirector, onAprovar, onRecusar, onDelete, busy }) {
   const st = STATUS_INFO[mov.status] || STATUS_INFO.pendente;
   const StatusIcon = st.icon;
   const salChange = mov.salario_novo != null && mov.salario_novo !== mov.salario_anterior;
@@ -419,9 +419,16 @@ function MovimentacaoCard({ mov, colaborador, isDirector, onAprovar, onRecusar, 
           <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
           <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 1 }}>{tipoMovLabel(mov.tipo)} · {fmt(mov.created_at)}{mov.effective_date ? ` · vigência ${fmt(mov.effective_date)}` : ""}</div>
         </div>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 99, padding: "2px 10px" }}>
-          <StatusIcon size={11} /> {st.label}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, borderRadius: 99, padding: "2px 10px" }}>
+            <StatusIcon size={11} /> {st.label}
+          </span>
+          {onDelete && (
+            <button onClick={onDelete} title="Excluir movimentação" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: 4, display: "flex", borderRadius: 6 }}>
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 10 }}>
@@ -478,14 +485,17 @@ function MovimentacaoCard({ mov, colaborador, isDirector, onAprovar, onRecusar, 
 
 // ── Tabela de movimentações (histórico) ───────────────────────────────────────
 
-function MovimentacoesTableView({ movimentacoes, colaboradoresById }) {
+function MovimentacoesTableView({ movimentacoes, colaboradoresById, onDelete }) {
+  const headers = onDelete
+    ? ["Colaborador", "Tipo", "Cargo", "Departamento", "Salário", "Data", "Status", ""]
+    : ["Colaborador", "Tipo", "Cargo", "Departamento", "Salário", "Data", "Status"];
   return (
     <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
-            {["Colaborador", "Tipo", "Cargo", "Departamento", "Salário", "Data", "Status"].map((h) => (
-              <th key={h} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+            {headers.map((h, i) => (
+              <th key={h || `col-${i}`} className="text-left px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
                 {h}
               </th>
             ))}
@@ -493,7 +503,7 @@ function MovimentacoesTableView({ movimentacoes, colaboradoresById }) {
         </thead>
         <tbody>
           {movimentacoes.length === 0 && (
-            <tr><td colSpan={7} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma movimentação encontrada.</td></tr>
+            <tr><td colSpan={headers.length} className="text-center py-10 text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma movimentação encontrada.</td></tr>
           )}
           {movimentacoes.map((m) => {
             const colaborador = colaboradoresById.get(m.colaborador_id);
@@ -511,6 +521,13 @@ function MovimentacoesTableView({ movimentacoes, colaboradoresById }) {
                     {st.label}
                   </span>
                 </td>
+                {onDelete && (
+                  <td className="px-4 py-3">
+                    <button onClick={() => onDelete(m)} title="Excluir movimentação" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: 4, display: "flex", borderRadius: 6 }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}
@@ -555,7 +572,7 @@ function CargoCardMenu({ onEdit, onDelete }) {
 
 export function RHCargosView({ currentUser, canWrite, isDirector, users = [], notifyMentions, initialSelectedMovimentacaoId, onInitialMovimentacaoConsumed }) {
   const { cargos, loading: loadingCargos, createCargo, updateCargo, deleteCargo } = useRHCargoTemplates({ userId: currentUser?.id });
-  const { movimentacoes, loading: loadingMov, createMovimentacao, aprovar, recusar } = useRHMovimentacoes({ userId: currentUser?.id });
+  const { movimentacoes, loading: loadingMov, createMovimentacao, aprovar, recusar, deleteMovimentacao } = useRHMovimentacoes({ userId: currentUser?.id });
   const { colaboradores } = useRHColaboradores({ userId: currentUser?.id });
 
   const [tab, setTab] = useState("cargos"); // "cargos" | "movimentacoes"
@@ -653,6 +670,17 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
     setActionError(null);
     try { await deleteCargo(cargo.id); }
     catch (e) { setActionError(e?.message || "Erro ao excluir cargo."); }
+  };
+
+  const handleDeleteMovimentacao = async (mov) => {
+    const colaboradorNome = colaboradoresById.get(mov.colaborador_id)?.fullName || "colaborador";
+    const avisoAprovado = mov.status === "aprovado"
+      ? " Essa movimentação já foi aprovada e o cargo/salário já foi aplicado ao cadastro do colaborador — excluir aqui não desfaz essa aplicação."
+      : "";
+    if (!window.confirm(`Excluir esta movimentação de ${colaboradorNome}?${avisoAprovado}`)) return;
+    setActionError(null);
+    try { await deleteMovimentacao(mov.id); }
+    catch (e) { setActionError(e?.message || "Erro ao excluir movimentação."); }
   };
 
   if (!isSupabaseConfigured) {
@@ -813,7 +841,7 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
               </div>
               <div className="flex flex-col gap-2">
                 {pendentes.map((m) => (
-                  <MovimentacaoCard key={m.id} mov={m} colaborador={colaboradoresById.get(m.colaborador_id)} isDirector={isDirector} onAprovar={handleAprovar} onRecusar={handleRecusar} busy={busyId === m.id} />
+                  <MovimentacaoCard key={m.id} mov={m} colaborador={colaboradoresById.get(m.colaborador_id)} isDirector={isDirector} onAprovar={handleAprovar} onRecusar={handleRecusar} onDelete={canWrite ? () => handleDeleteMovimentacao(m) : undefined} busy={busyId === m.id} />
                 ))}
               </div>
             </div>
@@ -823,13 +851,13 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
               <TrendingUp size={12} style={{ display: "inline", marginRight: 4 }} /> Histórico
             </div>
             {movViewMode === "tabela" ? (
-              <MovimentacoesTableView movimentacoes={decididas} colaboradoresById={colaboradoresById} />
+              <MovimentacoesTableView movimentacoes={decididas} colaboradoresById={colaboradoresById} onDelete={canWrite ? handleDeleteMovimentacao : undefined} />
             ) : decididas.length === 0 ? (
               <div style={{ fontSize: 13, color: "var(--text-dim)", padding: "8px 0" }}>Nenhuma movimentação decidida ainda.</div>
             ) : (
               <div className="flex flex-col gap-2">
                 {decididas.map((m) => (
-                  <MovimentacaoCard key={m.id} mov={m} colaborador={colaboradoresById.get(m.colaborador_id)} isDirector={isDirector} onAprovar={handleAprovar} onRecusar={handleRecusar} busy={busyId === m.id} />
+                  <MovimentacaoCard key={m.id} mov={m} colaborador={colaboradoresById.get(m.colaborador_id)} isDirector={isDirector} onAprovar={handleAprovar} onRecusar={handleRecusar} onDelete={canWrite ? () => handleDeleteMovimentacao(m) : undefined} busy={busyId === m.id} />
                 ))}
               </div>
             )}
