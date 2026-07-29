@@ -35,6 +35,7 @@ Confirmado via grep de uso real no código (não é aspiracional):
 | Formatação/cálculo de data (`formatDateBR`, `daysSince`, `closeDateUrgencyStyle`) | `src/utils/date.js` | idem |
 | Debounce de refetch em `postgres_changes` | `src/utils/debounce.js` | todo hook que assina Realtime |
 | Editor de campos por etapa (CRM e RH, um único componente) | `src/components/shared/stage-editor/StageFieldsPanel.jsx` (+ `CRMStageFieldsPanel.jsx`/`RHStageFieldsPanel.jsx` e demais arquivos da pasta) | Pipeline e todos os boards de RH — `StageFieldEditorModal.jsx`/`RHStageFieldEditorModal.jsx` (duas versões separadas, citadas em versões antigas deste arquivo) já foram deletados |
+| Título editável do card (lápis sempre visível, não só no hover — funciona em touch) | `src/components/shared/EditableTitle.jsx` | Campanhas, Entregas, Tarefas, Compras (`CampaignDetailDrawer`/`DeliverableDetailDrawer`/`MarketingTaskDetailDrawer`/`PurchaseRequestDetailDrawer`) — padrão da plataforma pra título de card, decidido com o Daniel 29/07/2026. **Funil de Vendas fica de fora por ora**: em `LeadDetailDrawer.jsx` o "título" é o Cliente vinculado (dedup por CNPJ via `ClientSelector`/`ClientQuickCreateModal`), não um texto solto — aplicar `EditableTitle` ali direto ignoraria o dedup. Não aplicar sem decidir antes como isso se encaixa. |
 
 **Tokens de design (CSS custom properties, `src/index.css`)** — 74+ arquivos já
 usam `var(--accent)`; nunca hardcode hex novo pra estado que já tem token:
@@ -205,3 +206,14 @@ pergunta — não só pra itens já enfileirados explicitamente como "faça em
 paralelo". Só interromper de verdade quando a mensagem for uma correção de
 rumo do que já está em andamento (ex.: "não, faça diferente") ou pedir
 explicitamente pra parar.
+
+## 8. Conta de teste conhecida — não é incidente de segurança
+
+`teste@sanwey.com.br` é uma conta fake/mockup criada de propósito (sem caixa
+de entrada real por trás) — não é um usuário real esquecido nem uma conta
+comprometida. Se aparecer em log de autenticação (ex.: pedido de redefinição
+de senha, tentativa de login), **não é sinal de invasão** e não precisa virar
+investigação — mas também ainda não foi limpa do sistema, então fica
+documentado aqui até alguém decidir removê-la ou trocar por um endereço mais
+claramente fake (ex.: `naoresponder@sanwey.com.br`). Não construir automação
+nem depender dela existir.

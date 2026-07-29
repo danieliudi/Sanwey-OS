@@ -21,6 +21,7 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { EditableTitle } from "../shared/EditableTitle";
 import { RHStageHistoryPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { RecordAIPanel } from "../shared/RecordAIPanel";
@@ -1716,9 +1717,11 @@ export function CampaignDetailDrawer({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
-          {get("name")}
-        </h2>
+        <EditableTitle
+          value={get("name")}
+          canWrite={canWrite}
+          onSave={(v) => set("name", v)}
+        />
         {canWrite && (
           <button
             onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}

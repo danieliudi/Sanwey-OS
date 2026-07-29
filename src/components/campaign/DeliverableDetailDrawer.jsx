@@ -23,6 +23,7 @@ import { EditableProtocolNumber }     from "../shared/EditableProtocolNumber";
 import { StageNavigator }             from "../shared/StageNavigator";
 import { SplitPanelDrawer }           from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs }           from "../shared/DetailDrawerTabs";
+import { EditableTitle }              from "../shared/EditableTitle";
 import { RHStageHistoryPanel }        from "../rh-pipeline/RHDetailDrawerShell";
 
 /* ── Priority helpers ───────────────────────────────────────── */
@@ -740,9 +741,11 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
           </span>
         )}
       </div>
-      <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
-        {item.title}
-      </h2>
+      <EditableTitle
+        value={item.title}
+        canWrite={canWrite}
+        onSave={(v) => onUpdate(item.id, { title: v })}
+      />
     </div>
   );
 
