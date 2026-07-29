@@ -180,7 +180,11 @@ export function PurchaseRequestDetailDrawer({
   const [quotesError,  setQuotesError]  = useState(null);
   const [winnerSupplierId, setWinnerSupplierId] = useState("");
 
-  const [approveResponsible, setApproveResponsible] = useState(purchase.responsibleId || currentUser?.id || "");
+  // Vazio por padrão — quem aprova (frequentemente o admin/Daniel) não é
+  // necessariamente quem vai executar a compra; sem isso o dropdown já
+  // nascia preenchido com quem só estava revisando a solicitação (achado
+  // reportado em auditoria).
+  const [approveResponsible, setApproveResponsible] = useState(purchase.responsibleId || "");
   const [showReject,   setShowReject]   = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -212,7 +216,7 @@ export function PurchaseRequestDetailDrawer({
     setReceivedBy(purchase.receivedBy || "");
     setQuoteRows(normalizeQuoteRows(purchase.quoteOptions));
     setWinnerSupplierId("");
-    setApproveResponsible(purchase.responsibleId || currentUser?.id || "");
+    setApproveResponsible(purchase.responsibleId || "");
     totalOverriddenRef.current = false;
     setSaveStatus(null);
     setActionError(null);
