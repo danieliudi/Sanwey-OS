@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   X, Trash2,
   FileText, Activity, Paperclip, CheckSquare, History,
-  Sparkles,
+  Sparkles, Layers,
   Upload, File, FileImage, Download, Plus,
   Check, Loader2, AlertCircle, RefreshCw,
 } from "lucide-react";
@@ -35,6 +35,7 @@ const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mo
 
 /* ── Pill SideTabs ──────────────────────────────────────────── */
 const SIDE_TABS = [
+  { id: "fase",        label: "Fase atual",  icon: Layers },
   { id: "form",        label: "Form",        icon: FileText },
   { id: "atividades",  label: "Atividades",  icon: Activity },
   { id: "historico",   label: "Histórico",   icon: History },
@@ -369,7 +370,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
 
 /* ── Main component ─────────────────────────────────────────── */
 export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], canWrite, userId, currentUser, notifyMentions }) {
-  const [sideTab,      setSideTab]     = useState("form");
+  const [sideTab,      setSideTab]     = useState("fase");
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,    setMoveError]   = useState(null);
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -405,7 +406,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     setAssigneeDraft(null);
     setMoveError(null);
     setSaveStatus(null);
-    setSideTab("form");
+    setSideTab("fase");
     if (customDebounceRef.current) clearTimeout(customDebounceRef.current);
     if (assigneeDebounceRef.current) clearTimeout(assigneeDebounceRef.current);
     return () => {
@@ -579,54 +580,9 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
 
   // ── Center tab content ────────────────────────────────────────────────────
   function CenterTabContent() {
-    if (sideTab === "form") {
+    if (sideTab === "fase") {
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <SectionLabel>Formulário Inicial</SectionLabel>
-            {saveStatus && (
-              <span
-                style={{
-                  fontSize: 10, marginLeft: "auto",
-                  color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
-                  fontWeight: saveStatus === "error" ? 700 : 400,
-                }}
-              >
-                {saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "✗ Falha ao salvar — tente de novo" : "✓ Salvo"}
-              </span>
-            )}
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Nº da Solicitação</div>
-            <EditableProtocolNumber
-              value={item.requestNumber}
-              canWrite={canWrite}
-              onSave={(next) => onUpdate(item.id, { requestNumber: next })}
-            />
-          </div>
-          {[
-            { label: "Título",       val: item.title },
-            { label: "Solicitante",  val: item.requesterName },
-            { label: "Departamento", val: item.department },
-          ].map(({ label, val }) => val ? (
-            <div key={label} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
-              <ReadValue value={val} />
-            </div>
-          ) : null)}
-          {item.description && (
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Descrição</div>
-              <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{item.description}</div>
-            </div>
-          )}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prazo</div>
-            {item.deadline
-              ? <span style={{ fontSize: 13, fontWeight: 600, color: new Date(item.deadline) < new Date() ? "#DC2626" : "var(--text)" }}>{formatDateBR(item.deadline)}</span>
-              : <ReadValue value={null} />}
-          </div>
-
           <FieldRow label="Responsáveis">
             {canWrite ? (
               <AssigneeMultiSelect
@@ -664,10 +620,23 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
 
           {/* Campos configurados via "Editar campos desta etapa"
               (rh_pipeline_stage_fields) — única fonte do formulário por etapa. */}
-          <div style={{ marginTop: 8, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-            <SectionLabel>Campos desta etapa</SectionLabel>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <SectionLabel>Campos desta etapa</SectionLabel>
+              {saveStatus && (
+                <span
+                  style={{
+                    fontSize: 10, marginLeft: "auto",
+                    color: saveStatus === "saved" ? "#16A34A" : saveStatus === "error" ? "#DC2626" : "var(--text-dim)",
+                    fontWeight: saveStatus === "error" ? 700 : 400,
+                  }}
+                >
+                  {saveStatus === "saving" ? "Salvando…" : saveStatus === "error" ? "✗ Falha ao salvar — tente de novo" : "✓ Salvo"}
+                </span>
+              )}
+            </div>
             {visibleCustomDefs.length === 0
-              ? <div style={{ fontSize: 12, color: "var(--text-dim)" }}>Nenhum campo para esta fase.</div>
+              ? <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 8 }}>Nenhum campo para esta fase.</div>
               : visibleCustomDefs.map(f => (
                 <FieldRow key={f.id} label={f.label} required={f.effectiveRequired} hint={f.helpText}>
                   {canWrite ? (
@@ -684,6 +653,43 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
                 </FieldRow>
               ))
             }
+          </div>
+        </div>
+      );
+    }
+    if (sideTab === "form") {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <SectionLabel>Formulário Inicial</SectionLabel>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Nº da Solicitação</div>
+            <EditableProtocolNumber
+              value={item.requestNumber}
+              canWrite={canWrite}
+              onSave={(next) => onUpdate(item.id, { requestNumber: next })}
+            />
+          </div>
+          {[
+            { label: "Título",       val: item.title },
+            { label: "Solicitante",  val: item.requesterName },
+            { label: "Departamento", val: item.department },
+          ].map(({ label, val }) => val ? (
+            <div key={label} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
+              <ReadValue value={val} />
+            </div>
+          ) : null)}
+          {item.description && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Descrição</div>
+              <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{item.description}</div>
+            </div>
+          )}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>Prazo</div>
+            {item.deadline
+              ? <span style={{ fontSize: 13, fontWeight: 600, color: new Date(item.deadline) < new Date() ? "#DC2626" : "var(--text)" }}>{formatDateBR(item.deadline)}</span>
+              : <ReadValue value={null} />}
           </div>
         </div>
       );

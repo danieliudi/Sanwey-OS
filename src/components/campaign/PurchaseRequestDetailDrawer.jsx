@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  CheckCircle2, XCircle, Upload, FileText,
+  CheckCircle2, XCircle, Upload, FileText, Layers,
   TrendingUp, TrendingDown, AlertCircle, ExternalLink, Loader2,
   Activity, Paperclip, ListChecks, History, Sparkles,
 } from "lucide-react";
@@ -189,7 +189,7 @@ export function PurchaseRequestDetailDrawer({
   const [lastPrice,     setLastPrice]     = useState(null);
   const [lastPriceError, setLastPriceError] = useState(null);
 
-  const [centerTab, setCenterTab] = useState("form");
+  const [centerTab, setCenterTab] = useState("fase");
 
   useEffect(() => {
     setSupplierId(purchase.supplierId || "");
@@ -218,7 +218,7 @@ export function PurchaseRequestDetailDrawer({
     setActionError(null);
     setUploadError(null);
     setQuotesError(null);
-    setCenterTab("form");
+    setCenterTab("fase");
   }, [purchase.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Comparação "valor pago no ano passado" — assim que fornecedor + item
@@ -776,7 +776,7 @@ export function PurchaseRequestDetailDrawer({
     <>
       <DetailDrawerTabs
         tabs={[
-          { id: "form",       label: "Form",       icon: FileText },
+          { id: "fase",       label: "Fase atual", icon: Layers },
           { id: "atividades", label: "Atividades", icon: Activity },
           { id: "historico",  label: "Histórico",  icon: History },
           { id: "ia",         label: "IA",         icon: Sparkles },
@@ -786,7 +786,7 @@ export function PurchaseRequestDetailDrawer({
         activeId={centerTab}
         onChange={setCenterTab}
       />
-      {centerTab === "form" && formTabContent}
+      {centerTab === "fase" && formTabContent}
       {centerTab === "atividades" && <ActivityLog activities={purchase.activities || []} />}
       {centerTab === "historico" && (
         <RHStageHistoryPanel domain="marketing_purchase_requests" recordId={purchase.id} stages={PURCHASE_STAGES} currentUser={currentUser} users={users} />
