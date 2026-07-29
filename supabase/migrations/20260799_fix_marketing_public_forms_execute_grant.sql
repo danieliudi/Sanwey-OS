@@ -1,0 +1,31 @@
+-- Bug real: os formulários públicos "Solicitar ao Marketing"
+-- (marketing_requests) e "Solicitar Compra" (marketing_purchase_requests)
+-- estavam quebrados pra qualquer envio anônimo, sempre com "Não foi
+-- possível concluir por uma restrição de acesso" (reportado pelo Daniel).
+--
+-- Causa raiz: current_user_is_marketing() teve EXECUTE revogado de anon
+-- desde a criação (20260609_marketing_module.sql:32), decisão razoável
+-- naquele momento (nenhuma tabela pública usava a função ainda). Depois,
+-- 20260713_fix_marketing_requests_public_insert.sql e
+-- 20260714_marketing_purchase_requests.sql adicionaram policies FOR ALL
+-- (marketing_requests_write / marketing_purchase_requests_insert_internal)
+-- cujo WITH CHECK é só `current_user_is_marketing()`, sem nenhuma outra
+-- condição — postgres SEMPRE avalia essa policy pra qualquer INSERT na
+-- tabela (mesmo o anônimo, coberto por uma policy IRMÃ permissiva
+-- separada), e chamar uma função sem EXECUTE lança erro de permissão em
+-- vez de simplesmente reprovar aquela policy — isso aborta o INSERT
+-- inteiro, mesmo a outra policy pública sendo válida.
+--
+-- Confirmado ao vivo: `set role anon; insert into marketing_requests(...)`
+-- retornava "permission denied for function current_user_is_marketing"
+-- (42501), nunca chegando a avaliar o array de company_ids.
+--
+-- Fix mínimo: liberar EXECUTE pra anon. A função é só leitura (STABLE,
+-- SECURITY DEFINER) e resolve pra `false` quando não há auth.uid() (caso
+-- do anônimo) — não abre nenhum acesso de escrita novo, só permite que a
+-- expressão booleana seja avaliada sem estourar. Mesmo padrão já usado
+-- por current_user_is_rh()/current_user_is_comex()/
+-- current_user_is_rh_manager(), que já tinham EXECUTE liberado pra anon
+-- por motivo análogo (candidatura pública, etc.).
+
+GRANT EXECUTE ON FUNCTION public.current_user_is_marketing() TO anon;
