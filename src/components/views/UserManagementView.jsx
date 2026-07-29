@@ -435,8 +435,10 @@ export function UserManagementView({
         >
           <Info size={14} className="shrink-0 mt-0.5" />
           <div>
-            <strong>Como funciona o convite:</strong> ao convidar, você define cargo e empresas. Peça para a pessoa
-            acessar a tela de login e clicar em <em>"Criar conta"</em> com o mesmo e-mail.
+            <strong>Como funciona o convite:</strong> ao convidar, você já define cargo e empresas. A pessoa só
+            precisa clicar no link do e-mail — ela entra direto, sem precisar criar conta. Se o link expirar ou
+            ela disser que o e-mail já está cadastrado, oriente a usar <em>"Esqueci minha senha"</em> na tela de
+            login.
           </div>
         </div>
       )}
@@ -540,7 +542,7 @@ export function UserManagementView({
               <Card
                 key={u.id}
                 density={density}
-                interactive={editable}
+                interactive={editable || deletable}
                 onClick={editable ? () => startEdit(u) : undefined}
                 icon={
                   u.avatarUrl
