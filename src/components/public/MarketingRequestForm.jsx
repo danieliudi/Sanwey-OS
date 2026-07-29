@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
 import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS } from "../../constants/companies";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import {
   DELIVERABLE_DEPARTMENTS,
   DELIVERABLE_PRIORITIES,
@@ -81,6 +82,8 @@ export default function MarketingRequestForm() {
     priority:       "media",
     deadline:       "",
     companyIds:     [],
+    budget:         "",
+    approverName:   "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [done,       setDone]       = useState(false);
@@ -143,6 +146,8 @@ export default function MarketingRequestForm() {
         priority:        form.priority,
         deadline:        form.deadline || null,
         company_ids:     form.companyIds.length > 0 ? form.companyIds : MARKETING_UNIT_IDS,
+        budget:          form.budget === "" ? null : form.budget,
+        approver_name:   form.approverName.trim() || null,
         status:          "pendente",
       });
       if (err) throw err;
@@ -302,6 +307,25 @@ export default function MarketingRequestForm() {
                 value={form.deadline}
                 onChange={e => set("deadline", e.target.value)}
                 style={{ ...input, cursor: "pointer" }}
+              />
+            </Field>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <Field label="Orçamento (se aplicável)">
+              <CurrencyInput
+                value={form.budget}
+                onChange={v => set("budget", v)}
+                style={input}
+              />
+            </Field>
+            <Field label="Aprovação necessária de quem?" hint="Nome/cargo do aprovador interno">
+              <input
+                type="text"
+                value={form.approverName}
+                onChange={e => set("approverName", e.target.value)}
+                placeholder="Ex: Maria Silva, Gerente Financeiro"
+                style={input}
               />
             </Field>
           </div>

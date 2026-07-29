@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Inbox, CheckCircle2, XCircle, Clock, Filter, Plus, ChevronDown,
   CalendarDays, Building2, Tag, AlertCircle, ExternalLink,
-  RefreshCw,
+  RefreshCw, Wallet, UserCheck,
 } from "lucide-react";
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -10,6 +10,7 @@ import { marketingUnitLabel } from "../../constants/companies";
 import { EditableProtocolNumber } from "../shared/EditableProtocolNumber";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
+import { formatBRL } from "../../utils/currency";
 import { EmptyState } from "../ui/EmptyState";
 import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
 import { PageHeader } from "../shared/PageHeader";
@@ -256,6 +257,18 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
               <span className="flex items-center gap-1">
                 <Building2 size={10} />
                 {request.companyIds.map(id => marketingUnitLabel(id)).join(", ")}
+              </span>
+            )}
+            {request.budget != null && (
+              <span className="flex items-center gap-1">
+                <Wallet size={10} />
+                {formatBRL(request.budget)}
+              </span>
+            )}
+            {request.approverName && (
+              <span className="flex items-center gap-1">
+                <UserCheck size={10} />
+                Aprovador: {request.approverName}
               </span>
             )}
           </div>
