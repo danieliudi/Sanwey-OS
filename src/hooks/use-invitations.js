@@ -109,14 +109,33 @@ export function useInvitations({ enabled = true } = {}) {
 
   const revokeInvitation = useCallback(async (id) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado.");
+    const target = invitations.find(i => i.id === id);
     setInvitations(prev => prev.filter(i => i.id !== id));
+
+    // O convite cria a conta de verdade em auth.users/profiles no ENVIO
+    // (resend-invite → auth.admin.inviteUserByEmail), não na aceitação —
+    // revogar só a linha de invitations deixava esse "fantasma" pra trás,
+    // e como o badge "Convite pendente" na lista geral só existe enquanto
+    // a linha de invitations existe, a pessoa reaparecia ali como usuário
+    // ativo comum assim que o convite era revogado — nunca dava pra
+    // removê-la de vez por essa tela (causa real do "não consigo deletar
+    // usuários", achado só depois do fix de exclusão em 922541f).
+    if (target?.email) {
+      const { data: ghost } = await supabase
+        .from("profiles").select("id").ilike("email", target.email).maybeSingle();
+      if (ghost?.id) {
+        const { error: ghostErr } = await supabase.functions.invoke("delete-user", { body: { user_id: ghost.id } });
+        if (ghostErr) console.warn("Falha ao remover conta do convite revogado:", ghostErr);
+      }
+    }
+
     const { error: err } = await supabase.from("invitations").delete().eq("id", id);
     if (err) {
       setError(err);
       fetchAll();
       throw err;
     }
-  }, [fetchAll]);
+  }, [invitations, fetchAll]);
 
   const resendInvitation = useCallback(async (id) => {
     if (!isSupabaseConfigured) throw new Error("Supabase não configurado.");

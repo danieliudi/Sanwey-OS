@@ -231,6 +231,23 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     }
   }, []);
 
+  // Avisa por e-mail o fornecedor vinculado à Campanha quando uma Entrega
+  // nova é criada — via edge function, nunca lança: falha de e-mail não
+  // pode desfazer uma criação já gravada. Mesmo padrão de sendCompleteEmail
+  // acima (a edge function decide sozinha se há fornecedor pra quem
+  // avisar; sem um vinculado, ela só responde sent:0, sem erro).
+  const sendSupplierNotifyEmail = useCallback(async (id) => {
+    try {
+      const { data, error: err } = await supabase.functions.invoke("send-deliverable-supplier-notify", {
+        body: { deliverable_id: id },
+      });
+      const emailError = err ? (err.message || String(err)) : (data?.error || null);
+      return { ok: !emailError, error: emailError };
+    } catch (e) {
+      return { ok: false, error: e?.message || String(e) };
+    }
+  }, []);
+
   const toggleStar = useCallback(async (id) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const current = deliverables.find(d => d.id === id);
@@ -252,6 +269,7 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     duplicateDeliverable,
     changeStage,
     sendCompleteEmail,
+    sendSupplierNotifyEmail,
     toggleStar,
     refetch: fetchAll,
   };
