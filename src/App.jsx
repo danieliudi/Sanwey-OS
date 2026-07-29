@@ -224,8 +224,9 @@ export default function App() {
   // A única exceção pedida é interação mais rica no Painel Executivo.
   const isDiretoria        = hasAnyRole(["diretoria"]);
   // Painel Executivo deixou de ser exclusivo do gerente Comercial: cada
-  // gerente de departamento acessa pra ver (só) o card do próprio setor.
-  const canSeeExecutive    = isManagerRole || isMarketingManager || isRHManager || isDiretoria;
+  // gerente de departamento acessa pra ver (só) a área do próprio setor —
+  // Comex incluído desde que a aba própria existe (regra 8 do CLAUDE.md).
+  const canSeeExecutive    = isManagerRole || isMarketingManager || isRHManager || isComex || isDiretoria;
   const isAdmin            = hasAnyRole(["admin"]);
   // isInsightsUser: quem o Painel de Insights (src/hooks/use-insights-metrics.js)
   // de fato consegue ler quase todos os dados — o hook cruza
@@ -1735,7 +1736,7 @@ export default function App() {
           } />
           <Route path={ROUTES.executive} element={
             canSeeExecutive
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager || isDiretoria} isRHManager={isRHManager || isDiretoria} isComercialManager={isManager || isDiretoria} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager || isDiretoria} isRHManager={isRHManager || isDiretoria} isComercialManager={isManager || isDiretoria} isComexManager={isComex || isDiretoria} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.insights} element={
@@ -1803,6 +1804,7 @@ export default function App() {
               isManager={isManager}
               isMarketingManager={isMarketingManager}
               isRHManager={isRHManager}
+              isComexManager={isComex || isDiretoria}
               isAdmin={isAdmin}
               usersPanel={isManager ? (
                 <UserManagementView

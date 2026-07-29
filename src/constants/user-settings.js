@@ -8,13 +8,18 @@ import { DEFAULT_PIPELINE_STAGES } from "./pipelines";
 // próprio Painel Executivo — cada gerente de departamento só mexe (e só vê)
 // nos do seu setor; admin acumula todos os depts e por isso vê tudo.
 export const EXECUTIVE_WIDGETS = [
-  { id: "outras_marketing",  label: "Cartão Marketing",   dept: "marketing" },
-  { id: "outras_rh",         label: "Cartão RH",          dept: "rh" },
+  // ids mantidos (outras_marketing/outras_rh) mesmo com o label atualizado —
+  // são os mesmos toggles de sempre, só que hoje controlam uma aba própria
+  // em vez de um cartão-resumo (regra 8 do CLAUDE.md, 29/07/2026).
+  { id: "outras_marketing",  label: "Aba Marketing",      dept: "marketing" },
+  { id: "outras_rh",         label: "Aba RH",             dept: "rh" },
   { id: "comercial_kpis",    label: "KPIs de Comercial",  dept: "comercial" },
   { id: "tab_charts",        label: "Aba Gráficos",       dept: "comercial" },
   { id: "tab_analytics",     label: "Aba Análise",        dept: "comercial" },
   { id: "tab_ia",            label: "Aba IA",             dept: "comercial" },
   { id: "tab_historico",     label: "Aba Histórico",      dept: "comercial" },
+  { id: "tab_comex",         label: "Aba Comex",          dept: "comex" },
+  { id: "tab_posvenda",      label: "Aba Pós-venda",      dept: "comercial" },
 ];
 
 export const NOTIFICATION_GROUPS = [
