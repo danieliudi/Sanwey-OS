@@ -369,7 +369,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
 }
 
 /* ── Main component ─────────────────────────────────────────── */
-export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], canWrite, userId, currentUser, notifyMentions }) {
+export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate, onMoveToStage, onDelete, onResendCompleteEmail, campaigns = [], users = [], stages = DELIVERABLE_STAGES, canWrite, userId, currentUser, notifyMentions }) {
   const [sideTab,      setSideTab]     = useState("fase");
   const [saveStatus,   setSaveStatus]  = useState(null); // 'saving' | 'saved' | 'error' | null
   const [moveError,    setMoveError]   = useState(null);
@@ -529,7 +529,11 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
   }, [item, onUpdate, currentUser, notifyMentions]);
 
-  const stageInfo  = DELIVERABLE_STAGES.find(s => s.id === item.stage);
+  // `stages` vem do board (rh_pipeline_stages dinâmico) — DELIVERABLE_STAGES
+  // é só o fallback legado e não inclui etapas custom criadas depois (ex.:
+  // "Encaminhado à Agência"), o que fazia "Etapa" renderizar "—" pra
+  // qualquer usuário quando o card estava numa etapa fora da lista fixa.
+  const stageInfo  = stages.find(s => s.id === item.stage);
 
   const priorityColor = PRIORITY_COLORS[item.priority] || NEUTRAL.slate;
   const priorityLabel = PRIORITY_LABELS[item.priority] || item.priority;
@@ -547,7 +551,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
       onStageMoved?.(item.id);
       return;
     }
-    const stageName = DELIVERABLE_STAGES.find(s => s.id === stageId)?.name || stageId;
+    const stageName = stages.find(s => s.id === stageId)?.name || stageId;
     try {
       await onUpdate(item.id, {
         stage:          stageId,
@@ -696,7 +700,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     }
     if (sideTab === "atividades")  return <AtividadesTab activities={item.activities} />;
     if (sideTab === "historico")   return (
-      <RHStageHistoryPanel domain="marketing_deliverables" recordId={item.id} stages={DELIVERABLE_STAGES} currentUser={currentUser} users={users} />
+      <RHStageHistoryPanel domain="marketing_deliverables" recordId={item.id} stages={stages} currentUser={currentUser} users={users} />
     );
     if (sideTab === "ia")          return (
       <DeliverableAIPanel
@@ -803,7 +807,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
         )}
         {canWrite && (
           <StageNavigator
-            targets={DELIVERABLE_STAGES.filter(s => s.id !== item.stage)}
+            targets={stages.filter(s => s.id !== item.stage)}
             onMove={handleMoveStage}
             getKey={(s) => s.id}
           />
