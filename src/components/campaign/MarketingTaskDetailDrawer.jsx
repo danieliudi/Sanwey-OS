@@ -463,9 +463,16 @@ export function MarketingTaskDetailDrawer({
               title: item.title,
               domainLabel: "Tarefas de Marketing",
               stageName: stageInfo?.name || item.stage,
+              slaDays: stageInfo?.sla,
               daysInStage: item.stageChangedAt
                 ? Math.floor((Date.now() - new Date(item.stageChangedAt)) / 86400000)
                 : 0,
+              customFields: visibleCustomDefs
+                .map(f => ({ label: f.label, value: formatCustomFieldValue(getCustomValue(f.fieldKey)) }))
+                .filter(f => f.value !== null),
+              recentComments: (item.notes || [])
+                .filter(n => !n.deletedAt && n.text)
+                .map(n => n.text),
             }),
           }]}
           defaultFeatureId="summary"

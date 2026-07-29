@@ -48,7 +48,10 @@ function ObjectionInput({ value, onChange }) {
   );
 }
 
-export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpdate, onAddActivity }) {
+export function LeadAIPanel({
+  lead, currentUser, activities, linkedEmails, onUpdate, onAddActivity,
+  stageName, slaDays, stageFieldValues = [],
+}) {
   const daysInStage = lead.stageChangedAt
     ? Math.floor((Date.now() - new Date(lead.stageChangedAt)) / 86400000)
     : 0;
@@ -62,8 +65,13 @@ export function LeadAIPanel({ lead, currentUser, activities, linkedEmails, onUpd
       buildMessages: () => genericCardSummaryPrompt({
         title: lead.company,
         domainLabel: "Funil de Vendas",
-        stageName: lead.stage,
+        // Nome legível da etapa, não a chave crua ("Negociação", não
+        // "negociacao") — e o SLA, que é o que destrava o bloco "Risco ou
+        // bloqueio" do prompt genérico.
+        stageName: stageName || lead.stage,
+        slaDays,
         daysInStage,
+        customFields: stageFieldValues,
         recentComments,
       }),
     },

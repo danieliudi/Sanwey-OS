@@ -63,7 +63,7 @@ const SIDE_TABS = [
 
 // ── AI panel ──────────────────────────────────────────────────────────────────
 
-function CampaignAIPanel({ campaign, currentUser }) {
+function CampaignAIPanel({ campaign, currentUser, stage, stageFields = [], recentComments = [] }) {
   const daysInStage = campaign.stageChangedAt
     ? Math.floor((Date.now() - new Date(campaign.stageChangedAt)) / 86400000)
     : 0;
@@ -75,8 +75,11 @@ function CampaignAIPanel({ campaign, currentUser }) {
       buildMessages: () => genericCardSummaryPrompt({
         title: campaign.name,
         domainLabel: "Campanhas",
-        stageName: campaign.stage,
+        stageName: stage?.name || campaign.stage,
+        slaDays: stage?.sla,
         daysInStage,
+        customFields: stageFields,
+        recentComments,
       }),
     },
     {
@@ -1329,6 +1332,13 @@ export function CampaignDetailDrawer({
   const customDefs = stageFieldsHook.getFields(get("stage"));
   const visibleCustomDefs = resolveVisibleFields(customDefs, get("customFields") || {});
 
+  const aiStageFields = visibleCustomDefs
+    .map(f => ({ label: f.label, value: formatCustomFieldValue(getCf(f.fieldKey)) }))
+    .filter(f => f.value !== null);
+  const aiRecentComments = (campaign?.notes || [])
+    .filter(n => !n.deletedAt && n.text)
+    .map(n => n.text);
+
   // Quem pode ser @mencionado nos comentários desta campanha — mesmo padrão
   // usado no LeadDetailDrawer, mas com escopo "marketing" e incluindo a
   // agência (que já tem acesso de leitura a campanhas/entregas).
@@ -1643,6 +1653,9 @@ export function CampaignDetailDrawer({
         <CampaignAIPanel
           campaign={{ ...campaign, ...draft }}
           currentUser={currentUser}
+          stage={stage}
+          stageFields={aiStageFields}
+          recentComments={aiRecentComments}
         />
       );
     }

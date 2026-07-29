@@ -762,7 +762,7 @@ function ComexCalendarView({ operations, stages, onSelect }) {
 
 function ComexDrawer({
   op, canWrite, stages, users, currentUser,
-  stageFieldsHook, onUpdateOperation, onMoveToStage, onAddActivity, onUpdateActivity,
+  stageFieldsHook, fieldsDomain, onUpdateOperation, onMoveToStage, onAddActivity, onUpdateActivity,
   onClose, onMoved, busy, notifyMentions, onDelete, onEditFields,
   renderLeftFields, renderFormExtra, moduleKey, entityLabel,
 }) {
@@ -863,6 +863,7 @@ function ComexDrawer({
       record={op}
       recordTitle={op.title}
       domainLabel="Comex"
+      fieldsDomain={fieldsDomain}
     />
   );
 
@@ -1331,6 +1332,7 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
           users={users}
           currentUser={currentUser}
           stageFieldsHook={stageFieldsHook}
+          fieldsDomain={config.domain}
           onUpdateOperation={(patch) => updateOperation(drawerOp.id, patch).catch((e) => setBoardError(e?.message || "Erro ao salvar."))}
           onMoveToStage={handleMoveToStageGeneric}
           onAddActivity={(entry) => handleAddActivity(drawerOp.id, entry)}

@@ -1,7 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Plus, X, AlertCircle, ExternalLink, Trash2, Settings, LayoutGrid, TrendingUp, List, CalendarDays, ChevronLeft, ChevronRight, FileText, Sparkles } from "lucide-react";
-import { RecordAIPanel } from "../shared/RecordAIPanel";
-import { genericCardSummaryPrompt } from "../../constants/ai-prompts";
+import { Plus, X, AlertCircle, ExternalLink, Settings, LayoutGrid, TrendingUp, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -20,6 +18,9 @@ import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { StageFieldInput } from "../shared/StageFieldInput";
+import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
+import { getMentionableUsers } from "../../utils/mentionable-users";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { usePosvenda } from "../../hooks/use-posvenda";
@@ -213,24 +214,16 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
   );
 }
 
-// ── Detalhe do caso (modal leve — nada comparável ao drawer de 3 painéis de
-// Venda/RH ainda, "começa simples" por pedido explícito do usuário) ─────────
+// ── Detalhe do caso (drawer de 3 painéis — mesmo shell de Venda/RH/Comex) ───
 
-const POSVENDA_TABS = [
-  { id: "form", label: "Form", icon: FileText },
-  { id: "ia",   label: "IA",   icon: Sparkles },
-];
-
-function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, users, currentUser, onClose, onMove, onDelete, onOpenLead, onUpdateCustomFields }) {
+function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, users, currentUser, onClose, onMove, onDelete, onOpenLead, onUpdateCustomFields, onAddActivity, onUpdateActivity }) {
   const st = stages.find(s => s.stageKey === kase.stage) || { name: "—", color: "#8A8680" };
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [attemptedMove, setAttemptedMove] = useState(false);
-  const [tab, setTab] = useState("form");
+  const [moveError, setMoveError] = useState(null);
 
   const stageFields = useRHStageFields("posvenda");
   const customDefs = stageFields.getFields(kase.stage);
   const [customDraft, setCustomDraft] = useState({});
-  React.useEffect(() => { setCustomDraft({}); setAttemptedMove(false); setTab("form"); }, [kase.id]);
+  React.useEffect(() => { setCustomDraft({}); setMoveError(null); }, [kase.id]);
 
   const getCustomValue = (fieldKey) =>
     fieldKey in customDraft ? customDraft[fieldKey] : (kase.customFields?.[fieldKey] ?? "");
@@ -242,153 +235,144 @@ function PosVendaDetailModal({ kase, stages, owners, sourceLead, canWrite, users
 
   const customValuesByKey = { ...(kase.customFields || {}), ...customDraft };
   const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
+  const days = daysInStage(kase.stageChangedAt);
+
+  const header = (
+    <div className="min-w-0">
+      <div className="font-bold text-base truncate" style={{ color: "var(--text)" }}>{kase.clientName}</div>
+      <span
+        className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+        style={{ background: `${st.color}18`, color: st.color, border: `1px solid ${st.color}40` }}
+      >
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color }} />
+        {st.name}
+      </span>
+    </div>
+  );
+
+  const left = (
+    <>
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Valor</div>
+        <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{formatK(kase.value)}</div>
+      </div>
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Responsáveis</div>
+        {owners.length > 0 ? <AvatarStack users={owners} size={22} max={4} /> : <span className="text-sm" style={{ color: "var(--text-dim)" }}>—</span>}
+      </div>
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Empresa</div>
+        <div className="text-sm" style={{ color: "var(--text)" }}>{COMPANIES[kase.companyId]?.short || kase.companyId || "—"}</div>
+      </div>
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Nesta etapa há</div>
+        <div className="text-sm" style={{ color: "var(--text)" }}>
+          {kase.stageChangedAt ? `${days} dia${days !== 1 ? "s" : ""}` : "—"}
+        </div>
+      </div>
+      {sourceLead && (
+        <button
+          onClick={() => { onOpenLead?.(sourceLead); onClose(); }}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"
+          style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}
+        >
+          <ExternalLink size={13} />
+          Ver negócio de origem em Venda
+        </button>
+      )}
+    </>
+  );
+
+  const formContent = (
+    <div className="space-y-3">
+      {visibleCustomDefs.length > 0 ? (
+        <>
+          <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>Campos desta etapa</div>
+          {visibleCustomDefs.map(f => (
+            <div key={f.id}>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
+                {f.effectiveRequired && <span style={{ color: "var(--danger)" }}>* </span>}
+                {f.label}
+              </label>
+              <StageFieldInput
+                field={f}
+                value={getCustomValue(f.fieldKey)}
+                onChange={val => canWrite && handleCustomChange(f.fieldKey, val)}
+                users={users}
+                touched={Boolean(moveError)}
+              />
+            </div>
+          ))}
+        </>
+      ) : (
+        <div className="text-xs italic" style={{ color: "var(--text-dim)" }}>
+          Nenhum campo configurado para esta etapa ainda.
+        </div>
+      )}
+    </div>
+  );
+
+  const center = (
+    <RHDetailDrawerShell
+      domain="posvenda"
+      recordId={kase.id}
+      activities={kase.notes || []}
+      onAddActivity={canWrite ? onAddActivity : undefined}
+      currentUser={currentUser}
+      users={users}
+      stages={stages}
+      formContent={formContent}
+      record={kase}
+      recordTitle={kase.clientName}
+      domainLabel="Pós-venda"
+    />
+  );
+
+  const right = (
+    <>
+      {canWrite && moveError && (
+        <div className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+          <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+          {moveError}
+        </div>
+      )}
+
+      {canWrite && (
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)" }}>Mover para</div>
+          <StageNavigator
+            targets={stages.filter(s => s.stageKey !== kase.stage)}
+            onMove={async (stageKey) => {
+              const ok = await onMove(stageKey, setMoveError);
+              if (ok === false) return;
+              onClose();
+            }}
+          />
+        </div>
+      )}
+
+      <RHDetailComments
+        activities={kase.notes || []}
+        onAddActivity={canWrite ? onAddActivity : undefined}
+        onUpdateActivity={canWrite ? onUpdateActivity : undefined}
+        currentUser={currentUser}
+        users={users}
+        mentionableUsers={getMentionableUsers(users, { domain: "crm", companyId: kase.companyId })}
+        mentionContextLabel={kase.clientName}
+      />
+    </>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay-scrim)" }} onClick={onClose}>
-      <div
-        className="rounded-2xl w-full max-w-md flex flex-col"
-        style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)", maxHeight: "88vh" }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="px-5 py-4 border-b flex items-start justify-between gap-3" style={{ borderColor: "var(--border)" }}>
-          <div className="min-w-0">
-            <div className="font-bold text-base truncate" style={{ color: "var(--text)" }}>{kase.clientName}</div>
-            <span
-              className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold"
-              style={{ background: `${st.color}18`, color: st.color, border: `1px solid ${st.color}40` }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color }} />
-              {st.name}
-            </span>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg cursor-pointer flex-shrink-0" style={{ color: "var(--text-dim)", background: "none", border: "none" }}>
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="px-5 pt-3">
-          <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }} role="tablist">
-            {POSVENDA_TABS.map(t => {
-              const Icon = t.icon;
-              const active = tab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold cursor-pointer"
-                  style={{ background: active ? "var(--surface)" : "transparent", color: active ? "var(--text)" : "var(--text-dim)", border: "none" }}
-                >
-                  <Icon size={12} />{t.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="px-5 py-4 space-y-4 overflow-y-auto">
-          {tab === "form" && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Valor</div>
-                  <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{formatK(kase.value)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "var(--text-dim)" }}>Responsáveis</div>
-                  {owners.length > 0 ? <AvatarStack users={owners} size={22} max={4} /> : <span className="text-sm" style={{ color: "var(--text-dim)" }}>—</span>}
-                </div>
-              </div>
-
-              {sourceLead && (
-                <button
-                  onClick={() => { onOpenLead?.(sourceLead); onClose(); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer"
-                  style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}
-                >
-                  <ExternalLink size={13} />
-                  Ver negócio de origem em Venda
-                </button>
-              )}
-
-              {visibleCustomDefs.length > 0 && (
-                <div className="pt-3 border-t space-y-3" style={{ borderColor: "var(--border)" }}>
-                  <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>Campos desta etapa</div>
-                  {visibleCustomDefs.map(f => (
-                    <div key={f.id}>
-                      <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text)" }}>
-                        {f.effectiveRequired && <span style={{ color: "var(--danger)" }}>* </span>}
-                        {f.label}
-                      </label>
-                      <StageFieldInput
-                        field={f}
-                        value={getCustomValue(f.fieldKey)}
-                        onChange={val => canWrite && handleCustomChange(f.fieldKey, val)}
-                        users={users}
-                        touched={attemptedMove}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {canWrite && (
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: "var(--text-dim)" }}>Mover para</div>
-                  <StageNavigator
-                    targets={stages.filter(s => s.stageKey !== kase.stage)}
-                    onMove={async (stageKey) => {
-                      const ok = await onMove(stageKey);
-                      if (ok === false) { setAttemptedMove(true); return; }
-                      onClose();
-                    }}
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-          {tab === "ia" && (
-            <RecordAIPanel
-              currentUser={currentUser}
-              features={[{
-                id: "summary",
-                label: "Resumo & Próximo passo",
-                buildMessages: () => genericCardSummaryPrompt({
-                  title: kase.clientName,
-                  domainLabel: "Pós-venda",
-                  stageName: st.name,
-                  slaDays: st.slaDays,
-                  daysInStage: daysInStage(kase.stageChangedAt),
-                  customFields: visibleCustomDefs.map(f => ({ label: f.label, value: getCustomValue(f.fieldKey) })),
-                }),
-              }]}
-              defaultFeatureId="summary"
-            />
-          )}
-        </div>
-
-        {canWrite && (
-          <div className="px-5 py-3 border-t" style={{ borderColor: "var(--border)" }}>
-            {confirmingDelete ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs flex-1" style={{ color: "var(--text)" }}>Excluir este caso? Não pode ser desfeito.</span>
-                <button onClick={() => { onDelete(); onClose(); }} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "#B91C1C", color: "#FFFFFF", border: "none" }}>Excluir</button>
-                <button onClick={() => setConfirmingDelete(false)} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)" }}>Cancelar</button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmingDelete(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
-                style={{ color: "#B91C1C", background: "none", border: "none" }}
-              >
-                <Trash2 size={13} />
-                Excluir caso
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    <SplitPanelDrawer
+      onClose={onClose}
+      header={header}
+      left={left}
+      center={center}
+      right={right}
+      onDelete={canWrite && onDelete ? onDelete : undefined}
+      deleteLabel="Excluir caso"
+    />
   );
 }
 
@@ -763,7 +747,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   const [addingStage, setAddingStage] = useState(false);
   const [draggedColumnKey, setDraggedColumnKey] = useState(null);
   const [editingFieldsStage, setEditingFieldsStage] = useState(null); // { stageKey, name }
-  const [selectedCase, setSelectedCase] = useState(null);
+  const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
 
   const trailingRef = useRef(null);
@@ -778,28 +762,32 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   // bloqueia sair da etapa atual com campo obrigatório (estático ou
   // condicional) vazio, ou com valor em formato inválido, antes de gravar a
   // transição.
-  const attemptStageChange = useCallback(async (id, stageKey) => {
+  // onBlocked: quando o chamador já mostra o erro por conta própria (drawer,
+  // que exibe inline na coluna direita), o toast global não dispara junto.
+  const attemptStageChange = useCallback(async (id, stageKey, onBlocked) => {
+    const reportBlock = (msg) => { if (onBlocked) onBlocked(msg); else setStageError(msg); };
     const kase = cases.find(c => c.id === id);
     if (kase) {
       const fields = stageFields.getFields(kase.stage);
       const customValues = kase.customFields || {};
       const missing = getMissingRequiredFields(fields, customValues);
       if (missing.length > 0) {
-        setStageError(`Não dá pra mover "${kase.clientName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
+        reportBlock(`Não dá pra mover "${kase.clientName}": preencha antes — ${missing.map(f => f.label).join(", ")}.`);
         return false;
       }
       const invalid = getInvalidFields(fields, customValues);
       if (invalid.length > 0) {
-        setStageError(`Não dá pra mover "${kase.clientName}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
+        reportBlock(`Não dá pra mover "${kase.clientName}": corrija antes — ${invalid.map(f => `${f.label} (${f.validationError})`).join(", ")}.`);
         return false;
       }
     }
     try {
       await changeStage(id, stageKey);
       setStageError(null);
+      if (onBlocked) onBlocked(null);
       return true;
     } catch (e) {
-      setStageError(e?.message || "Não foi possível mover o caso.");
+      reportBlock(e?.message || "Não foi possível mover o caso.");
       return false;
     }
   }, [cases, stageFields, changeStage]);
@@ -830,6 +818,23 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
   }, [draggedColumnKey, stages, reorderStages]);
 
   const resolveOwners = useCallback((ownerIds) => (ownerIds || []).map(id => usersById.get(id)).filter(Boolean), [usersById]);
+
+  // Lido sempre da lista (não de um snapshot em estado) pra que comentário
+  // novo e mudança de etapa apareçam no drawer sem precisar reabrir.
+  const selectedCase = selectedCaseId ? cases.find(c => c.id === selectedCaseId) : null;
+
+  const handleAddActivity = useCallback(async (entry) => {
+    const current = cases.find(c => c.id === selectedCaseId);
+    if (!current) return;
+    await updateCase(current.id, { notes: [...(current.notes || []), entry] });
+  }, [cases, selectedCaseId, updateCase]);
+
+  const handleUpdateActivity = useCallback(async (activityId, patch) => {
+    const current = cases.find(c => c.id === selectedCaseId);
+    if (!current) return;
+    const next = (current.notes || []).map(a => (a.id === activityId ? { ...a, ...patch } : a));
+    await updateCase(current.id, { notes: next });
+  }, [cases, selectedCaseId, updateCase]);
 
   const firstNonTerminalStage = stages.find(s => !s.terminal);
 
@@ -913,7 +918,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
             cases={scopedCases}
             stages={stages}
             usersById={usersById}
-            onRowClick={setSelectedCase}
+            onRowClick={kase => setSelectedCaseId(kase.id)}
           />
         )}
 
@@ -921,7 +926,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           <PosVendaCalendarView
             cases={scopedCases}
             stages={stages}
-            onSelect={setSelectedCase}
+            onSelect={kase => setSelectedCaseId(kase.id)}
           />
         )}
 
@@ -949,7 +954,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
               id={kase.id}
               stage={kase.stage}
               stages={stages}
-              onClick={() => setSelectedCase(kase)}
+              onClick={() => setSelectedCaseId(kase.id)}
               onMoveToStage={canWrite ? attemptStageChange : undefined}
               onDeleteCard={canWrite ? deleteCase : undefined}
               deleteLabel="Excluir caso"
@@ -1060,7 +1065,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                             id={kase.id}
                             stage={kase.stage}
                             stages={stages}
-                            onClick={() => setSelectedCase(kase)}
+                            onClick={() => setSelectedCaseId(kase.id)}
                             onDragStart={canWrite ? handleDragStart : undefined}
                             onDragEnd={canWrite ? handleDragEnd : undefined}
                             onDeleteCard={canWrite ? deleteCase : undefined}
@@ -1123,7 +1128,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
       />
 
       {selectedCase && (
-        <PosVendaDetailModal
+        <PosVendaDetailDrawer
           kase={selectedCase}
           stages={stages}
           owners={resolveOwners(selectedCase.ownerIds)}
@@ -1131,10 +1136,12 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
           canWrite={canWrite}
           users={users}
           currentUser={user}
-          onClose={() => setSelectedCase(null)}
-          onMove={(stageKey) => attemptStageChange(selectedCase.id, stageKey)}
+          onClose={() => setSelectedCaseId(null)}
+          onMove={(stageKey, onBlocked) => attemptStageChange(selectedCase.id, stageKey, onBlocked)}
           onDelete={() => deleteCase(selectedCase.id)}
           onUpdateCustomFields={(merged) => updateCase(selectedCase.id, { customFields: merged })}
+          onAddActivity={handleAddActivity}
+          onUpdateActivity={handleUpdateActivity}
           onOpenLead={onOpenLead}
         />
       )}

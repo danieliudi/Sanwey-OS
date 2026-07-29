@@ -1330,6 +1330,11 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 linkedEmails={lead.linkedEmails || []}
                 onUpdate={onUpdate}
                 onAddActivity={onAddActivity}
+                stageName={currentStageInfo?.name}
+                slaDays={currentStageInfo?.slaDays}
+                stageFieldValues={visibleCustomDefs
+                  .map(f => ({ label: f.label, value: customValuesByKey[f.fieldKey] }))
+                  .filter(f => f.value !== undefined && f.value !== null && f.value !== "")}
               />
 
               {/* Rascunho de abordagem */}

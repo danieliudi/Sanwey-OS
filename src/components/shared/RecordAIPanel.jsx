@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Sparkles, Loader2, AlertCircle, RotateCcw, Copy, Check, History, Target,
 } from "lucide-react";
@@ -53,6 +53,14 @@ export function RecordAIPanel({ currentUser, features, defaultFeatureId, onSaveN
   const [extraState, setExtraState] = useState({});
   const [actionDone, setActionDone] = useState({});
 
+  // Geração em andamento quando o card é fechado: sem isso, o `setState` do
+  // `finally`/`catch` roda em componente já desmontado (o `complete()` não é
+  // cancelável, mas o resultado passa a ser descartado). `useRef` em vez de
+  // state pra não provocar render — é só um sinal de "essa geração ainda
+  // interessa?".
+  const aliveRef = useRef(true);
+  useEffect(() => () => { aliveRef.current = false; }, []);
+
   const activeFeature = features.find(f => f.id === activeId) || features[0];
   if (!activeFeature) return null;
 
@@ -80,18 +88,28 @@ export function RecordAIPanel({ currentUser, features, defaultFeatureId, onSaveN
     try {
       const messages = activeFeature.buildMessages(extraValue);
       const text = await complete(messages);
+      if (!aliveRef.current) return;
       if (activeFeature.resultType === "score") {
         const parsed = parseScoreResponse(text);
+        // Só mostra. Gravar no registro é ação separada, por clique — ver o
+        // botão "Aplicar ao lead" abaixo. Antes o score era escrito no banco
+        // aqui dentro, antes de qualquer confirmação humana.
         setResult({ type: "score", score: parsed.score, justificativa: parsed.justificativa });
-        activeFeature.onScoreApply?.(parsed.score, parsed.justificativa);
       } else {
         setResult({ type: "text", text });
       }
     } catch (err) {
+      if (!aliveRef.current) return;
       setError(err.message || "Erro ao gerar resposta.");
     } finally {
-      setLoading(false);
+      if (aliveRef.current) setLoading(false);
     }
+  };
+
+  const applyScore = () => {
+    if (result?.type !== "score") return;
+    activeFeature.onScoreApply?.(result.score, result.justificativa);
+    setActionDone(s => ({ ...s, __score: true }));
   };
 
   const handleCopy = () => {
@@ -206,15 +224,28 @@ export function RecordAIPanel({ currentUser, features, defaultFeatureId, onSaveN
               {result.justificativa}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button onClick={handleGenerate} style={btnBase}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; }}>
-              <RotateCcw size={11} />Recalcular
+              <RotateCcw size={11} />Calcular novamente
             </button>
-            <span className="flex items-center gap-1 text-xs" style={{ color: "var(--success)" }}>
-              <Target size={11} /> Score salvo
-            </span>
+            {activeFeature.onScoreApply && (
+              <button
+                onClick={applyScore}
+                disabled={Boolean(actionDone.__score)}
+                style={{
+                  ...btnBase,
+                  background: actionDone.__score ? "color-mix(in srgb, var(--success) 12%, transparent)" : "var(--accent)",
+                  color: actionDone.__score ? "var(--success)" : "#FFFFFF",
+                  borderColor: actionDone.__score ? "color-mix(in srgb, var(--success) 35%, transparent)" : "var(--accent)",
+                  cursor: actionDone.__score ? "default" : "pointer",
+                }}
+              >
+                {actionDone.__score ? <Check size={11} /> : <Target size={11} />}
+                {actionDone.__score ? "Score salvo no lead" : "Aplicar ao lead"}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -231,7 +262,7 @@ export function RecordAIPanel({ currentUser, features, defaultFeatureId, onSaveN
             <button onClick={handleGenerate} style={btnBase}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; }}>
-              <RotateCcw size={11} />Regenerar
+              <RotateCcw size={11} />Gerar novamente
             </button>
             <button onClick={handleCopy} style={{
               ...btnBase,

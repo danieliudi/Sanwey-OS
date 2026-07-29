@@ -439,6 +439,44 @@ export function PurchaseRequestDetailDrawer({
     .map(s => ({ ...s, color: STAGE_COLORS[s.id] || "var(--text-dim)" }));
   const quoteOptions = Array.isArray(purchase.quoteOptions) ? purchase.quoteOptions : [];
 
+  // Compras não usa rh_pipeline_stage_fields (PURCHASE_STAGES é hardcoded —
+  // exceção deliberada, regra 2 do CLAUDE.md), então não há de onde derivar
+  // os campos por etapa: esta lista espelha à mão o formulário "Execução da
+  // compra" logo abaixo, com os mesmos gates de progressão.
+  //
+  // MANUTENÇÃO: campo novo no formulário abaixo precisa ser acrescentado
+  // aqui também, senão a IA deixa de enxergá-lo em silêncio. É o preço de
+  // Compras não ter campos configuráveis; some sozinho no dia que migrar.
+  const aiStageFields = [
+    { label: "Fornecedor",         value: suppliers.find(s => s.id === supplierId)?.name },
+    { label: "Responsáveis",       value: responsibleIds.map(id => users.find(u => u.id === id)?.name).filter(Boolean).join(", ") },
+    { label: "Quantidade",         value: quantity === "" || quantity == null ? null : String(quantity) },
+    { label: "Preço unitário",     value: unitPrice === "" || unitPrice == null ? null : formatBRL(Number(unitPrice)) },
+    { label: "Valor total",        value: totalValue === "" || totalValue == null ? null : formatBRL(Number(totalValue)) },
+    { label: "Prazo de pagamento", value: paymentTerms },
+    ...(reachedPedido ? [
+      { label: "Código de pedido do fornecedor", value: supplierOrderCode },
+      { label: "Prazo de entrega",               value: deliveryDeadline ? formatDateBR(deliveryDeadline) : null },
+    ] : []),
+    ...(reachedEntregaParcial ? [
+      { label: "Quantidade entregue",   value: partialDeliveredQty === "" || partialDeliveredQty == null ? null : String(partialDeliveredQty) },
+      { label: "Quanto falta entregar", value: partialRemainingQty === "" || partialRemainingQty == null ? null : String(partialRemainingQty) },
+      { label: "Novo prazo de entrega", value: partialNewDeadline ? formatDateBR(partialNewDeadline) : null },
+      { label: "Detalhes extras",       value: partialNotes },
+    ] : []),
+    ...(reachedEntregue ? [
+      { label: "Número da nota fiscal", value: invoiceNumber },
+      { label: "Data da nota fiscal",   value: invoiceDate ? formatDateBR(invoiceDate) : null },
+      { label: "Número da CP",          value: paymentControlNumber },
+      { label: "Data da entrega",       value: deliveredAt ? formatDateBR(deliveredAt) : null },
+      { label: "Quem recebeu",          value: receivedBy },
+    ] : []),
+  ].filter(f => f.value !== null && f.value !== undefined && f.value !== "");
+
+  const aiRecentComments = (purchase.notes || [])
+    .filter(n => !n.deletedAt && n.text)
+    .map(n => n.text);
+
   const currentTotal = totalValue === "" ? null : Number(totalValue);
   const priceDiff = lastPrice && currentTotal != null ? currentTotal - Number(lastPrice.total_value) : null;
 
@@ -763,9 +801,12 @@ export function PurchaseRequestDetailDrawer({
               title: purchase.itemName,
               domainLabel: "Compras",
               stageName: stageInfo?.name || purchase.stage,
+              slaDays: stageInfo?.slaDays,
               daysInStage: purchase.stageChangedAt
                 ? Math.floor((Date.now() - new Date(purchase.stageChangedAt)) / 86400000)
                 : 0,
+              customFields: aiStageFields,
+              recentComments: aiRecentComments,
             }),
           }]}
           defaultFeatureId="summary"

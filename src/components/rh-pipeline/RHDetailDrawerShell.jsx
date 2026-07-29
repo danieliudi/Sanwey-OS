@@ -7,6 +7,8 @@ import {
 import { useRHAttachments } from "../../hooks/use-rh-attachments";
 import { useRHChecklists } from "../../hooks/use-rh-checklists";
 import { useRHStageHistory } from "../../hooks/use-rh-stage-history";
+import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { resolveVisibleFields } from "../../utils/field-conditions";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
@@ -606,9 +608,13 @@ export function RHDetailComments({
 
 export function RHDetailDrawerShell({
   domain, recordId, activities = [], onAddActivity, currentUser,
-  users = [], stages, formContent, record, recordTitle, domainLabel,
+  users = [], stages, formContent, record, recordTitle, domainLabel, fieldsDomain,
 }) {
   const showChecklists = domain === "vagas" || domain === "candidatos" || domain === "comex";
+
+  // Comex é o único módulo em que o domínio dos campos por etapa
+  // (comex_importacao/comex_exportacao) não é o mesmo `domain` do shell.
+  const stageFieldsHook = useRHStageFields(fieldsDomain || domain);
 
   const tabs = useMemo(() => {
     const list = [];
@@ -663,12 +669,26 @@ export function RHDetailDrawerShell({
                 ? Math.floor((Date.now() - new Date(record.stageChangedAt)) / 86400000)
                 : 0;
               const recentComments = (activities || []).slice(-5).map(a => a.body).filter(Boolean);
+              // Enviar os campos de etapa de RH (que podem conter dado
+              // sensível) ao provedor de IA foi decisão explícita do Daniel
+              // em 29/07/2026, não descuido.
+              const recordValues = record.customFields || record.custom_fields || {};
+              const customFields = resolveVisibleFields(stageFieldsHook.getFields(record.stage), recordValues)
+                .map(f => {
+                  const v = recordValues[f.fieldKey];
+                  if (v === null || v === undefined || v === "") return null;
+                  if (Array.isArray(v)) return v.length ? { label: f.label, value: v.join(", ") } : null;
+                  if (typeof v === "boolean") return { label: f.label, value: v ? "Sim" : "Não" };
+                  return { label: f.label, value: String(v) };
+                })
+                .filter(Boolean);
               return genericCardSummaryPrompt({
                 title: recordTitle,
                 domainLabel,
                 stageName: currentStage?.name,
                 slaDays: currentStage?.slaDays,
                 daysInStage,
+                customFields,
                 recentComments,
               });
             },

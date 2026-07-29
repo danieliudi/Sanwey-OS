@@ -44,7 +44,7 @@ const SIDE_TABS = [
 ];
 
 /* ── Deliverable AI panel ───────────────────────────────────── */
-function DeliverableAIPanel({ item, currentUser }) {
+function DeliverableAIPanel({ item, currentUser, stage, stageFields = [], recentComments = [] }) {
   const daysInStage = item.stageChangedAt
     ? Math.floor((Date.now() - new Date(item.stageChangedAt)) / 86400000)
     : 0;
@@ -56,8 +56,11 @@ function DeliverableAIPanel({ item, currentUser }) {
       buildMessages: () => genericCardSummaryPrompt({
         title: item.title,
         domainLabel: "Entregas",
-        stageName: item.stage,
+        stageName: stage?.name || item.stage,
+        slaDays: stage?.sla,
         daysInStage,
+        customFields: stageFields,
+        recentComments,
       }),
     },
     {
@@ -433,6 +436,13 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
   const customValuesByKey = { ...(item.customFields || {}), ...customDraft };
   const visibleCustomDefs = resolveVisibleFields(customDefs, customValuesByKey);
 
+  const aiStageFields = visibleCustomDefs
+    .map(f => ({ label: f.label, value: formatCustomFieldValue(getCustomValue(f.fieldKey)) }))
+    .filter(f => f.value !== null);
+  const aiRecentComments = (item.notes || [])
+    .filter(n => !n.deletedAt && n.text)
+    .map(n => n.text);
+
   const assigneeIds = assigneeDraft !== null
     ? assigneeDraft
     : (item.assigneeIds?.length ? item.assigneeIds : (item.assignee ? [item.assignee] : []));
@@ -682,7 +692,15 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
     if (sideTab === "historico")   return (
       <RHStageHistoryPanel domain="marketing_deliverables" recordId={item.id} stages={DELIVERABLE_STAGES} currentUser={currentUser} users={users} />
     );
-    if (sideTab === "ia")          return <DeliverableAIPanel item={item} currentUser={currentUser} />;
+    if (sideTab === "ia")          return (
+      <DeliverableAIPanel
+        item={item}
+        currentUser={currentUser}
+        stage={stageInfo}
+        stageFields={aiStageFields}
+        recentComments={aiRecentComments}
+      />
+    );
     if (sideTab === "anexos")      return <AnexosTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
     if (sideTab === "checklists")  return <ChecklistsTab deliverableId={item.id} canWrite={canWrite} userId={userId || currentUser?.id} />;
     return null;

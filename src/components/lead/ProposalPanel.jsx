@@ -112,7 +112,7 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
                 style={{ background: "#FFFFFF", color: "var(--text-dim)", borderColor: BORDER, cursor: "pointer" }}
               >
                 <RotateCcw size={11} />
-                Regenerar
+                Gerar novamente
               </button>
               <button
                 onClick={() => printDocument()}
