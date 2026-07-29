@@ -205,3 +205,30 @@ pergunta — não só pra itens já enfileirados explicitamente como "faça em
 paralelo". Só interromper de verdade quando a mensagem for uma correção de
 rumo do que já está em andamento (ex.: "não, faça diferente") ou pedir
 explicitamente pra parar.
+
+## 8. Painel Executivo tem que acompanhar a plataforma inteira
+
+Instrução do Daniel (29/07/2026), permanente: o Painel Executivo
+(`src/components/views/ExecutiveDashboard.jsx`, rota `executive`) é o único
+lugar que presidência/diretoria olha pra ter visão do Grupo inteiro — não
+pode ficar defasado. **Toda vez que um departamento, Kanban ou domínio de
+dado novo nascer na plataforma, adicionar uma seção correspondente no Painel
+Executivo faz parte de "pronto" pra esse trabalho, não é item de backlog
+separado.**
+
+Auditoria de 29/07/2026 encontrou o painel cobrindo só Comercial (Funil de
+Vendas, com detalhe completo) + Marketing + RH (cartão-resumo simples cada)
+— Compras, Comex, Pós-venda, CRM Viagens, Treinamentos e vários outros
+domínios não tinham nenhuma seção lá. Mockup mostrado e aprovado (spec
+completa nesse commit): "Visão geral" virou uma faixa de saúde por área
+(1 número + 1 sinal de alerta cada), e cada área ganhou sua própria aba de
+profundidade — mesmo padrão que Comercial já usava (Gráficos/Análise/
+Histórico), agora generalizado. **Departamento novo = uma aba nova + uma
+entrada na faixa de saúde, nunca um redesign da grade.** Visibilidade por
+usuário continua via `EXECUTIVE_WIDGETS` em `src/constants/user-settings.js`.
+
+Isso é uma mudança visual/estrutural (rule 3 se aplica: mockup antes de
+implementar) — mas a lacuna em si (departamento existir na plataforma e não
+ter aba no Executivo) não precisa ser redescoberta a cada auditoria: se um
+módulo não tem entrada na faixa de saúde + aba própria, está incompleto até
+ganhar uma.
