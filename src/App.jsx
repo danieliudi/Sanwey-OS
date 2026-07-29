@@ -2020,9 +2020,11 @@ export default function App() {
       {needRefresh && (
         <AppToast
           icon={RefreshCw}
+          iconBadge
           title="Nova versão disponível"
+          description="Melhorias e correções prontas."
           onDismiss={dismissAppUpdate}
-          action={{ label: "Atualizar agora", onClick: updateNow }}
+          action={{ label: "Atualizar agora", onClick: updateNow, solid: true, icon: RefreshCw }}
         />
       )}
 

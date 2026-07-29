@@ -30,7 +30,21 @@ export function useAppUpdate() {
     },
   });
 
-  const updateNow = useCallback(() => { updateServiceWorker(true); }, [updateServiceWorker]);
+  // updateServiceWorker(true) só manda o SKIP_WAITING e TORCE pro evento
+  // "controllerchange" disparar o reload (é assim que virtual:pwa-register
+  // funciona por baixo — o `true` passado aqui nem é lido pela lib, ver
+  // node_modules/vite-plugin-pwa/dist/client/build/register.js). Isso falha
+  // silenciosamente sempre que o SW novo já assumiu a aba sozinho antes do
+  // clique (aba em segundo plano suspensa e retomada, ou o próprio Safari,
+  // que é notoriamente instável nesse ciclo de vida) — nesses casos
+  // registration.waiting já é null, a mensagem não tem o que fazer, e o
+  // botão parece "não funcionar". O fallback força o reload de qualquer
+  // jeito pouco depois do clique; se o reload por controllerchange já
+  // rolou, a página já navegou e este timeout nunca chega a disparar.
+  const updateNow = useCallback(() => {
+    updateServiceWorker(true);
+    setTimeout(() => window.location.reload(), 3000);
+  }, [updateServiceWorker]);
   const dismiss = useCallback(() => { setDismissed(true); }, []);
 
   return {
