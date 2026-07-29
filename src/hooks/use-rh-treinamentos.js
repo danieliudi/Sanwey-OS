@@ -189,12 +189,22 @@ export function useRHTreinamentos({ userId } = {}) {
     setTreinamentos(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
   }, []);
 
+  // rh_treinamento_atribuicoes.treinamento_id é ON DELETE CASCADE — excluir
+  // o treinamento já leva as atribuições junto, sem passo extra aqui.
+  const deleteTreinamento = useCallback(async (id) => {
+    const { error } = await supabase.from("rh_treinamentos").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    setTreinamentos(prev => prev.filter(t => t.id !== id));
+    setAtribuicoes(prev => prev.filter(a => a.treinamento_id !== id));
+  }, []);
+
   return useMemo(() => ({
     treinamentos,
     atribuicoes,
     loading,
     createTreinamento,
     updateTreinamento,
+    deleteTreinamento,
     assignToUsers,
     updateAtribuicaoStatus,
     changeAtribuicaoStage,
@@ -205,5 +215,5 @@ export function useRHTreinamentos({ userId } = {}) {
     addAtribuicaoActivity,
     updateAtribuicaoActivity,
     refetch: fetchAll,
-  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado, updateAtribuicaoCustomFields, deleteAtribuicao, addAtribuicaoActivity, updateAtribuicaoActivity, fetchAll]);
+  }), [treinamentos, atribuicoes, loading, createTreinamento, updateTreinamento, deleteTreinamento, assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado, updateAtribuicaoCustomFields, deleteAtribuicao, addAtribuicaoActivity, updateAtribuicaoActivity, fetchAll]);
 }

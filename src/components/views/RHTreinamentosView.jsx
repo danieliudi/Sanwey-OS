@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   GraduationCap, Plus, X, Check, ExternalLink, ChevronDown, ChevronRight, Users, AlertTriangle, RefreshCw,
   LayoutGrid, Settings2, AlertCircle, List, CalendarDays as CalendarIcon, ChevronLeft, TrendingUp,
@@ -1433,10 +1433,15 @@ function TreinamentoBoardModal({
 
 export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = [], notifyMentions, initialSelectedTreinamentoAtribuicaoId, onInitialTreinamentoAtribuicaoConsumed }) {
   const {
-    treinamentos, atribuicoes, loading: loadingTreinamentos, createTreinamento, updateTreinamento,
+    treinamentos, atribuicoes, loading: loadingTreinamentos, createTreinamento, updateTreinamento, deleteTreinamento,
     assignToUsers, updateAtribuicaoStatus, changeAtribuicaoStage, reciclarAtribuicao, updateAtribuicaoCertificado,
     updateAtribuicaoCustomFields, deleteAtribuicao, addAtribuicaoActivity, updateAtribuicaoActivity,
   } = useRHTreinamentos({ userId: currentUser?.id });
+
+  const handleDeleteTreinamento = useCallback(async (t) => {
+    if (!window.confirm(`Excluir "${t.title}"? As atribuições vinculadas também serão removidas.`)) return;
+    try { await deleteTreinamento(t.id); } catch (e) { window.alert(`Erro ao excluir: ${e?.message || e}`); }
+  }, [deleteTreinamento]);
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
   const { meuColaborador, loading: loadingMeuColaborador } = useMyColaborador(currentUser);
   const [novoOpen, setNovoOpen]         = useState(false);
@@ -1609,6 +1614,9 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
                               <LayoutGrid size={11} /> Ver quadro
                             </button>
                           )}
+                          <button onClick={() => handleDeleteTreinamento(t)} style={{ fontSize: 11, color: "var(--danger)", background: "var(--surface-alt)", border: "none", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}>
+                            Excluir
+                          </button>
                         </>
                       )}
                     </div>
