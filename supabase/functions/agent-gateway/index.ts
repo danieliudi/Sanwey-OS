@@ -22,6 +22,88 @@ const CORS = {
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
 };
 
+// Mesmo vermelho já usado na família de e-mails transacionais (ver
+// send-request-status-email / send-deliverable-supplier-notify) — "vermelho
+// e branco, sempre" (decisão do Daniel), não um tom novo.
+const BRAND_RED = '#DC2626';
+
+function escapeHtml(s: string): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function vagaManagerEmailHtml(managerName: string, vagaTitulo: string, diasParado: number, recommendedAction: string): string {
+  const inner = `<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#2C2C2B;line-height:1.25;letter-spacing:-0.01em;">Vaga parada sem avançar</h1>
+    <p style="margin:0 0 24px;font-size:15px;color:#8A8680;line-height:1.6;">Olá, <strong style="color:#2C2C2B;">${escapeHtml(managerName)}</strong>. A vaga abaixo está há um tempo sem mudar de etapa no processo seletivo.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F9F5F1;border:1px solid #E5E0DA;border-radius:10px;margin-bottom:28px;"><tr><td style="padding:16px 20px;"><table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr><td width="35%" style="padding:5px 0;font-size:13px;color:#8A8680;">Vaga</td><td width="65%" style="padding:5px 0;font-size:13px;color:#2C2C2B;font-weight:700;">${escapeHtml(vagaTitulo)}</td></tr>
+      <tr><td style="padding:5px 0;font-size:13px;color:#8A8680;">Parada há</td><td style="padding:5px 0;font-size:13px;color:#2C2C2B;font-weight:600;">${diasParado} dia(s)</td></tr>
+    </table></td></tr></table>
+    <p style="margin:0;font-size:14px;color:#2C2C2B;line-height:1.6;">${escapeHtml(recommendedAction)}</p>`;
+  return `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+<body style="margin:0;padding:0;background-color:#F9F5F1;font-family:Inter,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F9F5F1;"><tr><td align="center" style="padding:48px 16px;">
+    <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+      <tr><td align="center" style="padding-bottom:28px;"><img src="https://sanwey-crm.netlify.app/sanwey-logo.png" width="170" alt="Grupo Sanwey" style="display:block;height:auto;" /></td></tr>
+      <tr><td style="background:#FFFFFF;border-radius:16px;border:1px solid #E5E0DA;padding:40px 40px 36px;">
+        <div style="width:36px;height:3px;background:${BRAND_RED};border-radius:2px;margin-bottom:28px;"></div>
+        ${inner}
+      </td></tr>
+      <tr><td style="padding:28px 0 8px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:12px;color:#8A8680;line-height:1.6;">&copy; Grupo Sanwey &mdash; Commercial Intelligence Platform</p>
+        <p style="margin:0;font-size:11px;color:#A09A94;line-height:1.5;">Este é um e-mail automático do sistema de RH.</p>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
+}
+
+// Ao aprovar uma sugestão do piloto "Vaga parada" (Agent Builder), avisa o
+// gestor externo da vaga por e-mail, se houver um link de triagem válido
+// gerado pra ela (rh_vaga_manager_links — mesmo mecanismo do fluxo externo
+// de triagem por e-mail/link). Sem link válido, só não há pra quem avisar
+// externamente — o gerente de RH que aprovou já viu a sugestão aqui mesmo,
+// então nunca é erro, só ausência de destinatário.
+async function notifyVagaManagerIfApproved(admin: any, action: any) {
+  if (action.action_type !== 'aviso_interno_vaga') return;
+  const payload = action.payload || {};
+  if (payload.source_table !== 'rh_vagas' || !payload.source_id) return;
+
+  const { data: link } = await admin
+    .from('rh_vaga_manager_links')
+    .select('manager_name, manager_email, revoked_at, expires_at')
+    .eq('vaga_id', payload.source_id)
+    .is('revoked_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!link?.manager_email) return;
+
+  const resendKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendKey) return;
+
+  const html = vagaManagerEmailHtml(
+    link.manager_name || 'Gestor(a)',
+    payload.vaga_titulo || 'Vaga',
+    payload.dias_parado ?? 0,
+    payload.recommended_action || action.summary || '',
+  );
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'noreply@sanwey.com.br',
+      to: link.manager_email,
+      subject: `Vaga parada: ${payload.vaga_titulo || ''} — Grupo Sanwey`,
+      html,
+    }),
+  }).catch(() => {}); // fire-and-forget: falha de e-mail não desfaz a aprovação já gravada.
+}
+
 Deno.serve(async (req: Request) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -194,6 +276,7 @@ Deno.serve(async (req: Request) => {
           .single();
 
         if (error) throw error;
+        if (body.status === 'approved') await notifyVagaManagerIfApproved(adminClient, data);
         return json({ success: true, data });
       }
 
