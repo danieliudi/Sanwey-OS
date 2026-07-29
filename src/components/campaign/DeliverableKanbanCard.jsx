@@ -77,8 +77,20 @@ function DeliverableKanbanCardImpl({
           (aging, completude, domínio, utilitários) dos outros cards do
           Kanban; antes ficava dividido entre topo e rodapé do card. */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="font-semibold text-[13px] leading-snug min-w-0 flex-1 line-clamp-2" style={{ color: terminalTextColor(isTerminal) }}>
-          {item.requestNumber ? `${item.requestNumber} ${item.title}` : item.title}
+        <div className="min-w-0 flex-1">
+          {/* Protocolo em linha própria — concatenado no mesmo texto
+              clampado, ele quebrava no meio do número quando os chips à
+              direita sobravam pouco espaço (achado real, reportado pelo
+              Daniel). Mesmo padrão já usado em ComprasMarketingView.jsx:
+              protocolo nunca entra no texto que pode quebrar/truncar. */}
+          {item.requestNumber && (
+            <div className="font-mono font-bold text-[11px]" style={{ color: "var(--accent)", opacity: terminalAccentOpacity(isTerminal) }}>
+              {item.requestNumber}
+            </div>
+          )}
+          <div className="font-semibold text-[13px] leading-snug line-clamp-2" style={{ color: terminalTextColor(isTerminal) }}>
+            {item.title}
+          </div>
         </div>
         <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
           <KanbanCardStatusChips
