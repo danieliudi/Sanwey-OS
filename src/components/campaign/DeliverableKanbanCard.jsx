@@ -157,7 +157,7 @@ function DeliverableKanbanCardImpl({
       {(resolvedAssignees.length > 0 || item.deadline) && (
       <div className="flex items-center justify-between text-[11px] mb-2" style={{ color: "var(--text-dim)", opacity: terminalAccentOpacity(isTerminal) }}>
         {resolvedAssignees.length > 0
-          ? <AvatarStack users={resolvedAssignees} size={18} max={2} />
+          ? <AvatarStack users={resolvedAssignees} size={28} max={2} />
           : <span />
         }
         {item.deadline && (
