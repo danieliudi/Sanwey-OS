@@ -442,9 +442,32 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
   );
 }
 
-// ── Password reset screen (shown after clicking recovery email link) ─────────
+// ── Password reset / primeiro login via convite ───────────────────────────────
+// Mesmo shell pros dois casos (variant="recovery" | "invite") — o convite não
+// dispara PASSWORD_RECOVERY (só "type=recovery" faz isso), então quem aceita
+// convite hoje cai direto no painel de trabalho sem nunca definir senha.
+// Reaproveita a tela de "Redefinir senha" (mesmo ícone/tom, só muda o texto),
+// em vez de nascer uma tela nova do zero — mockup aprovado (opção A).
 
-export function PasswordResetScreen({ onReset }) {
+const PASSWORD_SCREEN_COPY = {
+  recovery: {
+    title: "Redefinir senha",
+    subtitle: "Escolha uma nova senha para sua conta.",
+    submitLabel: "Salvar nova senha",
+    doneTitle: "Senha redefinida com sucesso!",
+    doneSubtitle: "Você será redirecionado automaticamente.",
+  },
+  invite: {
+    title: "Defina sua senha",
+    subtitle: "Seu acesso à Sanwey Gestão já está liberado.",
+    submitLabel: "Definir senha e entrar",
+    doneTitle: "Tudo pronto!",
+    doneSubtitle: "Você será levado(a) direto pro seu painel de trabalho.",
+  },
+};
+
+export function PasswordResetScreen({ onReset, variant = "recovery" }) {
+  const copy = PASSWORD_SCREEN_COPY[variant] || PASSWORD_SCREEN_COPY.recovery;
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -462,7 +485,7 @@ export function PasswordResetScreen({ onReset }) {
       await onReset(password);
       setDone(true);
     } catch (err) {
-      setError(translateAuthError(err?.message) || "Não foi possível redefinir a senha.");
+      setError(translateAuthError(err?.message) || "Não foi possível salvar a senha.");
     } finally {
       setLoading(false);
     }
@@ -479,18 +502,18 @@ export function PasswordResetScreen({ onReset }) {
             <KeyRound size={22} style={{ color: "var(--text-dim)" }} />
           </div>
           <h2 className="font-bold text-center" style={{ fontSize: 22, color: "var(--text)" }}>
-            Redefinir senha
+            {copy.title}
           </h2>
           <p className="text-sm text-center mt-1" style={{ color: "var(--text-dim)" }}>
-            Escolha uma nova senha para sua conta.
+            {copy.subtitle}
           </p>
         </div>
 
         {done ? (
           <div className="rounded-xl p-5 flex flex-col items-center gap-3 text-center" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
             <CheckCircle2 size={32} style={{ color: "#16A34A" }} />
-            <div className="font-semibold" style={{ color: "#15803D" }}>Senha redefinida com sucesso!</div>
-            <div className="text-xs" style={{ color: "#166534" }}>Você será redirecionado automaticamente.</div>
+            <div className="font-semibold" style={{ color: "#15803D" }}>{copy.doneTitle}</div>
+            <div className="text-xs" style={{ color: "#166534" }}>{copy.doneSubtitle}</div>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -524,7 +547,7 @@ export function PasswordResetScreen({ onReset }) {
               onMouseLeave={e => { e.currentTarget.style.background = ACCENT; }}
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-              Salvar nova senha
+              {copy.submitLabel}
             </button>
           </form>
         )}
