@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bot, X, ChevronDown, ChevronUp, Info, AlertTriangle, Mail, Zap, ShieldCheck } from "lucide-react";
+import { Bot, X, ChevronDown, ChevronUp, Info, AlertTriangle, Mail, Zap, ShieldCheck, Briefcase } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAutomations } from "../../hooks/use-automations";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -8,7 +8,9 @@ import { ROUTES } from "../../constants/routes";
 import { friendlyAiErrorMessage } from "../../utils/ai-errors";
 
 // Assistente guiado de 6 passos pra criar/editar um Agente de IA (Agent
-// Builder, PRD docs/prd-agent-builder.md seção 3) — piloto Fornecedores RH.
+// Builder, PRD docs/prd-agent-builder.md seção 3). Fase 1: piloto
+// Fornecedores RH. Fase 2 (29/07/2026): piloto Vaga parada — Recrutamento,
+// mesmo assistente, 2º conjunto de dados escolhível no passo 1.
 // Totalmente separado do AutomationBuilder técnico (AutomationsView.jsx):
 // aquele continua servindo só automações comuns, sem ramificar pra IA.
 
@@ -40,7 +42,17 @@ const SUGGESTED_ACTIONS = [
   { id: "so_monitorar",      label: "Só monitorar" },
 ];
 
-function suggestedName(draftType) {
+const VAGA_SUGGESTED_ACTIONS = [
+  { id: "reabrir_divulgacao", label: "Reabrir divulgação" },
+  { id: "escalar_gestor",     label: "Escalar pro gestor" },
+  { id: "revisar_requisitos", label: "Revisar requisitos" },
+  { id: "so_monitorar",       label: "Só monitorar" },
+];
+
+const DATASET_DEFAULT_DAYS = { fornecedores: 15, vagas: 7 };
+
+function suggestedName(dataset, draftType) {
+  if (dataset === "vagas") return "Vaga parada — Recrutamento";
   return draftType === "email_fornecedor"
     ? "Aviso de renovação — Fornecedores RH"
     : "Aviso interno — Fornecedores RH";
@@ -49,6 +61,23 @@ function suggestedName(draftType) {
 const labelSt = { fontSize: 12, fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 6 };
 const inputCls = "w-full text-sm rounded-xl border px-3.5 py-2.5 outline-none";
 const inputSt = { borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)" };
+
+function DatasetCard({ active, icon, title, description, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left rounded-xl border px-4 py-3.5 flex items-start gap-3"
+      style={{ borderColor: active ? "var(--accent)" : "var(--border)", background: active ? "var(--accent-tint)" : "var(--surface-alt)", cursor: "pointer" }}
+    >
+      {icon}
+      <div>
+        <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{title}</div>
+        <p className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>{description}</p>
+      </div>
+    </button>
+  );
+}
 
 export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, onSaved }) {
   const { addAutomation, updateAutomation } = useAutomations({ userId: currentUser?.id });
@@ -60,7 +89,8 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
   const initialThen = initialRule?.thenActions?.[0] || {};
   const initialCondition = initialRule?.conditionGroups?.[0]?.conditions?.[0];
 
-  const [days, setDays] = useState(initialRule?.trigger?.days ?? 15);
+  const [dataset, setDataset] = useState(initialRule?.module === "rh-vagas" ? "vagas" : "fornecedores");
+  const [days, setDays] = useState(initialRule?.trigger?.days ?? DATASET_DEFAULT_DAYS[dataset]);
   const [showAdvanced, setShowAdvanced] = useState(Boolean(initialCondition));
   const [tipoOptions, setTipoOptions] = useState([]);
   const [tipoFilter, setTipoFilter] = useState(initialCondition?.value ?? "");
@@ -69,7 +99,7 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
   const [customInstruction, setCustomInstruction] = useState(initialThen.customInstruction || "");
   const [followUpDays, setFollowUpDays] = useState(initialThen.followUpDays ?? 5);
   const [suggestedAction, setSuggestedAction] = useState(initialThen.suggestedAction || "iniciar_renovacao");
-  const [name, setName] = useState(initialRule?.name || suggestedName(initialThen.draftType || "email_fornecedor"));
+  const [name, setName] = useState(initialRule?.name || suggestedName(dataset, initialThen.draftType || "email_fornecedor"));
   const [nameEdited, setNameEdited] = useState(Boolean(initialRule?.name));
 
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -83,36 +113,54 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
   const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
-    if (!nameEdited) setName(suggestedName(draftType));
-  }, [draftType, nameEdited]);
+    if (!nameEdited) setName(suggestedName(dataset, draftType));
+  }, [dataset, draftType, nameEdited]);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let active = true;
-    supabase.from("rh_fornecedores").select("tipo").then(({ data, error }) => {
+    const table = dataset === "vagas" ? "rh_vagas" : "rh_fornecedores";
+    const column = dataset === "vagas" ? "department" : "tipo";
+    supabase.from(table).select(column).then(({ data, error }) => {
       if (error || !active) return;
-      const unique = Array.from(new Set((data || []).map(r => r.tipo).filter(Boolean)));
+      const unique = Array.from(new Set((data || []).map(r => r[column]).filter(Boolean)));
       setTipoOptions(unique);
     });
     return () => { active = false; };
-  }, []);
+  }, [dataset]);
 
-  const trigger = { type: "date_approaching", field: "vigencia_fim", days: Number(days) || 0 };
+  const selectDataset = (next) => {
+    setDataset(next);
+    setTipoFilter("");
+    if (!initialRule) setDays(DATASET_DEFAULT_DAYS[next]);
+  };
+
+  const trigger = dataset === "vagas"
+    ? { type: "stage_stale", field: "stage_changed_at", days: Number(days) || 0 }
+    : { type: "date_approaching", field: "vigencia_fim", days: Number(days) || 0 };
   const conditionGroups = tipoFilter
-    ? [{ logic: "AND", conditions: [{ field: "tipo", operator: "eq", value: tipoFilter }] }]
+    ? [{ logic: "AND", conditions: [{ field: dataset === "vagas" ? "department" : "tipo", operator: "eq", value: tipoFilter }] }]
     : [];
-  const thenActions = [{
-    type: "suggest_with_ai",
-    draftType,
-    tone,
-    customInstruction: customInstruction.trim(),
-    followUpDays: draftType === "email_fornecedor" ? (Number(followUpDays) || 5) : undefined,
-    suggestedAction: draftType === "aviso_interno" ? suggestedAction : undefined,
-  }];
+  const thenActions = dataset === "vagas"
+    ? [{
+        type: "suggest_with_ai",
+        draftType: "aviso_interno_vaga",
+        tone,
+        customInstruction: customInstruction.trim(),
+        suggestedAction,
+      }]
+    : [{
+        type: "suggest_with_ai",
+        draftType,
+        tone,
+        customInstruction: customInstruction.trim(),
+        followUpDays: draftType === "email_fornecedor" ? (Number(followUpDays) || 5) : undefined,
+        suggestedAction: draftType === "aviso_interno" ? suggestedAction : undefined,
+      }];
 
   const canNext = () => {
     if (step === 1) return Number(days) > 0;
-    if (step === 2) return Boolean(draftType) && Boolean(tone);
+    if (step === 2) return dataset === "vagas" ? Boolean(tone) : Boolean(draftType) && Boolean(tone);
     return true;
   };
 
@@ -121,13 +169,14 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
     try {
       const session = isSupabaseConfigured ? (await supabase.auth.getSession()).data.session : null;
       const token = session?.access_token;
+      const module = dataset === "vagas" ? "rh-vagas" : "rh-fornecedores";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/agent-runner`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ action: "preview", rule: { trigger, conditionGroups, thenActions } }),
+        body: JSON.stringify({ action: "preview", rule: { module, trigger, conditionGroups, thenActions } }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -151,9 +200,9 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
     setSaveError(null);
     try {
       const rule = {
-        name: name.trim() || suggestedName(draftType),
+        name: name.trim() || suggestedName(dataset, draftType),
         companyId: "all",
-        module: "rh-fornecedores",
+        module: dataset === "vagas" ? "rh-vagas" : "rh-fornecedores",
         enabled: true,
         trigger,
         conditionGroups,
@@ -234,27 +283,32 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
         {/* Step content */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {step === 0 && (
-            <div
-              className="rounded-xl border px-4 py-3.5 flex items-start gap-3"
-              style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
-            >
-              <Bot size={16} style={{ color: "var(--accent)", marginTop: 1 }} />
-              <div>
-                <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                  Contratos de fornecedores (RH)
-                </div>
-                <p className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
-                  Único conjunto de dados disponível no piloto — o assistente monitora os contratos
-                  cadastrados em Fornecedores (RH) e a data de vencimento de cada um.
-                </p>
-              </div>
+            <div className="space-y-2.5">
+              <DatasetCard
+                active={dataset === "fornecedores"}
+                icon={<Bot size={16} style={{ color: "var(--accent)", marginTop: 1 }} />}
+                title="Contratos de fornecedores (RH)"
+                description="O assistente monitora os contratos cadastrados em Fornecedores (RH) e a data de vencimento de cada um."
+                onClick={() => !initialRule && selectDataset("fornecedores")}
+              />
+              <DatasetCard
+                active={dataset === "vagas"}
+                icon={<Briefcase size={16} style={{ color: "var(--accent)", marginTop: 1 }} />}
+                title="Vaga parada (Recrutamento)"
+                description="O assistente monitora as vagas publicadas ou em triagem e quanto tempo cada uma está sem avançar de etapa."
+                onClick={() => !initialRule && selectDataset("vagas")}
+              />
             </div>
           )}
 
           {step === 1 && (
             <div className="space-y-3">
               <div>
-                <label style={labelSt}>Avisar quantos dias antes do contrato vencer?</label>
+                <label style={labelSt}>
+                  {dataset === "vagas"
+                    ? "Avisar quando a vaga estiver parada há quantos dias?"
+                    : "Avisar quantos dias antes do contrato vencer?"}
+                </label>
                 <input
                   type="number"
                   min="1"
@@ -275,14 +329,14 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
               </button>
               {showAdvanced && (
                 <div>
-                  <label style={labelSt}>Tipo de fornecedor</label>
+                  <label style={labelSt}>{dataset === "vagas" ? "Departamento" : "Tipo de fornecedor"}</label>
                   <select
                     value={tipoFilter}
                     onChange={e => setTipoFilter(e.target.value)}
                     className={inputCls}
                     style={inputSt}
                   >
-                    <option value="">Qualquer tipo</option>
+                    <option value="">{dataset === "vagas" ? "Qualquer departamento" : "Qualquer tipo"}</option>
                     {tipoOptions.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
@@ -290,7 +344,35 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
             </div>
           )}
 
-          {step === 2 && (
+          {step === 2 && dataset === "vagas" && (
+            <div className="space-y-3">
+              <div>
+                <label style={labelSt}>Tom</label>
+                <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls} style={inputSt}>
+                  {TONES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelSt}>Ação sugerida</label>
+                <select value={suggestedAction} onChange={e => setSuggestedAction(e.target.value)} className={inputCls} style={inputSt}>
+                  {VAGA_SUGGESTED_ACTIONS.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelSt}>Algo específico que a IA deve sempre mencionar (opcional)</label>
+                <input
+                  type="text"
+                  value={customInstruction}
+                  onChange={e => setCustomInstruction(e.target.value)}
+                  placeholder="Ex: sempre pedir posição sobre o prazo de contratação"
+                  className={inputCls}
+                  style={inputSt}
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 2 && dataset === "fornecedores" && (
             <div className="space-y-3">
               <div>
                 <label style={labelSt}>Tipo de rascunho</label>
@@ -358,7 +440,9 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
             >
               <ShieldCheck size={16} style={{ color: "var(--accent)", marginTop: 1 }} />
               <p className="text-xs" style={{ color: "var(--text-dim)" }}>
-                Qualquer gerente de RH vê e aprova esta sugestão antes de qualquer coisa sair da plataforma.
+                {dataset === "vagas"
+                  ? "Qualquer gerente de RH vê e aprova esta sugestão antes do aviso chegar ao gestor da vaga (quando houver um link de triagem gerado pra ela)."
+                  : "Qualquer gerente de RH vê e aprova esta sugestão antes de qualquer coisa sair da plataforma."}
               </p>
             </div>
           )}
@@ -381,7 +465,9 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
                   style={{ background: "var(--surface-alt)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
                 >
                   <Info size={12} className="shrink-0" />
-                  Nenhum contrato real disponível ainda — mostrando um exemplo.
+                  {dataset === "vagas"
+                    ? "Nenhuma vaga parada disponível ainda — mostrando um exemplo."
+                    : "Nenhum contrato real disponível ainda — mostrando um exemplo."}
                 </div>
               )}
 
@@ -391,6 +477,12 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
                     <div className="text-xs" style={{ color: "var(--text-dim)" }}>
                       Fornecedor: <b style={{ color: "var(--text)" }}>{preview.result.fornecedorNome}</b>
                       {preview.result.diasParaVencer != null && ` · vence em ${preview.result.diasParaVencer} dia(s)`}
+                    </div>
+                  )}
+                  {preview.result.vagaTitulo && (
+                    <div className="text-xs" style={{ color: "var(--text-dim)" }}>
+                      Vaga: <b style={{ color: "var(--text)" }}>{preview.result.vagaTitulo}</b>
+                      {preview.result.diasParado != null && ` · parada há ${preview.result.diasParado} dia(s)`}
                     </div>
                   )}
                   {preview.result.isEmail ? (

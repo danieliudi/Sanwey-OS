@@ -35,8 +35,19 @@ function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 }
 
-const MODULE = "rh-fornecedores";
+// Fase 2 (Vaga parada — Recrutamento): mesma function, 2º módulo. Cada
+// automação já carrega seu próprio `module`; o sweep varre os dois de uma
+// vez e o loop abaixo decide qual "encontrar candidatos" usar por automação.
+const MODULES = ["rh-fornecedores", "rh-vagas"];
 const DAILY_LIMIT = 50;
+const VAGA_ACTIVE_STAGES = ["publicada", "em_triagem"];
+
+const VAGA_SUGGESTED_ACTION_LABEL: Record<string, string> = {
+  reabrir_divulgacao:  "Reabrir divulgação",
+  escalar_gestor:      "Escalar pro gestor",
+  revisar_requisitos:  "Revisar requisitos",
+  so_monitorar:        "Só monitorar",
+};
 
 // ── Templates de prompt por tipo de rascunho (PRD seção 3, passo 3) ────────
 
@@ -96,6 +107,31 @@ function diasParaVencer(vigenciaFim: string): number {
   return Math.floor((fim - hojeUTC) / 86400000);
 }
 
+// stage_changed_at é timestamptz (não date-only como vigencia_fim acima) —
+// diferença direta em ms, sem o ajuste de fuso do helper acima.
+function diasParado(stageChangedAt: string): number {
+  return Math.floor((Date.now() - new Date(stageChangedAt).getTime()) / 86400000);
+}
+
+function buildVagaPrompt(tone: string, customInstruction: string, ctx: {
+  title: string; department: string; diasParado: number; stage: string; hiringDeadline: string | null;
+}, suggestedAction?: string) {
+  const toneLabel = TONE_LABEL[tone] || TONE_LABEL.formal;
+  const actionLabel = VAGA_SUGGESTED_ACTION_LABEL[suggestedAction || ""] || null;
+  const contexto = [
+    `Vaga: ${ctx.title}`,
+    ctx.department ? `Departamento: ${ctx.department}` : null,
+    `Etapa atual: ${ctx.stage}`,
+    `Parada há: ${ctx.diasParado} dia(s) sem avançar de etapa`,
+    ctx.hiringDeadline ? `Prazo de contratação: ${ctx.hiringDeadline}` : null,
+    customInstruction ? `Observação adicional a sempre mencionar: ${customInstruction}` : null,
+  ].filter(Boolean).join("\n");
+  return {
+    system: `Você escreve avisos internos curtos em português do Brasil pro RH sobre vagas de recrutamento paradas há muito tempo sem avançar de etapa. Tom: ${toneLabel}. Responda SOMENTE com um JSON válido no formato {"title": "...", "recommended_action": "..."} — title é uma frase curta (até 80 caracteres), recommended_action é o texto do aviso (2-4 frases, sem saudação).${actionLabel ? ` Considere que a ação recomendada pelo gerente é "${actionLabel}" — mencione isso claramente em recommended_action, adaptando a redação ao contexto da vaga, sem inventar uma ação diferente.` : ""}`,
+    user: contexto,
+  };
+}
+
 // Condições avançadas opcionais (PRD seção 3, passo 2: "Adicionar filtro
 // avançado") — mesmo operador básico do motor de automações comuns
 // (use-automations.js matchOperator), só que contra o registro
@@ -133,6 +169,19 @@ async function findCandidateContracts(admin: any, conditionGroups: any[]) {
   });
 }
 
+async function findCandidateVagas(admin: any, conditionGroups: any[]) {
+  const { data, error } = await admin
+    .from("rh_vagas")
+    .select("*")
+    .in("stage", VAGA_ACTIVE_STAGES)
+    .not("stage_changed_at", "is", null);
+  if (error) throw error;
+  return (data || []).filter((v: any) => {
+    const record = { department: v.department || "", stage: v.stage };
+    return passesConditionGroups(conditionGroups, record);
+  });
+}
+
 // ── Sweep agendado ──────────────────────────────────────────────────────────
 
 async function runSweep(admin: any) {
@@ -143,7 +192,7 @@ async function runSweep(admin: any) {
   const { data: automations, error } = await admin
     .from("automations")
     .select("*")
-    .eq("module", MODULE)
+    .in("module", MODULES)
     .eq("enabled", true)
     .is("paused_reason", null);
   if (error) throw error;
@@ -152,7 +201,8 @@ async function runSweep(admin: any) {
 
   for (const automation of automations || []) {
     const trigger = automation.trigger || {};
-    if (trigger.type !== "date_approaching") continue;
+    const isVagas = automation.module === "rh-vagas";
+    if (isVagas ? trigger.type !== "stage_stale" : trigger.type !== "date_approaching") continue;
     processed++;
 
     const action = (automation.then_actions || [])[0];
@@ -169,11 +219,10 @@ async function runSweep(admin: any) {
       continue;
     }
 
-    const contratos = await findCandidateContracts(admin, automation.condition_groups || []);
-    const days = Number(trigger.days) || 15;
+    const days = Number(trigger.days) || (isVagas ? 7 : 15);
 
     // Chave do criador do agente (BYOLLM) — resolvida uma vez por automação,
-    // não por contrato.
+    // não por contrato/vaga.
     const { data: creatorProfile } = await admin.from("profiles").select("ai_config").eq("id", automation.created_by).maybeSingle();
     const providerConfig = resolveProviderConfig(creatorProfile?.ai_config);
     if (!providerConfig) {
@@ -183,6 +232,75 @@ async function runSweep(admin: any) {
       pausedNow++;
       continue;
     }
+
+    if (isVagas) {
+      const vagas = await findCandidateVagas(admin, automation.condition_groups || []);
+      let keyFailed = false;
+      for (const vaga of vagas) {
+        if (keyFailed) break;
+        const dias = diasParado(vaga.stage_changed_at);
+        if (dias < days) continue;
+
+        const { data: existing } = await admin
+          .from("agent_actions")
+          .select("id")
+          .eq("automation_id", automation.id)
+          .contains("payload", { source_id: vaga.id })
+          .limit(1);
+        if (existing && existing.length > 0) continue;
+
+        const { system, user } = buildVagaPrompt(action.tone, action.customInstruction || "", {
+          title: vaga.title,
+          department: vaga.department || "",
+          diasParado: dias,
+          stage: vaga.stage,
+          hiringDeadline: vaga.hiring_deadline || null,
+        }, action.suggestedAction);
+
+        try {
+          const raw = await callAIProvider({
+            provider: providerConfig.provider,
+            model: providerConfig.model,
+            apiKey: providerConfig.apiKey,
+            messages: [{ role: "system", content: system }, { role: "user", content: user }],
+            maxTokens: 600,
+          });
+          const draft = parseDraftJson(raw);
+          const title = draft.title || `Vaga parada: ${vaga.title} (${dias}d)`;
+          const summary = draft.recommended_action || `Vaga "${vaga.title}" parada há ${dias} dia(s) sem avançar de etapa.`;
+
+          await admin.from("agent_actions").insert({
+            agent_id: "automation",
+            action_type: "aviso_interno_vaga",
+            lead_id: null,
+            company_id: null,
+            title,
+            summary,
+            payload: {
+              source_table: "rh_vagas",
+              source_id: vaga.id,
+              vaga_titulo: vaga.title,
+              vaga_departamento: vaga.department || null,
+              dias_parado: dias,
+              recommended_action: draft.recommended_action || "",
+            },
+            priority: "normal",
+            status: "pending",
+            automation_id: automation.id,
+          });
+          created++;
+        } catch (err) {
+          keyFailed = true;
+          await admin.from("automations").update({
+            paused_reason: `Falha ao gerar sugestão: ${err instanceof Error ? err.message : String(err)}`,
+          }).eq("id", automation.id);
+          pausedNow++;
+        }
+      }
+      continue;
+    }
+
+    const contratos = await findCandidateContracts(admin, automation.condition_groups || []);
 
     let keyFailed = false;
     for (const contrato of contratos) {
@@ -273,6 +391,63 @@ async function runPreview(admin: any, body: any, userId: string) {
   const action = (rule.thenActions || [])[0] || {};
   if (action.type !== "suggest_with_ai") return json({ error: "Ação da automação precisa ser 'suggest_with_ai'" }, 400);
 
+  // Preview usa a chave de QUEM ESTÁ TESTANDO (a sessão autenticada), não a
+  // do dono do agente — o agente pode nem ter sido salvo ainda. Comum aos
+  // dois módulos, resolvida uma vez só.
+  const { data: profile } = await admin.from("profiles").select("ai_config").eq("id", userId).maybeSingle();
+  const providerConfig = resolveProviderConfig(profile?.ai_config);
+  if (!providerConfig) {
+    return json({ error: "Configure sua chave de IA em Configurações → Integrações de IA pra testar o agente." }, 400);
+  }
+
+  if (rule.module === "rh-vagas") {
+    const days = Number(trigger.days) || 7;
+    const vagas = await findCandidateVagas(admin, rule.conditionGroups || []);
+    const pick = vagas
+      .map((v: any) => ({ v, dias: diasParado(v.stage_changed_at) }))
+      .sort((a: any, b: any) => b.dias - a.dias)[0];
+
+    let usandoExemplo = false;
+    let vagaTitulo: string, departamento: string, dias: number, stage: string;
+    if (pick) {
+      vagaTitulo = pick.v.title;
+      departamento = pick.v.department || "";
+      dias = pick.dias;
+      stage = pick.v.stage;
+    } else {
+      usandoExemplo = true;
+      vagaTitulo = "Analista Fiscal Pleno";
+      departamento = "Financeiro";
+      dias = days;
+      stage = "publicada";
+    }
+
+    const { system, user } = buildVagaPrompt(action.tone, action.customInstruction || "", {
+      title: vagaTitulo, department: departamento, diasParado: dias, stage, hiringDeadline: pick?.v.hiring_deadline || null,
+    }, action.suggestedAction);
+
+    try {
+      const raw = await callAIProvider({
+        provider: providerConfig.provider,
+        model: providerConfig.model,
+        apiKey: providerConfig.apiKey,
+        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        maxTokens: 600,
+      });
+      const draft = parseDraftJson(raw);
+      return json({
+        usandoExemplo,
+        vagaTitulo,
+        diasParado: dias,
+        isEmail: false,
+        title: draft.title || "",
+        recommendedAction: draft.recommended_action || "",
+      });
+    } catch (err) {
+      return json({ error: `Falha ao gerar preview: ${err instanceof Error ? err.message : String(err)}` }, 502);
+    }
+  }
+
   const contratos = await findCandidateContracts(admin, rule.conditionGroups || []);
   const days = Number(trigger.days) || 15;
 
@@ -304,14 +479,6 @@ async function runPreview(admin: any, body: any, userId: string) {
     fornecedorContactName = null;
     fornecedorEmail = null;
     fornecedorPhone = null;
-  }
-
-  // Preview usa a chave de QUEM ESTÁ TESTANDO (a sessão autenticada), não a
-  // do dono do agente — o agente pode nem ter sido salvo ainda.
-  const { data: profile } = await admin.from("profiles").select("ai_config").eq("id", userId).maybeSingle();
-  const providerConfig = resolveProviderConfig(profile?.ai_config);
-  if (!providerConfig) {
-    return json({ error: "Configure sua chave de IA em Configurações → Integrações de IA pra testar o agente." }, 400);
   }
 
   const { system, user } = buildPrompt(action.draftType, action.tone, action.customInstruction || "", {
