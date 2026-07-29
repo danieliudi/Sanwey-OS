@@ -1521,6 +1521,7 @@ export default function App() {
         section={section}
         onSectionChange={setSection}
         currentUser={currentUser}
+        isAdmin={isAdmin}
         onLogout={handleLogout}
         mobileOpen={sidebarMobileOpen}
         onMobileClose={() => setSidebarMobileOpen(false)}
