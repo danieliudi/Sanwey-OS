@@ -28,6 +28,9 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
@@ -631,6 +634,7 @@ function TreinamentoBoardColumn({
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, boardHeight,
   draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
+  getSortCriteria, setSortCriteria,
 }) {
   return (
     <div
@@ -668,11 +672,21 @@ function TreinamentoBoardColumn({
           nameFontWeight={700}
           uppercase={false}
           countFontSize={12}
-          actions={canWrite && (
-            <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
-              <Settings2 size={13} />
-            </button>
-          )}
+          actions={
+            <div className="flex items-center gap-1 shrink-0">
+              <KanbanColumnSortMenu
+                criteria={getSortCriteria(stage.stageKey)}
+                onChange={(v) => setSortCriteria(stage.stageKey, v)}
+                options={["recent", "alpha"]}
+                accentColor={stage.color}
+              />
+              {canWrite && (
+                <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
+                  <Settings2 size={13} />
+                </button>
+              )}
+            </div>
+          }
         />
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1146,13 +1160,6 @@ function TreinamentoBoardModal({
     onInitialDrawerIdConsumed?.();
   }, [initialDrawerId, onInitialDrawerIdConsumed]);
 
-  const byStage = useMemo(() => {
-    const map = {};
-    const defaultKey = stages[0]?.stageKey || "pendente";
-    stages.forEach(s => { map[s.stageKey] = atribuicoes.filter(a => (a.status || defaultKey) === s.stageKey); });
-    return map;
-  }, [atribuicoes, stages]);
-
   const getCompleteness = (a) => getFieldCompleteness(stageFields.getFields(a.status), a.custom_fields || {});
 
   const handleMove = (id, stage) => {
@@ -1287,6 +1294,9 @@ function TreinamentoBoardModal({
               <RHMobileKanbanAccordion
                 stages={stages}
                 itemsByStage={byStage}
+                getSortCriteria={getSortCriteria}
+                setSortCriteria={setSortCriteria}
+                sortOptions={["recent", "alpha"]}
                 renderCard={(a) => (
                   <RHKanbanCard
                     key={a.id}
@@ -1345,6 +1355,8 @@ function TreinamentoBoardModal({
                         onColumnHeaderDragStart={setDraggedColumnKey}
                         onColumnHeaderDragEnd={handleStageReorderDragEnd}
                         onColumnHeaderDrop={handleStageReorderDrop}
+                        getSortCriteria={getSortCriteria}
+                        setSortCriteria={setSortCriteria}
                       />
                     ))}
                     {canWrite && (
@@ -1454,6 +1466,20 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
   const loading = loadingTreinamentos || loadingColaboradores || loadingMeuColaborador;
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
+
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("rh-treinamentos");
+  const byStage = useMemo(() => {
+    const map = {};
+    const defaultKey = stages[0]?.stageKey || "pendente";
+    stages.forEach(s => {
+      const list = atribuicoes.filter(a => (a.status || defaultKey) === s.stageKey);
+      map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
+        name: a => colaboradoresById.get(a.colaborador_id)?.fullName,
+        createdAt: a => a.created_at,
+      });
+    });
+    return map;
+  }, [atribuicoes, stages, getSortCriteria, colaboradoresById]);
 
   // Lista de atribuíveis do modal "Atribuir" — dois achados da auditoria de
   // QA aqui: (1) a mesma pessoa aparecia 2x (um registro legado com

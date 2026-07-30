@@ -35,6 +35,9 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
@@ -674,6 +677,7 @@ function FeedbackKanbanColumn({
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, boardHeight,
   draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
+  getSortCriteria, setSortCriteria,
 }) {
   return (
     <div
@@ -719,15 +723,25 @@ function FeedbackKanbanColumn({
           nameFontWeight={700}
           uppercase={false}
           countFontSize={12}
-          actions={canWrite && (
-            <button
-              onClick={() => onEditFields(stage)}
-              title="Editar campos desta etapa"
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}
-            >
-              <Settings2 size={13} />
-            </button>
-          )}
+          actions={
+            <div className="flex items-center gap-1 shrink-0">
+              <KanbanColumnSortMenu
+                criteria={getSortCriteria(stage.stageKey)}
+                onChange={(v) => setSortCriteria(stage.stageKey, v)}
+                options={["recent", "alpha"]}
+                accentColor={stage.color}
+              />
+              {canWrite && (
+                <button
+                  onClick={() => onEditFields(stage)}
+                  title="Editar campos desta etapa"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}
+                >
+                  <Settings2 size={13} />
+                </button>
+              )}
+            </div>
+          }
         />
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1476,12 +1490,19 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
     if (orderedIds.length === nextOrder.length) reorderStages(orderedIds);
   }, [draggedColumnKey, stages, reorderStages]);
 
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("rh-feedback");
   const feedbackByStage = useMemo(() => {
     const map = {};
     const defaultStageKey = stages[0]?.stageKey || "rascunho";
-    stages.forEach((s) => { map[s.stageKey] = feedbacks.filter((f) => (f.status || defaultStageKey) === s.stageKey); });
+    stages.forEach((s) => {
+      const list = feedbacks.filter((f) => (f.status || defaultStageKey) === s.stageKey);
+      map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
+        name: f => colaboradoresById.get(f.user_id)?.fullName,
+        createdAt: f => f.created_at,
+      });
+    });
     return map;
-  }, [feedbacks, stages]);
+  }, [feedbacks, stages, getSortCriteria, colaboradoresById]);
 
   const analyticsStages = useMemo(
     () => stages.filter((s) => !s.terminal).map((s) => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
@@ -1656,6 +1677,9 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           <RHMobileKanbanAccordion
             stages={stages}
             itemsByStage={feedbackByStage}
+            getSortCriteria={getSortCriteria}
+            setSortCriteria={setSortCriteria}
+            sortOptions={["recent", "alpha"]}
             renderCard={(f) => (
               <RHKanbanCard
                 key={f.id}
@@ -1714,6 +1738,8 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                     onColumnHeaderDragStart={setDraggedColumnKey}
                     onColumnHeaderDragEnd={handleStageReorderDragEnd}
                     onColumnHeaderDrop={handleStageReorderDrop}
+                    getSortCriteria={getSortCriteria}
+                    setSortCriteria={setSortCriteria}
                   />
                 ))}
                 {canWrite && (
