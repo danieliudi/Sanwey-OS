@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.4.1",
+    items: [
+      { kind: "correcao", text: "Despesas: o campo pra vincular uma campanha (opcional) não tinha rótulo e sumia da tela quando nenhuma campanha estava cadastrada ainda — agora sempre aparece, com rótulo claro.", roles: ["marketing", "gerente_marketing"] },
+    ],
+  },
+  {
     version: "4.4.0",
     items: [
       { kind: "novo", text: "Cada etapa de todos os Kanbans da plataforma agora tem seu próprio ícone de ordenação (por prioridade, prazo, mais recente ou ordem alfabética) — antes só 4 boards tinham um filtro, e era um só pro board inteiro." },
