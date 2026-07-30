@@ -273,6 +273,7 @@ function ImportCurrencyField({ op, onSave, disabled }) {
         className="w-full text-sm rounded-lg border px-3 py-2 outline-none" style={inputSt}>
         <option value="USD">USD</option>
         <option value="EUR">EUR</option>
+        <option value="JPY">JPY</option>
       </select>
     </div>
   );
@@ -403,6 +404,7 @@ function ExportSaleFields({ op, onSave, disabled }) {
             className="w-full text-sm rounded-lg border px-3 py-2 outline-none" style={inputSt}>
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
+            <option value="JPY">JPY</option>
           </select>
         </div>
         <div>

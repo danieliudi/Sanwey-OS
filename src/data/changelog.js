@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.2.2",
+    items: [
+      { kind: "novo", text: "Comex: Iene (JPY) agora é uma opção de moeda nas operações de Importação e Exportação.", roles: ["comex"] },
+    ],
+  },
+  {
     version: "4.2.1",
     items: [
       { kind: "ajuste", text: "O toast de \"Novidades\" agora mostra só o que tem a ver com o seu cargo — menos itens de outras áreas aparecendo pra você. A aba \"Novidades\" em Ajuda & Tutoriais continua com a lista completa, de todas as áreas." },
