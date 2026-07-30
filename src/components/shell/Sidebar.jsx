@@ -302,7 +302,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
                 key={group.label || `__pinned-${group.items[0]?.id ?? gi}`}
                 style={{
                   marginTop: gi === 0 ? 0 : 8,
-                  boxShadow: dragOverGroup === group.label ? "inset 0 2px 0 0 var(--accent)" : "none",
+                  boxShadow: (group.label && dragOverGroup === group.label) ? "inset 0 2px 0 0 var(--accent)" : "none",
                 }}
                 onDragOver={(e) => { if (isAdmin && draggedGroup && group.label) { e.preventDefault(); setDragOverGroup(group.label); } }}
                 onDrop={(e) => { if (isAdmin && group.label) { e.preventDefault(); handleGroupDrop(group.label); } }}
