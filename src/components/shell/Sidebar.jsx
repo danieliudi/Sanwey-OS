@@ -498,10 +498,12 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
   );
 }
 
-// Segurar o ícone e arrastar reordena o item dentro do grupo — só o ícone
-// é `draggable`, então um clique normal em qualquer outro ponto da linha
-// (inclusive no próprio ícone sem mover) continua navegando na hora, sem
-// nenhum gesto/atraso extra atrapalhando.
+// Reordena o item dentro do grupo segurando uma alça dedicada (6 pontinhos,
+// ícone universal de arrastar — mesmo padrão do grip de seção), visível só
+// no hover. Só ela é `draggable`, então um clique normal em qualquer outro
+// ponto da linha (inclusive no próprio ícone) continua navegando na hora,
+// sem nenhum gesto/atraso extra atrapalhando. Modo trilho (só ícones) é
+// exceção: sem espaço pra alça separada, o ícone em si volta a ser a alça.
 function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
   const [hovered, setHovered] = useState(false);
   // Âncora do tooltip em coordenadas de viewport. O balão era absolute
@@ -547,14 +549,39 @@ function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOv
         borderRadius: "var(--radius-sm)",
       }}
     >
-      {Icon && (
+      {/* Alça de arraste dedicada (6 pontinhos, ícone universal) — só
+          aparece no hover, mesmo padrão do grip de seção. Só existe no modo
+          expandido: no modo trilho (só ícones) não sobra espaço, então lá o
+          próprio ícone continua sendo a alça (comportamento de sempre). */}
+      {Icon && !rail && (
         <span
           draggable
           onDragStart={(e) => { e.stopPropagation(); onIconDragStart?.(); }}
           onDragEnd={(e) => { e.stopPropagation(); onIconDragEnd?.(); }}
           onMouseDown={(e) => e.stopPropagation()}
-          title={rail ? undefined : "Arraste para reordenar"}
-          style={{ position: "relative", display: "flex", flexShrink: 0, cursor: "grab" }}
+          title="Arraste para reordenar"
+          style={{
+            display: "flex",
+            flexShrink: 0,
+            cursor: "grab",
+            color: "var(--text-faint)",
+            opacity: hovered ? 1 : 0,
+            transition: "opacity 0.12s",
+            marginLeft: -4,
+          }}
+        >
+          <GripVertical size={12} strokeWidth={2} />
+        </span>
+      )}
+      {Icon && (
+        <span
+          {...(rail ? {
+            draggable: true,
+            onDragStart: (e) => { e.stopPropagation(); onIconDragStart?.(); },
+            onDragEnd: (e) => { e.stopPropagation(); onIconDragEnd?.(); },
+            onMouseDown: (e) => e.stopPropagation(),
+          } : {})}
+          style={{ position: "relative", display: "flex", flexShrink: 0, cursor: rail ? "grab" : "default" }}
         >
           <Icon size={15} strokeWidth={2} style={{ opacity: 0.85, color: rail && active ? "var(--accent)" : undefined }} />
           {/* Modo trilho esconde o label — o pill numérico não cabe, vira só
