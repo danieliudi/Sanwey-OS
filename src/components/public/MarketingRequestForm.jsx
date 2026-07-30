@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, FileEdit, ShoppingCart } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { friendlyError } from "../../utils/friendly-error";
 import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS } from "../../constants/companies";
@@ -28,7 +28,7 @@ const card = {
   boxShadow: "var(--shadow-pop)",
   padding: "36px 32px",
   width: "100%",
-  maxWidth: 540,
+  maxWidth: 560,
 };
 
 const input = {
@@ -71,7 +71,49 @@ function Field({ label: lbl, children, hint: h, required }) {
   );
 }
 
-export default function MarketingRequestForm() {
+// Duas frentes de solicitação num só formulário (pedido do Daniel,
+// 30/07/2026) — antes eram duas rotas/tabelas completamente separadas
+// (/solicitar-marketing -> marketing_requests, /solicitar-compra ->
+// marketing_purchase_requests direto, sem nenhum gate de aprovação). Os dois
+// tipos agora entram como 'pendente' em marketing_requests (coluna `category`)
+// e passam pela mesma fila de Solicitações — Compra só ganha a linha em
+// marketing_purchase_requests quando aprovada (ver approve_marketing_request_
+// as_purchase), sem escolha de destino nenhuma (isso só existe pra Material).
+function TypeToggle({ category, onChange }) {
+  const opts = [
+    { id: "material", icon: FileEdit, title: "Material de Marketing", desc: "Criação de peça: banner, arte, vídeo, post, impresso…" },
+    { id: "compra",   icon: ShoppingCart, title: "Compra", desc: "Um item já pronto: brinde, uniforme, material impresso de terceiro…" },
+  ];
+  return (
+    <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
+      {opts.map(opt => {
+        const selected = category === opt.id;
+        const Icon = opt.icon;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            style={{
+              flex: 1, padding: "14px 16px", borderRadius: 12, textAlign: "left", cursor: "pointer",
+              border: `1.5px solid ${selected ? ACCENT : "#D1D5DB"}`,
+              background: selected ? ACCENT + "0D" : "#FAFAF9",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13.5, fontWeight: 800, color: selected ? ACCENT : "#201a1a" }}>
+              <Icon size={15} />
+              {opt.title}
+            </div>
+            <div style={{ fontSize: 11.5, color: "#6B7280", marginTop: 3, lineHeight: 1.4 }}>{opt.desc}</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function MarketingRequestForm({ defaultCategory = "material" }) {
+  const [category, setCategory] = useState(defaultCategory);
   const [form, setForm] = useState({
     title:          "",
     requesterName:  "",
@@ -91,8 +133,8 @@ export default function MarketingRequestForm() {
   const [error,      setError]      = useState(null);
 
   useEffect(() => {
-    document.title = "Solicitar ao Marketing";
-  }, []);
+    document.title = category === "compra" ? "Solicitar Compra ao Marketing" : "Solicitar ao Marketing";
+  }, [category]);
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -104,13 +146,16 @@ export default function MarketingRequestForm() {
         : [...prev.companyIds, id],
     }));
 
-  const canSubmit = useMemo(() => (
-    form.title.trim().length >= 3 &&
-    form.requesterName.trim().length >= 2 &&
-    form.department.trim().length >= 1 &&
-    form.requestType.length >= 1 &&
-    !submitting
-  ), [form, submitting]);
+  const canSubmit = useMemo(() => {
+    if (submitting) return false;
+    if (form.requesterName.trim().length < 2) return false;
+    if (category === "compra") return form.title.trim().length >= 2;
+    return (
+      form.title.trim().length >= 3 &&
+      form.department.trim().length >= 1 &&
+      form.requestType.length >= 1
+    );
+  }, [form, category, submitting]);
 
   if (!isSupabaseConfigured) {
     return (
@@ -137,18 +182,19 @@ export default function MarketingRequestForm() {
       const id = crypto.randomUUID();
       const { error: err } = await supabase.from("marketing_requests").insert({
         id,
-        title:           form.title.trim(),
-        requester_name:  form.requesterName.trim(),
-        requester_email: form.requesterEmail.trim() || null,
-        department:      form.department,
-        request_type:    form.requestType,
-        description:     form.description.trim() || null,
-        priority:        form.priority,
-        deadline:        form.deadline || null,
-        company_ids:     form.companyIds.length > 0 ? form.companyIds : MARKETING_UNIT_IDS,
-        budget:          form.budget === "" ? null : form.budget,
-        approver_name:   form.approverName.trim() || null,
-        status:          "pendente",
+        category:        category,
+        title:            form.title.trim(),
+        requester_name:   form.requesterName.trim(),
+        requester_email:  form.requesterEmail.trim() || null,
+        department:       category === "material" ? form.department : null,
+        request_type:     category === "material" ? form.requestType : null,
+        description:      form.description.trim() || null,
+        priority:         category === "material" ? form.priority : "media",
+        deadline:         form.deadline || null,
+        company_ids:      form.companyIds.length > 0 ? form.companyIds : MARKETING_UNIT_IDS,
+        budget:           category === "material" && form.budget !== "" ? form.budget : null,
+        approver_name:    category === "material" ? (form.approverName.trim() || null) : null,
+        status:           "pendente",
       });
       if (err) throw err;
       const { data: numberData } = await supabase.rpc("get_marketing_request_number", { p_id: id });
@@ -189,7 +235,9 @@ export default function MarketingRequestForm() {
               </div>
             )}
             <p style={{ color: "#5c5f60", fontSize: 14, maxWidth: 360, margin: 0, lineHeight: 1.6 }}>
-              Recebemos sua solicitação{requestNumber ? ` (protocolo ${requestNumber})` : ""}. A equipe de Marketing irá analisá-la e você receberá um retorno em breve.
+              {category === "compra"
+                ? `Recebemos sua solicitação de compra${requestNumber ? ` (protocolo ${requestNumber})` : ""}. A equipe de Marketing irá analisar e cuidar de toda a compra até a entrega.`
+                : `Recebemos sua solicitação${requestNumber ? ` (protocolo ${requestNumber})` : ""}. A equipe de Marketing irá analisá-la e você receberá um retorno em breve.`}
             </p>
           </div>
         </div>
@@ -200,7 +248,7 @@ export default function MarketingRequestForm() {
   return (
     <div style={shell}>
       <div style={card}>
-        <header style={{ marginBottom: 28 }}>
+        <header style={{ marginBottom: 24 }}>
           <div
             style={{
               display: "inline-flex", alignItems: "center", gap: 8,
@@ -216,12 +264,13 @@ export default function MarketingRequestForm() {
             Solicitar ao Marketing
           </h1>
           <p style={{ color: "#5c5f60", fontSize: 14, margin: 0, lineHeight: 1.55 }}>
-            Preencha as informações abaixo para abrir uma solicitação de criação de material. A equipe de Marketing irá analisar e dar retorno.
+            O que você precisa? Escolha o tipo abaixo — o formulário se ajusta automaticamente.
           </p>
         </header>
 
+        <TypeToggle category={category} onChange={setCategory} />
+
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Quem solicita */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <Field label="Seu nome" required>
               <input
@@ -243,94 +292,129 @@ export default function MarketingRequestForm() {
             </Field>
           </div>
 
-          <Field label="Departamento" required>
-            <select
-              value={form.department}
-              onChange={e => set("department", e.target.value)}
-              style={{ ...input, cursor: "pointer" }}
-            >
-              <option value="">Selecione seu departamento…</option>
-              {DELIVERABLE_DEPARTMENTS.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </Field>
+          {category === "material" ? (
+            <>
+              <Field label="Departamento" required>
+                <select
+                  value={form.department}
+                  onChange={e => set("department", e.target.value)}
+                  style={{ ...input, cursor: "pointer" }}
+                >
+                  <option value="">Selecione seu departamento…</option>
+                  {DELIVERABLE_DEPARTMENTS.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </Field>
 
-          <Field label="Tipo de material" required>
-            <select
-              value={form.requestType}
-              onChange={e => set("requestType", e.target.value)}
-              style={{ ...input, cursor: "pointer" }}
-            >
-              <option value="">O que você precisa?</option>
-              {DELIVERABLE_REQUEST_TYPES.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </Field>
+              <Field label="Tipo de material" required>
+                <select
+                  value={form.requestType}
+                  onChange={e => set("requestType", e.target.value)}
+                  style={{ ...input, cursor: "pointer" }}
+                >
+                  <option value="">O que você precisa?</option>
+                  {DELIVERABLE_REQUEST_TYPES.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </Field>
 
-          <Field label="Título da solicitação" required hint="Ex: Banner para campanha de Black Friday">
-            <input
-              type="text"
-              value={form.title}
-              onChange={e => set("title", e.target.value)}
-              placeholder="Descreva brevemente o que precisa…"
-              style={input}
-            />
-          </Field>
+              <Field label="Título da solicitação" required hint="Ex: Banner para campanha de Black Friday">
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={e => set("title", e.target.value)}
+                  placeholder="Descreva brevemente o que precisa…"
+                  style={input}
+                />
+              </Field>
 
-          <Field label="Descrição detalhada" hint="Informações extras, referências, objetivos, público-alvo etc.">
-            <textarea
-              value={form.description}
-              onChange={e => set("description", e.target.value)}
-              placeholder="Detalhe sua necessidade aqui…"
-              rows={4}
-              style={{ ...input, resize: "vertical", lineHeight: 1.5 }}
-            />
-          </Field>
+              <Field label="Descrição detalhada" hint="Informações extras, referências, objetivos, público-alvo etc.">
+                <textarea
+                  value={form.description}
+                  onChange={e => set("description", e.target.value)}
+                  placeholder="Detalhe sua necessidade aqui…"
+                  rows={4}
+                  style={{ ...input, resize: "vertical", lineHeight: 1.5 }}
+                />
+              </Field>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <Field label="Prioridade">
-              <select
-                value={form.priority}
-                onChange={e => set("priority", e.target.value)}
-                style={{ ...input, cursor: "pointer" }}
-              >
-                {DELIVERABLE_PRIORITIES.map(p => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Prazo desejado">
-              <input
-                type="date"
-                value={form.deadline}
-                onChange={e => set("deadline", e.target.value)}
-                style={{ ...input, cursor: "pointer" }}
-              />
-            </Field>
-          </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <Field label="Prioridade">
+                  <select
+                    value={form.priority}
+                    onChange={e => set("priority", e.target.value)}
+                    style={{ ...input, cursor: "pointer" }}
+                  >
+                    {DELIVERABLE_PRIORITIES.map(p => (
+                      <option key={p.id} value={p.id}>{p.label}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Prazo desejado">
+                  <input
+                    type="date"
+                    value={form.deadline}
+                    onChange={e => set("deadline", e.target.value)}
+                    style={{ ...input, cursor: "pointer" }}
+                  />
+                </Field>
+              </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <Field label="Orçamento (se aplicável)">
-              <CurrencyInput
-                value={form.budget}
-                onChange={v => set("budget", v)}
-                style={input}
-              />
-            </Field>
-            <Field label="Aprovação necessária de quem?" hint="Nome/cargo do aprovador interno">
-              <input
-                type="text"
-                value={form.approverName}
-                onChange={e => set("approverName", e.target.value)}
-                placeholder="Ex: Maria Silva, Gerente Financeiro"
-                style={input}
-              />
-            </Field>
-          </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <Field label="Orçamento (se aplicável)">
+                  <CurrencyInput
+                    value={form.budget}
+                    onChange={v => set("budget", v)}
+                    style={input}
+                  />
+                </Field>
+                <Field label="Aprovação necessária de quem?" hint="Nome/cargo do aprovador interno">
+                  <input
+                    type="text"
+                    value={form.approverName}
+                    onChange={e => set("approverName", e.target.value)}
+                    placeholder="Ex: Maria Silva, Gerente Financeiro"
+                    style={input}
+                  />
+                </Field>
+              </div>
+            </>
+          ) : (
+            <>
+              <Field label="O que você precisa comprar?" required hint="Ex: Brinde personalizado para feira, uniforme, banner impresso já pronto">
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={e => set("title", e.target.value)}
+                  placeholder="Nome do item"
+                  style={input}
+                />
+              </Field>
 
-          <Field label="Empresa / unidade" hint="Selecione a(s) empresa(s) ou unidade para as quais o material será criado">
+              <Field label="Descrição detalhada" hint="Quantidade estimada, especificações, referências, onde será usado etc.">
+                <textarea
+                  value={form.description}
+                  onChange={e => set("description", e.target.value)}
+                  placeholder="Detalhe sua necessidade aqui…"
+                  rows={4}
+                  style={{ ...input, resize: "vertical", lineHeight: 1.5 }}
+                />
+              </Field>
+
+              <Field label="Prazo desejado">
+                <input
+                  type="date"
+                  value={form.deadline}
+                  onChange={e => set("deadline", e.target.value)}
+                  style={{ ...input, cursor: "pointer" }}
+                />
+              </Field>
+            </>
+          )}
+
+          <Field label="Empresa / unidade" hint={category === "compra" ? "Selecione a(s) empresa(s) ou unidade para as quais a compra será feita" : "Selecione a(s) empresa(s) ou unidade para as quais o material será criado"}>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {MARKETING_UNIT_IDS.map(id => {
                 const selected = form.companyIds.includes(id);

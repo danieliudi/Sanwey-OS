@@ -24,6 +24,14 @@
 
 export const CHANGELOG = [
   {
+    version: "4.3.0",
+    items: [
+      { kind: "novo", text: "Solicitar ao Marketing agora é um formulário só: escolha \"Material de Marketing\" ou \"Compra\" logo no topo, e os campos se ajustam sozinhos — antes eram dois links/formulários separados.", roles: ["marketing", "gerente_marketing"] },
+      { kind: "novo", text: "Solicitações de Compra agora passam por aprovação (\"Solicitações\") antes de entrar em Compras — antes iam direto pro Kanban sem ninguém revisar.", roles: ["marketing", "gerente_marketing"] },
+      { kind: "ajuste", text: "Solicitações: etiqueta \"Material\"/\"Compra\" pra diferenciar de relance; aprovar uma Compra não pede mais destino (Entrega/Tarefa é só de Material) — vai automaticamente pro Kanban de Compras.", roles: ["marketing", "gerente_marketing"] },
+    ],
+  },
+  {
     version: "4.2.5",
     items: [
       { kind: "novo", text: "Funcionários: agora dá pra excluir um registro (dentro do próprio card, botão de lixeira) — resolve os registros de teste/duplicados que ficavam presos na lista sem nenhum jeito de sair.", roles: ["gerente_rh", "rh"] },

@@ -1634,7 +1634,7 @@ export function SettingsView({
                             Formulário de Solicitação · Compras de Marketing
                           </div>
                           <p className="text-xs" style={{ color: "var(--text-dim)", marginBottom: 0 }}>
-                            Qualquer pessoa usa este link para pedir a compra de um item pronto (brinde, uniforme, material impresso). As solicitações entram em <strong>Marketing → Compras</strong> para aprovação.
+                            Qualquer pessoa usa este link para pedir a compra de um item pronto (brinde, uniforme, material impresso) — mesmo formulário de Solicitar ao Marketing, já com "Compra" pré-selecionado. Entra em <strong>Marketing → Solicitações</strong> para aprovação; ao aprovar, vai automaticamente para o Kanban de Compras.
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">

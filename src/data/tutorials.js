@@ -131,6 +131,8 @@ VIDEO_TUTORIALS.marketing = [
     quickStart: { icon: "💰", steps: ["Acesse 'Despesas' no menu lateral para registrar gastos por campanha", "Cada despesa tem categoria (Mídia Paga, Produção, Agência…) e valor", "O painel de totais mostra o budget consumido vs. disponível por campanha"] } },
   { id: "v-mkt5", title: "Aba Criativo e checklist de aprovação", description: "Campanhas", duration: null, url: null,
     quickStart: { icon: "✅", steps: ["Abra uma campanha e acesse a aba 'Criativo' no painel lateral", "Marque cada item do checklist de aprovação conforme for revisado", "A agência pode visualizar os itens marcados em tempo real"] } },
+  { id: "v-mkt6", title: "Solicitações: Material ou Compra", description: "Solicitações", duration: null, url: null,
+    quickStart: { icon: "📥", steps: ["Um só link público (/solicitar-marketing) agora cobre os dois tipos — quem pede escolhe 'Material de Marketing' ou 'Compra' logo no topo", "Ambos chegam em 'Solicitações' como pendentes, com uma etiqueta azul (Material) ou roxa (Compra) pra diferenciar", "Ao aprovar Material, você escolhe o destino (Entrega ou Tarefa); Compra vai direto pro Kanban de Compras, sem escolha"] } },
 ];
 
 VIDEO_TUTORIALS.gerente_marketing = [
