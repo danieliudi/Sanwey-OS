@@ -30,6 +30,9 @@ import { EmptyState } from "../ui/EmptyState";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { AppToast } from "../shared/AppToast";
@@ -470,6 +473,7 @@ function FeriasKanbanColumn({
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, onAprovar, onRecusar, busyId,
   draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
+  getSortCriteria, setSortCriteria,
 }) {
   return (
     <div
@@ -509,11 +513,21 @@ function FeriasKanbanColumn({
           nameFontWeight={700}
           uppercase={false}
           countFontSize={12}
-          actions={canWrite && (
-            <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
-              <Settings2 size={13} />
-            </button>
-          )}
+          actions={
+            <div className="flex items-center gap-1 shrink-0">
+              <KanbanColumnSortMenu
+                criteria={getSortCriteria(stage.stageKey)}
+                onChange={(v) => setSortCriteria(stage.stageKey, v)}
+                options={["recent", "deadline", "alpha"]}
+                accentColor={stage.color}
+              />
+              {canWrite && (
+                <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
+                  <Settings2 size={13} />
+                </button>
+              )}
+            </div>
+          }
         />
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -955,6 +969,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const loading = loadingRequests || loadingColaboradores || loadingStages;
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("rh-ferias");
 
   // Enforcement real: bloqueia sair da etapa atual com campo obrigatório
   // (estático ou condicional) vazio/inválido antes de qualquer transição —
@@ -1126,9 +1141,16 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const reqByStage = useMemo(() => {
     const map = {};
     const defaultStageKey = stages[0]?.stageKey || "pendente";
-    stages.forEach((s) => { map[s.stageKey] = filtered.filter((r) => (r.status || defaultStageKey) === s.stageKey); });
+    stages.forEach((s) => {
+      const list = filtered.filter((r) => (r.status || defaultStageKey) === s.stageKey);
+      map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
+        deadline: r => r.start_date,
+        name: r => colaboradoresById.get(r.user_id)?.fullName,
+        createdAt: r => r.created_at,
+      });
+    });
     return map;
-  }, [filtered, stages]);
+  }, [filtered, stages, getSortCriteria, colaboradoresById]);
 
   const PILL_TABS = [
     { id: "todas",    label: "Todas" },
@@ -1242,6 +1264,9 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
           <RHMobileKanbanAccordion
             stages={stages}
             itemsByStage={reqByStage}
+            getSortCriteria={getSortCriteria}
+            setSortCriteria={setSortCriteria}
+            sortOptions={["recent", "deadline", "alpha"]}
             renderCard={(req) => (
               <RHKanbanCard
                 key={req.id}
@@ -1304,6 +1329,8 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
                     onColumnHeaderDragStart={setDraggedColumnKey}
                     onColumnHeaderDragEnd={handleStageReorderDragEnd}
                     onColumnHeaderDrop={handleStageReorderDrop}
+                    getSortCriteria={getSortCriteria}
+                    setSortCriteria={setSortCriteria}
                   />
                 ))}
                 {canWrite && (

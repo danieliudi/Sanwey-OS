@@ -38,6 +38,9 @@ import { NovoColaboradorModal } from "./NovoColaboradorModal";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
@@ -300,6 +303,7 @@ function OnboardingKanbanColumn({
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread, onAddColaborador, boardHeight,
   draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
+  getSortCriteria, setSortCriteria,
 }) {
   return (
     <div
@@ -348,6 +352,12 @@ function OnboardingKanbanColumn({
           countFontSize={12}
           actions={
             <div className="flex items-center gap-1 shrink-0">
+              <KanbanColumnSortMenu
+                criteria={getSortCriteria(stage.stageKey)}
+                onChange={(v) => setSortCriteria(stage.stageKey, v)}
+                options={["recent", "alpha"]}
+                accentColor={stage.color}
+              />
               {canWrite && (
                 <button
                   onClick={onAddColaborador}
@@ -1312,12 +1322,19 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
     return map;
   }, [tarefas]);
 
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("rh-onboarding");
   const colaboradoresByStage = useMemo(() => {
     const map = {};
     const defaultStageKey = stages[0]?.stageKey || "documentacao";
-    stages.forEach((s) => { map[s.stageKey] = colaboradores.filter((c) => (c.onboardingStage || defaultStageKey) === s.stageKey); });
+    stages.forEach((s) => {
+      const list = colaboradores.filter((c) => (c.onboardingStage || defaultStageKey) === s.stageKey);
+      map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
+        name: c => c.fullName,
+        createdAt: c => c.createdAt,
+      });
+    });
     return map;
-  }, [colaboradores, stages]);
+  }, [colaboradores, stages, getSortCriteria]);
 
   // R22: visão consolidada de % de conclusão — antes só existia por card
   // individual, sem nenhum rollup entre colaboradores nem por frente.
@@ -1472,6 +1489,9 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           <RHMobileKanbanAccordion
             stages={stages}
             itemsByStage={colaboradoresByStage}
+            getSortCriteria={getSortCriteria}
+            setSortCriteria={setSortCriteria}
+            sortOptions={["recent", "alpha"]}
             renderCard={(c) => (
               <RHKanbanCard
                 key={c.id}
@@ -1542,6 +1562,8 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
                     onColumnHeaderDragStart={setDraggedColumnKey}
                     onColumnHeaderDragEnd={handleStageReorderDragEnd}
                     onColumnHeaderDrop={handleStageReorderDrop}
+                    getSortCriteria={getSortCriteria}
+                    setSortCriteria={setSortCriteria}
                   />
                 ))}
                 {canWrite && (
