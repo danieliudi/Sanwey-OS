@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       ? profile.roles
       : (profile?.role ? [profile.role] : []);
 
-    if (!profile || !profileRoles.some((r) => ["admin", "gerente", "gerente_marketing"].includes(r))) {
+    if (!profile || !profileRoles.some((r) => ["admin", "gerente", "gerente_marketing", "gerente_rh"].includes(r))) {
       return new Response(JSON.stringify({ error: "Sem permissão" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -62,6 +62,16 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Tenta apagar o registro de RH vinculado (rh_colaboradores.profile_id
+    // ON DELETE SET NULL) ANTES do profile — depois disso profile_id já
+    // teria virado null e não daria mais pra achar a linha por aqui. Falha
+    // (ex.: colaborador com histórico real — benefícios, holerite, ponto —
+    // apontando pra ele via FK sem ON DELETE) não bloqueia a exclusão da
+    // conta: fica órfão sem profile_id, igual já acontecia antes desta
+    // função existir, só não vira lixo indefinido pra contas de teste sem
+    // nenhum histórico vinculado, que é o caso comum.
+    await supabase.from("rh_colaboradores").delete().eq("profile_id", user_id);
 
     const { error: profileErr } = await supabase.from("profiles").delete().eq("id", user_id);
     if (profileErr) {
