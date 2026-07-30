@@ -2047,7 +2047,7 @@ export default function App() {
       {!needRefresh && !agentsCoachmarkVisible && changelogItems.length > 0 && (
         <AppToast icon={Sparkles} title="Novidades" onDismiss={dismissChangelog}>
           <ul className="list-disc pl-4 space-y-0.5">
-            {changelogItems.map((item, i) => <li key={i}>{item}</li>)}
+            {changelogItems.map((item, i) => <li key={i}>{item.text ?? item}</li>)}
           </ul>
         </AppToast>
       )}
