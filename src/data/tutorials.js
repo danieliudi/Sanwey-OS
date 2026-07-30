@@ -154,7 +154,7 @@ VIDEO_TUTORIALS.rh = [
   { id: "v-rh1", title: "Visão geral do RH", description: "Visão Geral", duration: null, url: null,
     quickStart: { icon: "👥", steps: ["Acesse 'Visão Geral' para ver o painel com funcionários, férias pendentes e vagas em aberto", "Os cards de KPI mostram ativos, de férias e afastados em tempo real", "Clique em 'Ver todas' em cada seção para ir ao módulo correspondente"] } },
   { id: "v-rh2", title: "Gerenciando funcionários", description: "Funcionários", duration: null, url: null,
-    quickStart: { icon: "🧑‍💼", steps: ["Acesse 'Funcionários' para ver o cadastro completo da equipe", "Clique num funcionário para editar dados: cargo, departamento, data de admissão", "Use os filtros (Departamento, Status, Tipo de contrato) para encontrar rapidamente"] } },
+    quickStart: { icon: "🧑‍💼", steps: ["Acesse 'Funcionários' para ver o cadastro completo da equipe", "Clique num funcionário para editar dados: cargo, departamento, data de admissão", "Use os filtros (Departamento, Status, Tipo de contrato) para encontrar rapidamente", "Pra remover um registro de teste ou duplicado, use o ícone de lixeira no card do funcionário — a exclusão não pode ser desfeita"] } },
   { id: "v-rh3", title: "Processo de recrutamento", description: "Recrutamento", duration: null, url: null,
     quickStart: { icon: "💼", steps: ["Acesse 'Recrutamento' para ver vagas abertas e candidatos no Kanban", "Crie vagas com cargo, departamento e requisitos; candidatos entram em 'Triagem'", "Arraste candidatos pelo pipeline: Triagem → Entrevista RH → Aprovado"] } },
   { id: "v-rh4", title: "Solicitações de férias", description: "Férias", duration: null, url: null,

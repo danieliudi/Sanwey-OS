@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.2.5",
+    items: [
+      { kind: "novo", text: "Funcionários: agora dá pra excluir um registro (dentro do próprio card, botão de lixeira) — resolve os registros de teste/duplicados que ficavam presos na lista sem nenhum jeito de sair.", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Editar ou excluir um funcionário falhava silenciosamente pra quem tinha o cargo de RH como cargo secundário — corrigido pra qualquer combinação de cargos, mesma classe de bug já corrigida em outras telas.", roles: ["gerente_rh", "rh"] },
+    ],
+  },
+  {
     version: "4.2.4",
     items: [
       { kind: "correcao", text: "Agência agora consegue preencher os campos das etapas em Entregas (responsáveis, campanha, checklist, anexos, título) e mover o card — antes tudo aparecia travado, só dava pra ver.", roles: ["agencia", "marketing", "gerente_marketing"] },

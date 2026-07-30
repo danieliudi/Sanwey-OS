@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check, Camera } from "lucide-react";
+import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check, Camera, Trash2 } from "lucide-react";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
 import { CurrencyInput } from "../ui/CurrencyInput";
@@ -52,7 +52,7 @@ function parseExtraction(text) {
   return JSON.parse(match[0]);
 }
 
-export function NovoColaboradorModal({ currentUser, initialData, hireContext, contextNote, stageId, users, onSave, onClose }) {
+export function NovoColaboradorModal({ currentUser, initialData, hireContext, contextNote, stageId, users, onSave, onClose, onDelete }) {
   const { complete, isConfigured, provider } = useAI(currentUser);
   const [form, setForm] = useState(() => initialData ? { ...EMPTY_FORM, ...initialData } : EMPTY_FORM);
   // Campos da etapa de Onboarding (só quando criado via "+" de uma coluna do
@@ -533,6 +533,11 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
             <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
               Cancelar
             </button>
+            {initialData && onDelete && (
+              <button type="button" onClick={onDelete} title="Excluir funcionário" style={{ padding: "10px 12px", borderRadius: 10, fontSize: 13, border: "none", background: "var(--danger-bg)", color: "var(--danger)", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                <Trash2 size={14} />
+              </button>
+            )}
           </div>
         </form>
       </div>

@@ -1895,6 +1895,7 @@ export default function App() {
                   leads={leads}
                   currentUser={currentUser}
                   onUpdateUser={updateUser}
+                  onDeleteUser={supabaseEnabled ? deleteUser : undefined}
                   canWrite={isRHManager}
                   initialSelectedEmployeeId={selectedEmployeeId}
                   onInitialEmployeeConsumed={() => setSelectedEmployeeId(null)}

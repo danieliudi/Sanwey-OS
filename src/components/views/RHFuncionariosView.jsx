@@ -19,6 +19,7 @@ import {
   Upload,
   Download,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import {
   RH_DEPARTMENTS,
@@ -851,7 +852,7 @@ function StatusBadge({ statusId }) {
 // ── Employee Detail Modal ─────────────────────────────────────────────────────
 
 function EmployeeDetailModal({
-  user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, onClose, currentUser,
+  user, leads = [], canWrite, onUpdateUser, colaboradorRow, onUpdateColaborador, onClose, onDelete, currentUser,
   onOpenAvaliacao, onOpenMovimentacao, onOpenTreinamento, onOpenFerias,
 }) {
   const [activeTab, setActiveTab] = useState("dados");
@@ -1131,26 +1132,46 @@ function EmployeeDetailModal({
         </div>
       }
       headerExtra={canWrite && !editing && (
-        <button
-          onClick={() => setEditing(true)}
-          style={{
-            background: "var(--accent-tint)",
-            border: "none",
-            color: "var(--accent)",
-            borderRadius: 8,
-            padding: "6px 12px",
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 16%, transparent)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent-tint)"; }}
-        >
-          <Pencil size={13} /> Editar
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => setEditing(true)}
+            style={{
+              background: "var(--accent-tint)",
+              border: "none",
+              color: "var(--accent)",
+              borderRadius: 8,
+              padding: "6px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "color-mix(in srgb, var(--accent) 16%, transparent)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent-tint)"; }}
+          >
+            <Pencil size={13} /> Editar
+          </button>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              title="Excluir funcionário"
+              style={{
+                background: "var(--danger-bg)",
+                border: "none",
+                color: "var(--danger)",
+                borderRadius: 8,
+                padding: "6px 8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       )}
       tabs={tabs}
       activeTab={activeTab}
@@ -1483,6 +1504,7 @@ export function RHFuncionariosView({
   leads = [],
   currentUser,
   onUpdateUser,
+  onDeleteUser,
   canWrite,
   initialSelectedEmployeeId,
   onInitialEmployeeConsumed,
@@ -1491,7 +1513,8 @@ export function RHFuncionariosView({
   onOpenTreinamento,
   onOpenFerias,
 }) {
-  const { colaboradores, loading, createColaborador, updateColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const [confirmDelete, setConfirmDelete] = useState(null); // { message, onConfirm }
   const [search, setSearch]         = useState("");
   const [filterDept, setFilterDept] = useState("all");
   const [filterFrente, setFilterFrente] = useState("all");
@@ -1520,6 +1543,40 @@ export function RHFuncionariosView({
     if (sortCol === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortCol(col); setSortDir("asc"); }
   };
+
+  // Exclui um funcionário — pedido do Daniel (30/07/2026): registros/contas
+  // estranhas (testes, duplicatas) ficavam sem nenhum jeito de sair da lista.
+  // Sem login (hasAccess=false): só apaga o registro de RH (rh_colaboradores),
+  // já permitido hoje via RLS (rh_colaboradores_rh_access). Com login
+  // (hasAccess=true): apaga a conta de acesso PRIMEIRO (mesma function
+  // delete-user já usada em Configurações → Usuários — exige admin/gerente/
+  // gerente_marketing, um conjunto diferente de quem já edita esta tela
+  // — isRHManager inclui gerente_rh) e só então o registro de RH. Nessa
+  // ordem: se a conta falhar por permissão, nada mais é tocado — nunca
+  // apaga o registro de RH e deixa a conta viva por trás sem explicar por quê.
+  const handleDeleteRow = useCallback((id, name, hasAccess, colaboradorId) => {
+    const message = hasAccess
+      ? `Excluir ${name || "este funcionário"}? Isso remove o registro de RH E a conta de acesso à plataforma — a pessoa não vai mais conseguir entrar. Não pode ser desfeito.`
+      : `Excluir o registro de ${name || "este funcionário"}? Não tem login vinculado — a exclusão é definitiva e não pode ser desfeita.`;
+    setConfirmDelete({
+      message,
+      onConfirm: async () => {
+        setConfirmDelete(null);
+        try {
+          if (hasAccess) {
+            if (onDeleteUser) await onDeleteUser(id);
+            if (colaboradorId) await deleteColaborador(colaboradorId);
+          } else {
+            await deleteColaborador(id);
+          }
+          setSelected((prev) => prev?.id === id ? null : prev);
+          setEditingColaborador((prev) => prev?.id === id ? null : prev);
+        } catch (e) {
+          window.alert(`Não foi possível excluir: ${e?.message || e}`);
+        }
+      },
+    });
+  }, [deleteColaborador, onDeleteUser]);
 
   // rh_colaboradores agora tem uma linha sincronizada pra cada profile (ver
   // sync_profile_to_colaborador), então quem já aparece em `users` também
@@ -2177,6 +2234,7 @@ export function RHFuncionariosView({
           colaboradorRow={colaboradores.find((c) => c.profileId === selected.id)}
           onUpdateColaborador={updateColaborador}
           onClose={() => setSelected(null)}
+          onDelete={canWrite ? () => handleDeleteRow(selected.id, selected.name, true, colaboradores.find((c) => c.profileId === selected.id)?.id) : undefined}
           currentUser={currentUser}
           onOpenAvaliacao={onOpenAvaliacao}
           onOpenMovimentacao={onOpenMovimentacao}
@@ -2199,7 +2257,30 @@ export function RHFuncionariosView({
           initialData={editingColaborador}
           onSave={(patch) => updateColaborador(editingColaborador.id, patch)}
           onClose={() => setEditingColaborador(null)}
+          onDelete={canWrite ? () => handleDeleteRow(editingColaborador.id, editingColaborador.fullName, false) : undefined}
         />
+      )}
+
+      {confirmDelete && (
+        <Modal open onClose={() => setConfirmDelete(null)} title="Confirmar exclusão" width={420}>
+          <div style={{ padding: "16px 24px 20px" }}>
+            <p style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, margin: "0 0 16px" }}>{confirmDelete.message}</p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setConfirmDelete(null)}
+                style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete.onConfirm}
+                style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, border: "none", background: "var(--danger)", color: "#FFF", cursor: "pointer" }}
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {bulkUploadOpen && (
