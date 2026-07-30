@@ -244,3 +244,36 @@ implementar) — mas a lacuna em si (departamento existir na plataforma e não
 ter aba no Executivo) não precisa ser redescoberta a cada auditoria: se um
 módulo não tem entrada na faixa de saúde + aba própria, está incompleto até
 ganhar uma.
+
+## 10. Toda entrega termina com changelog + versão — nunca só o merge
+
+Achado de 30/07/2026: o toast "Novidades" (`useChangelogNotice`) e o aviso
+de nova versão disponível (`use-app-update.js`) só disparam quando
+`package.json.version` muda — comparam contra `CHANGELOG[0].version`
+(`src/data/changelog.js`). Uma sessão inteira de trabalho real (RLS,
+Painel Executivo, título editável, Compras, etc.) foi mergeada na main sem
+bump nenhum: o toast simplesmente não tinha nada de novo pra detectar,
+mesmo com dezenas de mudanças reais no ar. Não é um bug de código — é um
+passo que faltou em "pronto".
+
+**Daqui pra frente, mergear na main não é o último passo de uma entrega
+com impacto pro usuário final** (feature nova, fix de comportamento
+visível, mudança de fluxo) — os dois itens abaixo fazem parte de "pronto",
+não são follow-up:
+
+1. Adicionar uma entrada no topo de `CHANGELOG` (`src/data/changelog.js`)
+   — mesmo tom das entradas existentes: frase curta, o que mudou pro
+   usuário, sem jargão técnico. Bump de `version` em `package.json`
+   (semver simples: patch pra fix pontual, minor pra feature) — sem os
+   dois juntos o toast não dispara pra ninguém.
+2. Avaliar se a mudança merece entrar em Ajuda & Tutoriais
+   (`src/data/tutorials.js`, `TutoriaisView.jsx`) — nem toda entrada de
+   changelog vira tutorial (um fix de bug não precisa), mas uma feature
+   nova que muda como alguém faz uma tarefa (ex.: reordenar o menu,
+   escolher destino de uma solicitação) geralmente merece um guia rápido
+   ali. Registrar a decisão (adicionou ou não, e por quê) não precisa de
+   mockup separado — só não pular a pergunta.
+
+Mudança interna sem nada visível pro usuário (migration de reconciliação,
+script de teste, refactor) não precisa de changelog — o critério é "alguém
+que usa a plataforma notaria essa mudança?".

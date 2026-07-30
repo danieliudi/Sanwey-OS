@@ -8,6 +8,19 @@
 // ninguém veria os itens da 4.1.0 abaixo.
 export const CHANGELOG = [
   {
+    version: "4.2.0",
+    items: [
+      "Painel Executivo: agora acompanha o Grupo inteiro — faixa de saúde por área (Comercial, Marketing, RH, Comex, Pós-venda) e uma aba de profundidade pra cada uma, não só Comercial.",
+      "Título editável (lápis) direto no card de Campanhas, Entregas, Tarefas e Compras.",
+      "Menu lateral: seções e itens podem ser reordenados por arrastar (segure o ícone de pontinhos que aparece ao passar o mouse).",
+      "Formulário de \"Solicitar ao Marketing\": tipos de material trocados por itens mais comuns (Cartas, Comunicado Interno, Caderno, Panfleto, Calendário, entre outros) e novos campos de Orçamento e Aprovador.",
+      "Entregas: campos de cada etapa (Encaminhado à Agência, Em Produção, Revisão e Aprovação, Entregue) revisados pra refletir o fluxo real de aprovação.",
+      "Correção: \"Nova etapa\" voltava a dar erro de permissão pra quem tinha o cargo de marketing/RH/comex como cargo secundário — corrigido pra qualquer combinação de cargos.",
+      "Correção: agência via etapa e responsável em branco no card de Entregas mesmo com os dados preenchidos.",
+      "Correção: Compras não coloca mais quem está só revisando a solicitação como responsável pela execução — fica em aberto até alguém escolher de propósito.",
+    ],
+  },
+  {
     version: "4.1.0",
     items: [
       "Novo: aba \"Agentes de IA\" (RH → Fornecedores) — crie um agente que acompanha contratos perto do vencimento e sugere o rascunho de e-mail ou aviso interno. Nada é enviado sozinho: toda sugestão espera aprovação de uma pessoa antes de sair.",
