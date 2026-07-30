@@ -34,8 +34,8 @@ import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
-import { KanbanSortSelect } from "../shared/KanbanSortSelect";
-import { useKanbanSort } from "../../hooks/use-kanban-sort";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
 
 function isOverdueTask(t) {
@@ -610,7 +610,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
   const [quickAddStage, setQuickAddStage] = useState(null);
   const [selected,      setSelected]      = useState(null);
   const [viewMode,      setViewMode]      = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
-  const [sortCriteria,  setSortCriteria]  = useKanbanSort("marketing-tarefas");
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("marketing-tarefas");
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => {
     const s = new Set(["a_fazer"]);
     if (location.state?.filterStage) s.add(location.state.filterStage);
@@ -650,12 +650,24 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
     return list;
   }, [tasks, ownerFilter, priorityFilter, companyFilter, starredOnly, campaignFilter, deadlineFilter]);
 
-  // Item 6: ordenar cards dentro de cada coluna do Kanban.
-  const sortedFiltered = useMemo(() => sortKanbanItems(filtered, sortCriteria, {
-    deadline: t => t.deadline,
-    name: t => t.title,
-    createdAt: t => t.createdAt,
-  }), [filtered, sortCriteria]);
+  // Ordenar cards dentro de cada coluna — cada etapa guarda seu próprio
+  // critério (ver KanbanColumnSortMenu).
+  const tasksByStage = useMemo(() => {
+    const bucket = Object.create(null);
+    for (const s of kanbanStages) bucket[s.id] = [];
+    for (const t of filtered) {
+      if (bucket[t.stage]) bucket[t.stage].push(t);
+    }
+    for (const s of kanbanStages) {
+      bucket[s.id] = sortKanbanItems(bucket[s.id], getSortCriteria(s.id), {
+        deadline: t => t.deadline,
+        priority: t => t.priority,
+        name: t => t.title,
+        createdAt: t => t.createdAt,
+      });
+    }
+    return bucket;
+  }, [filtered, kanbanStages, getSortCriteria]);
 
   const analyticsStages = useMemo(
     () => kanbanStages.filter(s => !s.terminal).map(s => ({ key: s.id, name: s.name, color: s.color, slaDays: s.sla })),
@@ -787,9 +799,6 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
           </div>
-          {viewMode === "kanban" && (
-            <KanbanSortSelect value={sortCriteria} onChange={setSortCriteria} include={["deadline", "alpha"]} className="w-40" />
-          )}
           {canWrite && viewMode === "kanban" && (
             <button
               onClick={() => setQuickAddStage(kanbanStages[0]?.id)}
@@ -916,7 +925,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
           {kanbanStages.map(stage => {
-            const stageItems = sortedFiltered.filter(t => t.stage === stage.id);
+            const stageItems = tasksByStage[stage.id] || [];
             const expanded = expandedMobileStages.has(stage.id);
             return (
               <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
@@ -932,6 +941,14 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
+                    <div onClick={e => e.stopPropagation()}>
+                      <KanbanColumnSortMenu
+                        criteria={getSortCriteria(stage.id)}
+                        onChange={(v) => setSortCriteria(stage.id, v)}
+                        options={["recent", "deadline", "priority", "alpha"]}
+                        accentColor={stage.color}
+                      />
+                    </div>
                     {canWrite && (
                       <span
                         role="button"
@@ -1004,7 +1021,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-2 h-full" style={{ minWidth: `${kanbanStages.length * 280}px` }}>
               {kanbanStages.map(stage => {
-                const stageItems = sortedFiltered.filter(t => t.stage === stage.id);
+                const stageItems = tasksByStage[stage.id] || [];
                 const isOver     = dragOverStage === stage.id;
 
                 return (
@@ -1038,6 +1055,11 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                         uppercase={false}
                         countFontSize={12}
                         actions={<>
+                          <KanbanColumnSortMenu
+                            criteria={getSortCriteria(stage.id)}
+                            onChange={(v) => setSortCriteria(stage.id, v)}
+                            options={["recent", "deadline", "priority", "alpha"]}
+                          />
                           {canWrite && (
                             <button onClick={() => setFieldEditorStage(stage)}
                               className="flex items-center justify-center rounded-md transition-colors"

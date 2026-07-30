@@ -10,13 +10,19 @@
 export const SORT_OPTIONS = [
   { value: "recent", label: "Mais recente" },
   { value: "deadline", label: "Prazo mais próximo" },
+  { value: "priority", label: "Prioridade" },
   { value: "value", label: "Valor (maior primeiro)" },
   { value: "alpha", label: "Alfabética" },
 ];
 
+// alta/media/baixa é o vocabulário já usado em todo lugar que tem prioridade
+// hoje (Entregas, vagas de Recrutamento) — sem valor reconhecido cai pro fim,
+// igual ao "sem prazo" do critério deadline.
+const PRIORITY_RANK = { alta: 0, media: 1, baixa: 2 };
+
 export function sortKanbanItems(items, criteria, getters = {}) {
   if (!items?.length) return items || [];
-  const { deadline, value, name, createdAt } = getters;
+  const { deadline, priority, value, name, createdAt } = getters;
 
   if (criteria === "deadline" && deadline) {
     return [...items].sort((a, b) => {
@@ -26,6 +32,9 @@ export function sortKanbanItems(items, criteria, getters = {}) {
       if (!db) return -1;
       return new Date(da) - new Date(db);
     });
+  }
+  if (criteria === "priority" && priority) {
+    return [...items].sort((a, b) => (PRIORITY_RANK[priority(a)] ?? 99) - (PRIORITY_RANK[priority(b)] ?? 99));
   }
   if (criteria === "value" && value) {
     return [...items].sort((a, b) => (value(b) || 0) - (value(a) || 0));

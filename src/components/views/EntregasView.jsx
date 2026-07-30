@@ -28,9 +28,9 @@ import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
-import { useKanbanSort } from "../../hooks/use-kanban-sort";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
-import { KanbanSortSelect } from "../shared/KanbanSortSelect";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
@@ -689,7 +689,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const [quickAddStage,  setQuickAddStage]  = useState(null);
   const [selected,       setSelected]       = useState(null);
   const [viewMode,       setViewMode]       = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
-  const [sortCriteria,   setSortCriteria]   = useKanbanSort("marketing-entregas");
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("marketing-entregas");
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => {
     const s = new Set(["solicitacao"]);
     if (location.state?.filterStage) s.add(location.state.filterStage);
@@ -732,12 +732,24 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     return list;
   }, [deliverables, ownerFilter, companyFilter, starredOnly, stuckOnly, campaignFilter, deadlineFilter]);
 
-  // Item 6: ordenar cards dentro de cada coluna do Kanban.
-  const sortedFiltered = useMemo(() => sortKanbanItems(filtered, sortCriteria, {
-    deadline: d => d.deadline,
-    name: d => d.title,
-    createdAt: d => d.createdAt,
-  }), [filtered, sortCriteria]);
+  // Ordenar cards dentro de cada coluna — cada etapa guarda seu próprio
+  // critério (ver KanbanColumnSortMenu).
+  const deliverablesByStage = useMemo(() => {
+    const bucket = Object.create(null);
+    for (const s of kanbanStages) bucket[s.id] = [];
+    for (const d of filtered) {
+      if (bucket[d.stage]) bucket[d.stage].push(d);
+    }
+    for (const s of kanbanStages) {
+      bucket[s.id] = sortKanbanItems(bucket[s.id], getSortCriteria(s.id), {
+        deadline: d => d.deadline,
+        priority: d => d.priority,
+        name: d => d.title,
+        createdAt: d => d.createdAt,
+      });
+    }
+    return bucket;
+  }, [filtered, kanbanStages, getSortCriteria]);
 
   const handleDragStart = useCallback((item) => setDraggedItem(item), []);
   const handleDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
@@ -905,9 +917,6 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" iconOnlyMobile />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}  label="Análise"    iconOnlyMobile />
           </div>
-          {viewMode === "kanban" && (
-            <KanbanSortSelect value={sortCriteria} onChange={setSortCriteria} include={["deadline", "alpha"]} className="w-40" />
-          )}
           {/* Export CSV */}
           <button
             onClick={() => exportCSV(filtered, kanbanStages)}
@@ -1005,7 +1014,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
           {kanbanStages.map(stage => {
-            const stageItems = sortedFiltered.filter(d => d.stage === stage.id);
+            const stageItems = deliverablesByStage[stage.id] || [];
             const expanded = expandedMobileStages.has(stage.id);
             return (
               <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
@@ -1021,6 +1030,14 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
+                    <div onClick={e => e.stopPropagation()}>
+                      <KanbanColumnSortMenu
+                        criteria={getSortCriteria(stage.id)}
+                        onChange={(v) => setSortCriteria(stage.id, v)}
+                        options={["recent", "deadline", "priority", "alpha"]}
+                        accentColor={stage.color}
+                      />
+                    </div>
                     {canManage && (
                       <span
                         role="button"
@@ -1093,7 +1110,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-2 h-full" style={{ minWidth: `${kanbanStages.length * 280}px` }}>
               {kanbanStages.map(stage => {
-                const stageItems = sortedFiltered.filter(d => d.stage === stage.id);
+                const stageItems = deliverablesByStage[stage.id] || [];
                 const isOver     = dragOverStage === stage.id;
 
                 return (
@@ -1130,6 +1147,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                         uppercase={false}
                         countFontSize={12}
                         actions={<>
+                          <KanbanColumnSortMenu
+                            criteria={getSortCriteria(stage.id)}
+                            onChange={(v) => setSortCriteria(stage.id, v)}
+                            options={["recent", "deadline", "priority", "alpha"]}
+                          />
                           {canManage && (
                             <button onClick={() => setFieldEditorStage(stage)}
                               className="flex items-center justify-center rounded-md transition-colors"
