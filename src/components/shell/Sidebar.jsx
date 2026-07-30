@@ -110,6 +110,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
   const [groupOrder, setGroupOrder] = useState(loadGroupOrder);
   const [draggedGroup, setDraggedGroup] = useState(null);
   const [dragOverGroup, setDragOverGroup] = useState(null);
+  const [hoveredGroup, setHoveredGroup] = useState(null);
   const [railCollapsed, setRailCollapsed] = useState(loadRail);
   // Modo "trilho" (só ícones) — só existe em desktop; no mobile o menu é um
   // overlay off-canvas que não reserva espaço de layout, então recolher não
@@ -313,6 +314,8 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
                 {group.label && !rail && (
                   <button
                     onClick={() => toggleGroup(group.label)}
+                    onMouseEnter={() => setHoveredGroup(group.label)}
+                    onMouseLeave={() => setHoveredGroup(prev => (prev === group.label ? null : prev))}
                     style={{
                       width: "100%",
                       display: "flex",
@@ -330,7 +333,9 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
                       {/* Alça de arrastar a seção inteira — só admin, por ora
                           (pedido do Daniel, rollout gradual). Ícone próprio
                           (não a linha inteira) pra não brigar com o clique
-                          que expande/recolhe o grupo. */}
+                          que expande/recolhe o grupo. Só aparece no hover —
+                          mesmo padrão do mockup aprovado, pra não empurrar o
+                          rótulo com um ícone visível o tempo todo. */}
                       {isAdmin && (
                         <span
                           draggable
@@ -339,7 +344,14 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
                           onMouseDown={(e) => e.stopPropagation()}
                           onClick={(e) => e.stopPropagation()}
                           title="Arraste para reordenar a seção"
-                          style={{ display: "flex", flexShrink: 0, cursor: "grab", color: "var(--text-faint)", opacity: 0.7 }}
+                          style={{
+                            display: "flex",
+                            flexShrink: 0,
+                            cursor: "grab",
+                            color: "var(--text-faint)",
+                            opacity: hoveredGroup === group.label ? 1 : 0,
+                            transition: "opacity 0.12s",
+                          }}
                         >
                           <GripVertical size={11} strokeWidth={2} />
                         </span>
