@@ -9,6 +9,9 @@ import { AppToast } from "../shared/AppToast";
 import { StageNavigator } from "../shared/StageNavigator";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
@@ -722,6 +725,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
     return s;
   }, [cases, activeCompany, isGroupView, isManager, isConsultor, subordinateIds, user.id]);
 
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("posvenda");
   const byStage = useMemo(() => {
     const bucket = Object.create(null);
     for (const s of stages) bucket[s.stageKey] = { cases: [], total: 0 };
@@ -730,8 +734,15 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
       bucket[c.stage].cases.push(c);
       bucket[c.stage].total += c.value || 0;
     }
+    for (const s of stages) {
+      bucket[s.stageKey].cases = sortKanbanItems(bucket[s.stageKey].cases, getSortCriteria(s.stageKey), {
+        value: c => c.value,
+        name: c => c.clientName,
+        createdAt: c => c.createdAt,
+      });
+    }
     return bucket;
-  }, [scopedCases, stages]);
+  }, [scopedCases, stages, getSortCriteria]);
 
   const summary = useMemo(() => {
     let total = 0;
@@ -944,6 +955,9 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
         <RHMobileKanbanAccordion
           stages={stages}
           itemsByStage={Object.fromEntries(stages.map(s => [s.stageKey, (byStage[s.stageKey]?.cases) || []]))}
+          getSortCriteria={getSortCriteria}
+          setSortCriteria={setSortCriteria}
+          sortOptions={["recent", "value", "alpha"]}
           addLabel="Novo caso"
           emptyLabel="Nenhum caso nesta etapa"
           onAdd={(stageKey) => setCreateModalStage(stages.find(s => s.stageKey === stageKey))}
@@ -1023,18 +1037,28 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                         nameFontWeight={700}
                         uppercase={false}
                         countFontSize={12}
-                        actions={isManager && (
-                          <button
-                            onClick={() => setEditingFieldsStage({ stageKey: stage.stageKey, name: stage.name })}
-                            className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
-                            style={{ width: 24, height: 24, flexShrink: 0, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                            title="Editar fase"
-                          >
-                            <Settings size={13} />
-                          </button>
-                        )}
+                        actions={
+                          <div className="flex items-center gap-1 shrink-0">
+                            <KanbanColumnSortMenu
+                              criteria={getSortCriteria(stage.stageKey)}
+                              onChange={(v) => setSortCriteria(stage.stageKey, v)}
+                              options={["recent", "value", "alpha"]}
+                              accentColor={stage.color}
+                            />
+                            {isManager && (
+                              <button
+                                onClick={() => setEditingFieldsStage({ stageKey: stage.stageKey, name: stage.name })}
+                                className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
+                                style={{ width: 24, height: 24, flexShrink: 0, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
+                                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                                title="Editar fase"
+                              >
+                                <Settings size={13} />
+                              </button>
+                            )}
+                          </div>
+                        }
                       >
                         <div className="text-xs mt-0.5" style={{ color: "var(--text-dim)", fontWeight: 600 }}>
                           {bucket.total > 0 ? formatK(bucket.total) : "R$ 0"}

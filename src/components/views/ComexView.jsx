@@ -27,6 +27,9 @@ import { EmptyState } from "../ui/EmptyState";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { AppToast } from "../shared/AppToast";
@@ -481,7 +484,7 @@ function ComexKanbanColumn({
   isDragOver, onColumnDragOver, onColumnDragLeave, onColumnDrop,
   canWrite, onEditFields, getCompleteness, getUnread,
   draggedColumnKey, onColumnHeaderDragStart, onColumnHeaderDragEnd, onColumnHeaderDrop,
-  renderCardBody,
+  renderCardBody, getSortCriteria, setSortCriteria,
 }) {
   return (
     <div
@@ -510,11 +513,21 @@ function ComexKanbanColumn({
           nameFontWeight={700}
           uppercase={false}
           countFontSize={12}
-          actions={canWrite && (
-            <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
-              <Settings2 size={13} />
-            </button>
-          )}
+          actions={
+            <div className="flex items-center gap-1 shrink-0">
+              <KanbanColumnSortMenu
+                criteria={getSortCriteria(stage.stageKey)}
+                onChange={(v) => setSortCriteria(stage.stageKey, v)}
+                options={["recent", "value", "alpha"]}
+                accentColor={stage.color}
+              />
+              {canWrite && (
+                <button onClick={() => onEditFields(stage)} title="Editar campos desta etapa" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 2, display: "flex", flexShrink: 0 }}>
+                  <Settings2 size={13} />
+                </button>
+              )}
+            </div>
+          }
         />
       </div>
       <div style={{ padding: 8, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1145,12 +1158,20 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
   const stats = useMemo(() => config.buildStats(operations, stages), [operations, stages, config]);
   const specificStats = useMemo(() => config.buildSpecificStats(operations), [operations, config]);
 
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort(`comex-${config.domain}`);
   const opsByStage = useMemo(() => {
     const map = {};
     const defaultStageKey = stages[0]?.stageKey;
-    stages.forEach(s => { map[s.stageKey] = operations.filter(o => (o.stage || defaultStageKey) === s.stageKey); });
+    stages.forEach(s => {
+      const list = operations.filter(o => (o.stage || defaultStageKey) === s.stageKey);
+      map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
+        value: o => o.saleValue,
+        name: o => o.title,
+        createdAt: o => o.createdAt,
+      });
+    });
     return map;
-  }, [operations, stages]);
+  }, [operations, stages, getSortCriteria]);
 
   const drawerOp = drawerOpId ? operations.find(o => o.id === drawerOpId) : null;
 
@@ -1234,6 +1255,9 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
           <RHMobileKanbanAccordion
             stages={stages}
             itemsByStage={opsByStage}
+            getSortCriteria={getSortCriteria}
+            setSortCriteria={setSortCriteria}
+            sortOptions={["recent", "value", "alpha"]}
             renderCard={(op) => (
               <RHKanbanCard
                 key={op.id}
@@ -1293,6 +1317,8 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
                     onColumnHeaderDragEnd={handleStageReorderDragEnd}
                     onColumnHeaderDrop={handleStageReorderDrop}
                     renderCardBody={(op) => config.renderCardBody(op, users)}
+                    getSortCriteria={getSortCriteria}
+                    setSortCriteria={setSortCriteria}
                   />
                 ))}
                 {canWrite && (
