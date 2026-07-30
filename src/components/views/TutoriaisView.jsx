@@ -1,11 +1,15 @@
 import React, { useMemo, useState } from "react";
-import { Play, ChevronDown, ChevronUp, BookOpen, LifeBuoy, Zap, Bot, Copy, Check, ChevronRight, ArrowRight, Search } from "lucide-react";
+import { Play, ChevronDown, ChevronUp, BookOpen, LifeBuoy, Zap, Bot, Copy, Check, ChevronRight, ArrowRight, Search, Sparkles } from "lucide-react";
 import { VIDEO_TUTORIALS, FAQ_ITEMS, AUTOMATION_GUIDE, AI_PROMPTS } from "../../data/tutorials";
+import { CHANGELOG } from "../../data/changelog";
 import { Tabs } from "../shared/Tabs";
 import { Card, CardGrid } from "../shared/Card";
 import { Badge } from "../ui/Badge";
 import { StatCard } from "../ui/StatCard";
 import { EmptyState } from "../ui/EmptyState";
+
+const CHANGELOG_KIND_LABEL = { novo: "Novo", correcao: "Correção", ajuste: "Ajuste" };
+const CHANGELOG_KIND_VARIANT = { novo: "secondary", correcao: "success", ajuste: "neutral" };
 
 const ROLE_LABEL = {
   admin: "Administrador", gerente: "Gerente", vendedor: "Vendedor", consultor: "Consultor",
@@ -17,6 +21,7 @@ const TABS = [
   { id: "tutoriais", label: "Tutoriais", icon: BookOpen },
   { id: "automacoes", label: "Automações", icon: Zap },
   { id: "ia", label: "Perguntar à IA", icon: Bot },
+  { id: "novidades", label: "Novidades", icon: Sparkles },
   { id: "faq", label: "FAQ", icon: LifeBuoy },
 ];
 
@@ -469,6 +474,41 @@ export function TutoriaisView({ currentUser, onNavigate }) {
               <PromptCategorySection key={i} category={cat} />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Tab: Novidades — lê direto de src/data/changelog.js, a mesma fonte
+          do toast "Novidades" (App.jsx/use-changelog-notice.js). Zero
+          duplicação de conteúdo: uma entrada nova no changelog aparece
+          nos dois lugares sem precisar escrever em dois arquivos. */}
+      {activeTab === "novidades" && (
+        <div className="space-y-5">
+          {CHANGELOG.filter(v => v.items.length > 0).map((v, vi) => (
+            <div
+              key={v.version}
+              className="rounded-xl border p-5"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="font-bold" style={{ fontSize: 15, color: "var(--text)" }}>
+                  Versão {v.version}
+                </h2>
+                {vi === 0 && <Badge variant="success">Mais recente</Badge>}
+              </div>
+              <div className="space-y-2">
+                {v.items.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--text-dim)" }}>
+                    <span className="mt-0.5 shrink-0">
+                      <Badge variant={CHANGELOG_KIND_VARIANT[item.kind] || "neutral"}>
+                        {CHANGELOG_KIND_LABEL[item.kind] || item.kind}
+                      </Badge>
+                    </span>
+                    <span className="leading-relaxed">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
