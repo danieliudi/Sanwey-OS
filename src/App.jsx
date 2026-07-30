@@ -178,7 +178,7 @@ export default function App() {
   // boas-vindas (showOnboarding) não recebe nenhum dos três na mesma sessão.
   const { needRefresh, updateNow, dismiss: dismissAppUpdate } = useAppUpdate();
   const { visible: agentsCoachmarkVisible, dismiss: dismissAgentsCoachmark } = useAgentsCoachmark(currentUser, { isRHManager, skip: showOnboarding || needRefresh });
-  const { items: changelogItems, dismiss: dismissChangelog } = useChangelogNotice(currentUser, { skip: showOnboarding || agentsCoachmarkVisible });
+  const { items: changelogItems, dismiss: dismissChangelog } = useChangelogNotice(currentUser, currentUserRoles, { skip: showOnboarding || agentsCoachmarkVisible });
 
   // Multi-cargo (FASE 1): `roles` é a fonte de verdade — um usuário pode
   // acumular mais de um cargo (ex: vendedor + agencia). `role` (escalar)

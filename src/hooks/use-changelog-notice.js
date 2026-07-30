@@ -8,10 +8,22 @@ import { CHANGELOG } from "../data/changelog";
 // mesmo padrão de src/App.jsx (onboardingDoneMap), localStorage por usuário
 // em vez de coluna no banco (não sincroniza entre dispositivos de propósito
 // — schema novo exigiria confirmação explícita, não se justifica aqui).
-export function useChangelogNotice(currentUser, { skip = false } = {}) {
+//
+// Filtro por cargo (30/07/2026, pedido do Daniel: "não mostrar tudo pra
+// todos, só o que tem a ver com os cargos da pessoa"): item de changelog sem
+// `roles` é global (todo mundo vê — é o padrão pra não perder cobertura por
+// esquecimento de tag). Item COM `roles` só aparece pra quem tem pelo menos
+// um desses cargos em `currentUserRoles` — exceto admin/diretoria, que
+// sempre veem tudo (mesmo bypass usado em toda checagem de módulo/RLS da
+// plataforma, não é regra nova). Isso filtra só o TOAST — a aba "Novidades"
+// (TutoriaisView) continua mostrando o histórico completo pra quem quiser
+// ver o que mudou em outras áreas.
+export function useChangelogNotice(currentUser, currentUserRoles, { skip = false } = {}) {
   const [changelogSeenMap, setChangelogSeenMap] = usePersistentState(STORAGE_KEYS.changelogSeen, {});
   const userId = currentUser?.id;
   const lastSeen = userId ? changelogSeenMap[userId] : undefined;
+  const sees = (roles) => currentUserRoles?.includes("admin") || currentUserRoles?.includes("diretoria")
+    || !roles || roles.some(r => currentUserRoles?.includes(r));
 
   // Usuário nunca visto por essa feature (inclui todo usuário já existente
   // na primeira vez que ela for ao ar) — grava a versão atual em silêncio,
@@ -31,8 +43,8 @@ export function useChangelogNotice(currentUser, { skip = false } = {}) {
     if (lastSeenIdx === -1) return [];
     // Array vem mais novo primeiro — tudo ANTES do índice da última vista é
     // mais novo que ela (exclusive) até a versão atual no topo (inclusive).
-    return CHANGELOG.slice(0, lastSeenIdx).flatMap(c => c.items);
-  }, [skip, userId, lastSeen]);
+    return CHANGELOG.slice(0, lastSeenIdx).flatMap(c => c.items).filter(item => sees(item.roles));
+  }, [skip, userId, lastSeen, currentUserRoles]);
 
   const dismiss = () => {
     if (!userId) return;
