@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.4.0",
+    items: [
+      { kind: "novo", text: "Cada etapa de todos os Kanbans da plataforma agora tem seu próprio ícone de ordenação (por prioridade, prazo, mais recente ou ordem alfabética) — antes só 4 boards tinham um filtro, e era um só pro board inteiro." },
+    ],
+  },
+  {
     version: "4.3.1",
     items: [
       { kind: "correcao", text: "Baixar um anexo em Entregas ou Campanhas navegava pra fora da plataforma, sem nenhum jeito de voltar — agora abre em outra aba, como já funcionava no Funil de Vendas." },
