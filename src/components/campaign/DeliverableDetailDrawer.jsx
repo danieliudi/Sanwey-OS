@@ -187,8 +187,19 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
   const handleDownload = async (att) => {
     const url = await getSignedUrl(att.file_path);
     if (!url) return;
+    // Sem target="_blank" o clique navegava a própria aba pro arquivo cru —
+    // a URL assinada é de outra origem (*.supabase.co), e o navegador ignora
+    // o atributo `download` de um <a> cross-origin, então virava navegação
+    // de verdade, sem nenhuma UI do app (nem botão de voltar/fechar) pra
+    // sair de lá. Mesmo padrão já usado em LeadDetailDrawer.jsx.
     const a = document.createElement("a");
-    a.href = url; a.download = att.file_name; a.click();
+    a.href = url;
+    a.download = att.file_name;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (

@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.3.1",
+    items: [
+      { kind: "correcao", text: "Baixar um anexo em Entregas ou Campanhas navegava pra fora da plataforma, sem nenhum jeito de voltar — agora abre em outra aba, como já funcionava no Funil de Vendas." },
+    ],
+  },
+  {
     version: "4.3.0",
     items: [
       { kind: "novo", text: "Solicitar ao Marketing agora é um formulário só: escolha \"Material de Marketing\" ou \"Compra\" logo no topo, e os campos se ajustam sozinhos — antes eram dois links/formulários separados.", roles: ["marketing", "gerente_marketing"] },
