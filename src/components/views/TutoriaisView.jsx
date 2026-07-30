@@ -279,10 +279,10 @@ function PromptCategorySection({ category }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export function TutoriaisView({ currentUser, onNavigate }) {
+export function TutoriaisView({ currentUser, onNavigate, initialTab }) {
   const role = currentUser?.role || "vendedor";
   const videos = VIDEO_TUTORIALS[role] || VIDEO_TUTORIALS.vendedor;
-  const [activeTab, setActiveTab] = useState("tutoriais");
+  const [activeTab, setActiveTab] = useState(initialTab || "tutoriais");
   const [faqSearch, setFaqSearch] = useState("");
 
   const filteredFaq = useMemo(() => {

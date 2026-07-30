@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart, RefreshCw, Sparkles, ListTodo, Handshake, Ship,
+  FileBarChart, RefreshCw, ListTodo, Handshake, Ship,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -101,6 +101,7 @@ import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
 import { AppToast } from "./components/shared/AppToast";
+import { ChangelogToast } from "./components/shared/ChangelogToast";
 import { useAppUpdate } from "./hooks/use-app-update";
 import { useChangelogNotice } from "./hooks/use-changelog-notice";
 import { useScreenTips } from "./hooks/use-screen-tips";
@@ -179,6 +180,7 @@ export default function App() {
   const { needRefresh, updateNow, dismiss: dismissAppUpdate } = useAppUpdate();
   const { visible: agentsCoachmarkVisible, dismiss: dismissAgentsCoachmark } = useAgentsCoachmark(currentUser, { isRHManager, skip: showOnboarding || needRefresh });
   const { items: changelogItems, dismiss: dismissChangelog } = useChangelogNotice(currentUser, currentUserRoles, { skip: showOnboarding || agentsCoachmarkVisible });
+  const [tutoriaisInitialTab, setTutoriaisInitialTab] = useState(undefined);
 
   // Multi-cargo (FASE 1): `roles` é a fonte de verdade — um usuário pode
   // acumular mais de um cargo (ex: vendedor + agencia). `role` (escalar)
@@ -1827,7 +1829,7 @@ export default function App() {
             />
           } />
           <Route path={ROUTES.tutorials} element={
-            <TutoriaisView currentUser={currentUser} onNavigate={setSection} />
+            <TutoriaisView currentUser={currentUser} onNavigate={setSection} initialTab={tutoriaisInitialTab} />
           } />
           <Route path={ROUTES["marketing-home"]} element={
             (isMarketingUser || isDiretoria)
@@ -2045,11 +2047,11 @@ export default function App() {
       )}
 
       {!needRefresh && !agentsCoachmarkVisible && changelogItems.length > 0 && (
-        <AppToast icon={Sparkles} title="Novidades" onDismiss={dismissChangelog}>
-          <ul className="list-disc pl-4 space-y-0.5">
-            {changelogItems.map((item, i) => <li key={i}>{item.text ?? item}</li>)}
-          </ul>
-        </AppToast>
+        <ChangelogToast
+          items={changelogItems}
+          onDismiss={dismissChangelog}
+          onViewAll={() => { setTutoriaisInitialTab("novidades"); setSection("tutorials"); dismissChangelog(); }}
+        />
       )}
 
       {screenTip && (
