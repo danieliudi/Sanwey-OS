@@ -299,7 +299,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAd
             const isCollapsed = group.label ? !!collapsed[group.label] : false;
             return (
               <div
-                key={group.label || "__pinned"}
+                key={group.label || `__pinned-${group.items[0]?.id ?? gi}`}
                 style={{
                   marginTop: gi === 0 ? 0 : 8,
                   boxShadow: dragOverGroup === group.label ? "inset 0 2px 0 0 var(--accent)" : "none",
