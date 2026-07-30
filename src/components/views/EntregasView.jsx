@@ -647,7 +647,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 export function EntregasView({ user, users = [], notifyMentions }) {
   const location = useLocation();
   const {
-    deliverables, loading, canWrite,
+    deliverables, loading, canWrite, canManage,
     createDeliverable, updateDeliverable, deleteDeliverable, duplicateDeliverable,
     changeStage, sendCompleteEmail, sendSupplierNotifyEmail, toggleStar,
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
@@ -920,7 +920,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             Exportar CSV
           </button>
           {/* Nova entrega */}
-          {canWrite && viewMode === "kanban" && (
+          {canManage && viewMode === "kanban" && (
             <button
               onClick={() => setQuickAddStage("solicitacao")}
               className="flex items-center gap-1.5 font-semibold"
@@ -995,7 +995,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       )}
       </KanbanBoardHeader>
 
-      {canWrite && viewMode === "kanban" && (
+      {canManage && viewMode === "kanban" && (
         <KanbanFab label="Nova entrega" flush onClick={() => setQuickAddStage("solicitacao")} />
       )}
 
@@ -1021,7 +1021,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
-                    {canWrite && (
+                    {canManage && (
                       <span
                         role="button"
                         title="Editar campos desta etapa"
@@ -1052,8 +1052,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                           onClick={setSelected}
                           stages={kanbanStages}
                           onMoveToStage={canWrite ? attemptStageChange : null}
-                          onDeleteCard={canWrite ? handleDelete : null}
-                          onDuplicateCard={canWrite ? handleDuplicate : null}
+                          onDeleteCard={canManage ? handleDelete : null}
+                          onDuplicateCard={canManage ? handleDuplicate : null}
                           onToggleStar={canWrite ? toggleStar : null}
                           completeness={getItemCompleteness(item)}
                           unread={getItemUnread(item)}
@@ -1061,7 +1061,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                         />
                       ))
                     )}
-                    {canWrite && !stage.terminal && (
+                    {canManage && !stage.terminal && (
                       <button
                         onClick={() => setQuickAddStage(stage.id)}
                         className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
@@ -1076,7 +1076,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
               </div>
             );
           })}
-          {canWrite && (
+          {canManage && (
             <button
               onClick={() => setAddingStage(true)}
               className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
@@ -1111,12 +1111,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                         (draggedColumnKey vs draggedItem), então soltar um
                         card aqui continua funcionando normalmente. */}
                     <div
-                      draggable={canWrite}
-                      onDragStart={() => canWrite && setDraggedColumnKey(stage.id)}
+                      draggable={canManage}
+                      onDragStart={() => canManage && setDraggedColumnKey(stage.id)}
                       onDragEnd={handleColumnDragEnd}
                       onDragOver={e => { if (draggedColumnKey) { e.preventDefault(); e.stopPropagation(); } }}
                       onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.id) { e.stopPropagation(); handleColumnDrop(stage.id); } }}
-                      style={{ cursor: canWrite ? "grab" : "default" }}
+                      style={{ cursor: canManage ? "grab" : "default" }}
                     >
                       <KanbanColumnHeader
                         color={stage.color}
@@ -1130,7 +1130,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                         uppercase={false}
                         countFontSize={12}
                         actions={<>
-                          {canWrite && (
+                          {canManage && (
                             <button onClick={() => setFieldEditorStage(stage)}
                               className="flex items-center justify-center rounded-md transition-colors"
                               style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
@@ -1140,7 +1140,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                               <Settings2 size={13} />
                             </button>
                           )}
-                          {canWrite && !stage.terminal && (
+                          {canManage && !stage.terminal && (
                             <button onClick={() => setQuickAddStage(stage.id)}
                               className="flex items-center justify-center rounded-md transition-colors"
                               style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
@@ -1191,8 +1191,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                             onClick={setSelected}
                             stages={kanbanStages}
                             onMoveToStage={canWrite ? attemptStageChange : null}
-                            onDeleteCard={canWrite ? handleDelete : null}
-                            onDuplicateCard={canWrite ? handleDuplicate : null}
+                            onDeleteCard={canManage ? handleDelete : null}
+                            onDuplicateCard={canManage ? handleDuplicate : null}
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
                             unread={getItemUnread(item)}
@@ -1205,7 +1205,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                   </div>
                 );
               })}
-              {canWrite && (
+              {canManage && (
                 <button
                   onClick={() => setAddingStage(true)}
                   title="Nova etapa"
@@ -1284,7 +1284,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         onStageMoved={reopenDeliverableAfterMove}
         onUpdate={handleUpdate}
         onMoveToStage={attemptStageChange}
-        onDelete={handleDelete}
+        onDelete={canManage ? handleDelete : undefined}
         onResendCompleteEmail={sendCompleteEmail}
         stages={kanbanStages}
         campaigns={campaigns}
@@ -1300,7 +1300,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         "Opções Avançadas" dentro dele também cobre renomear/recolorir/SLA/
         excluir a etapa (records+stageField habilitam a exclusão guardada
         por registro ativo). Substitui o antigo "Editar etapas" separado. */}
-    {canWrite && (
+    {canManage && (
       <RHStageFieldsPanel
         open={!!fieldEditorStage}
         onClose={() => setFieldEditorStage(null)}

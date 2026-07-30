@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.2.4",
+    items: [
+      { kind: "correcao", text: "Agência agora consegue preencher os campos das etapas em Entregas (responsáveis, campanha, checklist, anexos, título) e mover o card — antes tudo aparecia travado, só dava pra ver.", roles: ["agencia", "marketing", "gerente_marketing"] },
+    ],
+  },
+  {
     version: "4.2.3",
     items: [
       { kind: "ajuste", text: "Toast de \"Novidades\" com visual novo: mais espaço pra ler, etiqueta colorida por item e um link direto pra ver a lista completa — em vez de uma lista apertada com tudo de uma vez, mostra só as 3 novidades mais importantes." },
