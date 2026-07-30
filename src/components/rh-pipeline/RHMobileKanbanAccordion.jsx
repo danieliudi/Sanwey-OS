@@ -1,13 +1,20 @@
 import React, { useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 
 // Mesmo visual/comportamento do Kanban mobile do Pipeline Comercial
 // (CRMView.jsx: "Mobile kanban: vertical collapsible stages") — etapa
 // vira um pill colapsável, em vez de reaproveitar a coluna larga do
 // desktop encolhida. Compartilhado por Recrutamento (Vagas/Candidatos),
 // Onboarding e Avaliação de Desempenho pra manter os 4 boards idênticos.
+//
+// getSortCriteria/setSortCriteria/sortOptions (opcionais, 30/07/2026):
+// ícone de ordenação por etapa — mesmo controle do header desktop
+// (KanbanColumnSortMenu). Sem eles, nenhum ícone aparece (compatível com
+// qualquer chamador que ainda não passe ordenação).
 export function RHMobileKanbanAccordion({
   stages, itemsByStage, renderCard, onAdd, addLabel, emptyLabel, initialExpandedKey,
+  getSortCriteria, setSortCriteria, sortOptions,
 }) {
   const [expanded, setExpanded] = useState(() => new Set(initialExpandedKey ? [initialExpandedKey] : []));
   const toggle = (key) => setExpanded(prev => {
@@ -34,6 +41,16 @@ export function RHMobileKanbanAccordion({
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="font-bold text-sm" style={{ color: stage.color }}>{items.length}</span>
+                {getSortCriteria && (
+                  <div onClick={e => e.stopPropagation()}>
+                    <KanbanColumnSortMenu
+                      criteria={getSortCriteria(stage.stageKey)}
+                      onChange={(v) => setSortCriteria(stage.stageKey, v)}
+                      options={sortOptions || ["recent", "alpha"]}
+                      accentColor={stage.color}
+                    />
+                  </div>
+                )}
                 <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
                   <ChevronDown size={13} />
                 </div>
