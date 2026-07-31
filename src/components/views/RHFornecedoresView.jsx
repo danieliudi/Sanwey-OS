@@ -359,9 +359,22 @@ function ContratoRow({ contrato, eventos, users, onAddEvento, onUpdateResponsave
   );
 }
 
-function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onCreateContrato, onAddEvento, onUpdateResponsavel }) {
+function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onCreateContrato, onAddEvento, onUpdateResponsavel, onDelete }) {
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const fornecedorContratos = contratos.filter(c => c.fornecedorId === fornecedor.id);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await onDelete(fornecedor.id);
+      onClose();
+    } catch {
+      setDeleting(false);
+      setConfirmingDelete(false);
+    }
+  };
 
   return (
     <>
@@ -372,6 +385,37 @@ function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onCr
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{fornecedor.name}</div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{TIPO_LABELS[fornecedor.tipo] || fornecedor.tipo}</div>
           </div>
+          {confirmingDelete ? (
+            <div className="flex items-center gap-1.5 shrink-0" style={{ fontSize: 12 }}>
+              <span style={{ color: "var(--text-dim)" }}>
+                {fornecedorContratos.length > 0
+                  ? `Excluir com ${fornecedorContratos.length} contrato(s)?`
+                  : "Excluir?"}
+              </span>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{ background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: deleting ? "default" : "pointer" }}
+              >
+                {deleting ? "Excluindo…" : "Excluir"}
+              </button>
+              <button
+                onClick={() => setConfirmingDelete(false)}
+                disabled={deleting}
+                style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              title="Excluir fornecedor"
+              style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", fontSize: 12, fontWeight: 600 }}
+            >
+              Excluir
+            </button>
+          )}
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={18} /></button>
         </div>
 
@@ -503,7 +547,7 @@ function ContratosTableView({ contratos, suppliers, users, onRowClick }) {
 
 export function RHFornecedoresView({ currentUser }) {
   const navigate = useNavigate();
-  const { suppliers, contratos, eventos, loading, createSupplier, createContrato, updateContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
+  const { suppliers, contratos, eventos, loading, createSupplier, deleteSupplier, createContrato, updateContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
   const { users } = useProfiles();
   const [novoOpen, setNovoOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
@@ -733,6 +777,7 @@ export function RHFornecedoresView({ currentUser }) {
           onCreateContrato={createContrato}
           onAddEvento={addEvento}
           onUpdateResponsavel={handleUpdateResponsavel}
+          onDelete={deleteSupplier}
         />
       )}
     </div>
