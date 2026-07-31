@@ -97,6 +97,31 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
                 {payload.vaga_titulo}
               </span>
             )}
+            {/* Sugestão de Sinal de Mercado (Rotina de pesquisa real) — sem
+                lead_id, o payload é a única fonte de contexto no card fechado. */}
+            {action.action_type === "sugestao_sinal_mercado" && payload.source && (
+              <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+                {payload.source}
+              </span>
+            )}
+            {action.action_type === "sugestao_sinal_mercado" && payload.urgency && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                style={{ background: "#EFEFEF", color: "var(--text-dim)" }}>
+                {payload.urgency}
+              </span>
+            )}
+            {/* Sugestão de Prospect (Explorador, mesma Rotina) */}
+            {action.action_type === "sugestao_prospect" && payload.sector && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                style={{ background: "#EFEFEF", color: "var(--text-dim)" }}>
+                {payload.sector}
+              </span>
+            )}
+            {action.action_type === "sugestao_prospect" && payload.fit_score != null && (
+              <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                Fit {payload.fit_score}
+              </span>
+            )}
           </div>
           <p className="text-sm font-semibold leading-snug" style={{ color: "var(--text)" }}>
             {action.title}
@@ -112,7 +137,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
         </div>
 
         {/* Expand toggle */}
-        {(payload.draft_email || payload.recommended_action || payload.justificativa) && (
+        {(payload.draft_email || payload.recommended_action || payload.justificativa || payload.excerpt || payload.evidence) && (
           <button
             onClick={() => setExpanded(v => !v)}
             className="shrink-0 p-1 rounded-xl"
@@ -125,7 +150,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
       </div>
 
       {/* Expanded payload */}
-      {expanded && (payload.draft_email || payload.recommended_action || payload.justificativa) && (
+      {expanded && (payload.draft_email || payload.recommended_action || payload.justificativa || payload.excerpt || payload.evidence) && (
         <div className="mx-4 mb-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "#F8F9FA" }}>
           {action.action_type === "email_fornecedor" &&
             (payload.fornecedor_contact_name || payload.fornecedor_email || payload.fornecedor_phone) && (
@@ -206,6 +231,38 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
                 <ExternalLink size={11} />
                 Ver candidato{payload.candidato_nome ? ` — ${payload.candidato_nome}` : ""}
               </button>
+            </div>
+          )}
+          {action.action_type === "sugestao_sinal_mercado" && payload.excerpt && (
+            <div className="px-3 pb-3 pt-1">
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>
+                {payload.excerpt}
+              </p>
+              {payload.url && (
+                <a
+                  href={payload.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-semibold mt-2"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <ExternalLink size={11} />
+                  Ver fonte
+                </a>
+              )}
+            </div>
+          )}
+          {action.action_type === "sugestao_prospect" && payload.evidence && (
+            <div className="px-3 pb-3 pt-1">
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>
+                <span className="font-semibold">Por que é um bom prospect: </span>
+                {payload.evidence}
+              </p>
+              {(payload.city || payload.state || payload.cnpj) && (
+                <p className="text-[10px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+                  {[payload.cnpj, [payload.city, payload.state].filter(Boolean).join("/")].filter(Boolean).join(" · ")}
+                </p>
+              )}
             </div>
           )}
         </div>

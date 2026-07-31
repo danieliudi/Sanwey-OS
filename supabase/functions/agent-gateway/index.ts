@@ -137,6 +137,51 @@ async function notifyVagaResponsibleIfApproved(admin: any, action: any) {
   // fire-and-forget: falha ao notificar não desfaz a aprovação já gravada.
 }
 
+// Sinais de Mercado / Prospecção (Explorador) — a pesquisa real (Rotina
+// agendada fora do Supabase, com acesso de verdade à web — o mecanismo de
+// Agent Builder comum roda dentro desta edge function e não navega na
+// internet) grava rascunho em agent_actions. Só ao aprovar aqui é que a
+// linha nasce de fato em market_signals/prospect_seeds — mesmo padrão de
+// "rascunho -> aprovação -> publicação" dos outros agentes.
+async function publishMarketResearchIfApproved(admin: any, action: any) {
+  const payload = action.payload || {};
+
+  if (action.action_type === 'sugestao_sinal_mercado') {
+    const companyId = action.company_id || payload.company_id;
+    if (!companyId || !payload.title || !payload.excerpt || !payload.source) return;
+    await admin.from('market_signals').insert({
+      company_id: companyId,
+      source: payload.source,
+      title: payload.title,
+      excerpt: payload.excerpt,
+      url: payload.url || null,
+      urgency: payload.urgency || 'medio',
+      created_by: 'agente_pesquisa_mercado',
+    }).catch(() => {});
+    return;
+  }
+
+  if (action.action_type === 'sugestao_prospect') {
+    if (!payload.company || !payload.sector || !payload.state) return;
+    const relevantFor = Array.isArray(payload.relevant_for) && payload.relevant_for.length
+      ? payload.relevant_for
+      : (action.company_id ? [action.company_id] : []);
+    await admin.from('prospect_seeds').insert({
+      cnpj: payload.cnpj || null,
+      company: payload.company,
+      razao_social: payload.razao_social || payload.company,
+      sector: payload.sector,
+      state: payload.state,
+      city: payload.city || null,
+      size: payload.size || 'Mid-Market',
+      relevant_for: relevantFor,
+      evidence: payload.evidence || null,
+      source: 'agente_pesquisa_mercado',
+      fit_score: payload.fit_score ?? 65,
+    }).catch(() => {});
+  }
+}
+
 Deno.serve(async (req: Request) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -312,6 +357,7 @@ Deno.serve(async (req: Request) => {
         if (body.status === 'approved') {
           await notifyVagaManagerIfApproved(adminClient, data);
           await notifyVagaResponsibleIfApproved(adminClient, data);
+          await publishMarketResearchIfApproved(adminClient, data);
         }
         return json({ success: true, data });
       }

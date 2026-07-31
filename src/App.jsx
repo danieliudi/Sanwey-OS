@@ -15,7 +15,7 @@ import { DEFAULT_PIPELINE_STAGES } from "./constants/pipelines";
 import { ROUTES, sectionFromPath } from "./constants/routes";
 import { useModuleOverrides } from "./hooks/use-module-overrides";
 import { effectiveModules, ALL_MODULE_IDS } from "./utils/module-access";
-import { generateMarketSignals } from "./data/generate-signals";
+import { useMarketSignals } from "./hooks/use-market-signals";
 import { usePersistentState } from "./hooks/use-persistent-state";
 import { useCrossReferrals } from "./hooks/use-cross-referrals";
 import { useUserSettings } from "./hooks/use-user-settings";
@@ -56,7 +56,6 @@ import { TopBar } from "./components/shell/TopBar";
 import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
 import { useRecordViews } from "./hooks/use-record-views";
 import { reopenAfterMove } from "./utils/reopen-after-move";
-import { SignalDetailDrawer } from "./components/lead/SignalDetailDrawer";
 import { ImportModal } from "./components/lead/ImportModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { DashboardView } from "./components/views/DashboardView";
@@ -108,8 +107,6 @@ import { useChangelogNotice } from "./hooks/use-changelog-notice";
 import { useScreenTips } from "./hooks/use-screen-tips";
 import { useAgentsCoachmark } from "./hooks/use-agents-coachmark";
 import { AgentsSidebarCoachmark } from "./components/shell/AgentsSidebarCoachmark";
-
-const INITIAL_SIGNALS = generateMarketSignals();
 
 // Onboarding contextual por tela: reaproveita o quickStart que já existe em
 // VIDEO_TUTORIALS (src/data/tutorials.js), hoje só visível na tela separada
@@ -281,8 +278,7 @@ export default function App() {
     deleteClient,
   } = useClients({ userId: currentUser?.id });
 
-  // Signals are purely derived from the current date — no need to persist.
-  const [signals] = useState(INITIAL_SIGNALS);
+  const { signals } = useMarketSignals();
 
   const { crossReferrals, approve: approveCross, reject: rejectCross } = useCrossReferrals(leads);
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
@@ -800,13 +796,10 @@ export default function App() {
   }, [recrutamentoCandidatos, isRHUser, pushNotification]);
 
   const [activeCompany, setActiveCompany] = useState("all");
-  const [selectedSignal, setSelectedSignal] = useState(null);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [crmAutoCreate, setCrmAutoCreate] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [clientImportOpen, setClientImportOpen] = useState(false);
-
-  const closeSignalDrawer = useCallback(() => setSelectedSignal(null), []);
 
   useEffect(() => {
     document.body.style.overflow = sidebarMobileOpen ? "hidden" : "";
@@ -1648,7 +1641,6 @@ export default function App() {
               <SignalsView
                 activeCompany={activeCompany}
                 signals={signals}
-                onSignalClick={setSelectedSignal}
                 onAddLead={handleAddLead}
                 accessibleCompanies={accessibleCompanies}
               />
@@ -2108,16 +2100,6 @@ export default function App() {
         companies={accessibleCompanies || []}
       />
 
-      <ErrorBoundary>
-        <SignalDetailDrawer
-          signal={selectedSignal}
-          onClose={closeSignalDrawer}
-          onAddLead={handleAddLead}
-          currentUser={currentUser}
-          users={users}
-          pipelines={pipelines}
-        />
-      </ErrorBoundary>
     </div>
   );
 }

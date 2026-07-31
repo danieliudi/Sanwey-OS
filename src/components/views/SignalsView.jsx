@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Bell, Plus, CheckCircle2, AlertTriangle, Building2 } from "lucide-react";
+import { Bell, Plus, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { CompanyTag } from "../ui/CompanyTag";
 import { UrgencyTag } from "../ui/UrgencyTag";
@@ -34,7 +34,7 @@ const URGENCY_STATUS_LABEL = {
   informativo: "Info",
 };
 
-export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, accessibleCompanies }) {
+export function SignalsView({ activeCompany, signals, onAddLead, accessibleCompanies }) {
   const isGroupView = activeCompany === "all";
   const [urgencyFilter, setUrgencyFilter] = useState("all");
   const [density, setDensity] = useState("grid");
@@ -106,7 +106,6 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
   }, [signals, activeCompany, isGroupView, urgencyFilter]);
 
   const criticalCount = useMemo(() => scopedSignals.filter(s => s.urgency === "critico").length, [scopedSignals]);
-  const affectedTotal = useMemo(() => scopedSignals.reduce((sum, s) => sum + (s.affectedCount || 0), 0), [scopedSignals]);
 
   return (
     <div className="space-y-5">
@@ -121,7 +120,7 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <StatCard icon={Bell} value={scopedSignals.length} label="Sinais monitorados" />
         <StatCard
           icon={AlertTriangle}
@@ -129,7 +128,6 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
           label="Sinais críticos"
           accent={criticalCount > 0 ? "var(--warning)" : undefined}
         />
-        <StatCard icon={Building2} value={affectedTotal} label="Empresas afetadas" sublabel="No recorte atual" />
       </div>
 
       <FilterBar
@@ -181,7 +179,6 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
             <Card
               key={s.id}
               density={density}
-              onClick={() => onSignalClick?.(s)}
               icon={<Bell size={16} color="#FFFFFF" />}
               iconBg={COMPANIES[s.company]?.primary || "var(--text-dim)"}
               title={s.title}
@@ -193,11 +190,25 @@ export function SignalsView({ activeCompany, signals, onSignalClick, onAddLead, 
                 </>
               }
               status={{ color: URGENCY_STATUS_COLOR[s.urgency], label: URGENCY_STATUS_LABEL[s.urgency] }}
-              footer={`${s.affectedCount} afetad${s.affectedCount === 1 ? "a" : "as"} · ${s.date}`}
+              footer={s.date}
             >
               <p className="text-sm leading-relaxed" style={{ color: "var(--text-dim)" }}>
                 {s.excerpt}
               </p>
+
+              {s.url && (
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="flex items-center gap-1.5 text-xs font-semibold w-fit"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <ExternalLink size={11} />
+                  Ver fonte
+                </a>
+              )}
 
               {onAddLead && (
                 <div className="pt-3 border-t" style={{ borderColor: "var(--surface-alt)" }}>
