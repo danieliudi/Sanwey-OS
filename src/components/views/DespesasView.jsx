@@ -379,8 +379,7 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
             <div className="flex gap-2">
               <div className="flex-1">
                 <CurrencyInput
-                  prefix={null}
-                  placeholder="Valor R$"
+                  placeholder="Valor"
                   value={form.amount}
                   onChange={v => set("amount", v)}
                   className="w-full text-sm rounded-xl border px-3 py-2 outline-none"

@@ -308,7 +308,11 @@ export default function App() {
     role: currentUser?.role,
     roles: currentUser?.roles,
     companies: currentUser?.companies,
-    enabled: Boolean(currentUser) && (isMarketingUser || isAgencia),
+    // isDiretoria também acessa a rota de Despesas (App.jsx, guard da rota
+    // marketing-despesas) sem precisar de isMarketingUser — sem essa condição
+    // aqui, o dropdown "Campanha relacionada" ficava travado em "Nenhuma
+    // campanha cadastrada ainda" mesmo com campanhas reais existindo.
+    enabled: Boolean(currentUser) && (isMarketingUser || isAgencia || isDiretoria),
   });
 
   const {
