@@ -51,6 +51,23 @@ usam `var(--accent)`; nunca hardcode hex novo pra estado que já tem token:
 - `--text`, `--text-dim`, `--border`, `--surface`, `--surface-alt` = neutros
   padrão, com variante dark mode automática.
 
+**Padrão de exclusão em toda página "Fornecedores"** — decidido com o Daniel
+31/07/2026: referência canônica é `src/components/views/FornecedoresView.jsx`
+(Marketing) — ícone `Trash2` no slot `menu` do `Card` compartilhado (canto
+superior direito do card na grade), abrindo um `ConfirmDeleteModal` construído
+sobre o `Modal` compartilhado (`src/components/ui/Modal.jsx`), com botões
+"Cancelar"/"Excluir" (`Excluir` em `var(--danger)`). `RHFornecedoresView.jsx`
+já segue este padrão (só o texto do corpo do modal muda por página, pra
+refletir o que realmente é perdido — em RH, contratos e histórico de eventos
+somem junto via `ON DELETE CASCADE`; em Marketing, cotações já enviadas
+continuam no histórico). Só existem 2 páginas de Fornecedores hoje
+(Marketing/RH) — por isso isto é uma convenção escrita, não um componente
+`shared/` extraído: regra 4 abaixo só manda extrair na 3ª ocorrência real. Se
+uma 3ª página de Fornecedores nascer, é o momento de extrair
+`ConfirmDeleteModal` (e o botão de lixeira no `menu`) pra `shared/` — antes
+disso, qualquer página nova de Fornecedores replica a estrutura acima
+olhando `FornecedoresView.jsx`, não inventa variante própria.
+
 ## 2. Duplicação conhecida — famílias paralelas (não crie uma terceira)
 
 Estes pares **parecem** compartilhados mas na verdade são duas implementações
