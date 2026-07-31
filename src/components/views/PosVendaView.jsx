@@ -936,6 +936,8 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
             getStageKey={c => c.stage}
             getStageEnteredAt={c => c.stageChangedAt}
             specificStats={posVendaSpecificStats}
+            getOwnerIds={c => c.ownerIds || []}
+            usersById={usersById}
           />
         )}
 

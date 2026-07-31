@@ -743,6 +743,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           records={scopedLeads}
           getStageKey={l => l.stage}
           getStageEnteredAt={l => l.stageChangedAt}
+          getOwnerIds={getLeadOwnerIds}
+          usersById={usersById}
         />
       ) : (<>
       {/* Mobile kanban: vertical collapsible stages */}

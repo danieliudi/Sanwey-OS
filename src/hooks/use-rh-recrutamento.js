@@ -30,6 +30,10 @@ function joinAplicacao(aplicacao, candidatosById) {
     linkedin_url: cand.linkedin_url || null,
     resume_ext: cand.resume_ext || null,
     source: cand.source || null,
+    // Coluna existe desde a FASE 5 (20260714_multi_responsible_foundation)
+    // mas nunca tinha sido lida aqui — sem isso o card de candidato não sabe
+    // quem é o responsável, e ele some da análise de atraso por responsável.
+    responsible_ids: cand.responsible_ids || [],
     stage: aplicacao.etapa_pipeline,
     stage_changed_at: aplicacao.stage_changed_at,
     fit_score: aplicacao.fit_score,

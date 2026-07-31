@@ -3200,6 +3200,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
             getStageKey={(v) => v.stage}
             getStageEnteredAt={(v) => v.stage_changed_at}
             specificStats={vagaSpecificStats}
+            getOwnerIds={(v) => v.responsible_ids || []}
+            usersById={usersById}
           />
         ) : (
           <>
@@ -3392,6 +3394,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
               getStageKey={(c) => c.stage}
               getStageEnteredAt={(c) => c.stage_changed_at}
               specificStats={candSpecificStats}
+              getOwnerIds={(c) => c.responsible_ids || []}
+              usersById={usersById}
             />
           ) : (
             <>
