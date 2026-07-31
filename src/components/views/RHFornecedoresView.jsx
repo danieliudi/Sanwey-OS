@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Search, Bot,
+  Building2, Plus, X, FileText, Calendar, DollarSign, Clock, ChevronDown, ChevronUp, List, LayoutGrid, Search, Bot, Trash2,
 } from "lucide-react";
 import { AgentBuilderWizard } from "../agents/AgentBuilderWizard";
 import { useRHSuppliers } from "../../hooks/use-rh-suppliers";
@@ -359,22 +359,9 @@ function ContratoRow({ contrato, eventos, users, onAddEvento, onUpdateResponsave
   );
 }
 
-function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onCreateContrato, onAddEvento, onUpdateResponsavel, onDelete }) {
+function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onCreateContrato, onAddEvento, onUpdateResponsavel }) {
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const fornecedorContratos = contratos.filter(c => c.fornecedorId === fornecedor.id);
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await onDelete(fornecedor.id);
-      onClose();
-    } catch {
-      setDeleting(false);
-      setConfirmingDelete(false);
-    }
-  };
 
   return (
     <>
@@ -385,37 +372,6 @@ function FornecedorDrawer({ fornecedor, contratos, eventos, users, onClose, onCr
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{fornecedor.name}</div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{TIPO_LABELS[fornecedor.tipo] || fornecedor.tipo}</div>
           </div>
-          {confirmingDelete ? (
-            <div className="flex items-center gap-1.5 shrink-0" style={{ fontSize: 12 }}>
-              <span style={{ color: "var(--text-dim)" }}>
-                {fornecedorContratos.length > 0
-                  ? `Excluir com ${fornecedorContratos.length} contrato(s)?`
-                  : "Excluir?"}
-              </span>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                style={{ background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: deleting ? "default" : "pointer" }}
-              >
-                {deleting ? "Excluindo…" : "Excluir"}
-              </button>
-              <button
-                onClick={() => setConfirmingDelete(false)}
-                disabled={deleting}
-                style={{ background: "var(--surface-alt)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
-              >
-                Cancelar
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmingDelete(true)}
-              title="Excluir fornecedor"
-              style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", fontSize: 12, fontWeight: 600 }}
-            >
-              Excluir
-            </button>
-          )}
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)" }}><X size={18} /></button>
         </div>
 
@@ -545,12 +501,34 @@ function ContratosTableView({ contratos, suppliers, users, onRowClick }) {
   );
 }
 
+// Mesmo padrão de exclusão de fornecedor de FornecedoresView.jsx (Marketing)
+// — regra "toda página de Fornecedores" do CLAUDE.md. Só o texto do corpo
+// muda (aqui contratos/histórico são removidos junto, lá cotações continuam).
+function ConfirmDeleteModal({ fornecedor, contratoCount, onConfirm, onClose }) {
+  return (
+    <Modal open onClose={onClose} title="Excluir fornecedor?" width={400}>
+      <div className="p-6">
+        <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>
+          "{fornecedor.name}" será removido{contratoCount > 0 ? ` — junto com ${contratoCount} contrato(s) e o histórico de eventos vinculado` : ""}.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
+            style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
+          <button onClick={onConfirm}
+            className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--danger)", color: "#fff" }}>Excluir</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function RHFornecedoresView({ currentUser }) {
   const navigate = useNavigate();
   const { suppliers, contratos, eventos, loading, createSupplier, deleteSupplier, createContrato, updateContrato, addEvento } = useRHSuppliers({ userId: currentUser?.id });
   const { users } = useProfiles();
   const [novoOpen, setNovoOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   // "Ver fornecedor" (AgentActionsView, aviso interno do Agent Builder)
   // navega pra cá e abre o FornecedorDrawer já focado — mesmo padrão de
@@ -735,6 +713,15 @@ export function RHFornecedoresView({ currentUser }) {
                   : null
                 }
                 footer={`${contratoCountByFornecedor.get(s.id) || 0} contrato(s) ativo(s)`}
+                menu={
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(s); }}
+                    aria-label="Excluir fornecedor"
+                    style={{ color: "var(--danger)", background: "none", border: "none", cursor: "pointer", padding: 4 }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                }
               />
             );
           })}
@@ -743,6 +730,15 @@ export function RHFornecedoresView({ currentUser }) {
 
       {novoOpen && (
         <NovoFornecedorModal onSave={createSupplier} onClose={() => setNovoOpen(false)} />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDeleteModal
+          fornecedor={confirmDelete}
+          contratoCount={contratos.filter(c => c.fornecedorId === confirmDelete.id).length}
+          onConfirm={async () => { await deleteSupplier(confirmDelete.id); setConfirmDelete(null); }}
+          onClose={() => setConfirmDelete(null)}
+        />
       )}
 
       {agentWizardOpen && (
@@ -777,7 +773,6 @@ export function RHFornecedoresView({ currentUser }) {
           onCreateContrato={createContrato}
           onAddEvento={addEvento}
           onUpdateResponsavel={handleUpdateResponsavel}
-          onDelete={deleteSupplier}
         />
       )}
     </div>
