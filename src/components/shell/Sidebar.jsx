@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { LogOut, ChevronDown, ChevronLeft } from "lucide-react";
+import { LogOut, ChevronDown, ChevronLeft, GripVertical } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 
 const STORAGE_KEY = "sidebar_collapsed_groups";
 const ORDER_KEY = "sidebar_item_order";
+const GROUP_ORDER_KEY = "sidebar_group_order";
 const RAIL_KEY = "sidebar_rail_collapsed";
 
 function loadRail() {
@@ -30,6 +31,14 @@ function saveOrder(state) {
   try { localStorage.setItem(ORDER_KEY, JSON.stringify(state)); } catch {}
 }
 
+function loadGroupOrder() {
+  try { return JSON.parse(localStorage.getItem(GROUP_ORDER_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveGroupOrder(labels) {
+  try { localStorage.setItem(GROUP_ORDER_KEY, JSON.stringify(labels)); } catch {}
+}
+
 // Reordenação por segurar-e-arrastar o ícone (não o item inteiro, pra um
 // clique normal em qualquer parte da linha continuar navegando na hora,
 // sem gesto/threshold nenhum) — ordem por grupo, persistida no navegador.
@@ -39,6 +48,20 @@ function applySavedOrder(items, savedIds) {
   const ordered = savedIds.map(id => byId.get(id)).filter(Boolean);
   const missing = items.filter(it => !savedIds.includes(it.id));
   return [...ordered, ...missing];
+}
+
+// Mesma ideia pro grupo inteiro (ex.: "RH" acima de "Marketing") — usa
+// `label` como chave (grupos não têm id próprio). O grupo sem label (item
+// avulso "Minhas Tarefas", sempre o primeiro) fica de fora: não é uma
+// seção de verdade, não faz sentido arrastar.
+function applySavedGroupOrder(groups, savedLabels) {
+  if (!savedLabels?.length) return groups;
+  const pinned = groups.filter(g => !g.label);
+  const orderable = groups.filter(g => g.label);
+  const byLabel = new Map(orderable.map(g => [g.label, g]));
+  const ordered = savedLabels.map(l => byLabel.get(l)).filter(Boolean);
+  const missing = orderable.filter(g => !savedLabels.includes(g.label));
+  return [...pinned, ...ordered, ...missing];
 }
 
 function useIsMobile() {
@@ -78,12 +101,16 @@ const ROLE_LABEL = {
   gerente_rh:        "Gerente de RH",
 };
 
-export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLogout, mobileOpen, onMobileClose, onNewLead }) {
+export function Sidebar({ navGroups, section, onSectionChange, currentUser, isAdmin = false, onLogout, mobileOpen, onMobileClose, onNewLead }) {
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState(loadCollapsed);
   const [order, setOrder] = useState(loadOrder);
   const [draggedId, setDraggedId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
+  const [groupOrder, setGroupOrder] = useState(loadGroupOrder);
+  const [draggedGroup, setDraggedGroup] = useState(null);
+  const [dragOverGroup, setDragOverGroup] = useState(null);
+  const [hoveredGroup, setHoveredGroup] = useState(null);
   const [railCollapsed, setRailCollapsed] = useState(loadRail);
   // Modo "trilho" (só ícones) — só existe em desktop; no mobile o menu é um
   // overlay off-canvas que não reserva espaço de layout, então recolher não
@@ -119,6 +146,7 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
   };
 
   const orderedItems = (group) => applySavedOrder(group.items, order[group.label || "__default"]);
+  const orderedGroups = applySavedGroupOrder(navGroups, groupOrder);
 
   const handleItemDrop = (group, targetId) => {
     setDragOverId(null);
@@ -138,6 +166,26 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
       saveOrder(next);
       return next;
     });
+  };
+
+  // Mesmo mecanismo do handleItemDrop, um nível acima — arrasta a seção
+  // inteira (ex.: "RH" pra cima de "Marketing"). Só admin vê a alça pra
+  // isso por ora (pedido do Daniel); a ordem salva, se já existir, continua
+  // valendo pra todo mundo depois que abrir pro resto — não precisa migrar.
+  const handleGroupDrop = (targetLabel) => {
+    setDragOverGroup(null);
+    const sourceLabel = draggedGroup;
+    setDraggedGroup(null);
+    if (!sourceLabel || sourceLabel === targetLabel) return;
+    const currentLabels = orderedGroups.filter(g => g.label).map(g => g.label);
+    const from = currentLabels.indexOf(sourceLabel);
+    const to = currentLabels.indexOf(targetLabel);
+    if (from === -1 || to === -1) return;
+    const next = [...currentLabels];
+    next.splice(from, 1);
+    next.splice(to, 0, sourceLabel);
+    setGroupOrder(next);
+    saveGroupOrder(next);
   };
 
   const sidebarStyle = {
@@ -248,21 +296,32 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
 
         {/* ── Nav ── */}
         <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "4px 0 8px", scrollbarWidth: "none" }}>
-          {navGroups.map((group, gi) => {
+          {orderedGroups.map((group, gi) => {
             const isCollapsed = group.label ? !!collapsed[group.label] : false;
             return (
-              <div key={gi} style={{ marginTop: gi === 0 ? 0 : 8 }}>
+              <div
+                key={group.label || `__pinned-${group.items[0]?.id ?? gi}`}
+                style={{
+                  marginTop: gi === 0 ? 0 : 8,
+                  boxShadow: (group.label && dragOverGroup === group.label) ? "inset 0 2px 0 0 var(--accent)" : "none",
+                }}
+                onDragOver={(e) => { if (isAdmin && draggedGroup && group.label) { e.preventDefault(); setDragOverGroup(group.label); } }}
+                onDrop={(e) => { if (isAdmin && group.label) { e.preventDefault(); handleGroupDrop(group.label); } }}
+              >
                 {gi > 0 && group.label && (
                   <div style={{ height: 1, background: "var(--border)", margin: "0 16px 8px" }} />
                 )}
                 {group.label && !rail && (
                   <button
                     onClick={() => toggleGroup(group.label)}
+                    onMouseEnter={() => setHoveredGroup(group.label)}
+                    onMouseLeave={() => setHoveredGroup(prev => (prev === group.label ? null : prev))}
                     style={{
                       width: "100%",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      gap: 6,
                       padding: "10px 16px 5px 18px",
                       background: "none",
                       border: "none",
@@ -270,14 +329,45 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
                       fontFamily: "inherit",
                     }}
                   >
-                    <span style={{
-                      color: "var(--text-faint)",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                    }}>
-                      {group.label}
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                      {/* Alça de arrastar a seção inteira — só admin, por ora
+                          (pedido do Daniel, rollout gradual). Ícone próprio
+                          (não a linha inteira) pra não brigar com o clique
+                          que expande/recolhe o grupo. Só aparece no hover —
+                          mesmo padrão do mockup aprovado, pra não empurrar o
+                          rótulo com um ícone visível o tempo todo. */}
+                      {isAdmin && (
+                        <span
+                          draggable
+                          onDragStart={(e) => { e.stopPropagation(); setDraggedGroup(group.label); }}
+                          onDragEnd={(e) => { e.stopPropagation(); setDraggedGroup(null); setDragOverGroup(null); }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Arraste para reordenar a seção"
+                          style={{
+                            display: "flex",
+                            flexShrink: 0,
+                            cursor: "grab",
+                            color: "var(--text-faint)",
+                            opacity: hoveredGroup === group.label ? 1 : 0,
+                            transition: "opacity 0.12s",
+                          }}
+                        >
+                          <GripVertical size={11} strokeWidth={2} />
+                        </span>
+                      )}
+                      <span style={{
+                        color: "var(--text-faint)",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {group.label}
+                      </span>
                     </span>
                     <ChevronDown
                       size={13}
@@ -408,10 +498,12 @@ export function Sidebar({ navGroups, section, onSectionChange, currentUser, onLo
   );
 }
 
-// Segurar o ícone e arrastar reordena o item dentro do grupo — só o ícone
-// é `draggable`, então um clique normal em qualquer outro ponto da linha
-// (inclusive no próprio ícone sem mover) continua navegando na hora, sem
-// nenhum gesto/atraso extra atrapalhando.
+// Reordena o item dentro do grupo segurando uma alça dedicada (6 pontinhos,
+// ícone universal de arrastar — mesmo padrão do grip de seção), visível só
+// no hover. Só ela é `draggable`, então um clique normal em qualquer outro
+// ponto da linha (inclusive no próprio ícone) continua navegando na hora,
+// sem nenhum gesto/atraso extra atrapalhando. Modo trilho (só ícones) é
+// exceção: sem espaço pra alça separada, o ícone em si volta a ser a alça.
 function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOver, onIconDragStart, onIconDragEnd, onRowDragOver, onRowDrop }) {
   const [hovered, setHovered] = useState(false);
   // Âncora do tooltip em coordenadas de viewport. O balão era absolute
@@ -457,14 +549,39 @@ function NavItem({ id, icon: Icon, label, badge, active, onClick, rail, isDragOv
         borderRadius: "var(--radius-sm)",
       }}
     >
-      {Icon && (
+      {/* Alça de arraste dedicada (6 pontinhos, ícone universal) — só
+          aparece no hover, mesmo padrão do grip de seção. Só existe no modo
+          expandido: no modo trilho (só ícones) não sobra espaço, então lá o
+          próprio ícone continua sendo a alça (comportamento de sempre). */}
+      {Icon && !rail && (
         <span
           draggable
           onDragStart={(e) => { e.stopPropagation(); onIconDragStart?.(); }}
           onDragEnd={(e) => { e.stopPropagation(); onIconDragEnd?.(); }}
           onMouseDown={(e) => e.stopPropagation()}
-          title={rail ? undefined : "Arraste para reordenar"}
-          style={{ position: "relative", display: "flex", flexShrink: 0, cursor: "grab" }}
+          title="Arraste para reordenar"
+          style={{
+            display: "flex",
+            flexShrink: 0,
+            cursor: "grab",
+            color: "var(--text-faint)",
+            opacity: hovered ? 1 : 0,
+            transition: "opacity 0.12s",
+            marginLeft: -4,
+          }}
+        >
+          <GripVertical size={12} strokeWidth={2} />
+        </span>
+      )}
+      {Icon && (
+        <span
+          {...(rail ? {
+            draggable: true,
+            onDragStart: (e) => { e.stopPropagation(); onIconDragStart?.(); },
+            onDragEnd: (e) => { e.stopPropagation(); onIconDragEnd?.(); },
+            onMouseDown: (e) => e.stopPropagation(),
+          } : {})}
+          style={{ position: "relative", display: "flex", flexShrink: 0, cursor: rail ? "grab" : "default" }}
         >
           <Icon size={15} strokeWidth={2} style={{ opacity: 0.85, color: rail && active ? "var(--accent)" : undefined }} />
           {/* Modo trilho esconde o label — o pill numérico não cabe, vira só

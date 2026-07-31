@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Inbox, CheckCircle2, XCircle, Clock, Filter, Plus, ChevronDown,
   CalendarDays, Building2, Tag, AlertCircle, ExternalLink,
-  RefreshCw,
+  RefreshCw, Wallet, UserCheck, FileEdit, ShoppingCart,
 } from "lucide-react";
 import { useMarketingRequests }     from "../../hooks/use-marketing-requests";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -10,6 +10,7 @@ import { marketingUnitLabel } from "../../constants/companies";
 import { EditableProtocolNumber } from "../shared/EditableProtocolNumber";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
+import { formatBRL } from "../../utils/currency";
 import { EmptyState } from "../ui/EmptyState";
 import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
 import { PageHeader } from "../shared/PageHeader";
@@ -49,6 +50,27 @@ function PriorityBadge({ priority }) {
       style={{ background: cfg.bg, color: cfg.color }}
     >
       {label}
+    </span>
+  );
+}
+
+// Distingue Material de Marketing (destino escolhido na aprovação) de Compra
+// (sempre vai automaticamente pro Kanban de Compras) — mesmas duas categorias
+// que agora entram juntas nesta fila (antes eram formulários/tabelas
+// separados). Cores emprestadas do resto da plataforma (secondary/purple),
+// não inventa token novo.
+function CategoryBadge({ category }) {
+  const isCompra = category === "compra";
+  const Icon = isCompra ? ShoppingCart : FileEdit;
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+      style={isCompra
+        ? { background: "#EDE9FE", color: "#7C3AED" }
+        : { background: "#EFF6FF", color: "#1D4ED8" }}
+    >
+      <Icon size={10} />
+      {isCompra ? "Compra" : "Material"}
     </span>
   );
 }
@@ -106,7 +128,12 @@ function RejectModal({ request, onConfirm, onClose }) {
 // requester_name/email/department, então esses dados entram formatados no
 // topo da descrição da tarefa (approve_marketing_request_as_task) — mesma
 // solução já usada hoje pras observações internas.
+//
+// Compra (30/07/2026) NÃO escolhe destino — vai sempre automaticamente pro
+// Kanban de Compras, sem decisão nenhuma do aprovador (confirmado com o
+// Daniel depois do mockup: Entrega/Tarefa só faz sentido pra Material).
 function ApproveModal({ request, onConfirm, onClose }) {
+  const isCompra = request.category === "compra";
   const [destination, setDestination] = useState("entrega");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -118,53 +145,64 @@ function ApproveModal({ request, onConfirm, onClose }) {
     >
       <div className="rounded-2xl p-6 w-full max-w-md" style={{ background: "var(--surface)", boxShadow: "var(--shadow-pop)" }}>
         <h3 className="font-bold text-base mb-1" style={{ color: "var(--text)" }}>Aprovar solicitação</h3>
-        <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>"{request.title}"</p>
+        <p className="text-xs mb-4 flex items-center gap-1.5" style={{ color: "var(--text-dim)" }}>
+          "{request.title}" <CategoryBadge category={request.category} />
+        </p>
 
-        <div className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-faint)" }}>
-          Criar como
-        </div>
-        <div className="flex flex-col gap-2 mb-4">
-          {[
-            { id: "entrega", title: "Entrega — para agência externa", desc: "Vai pro board de Entregas, visível pra agência/fornecedor cuidar da produção." },
-            { id: "tarefa",  title: "Tarefa — equipe interna",         desc: "Vai pro board de Tarefas de Marketing, sem passar por fornecedor." },
-          ].map(opt => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setDestination(opt.id)}
-              className="flex items-start gap-2.5 text-left p-3 rounded-lg border transition-colors"
-              style={{
-                borderColor: destination === opt.id ? "var(--accent)" : "var(--border)",
-                background: destination === opt.id ? "color-mix(in srgb, var(--accent) 6%, var(--surface-alt))" : "var(--surface-alt)",
-              }}
-            >
-              <span
-                className="mt-0.5 rounded-full shrink-0"
-                style={{
-                  width: 16, height: 16, border: `1.5px solid ${destination === opt.id ? "var(--accent)" : "var(--border-strong)"}`,
-                  background: "var(--surface)", position: "relative",
-                }}
-              >
-                {destination === opt.id && (
-                  <span className="absolute rounded-full" style={{ inset: 3, background: "var(--accent)" }} />
-                )}
-              </span>
-              <span>
-                <div className="text-[13.5px] font-bold" style={{ color: "var(--text)" }}>{opt.title}</div>
-                <div className="text-[11.5px] leading-snug" style={{ color: "var(--text-dim)" }}>{opt.desc}</div>
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {destination === "entrega" ? (
-          <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
-            Uma entrega será criada automaticamente em <strong>Entregas</strong>, com os dados do solicitante preservados.
+        {isCompra ? (
+          <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "#EDE9FE", color: "#7C3AED" }}>
+            Solicitações de <strong>Compra</strong> vão direto pro Kanban de Compras — não tem escolha de destino
+            aqui (Entrega/Tarefa só existe pra Material de Marketing).
           </p>
         ) : (
-          <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
-            Uma tarefa será criada em <strong>Tarefas de Marketing</strong>. Nome/e-mail/departamento do solicitante entram na descrição da tarefa.
-          </p>
+          <>
+            <div className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-faint)" }}>
+              Criar como
+            </div>
+            <div className="flex flex-col gap-2 mb-4">
+              {[
+                { id: "entrega", title: "Entrega — para agência externa", desc: "Vai pro board de Entregas, visível pra agência/fornecedor cuidar da produção." },
+                { id: "tarefa",  title: "Tarefa — equipe interna",         desc: "Vai pro board de Tarefas de Marketing, sem passar por fornecedor." },
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setDestination(opt.id)}
+                  className="flex items-start gap-2.5 text-left p-3 rounded-lg border transition-colors"
+                  style={{
+                    borderColor: destination === opt.id ? "var(--accent)" : "var(--border)",
+                    background: destination === opt.id ? "color-mix(in srgb, var(--accent) 6%, var(--surface-alt))" : "var(--surface-alt)",
+                  }}
+                >
+                  <span
+                    className="mt-0.5 rounded-full shrink-0"
+                    style={{
+                      width: 16, height: 16, border: `1.5px solid ${destination === opt.id ? "var(--accent)" : "var(--border-strong)"}`,
+                      background: "var(--surface)", position: "relative",
+                    }}
+                  >
+                    {destination === opt.id && (
+                      <span className="absolute rounded-full" style={{ inset: 3, background: "var(--accent)" }} />
+                    )}
+                  </span>
+                  <span>
+                    <div className="text-[13.5px] font-bold" style={{ color: "var(--text)" }}>{opt.title}</div>
+                    <div className="text-[11.5px] leading-snug" style={{ color: "var(--text-dim)" }}>{opt.desc}</div>
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {destination === "entrega" ? (
+              <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
+                Uma entrega será criada automaticamente em <strong>Entregas</strong>, com os dados do solicitante preservados.
+              </p>
+            ) : (
+              <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
+                Uma tarefa será criada em <strong>Tarefas de Marketing</strong>. Nome/e-mail/departamento do solicitante entram na descrição da tarefa.
+              </p>
+            )}
+          </>
         )}
 
         <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
@@ -190,9 +228,9 @@ function ApproveModal({ request, onConfirm, onClose }) {
             onClick={async () => { setSaving(true); await onConfirm(notes, destination); }}
             disabled={saving}
             className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: destination === "entrega" ? "var(--success)" : "var(--warning)", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
+            style={{ background: isCompra ? "#7C3AED" : destination === "entrega" ? "var(--success)" : "var(--warning)", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
           >
-            {saving ? "Aprovando…" : destination === "entrega" ? "Aprovar e criar entrega" : "Aprovar e criar tarefa"}
+            {saving ? "Aprovando…" : isCompra ? "Aprovar e enviar para Compras" : destination === "entrega" ? "Aprovar e criar entrega" : "Aprovar e criar tarefa"}
           </button>
         </div>
       </div>
@@ -217,6 +255,7 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1.5">
             <StatusBadge status={request.status} />
+            <CategoryBadge category={request.category} />
             <PriorityBadge priority={request.priority} />
             {request.requestType && (
               <span
@@ -258,6 +297,18 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
                 {request.companyIds.map(id => marketingUnitLabel(id)).join(", ")}
               </span>
             )}
+            {request.budget != null && (
+              <span className="flex items-center gap-1">
+                <Wallet size={10} />
+                {formatBRL(request.budget)}
+              </span>
+            )}
+            {request.approverName && (
+              <span className="flex items-center gap-1">
+                <UserCheck size={10} />
+                Aprovador: {request.approverName}
+              </span>
+            )}
           </div>
         </div>
 
@@ -292,6 +343,12 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
         {request.status === "aprovado" && request.taskId && (
           <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "#FEF3C7", color: "#B45309" }}>
             Tarefa criada
+          </span>
+        )}
+
+        {request.status === "aprovado" && request.purchaseRequestId && (
+          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "#EDE9FE", color: "#7C3AED" }}>
+            Compra criada
           </span>
         )}
 
@@ -352,7 +409,7 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
 export function MarketingRequestsView({ user, users }) {
   const {
     requests, loading, error, canWrite,
-    approveAndCreateDeliverable, approveAndCreateTask, rejectRequest, sendStatusEmail, updateRequest,
+    approveAndCreateDeliverable, approveAndCreateTask, approveAndCreatePurchase, rejectRequest, sendStatusEmail, updateRequest,
   } = useMarketingRequests({ userId: user?.id, role: user?.role, roles: user?.roles });
 
   const [statusFilter, setStatusFilter]   = useState("pendente");
@@ -376,16 +433,20 @@ export function MarketingRequestsView({ user, users }) {
     if (!approvingReq) return;
     setActionError(null);
     try {
-      // Cria a entrega (ou tarefa, escolha do aprovador) e marca a
-      // solicitação como aprovada numa única transação no banco
-      // (approve_marketing_request / approve_marketing_request_as_task) —
-      // evita registro órfão se a 2ª escrita falhasse (achado da auditoria
-      // completa). Em seguida avisa o solicitante por e-mail — falha no
-      // envio não desfaz a aprovação, só fica visível no card com opção de
-      // tentar de novo.
-      const res = destination === "tarefa"
-        ? await approveAndCreateTask(approvingReq.id, notes)
-        : await approveAndCreateDeliverable(approvingReq.id, notes);
+      // Cria a entrega/tarefa/compra e marca a solicitação como aprovada numa
+      // única transação no banco (approve_marketing_request /
+      // approve_marketing_request_as_task / approve_marketing_request_as_
+      // purchase) — evita registro órfão se a 2ª escrita falhasse (achado da
+      // auditoria completa). Em seguida avisa o solicitante por e-mail —
+      // falha no envio não desfaz a aprovação, só fica visível no card com
+      // opção de tentar de novo.
+      // Compra nunca escolhe destino (só Entrega/Tarefa existe pra Material) —
+      // vai sempre pro Kanban de Compras, decisão do aprovador não entra aqui.
+      const res = approvingReq.category === "compra"
+        ? await approveAndCreatePurchase(approvingReq.id, notes)
+        : destination === "tarefa"
+          ? await approveAndCreateTask(approvingReq.id, notes)
+          : await approveAndCreateDeliverable(approvingReq.id, notes);
       if (res?.error) setActionError(`Solicitação aprovada, mas o e-mail não pôde ser enviado: ${res.error}`);
     } catch (e) {
       setActionError(e.message || "Erro ao aprovar solicitação.");

@@ -17,6 +17,7 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { StageNavigator } from "../shared/StageNavigator";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { EditableTitle } from "../shared/EditableTitle";
 import { RecordAIPanel } from "../shared/RecordAIPanel";
 import { genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { ActivityLog } from "./CampaignDetailDrawer";
@@ -180,7 +181,11 @@ export function PurchaseRequestDetailDrawer({
   const [quotesError,  setQuotesError]  = useState(null);
   const [winnerSupplierId, setWinnerSupplierId] = useState("");
 
-  const [approveResponsible, setApproveResponsible] = useState(purchase.responsibleId || currentUser?.id || "");
+  // Vazio por padrão — quem aprova (frequentemente o admin/Daniel) não é
+  // necessariamente quem vai executar a compra; sem isso o dropdown já
+  // nascia preenchido com quem só estava revisando a solicitação (achado
+  // reportado em auditoria).
+  const [approveResponsible, setApproveResponsible] = useState(purchase.responsibleId || "");
   const [showReject,   setShowReject]   = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -212,7 +217,7 @@ export function PurchaseRequestDetailDrawer({
     setReceivedBy(purchase.receivedBy || "");
     setQuoteRows(normalizeQuoteRows(purchase.quoteOptions));
     setWinnerSupplierId("");
-    setApproveResponsible(purchase.responsibleId || currentUser?.id || "");
+    setApproveResponsible(purchase.responsibleId || "");
     totalOverriddenRef.current = false;
     setSaveStatus(null);
     setActionError(null);
@@ -493,9 +498,11 @@ export function PurchaseRequestDetailDrawer({
           {stageInfo?.name || purchase.stage}
         </span>
       </div>
-      <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
-        {purchase.itemName}
-      </h2>
+      <EditableTitle
+        value={purchase.itemName}
+        canWrite={canApprove}
+        onSave={(v) => onUpdate(purchase.id, { itemName: v })}
+      />
     </div>
   );
 

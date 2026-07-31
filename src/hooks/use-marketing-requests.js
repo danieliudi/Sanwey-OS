@@ -5,34 +5,39 @@ const TABLE = "marketing_requests";
 
 function rowToRequest(r) {
   return {
-    id:              r.id,
-    requestNumber:   r.request_number ?? null,
-    title:           r.title,
-    description:     r.description ?? null,
-    department:      r.department ?? null,
-    requesterName:   r.requester_name ?? null,
-    requesterEmail:  r.requester_email ?? null,
-    requestType:     r.request_type ?? null,
-    priority:        r.priority ?? "media",
-    deadline:        r.deadline ?? null,
-    companyIds:      Array.isArray(r.company_ids) ? r.company_ids : [],
-    status:          r.status ?? "pendente",
-    rejectionReason: r.rejection_reason ?? null,
-    notes:           r.notes ?? null,
-    approvedAt:      r.approved_at ?? null,
-    approvedBy:      r.approved_by ?? null,
-    deliverableId:   r.deliverable_id ?? null,
-    taskId:          r.task_id ?? null,
-    emailError:      r.email_error ?? null,
-    isDemo:          r.is_demo ?? false,
-    createdAt:       r.created_at ?? null,
-    updatedAt:       r.updated_at ?? null,
+    id:               r.id,
+    requestNumber:    r.request_number ?? null,
+    category:         r.category ?? "material",
+    title:            r.title,
+    description:      r.description ?? null,
+    department:       r.department ?? null,
+    requesterName:    r.requester_name ?? null,
+    requesterEmail:   r.requester_email ?? null,
+    requestType:      r.request_type ?? null,
+    priority:         r.priority ?? "media",
+    deadline:         r.deadline ?? null,
+    companyIds:       Array.isArray(r.company_ids) ? r.company_ids : [],
+    budget:           r.budget ?? null,
+    approverName:     r.approver_name ?? null,
+    status:           r.status ?? "pendente",
+    rejectionReason:  r.rejection_reason ?? null,
+    notes:            r.notes ?? null,
+    approvedAt:       r.approved_at ?? null,
+    approvedBy:       r.approved_by ?? null,
+    deliverableId:    r.deliverable_id ?? null,
+    taskId:           r.task_id ?? null,
+    purchaseRequestId: r.purchase_request_id ?? null,
+    emailError:       r.email_error ?? null,
+    isDemo:           r.is_demo ?? false,
+    createdAt:        r.created_at ?? null,
+    updatedAt:        r.updated_at ?? null,
   };
 }
 
 function requestToRow(req, extras = {}) {
   return {
     request_number:   req.requestNumber ?? null,
+    category:         req.category ?? "material",
     title:            req.title,
     description:      req.description ?? null,
     department:       req.department ?? null,
@@ -42,6 +47,8 @@ function requestToRow(req, extras = {}) {
     priority:         req.priority ?? "media",
     deadline:         req.deadline ?? null,
     company_ids:      req.companyIds ?? [],
+    budget:           req.budget ?? null,
+    approver_name:    req.approverName ?? null,
     status:           req.status ?? "pendente",
     rejection_reason: req.rejectionReason ?? null,
     notes:            req.notes ?? null,
@@ -206,6 +213,27 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     return { taskId: data, ...emailResult };
   }, [canWrite, userId, sendStatusEmail]);
 
+  // Mesmo padrão de approveAndCreateTask, mas cria uma solicitação de compra
+  // (marketing_purchase_requests) — único destino possível quando
+  // category='compra' (sem escolha de Entrega/Tarefa, que só existe pra
+  // Material de Marketing). Ver approve_marketing_request_as_purchase.
+  const approveAndCreatePurchase = useCallback(async (id, notes) => {
+    if (!isSupabaseConfigured || !canWrite) return null;
+    const { data, error: err } = await supabase.rpc("approve_marketing_request_as_purchase", {
+      p_request_id: id,
+      p_notes: notes || null,
+    });
+    if (err) throw err;
+    const now = new Date().toISOString();
+    setRequests(prev => prev.map(r =>
+      r.id === id
+        ? { ...r, status: "aprovado", approvedAt: now, approvedBy: userId ?? null, purchaseRequestId: data ?? null }
+        : r
+    ));
+    const emailResult = await sendStatusEmail(id);
+    return { purchaseRequestId: data, ...emailResult };
+  }, [canWrite, userId, sendStatusEmail]);
+
   const rejectRequest = useCallback(async (id, reason) => {
     if (!isSupabaseConfigured || !canWrite) return;
     const patch = {
@@ -246,6 +274,7 @@ export function useMarketingRequests({ userId, role, roles, enabled = true } = {
     deleteRequest,
     approveAndCreateDeliverable,
     approveAndCreateTask,
+    approveAndCreatePurchase,
     rejectRequest,
     sendStatusEmail,
     loadDemoRequests,

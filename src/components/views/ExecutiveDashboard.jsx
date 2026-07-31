@@ -1,13 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight } from "lucide-react";
+import { HandCoins, CheckCircle2, AlertCircle, Shuffle, TrendingUp, Target, Printer, Bot, Sparkles, Loader2, RotateCcw, Megaphone, Briefcase, ArrowRight, Ship, Handshake } from "lucide-react";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { ROUTES } from "../../constants/routes";
 import { useAI } from "../../hooks/use-ai";
 import { useMarketingCampaigns } from "../../hooks/use-marketing-campaigns";
+import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
+import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
+import { useMarketingPurchaseRequests } from "../../hooks/use-marketing-purchase-requests";
+import { useMarketingExpenses } from "../../hooks/use-marketing-expenses";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
+import { useRHTreinamentos } from "../../hooks/use-rh-treinamentos";
+import { useRHFeedback } from "../../hooks/use-rh-feedback";
+import { useComexImportOperations } from "../../hooks/use-comex-import-operations";
+import { useComexExportOperations } from "../../hooks/use-comex-export-operations";
+import { usePosvenda } from "../../hooks/use-posvenda";
+import { useCRMViagens } from "../../hooks/use-crm-viagens";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompts";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
@@ -21,6 +32,12 @@ import { FunnelHistoryView } from "./FunnelHistoryView";
 // Painel Executivo — único ponto de visão consolidada do Grupo. Inclui
 // o que era a tela "Presidência" como uma tab. Filtro de período é
 // global da tela e afeta todas as agregações.
+//
+// Estrutura (regra 8 do CLAUDE.md, 29/07/2026): "Visão geral" é uma faixa
+// de saúde (1 número + 1 alerta por área) que nunca deve deixar de crescer
+// quando um departamento novo nasce na plataforma — cada área abre numa aba
+// própria ao lado, Comercial mantém a profundidade que já tinha (Gráficos/
+// Análise/IA/Histórico) dentro da própria aba "Comercial".
 
 const PERIODS = [
   { id: "all", label: "Todo período" },
@@ -30,12 +47,23 @@ const PERIODS = [
   { id: "ytd", label: "Este ano" },
 ];
 
-const TABS = [
+// Sub-abas de profundidade da área Comercial — eram as únicas abas do painel
+// antes da regra 8; agora vivem dentro da aba "Comercial".
+const COMERCIAL_SUBTABS = [
   { id: "overview",   label: "Visão geral",  hint: "KPIs e pipeline por empresa" },
   { id: "charts",     label: "Gráficos",     hint: "Evolução e distribuição visual" },
   { id: "analytics",  label: "Análise",      hint: "Diagnóstico detalhado por etapa" },
   { id: "ia",         label: "IA",           hint: "Análise e forecast com inteligência artificial" },
   { id: "historico",  label: "Histórico",    hint: "Evolução do funil ao longo do tempo" },
+];
+
+const AREA_TABS = [
+  { id: "overview",  label: "Visão geral" },
+  { id: "comercial", label: "Comercial" },
+  { id: "marketing", label: "Marketing" },
+  { id: "rh",        label: "RH" },
+  { id: "comex",     label: "Comex" },
+  { id: "posvenda",  label: "Pós-venda" },
 ];
 
 function filterByPeriod(leads, period) {
@@ -52,32 +80,71 @@ function filterByPeriod(leads, period) {
   });
 }
 
+function isThisMonth(iso) {
+  if (!iso) return false;
+  const d = new Date(iso);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
+// Etapa não-terminal de um domain de rh_pipeline_stages — mesmo critério
+// usado pelos próprios boards (Comex, Pós-venda, Entregas, Tarefas), em vez
+// de adivinhar qual stage_key é o final de cada um. Sem stages carregadas
+// ainda, assume aberto (não superestima "fechado" antes do fetch resolver).
+function isOpenStage(item, stages, stageKey = "stage") {
+  if (!stages?.length) return true;
+  const s = stages.find(s => s.stageKey === item[stageKey]);
+  return !s?.terminal;
+}
+function countOpen(items, stages, stageKey = "stage") {
+  return items.filter(i => isOpenStage(i, stages, stageKey)).length;
+}
+
 export function ExecutiveDashboard({
   leads, crossReferrals, pipelines, users, currentUser, activeCompany, visibleWidgets,
   isAdmin = false, isComercialManager = false, isMarketingManager = false, isRHManager = false,
+  isComexManager = false,
 }) {
   const navigate = useNavigate();
   const [period, setPeriod] = useState("all");
-  const [tab, setTab] = useState("overview");
+  const [areaTab, setAreaTab] = useState("overview");
+  const [comercialSubTab, setComercialSubTab] = useState("overview");
   const widgetVisible = (id) => !visibleWidgets || visibleWidgets.includes(id);
 
   // Cada gerente de departamento só vê o(s) recorte(s) do próprio setor —
-  // admin continua vendo tudo. Um usuário com múltiplos cargos (ex: gerente
-  // Comercial + gerente de Marketing) vê as duas seções, nunca a de RH.
-  const showComercial = isAdmin || isComercialManager;
-  const showMarketingCard = (isAdmin || isMarketingManager) && widgetVisible("outras_marketing");
-  const showRHCard = (isAdmin || isRHManager) && widgetVisible("outras_rh");
-  const showDepartmentsOverview = showMarketingCard || showRHCard;
+  // admin/diretoria continuam vendo tudo.
+  const showComercialArea = isAdmin || isComercialManager;
+  const showMarketingArea = (isAdmin || isMarketingManager) && widgetVisible("outras_marketing");
+  const showRHArea        = (isAdmin || isRHManager) && widgetVisible("outras_rh");
+  const showComexArea     = (isAdmin || isComexManager) && widgetVisible("tab_comex");
+  // Pós-venda navega junto de Comercial na plataforma toda (mesmo escopo de
+  // gerente) — não é um departamento à parte com gerente próprio.
+  const showPosVendaArea  = (isAdmin || isComercialManager) && widgetVisible("tab_posvenda");
+  const anyAreaVisible = showComercialArea || showMarketingArea || showRHArea || showComexArea || showPosVendaArea;
 
-  const visibleTabs = useMemo(
-    () => TABS.filter(t => t.id === "overview" || widgetVisible(`tab_${t.id}`)),
+  const visibleAreaTabs = useMemo(() => AREA_TABS.filter(t => {
+    if (t.id === "overview")  return true;
+    if (t.id === "comercial") return showComercialArea;
+    if (t.id === "marketing") return showMarketingArea;
+    if (t.id === "rh")        return showRHArea;
+    if (t.id === "comex")     return showComexArea;
+    if (t.id === "posvenda")  return showPosVendaArea;
+    return false;
+  }), [showComercialArea, showMarketingArea, showRHArea, showComexArea, showPosVendaArea]);
+
+  const visibleComercialSubtabs = useMemo(
+    () => COMERCIAL_SUBTABS.filter(t => t.id === "overview" || widgetVisible(`tab_${t.id}`)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [visibleWidgets]
   );
-  // Se o usuário esconder a aba ativa nas configurações, volta pra "Visão geral".
+
+  // Se o usuário esconder a aba ativa em Configurações, volta pro fallback.
   useEffect(() => {
-    if (!visibleTabs.some(t => t.id === tab)) setTab("overview");
-  }, [visibleTabs, tab]);
+    if (!visibleAreaTabs.some(t => t.id === areaTab)) setAreaTab("overview");
+  }, [visibleAreaTabs, areaTab]);
+  useEffect(() => {
+    if (!visibleComercialSubtabs.some(t => t.id === comercialSubTab)) setComercialSubTab("overview");
+  }, [visibleComercialSubtabs, comercialSubTab]);
 
   const filteredLeads = useMemo(() => filterByPeriod(leads, period), [leads, period]);
 
@@ -147,9 +214,6 @@ export function ExecutiveDashboard({
   // Construtor de pipeline.
   const funnelStages = useMemo(() => {
     const total = filteredLeads.length || 1;
-    // Itera em ordem estável (COMPANY_IDS) — antes usava a ordem de
-    // aparição nos leads, o que fazia nome/cor/posição da etapa no funil
-    // dependerem de qual lead vinha primeiro (não-determinístico).
     const presentIds = new Set(filteredLeads.map(l => l.companyId));
     const extraIds = [...presentIds].filter(id => !COMPANY_IDS.includes(id));
     const sourceCompanies = presentIds.size > 0 ? [...COMPANY_IDS.filter(id => presentIds.has(id)), ...extraIds] : COMPANY_IDS;
@@ -172,6 +236,86 @@ export function ExecutiveDashboard({
     });
   }, [filteredLeads, pipelines]);
 
+  // ── Dados das outras áreas — um hook por domínio, mesmo padrão que já
+  // existia (DepartmentsOverview chamava 4 hooks incondicionalmente; agora
+  // são mais, mas o critério não muda: React não permite chamar hooks
+  // condicionalmente, então todos disparam, e cada área decide se mostra o
+  // resultado via showXArea). ──
+  const { campaigns,    loading: loadingCampaigns }    = useMarketingCampaigns({});
+  const { deliverables, loading: loadingDeliverables } = useMarketingDeliverables({});
+  const { tasks,        loading: loadingTasks }        = useMarketingTasks({});
+  const { purchases,    loading: loadingPurchases }    = useMarketingPurchaseRequests({});
+  const { expenses,     loading: loadingExpenses }     = useMarketingExpenses({});
+  const { vagas, candidatos, loading: loadingRecrutamento } = useRHRecrutamento({});
+  const { colaboradores,     loading: loadingColaboradores } = useRHColaboradores({});
+  const { requests: feriasRequests, loading: loadingFerias } = useRHFeriasRequests({});
+  const { atribuicoes: treinamentoAtribuicoes, loading: loadingTreinamentos } = useRHTreinamentos({});
+  const { feedbacks,    loading: loadingFeedbacks }    = useRHFeedback({ enabled: showRHArea });
+  const { operations: comexImports, loading: loadingComexImports } = useComexImportOperations({});
+  const { operations: comexExports, loading: loadingComexExports } = useComexExportOperations({});
+  const { cases: posvendaCases, loading: loadingPosvenda } = usePosvenda({});
+  const { registros: viagens, loading: loadingViagens } = useCRMViagens({});
+
+  const { stages: deliverableStages } = useRHPipelineStages("marketing_deliverables");
+  const { stages: taskStages }        = useRHPipelineStages("marketing_tasks");
+  const { stages: posvendaStages }    = useRHPipelineStages("posvenda");
+  const { stages: comexImportStages } = useRHPipelineStages("comex_importacao");
+  const { stages: comexExportStages } = useRHPipelineStages("comex_exportacao");
+
+  const dash = "—";
+
+  // Marketing
+  const campanhasAtivas   = loadingCampaigns ? dash : campaigns.filter(c => c.stage !== "encerrado").length;
+  const entregasAbertas   = loadingDeliverables ? dash : countOpen(deliverables, deliverableStages);
+  const tarefasAtrasadas  = loadingTasks ? dash : tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && isOpenStage(t, taskStages)).length;
+  const comprasNoMes      = loadingPurchases ? dash : purchases.filter(p => isThisMonth(p.createdAt)).reduce((sum, p) => sum + (p.totalValue || 0), 0);
+  const despesasNoMes     = loadingExpenses ? dash : expenses.filter(e => isThisMonth(e.createdAt)).reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  // RH
+  const vagasPublicadas       = loadingRecrutamento ? dash : vagas.filter(v => v.stage === "publicada").length;
+  const candidatosEmProcesso  = loadingRecrutamento ? dash : candidatos.filter(c => !["aprovado", "reprovado"].includes(c.stage)).length;
+  const onboardingEmAndamento = loadingColaboradores ? dash : colaboradores.filter(c => c.onboardingStage && c.onboardingStage !== "concluido").length;
+  const emFeriasProximos7d    = loadingFerias ? dash : feriasRequests.filter(overlapsNext7Days).length;
+  const feriasPendentes       = loadingFerias ? dash : feriasRequests.filter(r => r.status === "pendente").length;
+  const treinamentosAtivos    = loadingTreinamentos ? dash : treinamentoAtribuicoes.filter(a => a.status !== "concluido").length;
+  const avaliacoesPendentes   = loadingFeedbacks ? dash : feedbacks.filter(f => f.status !== "concluido").length;
+
+  // Comex
+  const comexImportAbertas = loadingComexImports ? dash : countOpen(comexImports, comexImportStages);
+  const comexExportAbertas = loadingComexExports ? dash : countOpen(comexExports, comexExportStages);
+  const comexTotalAbertas  = (loadingComexImports || loadingComexExports) ? dash : comexImportAbertas + comexExportAbertas;
+
+  // Pós-venda
+  const posvendaAbertos = loadingPosvenda ? dash : countOpen(posvendaCases, posvendaStages);
+  const posvendaValor   = loadingPosvenda ? dash : formatK(posvendaCases.reduce((sum, c) => sum + (c.value || 0), 0));
+
+  // Viagens (rolla dentro de Comercial, pedido do Daniel — quem viaja é
+  // vendedor/gerente, não um departamento à parte)
+  const viagensEmAndamento = loadingViagens ? dash : viagens.filter(v => v.status !== "realizado" && v.status !== "cancelado").length;
+
+  const healthCards = [
+    showComercialArea && {
+      id: "comercial", label: "Comercial", color: "var(--text)",
+      value: formatM(totals.pipeline), sub: `${totals.stale} parado${totals.stale !== 1 ? "s" : ""}`,
+    },
+    showMarketingArea && {
+      id: "marketing", label: "Marketing", color: "#7C3AED",
+      value: campanhasAtivas, sub: `${tarefasAtrasadas} tarefa${tarefasAtrasadas !== 1 ? "s" : ""} atrasada${tarefasAtrasadas !== 1 ? "s" : ""}`,
+    },
+    showRHArea && {
+      id: "rh", label: "RH", color: "#0EA5E9",
+      value: vagasPublicadas, sub: `${avaliacoesPendentes} avaliação${avaliacoesPendentes !== 1 ? "ões" : ""} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
+    },
+    showComexArea && {
+      id: "comex", label: "Comex", color: "#0D9488",
+      value: comexTotalAbertas, sub: "operações em curso",
+    },
+    showPosVendaArea && {
+      id: "posvenda", label: "Pós-venda", color: "#DB2777",
+      value: posvendaAbertos, sub: "casos abertos",
+    },
+  ].filter(Boolean);
+
   return (
     <div className="space-y-5">
       {/* Header com filtros e ações */}
@@ -181,12 +325,12 @@ export function ExecutiveDashboard({
             Painel Executivo
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {showComercial
+            {showComercialArea && areaTab === "comercial"
               ? <>Visão consolidada do Grupo · {filteredLeads.length} leads · {PERIODS.find(p => p.id === period)?.label}</>
-              : "Visão do seu departamento"}
+              : `${healthCards.length} área${healthCards.length !== 1 ? "s" : ""} do Grupo`}
           </p>
         </div>
-        {showComercial && (
+        {showComercialArea && areaTab === "comercial" && (
           <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
               {PERIODS.map(p => (
@@ -218,15 +362,11 @@ export function ExecutiveDashboard({
         )}
       </div>
 
-      {/* Sem Comercial e sem nenhum cartão de departamento — geralmente um
-          gerente de Marketing/RH que desligou o próprio widget em
-          Configurações → Preferências, o que deixava a tela em branco
-          (achado da auditoria de fricção de 18/07). */}
-      {!showComercial && !showDepartmentsOverview && (
+      {!anyAreaVisible && (
         <EmptyState
           icon={Briefcase}
           title="Nada para mostrar aqui"
-          description="As seções deste painel foram ocultadas em Configurações → Preferências. Habilite ao menos uma para ver os dados do seu departamento."
+          description="As áreas deste painel foram ocultadas em Configurações → Preferências. Habilite ao menos uma para ver os dados do seu departamento."
           action={
             <button
               onClick={() => navigate(ROUTES.settings)}
@@ -239,49 +379,47 @@ export function ExecutiveDashboard({
         />
       )}
 
-      {/* Outras áreas do Grupo — cada gerente de departamento só vê o
-          cartão do próprio setor (admin vê os dois, conforme os toggles
-          em Configurações → Preferências). */}
-      {showDepartmentsOverview && (
-        <div className="print:hidden">
-          <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
-            {showComercial ? "Outras áreas" : "Seu departamento"}
-          </div>
-          <DepartmentsOverview
-            showMarketing={showMarketingCard}
-            showRH={showRHCard}
-          />
-        </div>
-      )}
-
-      {showComercial && (
+      {anyAreaVisible && (
         <>
-          {/* KPI strip — Comercial */}
-          {widgetVisible("comercial_kpis") && (
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
-                Comercial
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
-                <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
-                <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
-                <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
-                <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
-                <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
-              </div>
+          {/* Faixa de saúde — sempre visível, 1 número + 1 sinal de alerta por
+              área. Área nova = uma entrada nova aqui + uma aba, nunca um
+              redesign da grade (regra 8 do CLAUDE.md). */}
+          <div className="print:hidden">
+            <div
+              className="grid gap-2.5"
+              style={{ gridTemplateColumns: `repeat(${Math.min(healthCards.length, 5) || 1}, 1fr)` }}
+            >
+              {healthCards.map(h => (
+                <button
+                  key={h.id}
+                  onClick={() => setAreaTab(h.id)}
+                  className="text-left rounded-xl border p-3 cursor-pointer transition-colors"
+                  style={{
+                    background: "var(--surface)",
+                    borderColor: areaTab === h.id ? h.color : "var(--border)",
+                    borderWidth: areaTab === h.id ? 1.5 : 1,
+                    boxShadow: "var(--shadow-card)",
+                    position: "relative",
+                  }}
+                >
+                  <div style={{ position: "absolute", left: 0, top: 8, bottom: 8, width: 3, borderRadius: "0 4px 4px 0", background: h.color }} />
+                  <div className="pl-2">
+                    <div className="text-[11px] font-bold" style={{ color: "var(--text-dim)" }}>{h.label}</div>
+                    <div className="font-bold" style={{ fontSize: 17, color: "var(--text)", lineHeight: 1.2, marginTop: 4 }}>{h.value}</div>
+                    <div className="text-[10.5px] mt-0.5" style={{ color: "var(--text-faint)" }}>{h.sub}</div>
+                  </div>
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
-          {/* Tabs */}
           <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto" style={{ borderColor: "var(--border)" }}>
-            {visibleTabs.map(t => {
-              const active = tab === t.id;
+            {visibleAreaTabs.map(t => {
+              const active = areaTab === t.id;
               return (
                 <button
                   key={t.id}
-                  onClick={() => setTab(t.id)}
-                  title={t.hint}
+                  onClick={() => setAreaTab(t.id)}
                   className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
                   style={{
                     color: active ? "var(--text)" : "var(--text-dim)",
@@ -295,63 +433,122 @@ export function ExecutiveDashboard({
             })}
           </div>
 
-          {tab === "overview" && (
-            <OverviewTab
-              metricsByCompany={metricsByCompany}
-              maxPipeline={maxPipeline}
-              funnelStages={funnelStages}
+          {areaTab === "overview" && (
+            <OverviewTab metricsByCompany={showComercialArea ? metricsByCompany : []} maxPipeline={maxPipeline} funnelStages={funnelStages} showComercial={showComercialArea} />
+          )}
+
+          {areaTab === "comercial" && showComercialArea && (
+            <>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>
+                  Comercial
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
+                  <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
+                  <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
+                  <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
+                  <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />
+                  <StatCard icon={Shuffle}      value={pendingCross}             label="Cross-sell pendente" sublabel="Aguardando" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 border-b print:hidden overflow-x-auto mt-4" style={{ borderColor: "var(--border)" }}>
+                {visibleComercialSubtabs.map(t => {
+                  const active = comercialSubTab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setComercialSubTab(t.id)}
+                      title={t.hint}
+                      className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer"
+                      style={{
+                        color: active ? "var(--text)" : "var(--text-dim)",
+                        borderBottomColor: active ? "var(--accent)" : "transparent",
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {comercialSubTab === "overview" && (
+                <OverviewTab metricsByCompany={metricsByCompany} maxPipeline={maxPipeline} funnelStages={funnelStages} showComercial extra={
+                  <DeptStatRow stats={[{ v: viagensEmAndamento, l: "Viagens em andamento" }]} />
+                } />
+              )}
+              {comercialSubTab === "charts"    && <ExecutiveCharts leads={filteredLeads} pipelines={pipelines} users={users} />}
+              {comercialSubTab === "analytics" && <AnalyticsTab allLeads={leads} period={period} users={users} />}
+              {comercialSubTab === "ia"        && <AIExecutivePanel leads={filteredLeads} users={users} currentUser={currentUser} />}
+              {comercialSubTab === "historico" && <FunnelHistoryView user={currentUser} activeCompany={activeCompany} leads={leads} users={users} />}
+            </>
+          )}
+
+          {areaTab === "marketing" && showMarketingArea && (
+            <AreaDetail
+              title="Marketing"
+              color="#7C3AED"
+              ctaLabel="Ver Marketing"
+              onNavigate={() => navigate(ROUTES.marketing)}
+              stats={[
+                { v: campanhasAtivas,               l: "Campanhas ativas" },
+                { v: entregasAbertas,                l: "Entregas em aberto" },
+                { v: tarefasAtrasadas,               l: "Tarefas atrasadas" },
+                { v: loadingPurchases ? dash : formatK(comprasNoMes), l: "Compras no mês" },
+                { v: loadingExpenses ? dash : formatK(despesasNoMes), l: "Despesas no mês" },
+              ]}
             />
           )}
 
-          {tab === "charts" && (
-            <ExecutiveCharts leads={filteredLeads} pipelines={pipelines} users={users} />
+          {areaTab === "rh" && showRHArea && (
+            <AreaDetail
+              title="RH"
+              color="#0EA5E9"
+              ctaLabel="Ver RH"
+              onNavigate={() => navigate(ROUTES["rh-overview"])}
+              stats={[
+                { v: vagasPublicadas,        l: "Vagas publicadas" },
+                { v: candidatosEmProcesso,   l: "Candidatos em processo" },
+                { v: onboardingEmAndamento,  l: "Onboarding em andamento" },
+                { v: emFeriasProximos7d,     l: "Em férias (7 dias)" },
+                { v: feriasPendentes,        l: "Férias pendentes" },
+                { v: treinamentosAtivos,     l: "Treinamentos ativos" },
+                { v: avaliacoesPendentes,    l: "Avaliações pendentes" },
+              ]}
+            />
           )}
 
-          {tab === "analytics" && (
-            <AnalyticsTab allLeads={leads} period={period} users={users} />
+          {areaTab === "comex" && showComexArea && (
+            <AreaDetail
+              title="Comex"
+              color="#0D9488"
+              icon={Ship}
+              ctaLabel="Ver Comex"
+              onNavigate={() => navigate(ROUTES.comex)}
+              stats={[
+                { v: comexImportAbertas, l: "Importações em curso" },
+                { v: comexExportAbertas, l: "Exportações em curso" },
+              ]}
+            />
           )}
 
-          {tab === "ia" && (
-            <AIExecutivePanel leads={filteredLeads} users={users} currentUser={currentUser} />
-          )}
-
-          {tab === "historico" && (
-            <FunnelHistoryView user={currentUser} activeCompany={activeCompany} leads={leads} users={users} />
+          {areaTab === "posvenda" && showPosVendaArea && (
+            <AreaDetail
+              title="Pós-venda"
+              color="#DB2777"
+              icon={Handshake}
+              ctaLabel="Ver Pós-venda"
+              onNavigate={() => navigate(ROUTES.posvenda)}
+              stats={[
+                { v: posvendaAbertos, l: "Casos abertos" },
+                { v: posvendaValor,   l: "Valor em carteira" },
+              ]}
+            />
           )}
         </>
       )}
-    </div>
-  );
-}
-
-// ── Outras áreas do Grupo (Marketing / RH) ───────────────────────────────────
-
-function DepartmentCard({ icon: Icon, iconColor, title, stats, ctaLabel, onNavigate }) {
-  return (
-    <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: iconColor + "18" }}>
-            <Icon size={16} style={{ color: iconColor }} />
-          </div>
-          <h3 className="font-semibold" style={{ fontSize: 14, color: "var(--text)" }}>{title}</h3>
-        </div>
-        <button
-          onClick={onNavigate}
-          className="flex items-center gap-1 text-xs font-semibold cursor-pointer"
-          style={{ color: iconColor, background: "none", border: "none" }}
-        >
-          {ctaLabel} <ArrowRight size={11} />
-        </button>
-      </div>
-      <div className="flex items-start gap-8 flex-wrap">
-        {stats.map(s => (
-          <div key={s.label}>
-            <div className="font-bold" style={{ fontSize: 22, color: "var(--text)", lineHeight: 1 }}>{s.value}</div>
-            <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -368,53 +565,47 @@ function overlapsNext7Days(req) {
   return start <= in7d && end >= now;
 }
 
-function DepartmentsOverview({ showMarketing = true, showRH = true }) {
-  const navigate = useNavigate();
-  const { campaigns, loading: loadingCampaigns } = useMarketingCampaigns({});
-  const { vagas, candidatos, loading: loadingRecrutamento } = useRHRecrutamento({});
-  const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({});
-  const { requests: feriasRequests, loading: loadingFerias } = useRHFeriasRequests({});
+// ── Detalhe de área (Marketing / RH / Comex / Pós-venda) ────────────────────
 
-  const dash = "—";
-  const campanhasAtivas = loadingCampaigns ? dash : campaigns.filter(c => c.stage !== "encerrado").length;
-  const totalCampanhas = loadingCampaigns ? dash : campaigns.length;
-  const vagasPublicadas = loadingRecrutamento ? dash : vagas.filter(v => v.stage === "publicada").length;
-  const candidatosEmProcesso = loadingRecrutamento ? dash : candidatos.filter(c => !["aprovado", "reprovado"].includes(c.stage)).length;
-  const onboardingEmAndamento = loadingColaboradores ? dash : colaboradores.filter(c => c.onboardingStage && c.onboardingStage !== "concluido").length;
-  const emFeriasProximos7d = loadingFerias ? dash : feriasRequests.filter(overlapsNext7Days).length;
-  const feriasPendentes = loadingFerias ? dash : feriasRequests.filter(r => r.status === "pendente").length;
-
+function DeptStatRow({ stats }) {
   return (
-    <div className={showMarketing && showRH ? "grid md:grid-cols-2 gap-4" : "grid gap-4"}>
-      {showMarketing && (
-        <DepartmentCard
-          icon={Megaphone}
-          iconColor="#7C3AED"
-          title="Marketing"
-          stats={[
-            { label: "Campanhas ativas", value: campanhasAtivas },
-            { label: "Total de campanhas", value: totalCampanhas },
-          ]}
-          ctaLabel="Ver Marketing"
-          onNavigate={() => navigate(ROUTES.marketing)}
-        />
-      )}
-      {showRH && (
-        <DepartmentCard
-          icon={Briefcase}
-          iconColor="#0EA5E9"
-          title="RH"
-          stats={[
-            { label: "Vagas publicadas", value: vagasPublicadas },
-            { label: "Candidatos em processo", value: candidatosEmProcesso },
-            { label: "Onboarding em andamento", value: onboardingEmAndamento },
-            { label: "Em férias (7 dias)", value: emFeriasProximos7d },
-            { label: "Férias pendentes", value: feriasPendentes },
-          ]}
-          ctaLabel="Ver RH"
-          onNavigate={() => navigate(ROUTES["rh-overview"])}
-        />
-      )}
+    <div className="flex items-start gap-8 flex-wrap mt-3 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+      {stats.map(s => (
+        <div key={s.l}>
+          <div className="font-bold" style={{ fontSize: 20, color: "var(--text)", lineHeight: 1 }}>{s.v}</div>
+          <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>{s.l}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AreaDetail({ title, color, icon: Icon = Briefcase, stats, ctaLabel, onNavigate }) {
+  return (
+    <div className="rounded-xl border p-5" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: color + "18" }}>
+            <Icon size={16} style={{ color }} />
+          </div>
+          <h3 className="font-semibold" style={{ fontSize: 14, color: "var(--text)" }}>{title}</h3>
+        </div>
+        <button
+          onClick={onNavigate}
+          className="flex items-center gap-1 text-xs font-semibold cursor-pointer"
+          style={{ color, background: "none", border: "none" }}
+        >
+          {ctaLabel} <ArrowRight size={11} />
+        </button>
+      </div>
+      <div className="flex items-start gap-8 flex-wrap">
+        {stats.map(s => (
+          <div key={s.l}>
+            <div className="font-bold" style={{ fontSize: 22, color: "var(--text)", lineHeight: 1 }}>{s.v}</div>
+            <div className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>{s.l}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -606,7 +797,10 @@ function AIExecutivePanel({ leads, users, currentUser }) {
 
 // ── Overview tab ─────────────────────────────────────────────────────────────
 
-function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
+function OverviewTab({ metricsByCompany, maxPipeline, funnelStages, showComercial = true, extra = null }) {
+  if (!showComercial || metricsByCompany.length === 0) {
+    return extra;
+  }
   return (
     <div className="space-y-5">
       <div className="grid lg:grid-cols-2 gap-5">
@@ -733,6 +927,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages }) {
           </table>
         </div>
       </div>
+      {extra}
     </div>
   );
 }

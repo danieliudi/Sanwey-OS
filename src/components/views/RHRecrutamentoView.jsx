@@ -71,6 +71,9 @@ import { AppToast } from "../shared/AppToast";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
@@ -893,7 +896,7 @@ function VagaCard({ vaga, candidatosCount, usersById }) {
 function VagaKanbanColumn({
   stage, stages, vagasList, candidatosByVaga, onCardClick, canWrite,
   onMoveToStage, onDeleteVaga, onDuplicateVaga, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
-  getCompleteness, getUnread, onAddVaga, usersById, boardHeight,
+  getCompleteness, getUnread, onAddVaga, usersById, boardHeight, getSortCriteria, setSortCriteria,
 }) {
   return (
     <div
@@ -923,6 +926,12 @@ function VagaKanbanColumn({
         countFontSize={12}
         actions={
           <div className="flex items-center gap-1 shrink-0">
+            <KanbanColumnSortMenu
+              criteria={getSortCriteria(stage.stageKey)}
+              onChange={(v) => setSortCriteria(stage.stageKey, v)}
+              options={["recent", "deadline", "priority", "alpha"]}
+              accentColor={stage.color}
+            />
             {canWrite && (
               <button
                 onClick={onAddVaga}
@@ -2361,7 +2370,7 @@ function CandidatoCardBody({ candidato: c, vagas }) {
 function KanbanColumn({
   stage, stages, candidatos, vagas, canWrite, onCardClick, onAddCandidato,
   onMoveToStage, onDeleteCandidato, onDragStart, onDragEnd, isDragOver, onDragOver, onDragLeave, onDrop, onEditFields,
-  getCompleteness, getUnread, boardHeight,
+  getCompleteness, getUnread, boardHeight, getSortCriteria, setSortCriteria,
 }) {
   return (
     <div
@@ -2391,6 +2400,12 @@ function KanbanColumn({
         countFontSize={12}
         actions={
           <div className="flex items-center gap-1 shrink-0">
+            <KanbanColumnSortMenu
+              criteria={getSortCriteria(stage.stageKey)}
+              onChange={(v) => setSortCriteria(stage.stageKey, v)}
+              options={["recent", "alpha"]}
+              accentColor={stage.color}
+            />
             {canWrite && (
               <button
                 onClick={onAddCandidato}
@@ -2653,6 +2668,10 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const { stages: candStages, loading: candStagesLoading } = useRHPipelineStages("candidatos");
   const vagaStageFields = useRHStageFields("vagas");
   const candStageFields = useRHStageFields("candidatos");
+  // Dois boards nesta tela (Vagas e Candidatos) — cada um com seu próprio
+  // mapa de critério por etapa (chaves de localStorage separadas).
+  const { getCriteria: getVagaSortCriteria, setCriteria: setVagaSortCriteria } = useKanbanColumnSort("rh-recrutamento-vagas");
+  const { getCriteria: getCandSortCriteria, setCriteria: setCandSortCriteria } = useKanbanColumnSort("rh-recrutamento-candidatos");
   const { users: profileUsers } = useProfiles();
 
   const [viewMode, setViewMode]             = useState("vagas"); // "vagas" | "candidatos"
@@ -2983,10 +3002,14 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   const candByStage = useMemo(() => {
     const map = {};
     candStages.forEach((s) => {
-      map[s.stageKey] = filteredCandidatos.filter((c) => c.stage === s.stageKey);
+      const list = filteredCandidatos.filter((c) => c.stage === s.stageKey);
+      map[s.stageKey] = sortKanbanItems(list, getCandSortCriteria(s.stageKey), {
+        name: c => c.name,
+        createdAt: c => c.created_at,
+      });
     });
     return map;
-  }, [filteredCandidatos, candStages]);
+  }, [filteredCandidatos, candStages, getCandSortCriteria]);
 
   const candidatosByVaga = useMemo(() => {
     const map = {};
@@ -2999,9 +3022,17 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
 
   const vagasByStage = useMemo(() => {
     const map = {};
-    vagaStages.forEach((s) => { map[s.stageKey] = vagasFrenteFiltradas.filter((v) => (v.stage || "rascunho") === s.stageKey); });
+    vagaStages.forEach((s) => {
+      const list = vagasFrenteFiltradas.filter((v) => (v.stage || "rascunho") === s.stageKey);
+      map[s.stageKey] = sortKanbanItems(list, getVagaSortCriteria(s.stageKey), {
+        deadline: v => v.hiring_deadline,
+        priority: v => v.priority,
+        name: v => v.name,
+        createdAt: v => v.created_at,
+      });
+    });
     return map;
-  }, [vagasFrenteFiltradas, vagaStages]);
+  }, [vagasFrenteFiltradas, vagaStages, getVagaSortCriteria]);
 
   const analyticsVagaStages = useMemo(
     () => vagaStages.filter((s) => !s.terminal).map((s) => ({ key: s.stageKey, name: s.name, color: s.color, slaDays: s.slaDays })),
@@ -3208,6 +3239,9 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
             <RHMobileKanbanAccordion
               stages={vagaStages}
               itemsByStage={vagasByStage}
+              getSortCriteria={getVagaSortCriteria}
+              setSortCriteria={setVagaSortCriteria}
+              sortOptions={["recent", "deadline", "priority", "alpha"]}
               renderCard={(v) => (
                 <RHKanbanCard
                   key={v.id}
@@ -3258,6 +3292,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                       onAddVaga={() => setAddVagaStage(stage.stageKey)}
                       usersById={usersById}
                       boardHeight={boardHeight}
+                      getSortCriteria={getVagaSortCriteria}
+                      setSortCriteria={setVagaSortCriteria}
                     />
                   ))}
                 </div>
@@ -3402,6 +3438,9 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
               <RHMobileKanbanAccordion
                 stages={candStages}
                 itemsByStage={candByStage}
+                getSortCriteria={getCandSortCriteria}
+                setSortCriteria={setCandSortCriteria}
+                sortOptions={["recent", "alpha"]}
                 renderCard={(c) => (
                   <RHKanbanCard
                     key={c.id}
@@ -3449,6 +3488,8 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                         getCompleteness={getCandCompleteness}
                         getUnread={(c) => hasUnreadRHComment(c, candViewedAt, user?.id)}
                         boardHeight={boardHeight}
+                        getSortCriteria={getCandSortCriteria}
+                        setSortCriteria={setCandSortCriteria}
                       />
                     ))}
                   </div>

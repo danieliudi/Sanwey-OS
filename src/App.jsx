@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart, RefreshCw, Sparkles, ListTodo, Handshake, Ship,
+  FileBarChart, RefreshCw, ListTodo, Handshake, Ship,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -102,6 +102,7 @@ import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
 import { AppToast } from "./components/shared/AppToast";
+import { ChangelogToast } from "./components/shared/ChangelogToast";
 import { useAppUpdate } from "./hooks/use-app-update";
 import { useChangelogNotice } from "./hooks/use-changelog-notice";
 import { useScreenTips } from "./hooks/use-screen-tips";
@@ -179,7 +180,8 @@ export default function App() {
   // boas-vindas (showOnboarding) não recebe nenhum dos três na mesma sessão.
   const { needRefresh, updateNow, dismiss: dismissAppUpdate } = useAppUpdate();
   const { visible: agentsCoachmarkVisible, dismiss: dismissAgentsCoachmark } = useAgentsCoachmark(currentUser, { isRHManager, skip: showOnboarding || needRefresh });
-  const { items: changelogItems, dismiss: dismissChangelog } = useChangelogNotice(currentUser, { skip: showOnboarding || agentsCoachmarkVisible });
+  const { items: changelogItems, dismiss: dismissChangelog } = useChangelogNotice(currentUser, currentUserRoles, { skip: showOnboarding || agentsCoachmarkVisible });
+  const [tutoriaisInitialTab, setTutoriaisInitialTab] = useState(undefined);
 
   // Multi-cargo (FASE 1): `roles` é a fonte de verdade — um usuário pode
   // acumular mais de um cargo (ex: vendedor + agencia). `role` (escalar)
@@ -225,8 +227,9 @@ export default function App() {
   // A única exceção pedida é interação mais rica no Painel Executivo.
   const isDiretoria        = hasAnyRole(["diretoria"]);
   // Painel Executivo deixou de ser exclusivo do gerente Comercial: cada
-  // gerente de departamento acessa pra ver (só) o card do próprio setor.
-  const canSeeExecutive    = isManagerRole || isMarketingManager || isRHManager || isDiretoria;
+  // gerente de departamento acessa pra ver (só) a área do próprio setor —
+  // Comex incluído desde que a aba própria existe (regra 8 do CLAUDE.md).
+  const canSeeExecutive    = isManagerRole || isMarketingManager || isRHManager || isComex || isDiretoria;
   const isAdmin            = hasAnyRole(["admin"]);
   // isInsightsUser: quem o Painel de Insights (src/hooks/use-insights-metrics.js)
   // de fato consegue ler quase todos os dados — o hook cruza
@@ -1539,6 +1542,7 @@ export default function App() {
         section={section}
         onSectionChange={setSection}
         currentUser={currentUser}
+        isAdmin={isAdmin}
         onLogout={handleLogout}
         mobileOpen={sidebarMobileOpen}
         onMobileClose={() => setSidebarMobileOpen(false)}
@@ -1754,7 +1758,7 @@ export default function App() {
           } />
           <Route path={ROUTES.executive} element={
             canSeeExecutive
-              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager || isDiretoria} isRHManager={isRHManager || isDiretoria} isComercialManager={isManager || isDiretoria} />
+              ? <ExecutiveDashboard leads={leads} crossReferrals={crossReferrals} pipelines={pipelines} users={users} currentUser={currentUser} activeCompany={activeCompany} visibleWidgets={settings.visibleExecutiveWidgets} isAdmin={isAdmin} isMarketingManager={isMarketingManager || isDiretoria} isRHManager={isRHManager || isDiretoria} isComercialManager={isManager || isDiretoria} isComexManager={isComex || isDiretoria} />
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES.insights} element={
@@ -1822,6 +1826,7 @@ export default function App() {
               isManager={isManager}
               isMarketingManager={isMarketingManager}
               isRHManager={isRHManager}
+              isComexManager={isComex || isDiretoria}
               isAdmin={isAdmin}
               usersPanel={isManager ? (
                 <UserManagementView
@@ -1843,7 +1848,7 @@ export default function App() {
             />
           } />
           <Route path={ROUTES.tutorials} element={
-            <TutoriaisView currentUser={currentUser} onNavigate={setSection} />
+            <TutoriaisView currentUser={currentUser} onNavigate={setSection} initialTab={tutoriaisInitialTab} />
           } />
           <Route path={ROUTES["marketing-home"]} element={
             (isMarketingUser || isDiretoria)
@@ -1909,6 +1914,7 @@ export default function App() {
                   leads={leads}
                   currentUser={currentUser}
                   onUpdateUser={updateUser}
+                  onDeleteUser={supabaseEnabled ? deleteUser : undefined}
                   canWrite={isRHManager}
                   initialSelectedEmployeeId={selectedEmployeeId}
                   onInitialEmployeeConsumed={() => setSelectedEmployeeId(null)}
@@ -2061,11 +2067,11 @@ export default function App() {
       )}
 
       {!needRefresh && !agentsCoachmarkVisible && changelogItems.length > 0 && (
-        <AppToast icon={Sparkles} title="Novidades" onDismiss={dismissChangelog}>
-          <ul className="list-disc pl-4 space-y-0.5">
-            {changelogItems.map((item, i) => <li key={i}>{item}</li>)}
-          </ul>
-        </AppToast>
+        <ChangelogToast
+          items={changelogItems}
+          onDismiss={dismissChangelog}
+          onViewAll={() => { setTutoriaisInitialTab("novidades"); setSection("tutorials"); dismissChangelog(); }}
+        />
       )}
 
       {screenTip && (

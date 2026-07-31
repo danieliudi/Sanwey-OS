@@ -33,8 +33,8 @@ import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
-import { KanbanSortSelect } from "../shared/KanbanSortSelect";
-import { useKanbanSort } from "../../hooks/use-kanban-sort";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
 import { AvatarStack } from "../shared/AvatarStack";
 import { AppToast } from "../shared/AppToast";
@@ -674,7 +674,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   const [filterStarred, setFilterStarred]     = useState(false);
   const [ownerFilter, setOwnerFilter]         = useState("all");
   const [viewMode, setViewMode]               = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
-  const [sortCriteria, setSortCriteria]       = useKanbanSort("marketing-campanhas");
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("marketing-campanhas");
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => new Set(["briefing"]));
   const toggleMobileStage = (id) => setExpandedMobileStages(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -688,15 +688,25 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
     });
   }, [campaigns, filterCompany, filterChannel, filterStarred, ownerFilter, isManager]);
 
-  // Item 6: ordenar cards dentro de cada coluna do Kanban — ordenar a lista
-  // toda antes de filtrar por etapa preserva a ordem escolhida dentro de
-  // cada coluna, sem precisar de um sort por coluna separado.
-  const sortedCampaigns = useMemo(() => sortKanbanItems(filteredCampaigns, sortCriteria, {
-    deadline: c => c.launchDate,
-    value: c => c.budget,
-    name: c => c.name,
-    createdAt: c => c.createdAt,
-  }), [filteredCampaigns, sortCriteria]);
+  // Ordenar cards dentro de cada coluna do Kanban — cada etapa guarda seu
+  // próprio critério agora (ver KanbanColumnSortMenu), então precisa de um
+  // bucket por etapa em vez de ordenar a lista toda com um critério só.
+  const campaignsByStage = useMemo(() => {
+    const bucket = Object.create(null);
+    for (const s of kanbanStages) bucket[s.id] = [];
+    for (const c of filteredCampaigns) {
+      if (bucket[c.stage]) bucket[c.stage].push(c);
+    }
+    for (const s of kanbanStages) {
+      bucket[s.id] = sortKanbanItems(bucket[s.id], getSortCriteria(s.id), {
+        deadline: c => c.launchDate,
+        value: c => c.budget,
+        name: c => c.name,
+        createdAt: c => c.createdAt,
+      });
+    }
+    return bucket;
+  }, [filteredCampaigns, kanbanStages, getSortCriteria]);
 
   const ownerOptions = useMemo(() => {
     const idSet = new Set();
@@ -996,9 +1006,6 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           <Star size={11} fill={filterStarred ? "#F59E0B" : "none"} />
           Destaques
         </button>
-        {viewMode === "kanban" && (
-          <KanbanSortSelect value={sortCriteria} onChange={setSortCriteria} className="w-40" />
-        )}
       </div>
       </KanbanBoardHeader>
 
@@ -1045,7 +1052,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
         {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
           {kanbanStages.map(stage => {
-            const stageCampaigns = sortedCampaigns.filter(c => c.stage === stage.id);
+            const stageCampaigns = campaignsByStage[stage.id] || [];
             const expanded = expandedMobileStages.has(stage.id);
             const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
             return (
@@ -1062,6 +1069,14 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm" style={{ color: stage.color }}>{stageCampaigns.length}</span>
+                    <div onClick={e => e.stopPropagation()}>
+                      <KanbanColumnSortMenu
+                        criteria={getSortCriteria(stage.id)}
+                        onChange={(v) => setSortCriteria(stage.id, v)}
+                        options={["recent", "deadline", "value", "alpha"]}
+                        accentColor={stage.color}
+                      />
+                    </div>
                     {canWrite && (
                       <span
                         role="button"
@@ -1134,7 +1149,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               style={{ minWidth: `${kanbanStages.length * 280}px` }}
             >
               {kanbanStages.map(stage => {
-                const stageCampaigns = sortedCampaigns.filter(c => c.stage === stage.id);
+                const stageCampaigns = campaignsByStage[stage.id] || [];
                 const count       = stageCampaigns.length;
                 const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
                 const isOver      = dragOverStage === stage.id;
@@ -1183,6 +1198,11 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                         uppercase={false}
                         countFontSize={12}
                         actions={<>
+                          <KanbanColumnSortMenu
+                            criteria={getSortCriteria(stage.id)}
+                            onChange={(v) => setSortCriteria(stage.id, v)}
+                            options={["recent", "deadline", "value", "alpha"]}
+                          />
                           {canWrite && (
                             <span
                               draggable

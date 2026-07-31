@@ -162,5 +162,20 @@ export function useRHColaboradores({ userId, enabled = true } = {}) {
     setColaboradores(prev => prev.map(c => c.id === id ? { ...c, onboardingStage: stage, onboardingStageChangedAt: patch.onboarding_stage_changed_at } : c));
   }, []);
 
-  return { colaboradores, loading, createColaborador, updateColaborador, changeOnboardingStage, refetch: fetchAll };
+  // Exclui o REGISTRO de RH (rh_colaboradores) — pedido do Daniel (30/07/2026:
+  // "a plataforma está criando uns funcionários/usuários estranhos, inclusive
+  // testes"). Já é permitido hoje pela RLS existente (rh_colaboradores_rh_access,
+  // FOR ALL pra admin/gerente_rh/rh — 20260703_rh_colaboradores.sql), só
+  // faltava o hook e o botão. NÃO mexe em profiles/auth.users — quem tem
+  // login vinculado (profileId) continua exigindo a exclusão de CONTA
+  // separada em Configurações → Usuários (ou o botão em RHFuncionariosView
+  // que chama as duas em sequência) — nunca cascateia sozinho, pra não
+  // apagar o histórico de RH de alguém só desligado.
+  const deleteColaborador = useCallback(async (id) => {
+    const { error } = await supabase.from("rh_colaboradores").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    setColaboradores(prev => prev.filter(c => c.id !== id));
+  }, []);
+
+  return { colaboradores, loading, createColaborador, updateColaborador, changeOnboardingStage, deleteColaborador, refetch: fetchAll };
 }

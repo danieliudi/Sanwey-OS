@@ -24,10 +24,16 @@ export const DELIVERABLE_PRIORITIES = [
   { id: "alta",  label: "Alta",  color: "#DC2626" },
 ];
 
+// Quem preenche esse campo é de qualquer departamento pedindo material ao
+// Marketing, não o time de Marketing em si — termos técnicos (Copywriting,
+// Landing Page etc.) não eram reconhecidos por quem preenche. Trocados por
+// itens concretos e de uso comum entre departamentos (pedido do Daniel,
+// auditoria de UX do formulário).
 export const DELIVERABLE_REQUEST_TYPES = [
-  "Design", "Vídeo", "Copywriting", "Social Media", "Email Marketing",
-  "Apresentação", "Landing Page", "Impressos", "Divulgação Interna",
-  "Brinde/Merchandising", "Outro",
+  "Vídeo", "Social Media", "Email Marketing", "Apresentação",
+  "Divulgação Interna", "Brinde/Merchandising",
+  "Cartas", "Comunicado Interno", "Caderno", "Panfleto", "Calendário",
+  "Outro",
 ];
 
 export const EXPENSE_CATEGORIES = [

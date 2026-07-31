@@ -20,6 +20,9 @@ import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
+import { sortKanbanItems } from "../../utils/kanban-sort";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
@@ -269,7 +272,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
 }
 
 /* ── Kanban view ──────────────────────────────────────────────────────── */
-function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, onDuplicateCard, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop, getUnread }) {
+function KanbanBoard({ purchasesByStage, suppliersById, usersById, users, onCardClick, onDragStart, onDragEnd, onMoveToStage, onDeleteCard, onDuplicateCard, dragOverStage, onColumnDragOver, onColumnDragLeave, onColumnDrop, getUnread, getSortCriteria, setSortCriteria }) {
   const [boardRef, boardHeight] = useAvailableHeight(16);
   return (
     <div className="hidden lg:block relative">
@@ -277,7 +280,7 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
         <div className="flex gap-2 h-full" style={{ minWidth: `${PURCHASE_STAGES.length * 280}px` }}>
           {PURCHASE_STAGES.map(stage => {
             const color = STAGE_COLORS[stage.id] || "var(--text-dim)";
-            const items = purchases.filter(p => p.stage === stage.id);
+            const items = purchasesByStage[stage.id] || [];
             const isOver = dragOverStage === stage.id;
             return (
               <div key={stage.id}
@@ -306,6 +309,13 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
                   uppercase={false}
                   countFontSize={12}
                   truncateName={false}
+                  actions={
+                    <KanbanColumnSortMenu
+                      criteria={getSortCriteria(stage.id)}
+                      onChange={(v) => setSortCriteria(stage.id, v)}
+                      options={["recent", "deadline", "alpha"]}
+                    />
+                  }
                 />
                 <div className="px-2 pt-2 pb-2 flex-1 overflow-y-auto" style={{ minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                   {items.length === 0 ? (
@@ -341,21 +351,31 @@ function KanbanBoard({ purchases, suppliersById, usersById, users, onCardClick, 
   );
 }
 
-function MobileKanban({ purchases, suppliersById, usersById, users, onCardClick, onMoveToStage, onDeleteCard, onDuplicateCard, getUnread }) {
+function MobileKanban({ purchasesByStage, suppliersById, usersById, users, onCardClick, onMoveToStage, onDeleteCard, onDuplicateCard, getUnread, getSortCriteria, setSortCriteria }) {
   const [expanded, setExpanded] = useState(() => new Set(["solicitado"]));
   const toggle = (id) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   return (
     <div className="lg:hidden space-y-1.5 pb-8">
       {PURCHASE_STAGES.map(stage => {
         const color = STAGE_COLORS[stage.id] || "var(--text-dim)";
-        const items = purchases.filter(p => p.stage === stage.id);
+        const items = purchasesByStage[stage.id] || [];
         const isOpen = expanded.has(stage.id);
         return (
           <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: color + "28" }}>
             <button className="w-full flex items-center justify-between px-4 py-3 cursor-pointer" style={{ background: color + "12", border: "none" }}
               onClick={() => toggle(stage.id)}>
               <span className="font-bold text-sm" style={{ color }}>{stage.name}</span>
-              <span className="font-bold text-sm" style={{ color }}>{items.length}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm" style={{ color }}>{items.length}</span>
+                <div onClick={e => e.stopPropagation()}>
+                  <KanbanColumnSortMenu
+                    criteria={getSortCriteria(stage.id)}
+                    onChange={(v) => setSortCriteria(stage.id, v)}
+                    options={["recent", "deadline", "alpha"]}
+                    accentColor={color}
+                  />
+                </div>
+              </div>
             </button>
             {isOpen && (
               <div className="p-2.5 space-y-2" style={{ background: "var(--surface-alt)" }}>
@@ -554,6 +574,27 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
 
   const visiblePurchases = useMemo(() => purchases.filter(p => p.stage !== PURCHASE_REJECTED_STAGE), [purchases]);
   const rejectedPurchases = useMemo(() => purchases.filter(p => p.stage === PURCHASE_REJECTED_STAGE), [purchases]);
+
+  // Ordenar cards dentro de cada coluna — cada etapa guarda seu próprio
+  // critério (ver KanbanColumnSortMenu). PURCHASE_STAGES é hardcoded (regra
+  // 2 do CLAUDE.md — exceção deliberada de Compras), então o bucket usa
+  // stage.id fixo desse array em vez de rh_pipeline_stages.
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("marketing-compras");
+  const purchasesByStage = useMemo(() => {
+    const bucket = Object.create(null);
+    for (const s of PURCHASE_STAGES) bucket[s.id] = [];
+    for (const p of visiblePurchases) {
+      if (bucket[p.stage]) bucket[p.stage].push(p);
+    }
+    for (const s of PURCHASE_STAGES) {
+      bucket[s.id] = sortKanbanItems(bucket[s.id], getSortCriteria(s.id), {
+        deadline: p => p.dueDate,
+        name: p => p.itemName,
+        createdAt: p => p.createdAt,
+      });
+    }
+    return bucket;
+  }, [visiblePurchases, getSortCriteria]);
 
   const purchasesRef = useRef(purchases);
   useEffect(() => { purchasesRef.current = purchases; }, [purchases]);
@@ -770,9 +811,9 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
         <div className="text-sm text-center py-8" style={{ color: "var(--text-dim)" }}>Carregando solicitações…</div>
       ) : viewMode === "kanban" ? (
         <>
-          <MobileKanban purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} onDeleteCard={handleDeletePurchase} onDuplicateCard={handleDuplicatePurchase} getUnread={getPurchaseUnread} />
+          <MobileKanban purchasesByStage={purchasesByStage} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected} onMoveToStage={attemptStageChange} onDeleteCard={handleDeletePurchase} onDuplicateCard={handleDuplicatePurchase} getUnread={getPurchaseUnread} getSortCriteria={getSortCriteria} setSortCriteria={setSortCriteria} />
           <KanbanBoard
-            purchases={visiblePurchases} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected}
+            purchasesByStage={purchasesByStage} suppliersById={suppliersById} usersById={usersById} users={users} onCardClick={setSelected}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             onMoveToStage={attemptStageChange}
@@ -783,6 +824,8 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
             onColumnDragLeave={handleColumnDragLeave}
             onColumnDrop={handleColumnDrop}
             getUnread={getPurchaseUnread}
+            getSortCriteria={getSortCriteria}
+            setSortCriteria={setSortCriteria}
           />
         </>
       ) : viewMode === "table" ? (

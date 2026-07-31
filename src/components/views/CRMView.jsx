@@ -8,8 +8,8 @@ import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { CANONICAL_SECTORS } from "../../constants/taxonomy";
 import { Combobox } from "../shared/Combobox";
-import { KanbanSortSelect } from "../shared/KanbanSortSelect";
-import { useKanbanSort } from "../../hooks/use-kanban-sort";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
 import { LeadKanbanCard } from "../lead/LeadKanbanCard";
 import { LeadCreateModal } from "../lead/LeadCreateModal";
@@ -352,7 +352,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [starredOnly, setStarredOnly] = useState(false);
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "calendar"
-  const [sortCriteria, setSortCriteria] = useKanbanSort("crm-pipeline");
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("crm-pipeline");
   const [draggedLead, setDraggedLead] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
   const [blockedDrop, setBlockedDrop] = useState(null);
@@ -433,7 +433,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     // Item 6: ordenar cards dentro de cada coluna — antes só existia a ordem
     // de chegada (created_at desc), sem opção nenhuma de trocar.
     for (const s of stages) {
-      bucket[s.id].leads = sortKanbanItems(bucket[s.id].leads, sortCriteria, {
+      bucket[s.id].leads = sortKanbanItems(bucket[s.id].leads, getSortCriteria(s.id), {
         deadline: l => l.closeDate,
         value: l => l.value,
         name: l => l.company,
@@ -441,7 +441,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
       });
     }
     return bucket;
-  }, [stages, scopedLeads, sortCriteria]);
+  }, [stages, scopedLeads, getSortCriteria]);
 
   // Roster de vendedores/consultores/gerentes/admin da empresa ativa — não
   // "donos dos leads já visíveis" (bug real: com poucos leads atribuídos,
@@ -641,9 +641,6 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
             <Star size={11} fill={starredOnly ? "#F59E0B" : "none"} />
             Só favoritos
           </button>
-          {viewMode === "kanban" && (
-            <KanbanSortSelect value={sortCriteria} onChange={setSortCriteria} className="w-40" />
-          )}
           {isManager && !isGroupView && (
             <button
               onClick={() => setStageManagerOpen(true)}
@@ -766,6 +763,14 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm" style={{ color: stage.color }}>{bucket.leads.length}</span>
+                  <div onClick={e => e.stopPropagation()}>
+                    <KanbanColumnSortMenu
+                      criteria={getSortCriteria(stage.id)}
+                      onChange={(v) => setSortCriteria(stage.id, v)}
+                      options={["recent", "deadline", "value", "alpha"]}
+                      accentColor={stage.color}
+                    />
+                  </div>
                   <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${stage.color}`, display: "flex", alignItems: "center", justifyContent: "center", color: stage.color, transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
                     <ChevronDown size={13} />
                   </div>
@@ -860,17 +865,26 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   nameFontWeight={700}
                   uppercase={false}
                   countFontSize={12}
-                  actions={isManager && (
-                    <button
-                      onClick={() => setEditingStage({ stage, companyId: colCompanyId })}
-                      className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
-                      style={{ width: 24, height: 24, flexShrink: 0, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                      title="Editar fase"
-                    >
-                      <Settings size={13} />
-                    </button>
+                  actions={(
+                    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <KanbanColumnSortMenu
+                        criteria={getSortCriteria(stage.id)}
+                        onChange={(v) => setSortCriteria(stage.id, v)}
+                        options={["recent", "deadline", "value", "alpha"]}
+                      />
+                      {isManager && (
+                        <button
+                          onClick={() => setEditingStage({ stage, companyId: colCompanyId })}
+                          className="flex items-center justify-center rounded-md cursor-pointer transition-colors"
+                          style={{ width: 24, height: 24, flexShrink: 0, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                          title="Editar fase"
+                        >
+                          <Settings size={13} />
+                        </button>
+                      )}
+                    </div>
                   )}
                 >
                   {isBlocked ? (

@@ -316,19 +316,23 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
             onBlur={e => { e.target.style.borderColor = "var(--border-strong)"; }}
           />
 
-          {campaigns.length > 0 && (
+          <div>
+            <div className="text-[11px] font-semibold mb-1.5 uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+              Campanha relacionada (opcional)
+            </div>
             <select
               value={form.campaignId || ""}
               onChange={e => set("campaignId", e.target.value || null)}
+              disabled={campaigns.length === 0}
               className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-              style={{ borderColor: "var(--border-strong)", color: form.campaignId ? "var(--text)" : "var(--text-dim)", background: "var(--surface)" }}
+              style={{ borderColor: "var(--border-strong)", color: form.campaignId ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", cursor: campaigns.length === 0 ? "default" : "pointer" }}
             >
-              <option value="">Sem campanha vinculada</option>
+              <option value="">{campaigns.length === 0 ? "Nenhuma campanha cadastrada ainda" : "Sem campanha vinculada"}</option>
               {campaigns.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-          )}
+          </div>
 
           <div className="flex gap-2">
             <select

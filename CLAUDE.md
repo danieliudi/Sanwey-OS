@@ -35,6 +35,7 @@ Confirmado via grep de uso real no código (não é aspiracional):
 | Formatação/cálculo de data (`formatDateBR`, `daysSince`, `closeDateUrgencyStyle`) | `src/utils/date.js` | idem |
 | Debounce de refetch em `postgres_changes` | `src/utils/debounce.js` | todo hook que assina Realtime |
 | Editor de campos por etapa (CRM e RH, um único componente) | `src/components/shared/stage-editor/StageFieldsPanel.jsx` (+ `CRMStageFieldsPanel.jsx`/`RHStageFieldsPanel.jsx` e demais arquivos da pasta) | Pipeline e todos os boards de RH — `StageFieldEditorModal.jsx`/`RHStageFieldEditorModal.jsx` (duas versões separadas, citadas em versões antigas deste arquivo) já foram deletados |
+| Título editável do card (lápis sempre visível, não só no hover — funciona em touch) | `src/components/shared/EditableTitle.jsx` | Campanhas, Entregas, Tarefas, Compras (`CampaignDetailDrawer`/`DeliverableDetailDrawer`/`MarketingTaskDetailDrawer`/`PurchaseRequestDetailDrawer`) — padrão da plataforma pra título de card, decidido com o Daniel 29/07/2026. **Funil de Vendas fica de fora por ora**: em `LeadDetailDrawer.jsx` o "título" é o Cliente vinculado (dedup por CNPJ via `ClientSelector`/`ClientQuickCreateModal`), não um texto solto — aplicar `EditableTitle` ali direto ignoraria o dedup. Não aplicar sem decidir antes como isso se encaixa. |
 
 **Tokens de design (CSS custom properties, `src/index.css`)** — 74+ arquivos já
 usam `var(--accent)`; nunca hardcode hex novo pra estado que já tem token:
@@ -205,3 +206,74 @@ pergunta — não só pra itens já enfileirados explicitamente como "faça em
 paralelo". Só interromper de verdade quando a mensagem for uma correção de
 rumo do que já está em andamento (ex.: "não, faça diferente") ou pedir
 explicitamente pra parar.
+
+## 8. Conta de teste conhecida — não é incidente de segurança
+
+`teste@sanwey.com.br` é uma conta fake/mockup criada de propósito (sem caixa
+de entrada real por trás) — não é um usuário real esquecido nem uma conta
+comprometida. Se aparecer em log de autenticação (ex.: pedido de redefinição
+de senha, tentativa de login), **não é sinal de invasão** e não precisa virar
+investigação — mas também ainda não foi limpa do sistema, então fica
+documentado aqui até alguém decidir removê-la ou trocar por um endereço mais
+claramente fake (ex.: `naoresponder@sanwey.com.br`). Não construir automação
+nem depender dela existir.
+
+## 9. Painel Executivo tem que acompanhar a plataforma inteira
+
+Instrução do Daniel (29/07/2026), permanente: o Painel Executivo
+(`src/components/views/ExecutiveDashboard.jsx`, rota `executive`) é o único
+lugar que presidência/diretoria olha pra ter visão do Grupo inteiro — não
+pode ficar defasado. **Toda vez que um departamento, Kanban ou domínio de
+dado novo nascer na plataforma, adicionar uma seção correspondente no Painel
+Executivo faz parte de "pronto" pra esse trabalho, não é item de backlog
+separado.**
+
+Auditoria de 29/07/2026 encontrou o painel cobrindo só Comercial (Funil de
+Vendas, com detalhe completo) + Marketing + RH (cartão-resumo simples cada)
+— Compras, Comex, Pós-venda, CRM Viagens, Treinamentos e vários outros
+domínios não tinham nenhuma seção lá. Mockup mostrado e aprovado (spec
+completa nesse commit): "Visão geral" virou uma faixa de saúde por área
+(1 número + 1 sinal de alerta cada), e cada área ganhou sua própria aba de
+profundidade — mesmo padrão que Comercial já usava (Gráficos/Análise/
+Histórico), agora generalizado. **Departamento novo = uma aba nova + uma
+entrada na faixa de saúde, nunca um redesign da grade.** Visibilidade por
+usuário continua via `EXECUTIVE_WIDGETS` em `src/constants/user-settings.js`.
+
+Isso é uma mudança visual/estrutural (rule 3 se aplica: mockup antes de
+implementar) — mas a lacuna em si (departamento existir na plataforma e não
+ter aba no Executivo) não precisa ser redescoberta a cada auditoria: se um
+módulo não tem entrada na faixa de saúde + aba própria, está incompleto até
+ganhar uma.
+
+## 10. Toda entrega termina com changelog + versão — nunca só o merge
+
+Achado de 30/07/2026: o toast "Novidades" (`useChangelogNotice`) e o aviso
+de nova versão disponível (`use-app-update.js`) só disparam quando
+`package.json.version` muda — comparam contra `CHANGELOG[0].version`
+(`src/data/changelog.js`). Uma sessão inteira de trabalho real (RLS,
+Painel Executivo, título editável, Compras, etc.) foi mergeada na main sem
+bump nenhum: o toast simplesmente não tinha nada de novo pra detectar,
+mesmo com dezenas de mudanças reais no ar. Não é um bug de código — é um
+passo que faltou em "pronto".
+
+**Daqui pra frente, mergear na main não é o último passo de uma entrega
+com impacto pro usuário final** (feature nova, fix de comportamento
+visível, mudança de fluxo) — os dois itens abaixo fazem parte de "pronto",
+não são follow-up:
+
+1. Adicionar uma entrada no topo de `CHANGELOG` (`src/data/changelog.js`)
+   — mesmo tom das entradas existentes: frase curta, o que mudou pro
+   usuário, sem jargão técnico. Bump de `version` em `package.json`
+   (semver simples: patch pra fix pontual, minor pra feature) — sem os
+   dois juntos o toast não dispara pra ninguém.
+2. Avaliar se a mudança merece entrar em Ajuda & Tutoriais
+   (`src/data/tutorials.js`, `TutoriaisView.jsx`) — nem toda entrada de
+   changelog vira tutorial (um fix de bug não precisa), mas uma feature
+   nova que muda como alguém faz uma tarefa (ex.: reordenar o menu,
+   escolher destino de uma solicitação) geralmente merece um guia rápido
+   ali. Registrar a decisão (adicionou ou não, e por quê) não precisa de
+   mockup separado — só não pular a pergunta.
+
+Mudança interna sem nada visível pro usuário (migration de reconciliação,
+script de teste, refactor) não precisa de changelog — o critério é "alguém
+que usa a plataforma notaria essa mudança?".

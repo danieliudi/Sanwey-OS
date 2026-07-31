@@ -79,7 +79,16 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
   // secundário) — role sozinho (cargo principal) fica só de fallback pra
   // chamadas antigas que ainda não passam o array.
   const roleList = Array.isArray(roles) && roles.length ? roles : (role ? [role] : []);
-  const canWrite = roleList.some(r => ["admin", "marketing", "gerente_marketing"].includes(r));
+  // canManage = time interno (cria/exclui entrega, administra etapas — md_insert/
+  // md_delete no banco continuam só pra esses papéis). canWrite = também a
+  // Agência (30/07/2026, pedido do Daniel: "por que a agência não consegue
+  // preencher os formulários dos cards?") — cobre o dia a dia de quem
+  // produz a entrega: mover de etapa, preencher campos da etapa, responsáveis,
+  // checklist, anexos, título. Nunca excluir/duplicar/criar — md_update no
+  // banco foi ajustado pra combinar (migration 20260805), md_insert/md_delete
+  // permanecem marketing-only.
+  const canManage = roleList.some(r => ["admin", "marketing", "gerente_marketing"].includes(r));
+  const canWrite = canManage || roleList.includes("agencia");
 
   const fetchAll = useCallback(async () => {
     if (!isSupabaseConfigured) return;
@@ -125,7 +134,7 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
   }, [campaignId]);
 
   const createDeliverable = useCallback(async (deliverable) => {
-    if (!isSupabaseConfigured || !canWrite) return null;
+    if (!isSupabaseConfigured || !canManage) return null;
     const row = deliverableToRow(deliverable, { created_by: userId });
     const { data, error: err } = await supabase
       .from(TABLE)
@@ -136,7 +145,7 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     const created = rowToDeliverable(data);
     setDeliverables(prev => prev.some(d => d.id === created.id) ? prev : [created, ...prev]);
     return created;
-  }, [canWrite, userId]);
+  }, [canManage, userId]);
 
   const updateDeliverable = useCallback(async (id, patch) => {
     if (!isSupabaseConfigured || !canWrite) return;
@@ -185,11 +194,11 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
   }, [createDeliverable]);
 
   const deleteDeliverable = useCallback(async (id) => {
-    if (!isSupabaseConfigured || !canWrite) return;
+    if (!isSupabaseConfigured || !canManage) return;
     const { error: err } = await supabase.from(TABLE).delete().eq("id", id);
     if (err) throw err;
     setDeliverables(prev => prev.filter(d => d.id !== id));
-  }, [canWrite]);
+  }, [canManage]);
 
   const changeStage = useCallback(async (id, stage) => {
     if (!isSupabaseConfigured || !canWrite) return;
@@ -263,6 +272,7 @@ export function useMarketingDeliverables({ userId, role, roles, campaignId } = {
     loading,
     error,
     canWrite,
+    canManage,
     createDeliverable,
     updateDeliverable,
     deleteDeliverable,

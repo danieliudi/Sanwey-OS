@@ -28,9 +28,9 @@ import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
 import { useAvailableHeight } from "../../hooks/use-available-height";
-import { useKanbanSort } from "../../hooks/use-kanban-sort";
+import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
-import { KanbanSortSelect } from "../shared/KanbanSortSelect";
+import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
@@ -647,7 +647,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 export function EntregasView({ user, users = [], notifyMentions }) {
   const location = useLocation();
   const {
-    deliverables, loading, canWrite,
+    deliverables, loading, canWrite, canManage,
     createDeliverable, updateDeliverable, deleteDeliverable, duplicateDeliverable,
     changeStage, sendCompleteEmail, sendSupplierNotifyEmail, toggleStar,
   } = useMarketingDeliverables({ userId: user?.id, role: user?.role, roles: user?.roles });
@@ -689,7 +689,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const [quickAddStage,  setQuickAddStage]  = useState(null);
   const [selected,       setSelected]       = useState(null);
   const [viewMode,       setViewMode]       = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
-  const [sortCriteria,   setSortCriteria]   = useKanbanSort("marketing-entregas");
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("marketing-entregas");
   const [expandedMobileStages, setExpandedMobileStages] = useState(() => {
     const s = new Set(["solicitacao"]);
     if (location.state?.filterStage) s.add(location.state.filterStage);
@@ -732,12 +732,24 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     return list;
   }, [deliverables, ownerFilter, companyFilter, starredOnly, stuckOnly, campaignFilter, deadlineFilter]);
 
-  // Item 6: ordenar cards dentro de cada coluna do Kanban.
-  const sortedFiltered = useMemo(() => sortKanbanItems(filtered, sortCriteria, {
-    deadline: d => d.deadline,
-    name: d => d.title,
-    createdAt: d => d.createdAt,
-  }), [filtered, sortCriteria]);
+  // Ordenar cards dentro de cada coluna — cada etapa guarda seu próprio
+  // critério (ver KanbanColumnSortMenu).
+  const deliverablesByStage = useMemo(() => {
+    const bucket = Object.create(null);
+    for (const s of kanbanStages) bucket[s.id] = [];
+    for (const d of filtered) {
+      if (bucket[d.stage]) bucket[d.stage].push(d);
+    }
+    for (const s of kanbanStages) {
+      bucket[s.id] = sortKanbanItems(bucket[s.id], getSortCriteria(s.id), {
+        deadline: d => d.deadline,
+        priority: d => d.priority,
+        name: d => d.title,
+        createdAt: d => d.createdAt,
+      });
+    }
+    return bucket;
+  }, [filtered, kanbanStages, getSortCriteria]);
 
   const handleDragStart = useCallback((item) => setDraggedItem(item), []);
   const handleDragOver  = useCallback((e, stageId) => { e.preventDefault(); setDragOverStage(stageId); }, []);
@@ -905,9 +917,6 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" iconOnlyMobile />
             <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}  label="Análise"    iconOnlyMobile />
           </div>
-          {viewMode === "kanban" && (
-            <KanbanSortSelect value={sortCriteria} onChange={setSortCriteria} include={["deadline", "alpha"]} className="w-40" />
-          )}
           {/* Export CSV */}
           <button
             onClick={() => exportCSV(filtered, kanbanStages)}
@@ -920,7 +929,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
             Exportar CSV
           </button>
           {/* Nova entrega */}
-          {canWrite && viewMode === "kanban" && (
+          {canManage && viewMode === "kanban" && (
             <button
               onClick={() => setQuickAddStage("solicitacao")}
               className="flex items-center gap-1.5 font-semibold"
@@ -995,7 +1004,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       )}
       </KanbanBoardHeader>
 
-      {canWrite && viewMode === "kanban" && (
+      {canManage && viewMode === "kanban" && (
         <KanbanFab label="Nova entrega" flush onClick={() => setQuickAddStage("solicitacao")} />
       )}
 
@@ -1005,7 +1014,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         {/* Mobile kanban: vertical collapsible stages */}
         <div className="lg:hidden space-y-1.5 pb-24">
           {kanbanStages.map(stage => {
-            const stageItems = sortedFiltered.filter(d => d.stage === stage.id);
+            const stageItems = deliverablesByStage[stage.id] || [];
             const expanded = expandedMobileStages.has(stage.id);
             return (
               <div key={stage.id} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
@@ -1021,7 +1030,15 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
-                    {canWrite && (
+                    <div onClick={e => e.stopPropagation()}>
+                      <KanbanColumnSortMenu
+                        criteria={getSortCriteria(stage.id)}
+                        onChange={(v) => setSortCriteria(stage.id, v)}
+                        options={["recent", "deadline", "priority", "alpha"]}
+                        accentColor={stage.color}
+                      />
+                    </div>
+                    {canManage && (
                       <span
                         role="button"
                         title="Editar campos desta etapa"
@@ -1052,8 +1069,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                           onClick={setSelected}
                           stages={kanbanStages}
                           onMoveToStage={canWrite ? attemptStageChange : null}
-                          onDeleteCard={canWrite ? handleDelete : null}
-                          onDuplicateCard={canWrite ? handleDuplicate : null}
+                          onDeleteCard={canManage ? handleDelete : null}
+                          onDuplicateCard={canManage ? handleDuplicate : null}
                           onToggleStar={canWrite ? toggleStar : null}
                           completeness={getItemCompleteness(item)}
                           unread={getItemUnread(item)}
@@ -1061,7 +1078,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                         />
                       ))
                     )}
-                    {canWrite && !stage.terminal && (
+                    {canManage && !stage.terminal && (
                       <button
                         onClick={() => setQuickAddStage(stage.id)}
                         className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
@@ -1076,7 +1093,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
               </div>
             );
           })}
-          {canWrite && (
+          {canManage && (
             <button
               onClick={() => setAddingStage(true)}
               className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-dashed text-xs font-semibold"
@@ -1093,7 +1110,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-2 h-full" style={{ minWidth: `${kanbanStages.length * 280}px` }}>
               {kanbanStages.map(stage => {
-                const stageItems = sortedFiltered.filter(d => d.stage === stage.id);
+                const stageItems = deliverablesByStage[stage.id] || [];
                 const isOver     = dragOverStage === stage.id;
 
                 return (
@@ -1111,12 +1128,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                         (draggedColumnKey vs draggedItem), então soltar um
                         card aqui continua funcionando normalmente. */}
                     <div
-                      draggable={canWrite}
-                      onDragStart={() => canWrite && setDraggedColumnKey(stage.id)}
+                      draggable={canManage}
+                      onDragStart={() => canManage && setDraggedColumnKey(stage.id)}
                       onDragEnd={handleColumnDragEnd}
                       onDragOver={e => { if (draggedColumnKey) { e.preventDefault(); e.stopPropagation(); } }}
                       onDrop={e => { if (draggedColumnKey && draggedColumnKey !== stage.id) { e.stopPropagation(); handleColumnDrop(stage.id); } }}
-                      style={{ cursor: canWrite ? "grab" : "default" }}
+                      style={{ cursor: canManage ? "grab" : "default" }}
                     >
                       <KanbanColumnHeader
                         color={stage.color}
@@ -1130,7 +1147,12 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                         uppercase={false}
                         countFontSize={12}
                         actions={<>
-                          {canWrite && (
+                          <KanbanColumnSortMenu
+                            criteria={getSortCriteria(stage.id)}
+                            onChange={(v) => setSortCriteria(stage.id, v)}
+                            options={["recent", "deadline", "priority", "alpha"]}
+                          />
+                          {canManage && (
                             <button onClick={() => setFieldEditorStage(stage)}
                               className="flex items-center justify-center rounded-md transition-colors"
                               style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
@@ -1140,7 +1162,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                               <Settings2 size={13} />
                             </button>
                           )}
-                          {canWrite && !stage.terminal && (
+                          {canManage && !stage.terminal && (
                             <button onClick={() => setQuickAddStage(stage.id)}
                               className="flex items-center justify-center rounded-md transition-colors"
                               style={{ width: 28, height: 28, color: "var(--text-dim)", background: "transparent", border: "1px solid transparent", flexShrink: 0 }}
@@ -1191,8 +1213,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                             onClick={setSelected}
                             stages={kanbanStages}
                             onMoveToStage={canWrite ? attemptStageChange : null}
-                            onDeleteCard={canWrite ? handleDelete : null}
-                            onDuplicateCard={canWrite ? handleDuplicate : null}
+                            onDeleteCard={canManage ? handleDelete : null}
+                            onDuplicateCard={canManage ? handleDuplicate : null}
                             onToggleStar={canWrite ? toggleStar : null}
                             completeness={getItemCompleteness(item)}
                             unread={getItemUnread(item)}
@@ -1205,7 +1227,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                   </div>
                 );
               })}
-              {canWrite && (
+              {canManage && (
                 <button
                   onClick={() => setAddingStage(true)}
                   title="Nova etapa"
@@ -1286,10 +1308,10 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         onStageMoved={reopenDeliverableAfterMove}
         onUpdate={handleUpdate}
         onMoveToStage={attemptStageChange}
-        onDelete={handleDelete}
+        onDelete={canManage ? handleDelete : undefined}
         onResendCompleteEmail={sendCompleteEmail}
-        campaigns={campaigns}
         stages={kanbanStages}
+        campaigns={campaigns}
         users={Array.from(usersById.values())}
         canWrite={canWrite}
         userId={user?.id}
@@ -1302,7 +1324,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         "Opções Avançadas" dentro dele também cobre renomear/recolorir/SLA/
         excluir a etapa (records+stageField habilitam a exclusão guardada
         por registro ativo). Substitui o antigo "Editar etapas" separado. */}
-    {canWrite && (
+    {canManage && (
       <RHStageFieldsPanel
         open={!!fieldEditorStage}
         onClose={() => setFieldEditorStage(null)}

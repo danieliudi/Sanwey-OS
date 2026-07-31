@@ -131,6 +131,8 @@ VIDEO_TUTORIALS.marketing = [
     quickStart: { icon: "💰", steps: ["Acesse 'Despesas' no menu lateral para registrar gastos por campanha", "Cada despesa tem categoria (Mídia Paga, Produção, Agência…) e valor", "O painel de totais mostra o budget consumido vs. disponível por campanha"] } },
   { id: "v-mkt5", title: "Aba Criativo e checklist de aprovação", description: "Campanhas", duration: null, url: null,
     quickStart: { icon: "✅", steps: ["Abra uma campanha e acesse a aba 'Criativo' no painel lateral", "Marque cada item do checklist de aprovação conforme for revisado", "A agência pode visualizar os itens marcados em tempo real"] } },
+  { id: "v-mkt6", title: "Solicitações: Material ou Compra", description: "Solicitações", duration: null, url: null,
+    quickStart: { icon: "📥", steps: ["Um só link público (/solicitar-marketing) agora cobre os dois tipos — quem pede escolhe 'Material de Marketing' ou 'Compra' logo no topo", "Ambos chegam em 'Solicitações' como pendentes, com uma etiqueta azul (Material) ou roxa (Compra) pra diferenciar", "Ao aprovar Material, você escolhe o destino (Entrega ou Tarefa); Compra vai direto pro Kanban de Compras, sem escolha"] } },
 ];
 
 VIDEO_TUTORIALS.gerente_marketing = [
@@ -154,7 +156,7 @@ VIDEO_TUTORIALS.rh = [
   { id: "v-rh1", title: "Visão geral do RH", description: "Visão Geral", duration: null, url: null,
     quickStart: { icon: "👥", steps: ["Acesse 'Visão Geral' para ver o painel com funcionários, férias pendentes e vagas em aberto", "Os cards de KPI mostram ativos, de férias e afastados em tempo real", "Clique em 'Ver todas' em cada seção para ir ao módulo correspondente"] } },
   { id: "v-rh2", title: "Gerenciando funcionários", description: "Funcionários", duration: null, url: null,
-    quickStart: { icon: "🧑‍💼", steps: ["Acesse 'Funcionários' para ver o cadastro completo da equipe", "Clique num funcionário para editar dados: cargo, departamento, data de admissão", "Use os filtros (Departamento, Status, Tipo de contrato) para encontrar rapidamente"] } },
+    quickStart: { icon: "🧑‍💼", steps: ["Acesse 'Funcionários' para ver o cadastro completo da equipe", "Clique num funcionário para editar dados: cargo, departamento, data de admissão", "Use os filtros (Departamento, Status, Tipo de contrato) para encontrar rapidamente", "Pra remover um registro de teste ou duplicado, use o ícone de lixeira no card do funcionário — a exclusão não pode ser desfeita"] } },
   { id: "v-rh3", title: "Processo de recrutamento", description: "Recrutamento", duration: null, url: null,
     quickStart: { icon: "💼", steps: ["Acesse 'Recrutamento' para ver vagas abertas e candidatos no Kanban", "Crie vagas com cargo, departamento e requisitos; candidatos entram em 'Triagem'", "Arraste candidatos pelo pipeline: Triagem → Entrevista RH → Aprovado"] } },
   { id: "v-rh4", title: "Solicitações de férias", description: "Férias", duration: null, url: null,

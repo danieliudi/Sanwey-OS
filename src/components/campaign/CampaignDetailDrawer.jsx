@@ -21,6 +21,7 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { DetailDrawerTabs } from "../shared/DetailDrawerTabs";
+import { EditableTitle } from "../shared/EditableTitle";
 import { RHStageHistoryPanel } from "../rh-pipeline/RHDetailDrawerShell";
 import { resolveVisibleFields } from "../../utils/field-conditions";
 import { RecordAIPanel } from "../shared/RecordAIPanel";
@@ -335,8 +336,19 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
   const handleDownload = useCallback(async (att) => {
     const url = await getSignedUrl(att.file_path);
     if (!url) return;
+    // Sem target="_blank" o clique navegava a própria aba pro arquivo cru —
+    // a URL assinada é de outra origem (*.supabase.co), e o navegador ignora
+    // o atributo `download` de um <a> cross-origin, então virava navegação
+    // de verdade, sem nenhuma UI do app pra sair de lá. Mesmo padrão já
+    // usado em LeadDetailDrawer.jsx.
     const a = document.createElement("a");
-    a.href = url; a.download = att.file_name; a.click();
+    a.href = url;
+    a.download = att.file_name;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }, [getSignedUrl]);
 
   return (
@@ -1716,9 +1728,11 @@ export function CampaignDetailDrawer({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <h2 className="font-bold" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em", wordBreak: "break-word" }}>
-          {get("name")}
-        </h2>
+        <EditableTitle
+          value={get("name")}
+          canWrite={canWrite}
+          onSave={(v) => set("name", v)}
+        />
         {canWrite && (
           <button
             onClick={() => onUpdate?.(campaign.id, { starred: !campaign.starred })}
