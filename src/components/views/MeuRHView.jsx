@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useMyColaborador } from "../../hooks/use-my-colaborador";
-import { useServerNotifications } from "../../hooks/use-server-notifications";
 import { RHOnboardingView } from "./RHOnboardingView";
 import { RHTreinamentosView } from "./RHTreinamentosView";
 import { RHFeedbackView } from "./RHFeedbackView";
@@ -37,8 +36,12 @@ const STATUS_INFO = {
   recusado: { label: "Recusado", bg: "var(--danger-bg)",  text: "var(--danger)" },
 };
 
-function ComunicadosPanel({ currentUser }) {
-  const { notifications, markRead } = useServerNotifications({ currentUser });
+// notifications/markRead vêm por prop (do useServerNotifications já chamado
+// em App.jsx), não de uma 2ª chamada do hook aqui — App.jsx assina o canal
+// Realtime "notifications_<userId>" globalmente; uma 2ª assinatura com o
+// mesmo nome de canal, ao montar esta tela, derrubava o app inteiro com
+// "cannot add 'postgres_changes' callback ... after 'subscribe()'".
+function ComunicadosPanel({ notifications, markRead }) {
   const comunicados = useMemo(
     () => notifications.filter(n => n.type === "comunicado" || n.type === "comunicado_importante"),
     [notifications]
@@ -429,7 +432,7 @@ function MeusDadosPanel({ meuColaborador, currentUser }) {
   );
 }
 
-export function MeuRHView({ currentUser, notifyMentions }) {
+export function MeuRHView({ currentUser, notifyMentions, notifications, markNotificationRead }) {
   const [tab, setTab] = useState("comunicados");
   const { meuColaborador } = useMyColaborador(currentUser);
 
@@ -465,7 +468,7 @@ export function MeuRHView({ currentUser, notifyMentions }) {
         })}
       </div>
 
-      {tab === "comunicados" && <ComunicadosPanel currentUser={currentUser} />}
+      {tab === "comunicados" && <ComunicadosPanel notifications={notifications} markRead={markNotificationRead} />}
       {tab === "onboarding" && <RHOnboardingView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
       {tab === "treinamentos" && <RHTreinamentosView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
       {tab === "avaliacao" && <RHFeedbackView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}

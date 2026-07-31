@@ -2001,7 +2001,12 @@ export default function App() {
               : <Navigate to={ROUTES.dashboard} replace />
           } />
           <Route path={ROUTES["meu-rh"]} element={
-            <MeuRHView currentUser={currentUser} notifyMentions={notifyMentions} />
+            <MeuRHView
+              currentUser={currentUser}
+              notifyMentions={notifyMentions}
+              notifications={serverNotifications}
+              markNotificationRead={markServerNotificationRead}
+            />
           } />
           <Route path={ROUTES.profile} element={<Navigate to={ROUTES.settings} replace />} />
           {/* Catch-all: rota desconhecida volta pro Início. */}
