@@ -244,6 +244,13 @@ export default function JobApplicationForm() {
           {fileError && <div style={{ fontSize: 12, color: "#DC2626", marginTop: 6 }}>{fileError}</div>}
         </Field>
 
+        <p style={{ fontSize: 12, color: "#5c5f60", lineHeight: 1.5, margin: 0 }}>
+          Sua candidatura passa por uma triagem inicial com apoio de inteligência artificial, que organiza e
+          pontua os currículos por aderência à vaga. A decisão final sobre avanço no processo é sempre tomada
+          por um recrutador humano. Você pode pedir explicação sobre os critérios usados ou solicitar revisão
+          humana a qualquer momento, escrevendo para <strong>rh@sanwey.com.br</strong>.
+        </p>
+
         <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12, color: "#5c5f60", lineHeight: 1.5, cursor: "pointer" }}>
           <input
             type="checkbox"
