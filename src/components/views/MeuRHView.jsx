@@ -72,7 +72,11 @@ function ComunicadosPanel({ currentUser }) {
   );
 }
 
-function SolicitarFeriasForm({ currentUser, onCreated }) {
+// colaboradorId (rh_colaboradores.id), NÃO o id do profile: a FK de
+// rh_ferias.user_id foi migrada pra rh_colaboradores em 20260787, e as
+// policies de read/insert comparam por essa coluna. Gravar o id do profile
+// aqui violava a FK e fazia a lista voltar sempre vazia.
+function SolicitarFeriasForm({ colaboradorId, onCreated }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState("ferias");
   const [startDate, setStartDate] = useState("");
@@ -87,7 +91,7 @@ function SolicitarFeriasForm({ currentUser, onCreated }) {
     setSaving(true);
     setError(null);
     const { error: err } = await supabase.from("rh_ferias").insert({
-      user_id: currentUser.id,
+      user_id: colaboradorId,
       type,
       start_date: startDate,
       end_date: endDate,
@@ -156,21 +160,21 @@ function SolicitarFeriasForm({ currentUser, onCreated }) {
   );
 }
 
-function MeuFeriasPanel({ currentUser, admissionDate }) {
+function MeuFeriasPanel({ colaboradorId, admissionDate }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRequests = React.useCallback(async () => {
-    if (!isSupabaseConfigured || !currentUser?.id) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !colaboradorId) { setLoading(false); return; }
     setLoading(true);
     const { data } = await supabase
       .from("rh_ferias")
       .select("*")
-      .eq("user_id", currentUser.id)
+      .eq("user_id", colaboradorId)
       .order("start_date", { ascending: false });
     setRequests(data || []);
     setLoading(false);
-  }, [currentUser?.id]);
+  }, [colaboradorId]);
 
   React.useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
@@ -187,7 +191,7 @@ function MeuFeriasPanel({ currentUser, admissionDate }) {
           </span>
         </div>
       )}
-      <SolicitarFeriasForm currentUser={currentUser} onCreated={fetchRequests} />
+      <SolicitarFeriasForm colaboradorId={colaboradorId} onCreated={fetchRequests} />
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-dim)", fontSize: 13 }}>Carregando…</div>
       ) : requests.length === 0 ? (
@@ -465,7 +469,7 @@ export function MeuRHView({ currentUser, notifyMentions }) {
       {tab === "onboarding" && <RHOnboardingView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
       {tab === "treinamentos" && <RHTreinamentosView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
       {tab === "avaliacao" && <RHFeedbackView currentUser={currentUser} canWrite={false} isRHUser={false} notifyMentions={notifyMentions} />}
-      {tab === "ferias" && <MeuFeriasPanel currentUser={currentUser} admissionDate={meuColaborador?.admissionDate} />}
+      {tab === "ferias" && <MeuFeriasPanel colaboradorId={meuColaborador?.id} admissionDate={meuColaborador?.admissionDate} />}
       {tab === "documentos" && (
         meuColaborador ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>

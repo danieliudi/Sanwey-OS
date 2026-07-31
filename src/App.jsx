@@ -34,6 +34,7 @@ import { useMarketingCampaigns } from "./hooks/use-marketing-campaigns";
 import { useMarketingRequests } from "./hooks/use-marketing-requests";
 import { useRHFeriasRequests } from "./hooks/use-rh-ferias-requests";
 import { useRHFeedback } from "./hooks/use-rh-feedback";
+import { useMyColaborador } from "./hooks/use-my-colaborador";
 import { useRHColaboradores } from "./hooks/use-rh-colaboradores";
 import { useCRMDespesas } from "./hooks/use-crm-despesas";
 import { periodoExperienciaInfo, asoDiasParaVencer, contratoDiasParaFim, diasParaAniversario, diasParaBodasEmpresa, aprendizDiasParaFim, contratoFornecedorDiasParaVencer } from "./utils/rh-compliance-dates";
@@ -446,14 +447,14 @@ export default function App() {
   // colaborador quando o prazo (period_end) do ciclo pendente está a até 3
   // dias de vencer (ou já venceu) e ele ainda não preencheu a nota dele.
   const { feedbacks: meusCiclosFeedback } = useRHFeedback({ enabled: Boolean(currentUser) });
-  const [meuColaboradorId, setMeuColaboradorId] = useState(null);
-  useEffect(() => {
-    if (!currentUser?.id || !isSupabaseConfigured) return;
-    let active = true;
-    supabase.from("rh_colaboradores").select("id").eq("profile_id", currentUser.id).maybeSingle()
-      .then(({ data }) => { if (active) setMeuColaboradorId(data?.id || null); });
-    return () => { active = false; };
-  }, [currentUser?.id]);
+  // Via get_my_colaborador() (SECURITY DEFINER), não por select direto em
+  // rh_colaboradores: a policy ampla de self-select foi removida em
+  // 20260713_fix_..._scope, então o select direto voltava vazio justamente
+  // pro colaborador comum — quem mais precisa do lembrete. Também é o que
+  // decide se "Meu RH" aparece no menu (a tela só faz sentido pra quem tem
+  // ficha de colaborador).
+  const { meuColaborador } = useMyColaborador(currentUser);
+  const meuColaboradorId = meuColaborador?.id || null;
   const feedbackPrazoVistoRef = useRef(new Set());
   useEffect(() => {
     if (!meuColaboradorId) return;
@@ -1180,6 +1181,11 @@ export default function App() {
 
     const groups = [];
 
+    // "Meu RH" só faz sentido pra quem tem ficha em rh_colaboradores — sem
+    // ela a tela abre vazia (holerite, férias e dados pessoais são todos
+    // ancorados no id do colaborador, não no do profile).
+    const temFichaColaborador = Boolean(meuColaboradorId);
+
     // FASE 6: Minhas Tarefas é o pouso pós-login pra todo papel interno
     // (agência já saiu por cima, no `if` acima) — item de nav universal, já
     // que antes só quem caía na rota "dashboard" tinha um link direto pra ela
@@ -1268,14 +1274,27 @@ export default function App() {
     } else {
       // Todo colaborador (não só RH) precisa ver seu próprio checklist de
       // onboarding, treinamentos atribuídos e feedbacks — não é uma tela de
-      // gestão de RH.
+      // gestão de RH. "Meu RH" (/meu-rh) entra aqui só pra quem tem ficha de
+      // colaborador: a tela existia mas não estava em menu nenhum, então só
+      // era alcançável digitando a URL na mão.
       groups.push({
         label: "Meu Desenvolvimento",
         items: [
+          ...(temFichaColaborador ? [{ id: "meu-rh", label: "Meu RH", icon: Home }] : []),
           { id: "rh-onboarding",   label: "Onboarding",   icon: ClipboardCheck },
           { id: "rh-treinamentos", label: "Treinamentos", icon: GraduationCap },
           { id: "rh-feedback",     label: "Avaliação de Desempenho", icon: MessageSquareText },
         ],
+      });
+    }
+
+    // Quem é do RH/diretoria também é colaborador — tem holerite, ponto e
+    // férias próprios. O grupo acima não roda pra eles (já veem os boards de
+    // gestão), então "Meu RH" entra sozinho num grupo próprio.
+    if ((isRHUser || isDiretoria) && temFichaColaborador) {
+      groups.push({
+        label: "Meu Espaço",
+        items: [{ id: "meu-rh", label: "Meu RH", icon: Home }],
       });
     }
 
@@ -1329,7 +1348,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuColaboradorId]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
