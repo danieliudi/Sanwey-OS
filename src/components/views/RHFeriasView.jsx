@@ -8,6 +8,7 @@ import { parseDateInput } from "../../utils/date";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useRHFeriasRequests } from "../../hooks/use-rh-ferias-requests";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useMyColaborador } from "../../hooks/use-my-colaborador";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldsPanel } from "../shared/stage-editor/RHStageFieldsPanel";
@@ -306,7 +307,7 @@ function RecusarFeriasModal({ req, colaborador, busy, onConfirm, onClose }) {
   );
 }
 
-function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
+function SolicitarFeriasModal({ currentUser, colaboradorId, onSave, onClose }) {
   const [type, setType]           = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate]     = useState("");
@@ -329,11 +330,12 @@ function SolicitarFeriasModal({ currentUser, onSave, onClose }) {
     if (!startDate)   { setError("Informe a data de início."); return; }
     if (!endDate)     { setError("Informe a data de término."); return; }
     if (new Date(endDate) < new Date(startDate)) { setError("A data de término deve ser após o início."); return; }
+    if (!colaboradorId) { setError("Seu cadastro de colaborador ainda não foi encontrado — avise o RH."); return; }
     setSaving(true);
     setError(null);
     try {
       await onSave({
-        user_id:    currentUser.id,
+        user_id:    colaboradorId,
         type,
         start_date: startDate,
         end_date:   endDate,
@@ -928,6 +930,7 @@ function FeriasCalendarView({ requests, stages, colaboradoresById, onPillClick }
 export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions, initialSelectedFeriasId, onInitialFeriasConsumed }) {
   const { requests, loading: loadingRequests, createRequest, changeStatus, updateCustomFields, duplicateRequest, deleteRequest, addActivity, updateActivity } = useRHFeriasRequests({});
   const { colaboradores, loading: loadingColaboradores } = useRHColaboradores({ userId: currentUser?.id });
+  const { meuColaborador } = useMyColaborador(currentUser);
   const { stages, loading: loadingStages, addStage, reorderStages } = useRHPipelineStages("ferias");
   const feriasStageFields = useRHStageFields("ferias");
 
@@ -1120,6 +1123,16 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
     else handleMoveToStageGeneric(req, stageKey);
   }, [requests, handleAprovar, handleRecusar, handleMoveToStageGeneric]);
 
+  // Dispatcher usado pelo "Mover para" do drawer (StageNavigator, assinatura
+  // (req, stageKey, opts)) — sem isso, mover pra "recusado" por esse atalho
+  // pulava o motivo+e-mail obrigatórios do botão dedicado "Recusar" (achado
+  // #4 do roteiro de treinamento de RH, 31/07/2026).
+  const handleMoveToStageDrawer = useCallback((req, stageKey, opts) => {
+    if (stageKey === "aprovado") return handleAprovar(req, opts);
+    if (stageKey === "recusado") return handleRecusar(req, opts);
+    return handleMoveToStageGeneric(req, stageKey, opts);
+  }, [handleAprovar, handleRecusar, handleMoveToStageGeneric]);
+
   const getReqCompleteness = (req) => getFieldCompleteness(feriasStageFields.getFields(req.status), req.custom_fields || {});
 
   // ── Stats ──────────────────────────────────────────────────────────────────
@@ -1133,7 +1146,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
   const filtered = useMemo(() => {
     return requests.filter((r) => {
       if (filterStatus !== "todas" && r.status !== filterStatus) return false;
-      if (onlyMine && r.user_id !== currentUser?.id) return false;
+      if (onlyMine && r.user_id !== meuColaborador?.id) return false;
       return true;
     });
   }, [requests, filterStatus, onlyMine, currentUser]);
@@ -1353,7 +1366,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
         </>
       )}
 
-      {showSolicitar && <SolicitarFeriasModal currentUser={currentUser} onSave={createRequest} onClose={() => setShowSolicitar(false)} />}
+      {showSolicitar && <SolicitarFeriasModal currentUser={currentUser} colaboradorId={meuColaborador?.id} onSave={createRequest} onClose={() => setShowSolicitar(false)} />}
 
       {recusaModal && (
         <RecusarFeriasModal
@@ -1375,7 +1388,7 @@ export function RHFeriasView({ currentUser, users = [], canWrite, notifyMentions
           currentUser={currentUser}
           onAprovar={handleAprovar}
           onRecusar={handleRecusar}
-          onMoveToStage={handleMoveToStageGeneric}
+          onMoveToStage={handleMoveToStageDrawer}
           onUpdateCustomFields={(merged) => updateCustomFields(drawerReq.id, merged)}
           onAddActivity={(entry) => addActivity(drawerReq.id, entry)}
           onUpdateActivity={(activityId, patch) => updateActivity(drawerReq.id, activityId, patch)}

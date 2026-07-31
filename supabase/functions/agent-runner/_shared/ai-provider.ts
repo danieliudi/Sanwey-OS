@@ -7,6 +7,22 @@
 
 export type AIMessage = { role: string; content: string };
 
+// Achado #11 do roteiro de treinamento de RH (31/07/2026): erro de IA em 6+
+// telas era o texto cru do provider repassado direto ao usuário — igual pra
+// "sem cota/crédito" (algo real, avisar admin) e qualquer outro erro. Isso
+// reformula só o caso de cota/limite esgotado, sem mudar nenhuma lógica de
+// chamada — "não configurado" já tinha mensagem própria (ai-assistant/index.ts).
+function friendlyProviderError(raw: string, provider: string): string {
+  const s = (raw || "").toLowerCase();
+  const isQuota = s.includes("insufficient_quota") || s.includes("exceeded your current quota")
+    || s.includes("quota") || s.includes("rate limit") || s.includes("429")
+    || s.includes("billing") || s.includes("credit balance");
+  if (isQuota) {
+    return `A chave de IA (${provider}) está sem cota/crédito no provedor — avise um admin pra verificar o plano/billing.`;
+  }
+  return raw;
+}
+
 export async function callAIProvider(opts: {
   provider: string;
   model: string;
@@ -23,7 +39,7 @@ export async function callAIProvider(opts: {
       body: JSON.stringify({ model, messages, max_tokens: maxTokens }),
     });
     const d = await r.json();
-    if (!r.ok) throw new Error(d.error?.message || "OpenAI error");
+    if (!r.ok) throw new Error(friendlyProviderError(d.error?.message || "OpenAI error", "OpenAI"));
     return d.choices[0]?.message?.content || "";
   }
 
@@ -36,7 +52,7 @@ export async function callAIProvider(opts: {
       body: JSON.stringify({ model, messages: msgs, ...(sys ? { system: sys.content } : {}), max_tokens: maxTokens }),
     });
     const d = await r.json();
-    if (!r.ok) throw new Error(d.error?.message || "Anthropic error");
+    if (!r.ok) throw new Error(friendlyProviderError(d.error?.message || "Anthropic error", "Anthropic"));
     return d.content[0]?.text || "";
   }
 
@@ -55,7 +71,7 @@ export async function callAIProvider(opts: {
       }
     );
     const d = await r.json();
-    if (!r.ok) throw new Error(d.error?.message || "Gemini error");
+    if (!r.ok) throw new Error(friendlyProviderError(d.error?.message || "Gemini error", "Gemini"));
     return d.candidates?.[0]?.content?.parts?.[0]?.text || "";
   }
 

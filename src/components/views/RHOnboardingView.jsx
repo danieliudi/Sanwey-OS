@@ -30,6 +30,7 @@ import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion"
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
+import { AppToast } from "../shared/AppToast";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { Button } from "../ui/Button";
@@ -1134,6 +1135,13 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
   // nunca hardcoded — se não houver etapa terminal+lost configurada, a
   // opção "Excluir" fica indisponível (ver onDeleteCard abaixo).
   const onboardingRemovedStageKey = useMemo(() => stages.find((s) => s.terminal && s.lost)?.stageKey || null, [stages]);
+  // Contador do cabeçalho não deve incluir quem já foi "Removido" (etapa só
+  // visível na Tabela) — achado #13 do roteiro de treinamento de RH
+  // (31/07/2026), mesmo critério terminal&&lost já usado acima.
+  const colaboradoresEmOnboarding = useMemo(
+    () => onboardingRemovedStageKey ? colaboradores.filter((c) => c.onboardingStage !== onboardingRemovedStageKey) : colaboradores,
+    [colaboradores, onboardingRemovedStageKey]
+  );
   const onboardingStageFields = useRHStageFields("onboarding");
   const { users } = useProfiles();
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "table" | "calendar" | "analytics"
@@ -1433,7 +1441,7 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
             <h1 style={{ fontWeight: 700, fontSize: 26, color: "var(--text)", letterSpacing: "-0.02em", margin: 0 }}>Onboarding</h1>
           </div>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>
-            {colaboradores.length} colaborador{colaboradores.length !== 1 ? "es" : ""} no onboarding
+            {colaboradoresEmOnboarding.length} colaborador{colaboradoresEmOnboarding.length !== 1 ? "es" : ""} no onboarding
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -1608,6 +1616,17 @@ export function RHOnboardingView({ currentUser, canWrite, isRHUser, notifyMentio
           onAddActivity={(entry) => handleAddActivity(drawerColaborador.id, entry)}
           onUpdateActivity={handleUpdateActivity}
         />
+      )}
+
+      {/* moveError já aparece como banner dentro do drawer — mas mover pelo
+          menu do card (drawer fechado) bloqueava em silêncio, indistinguível
+          de "desabilitado" (achado #10 do roteiro de treinamento de RH,
+          31/07/2026). Mesmo padrão de toast já usado em outros Kanbans
+          (AppToast variant="danger", ver RHFeriasView.jsx). */}
+      {moveError && !drawerColaborador && (
+        <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setMoveError(null)}>
+          {moveError}
+        </AppToast>
       )}
 
       {novaTemplateOpen && (

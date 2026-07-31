@@ -33,6 +33,7 @@ import {
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
 import { supabase } from "../../lib/supabase";
 import { useRHColaboradores } from "../../hooks/use-rh-colaboradores";
+import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { useRHBeneficios } from "../../hooks/use-rh-beneficios";
 import { useRHSignatureRequests } from "../../hooks/use-rh-signature-requests";
 import { useColaboradorConnections } from "../../hooks/use-colaborador-connections";
@@ -860,6 +861,7 @@ function EmployeeDetailModal({
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState(null);
   const [emailWarning, setEmailWarning] = useState(null);
+  const { cargos: cargoTemplates } = useRHCargoTemplates({ userId: currentUser?.id });
   const [form, setForm] = useState({
     job_title:       user.job_title       || "",
     frente:          user.frente          || "",
@@ -877,6 +879,16 @@ function EmployeeDetailModal({
     desligamento_motivo: colaboradorRow?.desligamentoMotivo || "",
     desligamento_meta:   colaboradorRow?.desligamentoMeta || {},
   });
+
+  // Cargo virou select ligado ao catálogo de Cargos & Salários — ver mesmo
+  // comentário em NovoColaboradorModal.jsx (achado #6 do roteiro de
+  // treinamento de RH, 31/07/2026).
+  const cargoOptions = useMemo(() => {
+    const base = form.department
+      ? cargoTemplates.filter((c) => !c.department || c.department === form.department)
+      : cargoTemplates;
+    return [...base].sort((a, b) => a.name.localeCompare(b.name));
+  }, [cargoTemplates, form.department]);
 
   // Snapshot dos valores originais — usado só pra não travar retroativamente
   // um campo que esse registro já tinha vazio antes de virar obrigatório
@@ -1190,16 +1202,23 @@ function EmployeeDetailModal({
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label style={labelSt}>Cargo *</label>
-                  <input
-                    type="text"
+                  <select
                     value={form.job_title}
                     onChange={(e) => set("job_title", e.target.value)}
-                    placeholder="Ex: Analista Comercial"
-                    className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
+                    className="w-full text-sm rounded-xl border outline-none px-3 py-2"
                     style={inputSt}
-                    onFocus={focusBlue}
-                    onBlur={blurGray}
-                  />
+                  >
+                    <option value="">Selecionar</option>
+                    {form.job_title && !cargoOptions.some((c) => c.name === form.job_title) && (
+                      <option value={form.job_title}>{form.job_title} (fora do catálogo)</option>
+                    )}
+                    {cargoOptions.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                  {cargoOptions.length === 0 && (
+                    <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
+                      Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={labelSt}>Frente *</label>

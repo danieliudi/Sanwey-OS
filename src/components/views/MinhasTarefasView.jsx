@@ -147,7 +147,12 @@ export function MinhasTarefasView({ currentUser, users = [], onNavigate, onLeadC
               sublabel="Cruzando responsabilidades, aprovações e alertas"
               accent="var(--danger)"
             />
-            <StatCard icon={CheckSquare} value={counts.responsibility} label="Responsabilidades" />
+            <StatCard
+              icon={CheckSquare}
+              value={counts.responsibility}
+              label="Responsabilidades"
+              tooltip="Conta só o que já tem você como responsável atribuído — itens aguardando decisão de aprovação aparecem em 'Aguardando aprovação', mesmo antes de terem um responsável definido."
+            />
             <StatCard icon={Inbox} value={counts.approval} label="Aguardando aprovação" />
             <StatCard
               icon={AlertTriangle}

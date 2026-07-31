@@ -14,7 +14,7 @@ import { X } from "lucide-react";
 // bloqueante (ex.: falha ao mover card de etapa).
 const VARIANTS = {
   default: { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)", iconColor: "var(--text-dim)" },
-  danger: { background: "#FEF2F2", borderColor: "#FCA5A5", color: "#B91C1C", iconColor: "#B91C1C" },
+  danger: { background: "var(--danger-bg)", borderColor: "var(--danger)", color: "var(--danger)", iconColor: "var(--danger)" },
 };
 
 const POSITIONS = {

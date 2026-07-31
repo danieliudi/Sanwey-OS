@@ -249,11 +249,11 @@ export function CommandPalette({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, cursor, results]);
 
-  if (!open) return null;
-
-  const trimmedQuery = query.trim();
-
-  // Group results by type for section headers
+  // Group results by type for section headers — precisa vir antes do early
+  // return abaixo: um hook chamado só quando `open` é true muda a contagem de
+  // hooks entre renders fechado/aberto (React lança "Rendered fewer hooks
+  // than expected" e, sem ErrorBoundary em volta deste componente, isso
+  // derruba a árvore inteira — era a causa da tela branca ao abrir a busca).
   const groupedResults = useMemo(() => {
     const groups = {};
     results.forEach((item, idx) => {
@@ -262,6 +262,10 @@ export function CommandPalette({
     });
     return groups;
   }, [results]);
+
+  if (!open) return null;
+
+  const trimmedQuery = query.trim();
 
   return (
     <div

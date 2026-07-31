@@ -539,17 +539,18 @@ function MovimentacoesTableView({ movimentacoes, colaboradoresById, onDelete }) 
 
 // ── Menu de ações do card de cargo (kebab, affordance progressiva) ────────────
 
-function CargoCardMenu({ onEdit, onDelete }) {
+function CargoCardMenu({ onEdit, onDelete, busy }) {
   const [open, setOpen] = useState(false);
   const itemSt = { width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "transparent", border: "none", cursor: "pointer", fontSize: 12, textAlign: "left" };
   return (
     <div style={{ position: "relative" }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        title="Ações do cargo"
-        style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, display: "flex", borderRadius: 6 }}
+        disabled={busy}
+        title={busy ? "Excluindo…" : "Ações do cargo"}
+        style={{ background: "transparent", border: "none", cursor: busy ? "default" : "pointer", color: "var(--text-dim)", padding: 4, display: "flex", borderRadius: 6, opacity: busy ? 0.5 : 1 }}
       >
-        <MoreVertical size={14} />
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <MoreVertical size={14} />}
       </button>
       {open && (
         <>
@@ -668,8 +669,14 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
   const handleDeleteCargo = async (cargo) => {
     if (!window.confirm(`Excluir o cargo "${cargo.name}"? Vagas que apontam pra ele deixam de ter o vínculo, mas não são apagadas.`)) return;
     setActionError(null);
+    // Sem feedback visual, o clique parecia travado até a lista atualizar
+    // sozinha (achado #7 do roteiro de treinamento de RH, 31/07/2026) — o
+    // delete já funcionava, só faltava o estado "ocupado" que as
+    // movimentações (busyId acima) já usam.
+    setBusyId(cargo.id);
     try { await deleteCargo(cargo.id); }
     catch (e) { setActionError(e?.message || "Erro ao excluir cargo."); }
+    finally { setBusyId(null); }
   };
 
   const handleDeleteMovimentacao = async (mov) => {
@@ -772,7 +779,7 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
                   icon={<Briefcase size={cargoDensity === "list" ? 12 : 16} />}
                   title={c.name}
                   meta={[c.department, c.contract_type].filter(Boolean).join(" · ") || "—"}
-                  menu={canWrite ? <CargoCardMenu onEdit={() => setCargoModal({ data: c })} onDelete={() => handleDeleteCargo(c)} /> : null}
+                  menu={canWrite ? <CargoCardMenu onEdit={() => setCargoModal({ data: c })} onDelete={() => handleDeleteCargo(c)} busy={busyId === c.id} /> : null}
                   footer={fmtBanda(c.salary_min, c.salary_max)}
                 >
                   {c.description && (
