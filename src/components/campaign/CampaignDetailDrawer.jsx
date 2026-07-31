@@ -13,6 +13,7 @@ import { useMarketingTasks } from "../../hooks/use-marketing-tasks";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
+import { HelpTooltip } from "../ui/HelpTooltip";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
@@ -576,13 +577,7 @@ function Field({ label, children, hint }) {
     <div>
       <div className="flex items-center gap-1 mb-1">
         <div className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>{label}</div>
-        {hint && (
-          <span title={hint} style={{ cursor: "help", opacity: 0.5, display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
-            </svg>
-          </span>
-        )}
+        <HelpTooltip text={hint} size={11} />
       </div>
       {children}
     </div>
