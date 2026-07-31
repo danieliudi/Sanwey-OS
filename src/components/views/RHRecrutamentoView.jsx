@@ -3001,6 +3001,14 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   // Tempo médio de vaga aberta / faixa salarial: só entre as vagas ainda
   // abertas (não-terminais) — vagas encerradas não têm mais "runway" nem
   // representam a faixa salarial atualmente ofertada.
+  //
+  // Time-to-Fill / Time-to-Hire (estudo de mercado sobre aceleração de R&S,
+  // mockup aprovado com o Daniel): métricas distintas, não uma só —
+  // Time-to-Fill mede o atraso organizacional (vaga aprovada → aceite,
+  // via rh_vagas.approved_at, carimbado automaticamente quando a vaga sai
+  // do Rascunho); Time-to-Hire mede só o funil de seleção em si (candidato
+  // entra → aceite). Considera todo hired_at dentro das vagas visíveis no
+  // filtro atual, não só as abertas.
   const vagaSpecificStats = useMemo(() => {
     const open = vagasFrenteFiltradas.filter((v) => !vagaStages.find((s) => s.stageKey === v.stage)?.terminal);
     const withDeadline = open.filter((v) => v.hiring_deadline);
@@ -3010,6 +3018,20 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
     const withSalary = open.filter((v) => v.salary_min != null || v.salary_max != null);
     const avgMin = withSalary.length > 0 ? withSalary.reduce((s, v) => s + (Number(v.salary_min) || 0), 0) / withSalary.length : null;
     const avgMax = withSalary.length > 0 ? withSalary.reduce((s, v) => s + (Number(v.salary_max) || 0), 0) / withSalary.length : null;
+
+    const fillDays = [];
+    const hireDays = [];
+    for (const c of candidatos) {
+      if (!c.hired_at || !c.vaga_id) continue;
+      const vaga = vagasFrenteFiltradas.find((v) => v.id === c.vaga_id);
+      if (!vaga) continue;
+      if (vaga.approved_at) fillDays.push(Math.round((new Date(c.hired_at) - new Date(vaga.approved_at)) / 86400000));
+      if (c.created_at) hireDays.push(Math.round((new Date(c.hired_at) - new Date(c.created_at)) / 86400000));
+    }
+    const avg = (arr) => (arr.length > 0 ? Math.round(arr.reduce((s, d) => s + d, 0) / arr.length) : null);
+    const avgFill = avg(fillDays);
+    const avgHire = avg(hireDays);
+
     return [
       {
         label: "Prazo médio p/ contratação",
@@ -3017,8 +3039,10 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
         color: avgDaysToDeadline !== null && avgDaysToDeadline < 0 ? "var(--danger)" : undefined,
       },
       { label: "Faixa salarial média", value: withSalary.length > 0 ? fmtSalaryRange(avgMin, avgMax) : "—" },
+      { label: "Time-to-Fill médio", value: avgFill !== null ? `${avgFill}d` : "—" },
+      { label: "Time-to-Hire médio", value: avgHire !== null ? `${avgHire}d` : "—" },
     ];
-  }, [vagasFrenteFiltradas, vagaStages]);
+  }, [vagasFrenteFiltradas, vagaStages, candidatos]);
 
   // Funil de conversão: % de candidatos que já chegaram a cada etapa
   // não-terminal ou além (orderIdx da etapa atual >= orderIdx da etapa do
