@@ -1160,6 +1160,20 @@ function TreinamentoBoardModal({
     onInitialDrawerIdConsumed?.();
   }, [initialDrawerId, onInitialDrawerIdConsumed]);
 
+  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("rh-treinamentos");
+  const byStage = useMemo(() => {
+    const map = {};
+    const defaultKey = stages[0]?.stageKey || "pendente";
+    stages.forEach(s => {
+      const list = atribuicoes.filter(a => (a.status || defaultKey) === s.stageKey);
+      map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
+        name: a => colaboradoresById.get(a.colaborador_id)?.fullName,
+        createdAt: a => a.created_at,
+      });
+    });
+    return map;
+  }, [atribuicoes, stages, getSortCriteria, colaboradoresById]);
+
   const getCompleteness = (a) => getFieldCompleteness(stageFields.getFields(a.status), a.custom_fields || {});
 
   const handleMove = (id, stage) => {
@@ -1466,20 +1480,6 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
   const loading = loadingTreinamentos || loadingColaboradores || loadingMeuColaborador;
 
   const colaboradoresById = useMemo(() => new Map(colaboradores.map(c => [c.id, c])), [colaboradores]);
-
-  const { getCriteria: getSortCriteria, setCriteria: setSortCriteria } = useKanbanColumnSort("rh-treinamentos");
-  const byStage = useMemo(() => {
-    const map = {};
-    const defaultKey = stages[0]?.stageKey || "pendente";
-    stages.forEach(s => {
-      const list = atribuicoes.filter(a => (a.status || defaultKey) === s.stageKey);
-      map[s.stageKey] = sortKanbanItems(list, getSortCriteria(s.stageKey), {
-        name: a => colaboradoresById.get(a.colaborador_id)?.fullName,
-        createdAt: a => a.created_at,
-      });
-    });
-    return map;
-  }, [atribuicoes, stages, getSortCriteria, colaboradoresById]);
 
   // Lista de atribuíveis do modal "Atribuir" — dois achados da auditoria de
   // QA aqui: (1) a mesma pessoa aparecia 2x (um registro legado com
