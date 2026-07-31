@@ -24,6 +24,21 @@
 
 export const CHANGELOG = [
   {
+    version: "4.4.3",
+    items: [
+      { kind: "correcao", text: "Férias & Licenças: \"+Solicitar\" falhava com erro técnico ao enviar — corrigido.", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Férias & Licenças: excluir um pedido às vezes não persistia de verdade (reaparecia ao atualizar a página) — corrigido.", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Férias & Licenças: recusar um pedido pelo atalho \"Mover para\" não pedia motivo nem avisava o colaborador por e-mail — agora sempre passa pelo mesmo fluxo do botão \"Recusar\".", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Meu RH: a tela podia quebrar ao abrir, com um erro diferente a cada tentativa — corrigido." },
+      { kind: "correcao", text: "Onboarding: mover um card pra etapa seguinte quando falta um campo obrigatório agora sempre avisa por quê, mesmo movendo pelo menu do card (antes só avisava com o card aberto).", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Onboarding: o contador do topo não conta mais quem já está na etapa \"Removido\".", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Avaliação de Desempenho: \"+Novo feedback\" exige uma nota geral antes de salvar — evita registro vazio já em \"Concluído\".", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Cargos & Salários: excluir um cargo agora mostra feedback visual na hora — antes parecia travado até a lista atualizar sozinha.", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Fornecedores (RH): o filtro \"Vencido\" agora identifica corretamente contratos que já passaram da vigência.", roles: ["gerente_rh", "rh"] },
+      { kind: "correcao", text: "Mensagem de erro de IA mais clara quando a chave configurada está sem cota/crédito no provedor." },
+    ],
+  },
+  {
     version: "4.4.2",
     items: [
       { kind: "correcao", text: "Treinamentos: a tela travava inteira (\"Erro ao carregar esta tela\") ao clicar no menu — corrigido.", roles: ["gerente_rh", "rh"] },
