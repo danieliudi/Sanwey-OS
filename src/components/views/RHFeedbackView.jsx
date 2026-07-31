@@ -29,6 +29,7 @@ import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } 
 import { getInvalidFields } from "../../utils/field-validation";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { Button } from "../ui/Button";
+import { CurrencyInput } from "../ui/CurrencyInput";
 import { EmptyState } from "../ui/EmptyState";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
@@ -372,10 +373,10 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
             {desfecho === "promovido" && (
               <div>
                 <label style={labelSt}>Novo salário (opcional)</label>
-                <input
-                  type="number" min="0" step="0.01" value={novoSalario}
-                  onChange={(e) => setNovoSalario(e.target.value)}
-                  placeholder={colaborador?.salary != null ? `Atual: ${formatBRL(colaborador.salary)}` : "R$ 0,00"}
+                <CurrencyInput
+                  value={novoSalario}
+                  onChange={setNovoSalario}
+                  placeholder={colaborador?.salary != null ? `Atual: ${formatBRL(colaborador.salary)}` : undefined}
                   className="w-full text-sm rounded-xl border px-3 py-2 outline-none" style={inputSt}
                 />
                 <p style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 4 }}>
