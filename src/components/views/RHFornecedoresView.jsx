@@ -427,7 +427,15 @@ function ContratosTableView({ contratos, suppliers, users, onRowClick }) {
 
   const rows = useMemo(() => {
     return contratos
-      .filter(c => statusFilter === "all" || c.status === statusFilter)
+      // "Vencido" nunca é atualizado automaticamente no campo `status` (fica
+      // manual) — filtrar só por status==="vencido" escondia contratos que
+      // já passaram da vigência mas continuam marcados "ativo" (achado #8 do
+      // roteiro de treinamento de RH, 31/07/2026). Calcula por data real.
+      .filter(c => {
+        if (statusFilter === "all") return true;
+        if (statusFilter === "vencido") return c.status === "ativo" && contratoFornecedorDiasParaVencer(c) < 0;
+        return c.status === statusFilter;
+      })
       .map(c => ({ contrato: c, diasParaVencer: c.status === "ativo" ? contratoFornecedorDiasParaVencer(c) : null }))
       .sort((a, b) => {
         const fa = a.contrato.vigenciaFim ? new Date(a.contrato.vigenciaFim).getTime() : Infinity;

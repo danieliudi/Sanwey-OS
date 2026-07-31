@@ -409,7 +409,7 @@ function MeusDadosPanel({ meuColaborador, currentUser }) {
           <div key={key}>
             <div className="flex items-center gap-1.5">
               <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
-              <EditFieldInline colaboradorId={meuColaborador.id} currentUserId={currentUser.id} dbField={dbField} currentValue={meuColaborador[key]} onSubmitted={bump} />
+              <EditFieldInline colaboradorId={meuColaborador.id} currentUserId={currentUser?.id} dbField={dbField} currentValue={meuColaborador[key]} onSubmitted={bump} />
             </div>
             <div style={{ fontSize: 13, color: "var(--text)", marginTop: 2 }}>{meuColaborador[key] || "—"}</div>
           </div>
@@ -417,7 +417,7 @@ function MeusDadosPanel({ meuColaborador, currentUser }) {
         <div style={{ gridColumn: "1 / -1" }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Endereço</div>
           <div style={{ fontSize: 13, color: "var(--text)", marginTop: 2, marginBottom: 6 }}>{endereco || "—"}</div>
-          <EditEnderecoForm colaboradorId={meuColaborador.id} currentUserId={currentUser.id} meuColaborador={meuColaborador} onSubmitted={bump} />
+          <EditEnderecoForm colaboradorId={meuColaborador.id} currentUserId={currentUser?.id} meuColaborador={meuColaborador} onSubmitted={bump} />
         </div>
       </div>
       <MinhasSolicitacoesList currentUser={currentUser} refreshKey={refreshKey} />

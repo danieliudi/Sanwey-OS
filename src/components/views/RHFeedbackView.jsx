@@ -181,6 +181,7 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!colaboradorId) { setError("Selecione o colaborador."); return; }
+    if (notaGeral == null) { setError("Dê uma nota geral antes de registrar — o feedback já nasce em Concluído, precisa refletir uma avaliação de fato feita."); return; }
     setSaving(true);
     setError(null);
     try {
@@ -227,7 +228,7 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
               </div>
             </div>
             <div>
-              <label style={labelSt}>Nota geral</label>
+              <label style={labelSt}>Nota geral *</label>
               <RatingSelector value={notaGeral} onChange={setNotaGeral} />
             </div>
             <div>
