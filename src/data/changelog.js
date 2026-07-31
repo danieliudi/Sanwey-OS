@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.4.2",
+    items: [
+      { kind: "correcao", text: "Treinamentos: a tela travava inteira (\"Erro ao carregar esta tela\") ao clicar no menu — corrigido.", roles: ["gerente_rh", "rh"] },
+    ],
+  },
+  {
     version: "4.4.1",
     items: [
       { kind: "correcao", text: "Despesas: o campo pra vincular uma campanha (opcional) não tinha rótulo e sumia da tela quando nenhuma campanha estava cadastrada ainda — agora sempre aparece, com rótulo claro.", roles: ["marketing", "gerente_marketing"] },
