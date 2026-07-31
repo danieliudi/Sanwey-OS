@@ -323,9 +323,8 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
             <select
               value={form.campaignId || ""}
               onChange={e => set("campaignId", e.target.value || null)}
-              disabled={campaigns.length === 0}
               className="w-full text-sm rounded-xl border outline-none px-3 py-2"
-              style={{ borderColor: "var(--border-strong)", color: form.campaignId ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", cursor: campaigns.length === 0 ? "default" : "pointer" }}
+              style={{ borderColor: "var(--border-strong)", color: form.campaignId ? "var(--text)" : "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}
             >
               <option value="">{campaigns.length === 0 ? "Nenhuma campanha cadastrada ainda" : "Sem campanha vinculada"}</option>
               {campaigns.map(c => (
