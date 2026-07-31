@@ -32,7 +32,7 @@ const PRIORITY = {
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 // ── Action card ────────────────────────────────────────────────────────────
-function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
+function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onOpenCandidato }) {
   const [expanded, setExpanded] = useState(false);
   const prio = PRIORITY[action.priority] || PRIORITY.normal;
   const payload = action.payload || {};
@@ -84,6 +84,19 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
                 {payload.dias_para_vencer}d p/ vencer
               </span>
             )}
+            {/* Sugestão de Sourcing (Agent Builder) — sem lead_id, precisa do
+                payload pra mostrar quem é o candidato e pra qual vaga. */}
+            {payload.candidato_nome && (
+              <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+                {payload.candidato_nome}
+              </span>
+            )}
+            {payload.vaga_titulo && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                style={{ background: "#EFEFEF", color: "var(--text-dim)" }}>
+                {payload.vaga_titulo}
+              </span>
+            )}
           </div>
           <p className="text-sm font-semibold leading-snug" style={{ color: "var(--text)" }}>
             {action.title}
@@ -99,7 +112,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
         </div>
 
         {/* Expand toggle */}
-        {(payload.draft_email || payload.recommended_action) && (
+        {(payload.draft_email || payload.recommended_action || payload.justificativa) && (
           <button
             onClick={() => setExpanded(v => !v)}
             className="shrink-0 p-1 rounded-xl"
@@ -112,7 +125,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
       </div>
 
       {/* Expanded payload */}
-      {expanded && (payload.draft_email || payload.recommended_action) && (
+      {expanded && (payload.draft_email || payload.recommended_action || payload.justificativa) && (
         <div className="mx-4 mb-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "#F8F9FA" }}>
           {action.action_type === "email_fornecedor" &&
             (payload.fornecedor_contact_name || payload.fornecedor_email || payload.fornecedor_phone) && (
@@ -171,6 +184,27 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
               >
                 <ExternalLink size={11} />
                 Ver fornecedor{payload.fornecedor_nome ? ` — ${payload.fornecedor_nome}` : ""}
+              </button>
+            </div>
+          )}
+          {payload.justificativa && (
+            <div className="px-3 pb-3 pt-1 flex items-start gap-2">
+              <Zap size={11} className="mt-0.5 shrink-0" style={{ color: "#C2410C" }} />
+              <p className="text-xs" style={{ color: "var(--text)" }}>
+                <span className="font-semibold">Por que é aderente: </span>
+                {payload.justificativa}
+              </p>
+            </div>
+          )}
+          {action.action_type === "sugestao_candidato_vaga" && payload.candidato_id && (
+            <div className="px-3 pb-3">
+              <button
+                onClick={() => onOpenCandidato(payload.candidato_id)}
+                className="flex items-center gap-1.5 text-xs font-semibold"
+                style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                <ExternalLink size={11} />
+                Ver candidato{payload.candidato_nome ? ` — ${payload.candidato_nome}` : ""}
               </button>
             </div>
           )}
@@ -235,7 +269,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor }) {
 }
 
 // ── Agent section ──────────────────────────────────────────────────────────
-function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, onOpenFornecedor }) {
+function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, onOpenFornecedor, onOpenCandidato }) {
   const [open, setOpen] = useState(true);
   const meta = metaOverride || AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: "var(--text-dim)", bg: "var(--surface-alt)" };
   const { Icon } = meta;
@@ -291,6 +325,7 @@ function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, on
               onResolve={onResolve}
               resolving={resolving}
               onOpenFornecedor={onOpenFornecedor}
+              onOpenCandidato={onOpenCandidato}
             />
           ))}
         </div>
@@ -411,6 +446,15 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
       sessionStorage.setItem("rhFornecedoresOpenId", fornecedorId);
     } catch { /* sessionStorage indisponível (modo privado etc.) — segue sem handoff */ }
     navigate(ROUTES["rh-fornecedores"]);
+  }, [navigate]);
+
+  // "Ver candidato" (ActionCard, sugestão de Sourcing) navega pra
+  // RHRecrutamentoView e abre o candidato já focado — mesmo handoff.
+  const onOpenCandidato = useCallback((candidatoId) => {
+    try {
+      sessionStorage.setItem("rhRecrutamentoOpenCandidatoId", candidatoId);
+    } catch { /* sessionStorage indisponível (modo privado etc.) — segue sem handoff */ }
+    navigate(ROUTES["rh-recrutamento"]);
   }, [navigate]);
 
   // ── Group by agent ────────────────────────────────────────────────────────
@@ -651,6 +695,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
               onResolve={handleResolve}
               resolving={resolving}
               onOpenFornecedor={onOpenFornecedor}
+              onOpenCandidato={onOpenCandidato}
             />
           ))}
         </div>
@@ -668,6 +713,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
               resolving={resolving}
               metaOverride={sectionMetaOverrides[agentId]}
               onOpenFornecedor={onOpenFornecedor}
+              onOpenCandidato={onOpenCandidato}
             />
           ))}
         </div>

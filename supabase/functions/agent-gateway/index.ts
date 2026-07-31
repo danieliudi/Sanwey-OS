@@ -104,6 +104,39 @@ async function notifyVagaManagerIfApproved(admin: any, action: any) {
   }).catch(() => {}); // fire-and-forget: falha de e-mail não desfaz a aprovação já gravada.
 }
 
+// Ao aprovar uma sugestão do piloto "Sourcing interno" (Agent Builder,
+// Fase 3), avisa o(s) responsável(is) da vaga (rh_vagas.responsible_ids) —
+// notificação in-app via a tabela `notifications` já usada por @menção
+// (20260714_notifications_and_mentions.sql), não e-mail: diferente de
+// Fornecedores/Vaga parada, aqui não há gestor externo nem link de triagem,
+// só o time de RH já dentro da plataforma. Sem responsible_ids cadastrado,
+// só não há pra quem avisar — nunca é erro.
+async function notifyVagaResponsibleIfApproved(admin: any, action: any) {
+  if (action.action_type !== 'sugestao_candidato_vaga') return;
+  const payload = action.payload || {};
+  if (!payload.vaga_id) return;
+
+  const { data: vaga } = await admin
+    .from('rh_vagas')
+    .select('responsible_ids')
+    .eq('id', payload.vaga_id)
+    .maybeSingle();
+  const recipientIds: string[] = vaga?.responsible_ids || [];
+  if (recipientIds.length === 0) return;
+
+  const rows = recipientIds.map((recipientId) => ({
+    recipient_id: recipientId,
+    type: 'agent_sourcing_suggestion',
+    title: `Candidato sugerido: ${payload.candidato_nome || 'Banco de talentos'}`,
+    body: `Sugestão de candidato aprovada pra vaga "${payload.vaga_titulo || ''}".`,
+    link: { module: 'rh_candidatos', id: payload.candidato_id },
+    created_by: null,
+  }));
+
+  await admin.from('notifications').insert(rows).catch(() => {});
+  // fire-and-forget: falha ao notificar não desfaz a aprovação já gravada.
+}
+
 Deno.serve(async (req: Request) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -276,7 +309,10 @@ Deno.serve(async (req: Request) => {
           .single();
 
         if (error) throw error;
-        if (body.status === 'approved') await notifyVagaManagerIfApproved(adminClient, data);
+        if (body.status === 'approved') {
+          await notifyVagaManagerIfApproved(adminClient, data);
+          await notifyVagaResponsibleIfApproved(adminClient, data);
+        }
         return json({ success: true, data });
       }
 

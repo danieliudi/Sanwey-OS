@@ -35,12 +35,19 @@ function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 }
 
-// Fase 2 (Vaga parada — Recrutamento): mesma function, 2º módulo. Cada
-// automação já carrega seu próprio `module`; o sweep varre os dois de uma
-// vez e o loop abaixo decide qual "encontrar candidatos" usar por automação.
-const MODULES = ["rh-fornecedores", "rh-vagas"];
+// Fase 2 (Vaga parada — Recrutamento) e Fase 3 (Sourcing interno — banco de
+// talentos): mesma function, 3 módulos. Cada automação já carrega seu
+// próprio `module`; o sweep varre todos de uma vez e o loop abaixo decide
+// qual "encontrar candidatos" usar por automação.
+const MODULES = ["rh-fornecedores", "rh-vagas", "rh-sourcing"];
 const DAILY_LIMIT = 50;
 const VAGA_ACTIVE_STAGES = ["publicada", "em_triagem"];
+// Teto bruto de candidatos considerados por vaga antes do filtro estrutural
+// (evita puxar o banco de talentos inteiro a cada rodada) e teto de quantos
+// entram de fato no prompt de IA depois do filtro (custo de token).
+const SOURCING_POOL_FETCH_LIMIT = 200;
+const SOURCING_POOL_PROMPT_LIMIT = 30;
+const SOURCING_MAX_MATCHES = 5;
 
 const VAGA_SUGGESTED_ACTION_LABEL: Record<string, string> = {
   reabrir_divulgacao:  "Reabrir divulgação",
@@ -132,6 +139,58 @@ function buildVagaPrompt(tone: string, customInstruction: string, ctx: {
   };
 }
 
+// Sourcing interno (banco de talentos × vaga nova) — diferente dos outros
+// dois domínios: 1 chamada de IA por VAGA (não por candidato), com a lista
+// já pré-filtrada estruturalmente embutida no prompt. Evita o padrão "1
+// registro = 1 chamada de IA" dos outros domínios, que aqui explodiria
+// custo (N candidatos × M vagas) e o teto de 50 ações/dia.
+function buildSourcingPrompt(tone: string, customInstruction: string, vaga: {
+  title: string; department: string; requirements: string | null; description: string | null;
+}, candidatos: Array<{ id: string; name: string; source: string | null; frenteOrigem: string[]; resumo: string }>) {
+  const toneLabel = TONE_LABEL[tone] || TONE_LABEL.formal;
+  const vagaContexto = [
+    `Vaga: ${vaga.title}`,
+    vaga.department ? `Departamento: ${vaga.department}` : null,
+    vaga.requirements ? `Requisitos: ${vaga.requirements}` : null,
+    vaga.description ? `Descrição: ${vaga.description}` : null,
+    customInstruction ? `Observação adicional a considerar: ${customInstruction}` : null,
+  ].filter(Boolean).join("\n");
+
+  const candidatosLista = candidatos.map((c, i) => [
+    `${i + 1}. id=${c.id} | nome=${c.name}`,
+    c.source ? `origem=${c.source}` : null,
+    c.frenteOrigem.length ? `frente=${c.frenteOrigem.join(", ")}` : null,
+    `Currículo: ${c.resumo || "(sem texto extraído)"}`,
+  ].filter(Boolean).join(" | ")).join("\n\n");
+
+  return {
+    system: `Você analisa aderência entre candidatos de um banco de talentos e uma vaga de emprego aberta, em português do Brasil. Tom da justificativa: ${toneLabel}. Responda SOMENTE com um JSON válido no formato {"matches":[{"candidato_id":"...","justificativa":"..."}]} — inclua só candidatos genuinamente aderentes (experiência/competências compatíveis com a vaga), no máximo ${SOURCING_MAX_MATCHES}, ordenados do mais aderente pro menos aderente. Se nenhum candidato for aderente, responda {"matches":[]}. justificativa é uma frase curta (até 140 caracteres) explicando o motivo da aderência. Use só os "id" exatamente como aparecem na lista — nunca invente um id.`,
+    user: `${vagaContexto}\n\nCandidatos no banco de talentos:\n${candidatosLista}`,
+  };
+}
+
+async function findSourcingCandidatePool(admin: any, vaga: any, conditionGroups: any[]) {
+  const { data, error } = await admin
+    .from("rh_candidatos")
+    .select("id, name, source, frente_origem, cv_texto_extraido, stage, vaga_id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(SOURCING_POOL_FETCH_LIMIT);
+  if (error) throw error;
+
+  const companyIds: string[] = vaga.company_ids || [];
+  return (data || []).filter((c: any) => {
+    // Já é candidato desta vaga específica — não é "redescoberta" de banco
+    // de talentos, é aplicação direta, já aparece no board normal.
+    if (c.vaga_id === vaga.id) return false;
+    if (companyIds.length > 0) {
+      const frente: string[] = c.frente_origem || [];
+      if (!frente.some((f: string) => companyIds.includes(f))) return false;
+    }
+    const record = { source: c.source || "", stage: c.stage || "" };
+    return passesConditionGroups(conditionGroups, record);
+  });
+}
+
 // Condições avançadas opcionais (PRD seção 3, passo 2: "Adicionar filtro
 // avançado") — mesmo operador básico do motor de automações comuns
 // (use-automations.js matchOperator), só que contra o registro
@@ -202,7 +261,12 @@ async function runSweep(admin: any) {
   for (const automation of automations || []) {
     const trigger = automation.trigger || {};
     const isVagas = automation.module === "rh-vagas";
-    if (isVagas ? trigger.type !== "stage_stale" : trigger.type !== "date_approaching") continue;
+    const isSourcing = automation.module === "rh-sourcing";
+    if (isSourcing) {
+      if (trigger.type !== "candidatos_compativeis") continue;
+    } else if (isVagas ? trigger.type !== "stage_stale" : trigger.type !== "date_approaching") {
+      continue;
+    }
     processed++;
 
     const action = (automation.then_actions || [])[0];
@@ -289,6 +353,89 @@ async function runSweep(admin: any) {
             automation_id: automation.id,
           });
           created++;
+        } catch (err) {
+          keyFailed = true;
+          await admin.from("automations").update({
+            paused_reason: `Falha ao gerar sugestão: ${err instanceof Error ? err.message : String(err)}`,
+          }).eq("id", automation.id);
+          pausedNow++;
+        }
+      }
+      continue;
+    }
+
+    if (isSourcing) {
+      const vagas = await findCandidateVagas(admin, []);
+      let keyFailed = false;
+      for (const vaga of vagas) {
+        if (keyFailed) break;
+
+        // Candidatos já sugeridos pra esta vaga por esta automação, em
+        // qualquer rodada anterior — exclui do pool antes de gastar
+        // chamada de IA, pra não reprocessar quem o RH já viu/decidiu.
+        const { data: alreadySuggested } = await admin
+          .from("agent_actions")
+          .select("payload")
+          .eq("automation_id", automation.id)
+          .contains("payload", { vaga_id: vaga.id });
+        const suggestedIds = new Set((alreadySuggested || []).map((r: any) => r.payload?.candidato_id).filter(Boolean));
+
+        const pool = (await findSourcingCandidatePool(admin, vaga, automation.condition_groups || []))
+          .filter((c: any) => !suggestedIds.has(c.id))
+          .slice(0, SOURCING_POOL_PROMPT_LIMIT);
+        if (pool.length === 0) continue;
+
+        const { system, user } = buildSourcingPrompt(action.tone, action.customInstruction || "", {
+          title: vaga.title,
+          department: vaga.department || "",
+          requirements: vaga.requirements || null,
+          description: vaga.description || null,
+        }, pool.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          source: c.source,
+          frenteOrigem: c.frente_origem || [],
+          resumo: (c.cv_texto_extraido || "").slice(0, 600),
+        })));
+
+        try {
+          const raw = await callAIProvider({
+            provider: providerConfig.provider,
+            model: providerConfig.model,
+            apiKey: providerConfig.apiKey,
+            messages: [{ role: "system", content: system }, { role: "user", content: user }],
+            maxTokens: 800,
+          });
+          const parsed = parseDraftJson(raw) as any;
+          const matches: Array<{ candidato_id: string; justificativa: string }> = Array.isArray(parsed.matches) ? parsed.matches : [];
+          const poolById = new Map(pool.map((c: any) => [c.id, c]));
+
+          for (const match of matches.slice(0, SOURCING_MAX_MATCHES)) {
+            const candidato = poolById.get(match.candidato_id);
+            if (!candidato) continue; // id alucinado — ignora, não insere
+
+            await admin.from("agent_actions").insert({
+              agent_id: "automation",
+              action_type: "sugestao_candidato_vaga",
+              lead_id: null,
+              company_id: null,
+              title: `Candidato do banco de talentos: ${candidato.name}`,
+              summary: `"${candidato.name}" pode ser aderente à vaga "${vaga.title}". ${match.justificativa || ""}`.trim(),
+              payload: {
+                source_table: "rh_candidatos",
+                source_id: candidato.id,
+                candidato_id: candidato.id,
+                candidato_nome: candidato.name,
+                vaga_id: vaga.id,
+                vaga_titulo: vaga.title,
+                justificativa: match.justificativa || "",
+              },
+              priority: "normal",
+              status: "pending",
+              automation_id: automation.id,
+            });
+            created++;
+          }
         } catch (err) {
           keyFailed = true;
           await admin.from("automations").update({
@@ -442,6 +589,75 @@ async function runPreview(admin: any, body: any, userId: string) {
         isEmail: false,
         title: draft.title || "",
         recommendedAction: draft.recommended_action || "",
+      });
+    } catch (err) {
+      return json({ error: `Falha ao gerar preview: ${err instanceof Error ? err.message : String(err)}` }, 502);
+    }
+  }
+
+  if (rule.module === "rh-sourcing") {
+    const vagas = await findCandidateVagas(admin, []);
+
+    let picked: { vaga: any; candidatePool: any[] } | null = null;
+    for (const vaga of vagas) {
+      const candidatePool = await findSourcingCandidatePool(admin, vaga, rule.conditionGroups || []);
+      if (candidatePool.length > 0) { picked = { vaga, candidatePool }; break; }
+    }
+
+    let usandoExemplo = false;
+    let vagaTitulo: string, departamento: string, requirements: string | null, description: string | null;
+    let promptPool: Array<{ id: string; name: string; source: string | null; frenteOrigem: string[]; resumo: string }>;
+
+    if (picked) {
+      vagaTitulo = picked.vaga.title;
+      departamento = picked.vaga.department || "";
+      requirements = picked.vaga.requirements || null;
+      description = picked.vaga.description || null;
+      promptPool = picked.candidatePool.slice(0, SOURCING_POOL_PROMPT_LIMIT).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        source: c.source,
+        frenteOrigem: c.frente_origem || [],
+        resumo: (c.cv_texto_extraido || "").slice(0, 600),
+      }));
+    } else {
+      usandoExemplo = true;
+      vagaTitulo = "Analista Fiscal Pleno";
+      departamento = "Financeiro";
+      requirements = "Experiência com rotinas fiscais e apuração de impostos.";
+      description = null;
+      promptPool = [{
+        id: "exemplo",
+        name: "Candidato Exemplo",
+        source: "banco_talentos",
+        frenteOrigem: [],
+        resumo: "Experiência em rotinas fiscais, apuração de impostos e conciliação contábil.",
+      }];
+    }
+
+    const { system, user } = buildSourcingPrompt(action.tone, action.customInstruction || "", {
+      title: vagaTitulo, department: departamento, requirements, description,
+    }, promptPool);
+
+    try {
+      const raw = await callAIProvider({
+        provider: providerConfig.provider,
+        model: providerConfig.model,
+        apiKey: providerConfig.apiKey,
+        messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        maxTokens: 800,
+      });
+      const parsed = parseDraftJson(raw) as any;
+      const matches: Array<{ candidato_id: string; justificativa: string }> = Array.isArray(parsed.matches) ? parsed.matches : [];
+      const poolById = new Map(promptPool.map((c) => [c.id, c]));
+      return json({
+        usandoExemplo,
+        vagaTitulo,
+        isEmail: false,
+        matches: matches.slice(0, SOURCING_MAX_MATCHES).map((m) => ({
+          candidatoNome: poolById.get(m.candidato_id)?.name || "",
+          justificativa: m.justificativa || "",
+        })),
       });
     } catch (err) {
       return json({ error: `Falha ao gerar preview: ${err instanceof Error ? err.message : String(err)}` }, 502);

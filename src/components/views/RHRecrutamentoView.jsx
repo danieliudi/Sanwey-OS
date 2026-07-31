@@ -2687,6 +2687,20 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
   useEffect(() => { if (vagaDrawerId) markVagaViewed(vagaDrawerId); }, [vagaDrawerId]);
   useEffect(() => { if (selectedCandidatoId) markCandViewed(selectedCandidatoId); }, [selectedCandidatoId]);
 
+  // "Ver candidato" (AgentActionsView, sugestão do agente de Sourcing) navega
+  // pra cá e abre o candidato já focado — mesmo padrão de handoff via
+  // sessionStorage já usado por rhFornecedoresOpenId (RHFornecedoresView).
+  useEffect(() => {
+    try {
+      const id = sessionStorage.getItem("rhRecrutamentoOpenCandidatoId");
+      if (id) {
+        sessionStorage.removeItem("rhRecrutamentoOpenCandidatoId");
+        setViewMode("candidatos");
+        setSelectedCandidatoId(id);
+      }
+    } catch { /* sessionStorage indisponível — segue sem handoff */ }
+  }, []);
+
   // ── Reprovação em massa (Áudio 8): seleção múltipla na tabela de candidatos ──
   const [selectedCandIds, setSelectedCandIds] = useState(() => new Set());
   const [bulkReprovarOpen, setBulkReprovarOpen] = useState(false);
