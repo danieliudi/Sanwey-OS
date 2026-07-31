@@ -918,6 +918,8 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           getStageKey={t => t.stage}
           getStageEnteredAt={t => t.stageChangedAt}
           specificStats={taskSpecificStats}
+          getOwnerIds={t => t.assigneeIds || []}
+          usersById={usersById}
         />
       )}
 

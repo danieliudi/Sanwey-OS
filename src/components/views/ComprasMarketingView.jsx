@@ -837,6 +837,8 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
           getStageKey={p => p.stage}
           getStageEnteredAt={p => p.stageChangedAt}
           specificStats={purchaseSpecificStats}
+          getOwnerIds={p => p.responsibleIds?.length ? p.responsibleIds : (p.responsibleId ? [p.responsibleId] : [])}
+          usersById={usersById}
         />
       ) : (
         <CalendarView purchases={visiblePurchases} onPillClick={setSelected} />

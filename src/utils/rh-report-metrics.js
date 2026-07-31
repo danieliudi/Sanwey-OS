@@ -154,6 +154,30 @@ export const RH_REPORT_METRICS = [
     },
   },
   {
+    id: "tempo_preenchimento_vaga",
+    label: "Tempo de preenchimento (time-to-fill)",
+    categoria: "Recrutamento",
+    compute({ vagas, aplicacoes }) {
+      const vagasById = new Map(vagas.map((v) => [v.id, v]));
+      const tempos = aplicacoes
+        .filter((a) => a.hired_at && a.vaga_id)
+        .map((a) => {
+          const vaga = vagasById.get(a.vaga_id);
+          return vaga?.approved_at ? diasEntre(vaga.approved_at, a.hired_at) : null;
+        })
+        .filter((d) => d != null && d >= 0);
+      const media = tempos.length ? Math.round(tempos.reduce((s, d) => s + d, 0) / tempos.length) : null;
+      return {
+        title: "Tempo de preenchimento (time-to-fill)",
+        rows: [
+          ["Métrica", "Valor"],
+          ["Vagas preenchidas com dado de aprovação", tempos.length],
+          ["Tempo médio da aprovação até o aceite (dias)", media ?? "—"],
+        ],
+      };
+    },
+  },
+  {
     id: "funil_recrutamento",
     label: "Funil de recrutamento por etapa",
     categoria: "Recrutamento",

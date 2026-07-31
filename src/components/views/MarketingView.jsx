@@ -1323,6 +1323,8 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           getStageKey={c => c.stage}
           getStageEnteredAt={c => c.stageChangedAt}
           specificStats={campaignSpecificStats}
+          getOwnerIds={getCampaignOwnerIds}
+          usersById={usersById}
         />
       )}
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bot, X, ChevronDown, ChevronUp, Info, AlertTriangle, Mail, Zap, ShieldCheck, Briefcase } from "lucide-react";
+import { Bot, X, ChevronDown, ChevronUp, Info, AlertTriangle, Mail, Zap, ShieldCheck, Briefcase, Users } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAutomations } from "../../hooks/use-automations";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
@@ -53,6 +53,7 @@ const DATASET_DEFAULT_DAYS = { fornecedores: 15, vagas: 7 };
 
 function suggestedName(dataset, draftType) {
   if (dataset === "vagas") return "Vaga parada — Recrutamento";
+  if (dataset === "sourcing") return "Sourcing interno — Banco de talentos";
   return draftType === "email_fornecedor"
     ? "Aviso de renovação — Fornecedores RH"
     : "Aviso interno — Fornecedores RH";
@@ -89,7 +90,9 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
   const initialThen = initialRule?.thenActions?.[0] || {};
   const initialCondition = initialRule?.conditionGroups?.[0]?.conditions?.[0];
 
-  const [dataset, setDataset] = useState(initialRule?.module === "rh-vagas" ? "vagas" : "fornecedores");
+  const [dataset, setDataset] = useState(
+    initialRule?.module === "rh-vagas" ? "vagas" : initialRule?.module === "rh-sourcing" ? "sourcing" : "fornecedores"
+  );
   const [days, setDays] = useState(initialRule?.trigger?.days ?? DATASET_DEFAULT_DAYS[dataset]);
   const [showAdvanced, setShowAdvanced] = useState(Boolean(initialCondition));
   const [tipoOptions, setTipoOptions] = useState([]);
@@ -117,7 +120,7 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
   }, [dataset, draftType, nameEdited]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || dataset === "sourcing") return;
     let active = true;
     const table = dataset === "vagas" ? "rh_vagas" : "rh_fornecedores";
     const column = dataset === "vagas" ? "department" : "tipo";
@@ -137,6 +140,8 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
 
   const trigger = dataset === "vagas"
     ? { type: "stage_stale", field: "stage_changed_at", days: Number(days) || 0 }
+    : dataset === "sourcing"
+    ? { type: "candidatos_compativeis" }
     : { type: "date_approaching", field: "vigencia_fim", days: Number(days) || 0 };
   const conditionGroups = tipoFilter
     ? [{ logic: "AND", conditions: [{ field: dataset === "vagas" ? "department" : "tipo", operator: "eq", value: tipoFilter }] }]
@@ -149,6 +154,13 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
         customInstruction: customInstruction.trim(),
         suggestedAction,
       }]
+    : dataset === "sourcing"
+    ? [{
+        type: "suggest_with_ai",
+        draftType: "sugestao_candidato_vaga",
+        tone,
+        customInstruction: customInstruction.trim(),
+      }]
     : [{
         type: "suggest_with_ai",
         draftType,
@@ -159,8 +171,8 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
       }];
 
   const canNext = () => {
-    if (step === 1) return Number(days) > 0;
-    if (step === 2) return dataset === "vagas" ? Boolean(tone) : Boolean(draftType) && Boolean(tone);
+    if (step === 1) return dataset === "sourcing" ? true : Number(days) > 0;
+    if (step === 2) return dataset === "fornecedores" ? Boolean(draftType) && Boolean(tone) : Boolean(tone);
     return true;
   };
 
@@ -169,7 +181,7 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
     try {
       const session = isSupabaseConfigured ? (await supabase.auth.getSession()).data.session : null;
       const token = session?.access_token;
-      const module = dataset === "vagas" ? "rh-vagas" : "rh-fornecedores";
+      const module = dataset === "vagas" ? "rh-vagas" : dataset === "sourcing" ? "rh-sourcing" : "rh-fornecedores";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/agent-runner`, {
         method: "POST",
         headers: {
@@ -202,7 +214,7 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
       const rule = {
         name: name.trim() || suggestedName(dataset, draftType),
         companyId: "all",
-        module: dataset === "vagas" ? "rh-vagas" : "rh-fornecedores",
+        module: dataset === "vagas" ? "rh-vagas" : dataset === "sourcing" ? "rh-sourcing" : "rh-fornecedores",
         enabled: true,
         trigger,
         conditionGroups,
@@ -297,10 +309,30 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
                 description="O assistente monitora as vagas publicadas ou em triagem e quanto tempo cada uma está sem avançar de etapa."
                 onClick={() => !initialRule && selectDataset("vagas")}
               />
+              <DatasetCard
+                active={dataset === "sourcing"}
+                icon={<Users size={16} style={{ color: "var(--accent)", marginTop: 1 }} />}
+                title="Sourcing interno (banco de talentos)"
+                description="O assistente compara vagas abertas com o banco de talentos e sugere candidatos aderentes que ainda não se candidataram a essa vaga."
+                onClick={() => !initialRule && selectDataset("sourcing")}
+              />
             </div>
           )}
 
-          {step === 1 && (
+          {step === 1 && dataset === "sourcing" && (
+            <div
+              className="rounded-xl border px-4 py-3.5 flex items-start gap-3"
+              style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}
+            >
+              <Info size={16} style={{ color: "var(--accent)", marginTop: 1 }} className="shrink-0" />
+              <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+                Roda todo dia: compara cada vaga aberta com o banco de talentos e sugere só candidatos que
+                ainda não se candidataram a essa vaga específica. Sem intervalo pra configurar aqui.
+              </p>
+            </div>
+          )}
+
+          {step === 1 && dataset !== "sourcing" && (
             <div className="space-y-3">
               <div>
                 <label style={labelSt}>
@@ -364,6 +396,28 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
                   value={customInstruction}
                   onChange={e => setCustomInstruction(e.target.value)}
                   placeholder="Ex: sempre pedir posição sobre o prazo de contratação"
+                  className={inputCls}
+                  style={inputSt}
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 2 && dataset === "sourcing" && (
+            <div className="space-y-3">
+              <div>
+                <label style={labelSt}>Tom</label>
+                <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls} style={inputSt}>
+                  {TONES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelSt}>Algo específico que a IA deve sempre considerar (opcional)</label>
+                <input
+                  type="text"
+                  value={customInstruction}
+                  onChange={e => setCustomInstruction(e.target.value)}
+                  placeholder="Ex: priorizar candidatos com experiência em rotina fiscal"
                   className={inputCls}
                   style={inputSt}
                 />
@@ -441,6 +495,8 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
               <p className="text-xs" style={{ color: "var(--text-dim)" }}>
                 {dataset === "vagas"
                   ? "Qualquer gerente de RH vê e aprova esta sugestão antes do aviso chegar ao gestor da vaga (quando houver um link de triagem gerado pra ela)."
+                  : dataset === "sourcing"
+                  ? "Qualquer gerente de RH vê e aprova a sugestão de candidato antes dela chegar ao responsável pela vaga."
                   : "Qualquer gerente de RH vê e aprova esta sugestão antes de qualquer coisa sair da plataforma."}
               </p>
             </div>
@@ -466,6 +522,8 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
                   <Info size={12} className="shrink-0" />
                   {dataset === "vagas"
                     ? "Nenhuma vaga parada disponível ainda — mostrando um exemplo."
+                    : dataset === "sourcing"
+                    ? "Nenhuma vaga com candidato compatível no banco de talentos ainda — mostrando um exemplo."
                     : "Nenhum contrato real disponível ainda — mostrando um exemplo."}
                 </div>
               )}
@@ -498,6 +556,21 @@ export function AgentBuilderWizard({ currentUser, initialRule = null, onClose, o
                         </p>
                       )}
                     </>
+                  ) : dataset === "sourcing" ? (
+                    (preview.result.matches || []).length === 0 ? (
+                      <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+                        Nenhum candidato aderente encontrado neste exemplo.
+                      </p>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {preview.result.matches.map((m, i) => (
+                          <li key={i} className="text-xs" style={{ color: "var(--text)" }}>
+                            <b>{m.candidatoNome}</b>
+                            {m.justificativa && <> — {m.justificativa}</>}
+                          </li>
+                        ))}
+                      </ul>
+                    )
                   ) : (
                     <>
                       {preview.result.title && (

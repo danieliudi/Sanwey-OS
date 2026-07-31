@@ -1277,6 +1277,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           records={filtered}
           getStageKey={d => d.stage}
           getStageEnteredAt={d => d.stageChangedAt}
+          getOwnerIds={getDeliverableAssigneeIds}
+          usersById={usersById}
           specificStats={[
             {
               label: "Atrasadas",

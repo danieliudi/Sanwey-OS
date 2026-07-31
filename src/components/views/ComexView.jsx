@@ -1180,6 +1180,8 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
     [stages]
   );
 
+  const usersById = useMemo(() => new Map((users || []).map(u => [u.id, u])), [users]);
+
   const Icon = config.icon;
 
   return (
@@ -1249,6 +1251,8 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
           getStageKey={(o) => o.stage}
           getStageEnteredAt={(o) => o.stageChangedAt}
           specificStats={specificStats}
+          getOwnerIds={(o) => o.ownerIds || []}
+          usersById={usersById}
         />
       ) : (
         <>

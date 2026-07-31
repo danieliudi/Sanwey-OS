@@ -1671,6 +1671,8 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
           getStageKey={(f) => f.status}
           getStageEnteredAt={(f) => f.status_changed_at}
           specificStats={feedbackSpecificStats}
+          getOwnerIds={(f) => f.evaluator_ids?.length ? f.evaluator_ids : (f.evaluator_id ? [f.evaluator_id] : [])}
+          usersById={usersById}
         />
       ) : (
         <>
