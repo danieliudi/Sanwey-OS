@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.4.4",
+    items: [
+      { kind: "ajuste", text: "Funcionários: o campo \"Cargo\" agora é um select ligado ao catálogo de Cargos & Salários (antes era texto livre, sem nenhuma relação com o catálogo) — cargos já cadastrados aparecem prontos pra escolher.", roles: ["gerente_rh", "rh"] },
+    ],
+  },
+  {
     version: "4.4.3",
     items: [
       { kind: "correcao", text: "Férias & Licenças: \"+Solicitar\" falhava com erro técnico ao enviar — corrigido.", roles: ["gerente_rh", "rh"] },

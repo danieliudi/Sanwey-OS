@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X, Upload, FileText, Sparkles, Loader2, AlertCircle, Check, Camera, Trash2 } from "lucide-react";
 import { RH_DEPARTMENTS, RH_CONTRACT_TYPES, RH_EMPLOYEE_STATUSES } from "../../constants/rh-config";
 import { RH_FRENTES, RH_FRENTE_LABELS } from "../../constants/rh-frentes";
@@ -10,6 +10,7 @@ import { documentExtractionPrompt } from "../../constants/ai-prompts";
 import { periodoExperienciaInfo } from "../../utils/rh-compliance-dates";
 import { DocumentCaptureModal } from "../shared/DocumentCaptureModal";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
+import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -54,7 +55,18 @@ function parseExtraction(text) {
 
 export function NovoColaboradorModal({ currentUser, initialData, hireContext, contextNote, stageId, users, onSave, onClose, onDelete }) {
   const { complete, isConfigured, provider } = useAI(currentUser);
+  const { cargos: cargoTemplates } = useRHCargoTemplates({ userId: currentUser?.id });
   const [form, setForm] = useState(() => initialData ? { ...EMPTY_FORM, ...initialData } : EMPTY_FORM);
+  // Cargo virou select ligado ao catálogo de Cargos & Salários (rh_cargo_templates)
+  // — antes era texto livre, sem nenhuma relação com o catálogo (achado #6 do
+  // roteiro de treinamento de RH, 31/07/2026). Filtra por departamento quando
+  // já escolhido; sem departamento ainda, mostra o catálogo inteiro.
+  const cargoOptions = useMemo(() => {
+    const base = form.department
+      ? cargoTemplates.filter((c) => !c.department || c.department === form.department)
+      : cargoTemplates;
+    return [...base].sort((a, b) => a.name.localeCompare(b.name));
+  }, [cargoTemplates, form.department]);
   // Campos da etapa de Onboarding (só quando criado via "+" de uma coluna do
   // Kanban) — mesmo mecanismo de campos customizados por etapa usado em
   // vaga/candidato/campanha. `stageId` ausente (fluxo de contratação via
@@ -401,7 +413,18 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
             <div className="ncm-responsive-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <label style={labelSt}>Cargo *</label>
-                <input ref={registerField("jobTitle")} type="text" value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} placeholder="Ex: Operador de produção" className={inputCls} style={fieldSt("jobTitle")} onFocus={focusBlue} onBlur={blurGray} />
+                <select ref={registerField("jobTitle")} value={form.jobTitle} onChange={(e) => set("jobTitle", e.target.value)} className={inputCls} style={fieldSt("jobTitle")}>
+                  <option value="">Selecionar</option>
+                  {form.jobTitle && !cargoOptions.some((c) => c.name === form.jobTitle) && (
+                    <option value={form.jobTitle}>{form.jobTitle} (fora do catálogo)</option>
+                  )}
+                  {cargoOptions.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
+                {cargoOptions.length === 0 && (
+                  <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 4 }}>
+                    Nenhum cargo cadastrado ainda — crie um em Cargos &amp; Salários primeiro.
+                  </div>
+                )}
               </div>
               <div>
                 <label style={labelSt}>Frente *</label>
