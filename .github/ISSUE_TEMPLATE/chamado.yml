@@ -1,0 +1,41 @@
+name: "Chamado — bug ou correção"
+description: "Reportar um problema para triagem e correção (piloto de ordem de serviço)"
+title: "[Chamado] "
+labels: ["chamado"]
+body:
+  - type: dropdown
+    id: severidade
+    attributes:
+      label: Severidade
+      description: Sua avaliação inicial — o agente de triagem pode ajustar depois de investigar.
+      options:
+        - "Crítico — impede uso normal agora"
+        - "Importante — atrapalha, mas tem contorno"
+        - "Menor — incômodo, sem urgência"
+    validations:
+      required: true
+  - type: input
+    id: onde
+    attributes:
+      label: Tela/módulo afetado
+      placeholder: "Ex: RH > Treinamentos"
+    validations:
+      required: true
+  - type: textarea
+    id: descricao
+    attributes:
+      label: O que está acontecendo
+      description: Descreva como se estivesse contando pra alguém que nunca viu a tela.
+      placeholder: "Ex: Ao abrir Treinamentos, a tela mostra 'Erro ao carregar esta tela'."
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos pra reproduzir (se souber)
+      placeholder: |
+        1. Ir em ...
+        2. Clicar em ...
+        3. Ver o erro
+    validations:
+      required: false
