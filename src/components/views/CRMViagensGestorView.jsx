@@ -50,7 +50,7 @@ const errorBannerSt = { background: "#FEF2F2", color: "#B91C1C", borderRadius: 8
 function btnStyle(kind, disabled, big) {
   // big=true: alvo de toque ~40px pra ações de decisão de reembolso no celular
   const base = { display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 8, padding: big ? "10px 14px" : "5px 10px", fontSize: big ? 13 : 11, fontWeight: 700, border: "none", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1, minHeight: big ? 40 : undefined };
-  if (kind === "primary") return { ...base, background: "var(--accent)", color: "#FFF" };
+  if (kind === "primary") return { ...base, background: "var(--accent)", color: "var(--on-accent)" };
   if (kind === "danger")  return { ...base, background: "var(--danger)", color: "#FFF" };
   return { ...base, background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border)" };
 }
@@ -204,7 +204,7 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
           </span>
         )}
         {faltaComprovanteObrigatorio && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--danger)", background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 99, padding: "2px 8px" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 99, padding: "2px 8px" }}>
             <AlertTriangle size={11} /> Sem comprovante (obrigatório acima de {fmtMoney(COMPROVANTE_OBRIGATORIO_ACIMA_DE)})
           </span>
         )}

@@ -165,7 +165,7 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
                 width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
                 background: "var(--accent)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#FFF", fontWeight: 700, fontSize: 16,
+                color: "var(--on-accent)", fontWeight: 700, fontSize: 16,
               }}>
                 {(currentUser.name || "?").charAt(0).toUpperCase()}
               </div>

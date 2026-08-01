@@ -104,9 +104,9 @@ function SessaoFormModal({ sessao, onSave, onClose }) {
           <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: -4 }}>
             Quem entrar pelo QR escolhe um horário livre dentro dessa janela — igual reserva de restaurante.
           </p>
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : isEdit ? "Salvar alterações" : "Criar sessão"}
             </button>
             <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -218,7 +218,7 @@ export function RHBemEstarView({ currentUser, canWrite }) {
                       <AlertTriangle size={11} /> Sem horário
                     </span>
                   )}
-                  <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "#DCFCE7" : "var(--surface)", borderRadius: 99, padding: "2px 10px" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "var(--success-bg)" : "var(--surface)", borderRadius: 99, padding: "2px 10px" }}>
                     {aberta ? "Aberta" : "Encerrada"}
                   </span>
                   {canWrite && (

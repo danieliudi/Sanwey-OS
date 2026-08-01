@@ -25,8 +25,8 @@ const AGENTS = {
 const PRIORITY = {
   urgent: { label: "Urgente",  color: "#B91C1C", bg: "#FEF2F2" },
   high:   { label: "Alta",     color: "#C2410C", bg: "#FEF3EC" },
-  normal: { label: "Normal",   color: "var(--accent)", bg: "#EBF0F9" },
-  low:    { label: "Baixa",    color: "#6B7280", bg: "var(--surface-alt)" },
+  normal: { label: "Normal",   color: "#1D4ED8", bg: "#EBF0F9" },
+  low:    { label: "Baixa",    color: "var(--text-dim)", bg: "var(--surface-alt)" },
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -40,7 +40,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
   return (
     <div
       className="rounded-xl border"
-      style={{ borderColor: "#EFEFEF", background: "var(--surface)" }}
+      style={{ borderColor: "var(--border)", background: "var(--surface)" }}
     >
       {/* Header row */}
       <div className="px-4 py-3 flex items-start gap-3">
@@ -61,7 +61,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
             )}
             {action.leads?.stage && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{ background: "#EFEFEF", color: "var(--text-dim)" }}>
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
                 {action.leads.stage}
               </span>
             )}
@@ -93,7 +93,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
             )}
             {payload.vaga_titulo && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{ background: "#EFEFEF", color: "var(--text-dim)" }}>
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
                 {payload.vaga_titulo}
               </span>
             )}
@@ -106,14 +106,14 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
             )}
             {action.action_type === "sugestao_sinal_mercado" && payload.urgency && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{ background: "#EFEFEF", color: "var(--text-dim)" }}>
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
                 {payload.urgency}
               </span>
             )}
             {/* Sugestão de Prospect (Explorador, mesma Rotina) */}
             {action.action_type === "sugestao_prospect" && payload.sector && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full"
-                style={{ background: "#EFEFEF", color: "var(--text-dim)" }}>
+                style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
                 {payload.sector}
               </span>
             )}
@@ -131,7 +131,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
               {action.summary}
             </p>
           )}
-          <p className="text-[10px] mt-1.5" style={{ color: "#C0C4CC" }}>
+          <p className="text-[10px] mt-1.5" style={{ color: "var(--text-faint)" }}>
             {relativeTime(action.created_at)}
           </p>
         </div>
@@ -151,7 +151,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
 
       {/* Expanded payload */}
       {expanded && (payload.draft_email || payload.recommended_action || payload.justificativa || payload.excerpt || payload.evidence) && (
-        <div className="mx-4 mb-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "#F8F9FA" }}>
+        <div className="mx-4 mb-3 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
           {action.action_type === "email_fornecedor" &&
             (payload.fornecedor_contact_name || payload.fornecedor_email || payload.fornecedor_phone) && (
             <div className="px-3 pt-3 pb-1.5 flex items-start gap-2 border-b" style={{ borderColor: "var(--border)" }}>
@@ -286,9 +286,9 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
             onClick={() => onResolve(action.id, "rejected")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-opacity"
-            style={{ borderColor: "var(--danger)", color: "var(--danger)", background: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
-            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "#FEF2F2"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            style={{ borderColor: "var(--danger)", color: "var(--danger)", background: "var(--surface)", opacity: resolving === action.id ? 0.6 : 1 }}
+            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "var(--danger-bg)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           >
             <XCircle size={12} />
             Rejeitar
@@ -297,9 +297,9 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
             onClick={() => onResolve(action.id, "ignored")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-opacity"
-            style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
+            style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)", background: "var(--surface)", opacity: resolving === action.id ? 0.6 : 1 }}
             onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "var(--surface-alt)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; }}
           >
             <EyeOff size={12} />
             Ignorar
@@ -373,7 +373,7 @@ function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, on
 
       {/* Cards */}
       {open && (
-        <div className="divide-y" style={{ borderColor: "#EFEFEF" }}>
+        <div className="divide-y" style={{ borderColor: "var(--border)" }}>
           {actions.map(action => (
             <ActionCard
               key={action.id}
@@ -663,7 +663,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
 
       {/* Filter tabs */}
       <div className="overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-      <div className="flex items-center gap-1 border-b" style={{ borderColor: "#EFEFEF", width: "max-content", minWidth: "100%" }}>
+      <div className="flex items-center gap-1 border-b" style={{ borderColor: "var(--border)", width: "max-content", minWidth: "100%" }}>
         {[
           { key: "pending",  label: "Pendentes" },
           { key: "approved", label: "Aprovados" },
@@ -694,7 +694,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
       {resolveError && (
         <div
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-          style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger)" }}
         >
           <AlertTriangle size={12} />
           {resolveError}
@@ -712,7 +712,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
       {!loading && error && (
         <div
           className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
-          style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid var(--danger)" }}
         >
           <AlertTriangle size={14} />
           {error}
@@ -726,7 +726,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
             className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"
             style={{ background: "var(--surface-alt)" }}
           >
-            <TrendingUp size={24} style={{ color: "#9CA3AF" }} />
+            <TrendingUp size={24} style={{ color: "var(--text-faint)" }} />
           </div>
           <div>
             <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>

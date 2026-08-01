@@ -273,7 +273,7 @@ export function ProspectSuggestions({ filters, leads, accessibleCompanies, onAdd
           Carregando sugestões…
         </div>
       ) : error ? (
-        <div className="p-6 flex items-start gap-2 text-xs" style={{ background: "#FEF2F2", color: "var(--danger)" }}>
+        <div className="p-6 flex items-start gap-2 text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <div className="flex-1">
             <div className="font-semibold mb-1">Não foi possível carregar sugestões</div>

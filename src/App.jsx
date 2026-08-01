@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart, RefreshCw, ListTodo, Handshake, Ship,
+  FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -22,6 +22,7 @@ import { useUserSettings } from "./hooks/use-user-settings";
 import { useSupabaseAuth } from "./hooks/use-supabase-auth";
 import { useLeads } from "./hooks/use-leads";
 import { useClients } from "./hooks/use-clients";
+import { useChat } from "./hooks/use-chat";
 import { useNotifications } from "./hooks/use-notifications";
 import { useServerNotifications } from "./hooks/use-server-notifications";
 import { useProfiles } from "./hooks/use-profiles";
@@ -57,6 +58,7 @@ import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
 import { useRecordViews } from "./hooks/use-record-views";
 import { reopenAfterMove } from "./utils/reopen-after-move";
 import { ImportModal } from "./components/lead/ImportModal";
+import { ClientImportModal } from "./components/client/ClientImportModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
@@ -81,6 +83,7 @@ import { MarketingTarefasView } from "./components/views/MarketingTarefasView";
 import { DespesasView } from "./components/views/DespesasView";
 import { MarketingDashboardView } from "./components/views/MarketingDashboardView";
 import { MinhasTarefasView } from "./components/views/MinhasTarefasView";
+import { ChatView } from "./components/views/ChatView";
 import { MarketingRequestsView } from "./components/views/MarketingRequestsView";
 import { FornecedoresView } from "./components/views/FornecedoresView";
 import { ComprasMarketingView } from "./components/views/ComprasMarketingView";
@@ -276,7 +279,12 @@ export default function App() {
     createClient,
     updateClient,
     deleteClient,
+    upsertClientBillingHistory,
   } = useClients({ userId: currentUser?.id });
+
+  // Só o total de não-lidas — o badge do Chat na navegação precisa disso em
+  // qualquer tela, não só dentro do próprio Chat.
+  const { totalUnread: chatUnread } = useChat({ userId: currentUser?.id });
 
   const { signals } = useMarketSignals();
 
@@ -800,6 +808,12 @@ export default function App() {
   const [crmAutoCreate, setCrmAutoCreate] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [clientImportOpen, setClientImportOpen] = useState(false);
+  // Import de CLIENTES (carteira, sem virar negócio no Funil) — separado do
+  // clientImportOpen acima, que abre o importador de LEADS (usado também na
+  // tela de Comercial). Achado real: a tela de Clientes reaproveitava o
+  // mesmo estado/modal de leads, o que criaria um negócio fantasma por linha
+  // só pra povoar a lista de clientes.
+  const [clientRosterImportOpen, setClientRosterImportOpen] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = sidebarMobileOpen ? "hidden" : "";
@@ -1161,6 +1175,7 @@ export default function App() {
           label: null,
           items: [
             { id: "meu-rh", label: "Meu RH", icon: Home },
+            { id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined },
           ],
         },
       ];
@@ -1191,10 +1206,15 @@ export default function App() {
     // que antes só quem caía na rota "dashboard" tinha um link direto pra ela
     // (todo o resto usava "Visão Geral" pra ir pro dashboard antigo do
     // próprio módulo).
+    // Chat fica ao lado de Minhas Tarefas, fora de qualquer grupo: é
+    // utilitário do dia a dia de todo mundo, não feature de um módulo
+    // (mesma lógica que já vale pra Minhas Tarefas). Decidido com o Daniel
+    // no mockup do Chat.
     groups.push({
       label: null,
       items: [
         { id: "dashboard", label: "Minhas Tarefas", icon: CheckSquare },
+        { id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined },
       ],
     });
 
@@ -1348,7 +1368,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuColaboradorId]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuColaboradorId, chatUnread]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1582,7 +1602,7 @@ export default function App() {
               <div className="flex gap-2">
                 <button onClick={() => { setSection("dashboard"); reset(); }}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg"
-                        style={{ background: "var(--accent)", color: "#FFFFFF" }}>
+                        style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
                   Voltar ao Início
                 </button>
                 <button onClick={() => window.location.reload()}
@@ -1620,6 +1640,14 @@ export default function App() {
                 onLeadClick={setSelectedLead}
               />
             )
+          } />
+          {/* Chat é acessível a qualquer papel interno — inclusive portal-only
+              (chão de fábrica). Agência fica de fora: é fornecedor externo, e
+              a própria regra de DM no banco (chat_can_dm) já a exclui. */}
+          <Route path={ROUTES.chat} element={
+            isAgencia
+              ? <Navigate to={ROUTES.marketing} replace />
+              : <ChatView currentUser={currentUser} />
           } />
           <Route path={ROUTES["commercial-overview"]} element={
             (isAgencia || isPureMarketing || isPureRH)
@@ -1737,7 +1765,7 @@ export default function App() {
                   onUpdate={updateClient}
                   onDelete={deleteClient}
                   canDelete={isManager}
-                  onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
+                  onOpenImport={isManager ? () => setClientRosterImportOpen(true) : undefined}
                   onOpenLead={setSelectedLead}
                   onOpenViagem={(id) => { setSection("crm-viagens"); setSelectedViagemId(id); }}
                 />
@@ -2103,6 +2131,15 @@ export default function App() {
         currentUser={currentUser}
         onAddLead={handleAddLead}
         companies={accessibleCompanies || []}
+      />
+
+      <ClientImportModal
+        isOpen={clientRosterImportOpen}
+        onClose={() => setClientRosterImportOpen(false)}
+        clients={clients}
+        onCreateClient={createClient}
+        onUpdateClient={updateClient}
+        onUpsertBillingHistory={upsertClientBillingHistory}
       />
 
     </div>

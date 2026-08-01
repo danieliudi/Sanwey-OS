@@ -245,10 +245,10 @@ function NovoFeedbackModal({ colaboradores, onSave, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Registrar feedback"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -400,10 +400,10 @@ function CompletarFeedbackModal({ feedback, colaborador, onComplete, onClose }) 
             )}
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Concluir avaliação"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -460,10 +460,10 @@ function AutoavaliacaoModal({ feedback, onSubmit, onClose }) {
           <label style={labelSt}>Sua avaliação</label>
           <RatingSelector value={rating} onChange={setRating} />
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Enviando…" : "Enviar autoavaliação"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -626,7 +626,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -970,7 +970,7 @@ function FeedbackDrawer({
           />
           <button
             onClick={onComplete}
-            style={{ marginTop: 6, width: "100%", background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            style={{ marginTop: 6, width: "100%", background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
           >
             Concluir avaliação
           </button>
@@ -1564,7 +1564,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                   {pendentes.map(f => {
                     const isMine = meuColaborador?.id === f.user_id;
                     return (
-                      <div key={f.id} style={{ border: "1px solid #FDE68A", background: "var(--warning-bg)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                      <div key={f.id} style={{ border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", background: "var(--warning-bg)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                         <div style={{ flex: 1, minWidth: 180 }}>
                           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "#DBEAFE", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
                           <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>Prazo {fmt(f.period_end)} · {autoavaliacaoLabel(f, meuColaborador)}</div>

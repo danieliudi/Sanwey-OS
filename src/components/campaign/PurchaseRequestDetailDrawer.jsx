@@ -600,7 +600,7 @@ export function PurchaseRequestDetailDrawer({
               )}
               <button onClick={handleSaveQuotes} disabled={savingQuotes}
                 className="px-4 py-2 rounded-lg text-sm font-semibold"
-                style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: savingQuotes ? "default" : "pointer", opacity: savingQuotes ? 0.6 : 1 }}>
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: savingQuotes ? "default" : "pointer", opacity: savingQuotes ? 0.6 : 1 }}>
                 {savingQuotes ? "Salvando…" : "Salvar cotações"}
               </button>
             </>
@@ -611,7 +611,7 @@ export function PurchaseRequestDetailDrawer({
                 const won = q.supplierId && q.supplierId === purchase.supplierId;
                 return (
                   <div key={idx} className="flex items-center justify-between text-xs px-3 py-2 rounded-lg"
-                    style={won ? { background: "#DCFCE7", color: "#15803D", fontWeight: 700 } : { background: "var(--surface-alt)", color: "var(--text)" }}>
+                    style={won ? { background: "var(--success-bg)", color: "var(--success)", fontWeight: 700 } : { background: "var(--surface-alt)", color: "var(--text)" }}>
                     <span>{s?.name || "—"}{won ? " · vencedor" : ""}</span>
                     <span>{q.value != null ? formatBRL(Number(q.value)) : "—"}</span>
                   </div>
@@ -733,7 +733,7 @@ export function PurchaseRequestDetailDrawer({
             )}
             <button onClick={handleSaveFields} disabled={saving}
               className="px-4 py-2 rounded-lg text-sm font-semibold mt-2"
-              style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Salvar alterações"}
             </button>
           </fieldset>

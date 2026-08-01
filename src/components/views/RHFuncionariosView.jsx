@@ -126,7 +126,7 @@ function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
               <option value="">Selecionar benefício…</option>
               {disponiveis.map(c => <option key={c.id} value={c.id}>{c.nomeExibicao}</option>)}
             </select>
-            <button onClick={handleSolicitar} disabled={saving || !pickedId} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+            <button onClick={handleSolicitar} disabled={saving || !pickedId} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
               Solicitar
             </button>
             <button onClick={() => setPicking(false)} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 11 }}>
@@ -239,7 +239,7 @@ function SignatureSection({ colaboradorRow, canWrite }) {
               <button
                 onClick={handleSend}
                 disabled={sending || !file || !signerName.trim() || !signerEmail.trim()}
-                style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 700, cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
               >
                 {sending ? "Enviando…" : "Enviar pra assinatura"}
               </button>
@@ -360,7 +360,7 @@ function SolicitacoesAtualizacaoSection({ colaboradorId, canWrite }) {
               <button
                 onClick={() => approve(r.id)}
                 disabled={busyId === r.id}
-                style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
               >
                 Aprovar
               </button>
@@ -554,7 +554,7 @@ function BulkDocumentUploadModal({ colaboradores, currentUser, onClose }) {
                         <button
                           onClick={() => approve(row.id)}
                           disabled={!row.manualId || busyId === row.id}
-                          style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: row.manualId ? "pointer" : "default", opacity: row.manualId ? 1 : 0.5 }}
+                          style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: row.manualId ? "pointer" : "default", opacity: row.manualId ? 1 : 0.5 }}
                         >
                           <Check size={12} /> {busyId === row.id ? "Enviando…" : "Aprovar"}
                         </button>
@@ -744,7 +744,7 @@ function BulkStatusModal({ count, onConfirm, onClose }) {
             onClick={handleApply}
             disabled={saving}
             style={{
-              flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10,
+              flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10,
               padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none",
               cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1,
             }}
@@ -1412,7 +1412,7 @@ function EmployeeDetailModal({
             )}
 
             {expInfo && (
-              <div style={{ marginTop: 14, background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
+              <div style={{ marginTop: 14, background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
                 Período de experiência CLT: marco de {expInfo.marco} dias em {expInfo.diasRestantes} dia(s).
               </div>
             )}
@@ -1428,7 +1428,7 @@ function EmployeeDetailModal({
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
               {error}
             </div>
           )}
@@ -1447,7 +1447,7 @@ function EmployeeDetailModal({
                 style={{
                   flex: 1,
                   background: "var(--accent)",
-                  color: "#FFF",
+                  color: "var(--on-accent)",
                   borderRadius: 10,
                   padding: "8px 16px",
                   fontSize: 13,
@@ -1832,7 +1832,7 @@ export function RHFuncionariosView({
                 onClick={() => setNovoColaboradorOpen(true)}
                 className="flex items-center gap-1.5 font-semibold"
                 style={{
-                  background: "var(--accent)", color: "#FFF", borderRadius: 10,
+                  background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10,
                   padding: "6px 16px", fontSize: 13, border: "none",
                   cursor: "pointer",
                 }}
@@ -2018,7 +2018,7 @@ export function RHFuncionariosView({
               onClick={() => setBulkStatusOpen(true)}
               className="flex items-center gap-1.5 font-semibold"
               style={{
-                background: "var(--accent)", color: "#FFF", borderRadius: 8,
+                background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8,
                 padding: "5px 12px", fontSize: 12, border: "none",
                 cursor: "pointer",
               }}
@@ -2042,7 +2042,7 @@ export function RHFuncionariosView({
               <button
                 onClick={clearFilters}
                 className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
-                style={{ background: "var(--accent)", color: "#FFFFFF", border: "none" }}
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none" }}
               >
                 Limpar filtros
               </button>

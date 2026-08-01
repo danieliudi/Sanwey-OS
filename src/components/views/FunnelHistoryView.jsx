@@ -280,7 +280,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
       {error && (
         <div
           className="px-4 py-3 rounded-xl text-sm"
-          style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
         >
           Erro ao carregar histórico: {error.message || String(error)}
         </div>

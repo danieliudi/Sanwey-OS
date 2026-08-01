@@ -136,7 +136,7 @@ export function AgentConfigModal({
           <button
             onClick={onClose}
             className="px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer"
-            style={{ background: "var(--accent)", color: "#FFFFFF" }}
+            style={{ background: "var(--accent)", color: "var(--on-accent)" }}
           >
             Fechar
           </button>

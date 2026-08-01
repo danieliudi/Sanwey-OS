@@ -353,7 +353,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddItem(cl.id); } }}
                   />
                   <button onClick={() => handleAddItem(cl.id)}
-                    style={{ background: "var(--accent)", border: "none", borderRadius: 6, color: "#FFF", padding: "0 10px", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                    style={{ background: "var(--accent)", border: "none", borderRadius: 6, color: "var(--on-accent)", padding: "0 10px", cursor: "pointer", display: "flex", alignItems: "center" }}>
                     <Plus size={13} />
                   </button>
                 </div>

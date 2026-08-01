@@ -204,7 +204,7 @@ function ApplyEventChecklistButton({ campaign, currentUser }) {
         className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl"
         style={{
           background: "var(--accent)",
-          color: "#FFF",
+          color: "var(--on-accent)",
           border: "none",
           cursor: (applying || loading) ? "not-allowed" : "pointer",
           opacity: (applying || loading) ? 0.7 : 1,
@@ -267,7 +267,7 @@ function ApplyEventChecklistButton({ campaign, currentUser }) {
           <button onClick={() => { setConfirming(false); setApplyError(null); }} disabled={applying} className="px-4 py-2 rounded-lg text-sm font-semibold border" style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "transparent" }}>
             Cancelar
           </button>
-          <button onClick={handleApply} disabled={applying || taskCount === 0} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: "var(--accent)", color: "#FFF", border: "none", opacity: (applying || taskCount === 0) ? 0.6 : 1, cursor: (applying || taskCount === 0) ? "not-allowed" : "pointer" }}>
+          <button onClick={handleApply} disabled={applying || taskCount === 0} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold" style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", opacity: (applying || taskCount === 0) ? 0.6 : 1, cursor: (applying || taskCount === 0) ? "not-allowed" : "pointer" }}>
             <ListChecks size={13} />
             {applying ? "Aplicando…" : `Aplicar (${taskCount})`}
           </button>
@@ -289,7 +289,7 @@ function TriStateCheckbox({ state }) {
         className="inline-flex items-center justify-center rounded-sm flex-shrink-0"
         style={{ width: size, height: size, background: "var(--accent)", border: "none" }}
       >
-        <Check size={11} strokeWidth={3} style={{ color: "#FFF" }} />
+        <Check size={11} strokeWidth={3} style={{ color: "var(--on-accent)" }} />
       </span>
     );
   }
@@ -382,12 +382,12 @@ function AttachmentsPanel({ campaign, canDelete, currentUserId }) {
       </div>
 
       {fileError && (
-        <div className="text-xs rounded-md px-3 py-2" style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}>
+        <div className="text-xs rounded-md px-3 py-2" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
           {fileError}
         </div>
       )}
       {error && (
-        <div className="text-xs rounded-md px-3 py-2" style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}>
+        <div className="text-xs rounded-md px-3 py-2" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
           {error}
         </div>
       )}
@@ -533,7 +533,7 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
             onClick={addItem}
             disabled={!newLabel.trim()}
             className="flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-xl"
-            style={{ background: newLabel.trim() ? "var(--accent)" : "var(--surface-alt)", color: newLabel.trim() ? "#FFF" : "var(--text-dim)", border: "none", cursor: newLabel.trim() ? "pointer" : "default" }}
+            style={{ background: newLabel.trim() ? "var(--accent)" : "var(--surface-alt)", color: newLabel.trim() ? "var(--on-accent)" : "var(--text-dim)", border: "none", cursor: newLabel.trim() ? "pointer" : "default" }}
           >
             <Plus size={12} />
             Adicionar

@@ -257,10 +257,10 @@ function CargoModal({ initialData, currentUser, onSave, onDelete, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving || deleting} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving || deleting} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Criar cargo"}
             </button>
             <button type="button" onClick={onClose} disabled={saving || deleting} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -391,10 +391,10 @@ function MovimentacaoModal({ colaboradores, cargos, onCreate, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Enviando…" : "Enviar para aprovação"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -724,7 +724,7 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
         />
       </div>
 
-      {actionError && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{actionError}</div>}
+      {actionError && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{actionError}</div>}
 
       {tab === "cargos" ? (
         <>
@@ -828,14 +828,14 @@ export function RHCargosView({ currentUser, canWrite, isDirector, users = [], no
               <button
                 onClick={() => setMovViewMode("cards")}
                 className="flex items-center gap-1.5"
-                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "cards" ? "var(--accent)" : "transparent", color: movViewMode === "cards" ? "#FFF" : "var(--text-dim)" }}
+                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "cards" ? "var(--accent)" : "transparent", color: movViewMode === "cards" ? "var(--on-accent)" : "var(--text-dim)" }}
               >
                 <LayoutGrid size={13} /> Cards
               </button>
               <button
                 onClick={() => setMovViewMode("tabela")}
                 className="flex items-center gap-1.5"
-                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "tabela" ? "var(--accent)" : "transparent", color: movViewMode === "tabela" ? "#FFF" : "var(--text-dim)" }}
+                style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", background: movViewMode === "tabela" ? "var(--accent)" : "transparent", color: movViewMode === "tabela" ? "var(--on-accent)" : "var(--text-dim)" }}
               >
                 <List size={13} /> Tabela
               </button>

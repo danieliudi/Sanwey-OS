@@ -99,16 +99,16 @@ function ComunicadoComposer({ onSend }) {
           </span>
         </label>
 
-        {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
+        {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
         {result != null && (
-          <div style={{ background: "#DCFCE7", color: "var(--success)", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600 }}>
+          <div style={{ background: "var(--success-bg)", color: "var(--success)", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 600 }}>
             Comunicado enviado para {result} colaborador{result !== 1 ? "es" : ""}.
           </div>
         )}
         <div>
           <button
             onClick={handleSend} disabled={sending}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importante ? "var(--danger)" : "var(--accent)", color: "#FFF", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, border: "none", cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importante ? "var(--danger)" : "var(--accent)", color: importante ? "#FFF" : "var(--on-accent)", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, border: "none", cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
           >
             {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} {sending ? "Enviando…" : importante ? "Enviar comunicado importante" : "Enviar comunicado"}
           </button>
@@ -247,9 +247,9 @@ function NovaPesquisaModal({ onSave, onClose }) {
               <Plus size={12} /> Adicionar pergunta
             </button>
           </div>
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-            <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : "Criar pesquisa"}
             </button>
             <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -304,7 +304,7 @@ function ResultadosModal({ pesquisa, carregarRespostas, onClose }) {
           {loading ? (
             <div style={{ textAlign: "center", padding: "30px 0", color: "var(--text-dim)" }}><Loader2 size={20} className="animate-spin" /></div>
           ) : error ? (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>
           ) : data.total === 0 ? (
             <div style={{ fontSize: 13, color: "var(--text-dim)" }}>Nenhuma resposta ainda.</div>
           ) : (
@@ -409,7 +409,7 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
         {[{ id: "comunicados", label: "Comunicados", icon: Megaphone }, { id: "pesquisas", label: "Pesquisas", icon: ClipboardList }].map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)} role="tab" aria-selected={tab === t.id}
             className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-            style={{ background: tab === t.id ? "var(--accent)" : "var(--surface)", color: tab === t.id ? "#FFF" : "var(--text-dim)", border: "none" }}>
+            style={{ background: tab === t.id ? "var(--accent)" : "var(--surface)", color: tab === t.id ? "var(--on-accent)" : "var(--text-dim)", border: "none" }}>
             <t.icon size={13} /> {t.label}
           </button>
         ))}
@@ -476,7 +476,7 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
                     <span style={{ fontSize: 11, fontWeight: 700, color: identificada ? "var(--accent)" : "var(--text-dim)", background: identificada ? "#DBEAFE" : "var(--surface-alt)", borderRadius: 99, padding: "2px 10px", display: "inline-flex", alignItems: "center", gap: 4 }}>
                       {identificada ? <UserCheck size={11} /> : <Lock size={11} />} {identificada ? "Identificada" : "Anônima"}
                     </span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "#DCFCE7" : "var(--surface-alt)", borderRadius: 99, padding: "2px 10px" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "var(--success-bg)" : "var(--surface-alt)", borderRadius: 99, padding: "2px 10px" }}>
                       {aberta ? "Aberta" : "Encerrada"}
                     </span>
                   </div>
@@ -485,7 +485,7 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12, alignItems: "center" }}>
                     {aberta && !identificada && <QRCodeButton url={url} title={p.titulo} buttonLabel="QR / link" compact />}
                     {aberta && identificada && (
-                      <button onClick={() => handleNotificar(p.id)} disabled={notificando === p.id} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: notificando === p.id ? "default" : "pointer", opacity: notificando === p.id ? 0.6 : 1 }}>
+                      <button onClick={() => handleNotificar(p.id)} disabled={notificando === p.id} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: notificando === p.id ? "default" : "pointer", opacity: notificando === p.id ? 0.6 : 1 }}>
                         {notificando === p.id ? <Loader2 size={12} className="animate-spin" /> : <BellRing size={12} />} Notificar colaboradores
                       </button>
                     )}

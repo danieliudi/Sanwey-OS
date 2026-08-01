@@ -134,7 +134,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -213,9 +213,9 @@ function CreateOperationModal({ title, fields, users, onSave, onClose }) {
             <AssigneeMultiSelect value={ownerIds} onChange={setOwnerIds} options={users} placeholder="Selecionar responsáveis…" />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>
           )}
-          <button type="submit" disabled={saving} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+          <button type="submit" disabled={saving} style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Criando…" : "Criar operação"}
           </button>
         </form>
@@ -721,7 +721,7 @@ function ComexCalendarView({ operations, stages, onSelect }) {
                 <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
                   <div className="flex justify-center mb-1">
                     <span className="flex items-center justify-center text-xs font-semibold select-none"
-                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "var(--on-accent)" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
                       {day.getDate()}
                     </span>
                   </div>
@@ -884,7 +884,7 @@ function ComexDrawer({
   const right = (
     <>
       {canWrite && moveError && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#FEF2F2", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
           <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
           {moveError}
         </div>

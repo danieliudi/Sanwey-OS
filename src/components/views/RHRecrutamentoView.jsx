@@ -263,11 +263,11 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
 
         <div style={{ padding: "20px 24px 24px" }}>
           {!isConfigured ? (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
+            <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
               Configure uma LLM em <strong>Configurações → Integrações de IA</strong> para usar a triagem por currículo.
             </div>
           ) : provider !== "anthropic" ? (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
+            <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: 14, fontSize: 12, color: "var(--warning)", lineHeight: 1.6 }}>
               A triagem por currículo requer o provedor <strong>Anthropic (Claude)</strong> configurado — ele lê o PDF diretamente. Troque o provedor em Configurações → Integrações de IA.
             </div>
           ) : (
@@ -306,7 +306,7 @@ function TriagemIAModal({ vagas, talentPool, aplicacoesRaw, user, onAttach, onCl
               </div>
 
               {errorMsg && (
-                <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>
+                <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{errorMsg}</div>
               )}
 
               <button
@@ -716,7 +716,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
               {error}
             </div>
           )}
@@ -725,7 +725,7 @@ function NovaVagaModal({ cargos, initialData, onSave, onManageCargos, onClose, s
             <button
               type="submit"
               disabled={saving}
-              style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
+              style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
             >
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Criar vaga"}
             </button>
@@ -846,9 +846,9 @@ function GerenciarCargosModal({ cargos, onCreate, onDelete, onClose, userId }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{error}</div>}
 
-          <button onClick={handleAdd} disabled={saving} style={{ marginTop: 10, width: "100%", background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+          <button onClick={handleAdd} disabled={saving} style={{ marginTop: 10, width: "100%", background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Adicionando…" : "Adicionar cargo"}
           </button>
         </div>
@@ -1132,7 +1132,7 @@ function VagaDrawer({
                 href={whatsappShareUrl(vaga)}
                 target="_blank"
                 rel="noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
               >
                 <MessageSquare size={12} /> WhatsApp
               </a>
@@ -1141,7 +1141,7 @@ function VagaDrawer({
           )}
 
           <div className="flex gap-2">
-            <button onClick={() => onEdit(vaga)} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
+            <button onClick={() => onEdit(vaga)} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
               Editar vaga
             </button>
             <button onClick={() => onVerCandidatos(vaga.id)} style={{ flex: 1, background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
@@ -1335,7 +1335,7 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
         <div style={{ padding: "20px 24px 24px" }}>
           {emailFailedLink ? (
             <>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "var(--warning)", lineHeight: 1.5 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "var(--warning)", lineHeight: 1.5 }}>
                 <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
                 Link criado, mas o e-mail não foi enviado — copie o link e envie manualmente pro gestor.
               </div>
@@ -1386,7 +1386,7 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
             <button
               onClick={handleSave}
               disabled={saving || !valid}
-              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !valid ? 0.6 : 1 }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !valid ? 0.6 : 1 }}
             >
               {saving ? "Enviando…" : "Enviar link"}
             </button>
@@ -1696,13 +1696,13 @@ function NovoCandidatoModal({ defaultStage, defaultVagaId, vagas, stages, onSave
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>
               {error}
             </div>
           )}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Adicionando…" : "Adicionar candidato"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -1999,7 +1999,7 @@ function CandidatoDrawer({
               <button
                 onClick={handleAddNote}
                 disabled={savingNote || !noteText.trim()}
-                style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
+                style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingNote ? 0.6 : 1 }}
               >
                 {savingNote ? "Salvando…" : "Salvar"}
               </button>
@@ -2271,7 +2271,7 @@ function BulkReprovarModal({ selectedCandidatos, temEtapaReprovacao, onConfirm, 
               </div>
             )}
             <div className="flex mt-4">
-              <button onClick={onClose} style={{ background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>Fechar</button>
+              <button onClick={onClose} style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>Fechar</button>
             </div>
           </div>
         ) : (
@@ -3188,7 +3188,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
             <button
               onClick={() => setQuickAddVaga(true)}
               className="flex items-center gap-1.5 font-semibold"
-              style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "none", cursor: "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "none", cursor: "pointer" }}
             >
               <Plus size={14} /> Nova vaga
             </button>
@@ -3348,7 +3348,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                 href={whatsappShareUrl(activeVaga)}
                 target="_blank"
                 rel="noreferrer"
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "#DCFCE7", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--success)", textDecoration: "none" }}
               >
                 <MessageSquare size={12} /> Compartilhar no WhatsApp
               </a>
@@ -3357,7 +3357,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           )}
 
           {activeVaga && activeVaga.stage !== "publicada" && (
-            <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 8, padding: "8px 14px", marginBottom: 16, fontSize: 12, color: "var(--warning)" }}>
+            <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 8, padding: "8px 14px", marginBottom: 16, fontSize: 12, color: "var(--warning)" }}>
               Essa vaga está em <strong>{findStage(vagaStages, activeVaga.stage).name}</strong> — mova para "Publicada" na aba Vagas pra liberar o link de candidatura.
             </div>
           )}

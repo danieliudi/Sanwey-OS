@@ -229,7 +229,7 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser, 
         <button
           onClick={() => mainTab === "agents" ? openAgentWizard() : openBuilder()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-          style={{ background: "var(--accent)", color: "#FFFFFF" }}
+          style={{ background: "var(--accent)", color: "var(--on-accent)" }}
           onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
         >

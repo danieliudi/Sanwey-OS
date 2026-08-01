@@ -53,7 +53,7 @@ function ModalCard({ icon: Icon, title, total, breakdown, cheapest, disabled }) 
           <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>{title}</span>
         </div>
         {cheapest && !disabled && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "var(--accent)", color: "#FFF" }}>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
             <Check size={10} /> Mais econômico
           </span>
         )}

@@ -210,7 +210,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
           type="submit"
           disabled={saving || !company.trim() || !sector}
           className="flex-1 text-xs font-semibold py-1.5 rounded-lg transition-opacity"
-          style={{ background: "var(--accent)", color: "#FFFFFF", opacity: saving || !company.trim() || !sector ? 0.5 : 1 }}
+          style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving || !company.trim() || !sector ? 0.5 : 1 }}
           onMouseEnter={e => { if (!saving && company.trim() && sector) e.currentTarget.style.background = "var(--accent-hover)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
         >
@@ -636,7 +636,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           </div>
           <button
             onClick={() => setStarredOnly(v => !v)}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "var(--border)"}`, background: starredOnly ? "#FFFBEB" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "var(--border)"}`, background: starredOnly ? "var(--warning-bg)" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
           >
             <Star size={11} fill={starredOnly ? "#F59E0B" : "none"} />
             Só favoritos
@@ -688,7 +688,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               className="flex items-center gap-1.5 font-semibold"
               style={{
                 background: "var(--accent)",
-                color: "#FFFFFF",
+                color: "var(--on-accent)",
                 border: "none",
                 borderRadius: 10,
                 padding: "6px 16px",
@@ -1034,7 +1034,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
     <button
       onClick={() => setShowAIChat(v => !v)}
       className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 z-50 hidden lg:flex items-center gap-2 px-4 py-3 rounded-full font-semibold text-sm transition-all active:scale-95"
-      style={{ background: "var(--accent)", color: "#FFFFFF", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
+      style={{ background: "var(--accent)", color: "var(--on-accent)", boxShadow: "0 4px 16px rgba(181,0,11,0.30)", border: "none", cursor: "pointer" }}
       onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
       onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
     >
