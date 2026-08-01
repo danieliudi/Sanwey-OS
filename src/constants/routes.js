@@ -4,6 +4,7 @@
 
 export const ROUTES = {
   dashboard:         "/",
+  chat:              "/chat",
   // "Visão Geral" do Comercial — distinta de `dashboard`, que é o roteador
   // inteligente de pouso pós-login (admin cai no Executivo, RH puro cai no
   // RH etc). Sem essa separação, o item "Visão Geral" do grupo Comercial no
