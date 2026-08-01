@@ -825,7 +825,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages, showComercia
                       {formatK(m.pipeline)}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "#EFF2F5" }}>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-alt)" }}>
                     <div
                       className="h-full rounded-full transition-all"
                       style={{ width: `${pct}%`, background: m.company.primary }}
@@ -855,7 +855,7 @@ function OverviewTab({ metricsByCompany, maxPipeline, funnelStages, showComercia
                   </span>
                   <span className="text-xs" style={{ color: "var(--text-dim)" }}>{count} leads</span>
                 </div>
-                <div className="h-5 rounded-lg overflow-hidden" style={{ background: "#EFF2F5" }}>
+                <div className="h-5 rounded-lg overflow-hidden" style={{ background: "var(--surface-alt)" }}>
                   <div
                     className="h-full rounded-lg transition-all flex items-center justify-end pr-2"
                     style={{ width: `${Math.max(pct, 5)}%`, background: stage.color }}

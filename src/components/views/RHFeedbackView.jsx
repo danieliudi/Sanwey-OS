@@ -619,7 +619,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             <input autoFocus type="text" placeholder="Ex.: Autoavaliação"
               value={name} onChange={e => setName(e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
             <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
@@ -1242,7 +1242,7 @@ function FeedbackCalendarView({ feedbacks, stages, colaboradoresById, onPillClic
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              style={{ borderColor: "var(--border)", background: isToday ? "var(--warning-bg)" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
               <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
@@ -1566,7 +1566,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                     return (
                       <div key={f.id} style={{ border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", background: "var(--warning-bg)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                         <div style={{ flex: 1, minWidth: 180 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "#DBEAFE", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--channel-email-text)", background: "var(--channel-email-bg)", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
                           <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 3 }}>Prazo {fmt(f.period_end)} · {autoavaliacaoLabel(f, meuColaborador)}</div>
                         </div>
                         {isMine && f.self_rating == null && (
@@ -1588,7 +1588,7 @@ export function RHFeedbackView({ currentUser, canWrite, isRHUser, notifyMentions
                 {concluidos.map(f => (
                   <div key={f.id} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "#DBEAFE", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--channel-email-text)", background: "var(--channel-email-bg)", borderRadius: 99, padding: "2px 9px" }}>{tipoLabel(f.tipo)}</span>
                       <span style={{ fontSize: 11, color: "var(--text-dim)" }}>{fmt(f.period_end)}</span>
                     </div>
                     {(f.self_rating != null || f.manager_rating != null) && (

@@ -390,7 +390,7 @@ export function FunnelHistoryView({ user, activeCompany, leads, users }) {
                         {recycles > 0 && (
                           <span
                             className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ background: "#FEF3EC", color: "var(--amber)" }}
+                            style={{ background: "var(--amber-bg)", color: "var(--amber)" }}
                             title={`${recycles} reciclagem${recycles > 1 ? "s" : ""}`}
                           >
                             <Repeat2 size={10} />

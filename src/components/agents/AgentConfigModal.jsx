@@ -30,11 +30,11 @@ export function AgentConfigModal({
     >
       <div
         className="rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col"
-        style={{ background: "#FFFFFF", maxHeight: "90vh" }}
+        style={{ background: "var(--surface)", maxHeight: "90vh" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "#E5E7EB" }}>
+        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
           <h2 className="font-bold" style={{ fontSize: 16, color: "var(--text)" }}>
             Configurar agentes
           </h2>
@@ -66,7 +66,7 @@ export function AgentConfigModal({
 
         {/* Grade empresa × agente */}
         <div className="overflow-auto flex-1 p-5">
-          <div className="rounded-lg border overflow-hidden" style={{ borderColor: "#E5E7EB" }}>
+          <div className="rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)" }}>
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: "var(--surface-alt)" }}>
@@ -132,7 +132,7 @@ export function AgentConfigModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t flex items-center justify-end" style={{ borderColor: "#E5E7EB", background: "var(--surface-alt)" }}>
+        <div className="px-5 py-3 border-t flex items-center justify-end" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
           <button
             onClick={onClose}
             className="px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer"
@@ -167,7 +167,7 @@ function Toggle({ enabled, onClick, color }) {
           width: 14,
           height: 14,
           left: enabled ? 18 : 2,
-          background: "#FFFFFF",
+          background: "var(--surface)",
           transition: "left 120ms",
         }}
       />

@@ -55,11 +55,11 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
     >
       <div
         className="rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col"
-        style={{ background: "#FFFFFF", maxHeight: "90vh" }}
+        style={{ background: "var(--surface)", maxHeight: "90vh" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "#E5E7EB" }}>
+        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
           <div className="flex items-center gap-2">
             <User size={18} style={{ color: accent }} />
             <div>
@@ -89,7 +89,7 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
             <div
               key={from.id}
               className="rounded-xl border p-3"
-              style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}
+              style={{ borderColor: "var(--border)", background: "var(--surface)" }}
             >
               {/* Origem */}
               <div className="flex items-center gap-2 mb-2">
@@ -126,7 +126,7 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t flex items-center justify-end" style={{ borderColor: "#E5E7EB", background: "var(--surface)" }}>
+        <div className="px-5 py-3 border-t flex items-center justify-end" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <button
             onClick={onClose}
             className="px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer"

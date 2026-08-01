@@ -1526,7 +1526,7 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              style={{ borderColor: "var(--border)", background: isToday ? "var(--warning-bg)" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
               <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
@@ -1917,7 +1917,7 @@ function CandidatoDrawer({
 
       {/* Já contratado — sinal durável + sem botão de converter de novo */}
       {candidato.hired_at && (
-        <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <Check size={20} style={{ color: "var(--success)", flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: "var(--success)" }}>Contratado</div>
@@ -2348,7 +2348,7 @@ function CandidatoCardBody({ candidato: c, vagas }) {
             style={{
               fontSize: 10, fontWeight: 700,
               color: c.fit_score >= 70 ? "var(--success)" : c.fit_score >= 40 ? "var(--warning)" : "var(--danger)",
-              background: c.fit_score >= 70 ? "#DCFCE7" : c.fit_score >= 40 ? "#FEF3C7" : "#FEE2E2",
+              background: c.fit_score >= 70 ? "var(--success-bg)" : c.fit_score >= 40 ? "var(--warning-bg)" : "var(--danger-bg)",
               borderRadius: 99, padding: "1px 7px",
             }}
           >
@@ -2618,7 +2618,7 @@ function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              style={{ borderColor: "var(--border)", background: isToday ? "var(--warning-bg)" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
               <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>

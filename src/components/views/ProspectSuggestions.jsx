@@ -161,7 +161,7 @@ function ProspectCard({ seed, accessibleCompanies, existingCnpjByCompany, onAdd 
       {added ? (
         <div
           className="p-2.5 rounded-lg flex items-center gap-2 text-xs"
-          style={{ background: "#E8F2EC", color: "var(--color-resibag)" }}
+          style={{ background: "var(--success-bg)", color: "var(--color-resibag)" }}
         >
           <CheckCircle2 size={14} />
           Adicionado como lead em {COMPANIES[target]?.short}. Ver na aba Kanban.

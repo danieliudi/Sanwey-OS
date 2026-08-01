@@ -16,11 +16,11 @@ export function PendingAssignmentScreen({ currentUser, onRefresh, onLogout }) {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "#F5F5F3" }}
+      style={{ background: "var(--bg)" }}
     >
       <div
         className="w-full max-w-md rounded-2xl border p-8"
-        style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "var(--shadow-pop)" }}
+        style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-pop)" }}
       >
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
@@ -45,7 +45,7 @@ export function PendingAssignmentScreen({ currentUser, onRefresh, onLogout }) {
 
         <div
           className="p-3.5 rounded-xl mb-5 text-xs space-y-2"
-          style={{ background: "#F5F5F3", color: "var(--text)" }}
+          style={{ background: "var(--surface-alt)", color: "var(--text)" }}
         >
           <div className="flex items-center gap-2">
             <Mail size={12} color="var(--text-dim)" />
@@ -56,7 +56,7 @@ export function PendingAssignmentScreen({ currentUser, onRefresh, onLogout }) {
             <span className="text-xs font-medium" style={{ color: "var(--text-dim)" }}>Papel</span>
             <span
               className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-              style={{ background: "#E8E8E8", color: "var(--text)" }}
+              style={{ background: "var(--surface-alt)", color: "var(--text)" }}
             >
               {currentUser?.role || "vendedor"}
             </span>
@@ -68,7 +68,7 @@ export function PendingAssignmentScreen({ currentUser, onRefresh, onLogout }) {
 
         <div
           className="text-xs mb-5 p-3.5 rounded-xl leading-relaxed"
-          style={{ background: "#FFFBEB", color: "#92400E", border: "1px solid #FDE68A" }}
+          style={{ background: "var(--warning-bg)", color: "#92400E", border: "1px solid #FDE68A" }}
         >
           <strong>Dica:</strong> peça ao administrador para abrir <em>Usuários</em> e
           atribuir pelo menos uma empresa (Sanwey ou Resibag)

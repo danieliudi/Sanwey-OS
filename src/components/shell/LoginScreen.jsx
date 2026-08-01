@@ -200,7 +200,7 @@ function LangSelector() {
     <button
       type="button"
       className="flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors"
-      style={{ background: "#FFFFFF", borderColor: "#E5E7EB", color: "var(--text)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
       onMouseEnter={e => { e.currentTarget.style.background = "#F8F4EF"; }}
       onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; }}
       title="Idioma (em breve)"

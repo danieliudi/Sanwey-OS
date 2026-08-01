@@ -14,7 +14,7 @@ import { ROUTES } from "../../constants/routes";
 
 // ── Agent metadata ─────────────────────────────────────────────────────────
 const AGENTS = {
-  sdr_q:    { label: "SDR-Q",     sub: "Qualificador",         Icon: Target,    color: "var(--accent)", bg: "#EBF0F9" },
+  sdr_q:    { label: "SDR-Q",     sub: "Qualificador",         Icon: Target,    color: "#1D4ED8", bg: "#EBF0F9" },
   scout:    { label: "SCOUT",     sub: "Inteligência de Conta", Icon: Telescope, color: "#6B21A8", bg: "#F5F0FB" },
   cadencia: { label: "CADÊNCIA",  sub: "Follow-up Engine",      Icon: Repeat2,   color: "#C2410C", bg: "#FEF3EC" },
   sentinela:{ label: "SENTINELA", sub: "Monitor de Funil",      Icon: Shield,    color: "#B91C1C", bg: "#FEF2F2" },
@@ -313,7 +313,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
           <span
             className="text-[10px] font-bold px-2 py-0.5 rounded-full"
             style={{
-              background: action.status === "approved" ? "#E8F2EC" : action.status === "rejected" ? "#FEF2F2" : "var(--surface-alt)",
+              background: action.status === "approved" ? "var(--success-bg)" : action.status === "rejected" ? "var(--danger-bg)" : "var(--surface-alt)",
               color: action.status === "approved" ? "var(--success)" : action.status === "rejected" ? "var(--danger)" : "var(--text-dim)",
             }}
           >
@@ -328,7 +328,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
 // ── Agent section ──────────────────────────────────────────────────────────
 function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, onOpenFornecedor, onOpenCandidato }) {
   const [open, setOpen] = useState(true);
-  const meta = metaOverride || AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: "var(--text-dim)", bg: "var(--surface-alt)" };
+  const meta = metaOverride || AGENTS[agentId] || { label: agentId, sub: "", Icon: Bot, color: "var(--text)", bg: "var(--surface-alt)", onColor: "var(--surface)" };
   const { Icon } = meta;
   const pendingCount = actions.filter(a => a.status === "pending").length;
 
@@ -344,7 +344,7 @@ function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, on
           className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: meta.color }}
         >
-          <Icon size={15} color="#FFFFFF" />
+          <Icon size={15} color={meta.onColor || "#FFFFFF"} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -360,7 +360,7 @@ function AgentSection({ agentId, actions, onResolve, resolving, metaOverride, on
           {pendingCount > 0 && (
             <span
               className="text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
-              style={{ background: meta.color, color: "#FFFFFF" }}
+              style={{ background: meta.color, color: meta.onColor || "#FFFFFF" }}
             >
               {pendingCount}
             </span>
@@ -547,6 +547,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
       Icon: Bot,
       color: "var(--accent)",
       bg: "var(--surface-alt)",
+      onColor: "var(--on-accent)",
     };
   });
 

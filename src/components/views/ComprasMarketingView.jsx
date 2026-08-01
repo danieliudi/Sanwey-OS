@@ -523,7 +523,7 @@ function CalendarView({ purchases, onPillClick }) {
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              style={{ borderColor: "var(--border)", background: isToday ? "var(--warning-bg)" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
               <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>

@@ -177,7 +177,7 @@ export function PipelineChatPanel({ leads, users, currentUser, isOpen, onClose }
                   className="text-sm px-3 py-2 rounded-2xl rounded-tl-sm max-w-[90%] whitespace-pre-line leading-relaxed"
                   style={
                     isError
-                      ? { background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }
+                      ? { background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }
                       : { background: "var(--surface-alt)", color: "var(--text)" }
                   }
                 >

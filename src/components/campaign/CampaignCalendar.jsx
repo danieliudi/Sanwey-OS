@@ -85,7 +85,7 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
   };
 
   const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
-  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "#FAFAFA", borderRadius: 8, border: "1px solid #D1D5DB", padding: "6px 10px", fontSize: 13, width: "100%", outline: "none" };
+  const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface-alt)", borderRadius: 8, border: "1px solid var(--border-strong)", padding: "6px 10px", fontSize: 13, width: "100%", outline: "none" };
 
   return (
     <div
@@ -95,7 +95,7 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "var(--shadow-pop)", overflow: "hidden" }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>
             {isEdit ? "Editar evento" : "Novo evento pessoal"}
           </span>
@@ -187,7 +187,7 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
         style={{ background: "var(--surface)", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "var(--shadow-pop)", overflow: "hidden" }}
         onClick={e => e.stopPropagation()}
       >
-        <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>Sincronizar calendário</span>
             <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>Exporte ou assine o calendário no Google Calendar / Apple Calendar / Outlook</p>
@@ -255,7 +255,7 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
 
 function UrlRow({ label, desc, url, copied, onCopy, color }) {
   return (
-    <div style={{ border: "1px solid #E5E7EB", borderRadius: 10, padding: "10px 12px" }}>
+    <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
         <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
         <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text)" }}>{label}</span>
@@ -263,9 +263,9 @@ function UrlRow({ label, desc, url, copied, onCopy, color }) {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <input readOnly value={url} onClick={e => e.target.select()}
-          style={{ flex: 1, fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", border: "1px solid #E5E7EB", borderRadius: 6, padding: "4px 8px", outline: "none", overflow: "hidden", textOverflow: "ellipsis" }} />
+          style={{ flex: 1, fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 8px", outline: "none", overflow: "hidden", textOverflow: "ellipsis" }} />
         <button onClick={onCopy}
-          style={{ display: "flex", alignItems: "center", gap: 5, background: copied ? "#D1FAE5" : "var(--surface-alt)", color: copied ? "#065F46" : "var(--text)", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+          style={{ display: "flex", alignItems: "center", gap: 5, background: copied ? "var(--success-bg)" : "var(--surface-alt)", color: copied ? "#065F46" : "var(--text)", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
           <Link2 size={11} />
           {copied ? "Copiado!" : "Copiar"}
         </button>
@@ -488,7 +488,7 @@ export function CampaignCalendar({
       {/* Calendar grid */}
       <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
         {/* Day-name header */}
-        <div className="grid grid-cols-7" style={{ borderBottom: "1px solid #E5E7EB" }}>
+        <div className="grid grid-cols-7" style={{ borderBottom: "1px solid var(--border)" }}>
           {DAY_SHORT.map((d, i) => (
             <div key={d} className="text-center py-2 text-xs font-semibold" style={{ color: "var(--text-dim)", borderRight: i < 6 ? "1px solid #E5E7EB" : "none" }}>
               {d}
@@ -516,7 +516,7 @@ export function CampaignCalendar({
                     style={{
                       borderRight: di < 6 ? "1px solid #E5E7EB" : "none",
                       minHeight: rowHeight,
-                      background: isWeekend ? "#FAFAFA" : "transparent",
+                      background: isWeekend ? "var(--surface-alt)" : "transparent",
                     }}
                     onClick={e => handleDayClick(day, e)}
                   >

@@ -137,7 +137,7 @@ function ExportAuditPanel() {
             </thead>
             <tbody>
               {rows.map(r => (
-                <tr key={r.id} style={{ borderTop: "1px solid #F0F0F0" }}>
+                <tr key={r.id} style={{ borderTop: "1px solid var(--border)" }}>
                   <td className="py-1.5" style={{ color: "var(--text)" }}>{r.profiles?.name || "—"}</td>
                   <td className="py-1.5" style={{ color: "var(--text)" }}>{EXPORT_DOMAIN_LABEL[r.domain] || r.domain}</td>
                   <td className="py-1.5" style={{ color: "var(--text-dim)" }}>{r.record_count}</td>
@@ -875,7 +875,7 @@ export function SettingsView({
                     title="Widgets do Painel Executivo"
                     description="Cada gerente de departamento só vê (e só escolhe) o próprio recorte do Painel Executivo."
                   >
-                    <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                       {EXECUTIVE_WIDGETS
                         .filter(w =>
                           (w.dept === "comercial" && isManager) ||
@@ -899,7 +899,7 @@ export function SettingsView({
                   title="Etapas visíveis no Kanban"
                   description="Esconda etapas que você não usa no dia a dia."
                 >
-                  <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                  <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                     {DEFAULT_PIPELINE_STAGES.map(s => {
                       const checked = settings.visibleKanbanStages.includes(s.id);
                       // Última etapa visível não pode ser escondida — antes o
@@ -933,7 +933,7 @@ export function SettingsView({
                   <div>
                     <div
                       className="pb-2 mb-1 border-b"
-                      style={{ borderColor: "#F0F0F0" }}
+                      style={{ borderColor: "var(--border)" }}
                     >
                       <span
                         className="font-bold tracking-wide"
@@ -942,7 +942,7 @@ export function SettingsView({
                         Menções
                       </span>
                     </div>
-                    <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                       <ToggleRow
                         label="Notificar quando alguém me mencionar (@)"
                         sublabel="Ativado por padrão. Desative se não quiser receber notificação de @menção em comentários."
@@ -966,7 +966,7 @@ export function SettingsView({
                       <div key={group.id}>
                         <div
                           className="pb-2 mb-1 border-b flex items-center justify-between"
-                          style={{ borderColor: "#F0F0F0" }}
+                          style={{ borderColor: "var(--border)" }}
                         >
                           <span
                             className="font-bold tracking-wide"
@@ -991,7 +991,7 @@ export function SettingsView({
                             );
                           })()}
                         </div>
-                        <div className="divide-y" style={{ borderColor: "#F0F0F0" }}>
+                        <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                           {group.items.map(n => (
                             <ToggleRow
                               key={n.id}
@@ -1436,7 +1436,7 @@ export function SettingsView({
                       Carregar dados de demonstração
                     </Button>
                   </div>
-                  <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t" style={{ borderColor: "#F0F0F0" }}>
+                  <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t" style={{ borderColor: "var(--border)" }}>
                     <Button
                       variant="ghost"
                       icon={Trash2}
@@ -1499,7 +1499,7 @@ export function SettingsView({
                 >
                   <div
                     className="p-3.5 rounded-lg mb-4 flex items-start gap-2.5 text-xs"
-                    style={{ background: NEUTRAL.amber + "15" || "#FFF7ED", borderLeft: "3px solid var(--amber)", color: "var(--amber)" }}
+                    style={{ background: "var(--amber-bg)", borderLeft: "3px solid var(--amber)", color: "var(--amber)" }}
                   >
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                     <span className="leading-relaxed">
@@ -1522,7 +1522,7 @@ export function SettingsView({
                 <div className="space-y-6">
                   {/* ── Leads (Comercial) ── */}
                   <div>
-                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "var(--border)" }}>
                       <span
                         className="font-bold tracking-wide"
                         style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
@@ -1581,7 +1581,7 @@ export function SettingsView({
 
                   {/* ── Solicitações internas (Marketing) ── */}
                   <div>
-                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "var(--border)" }}>
                       <span
                         className="font-bold tracking-wide"
                         style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}
@@ -1664,7 +1664,7 @@ export function SettingsView({
 
                   {/* ── Recrutamento (Vagas públicas) ── */}
                   <div>
-                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "#F0F0F0" }}>
+                    <div className="pb-2 mb-3 border-b" style={{ borderColor: "var(--border)" }}>
                       <span
                         className="font-bold tracking-wide"
                         style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}

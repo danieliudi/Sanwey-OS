@@ -103,7 +103,7 @@ function VideoCard({ video, onNavigate }) {
         ) : (
           <div
             className="flex items-center justify-center rounded-full"
-            style={{ width: 48, height: 48, background: "#E5E7EB" }}
+            style={{ width: 48, height: 48, background: "var(--surface-alt)" }}
           >
             <Play size={20} style={{ color: "var(--text-dim)", marginLeft: 2 }} />
           </div>

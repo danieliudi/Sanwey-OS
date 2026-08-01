@@ -57,7 +57,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
     return (
       <div
         className="rounded-xl border bg-white p-3.5"
-        style={{ borderColor: "#E5E7EB", borderLeft: `3px solid ${cat ? clientCategoryColor(cat) : "var(--color-industria)"}` }}
+        style={{ borderColor: "var(--border)", borderLeft: `3px solid ${cat ? clientCategoryColor(cat) : "var(--color-industria)"}` }}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="font-bold leading-snug" style={{ fontSize: 15, color: "var(--text)", letterSpacing: "-0.01em" }}>
@@ -124,7 +124,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
   if (open) {
     return (
       <div ref={boxRef} className="rounded-xl bg-white overflow-hidden" style={{ border: "1.5px solid var(--accent)" }}>
-        <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: "1px solid #E5E7EB" }}>
+        <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: "1px solid var(--border)" }}>
           <Search size={15} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
           <input
             ref={inputRef}
@@ -181,7 +181,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
       className="w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold transition-colors"
       style={{
         border: "1.5px dashed #CBD5E1",
-        background: "#FFFFFF",
+        background: "var(--surface)",
         color: disabled ? "var(--text-dim)" : "var(--accent)",
         cursor: disabled ? "default" : "pointer",
       }}

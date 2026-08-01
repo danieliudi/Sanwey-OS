@@ -62,13 +62,13 @@ export function PipelineStagesModal({
       >
         <div
           className="rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col"
-          style={{ background: "#FFFFFF", maxHeight: "90vh" }}
+          style={{ background: "var(--surface)", maxHeight: "90vh" }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
           <div
             className="px-5 py-4 border-b flex items-start justify-between gap-3 flex-wrap"
-            style={{ borderColor: "#E5E7EB" }}
+            style={{ borderColor: "var(--border)" }}
           >
             <div>
               <div className="flex items-center gap-2">
@@ -154,8 +154,8 @@ export function PipelineStagesModal({
                           <span
                             className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
                             style={{
-                              background: stage.won ? "#E8F2EC" : "#FEF2F2",
-                              color: stage.won ? "#1A6E35" : "var(--danger)",
+                              background: stage.won ? "var(--success-bg)" : "var(--danger-bg)",
+                              color: stage.won ? "var(--success)" : "var(--danger)",
                             }}
                           >
                             {stage.won ? "Terminal" : "Perdido"}
@@ -230,7 +230,7 @@ export function PipelineStagesModal({
                 </span>
               </div>
 
-              <div className="divide-y" style={{ borderColor: "#F3F4F6" }}>
+              <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                 {sourceStages.map(fromStage => {
                   const allStageIds = safeStages.map(s => s.id);
                   const allowedDests = transitions.getAllowedDestinations(companyId, fromStage.id, allStageIds);
@@ -412,7 +412,7 @@ function DestPill({ stage, allowed, onClick }) {
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer"
       style={{
         background: "var(--surface-alt)",
-        color: "#9CA3AF",
+        color: "var(--text-faint)",
         border: "1px dashed var(--border-strong)",
         textDecoration: "line-through",
       }}
@@ -438,7 +438,7 @@ function PillSample({ allowed }) {
   ) : (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"
-      style={{ background: "var(--surface-alt)", color: "#9CA3AF", border: "1px dashed var(--border-strong)", textDecoration: "line-through" }}
+      style={{ background: "var(--surface-alt)", color: "var(--text-faint)", border: "1px dashed var(--border-strong)", textDecoration: "line-through" }}
     >
       <Lock size={9} /> bloq
     </span>

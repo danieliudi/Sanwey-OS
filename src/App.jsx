@@ -1596,7 +1596,7 @@ export default function App() {
               <div className="text-xs mb-3" style={{ color: "#7F1D1D" }}>
                 Algo travou no carregamento. Tente voltar ao Início ou recarregar a página.
               </div>
-              <div className="text-[11px] font-mono p-2 rounded mb-3" style={{ background: "#FFF", color: "#7F1D1D", whiteSpace: "pre-wrap", maxHeight: 160, overflow: "auto" }}>
+              <div className="text-[11px] font-mono p-2 rounded mb-3" style={{ background: "var(--surface)", color: "#7F1D1D", whiteSpace: "pre-wrap", maxHeight: 160, overflow: "auto" }}>
                 {error?.message || String(error)}
               </div>
               <div className="flex gap-2">
@@ -1607,7 +1607,7 @@ export default function App() {
                 </button>
                 <button onClick={() => window.location.reload()}
                         className="px-3 py-1.5 text-xs font-semibold rounded-lg border"
-                        style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "#FFFFFF" }}>
+                        style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }}>
                   Recarregar
                 </button>
               </div>

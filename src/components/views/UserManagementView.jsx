@@ -454,7 +454,7 @@ export function UserManagementView({
               <div
                 key={inv.id}
                 className="p-4 rounded-xl border flex items-center justify-between gap-4 flex-wrap"
-                style={{ background: "#FFFBEB", borderColor: "#FCD34D" }}
+                style={{ background: "var(--warning-bg)", borderColor: "#FCD34D" }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "var(--amber-bg)", color: "#92400E" }}>
@@ -774,7 +774,7 @@ export function UserManagementView({
             </div>
           )}
           {modalError && (
-            <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "var(--danger)" }}>{modalError}</div>
+            <div className="p-2 rounded-xl text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{modalError}</div>
           )}
         </div>
         <div className="px-6 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "var(--border)", background: "var(--surface-alt)" }}>
@@ -873,7 +873,7 @@ export function UserManagementView({
             </div>
           )}
           {inviteError && (
-            <div className="p-2 rounded-xl text-xs" style={{ background: "#ffdad6", color: "var(--danger)" }}>{inviteError}</div>
+            <div className="p-2 rounded-xl text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{inviteError}</div>
           )}
           {inviteJustSent && (
             <div className="p-2.5 rounded-xl text-xs flex items-start gap-2" style={{ background: "#ECFDF5", color: "#065F46" }}>

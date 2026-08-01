@@ -16,10 +16,10 @@ export function DynamicField({ field, value, onChange, users = [], disabled = fa
     fontSize: 12,
     padding: "6px 10px",
     borderRadius: 8,
-    border: "1px solid #D1D5DB",
+    border: "1px solid var(--border-strong)",
     outline: "none",
     color: "var(--text)",
-    background: "#FFFFFF",
+    background: "var(--surface)",
     boxSizing: "border-box",
   };
 

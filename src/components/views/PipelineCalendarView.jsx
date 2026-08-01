@@ -175,13 +175,13 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
                 onClick={() => setSelectedDay(isSelected ? null : k)}
                 className="text-left p-1.5 border-r border-b transition-colors cursor-pointer flex flex-col gap-1"
                 style={{
-                  borderColor: "#F0F0F0",
-                  background: isSelected ? "#EFF6FF" : isToday ? "#FFFBEB" : "var(--surface)",
+                  borderColor: "var(--border)",
+                  background: isSelected ? "#EFF6FF" : isToday ? "var(--warning-bg)" : "var(--surface)",
                   opacity: inMonth ? 1 : 0.4,
                 }}
                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#F8FAFC"; }}
                 onMouseLeave={e => {
-                  if (!isSelected) e.currentTarget.style.background = isToday ? "#FFFBEB" : "var(--surface)";
+                  if (!isSelected) e.currentTarget.style.background = isToday ? "var(--warning-bg)" : "var(--surface)";
                 }}
               >
                 <span

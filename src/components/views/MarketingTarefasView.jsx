@@ -351,7 +351,7 @@ function TaskCreateModal({ stageId, stages, currentUser, users, campaigns, onAdd
   const focusBlue = e => { e.target.style.borderColor = "var(--accent)"; };
   const blurGray  = e => { e.target.style.borderColor = "#D1D5DB"; };
   const labelSt   = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5, display: "block" };
-  const inputSt   = { borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" };
+  const inputSt   = { borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" };
 
   return (
     <div
@@ -556,7 +556,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             <input autoFocus type="text" placeholder="Ex.: Aprovação Jurídica"
               value={name} onChange={e => setName(e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
             <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
