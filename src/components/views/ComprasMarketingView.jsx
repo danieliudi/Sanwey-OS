@@ -256,7 +256,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
           </div>
         </div>
 
-        {error && <div className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{error}</div>}
+        {error && <div className="mt-3 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{error}</div>}
 
         <div className="flex justify-end gap-2 mt-5">
           <button type="button" onClick={guardedClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
@@ -772,23 +772,23 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
 
       {/* Rejected strip — tira fina, não uma coluna do kanban */}
       {rejectedPurchases.length > 0 && (
-        <div className="mb-4 rounded-xl border" style={{ borderColor: "#FECACA", background: "#FEF2F2" }}>
+        <div className="mb-4 rounded-xl border" style={{ borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)", background: "var(--danger-bg)" }}>
           <button onClick={() => setShowRejected(v => !v)}
             className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer" style={{ background: "none", border: "none" }}>
-            <span className="flex items-center gap-2 text-xs font-semibold" style={{ color: "#B91C1C" }}>
+            <span className="flex items-center gap-2 text-xs font-semibold" style={{ color: "var(--danger)" }}>
               <XCircle size={13} />
               {rejectedPurchases.length} solicitação{rejectedPurchases.length !== 1 ? "ões" : ""} rejeitada{rejectedPurchases.length !== 1 ? "s" : ""}
             </span>
-            <span className="text-xs font-semibold" style={{ color: "#B91C1C" }}>{showRejected ? "Ocultar" : "Ver"}</span>
+            <span className="text-xs font-semibold" style={{ color: "var(--danger)" }}>{showRejected ? "Ocultar" : "Ver"}</span>
           </button>
           {showRejected && (
             <div className="px-4 pb-3 space-y-1.5">
               {rejectedPurchases.map(p => (
                 <div key={p.id} onClick={() => setSelected(p)}
                   className="flex items-center justify-between text-xs px-3 py-2 rounded-lg cursor-pointer"
-                  style={{ background: "var(--surface)", border: "1px solid #FECACA" }}>
+                  style={{ background: "var(--surface)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
                   <span>
-                    <span className="font-mono font-bold mr-1.5" style={{ color: "#B91C1C" }}>{p.requestNumber}</span>
+                    <span className="font-mono font-bold mr-1.5" style={{ color: "var(--danger)" }}>{p.requestNumber}</span>
                     {p.itemName}
                   </span>
                   <span style={{ color: "var(--text-dim)" }}>{formatDateBR(p.createdAt)}</span>
@@ -800,11 +800,11 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
       )}
 
       {error && (
-        <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{error}</div>
+        <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{error}</div>
       )}
 
       {stageError && (
-        <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "#FEF3C7", color: "#92400E" }}>{stageError}</div>
+        <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>{stageError}</div>
       )}
 
       {loading ? (

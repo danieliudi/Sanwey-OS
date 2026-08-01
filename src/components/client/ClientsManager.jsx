@@ -352,7 +352,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                       </button>
                       {canDelete && (
                         <button onClick={() => setConfirmId(c.id)} title="Excluir"
-                          className="p-1.5 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626" }}>
+                          className="p-1.5 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)" }}>
                           <Trash2 size={14} />
                         </button>
                       )}
@@ -390,7 +390,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                       </button>
                       {canDelete && (
                         <button onClick={() => setConfirmId(c.id)} title="Excluir"
-                          className="p-2 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626" }}>
+                          className="p-2 rounded-lg" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)" }}>
                           <Trash2 size={16} />
                         </button>
                       )}
@@ -503,7 +503,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
             </button>
             <button onClick={async () => { await onDelete?.(confirmId); setConfirmId(null); }}
               className="px-4 py-2 text-sm rounded-lg font-semibold text-white"
-              style={{ background: "#DC2626", border: "none", cursor: "pointer" }}>
+              style={{ background: "var(--danger)", border: "none", cursor: "pointer" }}>
               Excluir
             </button>
           </div>

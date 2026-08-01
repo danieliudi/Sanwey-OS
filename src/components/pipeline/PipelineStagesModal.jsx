@@ -368,7 +368,7 @@ function BulkBtn({ onClick, icon: Icon, label, tone }) {
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = tone;
         e.currentTarget.style.color = tone;
-        e.currentTarget.style.background = tone + "0D";
+        e.currentTarget.style.background = `color-mix(in srgb, ${tone} 5%, transparent)`;
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = "var(--border)";

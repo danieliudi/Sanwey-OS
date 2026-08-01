@@ -1234,7 +1234,7 @@ function VagaDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>
@@ -1377,7 +1377,7 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
             />
           </div>
           {error && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginTop: 12, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginTop: 12, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {error}
             </div>
@@ -1931,8 +1931,8 @@ function CandidatoDrawer({
       {/* Convert to employee — only when aprovado e ainda não contratado */}
       {canWrite && candidato.stage === "aprovado" && !candidato.hired_at && onHire && (
         <div style={{
-          background: "#F0FDF4",
-          border: "1px solid #BBF7D0",
+          background: "var(--success-bg)",
+          border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)",
           borderRadius: 12,
           padding: "14px 16px",
           display: "flex",
@@ -2060,7 +2060,7 @@ function CandidatoDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>
@@ -2072,7 +2072,7 @@ function CandidatoDrawer({
           />
 
           {reprovando && (
-            <div style={{ marginTop: 10, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12 }}>
+            <div style={{ marginTop: 10, background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 10, padding: 12 }}>
               <div style={{ ...labelSt, color: "var(--danger)" }}>Motivo da reprovação *</div>
               <textarea
                 value={motivoReprovacao}
@@ -2081,7 +2081,7 @@ function CandidatoDrawer({
                 rows={2}
                 autoFocus
                 className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
-                style={{ borderColor: "#FCA5A5", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+                style={{ borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
               />
               <div className="flex gap-2 mt-2">
                 <button
@@ -2191,7 +2191,7 @@ function ReprovacaoDropModal({ info, onConfirm, onClose }) {
             rows={3}
             autoFocus
             className="w-full text-sm rounded-lg border px-3 py-2 outline-none resize-none"
-            style={{ borderColor: "#FCA5A5", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
+            style={{ borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)", color: "var(--text)", background: "var(--surface)", fontSize: 13 }}
           />
           <div className="flex gap-2 mt-3">
             <button

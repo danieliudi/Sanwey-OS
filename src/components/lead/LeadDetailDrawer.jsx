@@ -2191,7 +2191,7 @@ function CaptureRow({ label, value, mono, link, badge, hint }) {
           <a href={link} style={{ color: "var(--accent)", textDecoration: "none" }}>{value}</a>
         ) : badge ? (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-            style={{ background: (priorityColor || "var(--text-dim)") + "14", color: priorityColor || "var(--text-dim)" }}>
+            style={{ background: `color-mix(in srgb, ${priorityColor || "var(--text-dim)"} 8%, transparent)`, color: priorityColor || "var(--text-dim)" }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: priorityColor || "var(--text-dim)" }} />
             {value}
           </span>

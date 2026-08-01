@@ -85,7 +85,7 @@ function ComunicadoComposer({ onSend }) {
             display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
             borderRadius: 10, padding: "10px 12px",
             border: `1px solid ${importante ? "var(--danger)" : "var(--border)"}`,
-            background: importante ? "#FEF2F2" : "var(--surface-alt)",
+            background: importante ? "var(--danger-bg)" : "var(--surface-alt)",
           }}
         >
           <input type="checkbox" checked={importante} onChange={(e) => setImportante(e.target.checked)} style={{ marginTop: 2, flexShrink: 0 }} />

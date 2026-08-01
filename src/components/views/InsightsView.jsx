@@ -10,8 +10,8 @@ import { formatDateBR } from "../../utils/date";
 // já cadastrados no banco. Só dado que já existe — sem tabela nova, sem API
 // externa, sem estimativa. Ver src/hooks/use-insights-metrics.js.
 
-const FASTER_COLOR = "#15803D"; // verde — mesmo tom do trend positivo do StatCard
-const SLOWER_COLOR = "#B45309"; // âmbar — sinaliza "piorou" sem soar como erro grave
+const FASTER_COLOR = "var(--success)"; // mesmo tom do trend positivo do StatCard
+const SLOWER_COLOR = "var(--warning)"; // sinaliza "piorou" sem soar como erro grave
 
 // Pra métricas de TEMPO, menor é melhor — por isso não usamos a prop `trend`
 // numérica do StatCard aqui (ela pinta "subiu" de verde, o que inverteria o

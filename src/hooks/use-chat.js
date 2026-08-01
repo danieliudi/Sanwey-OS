@@ -113,12 +113,13 @@ export function useChat({ userId } = {}) {
     return () => { alive = false; };
   }, [enabled]);
 
-  const sendMessage = useCallback(async (channelId, body) => {
+  const sendMessage = useCallback(async (channelId, body, attachments = []) => {
     const text = (body || "").trim();
-    if (!channelId || !text) return null;
+    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+    if (!channelId || (!text && !hasAttachments)) return null;
     const { data, error: err } = await supabase
       .from(MESSAGES_TABLE)
-      .insert({ channel_id: channelId, author_id: userId, body: text })
+      .insert({ channel_id: channelId, author_id: userId, body: text, attachments: hasAttachments ? attachments : [] })
       .select(MESSAGE_SELECT)
       .single();
     if (err) throw err;

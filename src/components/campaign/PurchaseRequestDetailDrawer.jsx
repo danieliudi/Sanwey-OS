@@ -554,7 +554,7 @@ export function PurchaseRequestDetailDrawer({
               Última compra paga a este fornecedor: <strong>{formatBRL(Number(lastPrice.total_value))}</strong> em{" "}
               {formatDateBR(lastPrice.paid_at)} (protocolo {lastPrice.request_number})
               {priceDiff != null && (
-                <div className="flex items-center gap-1 mt-1 font-semibold" style={{ color: priceDiff > 0 ? "#DC2626" : priceDiff < 0 ? "#16A34A" : "#1E3A8A" }}>
+                <div className="flex items-center gap-1 mt-1 font-semibold" style={{ color: priceDiff > 0 ? "var(--danger)" : priceDiff < 0 ? "var(--success)" : "#1E3A8A" }}>
                   {priceDiff > 0 ? <TrendingUp size={12} /> : priceDiff < 0 ? <TrendingDown size={12} /> : null}
                   {priceDiff === 0
                     ? "Mesmo valor da última compra"
@@ -630,7 +630,7 @@ export function PurchaseRequestDetailDrawer({
           <div className="flex items-center gap-2 mb-2.5">
             <SectionLabel>Execução da compra</SectionLabel>
             {saveStatus && (
-              <span style={{ fontSize: 10, marginTop: -10, color: saveStatus === "saved" ? "#16A34A" : "#DC2626", fontWeight: 700 }}>
+              <span style={{ fontSize: 10, marginTop: -10, color: saveStatus === "saved" ? "var(--success)" : "var(--danger)", fontWeight: 700 }}>
                 {saveStatus === "saved" ? "✓ Salvo" : "✗ Falha ao salvar"}
               </span>
             )}
@@ -757,7 +757,7 @@ export function PurchaseRequestDetailDrawer({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEF3C7", color: "#92400E" }}>
+            <div className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
               <AlertCircle size={12} />
               Anexe a nota fiscal para poder marcar como pago.
             </div>
@@ -884,14 +884,14 @@ export function PurchaseRequestDetailDrawer({
               {isCotacao && (
                 <button onClick={handleApprove} disabled={actionLoading || !canApproveNow}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: "#DCFCE7", color: "#15803D", border: "none", cursor: (actionLoading || !canApproveNow) ? "default" : "pointer", opacity: (actionLoading || !canApproveNow) ? 0.6 : 1 }}>
+                  style={{ background: "var(--success-bg)", color: "var(--success)", border: "none", cursor: (actionLoading || !canApproveNow) ? "default" : "pointer", opacity: (actionLoading || !canApproveNow) ? 0.6 : 1 }}>
                   <CheckCircle2 size={13} />
                   {actionLoading ? "Aprovando…" : "Aprovar"}
                 </button>
               )}
               <button onClick={() => setShowReject(true)} disabled={actionLoading}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                style={{ background: "#FEE2E2", color: "#DC2626", border: "none", cursor: actionLoading ? "default" : "pointer" }}>
+                style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "none", cursor: actionLoading ? "default" : "pointer" }}>
                 <XCircle size={13} />
                 Rejeitar
               </button>
@@ -908,7 +908,7 @@ export function PurchaseRequestDetailDrawer({
               <div className="flex items-center gap-2">
                 <button onClick={handleReject} disabled={actionLoading}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: "#DC2626", color: "#FFF", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
+                  style={{ background: "var(--danger)", color: "#FFF", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
                   {actionLoading ? "Rejeitando…" : "Confirmar rejeição"}
                 </button>
                 <button onClick={() => { setShowReject(false); setRejectReason(""); }} disabled={actionLoading}

@@ -32,9 +32,9 @@ const TIPO_MOV = [
 const tipoMovLabel = (id) => TIPO_MOV.find((t) => t.id === id)?.label || id;
 
 const STATUS_INFO = {
-  pendente: { label: "Pendente", color: "var(--warning)", bg: "#FEF3C7", icon: Clock },
-  aprovado: { label: "Aprovado", color: "var(--success)", bg: "#DCFCE7", icon: Check },
-  recusado: { label: "Recusado", color: "var(--danger)", bg: "#FEE2E2", icon: XCircle },
+  pendente: { label: "Pendente", color: "var(--warning)", bg: "var(--warning-bg)", icon: Clock },
+  aprovado: { label: "Aprovado", color: "var(--success)", bg: "var(--success-bg)", icon: Check },
+  recusado: { label: "Recusado", color: "var(--danger)", bg: "var(--danger-bg)", icon: XCircle },
 };
 
 function fmt(dateStr) {

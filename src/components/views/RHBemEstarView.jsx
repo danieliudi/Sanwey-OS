@@ -24,8 +24,8 @@ const inputSt = { borderColor: "var(--border-strong)", color: "var(--text)", bac
 const FILA_STATUS = {
   na_fila:  { label: "Agendado",  color: "var(--accent)",   bg: "var(--accent-tint)" },
   chamado:  { label: "Agendado",  color: "var(--accent)",   bg: "var(--accent-tint)" },
-  atendido: { label: "Atendido",  color: "var(--success)",  bg: "#DCFCE7" },
-  faltou:   { label: "Faltou",    color: "var(--danger)",   bg: "#FEE2E2" },
+  atendido: { label: "Atendido",  color: "var(--success)",  bg: "var(--success-bg)" },
+  faltou:   { label: "Faltou",    color: "var(--danger)",   bg: "var(--danger-bg)" },
 };
 
 // Serve tanto pra criação quanto pra edição de sessão — passar `sessao` com

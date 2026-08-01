@@ -454,17 +454,17 @@ export function UserManagementView({
               <div
                 key={inv.id}
                 className="p-4 rounded-xl border flex items-center justify-between gap-4 flex-wrap"
-                style={{ background: "var(--warning-bg)", borderColor: "#FCD34D" }}
+                style={{ background: "var(--amber-bg)", borderColor: "color-mix(in srgb, var(--amber) 35%, transparent)" }}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "var(--amber-bg)", color: "#92400E" }}>
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: "var(--amber-bg)", color: "var(--amber)" }}>
                     <Mail size={18} />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>{inv.email}</span>
                       <Badge variant={roleBadgeVariant(inv.role)} size="sm">{roleLabel(inv.role)}</Badge>
-                      <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full" style={{ background: "var(--amber-bg)", color: "#92400E" }}>
+                      <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full" style={{ background: "var(--amber-bg)", color: "var(--amber)" }}>
                         Aguardando
                       </span>
                     </div>
@@ -758,7 +758,7 @@ export function UserManagementView({
                                   disabled={busy}
                                   title={`Personalizado (padrão do cargo: ${isDefault ? "concede" : "não concede"}) — clique pra restaurar o padrão`}
                                   className="flex items-center justify-center rounded-lg shrink-0"
-                                  style={{ width: 26, height: 26, background: "var(--amber-bg)", color: "#92400E", border: "none", cursor: busy ? "default" : "pointer" }}
+                                  style={{ width: 26, height: 26, background: "var(--amber-bg)", color: "var(--amber)", border: "none", cursor: busy ? "default" : "pointer" }}
                                 >
                                   <RotateCcw size={11} />
                                 </button>
@@ -876,7 +876,7 @@ export function UserManagementView({
             <div className="p-2 rounded-xl text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{inviteError}</div>
           )}
           {inviteJustSent && (
-            <div className="p-2.5 rounded-xl text-xs flex items-start gap-2" style={{ background: "#ECFDF5", color: "#065F46" }}>
+            <div className="p-2.5 rounded-xl text-xs flex items-start gap-2" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
               <Check size={14} className="shrink-0 mt-0.5" />
               <div>Convite registrado para <strong>{inviteJustSent}</strong>. Peça para criar a conta na tela de login.</div>
             </div>

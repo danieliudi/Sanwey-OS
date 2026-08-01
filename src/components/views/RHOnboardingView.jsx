@@ -179,7 +179,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
               style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
@@ -219,9 +219,9 @@ function InitialsAvatar({ name, size = 32 }) {
 
 function statusConfig(status) {
   switch (status) {
-    case "concluida":     return { label: "Concluída",     color: "var(--success)", bg: "#DCFCE7" };
+    case "concluida":     return { label: "Concluída",     color: "var(--success)", bg: "var(--success-bg)" };
     case "em_andamento":  return { label: "Em andamento",  color: "var(--accent)", bg: "#DBEAFE" };
-    default:              return { label: "Pendente",      color: "var(--warning)", bg: "#FEF3C7" };
+    default:              return { label: "Pendente",      color: "var(--warning)", bg: "var(--warning-bg)" };
   }
 }
 
@@ -651,7 +651,7 @@ function OnboardingDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>
@@ -860,7 +860,7 @@ function BulkTarefaModal({ colaboradores, onApply, onClose }) {
 
         {done > 0 ? (
           <div style={{ padding: "28px 24px", textAlign: "center" }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#DCFCE7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--success-bg)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
               <Check size={24} color="var(--success)" />
             </div>
             <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>Tarefa enviada a {done} colaborador{done !== 1 ? "es" : ""}</div>

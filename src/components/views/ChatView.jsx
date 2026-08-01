@@ -1,9 +1,44 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Hash, Lock, MessageSquare, Plus, Search, Send, Users } from "lucide-react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  ArrowLeft, File, FileImage, FileSpreadsheet, FileText, Hash, Lock,
+  MessageSquare, Paperclip, Plus, Search, Send, Smile, Users, X,
+} from "lucide-react";
 import { useChat, useChannelMessages } from "../../hooks/use-chat";
+import { useChatAttachments } from "../../hooks/use-chat-attachments";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { Modal } from "../ui/Modal";
 import { EmptyState } from "../ui/EmptyState";
+import { CHAT_EMOJI_CATEGORIES } from "../../constants/chat-emojis";
+import { findBannedWord } from "../../utils/language-filter";
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ATTACHMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.gif,.webp";
+
+// Réplica local do vocabulário ícone-por-mimetype/formatBytes de
+// LeadDetailDrawer.jsx:1756-1776 — 2ª ocorrência na plataforma (regra 4 do
+// CLAUDE.md só manda extrair pra shared/ na 3ª).
+const CHAT_FILE_ICON_MAP = {
+  "application/pdf": FileText,
+  "image/jpeg": FileImage,
+  "image/png": FileImage,
+  "image/gif": FileImage,
+  "image/webp": FileImage,
+  "application/vnd.ms-excel": FileSpreadsheet,
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": FileSpreadsheet,
+};
+
+function ChatFileIcon({ mimeType, size = 16 }) {
+  const Icon = CHAT_FILE_ICON_MAP[mimeType] || File;
+  return <Icon size={size} />;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const MANAGER_ROLES = ["admin", "gerente", "gerente_marketing", "gerente_rh", "diretoria"];
 
@@ -134,7 +169,60 @@ function ChannelRow({ channel, selected, onSelect }) {
   );
 }
 
+// Card de anexo dentro da bolha — imagem inline (com URL assinada, bucket
+// privado) ou card ícone+nome+tamanho pra outros tipos. Cores adaptam se é
+// bolha própria (fundo var(--accent)) ou de terceiro (fundo var(--surface)).
+function ChatAttachmentView({ attachment, own }) {
+  const { getSignedUrl } = useChatAttachments();
+  const [url, setUrl] = useState(null);
+  const isImage = (attachment.mime || "").startsWith("image/");
+
+  useEffect(() => {
+    let alive = true;
+    getSignedUrl(attachment.path).then(u => { if (alive) setUrl(u); });
+    return () => { alive = false; };
+  }, [attachment.path, getSignedUrl]);
+
+  if (isImage) {
+    if (!url) {
+      return <div style={{ width: 160, height: 120, borderRadius: 12, background: own ? "rgba(255,255,255,0.15)" : "var(--surface-alt)" }} />;
+    }
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        <img src={url} alt={attachment.name} style={{ maxWidth: 240, maxHeight: 240, borderRadius: 12, display: "block" }} />
+      </a>
+    );
+  }
+
+  const content = (
+    <div
+      className="flex items-center gap-2"
+      style={{ padding: "6px 8px", borderRadius: 10, background: own ? "rgba(255,255,255,0.15)" : "var(--surface-alt)" }}
+    >
+      <div
+        className="flex items-center justify-center shrink-0"
+        style={{ width: 28, height: 28, borderRadius: 8, background: own ? "rgba(255,255,255,0.15)" : "var(--surface-alt)", color: own ? "var(--on-accent)" : "var(--text-dim)" }}
+      >
+        <ChatFileIcon mimeType={attachment.mime} size={14} />
+      </div>
+      <div className="min-w-0">
+        <div className="truncate" style={{ fontSize: 12, fontWeight: 600, color: own ? "var(--on-accent)" : "var(--text)", maxWidth: 160 }}>
+          {attachment.name}
+        </div>
+        <div style={{ fontSize: 10, color: own ? "var(--on-accent)" : "var(--text-faint)", opacity: own ? 0.85 : 1 }}>
+          {formatBytes(attachment.size)}
+        </div>
+      </div>
+    </div>
+  );
+
+  return url ? (
+    <a href={url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>{content}</a>
+  ) : content;
+}
+
 function MessageBubble({ message, own }) {
+  const attachments = Array.isArray(message.attachments) ? message.attachments : [];
   return (
     <div className={`flex items-end gap-2${own ? " flex-row-reverse" : ""}`}>
       {!own && <Avatar name={message.authorName} initials={message.authorInitials} bg={message.authorAvatarBg} size={26} />}
@@ -159,13 +247,110 @@ function MessageBubble({ message, own }) {
             borderBottomLeftRadius: own ? 16 : 4,
           }}
         >
-          {message.body}
+          {message.body && <div>{message.body}</div>}
+          {attachments.length > 0 && (
+            <div className="flex flex-col" style={{ gap: 6, marginTop: message.body ? 6 : 0 }}>
+              {attachments.map((att, idx) => (
+                <ChatAttachmentView key={att.path || idx} attachment={att} own={own} />
+              ))}
+            </div>
+          )}
         </div>
         <span className="px-1" style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>
           {shortTimeAgo(message.createdAt)}{message.editedAt ? " · (editado)" : ""}
         </span>
       </div>
     </div>
+  );
+}
+
+// Popover de emoji do composer — mesmo padrão de posicionamento via portal
+// de MoveStageMenu.jsx (position: fixed, cálculo por getBoundingClientRect
+// do botão-gatilho, fecha em clique fora/scroll/resize/Escape). Abre pra
+// cima, já que o composer fica sempre no rodapé da tela.
+function EmojiPopover({ anchorRef, open, onClose, onPick }) {
+  const popRef = useRef(null);
+  const [pos, setPos] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e) => {
+      if (anchorRef.current?.contains(e.target) || popRef.current?.contains(e.target)) return;
+      onClose();
+    };
+    const close = () => onClose();
+    const handleKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("mousedown", handleOutside);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open, onClose, anchorRef]);
+
+  useEffect(() => { if (!open) setPos(null); }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current || !popRef.current) return;
+    const btnRect = anchorRef.current.getBoundingClientRect();
+    const popRect = popRef.current.getBoundingClientRect();
+    const left = Math.max(8, Math.min(btnRect.left, window.innerWidth - popRect.width - 8));
+    setPos({ bottom: window.innerHeight - btnRect.top + 4, left });
+  }, [open, anchorRef]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      ref={popRef}
+      style={{
+        position: "fixed",
+        bottom: pos?.bottom,
+        left: pos?.left ?? -9999,
+        visibility: pos ? "visible" : "hidden",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-lg)",
+        boxShadow: "var(--shadow-pop)",
+        zIndex: 2000,
+        width: 288,
+        padding: 10,
+      }}
+      onClick={e => e.stopPropagation()}
+    >
+      {CHAT_EMOJI_CATEGORIES.map((cat, i) => (
+        <div key={cat.id}>
+          <div
+            style={{
+              padding: i === 0 ? "8px 4px 4px" : "12px 4px 4px",
+              fontSize: 10, fontWeight: 700, letterSpacing: "0.06em",
+              textTransform: "uppercase", color: "var(--text-faint)",
+            }}
+          >
+            {cat.label}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 32px)", gap: 2 }}>
+            {cat.emojis.map(emoji => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => onPick(emoji)}
+                style={{ width: 32, height: 32, fontSize: 18, borderRadius: "var(--radius-sm)", background: "transparent", border: "none", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>,
+    document.body
   );
 }
 
@@ -281,13 +466,19 @@ function NewConversationModal({ open, onClose, candidates, onPick }) {
 
 export function ChatView({ currentUser }) {
   const { channels, dmCandidates, loading, markRead, sendMessage, startDm } = useChat({ userId: currentUser?.id });
+  const { uploadAttachment } = useChatAttachments();
   const [selectedId, setSelectedId] = useState(null);
   const [mobileShowThread, setMobileShowThread] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState([]);
   const feedRef = useRef(null);
+  const textareaRef = useRef(null);
+  const emojiBtnRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const [shellRef, shellHeight] = useAvailableHeight(20, [loading]);
 
@@ -303,6 +494,8 @@ export function ChatView({ currentUser }) {
   useEffect(() => {
     setDraft("");
     setSendError(null);
+    setPendingAttachments(prev => { prev.forEach(p => { if (p.previewUrl) URL.revokeObjectURL(p.previewUrl); }); return []; });
+    setEmojiOpen(false);
   }, [selectedId]);
 
   useEffect(() => {
@@ -323,12 +516,26 @@ export function ChatView({ currentUser }) {
 
   const handleSend = async () => {
     const text = draft.trim();
-    if (!text || !selectedId || sending) return;
+    if ((!text && pendingAttachments.length === 0) || !selectedId || sending) return;
+
+    const banned = findBannedWord(text);
+    if (banned) {
+      setSendError("Essa mensagem tem uma palavra não permitida no Chat — ajuste antes de enviar.");
+      return;
+    }
+
     setSending(true);
     setSendError(null);
     try {
-      await sendMessage(selectedId, text);
+      const uploaded = [];
+      for (const pending of pendingAttachments) {
+        const record = await uploadAttachment(pending.file, selectedId);
+        if (record) uploaded.push(record);
+      }
+      await sendMessage(selectedId, text, uploaded);
+      pendingAttachments.forEach(p => { if (p.previewUrl) URL.revokeObjectURL(p.previewUrl); });
       setDraft("");
+      setPendingAttachments([]);
     } catch (e) {
       setSendError(e?.message || "Não foi possível enviar a mensagem.");
     } finally {
@@ -341,6 +548,34 @@ export function ChatView({ currentUser }) {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const insertEmoji = (emoji) => {
+    setDraft(d => d + emoji);
+    textareaRef.current?.focus();
+  };
+
+  const handleFilesSelected = (fileList) => {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) return;
+    const accepted = files.filter(f => f.size <= MAX_ATTACHMENT_BYTES);
+    if (accepted.length < files.length) {
+      setSendError("Cada arquivo anexado pode ter no máximo 10 MB.");
+    }
+    const withPreview = accepted.map(file => ({
+      file,
+      previewUrl: file.type?.startsWith("image/") ? URL.createObjectURL(file) : null,
+    }));
+    setPendingAttachments(prev => [...prev, ...withPreview]);
+  };
+
+  const removePendingAttachment = (index) => {
+    setPendingAttachments(prev => {
+      const next = [...prev];
+      const [removed] = next.splice(index, 1);
+      if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+      return next;
+    });
   };
 
   const railGroup = (label, list) => {
@@ -480,37 +715,127 @@ export function ChatView({ currentUser }) {
                   <Lock size={12} /> Somente leitura — apenas a Direção publica neste canal
                 </div>
               ) : (
-                <div className="flex items-end gap-2">
-                  <textarea
-                    value={draft}
-                    onChange={e => setDraft(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Escreva uma mensagem…"
-                    rows={2}
-                    className="flex-1 rounded-2xl border px-3.5 py-2.5 outline-none resize-none"
-                    style={{ fontSize: 13, lineHeight: 1.4, borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text)" }}
-                    onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+                <>
+                  {pendingAttachments.length > 0 && (
+                    <div className="flex gap-2" style={{ overflowX: "auto", paddingBottom: 8 }}>
+                      {pendingAttachments.map((pending, idx) => (
+                        <div key={idx} style={{ position: "relative", flexShrink: 0 }}>
+                          {pending.previewUrl ? (
+                            <img
+                              src={pending.previewUrl}
+                              alt={pending.file.name}
+                              style={{ width: 64, height: 64, objectFit: "cover", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}
+                            />
+                          ) : (
+                            <div
+                              className="flex items-center gap-2"
+                              style={{ height: 64, minWidth: 120, padding: 8, background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)" }}
+                            >
+                              <ChatFileIcon mimeType={pending.file.type} />
+                              <div className="min-w-0">
+                                <div className="truncate" style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", maxWidth: 90 }}>
+                                  {pending.file.name}
+                                </div>
+                                <div style={{ fontSize: 10, color: "var(--text-dim)" }}>{formatBytes(pending.file.size)}</div>
+                              </div>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removePendingAttachment(idx)}
+                            title="Remover anexo"
+                            aria-label="Remover anexo"
+                            className="flex items-center justify-center"
+                            style={{
+                              position: "absolute", top: -6, right: -6, width: 16, height: 16, borderRadius: "50%",
+                              background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text-dim)", cursor: "pointer",
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-end gap-2">
+                    <button
+                      ref={emojiBtnRef}
+                      type="button"
+                      onClick={() => setEmojiOpen(v => !v)}
+                      title="Emoji"
+                      aria-label="Emoji"
+                      className="flex items-center justify-center rounded-full shrink-0"
+                      style={{
+                        width: 32, height: 32, background: emojiOpen ? "var(--surface-alt)" : "transparent",
+                        border: "none", color: emojiOpen ? "var(--accent)" : "var(--text-dim)", cursor: "pointer",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                      onMouseLeave={e => { if (!emojiOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; } }}
+                    >
+                      <Smile size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      title="Anexar arquivo"
+                      aria-label="Anexar arquivo"
+                      className="flex items-center justify-center rounded-full shrink-0"
+                      style={{ width: 32, height: 32, background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                    >
+                      <Paperclip size={18} />
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      hidden
+                      accept={ATTACHMENT_ACCEPT}
+                      onChange={e => { if (e.target.files?.length) handleFilesSelected(e.target.files); e.target.value = ""; }}
+                    />
+                    <textarea
+                      ref={textareaRef}
+                      value={draft}
+                      onChange={e => { setDraft(e.target.value); if (sendError) setSendError(null); }}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Escreva uma mensagem…"
+                      rows={2}
+                      className="flex-1 rounded-2xl border px-3.5 py-2.5 outline-none resize-none"
+                      style={{ fontSize: 13, lineHeight: 1.4, borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text)" }}
+                      onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                      onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSend}
+                      disabled={(!draft.trim() && pendingAttachments.length === 0) || sending}
+                      title="Enviar (Enter)"
+                      className="flex items-center justify-center rounded-full shrink-0 transition-opacity"
+                      style={{
+                        width: 34,
+                        height: 34,
+                        background: "var(--accent)",
+                        color: "var(--on-accent)",
+                        border: "none",
+                        cursor: (draft.trim() || pendingAttachments.length > 0) && !sending ? "pointer" : "default",
+                        opacity: (draft.trim() || pendingAttachments.length > 0) && !sending ? 1 : 0.4,
+                      }}
+                    >
+                      <Send size={14} />
+                    </button>
+                  </div>
+
+                  <EmojiPopover
+                    anchorRef={emojiBtnRef}
+                    open={emojiOpen}
+                    onClose={() => setEmojiOpen(false)}
+                    onPick={insertEmoji}
                   />
-                  <button
-                    type="button"
-                    onClick={handleSend}
-                    disabled={!draft.trim() || sending}
-                    title="Enviar (Enter)"
-                    className="flex items-center justify-center rounded-full shrink-0 transition-opacity"
-                    style={{
-                      width: 34,
-                      height: 34,
-                      background: "var(--accent)",
-                      color: "var(--on-accent)",
-                      border: "none",
-                      cursor: draft.trim() && !sending ? "pointer" : "default",
-                      opacity: draft.trim() && !sending ? 1 : 0.4,
-                    }}
-                  >
-                    <Send size={14} />
-                  </button>
-                </div>
+                </>
               )}
             </div>
           </>

@@ -248,7 +248,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Etapa não é Ganho nem Perdido",
       action: "Mover para 'Renegociação' e notificar responsável",
       difficulty: "Fácil",
-      difficultyColor: "#16A34A",
+      difficultyColor: "var(--success)",
     },
     {
       id: "r2",
@@ -258,7 +258,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Valor estimado acima de R$ 100.000",
       action: "Notificar Gerente imediatamente",
       difficulty: "Fácil",
-      difficultyColor: "#16A34A",
+      difficultyColor: "var(--success)",
     },
     {
       id: "r3",
@@ -268,7 +268,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Sem responsável definido",
       action: "Distribuir em rodízio entre vendedores da unidade",
       difficulty: "Médio",
-      difficultyColor: "#E8920A",
+      difficultyColor: "var(--amber)",
     },
     {
       id: "r4",
@@ -278,7 +278,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Nenhuma atividade nos próximos 5 dias",
       action: "Notificar vendedor para fazer follow-up",
       difficulty: "Médio",
-      difficultyColor: "#E8920A",
+      difficultyColor: "var(--amber)",
     },
     {
       id: "r5",
@@ -288,7 +288,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Qualquer lead",
       action: "Notificar toda a equipe da unidade com valor do negócio",
       difficulty: "Fácil",
-      difficultyColor: "#16A34A",
+      difficultyColor: "var(--success)",
     },
     {
       id: "r6",
@@ -298,7 +298,7 @@ export const AUTOMATION_GUIDE = {
       condition: "Motivo não é 'Concorrente ganhou (definitivo)'",
       action: "Criar alerta para gerente revisar e considerar reabrir",
       difficulty: "Avançado",
-      difficultyColor: "#C7212B",
+      difficultyColor: "var(--danger)",
     },
   ],
 };

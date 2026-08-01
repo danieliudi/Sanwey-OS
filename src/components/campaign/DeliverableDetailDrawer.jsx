@@ -259,7 +259,7 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
                 {canWrite && (
                   <button onClick={() => remove(att)} title="Remover"
                     style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger)", padding: 4, borderRadius: 4, display: "flex" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "none"; }}>
                     <Trash2 size={14} />
                   </button>

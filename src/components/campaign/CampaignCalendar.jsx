@@ -219,7 +219,7 @@ function SyncModal({ onClose, onExport, calendarToken, supabaseUrl }) {
             </div>
 
             {!personalUrl ? (
-              <div style={{ background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 10, padding: "12px 14px", fontSize: 12, color: "#92400E" }}>
+              <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "12px 14px", fontSize: 12, color: "var(--warning)" }}>
                 <strong>Edge Function não configurada.</strong> Para habilitar sync automático, faça deploy da Edge Function <code>calendar-ics</code> no Supabase.
               </div>
             ) : (
@@ -265,7 +265,7 @@ function UrlRow({ label, desc, url, copied, onCopy, color }) {
         <input readOnly value={url} onClick={e => e.target.select()}
           style={{ flex: 1, fontSize: 10, color: "var(--text-dim)", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 8px", outline: "none", overflow: "hidden", textOverflow: "ellipsis" }} />
         <button onClick={onCopy}
-          style={{ display: "flex", alignItems: "center", gap: 5, background: copied ? "var(--success-bg)" : "var(--surface-alt)", color: copied ? "#065F46" : "var(--text)", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+          style={{ display: "flex", alignItems: "center", gap: 5, background: copied ? "var(--success-bg)" : "var(--surface-alt)", color: copied ? "var(--success)" : "var(--text)", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
           <Link2 size={11} />
           {copied ? "Copiado!" : "Copiar"}
         </button>

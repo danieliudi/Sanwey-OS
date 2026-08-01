@@ -40,9 +40,9 @@ export function CopyPublicLinkButton({
   const style = strong
     ? {
         display: "flex", alignItems: "center", gap: 6, borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer",
-        background: copied ? "#DCFCE7" : "var(--surface)",
-        border: `1px solid ${copied ? "#BBF7D0" : "var(--border)"}`,
-        color: copied ? "#15803D" : "var(--text)",
+        background: copied ? "var(--success-bg)" : "var(--surface)",
+        border: `1px solid ${copied ? "color-mix(in srgb, var(--success) 35%, transparent)" : "var(--border)"}`,
+        color: copied ? "var(--success)" : "var(--text)",
       }
     : {
         display: "flex", alignItems: "center", gap: 6, borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer",
@@ -52,7 +52,7 @@ export function CopyPublicLinkButton({
   return (
     <button onClick={handleCopy} title={title} style={style}>
       {copied
-        ? <Check size={strong ? 13 : 12} color={strong ? "#15803D" : "var(--success)"} />
+        ? <Check size={strong ? 13 : 12} color="var(--success)" />
         : <Link2 size={strong ? 13 : 12} />}
       {copied ? copiedLabel : label}
     </button>
