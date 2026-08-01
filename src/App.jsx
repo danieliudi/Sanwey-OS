@@ -21,6 +21,7 @@ import { useCrossReferrals } from "./hooks/use-cross-referrals";
 import { useUserSettings } from "./hooks/use-user-settings";
 import { useSupabaseAuth } from "./hooks/use-supabase-auth";
 import { useLeads } from "./hooks/use-leads";
+import { useOfflineSync } from "./hooks/use-offline-sync";
 import { useClients } from "./hooks/use-clients";
 import { useChat } from "./hooks/use-chat";
 import { useNotifications } from "./hooks/use-notifications";
@@ -104,6 +105,7 @@ import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
 import { AppToast } from "./components/shared/AppToast";
+import { OfflineBanner } from "./components/shared/OfflineBanner";
 import { ChangelogToast } from "./components/shared/ChangelogToast";
 import { useAppUpdate } from "./hooks/use-app-update";
 import { useChangelogNotice } from "./hooks/use-changelog-notice";
@@ -267,11 +269,28 @@ export default function App() {
     addLeadActivity,
     loadDemoLeads,
     clearAllLeads: clearAllLeadsRemote,
+    isOnline,
+    cacheAge,
   } = useLeads({
     userId: currentUser?.id,
     role: currentUser?.role,
     companies: currentUser?.companies,
   });
+
+  // Offline fase 1 (ver docs/design-spec-offline-leads-notas.md) — sincroniza
+  // a fila de notas enfileiradas offline assim que a conexão volta.
+  const {
+    pending: offlineActivityQueue,
+    syncMessage: offlineSyncMessage,
+    dismissSyncMessage: dismissOfflineSyncMessage,
+    retry: retryOfflineActivity,
+  } = useOfflineSync({ leads, updateLead: updateLeadRemote });
+
+  const offlineStatusByActivityId = useMemo(() => {
+    const map = {};
+    for (const item of offlineActivityQueue) map[item.id] = item;
+    return map;
+  }, [offlineActivityQueue]);
 
   const {
     clients,
@@ -1586,6 +1605,8 @@ export default function App() {
           onHelpClick={() => setSection("tutorials")}
         />
 
+        <OfflineBanner isOnline={isOnline} cacheAge={cacheAge} />
+
         <div className="px-4 py-4 sm:px-6 sm:py-6 lg:py-6 pb-24 lg:pb-6 flex-1 min-w-0">
         <ErrorBoundary
           fallback={({ error, reset }) => (
@@ -2073,6 +2094,8 @@ export default function App() {
           onNavigateToPipelineBuilder={() => { closeDrawer(); setSection("crm"); }}
           notifyMentions={notifyMentions}
           pipelineTransitions={pipelineTransitions}
+          offlineStatusById={offlineStatusByActivityId}
+          onRetryOfflineActivity={retryOfflineActivity}
         />
       </ErrorBoundary>
 
@@ -2093,6 +2116,10 @@ export default function App() {
 
       {agentsCoachmarkVisible && (
         <AgentsSidebarCoachmark visible={agentsCoachmarkVisible} onDismiss={dismissAgentsCoachmark} />
+      )}
+
+      {offlineSyncMessage && !needRefresh && !agentsCoachmarkVisible && (
+        <AppToast title={offlineSyncMessage} onDismiss={dismissOfflineSyncMessage} />
       )}
 
       {!needRefresh && !agentsCoachmarkVisible && changelogItems.length > 0 && (

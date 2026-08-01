@@ -35,7 +35,7 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
 import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
 
-export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions, pipelineTransitions }) {
+export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("fase");
   const [mobileTab, setMobileTab] = useState("info");
@@ -294,6 +294,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     const resolveMentionNames = (ids) => (ids || [])
       .map(id => (users || []).find(u => u.id === id)?.name)
       .filter(Boolean);
+    // Offline fase 1: status vem da fila local (pendingActivities) quando
+    // disponível — senão cai no metadado `pending:true` gravado direto no
+    // objeto em memória (ver use-leads.js addLeadActivity), que cobre o
+    // instante entre "acabou de criar offline" e a fila ainda não ter sido
+    // relida por use-offline-sync.
+    const resolveOfflineStatus = (id, pendingFlag) => {
+      const entry = offlineStatusById?.[id];
+      if (entry) return entry.status;
+      return pendingFlag ? "pending" : undefined;
+    };
     const merged = [
       ...notes.filter(n => !n.deletedAt).map((n, i) => {
         const author = n.userId ? (users || []).find(u => u.id === n.userId) : null;
@@ -308,6 +318,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           mentionedNames: resolveMentionNames(n.mentionedIds),
           createdAt: n.createdAt,
           editedAt: n.editedAt || null,
+          status: resolveOfflineStatus(n.id, n.pending),
         };
       }),
       ...activityComments.filter(c => !c.deletedAt).map((c, i) => {
@@ -323,11 +334,12 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           mentionedNames: resolveMentionNames(c.mentionedIds),
           createdAt: c.timestamp || c.createdAt,
           editedAt: c.editedAt || null,
+          status: resolveOfflineStatus(c.id, c.pending),
         };
       }),
     ];
     return merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [lead, users]);
+  }, [lead, users, offlineStatusById]);
 
   const onUpdateComment = useCallback(async (id, patch) => {
     if (!lead || !onUpdate) return;
@@ -1414,6 +1426,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 mentionableUsers={mentionableUsers}
                 onAddComment={handleAddComment}
                 onUpdateComment={onUpdateComment}
+                onRetryOfflineActivity={onRetryOfflineActivity}
                 isManager={isManager}
                 onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
                 onGoToIA={() => { setSideTab("ia"); setMobileTab("info"); }}
@@ -1440,6 +1453,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               mentionableUsers={mentionableUsers}
               onAddComment={handleAddComment}
               onUpdateComment={onUpdateComment}
+              onRetryOfflineActivity={onRetryOfflineActivity}
               isManager={isManager}
               onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
               onGoToIA={() => setSideTab("ia")}
@@ -1583,7 +1597,7 @@ function SideTabs({ activeTab, onChange }) {
 // etapa livremente e sem acesso a comentários/@menção). ──────────────
 function MoveAndCommentsPanel({
   moveError, stageTargets, onMove,
-  commentsFeed, currentUser, mentionableUsers, onAddComment, onUpdateComment,
+  commentsFeed, currentUser, mentionableUsers, onAddComment, onUpdateComment, onRetryOfflineActivity,
   isManager, onNavigateToPipelineBuilder, onGoToIA,
   isWonStage, alreadySentToPosvenda, sendingToPosvenda, posvendaError, onSendToPosvenda,
 }) {
@@ -1641,6 +1655,7 @@ function MoveAndCommentsPanel({
           mentionableUsers={mentionableUsers}
           onAddComment={onAddComment}
           onUpdateComment={onUpdateComment}
+          onRetryOfflineActivity={onRetryOfflineActivity}
         />
       </div>
 

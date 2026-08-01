@@ -215,6 +215,10 @@ export const FAQ_ITEMS = [
     answer: "Sim. Com Supabase configurado, tudo é salvo em nuvem em tempo real. Em modo offline, os dados ficam em localStorage do navegador.",
   },
   {
+    question: "O que acontece se eu perder a internet no meio de uma visita a cliente?",
+    answer: "No Funil de Vendas, seus negócios continuam aparecendo na tela com os últimos dados salvos (uma faixa amarela avisa que você está offline). Dá pra registrar uma nota normalmente — ela fica marcada como \"vai enviar quando voltar o sinal\" e sincroniza sozinha assim que a conexão voltar, sem precisar reabrir nada.",
+  },
+  {
     question: "O que são automações e quem pode criar?",
     answer: "Automações são regras que executam ações sem intervenção manual — mover um lead de etapa, disparar uma notificação, atribuir responsável. Apenas Gerentes e Administradores podem criar e editar automações.",
   },
