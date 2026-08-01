@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.6.0",
+    items: [
+      { kind: "novo", text: "Chat interno: novo item no topo do menu, com canais por equipe e conversas diretas em tempo real. Quem você pode chamar no privado segue a estrutura da empresa — mesmo setor/departamento, seu gestor direto ou quem responde a você." },
+      { kind: "correcao", text: "Modo escuro: em várias telas o texto e os ícones sumiam sobre fundos claros (selos de status, chips e faixas). Corrigido em toda a plataforma." },
+    ],
+  },
+  {
     version: "4.5.0",
     items: [
       { kind: "novo", text: "Clientes: novo assistente de importação de planilha, dedicado ao cadastro de clientes — importa CNPJ, categoria, código externo por empresa, status e faturamento por ano, sem criar negócio nenhum no Funil de Vendas.", roles: ["admin", "gerente"] },
