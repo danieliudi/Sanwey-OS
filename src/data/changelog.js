@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.5.0",
+    items: [
+      { kind: "novo", text: "Clientes: novo assistente de importação de planilha, dedicado ao cadastro de clientes — importa CNPJ, categoria, código externo por empresa, status e faturamento por ano, sem criar negócio nenhum no Funil de Vendas.", roles: ["admin", "gerente"] },
+      { kind: "ajuste", text: "Notificações: o sino agora separa \"Novas\" de \"Antes de hoje\" e tem filtro por tipo (Tudo/Menções/Sistema), pra achar mais rápido o que importa." },
+    ],
+  },
+  {
     version: "4.4.5",
     items: [
       { kind: "correcao", text: "Busca global (Ctrl K): clicar na barra de busca deixava a tela em branco pra alguns usuários. Corrigido." },
