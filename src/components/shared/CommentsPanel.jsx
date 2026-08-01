@@ -240,7 +240,7 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
                           onClick={() => saveEdit(c)}
                           disabled={!editDraft.trim()}
                           className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold"
-                          style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: "pointer", opacity: editDraft.trim() ? 1 : 0.5 }}
+                          style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer", opacity: editDraft.trim() ? 1 : 0.5 }}
                         >
                           <Check size={11} /> Salvar
                         </button>
@@ -369,7 +369,7 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
               disabled={!draft.trim() || submitting}
               title="Enviar (Enter)"
               className="flex items-center justify-center rounded-full shrink-0 transition-opacity"
-              style={{ width: 34, height: 34, background: "var(--accent)", color: "#FFF", border: "none", cursor: draft.trim() ? "pointer" : "default", opacity: draft.trim() ? 1 : 0.4 }}
+              style={{ width: 34, height: 34, background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: draft.trim() ? "pointer" : "default", opacity: draft.trim() ? 1 : 0.4 }}
             >
               <Send size={14} />
             </button>

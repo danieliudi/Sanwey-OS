@@ -513,7 +513,7 @@ export function MarketingRequestsView({ user, users }) {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
             style={
               statusFilter === tab.id
-                ? { background: "var(--accent)", color: "#fff" }
+                ? { background: "var(--accent)", color: "var(--on-accent)" }
                 : { background: "var(--surface)", color: "var(--text-dim)", border: "1px solid var(--border)" }
             }
           >

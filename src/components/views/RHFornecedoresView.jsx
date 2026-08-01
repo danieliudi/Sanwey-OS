@@ -129,7 +129,7 @@ function NovoFornecedorModal({ onSave, onClose }) {
           </div>
           {error && <div style={{ fontSize: 12, color: "var(--danger)" }}>{error}</div>}
           <div className="flex gap-2 mt-2">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
               {saving ? "Salvando…" : "Cadastrar"}
             </button>
             <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -215,7 +215,7 @@ function NovoContratoModal({ fornecedorId, users, onSave, onClose }) {
           </div>
           {error && <div style={{ fontSize: 12, color: "var(--danger)" }}>{error}</div>}
           <div className="flex gap-2 mt-2">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer" }}>
               {saving ? "Salvando…" : "Criar contrato"}
             </button>
             <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -266,7 +266,7 @@ function NovoEventoForm({ contratoId, onSave, onDone }) {
       )}
       <input placeholder="Descrição (opcional)" className={inputCls} style={inputSt} value={form.descricao} onChange={(e) => setForm(f => ({ ...f, descricao: e.target.value }))} />
       <div className="flex gap-2">
-        <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
+        <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}>
           {saving ? "Salvando…" : "Registrar evento"}
         </button>
         <button type="button" onClick={onDone} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -633,7 +633,7 @@ export function RHFornecedoresView({ currentUser }) {
           <button
             onClick={() => setNovoOpen(true)}
             className="flex items-center gap-1.5 font-semibold"
-            style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
+            style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
           >
             <Plus size={14} /> Novo fornecedor
           </button>
@@ -675,7 +675,7 @@ export function RHFornecedoresView({ currentUser }) {
             <button
               onClick={() => setNovoOpen(true)}
               className="flex items-center gap-1.5 font-semibold"
-              style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}
             >
               <Plus size={14} /> Novo fornecedor
             </button>

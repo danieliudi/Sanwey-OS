@@ -217,7 +217,7 @@ function TaskCalendarView({ tasks, stages, onSelect }) {
                 <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
                   <div className="flex justify-center mb-1">
                     <span className="flex items-center justify-center text-xs font-semibold select-none"
-                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "var(--on-accent)" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
                       {day.getDate()}
                     </span>
                   </div>
@@ -484,7 +484,7 @@ function TaskCreateModal({ stageId, stages, currentUser, users, campaigns, onAdd
 
           <button type="submit" disabled={saving || !title.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !title.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !title.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !title.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !title.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar novo card"}
           </button>
         </form>
@@ -563,7 +563,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -803,7 +803,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
             <button
               onClick={() => setQuickAddStage(kanbanStages[0]?.id)}
               className="flex items-center gap-1.5 font-semibold"
-              style={{ background: "var(--accent)", color: "#FFFFFF", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
               onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; }}
               onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
               aria-label="Criar nova tarefa"
@@ -823,7 +823,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           <Filter size={12} />
           Filtros
           {activeFilterCount > 0 && (
-            <span style={{ background: "var(--accent)", color: "#FFF", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px", marginLeft: 2 }}>{activeFilterCount}</span>
+            <span style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 99, fontSize: 9, fontWeight: 700, padding: "1px 5px", marginLeft: 2 }}>{activeFilterCount}</span>
           )}
         </button>
 
@@ -875,7 +875,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
 
             {/* Starred */}
             <button onClick={() => setStarredOnly(v => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "var(--border)"}`, background: starredOnly ? "#FFFBEB" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: `1px solid ${starredOnly ? "#F59E0B" : "var(--border)"}`, background: starredOnly ? "var(--warning-bg)" : "var(--surface)", color: starredOnly ? "var(--warning)" : "var(--text-dim)", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
               <Star size={11} fill={starredOnly ? "#F59E0B" : "none"} />
               Favoritos
             </button>

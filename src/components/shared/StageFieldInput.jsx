@@ -69,7 +69,7 @@ function renderInput({ field, value, onChange, users, companyId }) {
     return (
       <div style={{
         width: "100%", boxSizing: "border-box", display: "flex", alignItems: "flex-start", gap: 6,
-        background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 8,
+        background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 8,
         padding: "8px 12px", fontSize: 12, color: "var(--warning)",
       }}>
         <AlertTriangle size={14} style={{ color: "var(--warning)", flexShrink: 0, marginTop: 1 }} />

@@ -198,7 +198,7 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
               type="submit"
               disabled={saving || !clientName.trim()}
               className="flex-1 text-sm font-semibold py-2 rounded-xl transition-opacity"
-              style={{ background: "var(--accent)", color: "#FFFFFF", border: "none", opacity: saving || !clientName.trim() ? 0.5 : 1 }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", opacity: saving || !clientName.trim() ? 0.5 : 1 }}
             >
               {saving ? "Salvando…" : "Criar caso"}
             </button>
@@ -552,7 +552,7 @@ function PosVendaCalendarView({ cases, stages, onSelect }) {
                 <div key={di} style={{ borderRight: di < 6 ? "1px solid var(--border)" : "none", minHeight: 96, padding: "6px 4px", background: isWeekend ? "var(--surface-alt)" : "transparent" }}>
                   <div className="flex justify-center mb-1">
                     <span className="flex items-center justify-center text-xs font-semibold select-none"
-                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? "var(--accent)" : "transparent", color: isToday ? "var(--on-accent)" : isCurrentMonth ? "var(--text)" : "var(--text-dim)", fontWeight: isToday ? 700 : 600 }}>
                       {day.getDate()}
                     </span>
                   </div>
@@ -673,7 +673,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -909,7 +909,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                 <button
                   onClick={() => setCreateModalStage(firstNonTerminalStage)}
                   className="flex items-center gap-1.5 font-semibold"
-                  style={{ background: "var(--accent)", color: "#FFFFFF", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
+                  style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 10, padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
                 >
                   <Plus size={14} />
                   Novo caso

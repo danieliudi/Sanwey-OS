@@ -148,7 +148,7 @@ export function RHAttachmentsPanel({ domain, recordId, currentUser, readOnly = f
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
             style={{
               background: "var(--accent)",
-              color: "#FFFFFF",
+              color: "var(--on-accent)",
               border: "none",
               opacity: uploading ? 0.6 : 1,
               cursor: uploading ? "not-allowed" : "pointer",

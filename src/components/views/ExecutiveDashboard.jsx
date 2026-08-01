@@ -371,7 +371,7 @@ export function ExecutiveDashboard({
             <button
               onClick={() => navigate(ROUTES.settings)}
               className="text-xs font-semibold px-3.5 py-2 rounded-lg cursor-pointer"
-              style={{ background: "var(--accent)", color: "#FFFFFF" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)" }}
             >
               Ir para Configurações
             </button>
@@ -647,7 +647,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
         className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150 active:scale-95"
         style={{
           background: "var(--accent)",
-          color: "#FFFFFF",
+          color: "var(--on-accent)",
           border: "none",
           cursor: loading ? "not-allowed" : "pointer",
           opacity: loading ? 0.8 : 1,
@@ -662,7 +662,7 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
       {error && (
         <div
           className="flex items-start gap-2 text-sm px-3 py-2.5 rounded-lg"
-          style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
         >
           <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
           <span>{error}</span>

@@ -151,9 +151,9 @@ function BeneficiosCatalogoModal({ catalogo, onCreate, onDelete, onClose }) {
           </div>
 
           {notice && <div style={{ background: "var(--warning-bg)", color: "var(--warning)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{notice}</div>}
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 }}>{error}</div>}
 
-          <button onClick={handleAdd} disabled={saving} className="inline-flex items-center justify-center gap-1.5" style={{ marginTop: 10, width: "100%", background: "var(--accent)", color: "#FFF", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+          <button onClick={handleAdd} disabled={saving} className="inline-flex items-center justify-center gap-1.5" style={{ marginTop: 10, width: "100%", background: "var(--accent)", color: "var(--on-accent)", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
             <Plus size={13} /> {saving ? "Adicionando…" : "Adicionar benefício"}
           </button>
         </div>

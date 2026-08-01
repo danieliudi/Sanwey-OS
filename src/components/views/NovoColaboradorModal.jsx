@@ -283,7 +283,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
             </div>
           )}
           {hireContext && (
-            <div style={{ background: "var(--success-bg)", border: "1px solid #BBF7D0", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+            <div style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "var(--success)", marginBottom: 6 }}>
                 Convertendo candidato aprovado{hireContext.vagaTitle ? ` — vaga "${hireContext.vagaTitle}"` : ""}
               </div>
@@ -508,7 +508,7 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
               if (!exp) return null;
               const custom = Number(form.periodoExperienciaDias) > 0;
               return (
-                <div style={{ background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
+                <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: "var(--warning)" }}>
                   {custom
                     ? `Período de experiência: ${exp.marco} dias — termina em ${exp.diasRestantes} dia(s).`
                     : `Período de experiência CLT (padrão): marco de ${exp.marco} dias em ${exp.diasRestantes} dia(s). Informe "Dias de período de experiência" acima pra usar um valor diferente do padrão.`}
@@ -543,14 +543,14 @@ export function NovoColaboradorModal({ currentUser, initialData, hireContext, co
           </div>
 
           {error && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "16px 0 0" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "16px 0 0" }}>
               <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
               <span>{error}</span>
             </div>
           )}
 
           <div className="flex gap-2 mt-5">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "10px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Salvando…" : initialData ? "Salvar alterações" : "Cadastrar funcionário"}
             </button>
             <button type="button" onClick={guardedClose} style={{ padding: "10px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>

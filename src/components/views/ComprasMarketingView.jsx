@@ -105,7 +105,7 @@ function PurchaseKanbanCard({ purchase, supplier, users, onClick, draggable, onD
             <span
               title="Comentário novo"
               className="inline-flex items-center justify-center rounded-full"
-              style={{ width: 16, height: 16, background: "var(--accent)", color: "#FFF", opacity: terminalAccentOpacity(isTerminal) }}
+              style={{ width: 16, height: 16, background: "var(--accent)", color: "var(--on-accent)", opacity: terminalAccentOpacity(isTerminal) }}
             >
               <MessageCircle size={9} strokeWidth={2.5} fill="currentColor" />
             </span>
@@ -262,7 +262,7 @@ function CreateModal({ currentUser, onCreate, onClose }) {
           <button type="button" onClick={guardedClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
           <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "var(--accent)", color: "#fff", opacity: saving ? 0.6 : 1 }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Criando…" : "Criar solicitação"}
           </button>
         </div>
@@ -751,7 +751,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
             className="flex items-center gap-2 font-semibold"
             style={{
               background: "var(--accent)",
-              color: "#FFF",
+              color: "var(--on-accent)",
               border: "none",
               borderRadius: 10,
               padding: "6px 16px",

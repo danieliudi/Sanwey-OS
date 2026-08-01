@@ -393,7 +393,7 @@ export function TutoriaisView({ currentUser, onNavigate, initialTab }) {
                   <div className="flex flex-col items-center">
                     <div
                       className="flex items-center justify-center rounded-full font-bold text-sm shrink-0"
-                      style={{ width: 32, height: 32, background: "var(--accent)", color: "#FFFFFF", fontSize: 13 }}
+                      style={{ width: 32, height: 32, background: "var(--accent)", color: "var(--on-accent)", fontSize: 13 }}
                     >
                       {step.number}
                     </div>

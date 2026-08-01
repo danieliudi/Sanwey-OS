@@ -176,7 +176,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -397,7 +397,7 @@ function SolicitarFeriasModal({ currentUser, colaboradorId, onSave, onClose }) {
             {type === "ferias" && startDate && (() => {
               const diasAntecedencia = Math.floor((new Date(startDate).getTime() - Date.now()) / 86400000);
               return diasAntecedencia < AVISO_MINIMO_DIAS_FERIAS ? (
-                <div style={{ background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 14px", fontSize: 11, color: "var(--warning)", display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "8px 14px", fontSize: 11, color: "var(--warning)", display: "flex", alignItems: "center", gap: 6 }}>
                   <AlertTriangle size={12} /> Menos de {AVISO_MINIMO_DIAS_FERIAS} dias de antecedência (CLT recomenda aviso prévio de 30 dias).
                 </div>
               ) : null;
@@ -415,10 +415,10 @@ function SolicitarFeriasModal({ currentUser, colaboradorId, onSave, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
-            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
               {saving ? "Enviando…" : "Enviar solicitação"}
             </button>
             <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>Cancelar</button>
@@ -458,10 +458,10 @@ function FeriasCardBody({ req, colaborador, canWrite, onAprovar, onRecusar, busy
       )}
       {canWrite && req.status === "pendente" && (
         <div style={{ display: "flex", gap: 10, marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => onAprovar(req)} disabled={busy} style={{ flex: 1, background: "#DCFCE7", color: "var(--success)", border: "1px solid #BBF7D0", borderRadius: 7, padding: "9px 4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+          <button onClick={() => onAprovar(req)} disabled={busy} style={{ flex: 1, background: "var(--success-bg)", color: "var(--success)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)", borderRadius: 7, padding: "9px 4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
             <Check size={11} style={{ verticalAlign: -1 }} /> Aprovar
           </button>
-          <button onClick={() => onRecusar(req)} disabled={busy} style={{ flex: 1, background: "#FEE2E2", color: "var(--danger)", border: "1px solid #FECACA", borderRadius: 7, padding: "9px 4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+          <button onClick={() => onRecusar(req)} disabled={busy} style={{ flex: 1, background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 7, padding: "9px 4px", fontSize: 11, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
             <X size={11} style={{ verticalAlign: -1 }} /> Recusar
           </button>
         </div>
@@ -645,7 +645,7 @@ function FeriasDrawer({
       )}
 
       {avisoAntecedenciaCurto(req) && (
-        <div style={{ background: "var(--warning-bg)", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--warning)", display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 10, padding: "8px 12px", fontSize: 11, color: "var(--warning)", display: "flex", alignItems: "center", gap: 6 }}>
           <AlertTriangle size={12} /> Solicitado com menos de {AVISO_MINIMO_DIAS_FERIAS} dias de antecedência (CLT Art. 135).
         </div>
       )}
@@ -695,7 +695,7 @@ function FeriasDrawer({
   const right = (
     <>
       {canWrite && moveError && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#FEF2F2", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 10, padding: "8px 12px", fontSize: 12 }}>
           <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
           {moveError}
         </div>

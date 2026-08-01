@@ -1201,8 +1201,9 @@ export function SettingsView({
                         disabled={aiSaving}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all"
                         style={{
-                          background: aiSaving ? "#E5E7EB" : "var(--color-industria)",
+                          background: "var(--color-industria)",
                           border: "none",
+                          opacity: aiSaving ? 0.6 : 1,
                           cursor: aiSaving ? "wait" : "pointer",
                         }}
                       >
@@ -1614,7 +1615,7 @@ export function SettingsView({
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
-                            style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                            style={{ background: "var(--accent)", color: "var(--on-accent)", textDecoration: "none" }}
                           >
                             <ExternalLink size={12} />
                             Abrir
@@ -1648,7 +1649,7 @@ export function SettingsView({
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
-                            style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                            style={{ background: "var(--accent)", color: "var(--on-accent)", textDecoration: "none" }}
                           >
                             <ExternalLink size={12} />
                             Abrir
@@ -1714,7 +1715,7 @@ export function SettingsView({
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer"
-                                    style={{ background: "var(--accent)", color: "#FFFFFF", textDecoration: "none" }}
+                                    style={{ background: "var(--accent)", color: "var(--on-accent)", textDecoration: "none" }}
                                   >
                                     <ExternalLink size={12} />
                                     Abrir
@@ -1760,7 +1761,7 @@ export function SettingsView({
           </p>
           <div
             className="p-3 rounded-lg text-xs flex items-start gap-2"
-            style={{ background: "#FEF2F2", color: "var(--danger)", border: "1px solid #FECACA" }}
+            style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
           >
             <AlertTriangle size={13} className="shrink-0 mt-0.5" />
             <span>Dados sincronizados com o Supabase serão excluídos do banco de dados permanentemente.</span>

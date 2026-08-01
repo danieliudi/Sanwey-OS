@@ -140,7 +140,7 @@ function PersonalEventModal({ event, defaultDate, onSave, onDelete, onClose }) {
           <div style={{ display: "flex", gap: 8, justifyContent: isEdit ? "space-between" : "flex-end" }}>
             {isEdit && (
               <button type="button" onClick={handleDelete} disabled={saving}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "#FEF2F2", color: "var(--danger)", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                 <Trash2 size={13} /> Excluir
               </button>
             )}

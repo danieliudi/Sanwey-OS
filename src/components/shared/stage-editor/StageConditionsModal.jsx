@@ -240,7 +240,7 @@ function ConditionalCard({ entry, fields, accent, busy, onSave, onDelete, startE
       </FlowBox>
 
       {error && (
-        <div style={{ fontSize: 12, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px", marginTop: 10 }}>
+        <div style={{ fontSize: 12, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 6, padding: "6px 10px", marginTop: 10 }}>
           {error}
         </div>
       )}

@@ -67,7 +67,7 @@ export function AppToast({
             <button
               onClick={action.onClick}
               className="inline-flex items-center gap-1.5 text-xs font-bold mt-2 cursor-pointer"
-              style={{ color: "#FFF", background: "var(--accent)", border: "none", borderRadius: 7, padding: "6px 12px" }}
+              style={{ color: "var(--on-accent)", background: "var(--accent)", border: "none", borderRadius: 7, padding: "6px 12px" }}
             >
               {action.icon && <action.icon size={11} />}
               {action.label}

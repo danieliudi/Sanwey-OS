@@ -530,7 +530,7 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
           />
 
           {error && (
-            <div className="text-[12px] rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "var(--danger)" }}>
+            <div className="text-[12px] rounded-lg px-3 py-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
               {error}
             </div>
           )}
@@ -540,7 +540,7 @@ function ExpenseModal({ initial, campaigns = [], onSave, onClose, currentUser })
               type="submit"
               disabled={saving || !form.description.trim()}
               className="flex-1 text-sm font-semibold py-2 rounded-xl"
-              style={{ background: "var(--accent)", color: "#FFF", opacity: saving || !form.description.trim() ? 0.5 : 1, border: "none", cursor: saving || !form.description.trim() ? "default" : "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: saving || !form.description.trim() ? 0.5 : 1, border: "none", cursor: saving || !form.description.trim() ? "default" : "pointer" }}
             >
               {saving ? "Salvando…" : "Salvar"}
             </button>
@@ -631,7 +631,7 @@ export function DespesasView({ user, users = [], campaigns = [] }) {
             <button
               onClick={openNew}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--accent)", color: "#FFF", border: "none", cursor: "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", cursor: "pointer" }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-hover)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
             >

@@ -363,7 +363,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose, stag
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>
               {error}
             </div>
           )}
@@ -452,7 +452,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
-            style={{ background: "var(--accent)", color: "#FFF", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
+            style={{ background: "var(--accent)", color: "var(--on-accent)", opacity: (saving || !name.trim()) ? 0.5 : 1, border: "none", cursor: (saving || !name.trim()) ? "default" : "pointer" }}>
             {saving ? "Criando…" : "Criar etapa"}
           </button>
         </form>
@@ -953,7 +953,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               className="flex items-center gap-1.5 font-semibold"
               style={{
                 background: "var(--accent)",
-                color: "#FFFFFF",
+                color: "var(--on-accent)",
                 border: "none",
                 borderRadius: 10,
                 padding: "6px 16px",

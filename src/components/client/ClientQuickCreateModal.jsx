@@ -105,7 +105,7 @@ export function ClientQuickCreateModal({ initialName = "", initialCnpj = "", ext
             <button
               type="submit"
               disabled={saving || !!duplicateMatch}
-              style={{ flex: 1, background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: (saving || duplicateMatch) ? "default" : "pointer", opacity: (saving || duplicateMatch) ? 0.5 : 1 }}
+              style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: (saving || duplicateMatch) ? "default" : "pointer", opacity: (saving || duplicateMatch) ? 0.5 : 1 }}
             >
               {saving ? "Cadastrando…" : "Cadastrar cliente"}
             </button>

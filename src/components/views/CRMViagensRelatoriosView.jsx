@@ -148,7 +148,7 @@ const errorBannerSt = { background: "#FEF2F2", color: "#B91C1C", borderRadius: 8
 
 function btnStyle(kind, disabled) {
   const base = { display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1 };
-  if (kind === "primary") return { ...base, background: "var(--accent)", color: "#FFF" };
+  if (kind === "primary") return { ...base, background: "var(--accent)", color: "var(--on-accent)" };
   return { ...base, background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border)" };
 }
 

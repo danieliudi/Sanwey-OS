@@ -1621,7 +1621,7 @@ function MoveAndCommentsPanel({
                 onClick={onSendToPosvenda}
                 disabled={sendingToPosvenda}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs cursor-pointer"
-                style={{ background: "var(--accent)", color: "#FFFFFF", border: "none", opacity: sendingToPosvenda ? 0.6 : 1 }}
+                style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", opacity: sendingToPosvenda ? 0.6 : 1 }}
               >
                 <Handshake size={14} />
                 {sendingToPosvenda ? "Enviando…" : "Enviar para o Funil de Pós-venda"}

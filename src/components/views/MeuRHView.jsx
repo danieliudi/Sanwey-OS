@@ -113,7 +113,7 @@ function SolicitarFeriasForm({ colaboradorId, onCreated }) {
       <button
         onClick={() => setOpen(true)}
         className="flex items-center gap-1.5 font-semibold"
-        style={{ background: "var(--accent)", color: "#FFF", borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "none", cursor: "pointer", marginBottom: 16 }}
+        style={{ background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "6px 16px", fontSize: 13, border: "none", cursor: "pointer", marginBottom: 16 }}
       >
         <Plus size={14} /> Solicitar férias/afastamento
       </button>
@@ -151,7 +151,7 @@ function SolicitarFeriasForm({ colaboradorId, onCreated }) {
         <button
           onClick={handleSubmit}
           disabled={saving}
-          style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}
+          style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1, display: "flex", alignItems: "center", gap: 6 }}
         >
           {saving && <Loader2 size={12} className="animate-spin" />} Enviar solicitação
         </button>
@@ -334,7 +334,7 @@ function EditEnderecoForm({ colaboradorId, currentUserId, meuColaborador, onSubm
         ))}
       </div>
       <div className="flex gap-2">
-        <button onClick={submit} disabled={saving} style={{ background: "var(--accent)", color: "#FFF", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+        <button onClick={submit} disabled={saving} style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
           {saving ? "Enviando…" : "Enviar solicitação"}
         </button>
         <button onClick={() => setOpen(false)} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-dim)", borderRadius: 8, padding: "5px 12px", fontSize: 12, cursor: "pointer" }}>
