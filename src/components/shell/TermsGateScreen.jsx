@@ -22,10 +22,10 @@ export function TermsGateScreen({ currentUser, onAccept, onLogout }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#F5F5F3" }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--bg)" }}>
       <div
         className="w-full max-w-lg rounded-2xl border p-8"
-        style={{ background: "#FFFFFF", borderColor: "#E8E8E8", boxShadow: "var(--shadow-pop)" }}
+        style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-pop)" }}
       >
         <div
           className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
@@ -44,7 +44,7 @@ export function TermsGateScreen({ currentUser, onAccept, onLogout }) {
 
         <div
           className="text-xs mb-4 p-4 rounded-xl leading-relaxed"
-          style={{ background: "#F5F5F3", color: "var(--text)", maxHeight: 220, overflowY: "auto" }}
+          style={{ background: "var(--surface-alt)", color: "var(--text)", maxHeight: 220, overflowY: "auto" }}
         >
           <p style={{ marginBottom: 8 }}>
             <strong>Rascunho — pendente de revisão jurídica.</strong> Este texto ainda não foi validado por um

@@ -470,7 +470,7 @@ function ComplianceStats({ atribuicoes, treinamentos, colaboradoresById }) {
       </div>
 
       {preAudit && (
-        <div className="mb-3 rounded-xl border" style={{ borderColor: preAudit.totalPendencias > 0 ? "#FCA5A5" : "#86EFAC", background: preAudit.totalPendencias > 0 ? "#FEF2F2" : "#F0FDF4", padding: "12px 16px" }}>
+        <div className="mb-3 rounded-xl border" style={{ borderColor: preAudit.totalPendencias > 0 ? "color-mix(in srgb, var(--danger) 35%, transparent)" : "color-mix(in srgb, var(--success) 35%, transparent)", background: preAudit.totalPendencias > 0 ? "var(--danger-bg)" : "var(--success-bg)", padding: "12px 16px" }}>
           <div className="flex items-center gap-2 flex-wrap">
             <AlertTriangle size={16} style={{ color: preAudit.totalPendencias > 0 ? "var(--danger)" : "var(--success)", flexShrink: 0 }} />
             <span style={{ fontSize: 14, fontWeight: 800, color: preAudit.totalPendencias > 0 ? "var(--danger)" : "var(--success)" }}>
@@ -589,7 +589,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             <input autoFocus type="text" placeholder="Ex.: Em análise"
               value={name} onChange={e => setName(e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--warning-bg)", borderRadius: 10, padding: "8px 12px", marginBottom: 18 }}>
             <AlertTriangle size={13} style={{ color: "var(--warning)", flexShrink: 0, marginTop: 1 }} />
@@ -1082,7 +1082,7 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "#F0F0F0", background: isToday ? "#FFFBEB" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              style={{ borderColor: "var(--border)", background: isToday ? "var(--warning-bg)" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
               <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>

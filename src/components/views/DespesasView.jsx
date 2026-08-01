@@ -32,9 +32,9 @@ function StatusBadge({ status }) {
     <span
       className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
       style={{
-        background: isPago ? "#DCFCE7" : "#FEF3C7",
+        background: isPago ? "var(--success-bg)" : "var(--warning-bg)",
         color:      isPago ? "var(--success)" : "var(--warning)",
-        border:     `1px solid ${isPago ? "#BBF7D0" : "#FDE68A"}`,
+        border:     `1px solid ${isPago ? "color-mix(in srgb, var(--success) 35%, transparent)" : "color-mix(in srgb, var(--warning) 35%, transparent)"}`,
       }}
     >
       {isPago ? "Pago" : "Pendente"}

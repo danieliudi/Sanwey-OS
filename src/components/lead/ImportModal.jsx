@@ -137,7 +137,7 @@ const BTN_PRIMARY = {
 };
 
 const BTN_SECONDARY = {
-  background: "#FFFFFF",
+  background: "var(--surface)",
   color: "var(--text)",
   border: `1px solid #E5E7EB`,
   borderRadius: 8,
@@ -181,7 +181,7 @@ const SELECT_STYLE = {
   borderRadius: 8,
   fontSize: 13,
   color: "var(--text)",
-  background: "#FFFFFF",
+  background: "var(--surface)",
   outline: "none",
 };
 
@@ -410,7 +410,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
   const cardStyle = {
     width: "100%",
     maxWidth: 672,
-    background: "#FFFFFF",
+    background: "var(--surface)",
     borderRadius: 12,
     maxHeight: "90vh",
     overflowY: "auto",
@@ -459,7 +459,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                 height: 4,
                 flex: 1,
                 borderRadius: 2,
-                background: s <= step ? "var(--color-industria)" : "#E5E7EB",
+                background: s <= step ? "var(--color-industria)" : "var(--border)",
                 transition: "background 0.2s",
               }}
             />
@@ -579,7 +579,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                 <div style={{ border: `1px solid #E5E7EB`, borderRadius: 8, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
-                      <tr style={{ background: "#F5F5F3" }}>
+                      <tr style={{ background: "var(--surface-alt)" }}>
                         <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "var(--text)", width: "45%" }}>
                           Coluna da sua planilha
                         </th>
@@ -673,7 +673,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", marginBottom: 16 }}>
                     Importando {importProgress}/{importTotal}…
                   </div>
-                  <div style={{ background: "#E5E7EB", borderRadius: 4, height: 8, overflow: "hidden", maxWidth: 400, margin: "0 auto" }}>
+                  <div style={{ background: "var(--border)", borderRadius: 4, height: 8, overflow: "hidden", maxWidth: 400, margin: "0 auto" }}>
                     <div
                       style={{
                         height: "100%",
@@ -712,7 +712,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                     <div style={{ overflowX: "auto", border: `1px solid #E5E7EB`, borderRadius: 8 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 480 }}>
                         <thead>
-                          <tr style={{ background: "#F5F5F3" }}>
+                          <tr style={{ background: "var(--surface-alt)" }}>
                             {Object.entries(mapping)
                               .filter(([, fId]) => fId !== "")
                               .map(([colIdx, fId]) => {
@@ -730,7 +730,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                         </thead>
                         <tbody>
                           {rows.slice(0, 5).map((row, ri) => (
-                            <tr key={ri} style={{ borderTop: "1px solid #EEEEEE" }}>
+                            <tr key={ri} style={{ borderTop: "1px solid var(--border)" }}>
                               {Object.entries(mapping)
                                 .filter(([, fId]) => fId !== "")
                                 .map(([colIdx]) => (

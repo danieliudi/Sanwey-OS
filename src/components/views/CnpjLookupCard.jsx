@@ -177,7 +177,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
                 <div
                   className="px-2 py-0.5 rounded-xl text-[10px] uppercase font-semibold"
                   style={{
-                    background: data.situacao.toUpperCase() === "ATIVA" ? "#E8F2EC" : "#FEF2F2",
+                    background: data.situacao.toUpperCase() === "ATIVA" ? "var(--success-bg)" : "var(--danger-bg)",
                     color: data.situacao.toUpperCase() === "ATIVA" ? "var(--color-resibag)" : "var(--danger)",
                   }}
                 >
@@ -239,7 +239,7 @@ export function CnpjLookupCard({ onAddLead, accessibleCompanies }) {
           {added ? (
             <div
               className="p-3 rounded-xl flex items-center gap-2 text-xs"
-              style={{ background: "#E8F2EC", color: "var(--color-resibag)" }}
+              style={{ background: "var(--success-bg)", color: "var(--color-resibag)" }}
             >
               <CheckCircle2 size={14} />
               Lead adicionado. Vá pro final da lista ou filtre pelo CNPJ.

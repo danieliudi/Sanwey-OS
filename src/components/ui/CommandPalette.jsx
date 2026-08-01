@@ -48,10 +48,10 @@ function LeadResultRow({ item, users, pipelines, highlighted, onSelect }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <Handshake size={10} style={{ color: "#6B7280", flexShrink: 0 }} />
+          <Handshake size={10} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
           <div className="font-semibold truncate" style={{ fontSize: 14, color: "var(--text)" }}>{lead.company}</div>
         </div>
-        <div className="text-xs truncate mt-0.5" style={{ color: "#6B7280" }}>
+        <div className="text-xs truncate mt-0.5" style={{ color: "var(--text-dim)" }}>
           {stageName}{lead.sector ? ` · ${lead.sector}` : ""}
         </div>
       </div>
@@ -89,10 +89,10 @@ function CampaignResultRow({ item, highlighted, onSelect }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <Megaphone size={10} style={{ color: "#6B7280", flexShrink: 0 }} />
+          <Megaphone size={10} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
           <div className="font-semibold truncate" style={{ fontSize: 14, color: "var(--text)" }}>{campaign.name}</div>
         </div>
-        <div className="text-xs truncate mt-0.5" style={{ color: "#6B7280" }}>
+        <div className="text-xs truncate mt-0.5" style={{ color: "var(--text-dim)" }}>
           {stage ? (
             <span style={{ color: stage.color, fontWeight: 600 }}>{stage.name}</span>
           ) : campaign.stage}
@@ -122,10 +122,10 @@ function EmployeeResultRow({ item, highlighted, onSelect }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <Users size={10} style={{ color: "#6B7280", flexShrink: 0 }} />
+          <Users size={10} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
           <div className="font-semibold truncate" style={{ fontSize: 14, color: "var(--text)" }}>{user.name}</div>
         </div>
-        <div className="text-xs truncate mt-0.5" style={{ color: "#6B7280" }}>
+        <div className="text-xs truncate mt-0.5" style={{ color: "var(--text-dim)" }}>
           {user.department || user.role || "Funcionário"}
           {user.position ? ` · ${user.position}` : ""}
         </div>
@@ -280,8 +280,8 @@ export function CommandPalette({
         style={{
           maxWidth: 560,
           borderRadius: 16,
-          background: "#FFFFFF",
-          border: "1px solid #E5E7EB",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
           boxShadow: "0 24px 64px rgba(44,44,43,0.20)",
           overflow: "hidden",
           maxHeight: "calc(100vh - 120px)",
@@ -289,8 +289,8 @@ export function CommandPalette({
         onClick={e => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4" style={{ height: 56, borderBottom: "1px solid #E5E7EB" }}>
-          <Search size={18} style={{ color: "#6B7280", flexShrink: 0 }} />
+        <div className="flex items-center gap-3 px-4" style={{ height: 56, borderBottom: "1px solid var(--border)" }}>
+          <Search size={18} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
           <input
             ref={inputRef}
             type="text"
@@ -304,7 +304,7 @@ export function CommandPalette({
             aria-autocomplete="list"
             aria-controls="cmd-results"
           />
-          <kbd style={{ fontSize: 10, color: "#9CA3AF", background: "var(--surface-alt)", border: "1px solid #E5E7EB", borderRadius: 4, padding: "2px 5px" }}>
+          <kbd style={{ fontSize: 10, color: "var(--text-faint)", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 4, padding: "2px 5px" }}>
             ESC
           </kbd>
         </div>
@@ -312,15 +312,15 @@ export function CommandPalette({
         {/* Results */}
         <div id="cmd-results" ref={listRef} role="listbox" style={{ overflowY: "auto", maxHeight: 440 }}>
           {trimmedQuery === "" && (
-            <div className="flex flex-col items-center justify-center py-10 gap-2" style={{ color: "#6B7280" }}>
+            <div className="flex flex-col items-center justify-center py-10 gap-2" style={{ color: "var(--text-dim)" }}>
               <Search size={24} strokeWidth={1} />
               <span style={{ fontSize: 14 }}>Digite para buscar leads, campanhas ou funcionários</span>
-              <span style={{ fontSize: 12, color: "#9CA3AF" }}>Use ↑↓ para navegar · Enter para abrir · Esc para fechar</span>
+              <span style={{ fontSize: 12, color: "var(--text-faint)" }}>Use ↑↓ para navegar · Enter para abrir · Esc para fechar</span>
             </div>
           )}
 
           {trimmedQuery !== "" && results.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-10 gap-2" style={{ color: "#6B7280" }}>
+            <div className="flex flex-col items-center justify-center py-10 gap-2" style={{ color: "var(--text-dim)" }}>
               <span style={{ fontSize: 14 }}>Nenhum resultado para <strong>"{trimmedQuery}"</strong></span>
             </div>
           )}
@@ -331,7 +331,7 @@ export function CommandPalette({
                 padding: "8px 16px 4px",
                 fontSize: 10,
                 fontWeight: 700,
-                color: "#9CA3AF",
+                color: "var(--text-faint)",
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
               }}>

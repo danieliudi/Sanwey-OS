@@ -37,7 +37,7 @@ function wonValue(l) {
 }
 
 function CategoryTag({ value }) {
-  if (!value) return <span style={{ color: "#9CA3AF" }}>—</span>;
+  if (!value) return <span style={{ color: "var(--text-faint)" }}>—</span>;
   const color = clientCategoryColor(value);
   return (
     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -200,12 +200,12 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
     }));
   };
 
-  const inputStyle = { borderColor: "#E5E7EB", color: "var(--text)", outline: "none", background: "var(--surface)" };
+  const inputStyle = { borderColor: "var(--border)", color: "var(--text)", outline: "none", background: "var(--surface)" };
   const onFocusRed = e => { e.target.style.borderColor = "var(--color-industria)"; e.target.style.boxShadow = "0 0 0 3px rgba(199,33,43,0.12)"; };
   const onBlurRed = e => { e.target.style.borderColor = "#E5E7EB"; e.target.style.boxShadow = "none"; };
 
   return (
-    <div className="p-5 rounded-xl border" style={{ background: "#FFFFFF", borderColor: "#E5E7EB", boxShadow: "var(--shadow-card)" }}>
+    <div className="p-5 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-card)" }}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
         <div>
@@ -221,7 +221,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
             <button
               onClick={onOpenImport}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold border"
-              style={{ borderColor: "#E5E7EB", color: "var(--text)", background: "#FFFFFF", cursor: "pointer" }}
+              style={{ borderColor: "var(--border)", color: "var(--text)", background: "var(--surface)", cursor: "pointer" }}
             >
               <Database size={15} /> Importar planilha
             </button>
@@ -238,7 +238,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
 
       {/* Search */}
       <div className="flex items-center gap-3 mb-3 flex-wrap">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border flex-1" style={{ borderColor: "#E5E7EB", background: "var(--surface)", minWidth: 220 }}>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border flex-1" style={{ borderColor: "var(--border)", background: "var(--surface)", minWidth: 220 }}>
           <Search size={15} style={{ color: "var(--text-dim)" }} />
           <input
             value={query}
@@ -285,7 +285,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                   {COLS.map((col, i) => (
                     <th key={i} className={col.numeric ? "text-right font-bold uppercase" : "text-left font-bold uppercase"}
                       onClick={() => toggleSort(col.key)}
-                      style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--text-dim)", padding: "10px 12px", borderBottom: "1px solid #E5E7EB", cursor: col.key ? "pointer" : "default", userSelect: "none", whiteSpace: "nowrap" }}>
+                      style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--text-dim)", padding: "10px 12px", borderBottom: "1px solid var(--border)", cursor: col.key ? "pointer" : "default", userSelect: "none", whiteSpace: "nowrap" }}>
                       {col.label}
                       {col.key && sortCol === col.key && (
                         <span style={{ marginLeft: 4 }}>{sortDir === "asc" ? "▲" : "▼"}</span>
@@ -314,7 +314,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                     </td>
                     <td style={{ padding: "12px" }}><CategoryTag value={c.category} /></td>
                     <td style={{ padding: "12px", fontSize: 13, color: "var(--text)" }}>
-                      {[c.city, c.state].filter(Boolean).join(" / ") || <span style={{ color: "#9CA3AF" }}>—</span>}
+                      {[c.city, c.state].filter(Boolean).join(" / ") || <span style={{ color: "var(--text-faint)" }}>—</span>}
                     </td>
                     <td style={{ padding: "12px", fontSize: 12, fontFamily: "monospace", color: "var(--text-dim)" }}>
                       {c.cnpj || "—"}
@@ -329,7 +329,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                               className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
                               style={won
                                 ? { background: co.primary + "1A", color: co.primary }
-                                : { background: "#F3F4F6", color: "#9CA3AF" }}>
+                                : { background: "var(--surface-alt)", color: "var(--text-faint)" }}>
                               {co.short}
                             </span>
                           );
@@ -370,7 +370,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
               const stats = statsByClient.get(c.id);
               const dealCount = dealsByClient.get(c.id)?.length || 0;
               return (
-                <div key={c.id} className="rounded-lg border p-3" style={{ borderColor: "#E5E7EB" }}>
+                <div key={c.id} className="rounded-lg border p-3" style={{ borderColor: "var(--border)" }}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <button onClick={() => openDetail(c, dealCount > 0 ? "conexoes" : "dados")}
@@ -413,7 +413,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
                           className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
                           style={won
                             ? { background: co.primary + "1A", color: co.primary }
-                            : { background: "#F3F4F6", color: "#9CA3AF" }}>
+                            : { background: "var(--surface-alt)", color: "var(--text-faint)" }}>
                           {co.short}
                         </span>
                       );
@@ -498,7 +498,7 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
           </p>
           <div className="flex justify-end gap-2">
             <button onClick={() => setConfirmId(null)} className="px-4 py-2 text-sm rounded-lg border"
-              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFFFFF", cursor: "pointer" }}>
+              style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}>
               Cancelar
             </button>
             <button onClick={async () => { await onDelete?.(confirmId); setConfirmId(null); }}
@@ -651,7 +651,7 @@ function ClientDetailModal({
                 return (
                   <button key={id} type="button" onClick={() => toggleCompany(id)}
                     className="px-2.5 py-1 rounded-full text-xs font-medium border"
-                    style={{ borderColor: sel ? co.primary : "#E5E7EB", background: sel ? co.primary + "1A" : "#FFFFFF", color: sel ? co.primary : "var(--text-dim)", cursor: "pointer" }}>
+                    style={{ borderColor: sel ? co.primary : "var(--border)", background: sel ? co.primary + "1A" : "var(--surface)", color: sel ? co.primary : "var(--text-dim)", cursor: "pointer" }}>
                     {co.short}
                   </button>
                 );
@@ -677,7 +677,7 @@ function ClientDetailModal({
                     { label: "Empresas atendidas", value: `${stats.companies.size}/${COMPANY_IDS.length}` },
                     { label: "Último pedido", value: formatDateBR(stats.lastOrder) },
                   ].map(item => (
-                    <div key={item.label} className="rounded-lg border px-3 py-2" style={{ borderColor: "#E5E7EB" }}>
+                    <div key={item.label} className="rounded-lg border px-3 py-2" style={{ borderColor: "var(--border)" }}>
                       <div style={{ fontSize: 10, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.label}</div>
                       <div className="font-semibold mt-0.5" style={{ fontSize: 14, color: "var(--text)" }}>{item.value}</div>
                     </div>
@@ -694,7 +694,7 @@ function ClientDetailModal({
 
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border"
-              style={{ borderColor: "#E5E7EB", color: "var(--text-dim)", background: "#FFFFFF", cursor: "pointer" }}>
+              style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)", cursor: "pointer" }}>
               Cancelar
             </button>
             <button onClick={onSave} disabled={!form.name.trim() || saving || !!duplicateMatch}

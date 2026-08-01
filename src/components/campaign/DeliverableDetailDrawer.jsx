@@ -84,7 +84,7 @@ function DeliverableAIPanel({ item, currentUser, stage, stageFields = [], recent
 /* ── Shared input style ─────────────────────────────────────── */
 const inputBase = {
   width: "100%", fontSize: 13, borderRadius: 6,
-  border: "1px solid #D1D5DB", padding: "7px 10px",
+  border: "1px solid var(--border-strong)", padding: "7px 10px",
   background: "var(--surface)", color: "var(--text)", outline: "none",
 };
 const focusBorder = e => { e.target.style.borderColor = "var(--accent)"; };
@@ -142,7 +142,7 @@ function AtividadesTab({ activities }) {
         <div key={i} style={{ display: "flex", gap: 10, paddingBottom: 14 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: typeColor[a.type] || "#9CA3AF", marginTop: 3 }} />
-            {i < sorted.length - 1 && <div style={{ width: 1, flex: 1, background: "#E5E7EB", marginTop: 4 }} />}
+            {i < sorted.length - 1 && <div style={{ width: 1, flex: 1, background: "var(--border)", marginTop: 4 }} />}
           </div>
           <div>
             <div style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>{a.description}</div>
@@ -221,7 +221,7 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
           <div style={{ fontSize: 12, color: "var(--text-dim)", fontWeight: 500 }}>
             {uploading ? "Enviando…" : "Arraste ou clique para enviar"}
           </div>
-          <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 3 }}>PDF, Word, imagens, vídeos — máx 50 MB</div>
+          <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 3 }}>PDF, Word, imagens, vídeos — máx 50 MB</div>
           <input ref={inputRef} type="file" accept={ACCEPTED} multiple style={{ display: "none" }}
             onChange={e => { handleFiles(Array.from(e.target.files || [])); e.target.value = ""; }} />
         </div>
@@ -244,7 +244,7 @@ function AnexosTab({ deliverableId, canWrite, userId }) {
           {attachments.map(att => {
             const Icon = fileIconFn(att.mime_type);
             return (
-              <div key={att.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+              <div key={att.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "var(--surface-alt)", borderRadius: 8, border: "1px solid var(--border)" }}>
                 <Icon size={16} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.file_name}</div>
@@ -296,14 +296,14 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
         const total = (cl.items || []).length;
         const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
         return (
-          <div key={cl.id} style={{ border: "1px solid #E5E7EB", borderRadius: 10, overflow: "hidden" }}>
-            <div style={{ background: "#F9FAFB", padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E5E7EB" }}>
+          <div key={cl.id} style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+            <div style={{ background: "var(--surface-alt)", padding: "10px 12px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid var(--border)" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 12, color: "var(--text)" }}>{cl.title}</div>
                 <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2 }}>{done}/{total} concluídos</div>
               </div>
               {total > 0 && (
-                <div style={{ width: 40, height: 4, background: "#E5E7EB", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ width: 40, height: 4, background: "var(--border)", borderRadius: 2, overflow: "hidden" }}>
                   <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? "#16A34A" : "var(--accent)", transition: "width 0.3s" }} />
                 </div>
               )}
@@ -334,7 +334,7 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
                   </span>
                   {canWrite && (
                     <button onClick={() => removeItem(cl.id, it.id)}
-                      style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 2, display: "flex" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-faint)", padding: 2, display: "flex" }}
                       onMouseEnter={e => { e.currentTarget.style.color = "#DC2626"; }}
                       onMouseLeave={e => { e.currentTarget.style.color = "#9CA3AF"; }}>
                       <X size={11} />

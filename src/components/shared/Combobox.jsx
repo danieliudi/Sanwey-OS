@@ -46,7 +46,7 @@ export function Combobox({ value, onChange, options, placeholder, className = ""
         className={`w-full flex items-center text-left ${sizeClass} border transition-colors duration-150 cursor-pointer`}
         style={{
           borderColor: open ? "var(--accent)" : "#E5E7EB",
-          background: "#FFFFFF",
+          background: "var(--surface)",
           color: selected ? "var(--text)" : "var(--text-dim)",
           boxShadow: open ? "0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent)" : "none",
         }}

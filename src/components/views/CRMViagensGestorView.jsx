@@ -199,7 +199,7 @@ function DespesaRow({ despesa, vendedorNome, deciding, isRejecting, rejectObs, s
         <span style={{ fontSize: 12, color: "var(--text-dim)" }}>{despesa.categoria}</span>
         <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{fmtMoney(despesa.valor)}</span>
         {divergente && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "#B45309", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 99, padding: "2px 8px" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--warning)", background: "var(--warning-bg)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", borderRadius: 99, padding: "2px 8px" }}>
             <AlertTriangle size={11} /> Comprovante mostra {fmtMoney(iaValor)}
           </span>
         )}

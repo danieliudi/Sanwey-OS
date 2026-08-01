@@ -445,7 +445,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             <input autoFocus type="text" placeholder="Ex.: Aprovação Jurídica"
               value={name} onChange={e => setName(e.target.value)}
               className="w-full text-sm rounded-xl border px-3 py-2 outline-none"
-              style={{ borderColor: "#D1D5DB", color: "var(--text)", background: "var(--surface)" }} />
+              style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
             <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>

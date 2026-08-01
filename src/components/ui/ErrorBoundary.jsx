@@ -25,7 +25,7 @@ export class ErrorBoundary extends React.Component {
       >
         <div
           className="max-w-md w-full rounded-xl p-5 shadow-lg"
-          style={{ background: "#FFFFFF", border: "1px solid #FECACA" }}
+          style={{ background: "var(--surface)", border: "1px solid #FECACA" }}
           onClick={e => e.stopPropagation()}
         >
           <div className="font-bold text-base mb-2" style={{ color: "#B91C1C" }}>

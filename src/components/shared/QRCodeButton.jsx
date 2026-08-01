@@ -63,7 +63,7 @@ export function QRCodeButton({ url, title, buttonLabel = "QR code", compact = fa
               </button>
             </div>
 
-            <div ref={canvasWrapRef} style={{ display: "flex", justifyContent: "center", padding: 16, background: "#FFFFFF", borderRadius: 12, border: "1px solid var(--border)" }}>
+            <div ref={canvasWrapRef} style={{ display: "flex", justifyContent: "center", padding: 16, background: "var(--surface)", borderRadius: 12, border: "1px solid var(--border)" }}>
               <QRCodeCanvas value={url} size={200} level="M" includeMargin marginSize={2} />
             </div>
 

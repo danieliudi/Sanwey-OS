@@ -473,7 +473,7 @@ export function RHComunicacaoView({ currentUser, canWrite }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span style={{ fontSize: 11, fontWeight: 700, color: identificada ? "var(--accent)" : "var(--text-dim)", background: identificada ? "#DBEAFE" : "var(--surface-alt)", borderRadius: 99, padding: "2px 10px", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: identificada ? "var(--channel-email-text)" : "var(--text-dim)", background: identificada ? "var(--channel-email-bg)" : "var(--surface-alt)", borderRadius: 99, padding: "2px 10px", display: "inline-flex", alignItems: "center", gap: 4 }}>
                       {identificada ? <UserCheck size={11} /> : <Lock size={11} />} {identificada ? "Identificada" : "Anônima"}
                     </span>
                     <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "var(--success-bg)" : "var(--surface-alt)", borderRadius: 99, padding: "2px 10px" }}>

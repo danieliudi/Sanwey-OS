@@ -465,7 +465,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
         <>
           {unassignedCount > 0 && (
             <div className="flex items-center gap-2 p-3 rounded-xl border-l-4 text-sm"
-              style={{ background: "#FFF9EC", borderLeftColor: "var(--amber)", color: "var(--text)" }}>
+              style={{ background: "var(--amber-bg)", borderLeftColor: "var(--amber)", color: "var(--text)" }}>
               <TriangleAlert size={14} style={{ color: "var(--amber)", flexShrink: 0 }} />
               {unassignedCount} lead{unassignedCount > 1 ? "s" : ""} sem vendedor atribuído — defina antes de importar ou deixe para o gerente redistribuir depois.
             </div>
@@ -506,7 +506,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
 
           {/* Import CTA */}
           <div className="flex items-center justify-between p-4 rounded-xl border sticky bottom-4"
-            style={{ background: "#FFFFFF", borderColor: "#EFEFEF", boxShadow: "var(--shadow-pop)" }}>
+            style={{ background: "var(--surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-pop)" }}>
             <div className="text-sm" style={{ color: "var(--text-dim)" }}>
               <span className="font-semibold" style={{ color: "var(--text)" }}>{selectedRows.length} leads</span> serão adicionados ao pipeline em <strong>Prospecção</strong>
             </div>
@@ -572,7 +572,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             {row.company}
             {isDup && (
               <span className="ml-2 text-[9px] font-normal px-1.5 py-0.5 rounded"
-                style={{ background: "#FEF3EC", color: "var(--amber)" }}>
+                style={{ background: "var(--amber-bg)", color: "var(--amber)" }}>
                 duplicado
               </span>
             )}
@@ -595,7 +595,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             onChange={e => onUpdate({ companyId: e.target.value })}
             disabled={isDup || !row._selected}
             className="text-xs rounded-xl border px-2 py-1 w-full"
-            style={{ borderColor: "#DCDCDC", color: "var(--text)", background: "#FFFFFF" }}
+            style={{ borderColor: "#DCDCDC", color: "var(--text)", background: "var(--surface)" }}
           >
             {companyOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -611,7 +611,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
             style={{
               borderColor: !row.owner && row._selected ? "var(--amber)" : "#DCDCDC",
               color: "var(--text)",
-              background: "#FFFFFF",
+              background: "var(--surface)",
             }}
           >
             {sellerOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -637,7 +637,7 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
       {/* Expanded detail */}
       {expanded && (
         <div className="px-10 pb-3 pt-1 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs border-t"
-          style={{ borderColor: "#EFF2F5", background: "var(--surface)" }}>
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <DetailField label="CNPJ" value={row.cnpj || "—"} />
           <DetailField label="Email" value={row.contactEmail || "—"} />
           <DetailField label="Telefone" value={row.phone || "—"} />

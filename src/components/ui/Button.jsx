@@ -15,10 +15,10 @@ export function Button({
 
   const variants = {
     primary:   { bg: a,                       color: "var(--on-accent)", border: a },
-    dark:      { bg: "var(--text)",            color: "#FFFFFF",          border: "var(--text)" },
+    dark:      { bg: "var(--text)",            color: "var(--surface)",   border: "var(--text)" },
     secondary: { bg: "var(--surface)",         color: "var(--text)",      border: "var(--border-strong)" },
     ghost:     { bg: "transparent",            color: "var(--text-dim)",  border: "transparent" },
-    danger:    { bg: "#FEF2F2",                color: "var(--danger)",    border: "#FECACA" },
+    danger:    { bg: "var(--danger-bg)",       color: "var(--danger)",    border: "color-mix(in srgb, var(--danger) 35%, transparent)" },
   };
   const v = variants[variant] || variants.primary;
   const s = SIZES[size];

@@ -68,10 +68,10 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
     width: "100%",
     fontSize: 13,
     borderRadius: 6,
-    border: "1px solid #D1D5DB",
+    border: "1px solid var(--border-strong)",
     padding: "8px 12px",
     color: "var(--text)",
-    background: "#FFFFFF",
+    background: "var(--surface)",
     outline: "none",
     boxSizing: "border-box",
   };
@@ -193,8 +193,8 @@ function FieldInput({ def, configEntry, value, onChange, users, companyId, input
       <div style={{ display: "flex", gap: 6 }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 6,
-          border: "1px solid #D1D5DB", borderRadius: 6, padding: "6px 10px",
-          background: "#F9FAFB", fontSize: 12, color: "var(--text)", flexShrink: 0,
+          border: "1px solid var(--border-strong)", borderRadius: 6, padding: "6px 10px",
+          background: "var(--surface-alt)", fontSize: 12, color: "var(--text)", flexShrink: 0,
         }}>
           🇧🇷 +55
         </div>
@@ -464,7 +464,7 @@ export function LeadCreateModal({
       <div
         className="w-full max-w-xl max-h-full overflow-y-auto rounded-2xl flex flex-col"
         style={{
-          background: "#FFFFFF",
+          background: "var(--surface)",
           boxShadow: "var(--shadow-pop)",
         }}
         onClick={e => e.stopPropagation()}
@@ -472,7 +472,7 @@ export function LeadCreateModal({
         {/* Header — same style as LeadDetailDrawer */}
         <div
           className="sticky top-0 z-10 px-5 py-3.5 border-b flex items-center justify-between shrink-0"
-          style={{ background: "rgba(250,250,248,0.97)", borderColor: "#E5E7EB", backdropFilter: "blur(8px)" }}
+          style={{ background: "var(--surface)", borderColor: "var(--border)", backdropFilter: "blur(8px)" }}
         >
           <div className="flex items-center gap-2 min-w-0">
             {company && (
@@ -605,7 +605,7 @@ export function LeadCreateModal({
                               display: "flex", alignItems: "center", justifyContent: "space-between",
                               gap: 10, width: "100%", textAlign: "left",
                               padding: "8px 10px", borderRadius: 6,
-                              background: "#FFFFFF", border: "1px solid #DBEAFE",
+                              background: "var(--surface)", border: "1px solid #DBEAFE",
                               cursor: "pointer", color: "var(--text)",
                             }}
                             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "#93C5FD"; }}
@@ -682,7 +682,7 @@ export function LeadCreateModal({
         {/* Footer */}
         <div
           className="px-5 py-4 border-t shrink-0 flex gap-2"
-          style={{ borderColor: "#E5E7EB", background: "rgba(250,250,248,0.97)" }}
+          style={{ borderColor: "var(--border)", background: "var(--surface)" }}
         >
           <button
             type="submit"
@@ -705,7 +705,7 @@ export function LeadCreateModal({
             type="button"
             onClick={guardedClose}
             className="py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors"
-            style={{ border: "1px solid #E5E7EB", background: "#FFFFFF", color: "var(--text-dim)", cursor: "pointer" }}
+            style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}
           >
             Cancelar
           </button>
