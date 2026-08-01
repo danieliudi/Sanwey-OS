@@ -57,6 +57,7 @@ import { LeadDetailDrawer } from "./components/lead/LeadDetailDrawer";
 import { useRecordViews } from "./hooks/use-record-views";
 import { reopenAfterMove } from "./utils/reopen-after-move";
 import { ImportModal } from "./components/lead/ImportModal";
+import { ClientImportModal } from "./components/client/ClientImportModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { DashboardView } from "./components/views/DashboardView";
 import { SignalsView } from "./components/views/SignalsView";
@@ -276,6 +277,7 @@ export default function App() {
     createClient,
     updateClient,
     deleteClient,
+    upsertClientBillingHistory,
   } = useClients({ userId: currentUser?.id });
 
   const { signals } = useMarketSignals();
@@ -800,6 +802,12 @@ export default function App() {
   const [crmAutoCreate, setCrmAutoCreate] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [clientImportOpen, setClientImportOpen] = useState(false);
+  // Import de CLIENTES (carteira, sem virar negócio no Funil) — separado do
+  // clientImportOpen acima, que abre o importador de LEADS (usado também na
+  // tela de Comercial). Achado real: a tela de Clientes reaproveitava o
+  // mesmo estado/modal de leads, o que criaria um negócio fantasma por linha
+  // só pra povoar a lista de clientes.
+  const [clientRosterImportOpen, setClientRosterImportOpen] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = sidebarMobileOpen ? "hidden" : "";
@@ -1737,7 +1745,7 @@ export default function App() {
                   onUpdate={updateClient}
                   onDelete={deleteClient}
                   canDelete={isManager}
-                  onOpenImport={isManager ? () => setClientImportOpen(true) : undefined}
+                  onOpenImport={isManager ? () => setClientRosterImportOpen(true) : undefined}
                   onOpenLead={setSelectedLead}
                   onOpenViagem={(id) => { setSection("crm-viagens"); setSelectedViagemId(id); }}
                 />
@@ -2103,6 +2111,15 @@ export default function App() {
         currentUser={currentUser}
         onAddLead={handleAddLead}
         companies={accessibleCompanies || []}
+      />
+
+      <ClientImportModal
+        isOpen={clientRosterImportOpen}
+        onClose={() => setClientRosterImportOpen(false)}
+        clients={clients}
+        onCreateClient={createClient}
+        onUpdateClient={updateClient}
+        onUpsertBillingHistory={upsertClientBillingHistory}
       />
 
     </div>

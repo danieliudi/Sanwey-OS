@@ -17,6 +17,8 @@ function rowToClient(r) {
     state: r.state ?? null,
     cnpj: r.cnpj ?? null,
     companyIds: Array.isArray(r.company_ids) ? r.company_ids : [],
+    externalCodes: r.external_codes && typeof r.external_codes === "object" ? r.external_codes : {},
+    status: r.status || "ativo",
     notes: r.notes ?? null,
     createdBy: r.created_by ?? null,
     createdAt: r.created_at,
@@ -33,13 +35,15 @@ function clientToRow(c, extras = {}) {
     state: c.state ?? null,
     cnpj: c.cnpj ?? null,
     company_ids: Array.isArray(c.companyIds) ? c.companyIds : [],
+    external_codes: c.externalCodes && typeof c.externalCodes === "object" ? c.externalCodes : {},
+    status: c.status || "ativo",
     notes: c.notes ?? null,
     ...extras,
   };
 }
 
 function patchToRow(patch) {
-  const map = { companyIds: "company_ids", createdBy: "created_by" };
+  const map = { companyIds: "company_ids", createdBy: "created_by", externalCodes: "external_codes" };
   const out = {};
   for (const [k, v] of Object.entries(patch)) out[map[k] || k] = v;
   return out;
@@ -152,6 +156,22 @@ export function useClients({ userId } = {}) {
     }
   }, [clients, setFallbackClients, fetchAll]);
 
+  // Faturamento histórico por ano — tabela própria (client_billing_history),
+  // não colunas fixas por ano. `entries`: [{ year, totalValue, orderCount }].
+  // Usado hoje só pelo import de planilha (ClientImportModal); em modo
+  // offline (sem Supabase) é no-op, já que a tabela não existe no fallback local.
+  const upsertClientBillingHistory = useCallback(async (clientId, entries) => {
+    if (!isSupabaseConfigured || !entries || entries.length === 0) return;
+    const rows = entries.map(e => ({
+      client_id: clientId,
+      year: e.year,
+      total_value: e.totalValue || 0,
+      order_count: e.orderCount || 0,
+    }));
+    const { error: err } = await supabase.from("client_billing_history").upsert(rows, { onConflict: "client_id,year" });
+    if (err) { setError(err); throw err; }
+  }, []);
+
   return useMemo(() => ({
     clients,
     loading,
@@ -159,6 +179,7 @@ export function useClients({ userId } = {}) {
     createClient,
     updateClient,
     deleteClient,
+    upsertClientBillingHistory,
     refetch: fetchAll,
-  }), [clients, loading, error, createClient, updateClient, deleteClient, fetchAll]);
+  }), [clients, loading, error, createClient, updateClient, deleteClient, upsertClientBillingHistory, fetchAll]);
 }

@@ -33,6 +33,45 @@ function timeAgo(iso) {
   return formatDateBR(iso);
 }
 
+// Filtro por tipo — "Menções" separa o que é diretamente sobre você
+// (@menção) do resto ("Sistema": prazo, etapa, comunicado etc.). Com o
+// volume de tipos só tendendo a crescer (Chat, sinais, ações de agente),
+// separar por tipo evita que a lista vire uma pilha indiferenciada.
+const FILTERS = [
+  { id: "all", label: "Tudo" },
+  { id: "mention", label: "Menções" },
+  { id: "system", label: "Sistema" },
+];
+function matchesFilter(notif, filter) {
+  if (filter === "all") return true;
+  if (filter === "mention") return notif.type === "mention";
+  return notif.type !== "mention";
+}
+
+function NotificationRow({ notif, onClick }) {
+  const Icon = TYPE_ICON[notif.type] || TYPE_ICON.default;
+  const color = TYPE_COLOR[notif.type] || TYPE_COLOR.default;
+  return (
+    <div
+      onClick={() => onClick(notif)}
+      className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors"
+      style={{ background: notif.read ? "var(--surface)" : "var(--surface-alt)" }}
+      onMouseEnter={e => { e.currentTarget.style.background = "var(--border)"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = notif.read ? "var(--surface)" : "var(--surface-alt)"; }}
+    >
+      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: color + "18" }}>
+        <Icon size={13} style={{ color }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-semibold leading-snug" style={{ color: "var(--text)" }}>{notif.title}</div>
+        <div className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--text-dim)" }}>{notif.body}</div>
+        <div className="text-[10px] mt-1" style={{ color: "var(--text-faint)" }}>{timeAgo(notif.createdAt)}</div>
+      </div>
+      {!notif.read && <div className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: "var(--accent)" }} />}
+    </div>
+  );
+}
+
 export function NotificationCenter({
   notifications,
   unreadCount,
@@ -46,7 +85,17 @@ export function NotificationCenter({
 }) {
   const [open, setOpen] = useState(false);
   const [permissionFeedback, setPermissionFeedback] = useState(null);
+  const [filter, setFilter] = useState("all");
   const panelRef = useRef(null);
+
+  const filterCounts = {
+    all: notifications.length,
+    mention: notifications.filter(n => n.type === "mention").length,
+    system: notifications.filter(n => n.type !== "mention").length,
+  };
+  const filtered = notifications.filter(n => matchesFilter(n, filter));
+  const unread = filtered.filter(n => !n.read);
+  const seen = filtered.filter(n => n.read);
 
   const handleRequestPermission = async () => {
     setPermissionFeedback(null);
@@ -107,14 +156,16 @@ export function NotificationCenter({
         <Bell size={18} strokeWidth={1.75} />
         {unreadCount > 0 && (
           <span
-            className="absolute flex items-center justify-center rounded-full font-bold text-white"
+            className="absolute flex items-center justify-center rounded-full font-extrabold text-white"
             style={{
-              top: 4, right: 4,
-              width: unreadCount > 9 ? 16 : 14,
-              height: 14,
-              fontSize: 9,
-              background: "var(--accent)",
+              top: 3, right: 3,
+              minWidth: 17,
+              height: 17,
+              padding: "0 4px",
+              fontSize: 10,
+              background: "var(--danger)",
               lineHeight: 1,
+              boxShadow: "0 0 0 2px var(--surface)",
             }}
           >
             {unreadCount > 99 ? "99+" : unreadCount}
@@ -178,6 +229,30 @@ export function NotificationCenter({
             </div>
           </div>
 
+          {/* Filtro por tipo — client-side, sobre o que já foi carregado */}
+          {notifications.length > 0 && (
+            <div className="flex items-center gap-1.5 px-4 py-2 border-b overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+              {FILTERS.map(f => {
+                const active = filter === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => setFilter(f.id)}
+                    className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full transition-colors"
+                    style={{
+                      border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                      background: active ? "var(--accent)" : "var(--surface)",
+                      color: active ? "var(--on-accent)" : "var(--text-dim)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {f.label} <span style={{ opacity: 0.75 }}>{filterCounts[f.id]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Desktop permission banner */}
           {desktopPermission === "default" && (
             <div className="border-b" style={{ borderColor: "var(--border)", background: "var(--amber-bg)" }}>
@@ -199,54 +274,39 @@ export function NotificationCenter({
             </div>
           )}
 
-          {/* Notification list */}
+          {/* Notification list — "Novas" (não lidas) separado de "Antes de
+              hoje" (já vistas), pra não precisar escanear a lista toda
+              procurando o que é novo. */}
           <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2">
                 <Bell size={28} style={{ color: "var(--text-faint)" }} strokeWidth={1.5} />
                 <span className="text-sm" style={{ color: "var(--text-dim)" }}>Nenhuma notificação</span>
               </div>
-            ) : (
-              <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                {notifications.map((notif) => {
-                  const Icon = TYPE_ICON[notif.type] || TYPE_ICON.default;
-                  const color = TYPE_COLOR[notif.type] || TYPE_COLOR.default;
-                  return (
-                    <div
-                      key={notif.id}
-                      onClick={() => handleNotifClick(notif)}
-                      className="flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors"
-                      style={{ background: notif.read ? "var(--surface)" : "var(--surface-alt)" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--border)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = notif.read ? "var(--surface)" : "var(--surface-alt)"; }}
-                    >
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                        style={{ background: color + "18" }}
-                      >
-                        <Icon size={13} style={{ color }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold leading-snug" style={{ color: "var(--text)" }}>
-                          {notif.title}
-                        </div>
-                        <div className="text-xs mt-0.5 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                          {notif.body}
-                        </div>
-                        <div className="text-[10px] mt-1" style={{ color: "var(--text-faint)" }}>
-                          {timeAgo(notif.createdAt)}
-                        </div>
-                      </div>
-                      {!notif.read && (
-                        <div
-                          className="w-2 h-2 rounded-full shrink-0 mt-1.5"
-                          style={{ background: "var(--accent)" }}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2">
+                <Bell size={28} style={{ color: "var(--text-faint)" }} strokeWidth={1.5} />
+                <span className="text-sm" style={{ color: "var(--text-dim)" }}>Nada nesse filtro</span>
               </div>
+            ) : (
+              <>
+                {unread.length > 0 && (
+                  <>
+                    <div className="px-4 pt-2.5 pb-1 text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>Novas</div>
+                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                      {unread.map(notif => <NotificationRow key={notif.id} notif={notif} onClick={handleNotifClick} />)}
+                    </div>
+                  </>
+                )}
+                {seen.length > 0 && (
+                  <>
+                    <div className="px-4 pt-2.5 pb-1 text-[10px] font-extrabold uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>Antes de hoje</div>
+                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                      {seen.map(notif => <NotificationRow key={notif.id} notif={notif} onClick={handleNotifClick} />)}
+                    </div>
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>
