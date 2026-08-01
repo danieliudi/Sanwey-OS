@@ -548,7 +548,19 @@ export function ChatView({ currentUser }) {
   const stickerBtnRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const [shellRef, shellHeight] = useAvailableHeight(20, [loading]);
+  // No mobile, `MobileBottomNav` (App.jsx) fica fixa por cima dos últimos
+  // 64px da viewport — abaixo do breakpoint "lg" (1024px, o mesmo usado por
+  // ela e pela Sidebar). Ao contrário das telas de Kanban, que rolam a
+  // página inteira e por isso ganham `pb-24` no wrapper, o Chat é um shell
+  // de altura fixa sem scroll de página — então esse padding nunca ajuda, e
+  // sem esse desconto o composer ficava com a base atrás da barra.
+  const [isMobileNav, setIsMobileNav] = useState(() => typeof window !== "undefined" && window.innerWidth < 1024);
+  useEffect(() => {
+    const onResize = () => setIsMobileNav(window.innerWidth < 1024);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const [shellRef, shellHeight] = useAvailableHeight(isMobileNav ? 84 : 20, [loading, isMobileNav]);
 
   const selected = useMemo(() => channels.find(c => c.id === selectedId) || null, [channels, selectedId]);
   const { messages, loading: messagesLoading } = useChannelMessages(selectedId);
