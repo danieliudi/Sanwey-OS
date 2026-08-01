@@ -24,6 +24,14 @@
 
 export const CHANGELOG = [
   {
+    version: "4.7.0",
+    items: [
+      { kind: "novo", text: "Chat interno: agora dá pra mandar emoji (paleta com 32 opções), anexar arquivo/imagem e enviar figurinhas — tudo pelos novos ícones ao lado da caixa de mensagem." },
+      { kind: "ajuste", text: "Chat interno: mensagens com palavras impróprias não são enviadas — aparece um aviso na hora, só pra quem escreveu." },
+      { kind: "correcao", text: "Modo escuro: mais uma leva de selos e faixas de erro/sucesso/atenção que ainda ficavam com fundo claro e destoavam no tema escuro." },
+    ],
+  },
+  {
     version: "4.6.0",
     items: [
       { kind: "novo", text: "Chat interno: novo item no topo do menu, com canais por equipe e conversas diretas em tempo real. Quem você pode chamar no privado segue a estrutura da empresa — mesmo setor/departamento, seu gestor direto ou quem responde a você." },
