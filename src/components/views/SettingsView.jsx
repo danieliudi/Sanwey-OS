@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
-  ShieldCheck,
+  ShieldCheck, Image, Upload,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { AvatarCropModal } from "../shared/AvatarCropModal";
@@ -16,8 +16,21 @@ import {
 } from "../../constants/user-settings";
 import { Button } from "../ui/Button";
 import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
+import { useChatStickers } from "../../hooks/use-chat-stickers";
 import { callAI } from "../../hooks/use-ai";
 import { friendlyAiErrorMessage } from "../../utils/ai-errors";
+
+// Mesmo critério de quem cria canal no Chat (chat_is_manager, migration
+// 20260812_chat_interno_fase1.sql) — replicado aqui (2ª ocorrência, também em
+// ChatView.jsx) porque nenhuma das flags de gestor já calculadas em App.jsx
+// (isManager/isMarketingManager/isRHManager/isComexManager) mapeia 1:1 pro
+// conjunto de roles do chat_is_manager (isComexManager, por exemplo, inclui
+// "comex" puro, que não é gestor pro Chat).
+const CHAT_MANAGER_ROLES = ["admin", "gerente", "gerente_marketing", "gerente_rh", "diretoria"];
+function isChatManagerUser(user) {
+  const roles = Array.isArray(user?.roles) ? user.roles : (user?.role ? [user.role] : []);
+  return roles.some(r => CHAT_MANAGER_ROLES.includes(r));
+}
 
 function Section({ title, description, children }) {
   return (
@@ -152,6 +165,197 @@ function ExportAuditPanel() {
   );
 }
 
+// Painel de gestão de figurinhas do Chat interno — pacote único/global (sem
+// company_id, decisão do Daniel). `includeInactive: true` porque o gestor
+// precisa ver o que já foi desativado sem reativar às cegas (mesma regra da
+// policy de SELECT em chat_stickers).
+function StickersPanel() {
+  const { stickers, loading, error, uploadSticker, toggleStickerActive, deleteSticker, getPublicUrl } =
+    useChatStickers({ includeInactive: true });
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const inputRef = useRef(null);
+
+  const handleFiles = useCallback(async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      for (const file of files) {
+        if (!["image/png", "image/webp"].includes(file.type)) {
+          setUploadError("Só são aceitos arquivos PNG ou WEBP.");
+          continue;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+          setUploadError("Cada figurinha pode ter no máximo 2 MB.");
+          continue;
+        }
+        await uploadSticker(file);
+      }
+    } catch (e) {
+      setUploadError(e.message || "Erro ao enviar figurinha.");
+    } finally {
+      setUploading(false);
+    }
+  }, [uploadSticker]);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  }, [handleFiles]);
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await deleteSticker(confirmDelete.id);
+      setConfirmDelete(null);
+    } catch (e) {
+      setUploadError(e.message || "Erro ao excluir figurinha.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <>
+      <Section
+        title="Figurinhas do Chat"
+        description="Pacote único, compartilhado por toda a plataforma — não é por empresa. Todo colaborador vê as ativas no composer do Chat."
+      >
+        <div
+          className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 p-5 cursor-pointer transition-colors mb-4"
+          style={{
+            borderColor: dragOver ? "var(--accent)" : "var(--border-strong)",
+            background: dragOver ? "var(--accent-tint)" : "var(--surface-alt)",
+          }}
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={e => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+          aria-label="Clique ou arraste imagens para adicionar figurinhas"
+        >
+          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: dragOver ? "var(--accent-tint)" : "var(--surface-alt)" }}>
+            <Upload size={16} style={{ color: dragOver ? "var(--accent)" : "var(--text-dim)" }} />
+          </div>
+          <div className="text-xs text-center" style={{ color: "var(--text-dim)" }}>
+            {uploading ? (
+              <span style={{ color: "var(--accent)" }}>Enviando…</span>
+            ) : (
+              <>
+                <span className="font-semibold" style={{ color: "var(--text)" }}>Clique ou arraste</span>{" "}
+                para adicionar uma figurinha
+                <div className="mt-0.5">Recomendado: quadrado, fundo transparente, até 512×512 · PNG ou WEBP, máx 2 MB</div>
+              </>
+            )}
+          </div>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            accept="image/png,image/webp"
+            className="hidden"
+            onChange={e => { if (e.target.files?.length) { handleFiles(e.target.files); e.target.value = ""; } }}
+          />
+        </div>
+
+        {uploadError && (
+          <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+            <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+            {uploadError}
+          </div>
+        )}
+
+        {error && (
+          <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>Carregando…</div>
+        ) : stickers.length === 0 ? (
+          <div className="text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma figurinha cadastrada ainda.</div>
+        ) : (
+          <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
+            {stickers.map(s => (
+              <div
+                key={s.id}
+                className="rounded-xl border p-3 flex flex-col gap-2"
+                style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={getPublicUrl(s.image_path)}
+                    alt={s.name}
+                    className="shrink-0"
+                    style={{ width: 44, height: 44, objectFit: "contain", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)" }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate text-sm font-semibold" style={{ color: "var(--text)" }}>{s.name}</div>
+                    <div className="text-xs" style={{ color: s.active ? "var(--success)" : "var(--text-faint)" }}>
+                      {s.active ? "Ativa" : "Inativa"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setConfirmDelete(s)}
+                    title="Excluir figurinha"
+                    aria-label="Excluir figurinha"
+                    className="p-1.5 rounded-lg transition-colors shrink-0"
+                    style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <ToggleRow
+                  label="Ativa no picker do Chat"
+                  checked={s.active}
+                  onChange={() => toggleStickerActive(s.id, !s.active)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Modal open={Boolean(confirmDelete)} onClose={() => setConfirmDelete(null)} title="Excluir figurinha?" width={400}>
+        <div className="p-6">
+          <p className="text-sm mb-4" style={{ color: "var(--text-dim)" }}>
+            "{confirmDelete?.name}" será removida definitivamente — some do picker de todo mundo e o arquivo é apagado do armazenamento. Essa ação não pode ser desfeita.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmDelete(null)}
+              className="px-4 py-2 rounded-lg text-sm font-semibold border"
+              style={{ borderColor: "var(--border)", color: "var(--text)" }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              className="px-4 py-2 rounded-lg text-sm font-semibold"
+              style={{ background: "var(--danger)", color: "#fff", opacity: deleting ? 0.6 : 1 }}
+            >
+              {deleting ? "Excluindo…" : "Excluir"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 const ROLE_LABEL = {
   admin:             "Administrador",
   gerente:           "Gerente Comercial",
@@ -210,17 +414,21 @@ export function SettingsView({
   // Marketing/RH/Comex também acessa a aba Preferências, só que só enxerga
   // (e só mexe n)o próprio recorte de widgets do Painel Executivo lá dentro.
   const canSeeExecutive = isManager || isMarketingManager || isRHManager || isComexManager;
+  const isChatManager = isChatManagerUser(currentUser);
   const [activeTab, setActiveTab] = useState("perfil");
   const tabs = useMemo(() => {
-    if (!isManager && !canSeeExecutive) return PERSONAL_TABS;
-    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Usuários
+    if (!isManager && !canSeeExecutive) {
+      return isChatManager ? [...PERSONAL_TABS, { id: "figurinhas", label: "Figurinhas", icon: Image }] : PERSONAL_TABS;
+    }
+    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Figurinhas, Usuários
     const list = [PERSONAL_TABS[0]];
     list.push(MANAGER_TABS[0]);
     list.push(PERSONAL_TABS[1], PERSONAL_TABS[2]);
     if (isManager) list.push(MANAGER_TABS[1], MANAGER_TABS[2]);
+    if (isChatManager) list.push({ id: "figurinhas", label: "Figurinhas", icon: Image });
     if (isAdmin) list.push({ id: "seguranca", label: "Segurança", icon: ShieldCheck });
     return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
-  }, [isManager, canSeeExecutive, usersPanel, isAdmin]);
+  }, [isManager, canSeeExecutive, usersPanel, isAdmin, isChatManager]);
 
   // ── Vagas públicas (Recrutamento) ─────────────────────────────────────
   // rh_vagas vem cru (snake_case) de useRHRecrutamento — sem mapper camelCase.
@@ -1732,6 +1940,9 @@ export function SettingsView({
                 </div>
               </Section>
             )}
+
+            {/* ── FIGURINHAS (chat_is_manager) ── */}
+            {activeTab === "figurinhas" && isChatManager && <StickersPanel />}
 
             {/* ── SEGURANÇA (admin) ── */}
             {activeTab === "seguranca" && isAdmin && (

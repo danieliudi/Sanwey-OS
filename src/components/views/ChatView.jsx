@@ -1,16 +1,20 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowLeft, File, FileImage, FileSpreadsheet, FileText, Hash, Lock,
+  ArrowLeft, File, FileImage, FileSpreadsheet, FileText, Hash, Image, Lock,
   MessageSquare, Paperclip, Plus, Search, Send, Smile, Users, X,
 } from "lucide-react";
 import { useChat, useChannelMessages } from "../../hooks/use-chat";
 import { useChatAttachments } from "../../hooks/use-chat-attachments";
+import { useChatStickers } from "../../hooks/use-chat-stickers";
 import { useAvailableHeight } from "../../hooks/use-available-height";
+import { supabase } from "../../lib/supabase";
 import { Modal } from "../ui/Modal";
 import { EmptyState } from "../ui/EmptyState";
 import { CHAT_EMOJI_CATEGORIES } from "../../constants/chat-emojis";
 import { findBannedWord } from "../../utils/language-filter";
+
+const STICKERS_BUCKET = "chat-stickers";
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const ATTACHMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.gif,.webp";
@@ -175,13 +179,22 @@ function ChannelRow({ channel, selected, onSelect }) {
 function ChatAttachmentView({ attachment, own }) {
   const { getSignedUrl } = useChatAttachments();
   const [url, setUrl] = useState(null);
-  const isImage = (attachment.mime || "").startsWith("image/");
+  const isSticker = attachment.type === "sticker";
+  const isImage = isSticker || (attachment.mime || "").startsWith("image/");
 
   useEffect(() => {
+    // Figurinha vive no bucket público chat-stickers — getPublicUrl é
+    // síncrono (não é round-trip de rede), ao contrário do signed URL do
+    // bucket privado chat-attachments usado pelos anexos de arquivo.
+    if (isSticker) {
+      const { data } = supabase.storage.from(STICKERS_BUCKET).getPublicUrl(attachment.path);
+      setUrl(data?.publicUrl || null);
+      return;
+    }
     let alive = true;
     getSignedUrl(attachment.path).then(u => { if (alive) setUrl(u); });
     return () => { alive = false; };
-  }, [attachment.path, getSignedUrl]);
+  }, [attachment.path, isSticker, getSignedUrl]);
 
   if (isImage) {
     if (!url) {
@@ -264,11 +277,13 @@ function MessageBubble({ message, own }) {
   );
 }
 
-// Popover de emoji do composer — mesmo padrão de posicionamento via portal
-// de MoveStageMenu.jsx (position: fixed, cálculo por getBoundingClientRect
-// do botão-gatilho, fecha em clique fora/scroll/resize/Escape). Abre pra
-// cima, já que o composer fica sempre no rodapé da tela.
-function EmojiPopover({ anchorRef, open, onClose, onPick }) {
+// Casca compartilhada dos popovers do composer (emoji e figurinha) — mesmo
+// padrão de posicionamento via portal de MoveStageMenu.jsx (position: fixed,
+// cálculo por getBoundingClientRect do botão-gatilho, fecha em clique fora/
+// scroll/resize/Escape). Abre pra cima, já que o composer fica sempre no
+// rodapé da tela. Extraído aqui pra não reimplementar o mesmo cálculo de
+// posição uma 2ª vez no mesmo arquivo (figurinha reaproveita, não copia).
+function ComposerPopover({ anchorRef, open, onClose, width, children }) {
   const popRef = useRef(null);
   const [pos, setPos] = useState(null);
 
@@ -317,11 +332,20 @@ function EmojiPopover({ anchorRef, open, onClose, onPick }) {
         borderRadius: "var(--radius-lg)",
         boxShadow: "var(--shadow-pop)",
         zIndex: 2000,
-        width: 288,
+        width,
         padding: 10,
       }}
       onClick={e => e.stopPropagation()}
     >
+      {children}
+    </div>,
+    document.body
+  );
+}
+
+function EmojiPopover({ anchorRef, open, onClose, onPick }) {
+  return (
+    <ComposerPopover anchorRef={anchorRef} open={open} onClose={onClose} width={288}>
       {CHAT_EMOJI_CATEGORIES.map((cat, i) => (
         <div key={cat.id}>
           <div
@@ -349,8 +373,49 @@ function EmojiPopover({ anchorRef, open, onClose, onPick }) {
           </div>
         </div>
       ))}
-    </div>,
-    document.body
+    </ComposerPopover>
+  );
+}
+
+// Grid 4 colunas de figurinhas — clique envia a mensagem na hora (não fica
+// pendente como anexo de arquivo, ver spec seção b/e.2).
+function StickerPopover({ anchorRef, open, onClose, stickers, getPublicUrl, onPick }) {
+  return (
+    <ComposerPopover anchorRef={anchorRef} open={open} onClose={onClose} width={300}>
+      <div style={{ maxHeight: 280, overflowY: "auto" }}>
+        {stickers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-1.5 text-center" style={{ padding: 24 }}>
+            <Image size={18} color="var(--text-faint)" />
+            <span style={{ fontSize: 12, color: "var(--text-faint)" }}>
+              Nenhuma figurinha disponível ainda.
+            </span>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+            {stickers.map(sticker => (
+              <button
+                key={sticker.id}
+                type="button"
+                title={sticker.name}
+                onClick={() => onPick(sticker)}
+                style={{
+                  aspectRatio: "1", padding: 4, background: "var(--surface-alt)",
+                  border: "1px solid var(--border)", borderRadius: "var(--radius-md)", cursor: "pointer",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+              >
+                <img
+                  src={getPublicUrl(sticker.image_path)}
+                  alt={sticker.name}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </ComposerPopover>
   );
 }
 
@@ -467,6 +532,7 @@ function NewConversationModal({ open, onClose, candidates, onPick }) {
 export function ChatView({ currentUser }) {
   const { channels, dmCandidates, loading, markRead, sendMessage, startDm } = useChat({ userId: currentUser?.id });
   const { uploadAttachment } = useChatAttachments();
+  const { stickers, getPublicUrl: getStickerPublicUrl } = useChatStickers();
   const [selectedId, setSelectedId] = useState(null);
   const [mobileShowThread, setMobileShowThread] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
@@ -474,10 +540,12 @@ export function ChatView({ currentUser }) {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [stickerOpen, setStickerOpen] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState([]);
   const feedRef = useRef(null);
   const textareaRef = useRef(null);
   const emojiBtnRef = useRef(null);
+  const stickerBtnRef = useRef(null);
   const fileInputRef = useRef(null);
 
   const [shellRef, shellHeight] = useAvailableHeight(20, [loading]);
@@ -496,6 +564,7 @@ export function ChatView({ currentUser }) {
     setSendError(null);
     setPendingAttachments(prev => { prev.forEach(p => { if (p.previewUrl) URL.revokeObjectURL(p.previewUrl); }); return []; });
     setEmojiOpen(false);
+    setStickerOpen(false);
   }, [selectedId]);
 
   useEffect(() => {
@@ -553,6 +622,22 @@ export function ChatView({ currentUser }) {
   const insertEmoji = (emoji) => {
     setDraft(d => d + emoji);
     textareaRef.current?.focus();
+  };
+
+  // Figurinha É a mensagem — envia direto ao clicar, sem passar pela preview
+  // strip de anexo pendente (spec seção b/e.2).
+  const handlePickSticker = async (sticker) => {
+    setStickerOpen(false);
+    if (!selectedId || sending) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      await sendMessage(selectedId, "", [{ type: "sticker", path: sticker.image_path, name: sticker.name }]);
+    } catch (e) {
+      setSendError(e?.message || "Não foi possível enviar a figurinha.");
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleFilesSelected = (fileList) => {
@@ -778,6 +863,22 @@ export function ChatView({ currentUser }) {
                       <Smile size={18} />
                     </button>
                     <button
+                      ref={stickerBtnRef}
+                      type="button"
+                      onClick={() => setStickerOpen(v => !v)}
+                      title="Figurinha"
+                      aria-label="Figurinha"
+                      className="flex items-center justify-center rounded-full shrink-0"
+                      style={{
+                        width: 32, height: 32, background: stickerOpen ? "var(--surface-alt)" : "transparent",
+                        border: "none", color: stickerOpen ? "var(--accent)" : "var(--text-dim)", cursor: "pointer",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                      onMouseLeave={e => { if (!stickerOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; } }}
+                    >
+                      <Image size={18} />
+                    </button>
+                    <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       title="Anexar arquivo"
@@ -834,6 +935,14 @@ export function ChatView({ currentUser }) {
                     open={emojiOpen}
                     onClose={() => setEmojiOpen(false)}
                     onPick={insertEmoji}
+                  />
+                  <StickerPopover
+                    anchorRef={stickerBtnRef}
+                    open={stickerOpen}
+                    onClose={() => setStickerOpen(false)}
+                    stickers={stickers}
+                    getPublicUrl={getStickerPublicUrl}
+                    onPick={handlePickSticker}
                   />
                 </>
               )}
