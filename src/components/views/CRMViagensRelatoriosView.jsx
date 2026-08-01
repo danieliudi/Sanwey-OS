@@ -144,7 +144,7 @@ const inputSt = {
 
 const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 
-const errorBannerSt = { background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 };
+const errorBannerSt = { background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 };
 
 function btnStyle(kind, disabled) {
   const base = { display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1 };

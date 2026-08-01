@@ -491,7 +491,7 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
           <div
             key={idx}
             className="flex items-center gap-2.5 p-2.5 rounded-xl border cursor-pointer"
-            style={{ borderColor: item.done ? "#BBF7D0" : "var(--border)", background: item.done ? "#F0FDF4" : "var(--surface-alt)" }}
+            style={{ borderColor: item.done ? "color-mix(in srgb, var(--success) 35%, transparent)" : "var(--border)", background: item.done ? "var(--success-bg)" : "var(--surface-alt)" }}
             onClick={() => toggle(idx)}
           >
             <div
@@ -1717,7 +1717,7 @@ export function CampaignDetailDrawer({
         )}
         {isAgencia && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }}>
+            style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}>
             Visitante
           </span>
         )}

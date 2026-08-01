@@ -622,7 +622,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
               style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
@@ -958,7 +958,7 @@ function FeedbackDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>

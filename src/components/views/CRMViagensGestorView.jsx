@@ -45,7 +45,7 @@ const thSt = { fontSize: 10, fontWeight: 700, color: "var(--text-faint)", textTr
 
 const labelSt = { fontSize: 10, fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4, display: "block" };
 
-const errorBannerSt = { background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 };
+const errorBannerSt = { background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginTop: 10 };
 
 function btnStyle(kind, disabled, big) {
   // big=true: alvo de toque ~40px pra ações de decisão de reembolso no celular
@@ -94,7 +94,7 @@ function VisitaCardMobile({ registro: r, showVendedorCol, nomePorId, today }) {
         border: "1px solid var(--border)",
         borderRadius: 10,
         padding: 12,
-        background: destaque ? "#FEF2F2" : "transparent",
+        background: destaque ? "var(--danger-bg)" : "transparent",
         borderLeft: destaque ? "3px solid var(--danger)" : "3px solid transparent",
       }}
     >
@@ -164,7 +164,7 @@ function VisitasTable({ registros, showVendedorCol, nomePorId, today }) {
                 borderRadius: 8,
                 marginTop: 4,
                 alignItems: "start",
-                background: destaque ? "#FEF2F2" : "transparent",
+                background: destaque ? "var(--danger-bg)" : "transparent",
                 borderLeft: destaque ? "3px solid var(--danger)" : "3px solid transparent",
               }}
             >

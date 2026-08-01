@@ -49,7 +49,7 @@ function PosVendaCardBody({ kase, owners, sourceLead, onOpenLead }) {
         {kase.clientName}
       </div>
       <div className="flex items-center justify-between text-xs">
-        <span className="font-semibold" style={{ color: "#15803D" }}>{formatK(kase.value)}</span>
+        <span className="font-semibold" style={{ color: "var(--success)" }}>{formatK(kase.value)}</span>
         <AvatarStack users={owners} size={20} max={3} />
       </div>
       {sourceLead && (
@@ -189,7 +189,7 @@ function QuickAddCaseModal({ stage, companyId, currentUser, users, onAdd, onClos
             </div>
           )}
           {error && (
-            <div className="text-xs rounded-lg px-3 py-2" style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}>
+            <div className="text-xs rounded-lg px-3 py-2" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
               {error}
             </div>
           )}
@@ -410,7 +410,7 @@ function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
                 <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)", maxWidth: 220 }}>
                   <div className="truncate">{kase.clientName}</div>
                 </td>
-                <td className="px-4 py-3 text-xs font-semibold" style={{ color: "#15803D" }}>{formatK(kase.value)}</td>
+                <td className="px-4 py-3 text-xs font-semibold" style={{ color: "var(--success)" }}>{formatK(kase.value)}</td>
                 <td className="px-4 py-3">
                   <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
                     {stage?.name || kase.stage}
@@ -669,7 +669,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
               style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"

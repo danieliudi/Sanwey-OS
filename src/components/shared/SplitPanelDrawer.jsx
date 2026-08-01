@@ -59,7 +59,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
                 onClick={() => setConfirmDelete(true)}
                 className="min-w-10 min-h-10 flex items-center justify-center rounded-lg transition-colors duration-150 cursor-pointer"
                 style={{ color: "var(--text-dim)", background: "transparent", border: "none" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                 aria-label={deleteLabel}
                 title={deleteLabel}
@@ -73,7 +73,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
                   onClick={handleDeleteConfirmed}
                   disabled={deleting}
                   className="px-3 min-h-10 flex items-center justify-center rounded-lg text-xs font-semibold cursor-pointer transition-colors"
-                  style={{ background: "#B91C1C", color: "#FFFFFF", border: "none", opacity: deleting ? 0.6 : 1 }}
+                  style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", opacity: deleting ? 0.6 : 1 }}
                 >
                   {deleting ? "Excluindo…" : "Confirmar exclusão"}
                 </button>

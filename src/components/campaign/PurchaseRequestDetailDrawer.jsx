@@ -509,7 +509,7 @@ export function PurchaseRequestDetailDrawer({
   const left = (
     <>
       {isRejected && (
-        <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>
+        <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <XCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
           <div>
             <div className="font-semibold text-sm">Solicitação rejeitada</div>
@@ -596,7 +596,7 @@ export function PurchaseRequestDetailDrawer({
                 </div>
               ))}
               {quotesError && (
-                <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{quotesError}</div>
+                <div className="text-xs px-3 py-2 rounded-lg mb-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{quotesError}</div>
               )}
               <button onClick={handleSaveQuotes} disabled={savingQuotes}
                 className="px-4 py-2 rounded-lg text-sm font-semibold"
@@ -729,7 +729,7 @@ export function PurchaseRequestDetailDrawer({
             )}
 
             {saveError && (
-              <div className="text-xs px-3 py-2 rounded-lg mb-2 mt-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{saveError}</div>
+              <div className="text-xs px-3 py-2 rounded-lg mb-2 mt-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{saveError}</div>
             )}
             <button onClick={handleSaveFields} disabled={saving}
               className="px-4 py-2 rounded-lg text-sm font-semibold mt-2"
@@ -772,7 +772,7 @@ export function PurchaseRequestDetailDrawer({
               onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadInvoice(f); e.target.value = ""; }} />
           </label>
           {uploadError && (
-            <div className="text-xs px-3 py-2 rounded-lg mt-2" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{uploadError}</div>
+            <div className="text-xs px-3 py-2 rounded-lg mt-2" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{uploadError}</div>
           )}
         </div>
       )}
@@ -876,7 +876,7 @@ export function PurchaseRequestDetailDrawer({
           </FieldRow>
 
           {actionError && (
-            <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{actionError}</div>
+            <div className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{actionError}</div>
           )}
 
           {!showReject ? (
@@ -930,7 +930,7 @@ export function PurchaseRequestDetailDrawer({
           handleMoveStage nessa combinação (isPending && !canApprove) não
           aparecia em lugar nenhum — achado ao ampliar quem pode agir aqui. */}
       {!(isPending && canApprove) && actionError && (
-        <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>{actionError}</div>
+        <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>{actionError}</div>
       )}
 
       {!isRejected && !isPending && movableStages.length > 0 && (

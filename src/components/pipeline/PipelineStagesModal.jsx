@@ -211,7 +211,7 @@ export function PipelineStagesModal({
                     onClick={() => transitions.resetCompany(companyId)}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
                     style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.borderColor = "#FECACA"; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.borderColor = "color-mix(in srgb, var(--danger) 35%, transparent)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "var(--border)"; }}
                   >
                     <RotateCcw size={11} />
@@ -327,8 +327,8 @@ function StageRow({
         {/* Bulk actions — empilha abaixo do sm pra não ficar cortada pelo overflow-hidden do card pai */}
         <div className="flex items-center gap-1 flex-wrap w-full sm:w-auto sm:flex-nowrap sm:shrink-0">
           <BulkBtn onClick={onForwardOnly} icon={FastForward} label="Só avançar" tone={accent} />
-          <BulkBtn onClick={onSetAll}      icon={CheckCheck}   label="Permitir todas" tone="#047857" />
-          <BulkBtn onClick={onClearAll}    icon={Ban}          label="Bloquear todas" tone="#B91C1C" />
+          <BulkBtn onClick={onSetAll}      icon={CheckCheck}   label="Permitir todas" tone="var(--success)" />
+          <BulkBtn onClick={onClearAll}    icon={Ban}          label="Bloquear todas" tone="var(--danger)" />
           <button
             onClick={() => setExpanded(v => !v)}
             className="p-1 ml-1 cursor-pointer"

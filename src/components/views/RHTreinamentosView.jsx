@@ -78,13 +78,13 @@ function vencimentoDate(atribuicao, treinamento) {
 
 function atribuicaoStatusInfo(atribuicao, treinamento) {
   if (atribuicao.status === "vencido") {
-    return { label: `Vencido em ${fmt(vencimentoDate(atribuicao, treinamento))}`, color: "var(--danger)", bg: "#FEE2E2" };
+    return { label: `Vencido em ${fmt(vencimentoDate(atribuicao, treinamento))}`, color: "var(--danger)", bg: "var(--danger-bg)" };
   }
   if (atribuicao.status === "concluido") {
     const venc = vencimentoDate(atribuicao, treinamento);
-    return { label: venc ? `Concluído em ${fmt(atribuicao.data_conclusao)} · vence ${fmt(venc)}` : `Concluído em ${fmt(atribuicao.data_conclusao)}`, color: "var(--success)", bg: "#DCFCE7" };
+    return { label: venc ? `Concluído em ${fmt(atribuicao.data_conclusao)} · vence ${fmt(venc)}` : `Concluído em ${fmt(atribuicao.data_conclusao)}`, color: "var(--success)", bg: "var(--success-bg)" };
   }
-  return { label: "Pendente", color: "var(--warning)", bg: "#FEF3C7" };
+  return { label: "Pendente", color: "var(--warning)", bg: "var(--warning-bg)" };
 }
 
 // ── Modal: novo/editar treinamento ────────────────────────────────────────────
@@ -598,7 +598,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             </span>
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
@@ -853,7 +853,7 @@ function AtribuicaoDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>

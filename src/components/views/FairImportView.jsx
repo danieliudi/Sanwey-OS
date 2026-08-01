@@ -376,10 +376,10 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
       {/* Format instructions */}
       <div
         className="p-4 rounded-xl border text-xs leading-relaxed"
-        style={{ background: "#FFFBF0", borderColor: "#FDE68A", color: "#78350F" }}
+        style={{ background: "var(--warning-bg)", borderColor: "color-mix(in srgb, var(--warning) 35%, transparent)", color: "var(--warning)" }}
       >
         <div className="font-semibold mb-1.5">Colunas esperadas (Swapcard / RD Station Events)</div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1" style={{ color: "#92400E" }}>
+        <div className="flex flex-wrap gap-x-4 gap-y-1" style={{ color: "var(--warning)" }}>
           <span>✓ First Name / Last Name</span>
           <span>✓ Company / Email</span>
           <span>✓ Job Title / Mobile Phone</span>
@@ -387,7 +387,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           <span>✓ Porte da empresa / Área de atuação</span>
           <span>✓ Exhibitor Member (para atribuição ao vendedor)</span>
         </div>
-        <div className="mt-1.5" style={{ color: "#B45309" }}>
+        <div className="mt-1.5" style={{ color: "var(--warning)" }}>
           Formatos aceitos: <strong>.xlsx</strong> e <strong>.csv</strong> · Máx. 5 MB · Use o modelo acima como referência.
         </div>
       </div>

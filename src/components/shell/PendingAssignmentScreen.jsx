@@ -68,7 +68,7 @@ export function PendingAssignmentScreen({ currentUser, onRefresh, onLogout }) {
 
         <div
           className="text-xs mb-5 p-3.5 rounded-xl leading-relaxed"
-          style={{ background: "var(--warning-bg)", color: "#92400E", border: "1px solid #FDE68A" }}
+          style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}
         >
           <strong>Dica:</strong> peça ao administrador para abrir <em>Usuários</em> e
           atribuir pelo menos uma empresa (Sanwey ou Resibag)

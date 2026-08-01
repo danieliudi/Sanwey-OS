@@ -230,7 +230,7 @@ function QuickAddForm({ stageId, stage, companyId, currentUser, users, usersById
       {error && (
         <div
           className="text-[11px] rounded-md px-2 py-1.5"
-          style={{ background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }}
+          style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
         >
           {error}
         </div>
@@ -847,8 +847,8 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   height: "100%",
                   overflow: "hidden",
                   border: "1px solid var(--border)",
-                  background: isBlocked ? "#FEF2F2" : isOver && canAccept ? stage.color + "14" : "var(--surface-alt)",
-                  boxShadow: isBlocked ? "0 0 0 2px #FCA5A520" : isOver && canAccept ? `0 0 0 2px ${stage.color}40` : isOver && !canAccept ? "0 0 0 2px #FECACA" : "none",
+                  background: isBlocked ? "var(--danger-bg)" : isOver && canAccept ? stage.color + "14" : "var(--surface-alt)",
+                  boxShadow: isBlocked ? "0 0 0 2px color-mix(in srgb, var(--danger) 20%, transparent)" : isOver && canAccept ? `0 0 0 2px ${stage.color}40` : isOver && !canAccept ? "0 0 0 2px color-mix(in srgb, var(--danger) 35%, transparent)" : "none",
                 }}
               >
                 {/* Cabeçalho encostado no topo da coluna, sem gap/sombra
@@ -888,7 +888,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   )}
                 >
                   {isBlocked ? (
-                    <div className="text-xs mt-1 font-semibold" style={{ color: "#B91C1C" }}>
+                    <div className="text-xs mt-1 font-semibold" style={{ color: "var(--danger)" }}>
                       Transição bloqueada
                     </div>
                   ) : (
@@ -1189,7 +1189,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="font-semibold text-sm" style={{ color: lead.value > 0 ? "#15803D" : "var(--text-dim)" }}>
+                <span className="font-semibold text-sm" style={{ color: lead.value > 0 ? "var(--success)" : "var(--text-dim)" }}>
                   {lead.value > 0 ? formatK(lead.value) : "—"}
                 </span>
                 {onStarToggle && (
@@ -1211,8 +1211,8 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                       padding: "1px 5px",
                       borderRadius: 4,
                       fontWeight: 700,
-                      background: lead.fitScore >= 80 ? "#DCFCE7" : lead.fitScore >= 50 ? "#FEF3C7" : "#FEE2E2",
-                      color: lead.fitScore >= 80 ? "#15803D" : lead.fitScore >= 50 ? "#B45309" : "#B91C1C",
+                      background: lead.fitScore >= 80 ? "var(--success-bg)" : lead.fitScore >= 50 ? "var(--warning-bg)" : "var(--danger-bg)",
+                      color: lead.fitScore >= 80 ? "var(--success)" : lead.fitScore >= 50 ? "var(--warning)" : "var(--danger)",
                     }}
                   >
                     {lead.fitScore}
@@ -1333,7 +1333,7 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                   ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
                 </td>
                 {/* Value */}
-                <td style={{ padding: "10px 12px", fontWeight: 600, color: lead.value > 0 ? "#15803D" : "var(--text-dim)" }}>
+                <td style={{ padding: "10px 12px", fontWeight: 600, color: lead.value > 0 ? "var(--success)" : "var(--text-dim)" }}>
                   {lead.value > 0 ? formatK(lead.value) : "—"}
                 </td>
                 {/* Fit Score */}
@@ -1345,8 +1345,8 @@ function LeadTableView({ leads, stages, users, onLeadClick, onStarToggle, isGrou
                       borderRadius: 4,
                       fontSize: 11,
                       fontWeight: 700,
-                      background: lead.fitScore >= 80 ? "#DCFCE7" : lead.fitScore >= 50 ? "#FEF3C7" : "#FEE2E2",
-                      color: lead.fitScore >= 80 ? "#15803D" : lead.fitScore >= 50 ? "#B45309" : "#B91C1C",
+                      background: lead.fitScore >= 80 ? "var(--success-bg)" : lead.fitScore >= 50 ? "var(--warning-bg)" : "var(--danger-bg)",
+                      color: lead.fitScore >= 80 ? "var(--success)" : lead.fitScore >= 50 ? "var(--warning)" : "var(--danger)",
                     }}>
                       {lead.fitScore}
                     </span>

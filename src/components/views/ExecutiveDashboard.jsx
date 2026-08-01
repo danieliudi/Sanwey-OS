@@ -692,9 +692,9 @@ function AISection({ icon: Icon, title, description, onGenerate, loading, result
               onClick={handleCopy}
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150"
               style={{
-                background: copied ? "#F0FDF4" : "var(--surface)",
-                color: copied ? "#16A34A" : "var(--text-dim)",
-                borderColor: copied ? "#BBF7D0" : "var(--border)",
+                background: copied ? "var(--success-bg)" : "var(--surface)",
+                color: copied ? "var(--success)" : "var(--text-dim)",
+                borderColor: copied ? "color-mix(in srgb, var(--success) 35%, transparent)" : "var(--border)",
                 cursor: "pointer",
               }}
               onMouseEnter={e => { if (!copied) { e.currentTarget.style.borderColor = "var(--text)"; e.currentTarget.style.color = "var(--text)"; } }}
@@ -762,7 +762,7 @@ function AIExecutivePanel({ leads, users, currentUser }) {
         {!isConfigured && (
           <span
             className="text-xs font-medium px-3 py-1.5 rounded-full"
-            style={{ background: "#FEF3C7", color: "#92400E" }}
+            style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
           >
             Configure sua LLM nas Configurações → Integrações de IA
           </span>

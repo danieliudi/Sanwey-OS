@@ -390,7 +390,7 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
       {field.locked ? (
         <span
           className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded"
-          style={{ background: "#F0FDF4", color: "#16A34A", letterSpacing: "0.1em" }}
+          style={{ background: "var(--success-bg)", color: "var(--success)", letterSpacing: "0.1em" }}
         >
           Fixo
         </span>
@@ -416,7 +416,7 @@ function FormFieldRow({ field, index, onDragStart, onDragEnd, onToggleRequired, 
             onClick={onRemove}
             className="p-1 rounded transition-colors"
             style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; e.currentTarget.style.background = "#FEE2E2"; }}
+            onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.background = "var(--danger-bg)"; }}
             onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
           >
             <Trash2 size={13} />

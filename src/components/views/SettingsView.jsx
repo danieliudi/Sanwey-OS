@@ -54,7 +54,7 @@ function CopyLinkButton({ url, className, style }) {
       className={className}
       style={{
         ...style,
-        ...(copied ? { background: "#DCFCE7", color: "#15803D", borderColor: "#BBF7D0" } : {}),
+        ...(copied ? { background: "var(--success-bg)", color: "var(--success)", borderColor: "color-mix(in srgb, var(--success) 35%, transparent)" } : {}),
       }}
       title={url}
     >
@@ -723,7 +723,7 @@ export function SettingsView({
                       style={{
                         background: profileFeedback.type === "success" ? "var(--success-bg)" : "var(--danger-bg)",
                         color: profileFeedback.type === "success" ? "var(--success)" : "var(--danger)",
-                        border: `1px solid ${profileFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
+                        border: `1px solid ${profileFeedback.type === "success" ? "color-mix(in srgb, var(--success) 35%, transparent)" : "color-mix(in srgb, var(--danger) 35%, transparent)"}`,
                       }}
                     >
                       {profileFeedback.type === "success" ? <Check size={13} /> : <AlertTriangle size={13} />}
@@ -784,7 +784,7 @@ export function SettingsView({
                       style={{
                         background: passwordFeedback.type === "success" ? "var(--success-bg)" : "var(--danger-bg)",
                         color: passwordFeedback.type === "success" ? "var(--success)" : "var(--danger)",
-                        border: `1px solid ${passwordFeedback.type === "success" ? "#BBF7D0" : "#FECACA"}`,
+                        border: `1px solid ${passwordFeedback.type === "success" ? "color-mix(in srgb, var(--success) 35%, transparent)" : "color-mix(in srgb, var(--danger) 35%, transparent)"}`,
                       }}
                     >
                       {passwordFeedback.type === "success" ? <Check size={13} /> : <AlertTriangle size={13} />}
@@ -1253,7 +1253,7 @@ export function SettingsView({
                           {d4signStatus.configured ? "Configurado e ativo" : "Não configurado"}
                         </span>
                         {d4signStatus.configured && d4signStatus.sandbox && (
-                          <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                          <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
                             SANDBOX
                           </span>
                         )}
@@ -1421,7 +1421,7 @@ export function SettingsView({
             {activeTab === "dados" && (
               <div className="space-y-4">
                 {!supabaseEnabled && (
-                  <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid #FCD34D" }}>
+                  <div className="text-xs px-3 py-2 rounded-lg" style={{ background: "var(--warning-bg)", color: "var(--warning)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}>
                     Modo offline — dados armazenados localmente neste navegador.
                   </div>
                 )}
@@ -1442,7 +1442,7 @@ export function SettingsView({
                       icon={Trash2}
                       onClick={handleClearLeads}
                       disabled={leadsCount === 0}
-                      style={{ color: "var(--danger)", borderColor: "#FECACA" }}
+                      style={{ color: "var(--danger)", borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}
                     >
                       Limpar todos os leads
                     </Button>
@@ -1466,7 +1466,7 @@ export function SettingsView({
                     description="Popula campanhas, entregas, despesas, solicitações e funcionários fictícios para explorar todas as áreas da plataforma."
                   >
                     {demoDataCounts && (
-                      <div className="mb-3 p-3 rounded-lg text-xs" style={{ background: "#DCFCE7", color: "#15803D", border: "1px solid #BBF7D0" }}>
+                      <div className="mb-3 p-3 rounded-lg text-xs" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}>
                         <strong>Carregado com sucesso:</strong>{" "}
                         {demoDataCounts.campaigns} campanhas,{" "}
                         {demoDataCounts.deliverables} entregas,{" "}

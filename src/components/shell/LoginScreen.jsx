@@ -297,11 +297,11 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
       {mode === "recovery" && recoverySent && (
         <div
           className="rounded-xl p-4 flex flex-col items-center gap-2 text-center mb-4"
-          style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}
+          style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}
         >
-          <CheckCircle2 size={28} style={{ color: "#16A34A" }} />
-          <div className="font-semibold text-sm" style={{ color: "#15803D" }}>E-mail enviado!</div>
-          <div className="text-xs" style={{ color: "#166534" }}>
+          <CheckCircle2 size={28} style={{ color: "var(--success)" }} />
+          <div className="font-semibold text-sm" style={{ color: "var(--success)" }}>E-mail enviado!</div>
+          <div className="text-xs" style={{ color: "var(--success)" }}>
             Verifique sua caixa de entrada em <strong>{email}</strong> e clique no link para redefinir a senha.
           </div>
           <button
@@ -380,7 +380,7 @@ function SupabaseAuthCard({ authError, authLoading, onSignIn, onSignUp }) {
         {err && (
           <div
             className="text-xs px-3.5 py-2.5 rounded-lg"
-            style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FCA5A5" }}
+            style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
           >
             {translateAuthError(err.message) || "Não foi possível autenticar. Tente novamente."}
           </div>
@@ -510,10 +510,10 @@ export function PasswordResetScreen({ onReset, variant = "recovery" }) {
         </div>
 
         {done ? (
-          <div className="rounded-xl p-5 flex flex-col items-center gap-3 text-center" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
-            <CheckCircle2 size={32} style={{ color: "#16A34A" }} />
-            <div className="font-semibold" style={{ color: "#15803D" }}>{copy.doneTitle}</div>
-            <div className="text-xs" style={{ color: "#166534" }}>{copy.doneSubtitle}</div>
+          <div className="rounded-xl p-5 flex flex-col items-center gap-3 text-center" style={{ background: "var(--success-bg)", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}>
+            <CheckCircle2 size={32} style={{ color: "var(--success)" }} />
+            <div className="font-semibold" style={{ color: "var(--success)" }}>{copy.doneTitle}</div>
+            <div className="text-xs" style={{ color: "var(--success)" }}>{copy.doneSubtitle}</div>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -534,7 +534,7 @@ export function PasswordResetScreen({ onReset, variant = "recovery" }) {
               onToggleShow={() => setShowPwd(v => !v)}
             />
             {error && (
-              <div className="text-xs px-3.5 py-2.5 rounded-lg" style={{ background: "#FEE2E2", color: "#991B1B", border: "1px solid #FCA5A5" }}>
+              <div className="text-xs px-3.5 py-2.5 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}>
                 {error}
               </div>
             )}

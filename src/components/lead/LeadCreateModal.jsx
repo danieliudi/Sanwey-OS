@@ -667,10 +667,10 @@ export function LeadCreateModal({
               style={{
                 padding: "8px 12px",
                 borderRadius: 8,
-                background: "#FEF2F2",
-                color: "#B91C1C",
+                background: "var(--danger-bg)",
+                color: "var(--danger)",
                 fontSize: 12,
-                border: "1px solid #FECACA",
+                border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)",
                 marginBottom: 16,
               }}
             >

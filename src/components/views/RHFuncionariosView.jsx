@@ -56,7 +56,7 @@ import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
 const BENEFICIO_STATUS_COLORS = {
   solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
   aprovado:   { bg: "#DBEAFE", text: "#2563EB" },
-  ativo:      { bg: "#DCFCE7", text: "#16A34A" },
+  ativo:      { bg: "var(--success-bg)", text: "var(--success)" },
   cancelado:  { bg: "var(--surface-alt)", text: "var(--text-dim)" },
 };
 const BENEFICIO_STATUS_LABELS = { solicitado: "Solicitado", aprovado: "Aprovado", ativo: "Ativo", cancelado: "Cancelado" };
@@ -150,8 +150,8 @@ function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
 const SIGNATURE_STATUS_COLORS = {
   pendente_envio: { bg: "var(--surface-alt)", text: "var(--text-dim)" },
   enviado:        { bg: "var(--warning-bg)", text: "var(--warning)" },
-  assinado:       { bg: "#DCFCE7", text: "#16A34A" },
-  recusado:       { bg: "#FEE2E2", text: "#DC2626" },
+  assinado:       { bg: "var(--success-bg)", text: "var(--success)" },
+  recusado:       { bg: "var(--danger-bg)", text: "var(--danger)" },
   cancelado:      { bg: "var(--surface-alt)", text: "var(--text-dim)" },
 };
 const SIGNATURE_STATUS_LABELS = {

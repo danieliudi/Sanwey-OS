@@ -17,13 +17,13 @@ const AGENTS = {
   sdr_q:    { label: "SDR-Q",     sub: "Qualificador",         Icon: Target,    color: "#1D4ED8", bg: "#EBF0F9" },
   scout:    { label: "SCOUT",     sub: "Inteligência de Conta", Icon: Telescope, color: "#6B21A8", bg: "#F5F0FB" },
   cadencia: { label: "CADÊNCIA",  sub: "Follow-up Engine",      Icon: Repeat2,   color: "#C2410C", bg: "#FEF3EC" },
-  sentinela:{ label: "SENTINELA", sub: "Monitor de Funil",      Icon: Shield,    color: "#B91C1C", bg: "#FEF2F2" },
+  sentinela:{ label: "SENTINELA", sub: "Monitor de Funil",      Icon: Shield,    color: "var(--danger)", bg: "var(--danger-bg)" },
   cross:    { label: "CROSS",     sub: "Cross-sell",            Icon: GitMerge,  color: "#0F766E", bg: "#F0FDFA" },
 };
 
 // ── Priority config ────────────────────────────────────────────────────────
 const PRIORITY = {
-  urgent: { label: "Urgente",  color: "#B91C1C", bg: "#FEF2F2" },
+  urgent: { label: "Urgente",  color: "var(--danger)", bg: "var(--danger-bg)" },
   high:   { label: "Alta",     color: "#C2410C", bg: "#FEF3EC" },
   normal: { label: "Normal",   color: "#1D4ED8", bg: "#EBF0F9" },
   low:    { label: "Baixa",    color: "var(--text-dim)", bg: "var(--surface-alt)" },

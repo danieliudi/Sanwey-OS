@@ -187,7 +187,7 @@ function AddFieldForm({ presetType, onAdd, onCancel, accent, busy }) {
       </div>
 
       {error && (
-        <div style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}>
+        <div style={{ fontSize: 12, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}>
           {error}
         </div>
       )}
@@ -270,7 +270,7 @@ function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, on
               title="Clique para renomear"
               style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" }}
             >
-              {field.required && <span style={{ color: "#B91C1C", marginRight: 3 }}>*</span>}
+              {field.required && <span style={{ color: "var(--danger)", marginRight: 3 }}>*</span>}
               {field.label}
             </div>
           )}
@@ -382,7 +382,7 @@ function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, on
             <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               <button
                 onClick={() => onDelete(field.id)}
-                style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, border: "none", background: "#B91C1C", color: "#FFF", cursor: "pointer" }}
+                style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, border: "none", background: "var(--danger)", color: "#FFF", cursor: "pointer" }}
               >
                 Remover
               </button>
@@ -397,7 +397,7 @@ function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, on
             <button
               onClick={() => setConfirmDel(true)}
               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--border-strong)", padding: 2, lineHeight: 0, flexShrink: 0 }}
-              onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
               onMouseLeave={e => { e.currentTarget.style.color = "var(--border-strong)"; }}
               title="Remover campo"
             >
@@ -725,7 +725,7 @@ export function StageFieldsPanel({
                 )}
 
                 {opError && (
-                  <div className="mb-3" style={{ fontSize: 12, color: "#B91C1C", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, padding: "6px 10px" }}>
+                  <div className="mb-3" style={{ fontSize: 12, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 6, padding: "6px 10px" }}>
                     {opError}
                   </div>
                 )}

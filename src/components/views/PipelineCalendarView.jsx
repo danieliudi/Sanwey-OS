@@ -211,7 +211,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
         <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap text-[11px] border-t" style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}>
           <LegendDot color="#047857" icon={CalendarCheck} label="Follow-up agendado" />
           <LegendDot color="#1E3A8A" icon={CalendarClock} label="Previsão de fechamento" />
-          <LegendDot color="#DC2626" icon={AlertTriangle} label="Fechamento atrasado" />
+          <LegendDot color="var(--danger)" icon={AlertTriangle} label="Fechamento atrasado" />
         </div>
       </div>
 
@@ -245,7 +245,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
 const EVENT_STYLE = {
   followup: { bg: "#D1FAE5", color: "#047857", label: "Follow-up" },
   close:    { bg: "#DBEAFE", color: "#1E3A8A", label: "Fechamento" },
-  overdue:  { bg: "#FEE2E2", color: "#B91C1C", label: "Atrasado" },
+  overdue:  { bg: "var(--danger-bg)", color: "var(--danger)", label: "Atrasado" },
 };
 
 function EventPill({ event, onClick }) {

@@ -313,7 +313,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
 
           <button type="submit" disabled={saving || !title.trim() || !deadline}
@@ -630,7 +630,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
               style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
@@ -902,9 +902,9 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           {/* Chip do deep-link "Presas em revisão" (Painel de Marketing) —
               fica visível mesmo com o painel de filtros fechado. */}
           {stuckOnly && (
-            <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: "1px solid #FED7AA", background: "#FFF7ED", color: "#D97706", fontSize: 11, fontWeight: 600 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", background: "var(--warning-bg)", color: "var(--warning)", fontSize: 11, fontWeight: 600 }}>
               Presas em revisão · +3 dias
-              <button onClick={() => setStuckOnly(false)} style={{ display: "flex", color: "#D97706", background: "none", border: "none", cursor: "pointer", padding: 0 }} title="Limpar filtro">
+              <button onClick={() => setStuckOnly(false)} style={{ display: "flex", color: "var(--warning)", background: "none", border: "none", cursor: "pointer", padding: 0 }} title="Limpar filtro">
                 <X size={11} />
               </button>
             </span>
