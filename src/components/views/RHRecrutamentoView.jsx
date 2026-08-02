@@ -44,6 +44,7 @@ import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useRHManagerLinks } from "../../hooks/use-rh-manager-links";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { QRCodeButton } from "../shared/QRCodeButton";
 import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
 import { useRHCargoTemplates } from "../../hooks/use-rh-cargo-templates";
@@ -1407,7 +1408,32 @@ function EncaminharGestorModal({ vagaTitle, onSave, onClose }) {
 
 function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={vagas}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma vaga encontrada."
+      title={(vaga) => vaga.title}
+      chips={(vaga) => {
+        const st = findStage(stages, vaga.stage);
+        const pri = priorityInfo(vaga.priority);
+        return [
+          { label: pri.name, color: pri.color },
+          { label: st.name, color: st.color },
+        ];
+      }}
+      right={(vaga) => {
+        const count = candidatosByVaga[vaga.id] || 0;
+        return (
+          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+            {count} candidato{count !== 1 ? "s" : ""}
+          </span>
+        );
+      }}
+      meta={(vaga) => [vaga.job_title, vaga.department].filter(Boolean).join(" · ") || "—"}
+      metaRight={(vaga) => <span>{fmt(vaga.hiring_deadline)}</span>}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full min-w-[720px] border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -1449,6 +1475,7 @@ function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -2474,7 +2501,44 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
   const allSelected = selectable && candidatos.length > 0 && candidatos.every((c) => selectedIds?.has(c.id));
   const baseCols = 6;
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={candidatos}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhum candidato encontrado."
+      title={(c) => c.name}
+      chips={(c) => {
+        const st = findStage(stages, c.stage);
+        return [{ label: st.name, color: st.color }];
+      }}
+      right={(c) => (
+        <span className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <StarRating value={c.rating || 0} />
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={selectedIds?.has(c.id) || false}
+              onChange={() => onToggleSelect?.(c.id)}
+              title={c.email ? `Selecionar ${c.name}` : `${c.name} não tem e-mail`}
+              style={{ cursor: "pointer" }}
+            />
+          )}
+        </span>
+      )}
+      meta={(c) => {
+        const vagaTitle = vagas.find((v) => v.id === c.vaga_id)?.title;
+        return (
+          <>
+            <span className="truncate">{[vagaTitle, c.source].filter(Boolean).join(" · ") || "—"}</span>
+            {selectable && !c.email && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "var(--warning-bg)", color: "var(--warning)" }} title="Sem e-mail — não receberá retorno">sem e-mail</span>
+            )}
+          </>
+        );
+      }}
+      metaRight={(c) => <span>{fmt(c.created_at)}</span>}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full min-w-[720px] border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -2543,6 +2607,7 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

@@ -20,6 +20,7 @@ import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion"
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
@@ -949,7 +950,40 @@ function AtribuicaoDrawer({
 
 function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={atribuicoes}
+      onRowClick={onRowClick}
+      emptyMessage="Ninguém atribuído ainda."
+      title={(a) => colaboradoresById.get(a.colaborador_id)?.fullName || "—"}
+      chips={(a) => {
+        const st = findStage(stages, a.status);
+        return [{ label: st.name, color: st.color }];
+      }}
+      right={(a) => a.certificado_url ? (
+        <a href={a.certificado_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+          className="text-xs" style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--accent)", fontWeight: 600 }}>
+          <ExternalLink size={12} /> Certificado
+        </a>
+      ) : a.status === "concluido" ? (
+        <span className="text-xs" style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "var(--warning)", fontWeight: 600 }}>
+          <AlertCircle size={11} /> Sem certificado
+        </span>
+      ) : null}
+      meta={(a) => colaboradoresById.get(a.colaborador_id)?.jobTitle || "—"}
+      metaRight={(a) => {
+        const venc = vencimentoDate(a, treinamento);
+        return (
+          <>
+            <span>Conclusão: {fmt(a.data_conclusao)}</span>
+            <span style={{ color: a.status === "vencido" ? "var(--danger)" : "var(--text-dim)", fontWeight: a.status === "vencido" ? 700 : 400 }}>
+              Venc.: {venc ? fmt(venc) : "—"}
+            </span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -1003,6 +1037,7 @@ function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresB
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

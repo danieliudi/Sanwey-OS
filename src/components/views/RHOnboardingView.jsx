@@ -29,6 +29,7 @@ import { RHKanbanCard } from "../rh-pipeline/RHKanbanCard";
 import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { AppToast } from "../shared/AppToast";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
@@ -960,7 +961,29 @@ function MeuChecklist({ colaborador, tarefas, onStatusChange }) {
 
 function OnboardingTableView({ colaboradores, stages, tarefasByColaborador, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={colaboradores}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhum colaborador encontrado."
+      title={(c) => c.fullName}
+      chips={(c) => {
+        const st = findStage(stages, c.onboardingStage);
+        return [{ label: st.name, color: st.color }];
+      }}
+      right={(c) => {
+        const tarefas = tarefasByColaborador[c.id] || [];
+        const done = tarefas.filter((t) => t.status === "concluida").length;
+        return (
+          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+            {tarefas.length > 0 ? `${done}/${tarefas.length}` : "—"}
+          </span>
+        );
+      }}
+      meta={(c) => [c.jobTitle, c.department].filter(Boolean).join(" · ") || "—"}
+      metaRight={(c) => <span>{fmt(c.admissionDate)}</span>}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -1004,6 +1027,7 @@ function OnboardingTableView({ colaboradores, stages, tarefasByColaborador, onRo
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

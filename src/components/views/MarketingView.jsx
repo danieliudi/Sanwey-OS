@@ -37,6 +37,7 @@ import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
@@ -465,7 +466,38 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 
 function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={campaigns}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma campanha encontrada."
+      title={(c) => c.name}
+      chips={(c) => {
+        const stage = (stages?.length ? stages : MARKETING_STAGES).find(s => s.id === c.stage);
+        const color = stage?.color || "var(--text-dim)";
+        return [{ label: stage?.name || c.stage, color }];
+      }}
+      right={(c) => (
+        <span className="flex items-center gap-1.5">
+          {c.starred && <Star size={12} style={{ color: "#F59E0B", fill: "#F59E0B" }} />}
+          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>{c.budget > 0 ? formatK(c.budget) : "—"}</span>
+        </span>
+      )}
+      meta={(c) => {
+        const companies = (c.companyIds || []).map(id => COMPANIES[id]?.short).filter(Boolean).join("/");
+        return [companies, c.channel].filter(Boolean).join(" · ") || "—";
+      }}
+      metaRight={(c) => {
+        const resolvedOwners = getCampaignOwnerIds(c).map(id => usersById.get(id)).filter(Boolean);
+        return (
+          <>
+            {resolvedOwners.length > 0 && <AvatarStack users={resolvedOwners} size={18} max={2} />}
+            <span>{c.launchDate ? formatDateBR(c.launchDate) : "—"}</span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -531,6 +563,7 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

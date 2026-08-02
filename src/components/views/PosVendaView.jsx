@@ -5,6 +5,7 @@ import { Select } from "../ui/Select";
 import { CurrencyInput } from "../ui/CurrencyInput";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { AppToast } from "../shared/AppToast";
 import { StageNavigator } from "../shared/StageNavigator";
 import { KanbanFab } from "../shared/KanbanFab";
@@ -383,7 +384,32 @@ function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, user
 
 function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={cases}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhum caso encontrado."
+      title={(kase) => kase.clientName}
+      chips={(kase) => {
+        const stage = stages.find(s => s.stageKey === kase.stage);
+        const color = stage?.color || "var(--text-dim)";
+        return [{ label: stage?.name || kase.stage, color }];
+      }}
+      right={(kase) => (
+        <span className="text-sm font-semibold" style={{ color: "var(--success)", whiteSpace: "nowrap" }}>{formatK(kase.value)}</span>
+      )}
+      metaRight={(kase) => {
+        const owners = (kase.ownerIds || []).map(id => usersById.get(id)).filter(Boolean);
+        const days = daysInStage(kase.stageChangedAt);
+        return (
+          <>
+            {owners.length > 0 && <AvatarStack users={owners} size={18} max={2} />}
+            <span>{kase.stageChangedAt ? `${days} dia${days !== 1 ? "s" : ""} na etapa` : "—"}</span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -433,6 +459,7 @@ function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

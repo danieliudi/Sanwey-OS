@@ -24,6 +24,7 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
@@ -330,7 +331,40 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
 /* ── Tabela ───────────────────────────────────────────────────── */
 function DeliverableTableView({ deliverables, stages, usersById, campaignsById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={deliverables}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma entrega encontrada."
+      title={(item) => item.title}
+      chips={(item) => {
+        const stage = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
+        const color = stage?.color || "var(--text-dim)";
+        const priColor = PRIORITY_COLORS[item.priority] || null;
+        return [
+          priColor && { label: PRIORITY_LABELS[item.priority] || item.priority, color: priColor },
+          { label: stage?.name || item.stage, color },
+        ];
+      }}
+      right={(item) => item.starred ? <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} /> : null}
+      meta={(item) => {
+        const campaign = item.campaignId ? campaignsById.get(item.campaignId) : null;
+        return [item.requestNumber, campaign?.name].filter(Boolean).join(" · ") || "—";
+      }}
+      metaRight={(item) => {
+        const resolvedOwners = getDeliverableAssigneeIds(item).map(id => usersById.get(id)).filter(Boolean);
+        const isOverdue = item.deadline && new Date(item.deadline) < new Date();
+        return (
+          <>
+            {resolvedOwners.length > 0 && <AvatarStack users={resolvedOwners} size={18} max={2} />}
+            <span style={{ color: isOverdue ? "var(--danger)" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
+              {item.deadline ? formatDateBR(item.deadline) : "—"}
+            </span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -395,6 +429,7 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

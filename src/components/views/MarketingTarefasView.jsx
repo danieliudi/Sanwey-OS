@@ -18,6 +18,7 @@ import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { localDateInputToISOString, formatDateBR, parseDateInput } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -51,7 +52,39 @@ function isDueSoon(t) {
 /* ── Tabela (item 9/11: padronização de views — mesmo padrão de EntregasView.jsx) ── */
 function TaskTableView({ tasks, stages, usersById, campaignsById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={tasks}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma tarefa encontrada."
+      title={(item) => item.title}
+      chips={(item) => {
+        const stage = (stages || []).find(s => s.id === item.stage);
+        const color = stage?.color || "var(--text-dim)";
+        const pri = DELIVERABLE_PRIORITIES.find(p => p.id === item.priority);
+        return [
+          pri && { label: pri.label, color: pri.color },
+          { label: stage?.name || item.stage, color },
+        ];
+      }}
+      meta={(item) => {
+        const campaign = item.campaignId ? campaignsById.get(item.campaignId) : null;
+        return campaign?.name || "—";
+      }}
+      metaRight={(item) => {
+        const resolvedOwners = (item.assigneeIds || []).map(id => usersById.get(id)).filter(Boolean);
+        const isOverdue = isOverdueTask(item);
+        return (
+          <>
+            {resolvedOwners.length > 0 && <AvatarStack users={resolvedOwners} size={18} max={2} />}
+            <span style={{ color: isOverdue ? "var(--danger)" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
+              {item.deadline ? formatDateBR(item.deadline) : "—"}
+            </span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -112,6 +145,7 @@ function TaskTableView({ tasks, stages, usersById, campaignsById, onRowClick }) 
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

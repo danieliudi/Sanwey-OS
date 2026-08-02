@@ -37,6 +37,7 @@ import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatBRL, formatK, formatCurrency, calculateLandedCost } from "../../utils/currency";
 
@@ -566,8 +567,27 @@ function ComexKanbanColumn({
 // ── Tabela ────────────────────────────────────────────────────────────────
 
 function ComexTableView({ operations, stages, columns, onRowClick }) {
+  const valueCol = columns.find(c => c.key === "value");
+  const metaCols = columns.slice(1).filter(c => c.key !== "value");
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={operations}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma operação encontrada."
+      title={(op) => op[columns[0].key] || "—"}
+      chips={(op) => {
+        const st = findStage(stages, op.stage);
+        return [{ label: st.name, color: st.color }];
+      }}
+      right={valueCol ? (op) => (
+        <span className="text-sm font-semibold" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+          {valueCol.render ? valueCol.render(op) : (op[valueCol.key] ?? "—")}
+        </span>
+      ) : undefined}
+      meta={(op) => metaCols.map(c => op[c.key]).filter(Boolean).join(" · ") || "—"}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -603,6 +623,7 @@ function ComexTableView({ operations, stages, columns, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

@@ -33,6 +33,7 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { EmptyState } from "../ui/EmptyState";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { KanbanFab } from "../shared/KanbanFab";
 import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
@@ -1025,7 +1026,29 @@ function FeedbackDrawer({
 
 function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={feedbacks}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhum ciclo encontrado."
+      title={(f) => colaboradoresById.get(f.user_id)?.fullName || "—"}
+      chips={(f) => {
+        const st = findStage(stages, f.status);
+        return [{ label: st.name, color: st.color }];
+      }}
+      meta={(f) => tipoLabel(f.tipo)}
+      metaRight={(f) => {
+        const evaluatorIds = f.evaluator_ids?.length ? f.evaluator_ids : (f.evaluator_id ? [f.evaluator_id] : []);
+        const resolvedEvaluators = evaluatorIds.map(id => usersById.get(id)).filter(Boolean);
+        return (
+          <>
+            {resolvedEvaluators.length > 0 && <AvatarStack users={resolvedEvaluators} size={18} max={2} />}
+            <span style={{ color: isAtrasado(f) ? "var(--danger)" : "var(--text-dim)", fontWeight: isAtrasado(f) ? 700 : 400 }}>{fmt(f.period_end)}</span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -1076,6 +1099,7 @@ function FeedbackTableView({ feedbacks, stages, colaboradoresById, usersById, on
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

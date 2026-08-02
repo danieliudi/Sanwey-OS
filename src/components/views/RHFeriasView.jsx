@@ -19,6 +19,7 @@ import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion"
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
@@ -772,7 +773,22 @@ function FeriasDrawer({
 
 function FeriasTableView({ requests, stages, colaboradoresById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={requests}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma solicitação encontrada."
+      title={(req) => colaboradoresById.get(req.user_id)?.fullName || "Desconhecido"}
+      chips={(req) => {
+        const st = findStage(stages, req.status);
+        return [{ label: st.name, color: st.color }];
+      }}
+      right={(req) => (
+        <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>{calcDias(req.start_date, req.end_date)}d</span>
+      )}
+      meta={(req) => `${leaveTypeLabel(req.type)} · ${fmt(req.start_date)} → ${fmt(req.end_date)}`}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -816,6 +832,7 @@ function FeriasTableView({ requests, stages, colaboradoresById, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

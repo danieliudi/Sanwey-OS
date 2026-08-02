@@ -12,6 +12,7 @@ import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from
 import { formatK, formatBRL } from "../../utils/currency";
 import { formatDateBR, parseDateInput } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { MoveStageMenu } from "../shared/MoveStageMenu";
 import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
 import { terminalCardBackground, terminalTextColor, terminalAccentOpacity } from "../shared/terminal-card-style";
@@ -399,7 +400,35 @@ function MobileKanban({ purchasesByStage, suppliersById, usersById, users, onCar
 /* ── Tabela ───────────────────────────────────────────────────────────── */
 function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={purchases}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma solicitação encontrada."
+      title={(p) => p.itemName}
+      chips={(p) => {
+        const color = STAGE_COLORS[p.stage] || "var(--text-dim)";
+        const stageInfo = PURCHASE_STAGES.find(s => s.id === p.stage) || (p.stage === PURCHASE_REJECTED_STAGE ? { name: "Rejeitado" } : null);
+        return [{ label: stageInfo?.name || p.stage, color }];
+      }}
+      right={(p) => (
+        <span className="text-sm font-semibold" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+          {p.totalValue != null ? formatBRL(p.totalValue) : "—"}
+        </span>
+      )}
+      meta={(p) => [p.requestNumber, suppliersById.get(p.supplierId)?.name].filter(Boolean).join(" · ") || "—"}
+      metaRight={(p) => {
+        const responsibleIds = p.responsibleIds?.length ? p.responsibleIds : (p.responsibleId ? [p.responsibleId] : []);
+        const resolvedResponsible = responsibleIds.map(id => usersById.get(id)).filter(Boolean);
+        return (
+          <>
+            {resolvedResponsible.length > 0 && <AvatarStack users={resolvedResponsible} size={18} max={2} />}
+            <span>{formatDateBR(p.dueDate)}</span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -449,6 +478,7 @@ function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
