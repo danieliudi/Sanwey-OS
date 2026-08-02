@@ -545,7 +545,7 @@ export function MarketingDashboardView({ user }) {
             aria-label="Personalizar"
           />
         </div>
-        <div className="self-start flex items-center gap-2">
+        <div className="self-start flex items-center flex-wrap gap-2">
           <Button
             variant="secondary"
             icon={RefreshCcw}

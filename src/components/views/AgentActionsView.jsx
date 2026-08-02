@@ -611,7 +611,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
               : "Nenhuma sugestão pendente — pipeline em dia"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
           {isManager && (
             <button
               onClick={() => setConfigOpen(true)}

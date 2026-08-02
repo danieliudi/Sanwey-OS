@@ -792,7 +792,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           </div>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de tarefas do dia a dia de Marketing</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
             <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" />
             <ViewToggleButton active={viewMode === "table"} onClick={() => setViewMode("table")} icon={List} label="Tabela" />

@@ -1263,7 +1263,7 @@ function TreinamentoBoardModal({
             <div style={{ fontWeight: 700, fontSize: 18, color: "var(--text)" }}>{treinamento.titulo}</div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>Board de acompanhamento — {atribuicoes.length} pessoa{atribuicoes.length !== 1 ? "s" : ""} atribuída{atribuicoes.length !== 1 ? "s" : ""}</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
               <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
               <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />

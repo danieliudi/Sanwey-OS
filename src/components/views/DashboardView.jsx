@@ -230,7 +230,7 @@ export function DashboardView({ user, activeCompany, leads, users = [], onNaviga
             {totalTasks > 0 && ` · ${totalTasks} pendência${totalTasks !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
           <Button
             variant="secondary"
             icon={RefreshCcw}
