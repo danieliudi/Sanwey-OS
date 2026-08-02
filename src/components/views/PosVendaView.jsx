@@ -30,6 +30,7 @@ import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { usePosvenda } from "../../hooks/use-posvenda";
 import { useAvailableHeight } from "../../hooks/use-available-height";
 import { formatK } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 import { resolveVisibleFields, getMissingRequiredFields } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 
@@ -246,7 +247,7 @@ function PosVendaDetailDrawer({ kase, stages, owners, sourceLead, canWrite, user
       <div className="font-bold text-base truncate" style={{ color: "var(--text)" }}>{kase.clientName}</div>
       <span
         className="inline-flex items-center gap-1.5 mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold"
-        style={{ background: `${st.color}18`, color: st.color, border: `1px solid ${st.color}40` }}
+        style={{ background: `${st.color}18`, color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}
       >
         <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color }} />
         {st.name}
@@ -438,7 +439,7 @@ function PosVendaTableView({ cases, stages, usersById, onRowClick }) {
                 </td>
                 <td className="px-4 py-3 text-xs font-semibold" style={{ color: "var(--success)", whiteSpace: "nowrap" }}>{formatK(kase.value)}</td>
                 <td className="px-4 py-3">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40` }}>
                     {stage?.name || kase.stage}
                   </span>
                 </td>
@@ -593,7 +594,7 @@ function PosVendaCalendarView({ cases, stages, onSelect }) {
                           onClick={() => onSelect(kase)}
                           title={kase.clientName}
                           className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                          style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40`, cursor: "pointer" }}
                         >
                           {kase.clientName}
                         </button>
@@ -1134,7 +1135,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                         <button
                           onClick={() => setCreateModalStage(stage)}
                           className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                          style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                          style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                         >
                           <Plus size={12} />
                           Novo caso

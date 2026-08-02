@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
+import { stageTextColor } from "../../utils/stage-colors";
 
 // Mesmo visual/comportamento do Kanban mobile do Pipeline Comercial
 // (CRMView.jsx: "Mobile kanban: vertical collapsible stages") — etapa
@@ -37,10 +38,10 @@ export function RHMobileKanbanAccordion({
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                <span className="font-bold text-sm truncate" style={{ color: stage.color }}>{stage.name}</span>
+                <span className="font-bold text-sm truncate" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="font-bold text-sm" style={{ color: stage.color }}>{items.length}</span>
+                <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{items.length}</span>
                 {getSortCriteria && (
                   <div onClick={e => e.stopPropagation()}>
                     <KanbanColumnSortMenu
@@ -67,7 +68,7 @@ export function RHMobileKanbanAccordion({
                   <button
                     onClick={() => onAdd(stage.stageKey)}
                     className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                    style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                    style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                   >
                     <Plus size={12} />
                     {addLabel || "Adicionar"}

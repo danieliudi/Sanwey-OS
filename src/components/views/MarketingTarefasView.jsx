@@ -38,6 +38,7 @@ import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
+import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 
 function isOverdueTask(t) {
   return Boolean(t.deadline) && new Date(t.deadline) < new Date();
@@ -124,7 +125,7 @@ function TaskTableView({ tasks, stages, usersById, campaignsById, onRowClick }) 
                   ) : "—"}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40` }}>
                     {stage?.name || item.stage}
                   </span>
                 </td>
@@ -265,7 +266,7 @@ function TaskCalendarView({ tasks, stages, onSelect }) {
                           onClick={() => onSelect(item)}
                           title={item.title}
                           className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                          style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40`, cursor: "pointer" }}
                         >
                           {item.title}
                         </button>
@@ -972,11 +973,11 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
-                    {stage.sla && <span className="text-xs" style={{ color: stage.color + "88" }}>SLA {stage.sla}d</span>}
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
+                    {stage.sla && <span className="text-xs" style={{ color: stageTextColorStrong(stage.color) }}>SLA {stage.sla}d</span>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stageItems.length}</span>
                     <div onClick={e => e.stopPropagation()}>
                       <KanbanColumnSortMenu
                         criteria={getSortCriteria(stage.id)}
@@ -1029,7 +1030,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                       <button
                         onClick={() => setQuickAddStage(stage.id)}
                         className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                        style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                        style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                       >
                         <Plus size={12} />
                         Nova tarefa

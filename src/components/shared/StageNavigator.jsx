@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useId, useRef } from "react";
 import { ArrowRight } from "lucide-react";
+import { stageTextColor } from "../../utils/stage-colors";
 
 // Registro consumido pelo SplitPanelDrawer: qualquer StageNavigator montado
 // dentro das colunas do drawer se anuncia aqui, e é isso que faz a barra
@@ -39,7 +40,7 @@ export function StageNavigator({ targets, onMove, getKey = (s) => s.stageKey ?? 
           onClick={() => onMove(getKey(s))}
           disabled={disabled}
           className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-          style={{ background: `${s.color}14`, color: s.color, border: `1px solid ${s.color}30`, opacity: disabled ? 0.6 : 1, cursor: disabled ? "default" : "pointer" }}
+          style={{ background: `${s.color}14`, color: stageTextColor(s.color), border: `1px solid ${s.color}30`, opacity: disabled ? 0.6 : 1, cursor: disabled ? "default" : "pointer" }}
           onMouseEnter={e => { if (!disabled) e.currentTarget.style.background = `${s.color}22`; }}
           onMouseLeave={e => { e.currentTarget.style.background = `${s.color}14`; }}
         >

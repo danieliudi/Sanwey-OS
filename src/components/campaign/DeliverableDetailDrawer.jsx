@@ -9,6 +9,7 @@ import {
 import { NEUTRAL, marketingUnitLabel } from "../../constants/companies";
 import { DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
 import { formatDateBR } from "../../utils/date";
+import { stageTextColor } from "../../utils/stage-colors";
 import { useDeliverableAttachments }  from "../../hooks/use-deliverable-attachments";
 import { useDeliverableChecklists }   from "../../hooks/use-deliverable-checklists";
 import { useRHStageFields }           from "../../hooks/use-rh-stage-fields";
@@ -735,7 +736,7 @@ export function DeliverableDetailDrawer({ item, onClose, onStageMoved, onUpdate,
       <div className="flex items-center gap-2 flex-wrap mb-1.5">
         {stageInfo && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: stageInfo.color + "22", color: stageInfo.color, border: `1px solid ${stageInfo.color}44` }}>
+            style={{ background: stageInfo.color + "22", color: stageTextColor(stageInfo.color), border: `1px solid ${stageInfo.color}44` }}>
             {stageInfo.name}
           </span>
         )}

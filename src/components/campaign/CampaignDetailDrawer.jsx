@@ -28,6 +28,7 @@ import { resolveVisibleFields } from "../../utils/field-conditions";
 import { RecordAIPanel } from "../shared/RecordAIPanel";
 import { campaignStageSuggestionPrompt, genericCardSummaryPrompt } from "../../constants/ai-prompts";
 import { formatK } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { EVENT_CHECKLIST_TEMPLATE } from "../../constants/event-checklist-template";
 import { supabase } from "../../lib/supabase";
@@ -1710,7 +1711,7 @@ export function CampaignDetailDrawer({
       <div className="flex items-center gap-2 flex-wrap mb-1.5">
         {stage && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: stage.color + "22", color: stage.color, border: `1px solid ${stage.color}44` }}>
+            style={{ background: stage.color + "22", color: stageTextColor(stage.color), border: `1px solid ${stage.color}44` }}>
             {stage.name}
           </span>
         )}

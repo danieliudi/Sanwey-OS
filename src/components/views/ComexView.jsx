@@ -40,6 +40,7 @@ import { AvatarStack } from "../shared/AvatarStack";
 import { MobileTableCards } from "../shared/MobileTableCards";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { formatBRL, formatK, formatCurrency, calculateLandedCost } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 
 // ── helpers genéricos (compartilhados pelos 2 boards) ───────────────────────
 
@@ -613,7 +614,7 @@ function ComexTableView({ operations, stages, columns, onRowClick }) {
                   </td>
                 ))}
                 <td className="px-4 py-3">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -756,7 +757,7 @@ function ComexCalendarView({ operations, stages, onSelect }) {
                           onClick={() => onSelect(op)}
                           title={op.title}
                           className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                          style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40`, cursor: "pointer" }}
                         >
                           {op.title}
                         </button>
@@ -837,7 +838,7 @@ function ComexDrawer({
     <div style={{ minWidth: 0 }}>
       <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{op.title}</div>
       <div style={{ marginTop: 8 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: stageTextColor(st.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
         </span>
       </div>

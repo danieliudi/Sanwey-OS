@@ -18,6 +18,7 @@ import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
+import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { exportCampaignsToCSV } from "../../utils/export-csv";
 import { useAvailableHeight } from "../../hooks/use-available-height";
@@ -543,7 +544,7 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.channel || "—"}</td>
                 <td className="px-4 py-3">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40` }}>
                     {stage?.name || c.stage}
                   </span>
                 </td>
@@ -1097,11 +1098,11 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
-                    {totalBudget > 0 && <span className="text-xs font-semibold" style={{ color: stage.color + "99" }}>{formatK(totalBudget)}</span>}
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
+                    {totalBudget > 0 && <span className="text-xs font-semibold" style={{ color: stageTextColorStrong(stage.color) }}>{formatK(totalBudget)}</span>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stageCampaigns.length}</span>
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stageCampaigns.length}</span>
                     <div onClick={e => e.stopPropagation()}>
                       <KanbanColumnSortMenu
                         criteria={getSortCriteria(stage.id)}
@@ -1151,7 +1152,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       <button
                         onClick={() => setQuickAddStage(stage.id)}
                         className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                        style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                        style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                       >
                         <Plus size={12} />
                         Nova campanha

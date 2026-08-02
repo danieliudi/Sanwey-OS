@@ -26,6 +26,7 @@ import { useStageFields } from "../../hooks/use-stage-fields";
 import { getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
 import { formatK } from "../../utils/currency";
+import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AvatarStack } from "../shared/AvatarStack";
 import { AppToast } from "../shared/AppToast";
@@ -758,11 +759,11 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                  <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
-                  {bucket.total > 0 && <span className="text-xs font-semibold" style={{ color: stage.color + "99" }}>{formatK(bucket.total)}</span>}
+                  <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
+                  {bucket.total > 0 && <span className="text-xs font-semibold" style={{ color: stageTextColorStrong(stage.color) }}>{formatK(bucket.total)}</span>}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm" style={{ color: stage.color }}>{bucket.leads.length}</span>
+                  <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{bucket.leads.length}</span>
                   <div onClick={e => e.stopPropagation()}>
                     <KanbanColumnSortMenu
                       criteria={getSortCriteria(stage.id)}
@@ -805,7 +806,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                     <button
                       onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: isGroupView ? firstValidCompany : activeCompany })}
                       className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                      style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                      style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                     >
                       <Plus size={12} />
                       Nova oportunidade
@@ -946,7 +947,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                     <button
                       onClick={() => setCreateModalStage({ stageId: stage.id, stage, companyId: isGroupView ? firstValidCompany : activeCompany })}
                       className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                      style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                      style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                     >
                       <Plus size={12} />
                       Nova oportunidade

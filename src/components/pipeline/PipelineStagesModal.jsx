@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { CRMStageListManager } from "../shared/stage-editor/StageListManager";
+import { stageTextColor } from "../../utils/stage-colors";
 import { SellerPreviewModal } from "./SellerPreviewModal";
 
 /**
@@ -145,7 +146,7 @@ export function PipelineStagesModal({
                           style={{
                             width: 22, height: 22,
                             background: stage.color + "18",
-                            color: stage.color,
+                            color: stageTextColor(stage.color),
                           }}
                         >
                           {stage.code}

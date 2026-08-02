@@ -9,6 +9,7 @@ import { MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/co
 import { PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-marketing-purchase-requests";
 import { formatDateBR } from "../../utils/date";
 import { formatBRL } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { CommentsPanel } from "../shared/CommentsPanel";
 import { getMentionableUsers } from "../../utils/mentionable-users";
@@ -496,7 +497,7 @@ export function PurchaseRequestDetailDrawer({
           </span>
         )}
         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-          style={{ background: stageColor + "18", color: stageColor, border: `1px solid ${stageColor}40` }}>
+          style={{ background: stageColor + "18", color: stageTextColor(stageColor), border: `1px solid ${stageColor}40` }}>
           {stageInfo?.name || purchase.stage}
         </span>
       </div>

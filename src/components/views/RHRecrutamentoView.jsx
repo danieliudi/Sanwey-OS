@@ -76,6 +76,7 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
+import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
@@ -1028,7 +1029,7 @@ function VagaDrawer({
       <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{vaga.title}</div>
       <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{vaga.job_title || "—"} · {vaga.department || "—"}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageTextColor(stageInfo.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} /> {stageInfo.name}
         </span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: pri.color, fontSize: 11, fontWeight: 600 }}>
@@ -1463,7 +1464,7 @@ function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -1566,7 +1567,7 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
                   return (
                     <span key={vaga.id} onClick={() => onPillClick(vaga)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: st.color + "18", color: st.color }}
+                      style={{ background: st.color + "18", color: stageTextColor(st.color) }}
                       title={vaga.title}>
                       {vaga.title}
                     </span>
@@ -1847,7 +1848,7 @@ function CandidatoDrawer({
         <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)", letterSpacing: "-0.01em" }}>{candidato.name}</div>
         {candidato.email && <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{candidato.email}</div>}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageInfo.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${stageInfo.color}18`, color: stageTextColor(stageInfo.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: stageInfo.color, display: "inline-block" }} />
             {stageInfo.name}
           </span>
@@ -2594,7 +2595,7 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{vagaTitle}</td>
                 <td className="px-4 py-3">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -2698,7 +2699,7 @@ function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
                   return (
                     <span key={c.id} onClick={() => onPillClick(c)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: st.color + "18", color: st.color }}
+                      style={{ background: st.color + "18", color: stageTextColor(st.color) }}
                       title={c.name}>
                       {c.name}
                     </span>

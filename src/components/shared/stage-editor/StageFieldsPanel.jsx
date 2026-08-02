@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { FIELD_TYPES, TYPE_ICON, OPTION_FIELD_TYPES } from "../../../constants/field-types";
 import { VALIDATION_PRESETS, VALIDATION_RULE_TYPES } from "../../../utils/field-validation";
+import { stageTextColor } from "../../../utils/stage-colors";
 import { slugifyKey } from "../../../hooks/use-stage-fields";
 import { StageConditionsModal } from "./StageConditionsModal";
 import { StageAdvancedModal } from "./StageAdvancedModal";
@@ -576,7 +577,7 @@ export function StageFieldsPanel({
                 title={`Editar fase: ${stage.name}`}
                 style={{
                   background: `color-mix(in srgb, ${stageColor} 14%, var(--surface))`,
-                  color: stageColor,
+                  color: stageTextColor(stageColor),
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}
               >
@@ -680,7 +681,7 @@ export function StageFieldsPanel({
                   className="rounded-lg px-3.5 py-2.5 mb-4"
                   style={{
                     background: `color-mix(in srgb, ${stageColor} 12%, var(--surface))`,
-                    color: stageColor, fontSize: 15, fontWeight: 700,
+                    color: stageTextColor(stageColor), fontSize: 15, fontWeight: 700,
                   }}
                 >
                   {stage.name}

@@ -35,6 +35,7 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
+import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardHeader } from "../shared/KanbanBoardHeader";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { AppToast } from "../shared/AppToast";
@@ -628,7 +629,7 @@ function FeriasDrawer({
         <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "Desconhecido"}</div>
         <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{leaveTypeLabel(req.type)} · {fmt(req.start_date)} – {fmt(req.end_date)} · {dias}d</div>
         <div style={{ marginTop: 8 }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: stageTextColor(st.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
           </span>
         </div>
@@ -822,7 +823,7 @@ function FeriasTableView({ requests, stages, colaboradoresById, onRowClick }) {
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{fmt(req.end_date)}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{dias}d</td>
                 <td className="px-4 py-3">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -926,7 +927,7 @@ function FeriasCalendarView({ requests, stages, colaboradoresById, onPillClick }
                   return (
                     <span key={req.id} onClick={() => onPillClick(req)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: st.color + "18", color: st.color }}
+                      style={{ background: st.color + "18", color: stageTextColor(st.color) }}
                       title={`${colaborador?.fullName || "Desconhecido"} · ${leaveTypeLabel(req.type)}`}>
                       {colaborador?.fullName || leaveTypeLabel(req.type)}
                     </span>

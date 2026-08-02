@@ -1,4 +1,5 @@
 import React from "react";
+import { stageTextColor } from "../../utils/stage-colors";
 
 // Decisão 4A (mockup aprovado 02/08/2026): abaixo de md a <table> das visões
 // "Tabela" cortava colunas inteiras em silêncio — no mobile a mesma lista vira
@@ -49,7 +50,7 @@ export function MobileTableCards({
                       <span
                         key={i}
                         className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                        style={{ background: chip.color + "18", color: chip.color, border: `1px solid ${chip.color}40` }}
+                        style={{ background: chip.color + "18", color: stageTextColor(chip.color), border: `1px solid ${chip.color}40` }}
                       >
                         {chip.label}
                       </span>

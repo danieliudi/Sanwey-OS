@@ -10,6 +10,7 @@ import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { MARKETING_UNIT_IDS, MARKETING_UNIT_LABELS, MARKETING_UNIT_COLORS } from "../../constants/companies";
 import { formatK, formatBRL } from "../../utils/currency";
+import { stageTextColor } from "../../utils/stage-colors";
 import { formatDateBR, parseDateInput } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
 import { MobileTableCards } from "../shared/MobileTableCards";
@@ -460,7 +461,7 @@ function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
                 <td className="px-4 py-3 text-sm font-semibold text-right" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{p.totalValue != null ? formatBRL(p.totalValue) : "—"}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(p.dueDate)}</td>
                 <td className="px-4 py-3">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40` }}>
                     {stageInfo?.name || p.stage}
                   </span>
                 </td>
@@ -568,7 +569,7 @@ function CalendarView({ purchases, onPillClick }) {
                   return (
                     <span key={p.id} onClick={() => onPillClick(p)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: color + "18", color }}
+                      style={{ background: color + "18", color: stageTextColor(color) }}
                       title={`${p.requestNumber} · ${p.itemName}`}>
                       {p.itemName}
                     </span>

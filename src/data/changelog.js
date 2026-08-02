@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.13.0",
+    items: [
+      { kind: "ajuste", text: "Nomes e valores coloridos por etapa (chips \"Mover para\", cabeçalhos de coluna, etiquetas de tabela e calendário) agora são sempre legíveis — o fundo colorido continua igual, só o texto ganhou mais contraste. Vale também no modo escuro." },
+    ],
+  },
+  {
     version: "4.12.0",
     items: [
       { kind: "novo", text: "Celular: a visão Tabela de todos os quadros agora mostra cards fáceis de ler (título, etapa, valor e responsáveis) em vez de uma tabela cortada — nenhuma informação fica mais escondida fora da tela. No computador, nada muda." },

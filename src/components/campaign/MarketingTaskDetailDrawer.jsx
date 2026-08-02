@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertCircle, FileText, Activity, Paperclip, ListChecks, History, Sparkles, Layers } from "lucide-react";
 import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
+import { stageTextColor } from "../../utils/stage-colors";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { resolveVisibleFields } from "../../utils/field-conditions";
@@ -282,7 +283,7 @@ export function MarketingTaskDetailDrawer({
       <div className="flex items-center gap-2 flex-wrap mb-1.5">
         {stageInfo && (
           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: stageInfo.color + "22", color: stageInfo.color, border: `1px solid ${stageInfo.color}44` }}>
+            style={{ background: stageInfo.color + "22", color: stageTextColor(stageInfo.color), border: `1px solid ${stageInfo.color}44` }}>
             {stageInfo.name}
           </span>
         )}
