@@ -32,9 +32,9 @@ const TIPO_LABELS = {
 };
 
 const STATUS_COLORS = {
-  ativo: { bg: "#DCFCE7", text: "#16A34A" },
-  vencido: { bg: "#FEE2E2", text: "#DC2626" },
-  renovacao_pendente: { bg: "#FEF3C7", text: "#D97706" },
+  ativo: { bg: "var(--success-bg)", text: "var(--success)" },
+  vencido: { bg: "var(--danger-bg)", text: "var(--danger)" },
+  renovacao_pendente: { bg: "var(--warning-bg)", text: "var(--warning)" },
   cancelado: { bg: "var(--surface-alt)", text: "var(--text-dim)" },
 };
 
@@ -523,7 +523,7 @@ function ConfirmDeleteModal({ fornecedor, contratoCount, onConfirm, onClose }) {
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold border"
             style={{ borderColor: "var(--border)", color: "var(--text)" }}>Cancelar</button>
           <button onClick={onConfirm}
-            className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--danger)", color: "#fff" }}>Excluir</button>
+            className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--danger)", color: "var(--on-danger)" }}>Excluir</button>
         </div>
       </div>
     </Modal>
@@ -639,7 +639,7 @@ export function RHFornecedoresView({ currentUser }) {
           </button>
         </div>
       </div>
-      <p className="text-sm" style={{ color: "var(--text-dim)", marginTop: -8 }}>
+      <p className="text-sm" style={{ color: "var(--text-dim)" }}>
         Convênio médico, seguradora, terceirizada de RH — cadastro, contrato (vigência/valor) e histórico de reajustes, renovações, faturas e orçamentos.
       </p>
 

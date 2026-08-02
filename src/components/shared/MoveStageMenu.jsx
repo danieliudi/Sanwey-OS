@@ -90,7 +90,10 @@ export function MoveStageMenu({
     if (!menuOpen || !wrapRef.current || !dropdownRef.current) return;
     const btnRect = wrapRef.current.getBoundingClientRect();
     const menuRect = dropdownRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - btnRect.bottom;
+    // Abaixo de lg (1024px) o MobileBottomNav cobre os ~64px finais do viewport;
+    // sem reservar esse espaço o menu abre por cima da nav.
+    const navReserve = window.innerWidth < 1024 ? 72 : 0;
+    const spaceBelow = window.innerHeight - navReserve - btnRect.bottom;
     const openUpward = spaceBelow < menuRect.height + 12;
     const left = Math.max(8, Math.min(btnRect.right - menuRect.width, window.innerWidth - menuRect.width - 8));
     setPos(openUpward
@@ -137,7 +140,7 @@ export function MoveStageMenu({
           cursor: "pointer", padding: 2, borderRadius: 4, display: "flex",
           alignItems: "center", lineHeight: 1,
         }}
-        onMouseEnter={e => { e.currentTarget.style.background = deleteOnly ? "#FEE2E2" : "var(--surface-alt)"; e.currentTarget.style.color = deleteOnly ? "#B91C1C" : "var(--accent)"; }}
+        onMouseEnter={e => { e.currentTarget.style.background = deleteOnly ? "var(--danger-bg)" : "var(--surface-alt)"; e.currentTarget.style.color = deleteOnly ? "var(--danger)" : "var(--accent)"; }}
         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
       >
         {deleteOnly ? <Trash2 size={14} /> : <MoreVertical size={14} />}
@@ -164,7 +167,7 @@ export function MoveStageMenu({
               <div style={{ display: "flex", gap: 6 }}>
                 <button
                   onClick={e => { e.stopPropagation(); onDelete(); setMenuOpen(false); }}
-                  style={{ flex: 1, background: "#B91C1C", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                  style={{ flex: 1, background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
                 >
                   Excluir
                 </button>
@@ -243,9 +246,9 @@ export function MoveStageMenu({
                     style={{
                       width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
                       background: "transparent", border: "none", cursor: "pointer", fontSize: 13,
-                      color: "#B91C1C", textAlign: "left", transition: "background 0.1s",
+                      color: "var(--danger)", textAlign: "left", transition: "background 0.1s",
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                   >
                     <Trash2 size={13} style={{ flexShrink: 0 }} />

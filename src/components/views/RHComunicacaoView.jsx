@@ -58,7 +58,7 @@ function ComunicadoComposer({ onSend }) {
           <label style={labelSt}>Mensagem</label>
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="Escreva o comunicado…" className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-y" style={inputSt} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
           <div>
             <label style={labelSt}>Enviar para</label>
             <select value={scopeType} onChange={(e) => { setScopeType(e.target.value); setScopeValue(""); }} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
@@ -85,7 +85,7 @@ function ComunicadoComposer({ onSend }) {
             display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer",
             borderRadius: 10, padding: "10px 12px",
             border: `1px solid ${importante ? "var(--danger)" : "var(--border)"}`,
-            background: importante ? "#FEF2F2" : "var(--surface-alt)",
+            background: importante ? "var(--danger-bg)" : "var(--surface-alt)",
           }}
         >
           <input type="checkbox" checked={importante} onChange={(e) => setImportante(e.target.checked)} style={{ marginTop: 2, flexShrink: 0 }} />
@@ -108,7 +108,7 @@ function ComunicadoComposer({ onSend }) {
         <div>
           <button
             onClick={handleSend} disabled={sending}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importante ? "var(--danger)" : "var(--accent)", color: importante ? "#FFF" : "var(--on-accent)", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, border: "none", cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: importante ? "var(--danger)" : "var(--accent)", color: importante ? "var(--on-danger)" : "var(--on-accent)", borderRadius: 10, padding: "9px 18px", fontSize: 13, fontWeight: 700, border: "none", cursor: sending ? "default" : "pointer", opacity: sending ? 0.6 : 1 }}
           >
             {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} {sending ? "Enviando…" : importante ? "Enviar comunicado importante" : "Enviar comunicado"}
           </button>
@@ -188,13 +188,13 @@ function NovaPesquisaModal({ onSave, onClose }) {
           <div>
             <label style={labelSt}>Modo</label>
             <div className="grid grid-cols-2" style={{ gap: 8 }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: 2, cursor: "pointer", borderRadius: 10, padding: "10px 12px", border: `1px solid ${modo === "anonima" ? "var(--accent)" : "var(--border)"}`, background: modo === "anonima" ? "var(--accent-bg, #EFF6FF)" : "var(--surface-alt)" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 2, cursor: "pointer", borderRadius: 10, padding: "10px 12px", border: `1px solid ${modo === "anonima" ? "var(--accent)" : "var(--border)"}`, background: modo === "anonima" ? "var(--accent-tint)" : "var(--surface-alt)" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
                   <input type="radio" checked={modo === "anonima"} onChange={() => setModo("anonima")} /> <Lock size={12} /> Anônima
                 </span>
                 <span style={{ fontSize: 11, color: "var(--text-dim)" }}>Via QR/link — respostas nunca identificadas.</span>
               </label>
-              <label style={{ display: "flex", flexDirection: "column", gap: 2, cursor: "pointer", borderRadius: 10, padding: "10px 12px", border: `1px solid ${modo === "identificada" ? "var(--accent)" : "var(--border)"}`, background: modo === "identificada" ? "var(--accent-bg, #EFF6FF)" : "var(--surface-alt)" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 2, cursor: "pointer", borderRadius: 10, padding: "10px 12px", border: `1px solid ${modo === "identificada" ? "var(--accent)" : "var(--border)"}`, background: modo === "identificada" ? "var(--accent-tint)" : "var(--surface-alt)" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "var(--text)" }}>
                   <input type="radio" checked={modo === "identificada"} onChange={() => setModo("identificada")} /> <UserCheck size={12} /> Identificada
                 </span>
@@ -203,7 +203,7 @@ function NovaPesquisaModal({ onSave, onClose }) {
             </div>
           </div>
           {modo === "identificada" && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
               <div>
                 <label style={labelSt}>Enviar para</label>
                 <select value={scopeType} onChange={(e) => { setScopeType(e.target.value); setScopeValue(""); }} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>

@@ -1,4 +1,5 @@
 import React from "react";
+import { stageTextColor } from "../../utils/stage-colors";
 
 /**
  * Shell of a Kanban board column header — reused across every board
@@ -50,7 +51,10 @@ export function KanbanColumnHeader({
         <div className="min-w-0 flex-1">
           <div
             className="flex items-center gap-1.5"
-            style={{ color: nameColor, fontSize: nameFontSize, fontWeight: nameFontWeight, letterSpacing, textTransform: uppercase ? "uppercase" : "none" }}
+            // stageTextColor aplicado aqui (e não nos 13 chamadores) pra
+            // centralizar a decisão 1A; com o default var(--text) o mix
+            // resolve pro próprio var(--text), sem mudança visual.
+            style={{ color: stageTextColor(nameColor), fontSize: nameFontSize, fontWeight: nameFontWeight, letterSpacing, textTransform: uppercase ? "uppercase" : "none" }}
           >
             {truncateName ? (
               <span

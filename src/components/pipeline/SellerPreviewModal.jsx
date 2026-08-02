@@ -110,7 +110,7 @@ export function SellerPreviewModal({ open, onClose, companyId, stages, transitio
               </div>
 
               {locked ? (
-                <div className="flex items-center gap-2 text-xs" style={{ color: "#B91C1C" }}>
+                <div className="flex items-center gap-2 text-xs" style={{ color: "var(--danger)" }}>
                   <Lock size={12} />
                   Vendedor não pode mover esse lead pra nenhuma outra etapa. Etapa travada.
                 </div>

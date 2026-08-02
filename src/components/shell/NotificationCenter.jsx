@@ -156,7 +156,7 @@ export function NotificationCenter({
         <Bell size={18} strokeWidth={1.75} />
         {unreadCount > 0 && (
           <span
-            className="absolute flex items-center justify-center rounded-full font-extrabold text-white"
+            className="absolute flex items-center justify-center rounded-full font-extrabold"
             style={{
               top: 3, right: 3,
               minWidth: 17,
@@ -164,6 +164,7 @@ export function NotificationCenter({
               padding: "0 4px",
               fontSize: 10,
               background: "var(--danger)",
+              color: "var(--on-danger)",
               lineHeight: 1,
               boxShadow: "0 0 0 2px var(--surface)",
             }}

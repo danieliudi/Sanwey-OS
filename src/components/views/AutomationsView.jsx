@@ -526,7 +526,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
           onClick={onDelete}
           className="shrink-0 p-1.5 rounded-lg"
           style={{ color: "var(--text-faint)" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = "#EF4444"; }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
           title="Excluir automação"
         >
@@ -735,7 +735,7 @@ function AgentCard({ rule, lastRunAt, confirmingDelete, onEdit, onToggle, onDele
             <span className="text-[11px]" style={{ color: "var(--text)" }}>Excluir?</span>
             <button
               onClick={onDeleteConfirm}
-              style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+              style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
             >
               Excluir
             </button>
@@ -1004,7 +1004,7 @@ function StepIdentification({ rule, setRule }) {
     <div className="space-y-4">
       <div>
         <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>
-          Nome da automação <span style={{ color: "#EF4444" }}>*</span>
+          Nome da automação <span style={{ color: "var(--danger)" }}>*</span>
         </label>
         <input
           type="text"
@@ -1312,7 +1312,7 @@ function StepConditions({ rule, setRule }) {
               onClick={() => removeGroup(gi)}
               className="p-1 rounded"
               style={{ color: "var(--text-faint)" }}
-              onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
               onMouseLeave={e => { e.currentTarget.style.color = "var(--text-faint)"; }}
               title="Remover grupo"
             >
@@ -1457,7 +1457,7 @@ function ActionListEditor({ title, actions, setActions, allStages, fields, allow
                 onClick={() => removeAction(i)}
                 className="p-1 rounded"
                 style={{ color: "var(--text-faint)" }}
-                onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
                 onMouseLeave={e => { e.currentTarget.style.color = "var(--text-faint)"; }}
               >
                 <Trash2 size={12} />

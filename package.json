@@ -1,7 +1,7 @@
 {
   "name": "grupo-sanwey",
   "private": true,
-  "version": "4.6.0",
+  "version": "4.13.0",
   "type": "module",
   "description": "Grupo Sanwey · Commercial Intelligence platform (multi-tenant)",
   "scripts": {
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
+    "idb": "^8.0.3",
     "lucide-react": "^0.454.0",
     "mammoth": "^1.12.0",
     "qrcode.react": "^4.2.0",

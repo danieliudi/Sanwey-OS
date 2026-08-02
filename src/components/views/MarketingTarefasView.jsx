@@ -18,6 +18,7 @@ import { DELIVERABLE_PRIORITIES } from "../../constants/marketing-pipelines";
 import { COMPANIES, COMPANY_IDS } from "../../constants/companies";
 import { localDateInputToISOString, formatDateBR, parseDateInput } from "../../utils/date";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
 import { getInvalidFields } from "../../utils/field-validation";
@@ -37,6 +38,7 @@ import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
+import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 
 function isOverdueTask(t) {
   return Boolean(t.deadline) && new Date(t.deadline) < new Date();
@@ -51,7 +53,39 @@ function isDueSoon(t) {
 /* ── Tabela (item 9/11: padronização de views — mesmo padrão de EntregasView.jsx) ── */
 function TaskTableView({ tasks, stages, usersById, campaignsById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={tasks}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma tarefa encontrada."
+      title={(item) => item.title}
+      chips={(item) => {
+        const stage = (stages || []).find(s => s.id === item.stage);
+        const color = stage?.color || "var(--text-dim)";
+        const pri = DELIVERABLE_PRIORITIES.find(p => p.id === item.priority);
+        return [
+          pri && { label: pri.label, color: pri.color },
+          { label: stage?.name || item.stage, color },
+        ];
+      }}
+      meta={(item) => {
+        const campaign = item.campaignId ? campaignsById.get(item.campaignId) : null;
+        return campaign?.name || "—";
+      }}
+      metaRight={(item) => {
+        const resolvedOwners = (item.assigneeIds || []).map(id => usersById.get(id)).filter(Boolean);
+        const isOverdue = isOverdueTask(item);
+        return (
+          <>
+            {resolvedOwners.length > 0 && <AvatarStack users={resolvedOwners} size={18} max={2} />}
+            <span style={{ color: isOverdue ? "var(--danger)" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
+              {item.deadline ? formatDateBR(item.deadline) : "—"}
+            </span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -91,7 +125,7 @@ function TaskTableView({ tasks, stages, usersById, campaignsById, onRowClick }) 
                   ) : "—"}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40` }}>
                     {stage?.name || item.stage}
                   </span>
                 </td>
@@ -112,6 +146,7 @@ function TaskTableView({ tasks, stages, usersById, campaignsById, onRowClick }) 
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -231,7 +266,7 @@ function TaskCalendarView({ tasks, stages, onSelect }) {
                           onClick={() => onSelect(item)}
                           title={item.title}
                           className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                          style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40`, cursor: "pointer" }}
                         >
                           {item.title}
                         </button>
@@ -559,7 +594,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
               style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
@@ -792,12 +827,12 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
           </div>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Kanban de tarefas do dia a dia de Marketing</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" />
-            <ViewToggleButton active={viewMode === "table"} onClick={() => setViewMode("table")} icon={List} label="Tabela" />
-            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" />
-            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
+            <ViewToggleButton active={viewMode === "kanban"} onClick={() => setViewMode("kanban")} icon={LayoutGrid} label="Kanban" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "table"} onClick={() => setViewMode("table")} icon={List} label="Tabela" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarDays} label="Calendário" iconOnlyMobile />
+            <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
           {canWrite && viewMode === "kanban" && (
             <button
@@ -938,11 +973,11 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
-                    {stage.sla && <span className="text-xs" style={{ color: stage.color + "88" }}>SLA {stage.sla}d</span>}
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
+                    {stage.sla && <span className="text-xs" style={{ color: stageTextColorStrong(stage.color) }}>SLA {stage.sla}d</span>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stageItems.length}</span>
                     <div onClick={e => e.stopPropagation()}>
                       <KanbanColumnSortMenu
                         criteria={getSortCriteria(stage.id)}
@@ -995,7 +1030,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                       <button
                         onClick={() => setQuickAddStage(stage.id)}
                         className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                        style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                        style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                       >
                         <Plus size={12} />
                         Nova tarefa

@@ -6,6 +6,7 @@ import {
   Shield, GitMerge, Settings, Info, ExternalLink,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
+import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { AgentConfigModal } from "../agents/AgentConfigModal";
@@ -17,19 +18,21 @@ const AGENTS = {
   sdr_q:    { label: "SDR-Q",     sub: "Qualificador",         Icon: Target,    color: "#1D4ED8", bg: "#EBF0F9" },
   scout:    { label: "SCOUT",     sub: "Inteligência de Conta", Icon: Telescope, color: "#6B21A8", bg: "#F5F0FB" },
   cadencia: { label: "CADÊNCIA",  sub: "Follow-up Engine",      Icon: Repeat2,   color: "#C2410C", bg: "#FEF3EC" },
-  sentinela:{ label: "SENTINELA", sub: "Monitor de Funil",      Icon: Shield,    color: "#B91C1C", bg: "#FEF2F2" },
+  sentinela:{ label: "SENTINELA", sub: "Monitor de Funil",      Icon: Shield,    color: "var(--danger)", bg: "var(--danger-bg)" },
   cross:    { label: "CROSS",     sub: "Cross-sell",            Icon: GitMerge,  color: "#0F766E", bg: "#F0FDFA" },
 };
 
 // ── Priority config ────────────────────────────────────────────────────────
 const PRIORITY = {
-  urgent: { label: "Urgente",  color: "#B91C1C", bg: "#FEF2F2" },
+  urgent: { label: "Urgente",  color: "var(--danger)", bg: "var(--danger-bg)" },
   high:   { label: "Alta",     color: "#C2410C", bg: "#FEF3EC" },
   normal: { label: "Normal",   color: "#1D4ED8", bg: "#EBF0F9" },
   low:    { label: "Baixa",    color: "var(--text-dim)", bg: "var(--surface-alt)" },
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+const STAGE_NAMES = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
 
 // ── Action card ────────────────────────────────────────────────────────────
 function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onOpenCandidato }) {
@@ -62,7 +65,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
             {action.leads?.stage && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full"
                 style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
-                {action.leads.stage}
+                {STAGE_NAMES[action.leads.stage] || action.leads.stage}
               </span>
             )}
             {payload.days_stale && (
@@ -275,8 +278,8 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
             onClick={() => onResolve(action.id, "approved")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-opacity"
-            style={{ background: "var(--success)", color: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
-            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "#155d2b"; }}
+            style={{ background: "var(--success)", color: "var(--on-success)", opacity: resolving === action.id ? 0.6 : 1 }}
+            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "color-mix(in srgb, var(--success) 85%, var(--text))"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--success)"; }}
           >
             <CheckCircle2 size={12} />
@@ -607,11 +610,11 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
             {loading
               ? "Carregando sugestões…"
               : totalPending > 0
-              ? `${totalPending} sugestão${totalPending !== 1 ? "ões" : ""} pendente${totalPending !== 1 ? "s" : ""} aguardando decisão`
+              ? `${totalPending} sugest${totalPending !== 1 ? "ões" : "ão"} pendente${totalPending !== 1 ? "s" : ""} aguardando decisão`
               : "Nenhuma sugestão pendente — pipeline em dia"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
           {isManager && (
             <button
               onClick={() => setConfigOpen(true)}

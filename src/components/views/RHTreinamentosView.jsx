@@ -20,6 +20,7 @@ import { RHMobileKanbanAccordion } from "../rh-pipeline/RHMobileKanbanAccordion"
 import { RHDetailDrawerShell, RHDetailComments } from "../rh-pipeline/RHDetailDrawerShell";
 import { StageNavigator } from "../shared/StageNavigator";
 import { SplitPanelDrawer } from "../shared/SplitPanelDrawer";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadRHComment } from "../../lib/comment-badge";
 import { resolveVisibleFields, getMissingRequiredFields, getFieldCompleteness } from "../../utils/field-conditions";
@@ -31,6 +32,7 @@ import { KanbanColumnHeader } from "../shared/KanbanColumnHeader";
 import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
+import { stageTextColor } from "../../utils/stage-colors";
 import { KanbanBoardScrollArea } from "../shared/KanbanBoardScrollArea";
 import { ViewToggleButton } from "../shared/ViewToggleButton";
 import { KanbanAnalyticsPanel } from "../shared/KanbanAnalyticsPanel";
@@ -55,7 +57,7 @@ const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
-const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function dayKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -78,13 +80,13 @@ function vencimentoDate(atribuicao, treinamento) {
 
 function atribuicaoStatusInfo(atribuicao, treinamento) {
   if (atribuicao.status === "vencido") {
-    return { label: `Vencido em ${fmt(vencimentoDate(atribuicao, treinamento))}`, color: "var(--danger)", bg: "#FEE2E2" };
+    return { label: `Vencido em ${fmt(vencimentoDate(atribuicao, treinamento))}`, color: "var(--danger)", bg: "var(--danger-bg)" };
   }
   if (atribuicao.status === "concluido") {
     const venc = vencimentoDate(atribuicao, treinamento);
-    return { label: venc ? `Concluído em ${fmt(atribuicao.data_conclusao)} · vence ${fmt(venc)}` : `Concluído em ${fmt(atribuicao.data_conclusao)}`, color: "var(--success)", bg: "#DCFCE7" };
+    return { label: venc ? `Concluído em ${fmt(atribuicao.data_conclusao)} · vence ${fmt(venc)}` : `Concluído em ${fmt(atribuicao.data_conclusao)}`, color: "var(--success)", bg: "var(--success-bg)" };
   }
-  return { label: "Pendente", color: "var(--warning)", bg: "#FEF3C7" };
+  return { label: "Pendente", color: "var(--warning)", bg: "var(--warning-bg)" };
 }
 
 // ── Modal: novo/editar treinamento ────────────────────────────────────────────
@@ -598,7 +600,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
             </span>
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
@@ -777,7 +779,7 @@ function AtribuicaoDrawer({
       <div style={{ fontWeight: 700, fontSize: 16, color: "var(--text)" }}>{colaborador?.fullName || "—"}</div>
       <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>{treinamento.titulo}</div>
       <div style={{ marginTop: 8 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: st.color, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: `${st.color}18`, color: stageTextColor(st.color), borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 600 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: st.color, display: "inline-block" }} /> {st.name}
         </span>
       </div>
@@ -853,7 +855,7 @@ function AtribuicaoDrawer({
         <div>
           <div style={labelSt}>Mover para</div>
           {moveError && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 10px", marginBottom: 8, fontSize: 11 }}>
               <AlertCircle size={12} style={{ flexShrink: 0, marginTop: 1 }} />
               {moveError}
             </div>
@@ -949,7 +951,40 @@ function AtribuicaoDrawer({
 
 function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={atribuicoes}
+      onRowClick={onRowClick}
+      emptyMessage="Ninguém atribuído ainda."
+      title={(a) => colaboradoresById.get(a.colaborador_id)?.fullName || "—"}
+      chips={(a) => {
+        const st = findStage(stages, a.status);
+        return [{ label: st.name, color: st.color }];
+      }}
+      right={(a) => a.certificado_url ? (
+        <a href={a.certificado_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+          className="text-xs" style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--accent)", fontWeight: 600 }}>
+          <ExternalLink size={12} /> Certificado
+        </a>
+      ) : a.status === "concluido" ? (
+        <span className="text-xs" style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "var(--warning)", fontWeight: 600 }}>
+          <AlertCircle size={11} /> Sem certificado
+        </span>
+      ) : null}
+      meta={(a) => colaboradoresById.get(a.colaborador_id)?.jobTitle || "—"}
+      metaRight={(a) => {
+        const venc = vencimentoDate(a, treinamento);
+        return (
+          <>
+            <span>Conclusão: {fmt(a.data_conclusao)}</span>
+            <span style={{ color: a.status === "vencido" ? "var(--danger)" : "var(--text-dim)", fontWeight: a.status === "vencido" ? 700 : 400 }}>
+              Venc.: {venc ? fmt(venc) : "—"}
+            </span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-x-auto" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -975,7 +1010,7 @@ function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresB
                 <td className="px-4 py-3 text-sm font-medium" style={{ color: "var(--text)" }}>{colaborador?.fullName || "—"}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{colaborador?.jobTitle || "—"}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: stageTextColor(st.color), border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -1003,6 +1038,7 @@ function TreinamentoTableView({ atribuicoes, treinamento, stages, colaboradoresB
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -1032,7 +1068,7 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
 
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const offset = (first.getDay() + 6) % 7;
+    const offset = first.getDay();
     const start = new Date(first);
     start.setDate(first.getDate() - offset);
     const days = [];
@@ -1071,7 +1107,7 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
       </div>
       <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
         {WEEKDAYS.map(w => (
-          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+          <div key={w} className="px-2 py-2 text-[10px] font-bold text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
@@ -1082,8 +1118,10 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "var(--border)", background: isToday ? "var(--warning-bg)" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
-              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+              style={{ borderColor: "var(--border)", background: "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={isToday
+                ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
               <div className="flex flex-col gap-0.5">
@@ -1093,7 +1131,7 @@ function TreinamentoCalendarView({ atribuicoes, treinamento, stages, colaborador
                   return (
                     <span key={a.id} onClick={() => onPillClick(a)}
                       className="text-[10px] font-semibold px-1.5 py-0.5 rounded truncate cursor-pointer"
-                      style={{ background: st.color + "18", color: st.color }}
+                      style={{ background: st.color + "18", color: stageTextColor(st.color) }}
                       title={colaborador?.fullName || "—"}>
                       {colaborador?.fullName || "—"}
                     </span>
@@ -1263,12 +1301,12 @@ function TreinamentoBoardModal({
             <div style={{ fontWeight: 700, fontSize: 18, color: "var(--text)" }}>{treinamento.titulo}</div>
             <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 2 }}>Board de acompanhamento — {atribuicoes.length} pessoa{atribuicoes.length !== 1 ? "s" : ""} atribuída{atribuicoes.length !== 1 ? "s" : ""}</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-              <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
-              <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" />
-              <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" />
-              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" />
+              <ViewToggleButton active={viewMode === "kanban"}   onClick={() => setViewMode("kanban")}   icon={LayoutGrid}   label="Kanban" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "table"}    onClick={() => setViewMode("table")}    icon={List}         label="Tabela" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "calendar"} onClick={() => setViewMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
             </div>
             <button onClick={onClose} style={{ background: "transparent", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-dim)", padding: "8px 10px", borderRadius: 10, display: "flex" }}>
               <X size={16} />
@@ -1627,7 +1665,10 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
                         <a href={t.link_conteudo} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", display: "flex", flexShrink: 0 }}><ExternalLink size={14} /></a>
                       )}
                       {canWrite && (
-                        <>
+                        // Fileira própria: soltos no container (coluna do título tem flex:1
+                        // basis 0), os botões ocupavam a linha inteira e o título ficava
+                        // com a sobra (~1 palavra por linha em 360px).
+                        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                           <button onClick={() => setEditingTreinamento(t)} style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--surface-alt)", border: "none", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}>
                             Editar
                           </button>
@@ -1642,7 +1683,7 @@ export function RHTreinamentosView({ currentUser, canWrite, isRHUser, users = []
                           <button onClick={() => handleDeleteTreinamento(t)} style={{ fontSize: 11, color: "var(--danger)", background: "var(--surface-alt)", border: "none", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}>
                             Excluir
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
                     {expanded.has(t.id) && (

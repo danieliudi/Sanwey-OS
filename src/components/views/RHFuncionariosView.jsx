@@ -55,8 +55,8 @@ import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
 
 const BENEFICIO_STATUS_COLORS = {
   solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
-  aprovado:   { bg: "#DBEAFE", text: "#2563EB" },
-  ativo:      { bg: "#DCFCE7", text: "#16A34A" },
+  aprovado:   { bg: "color-mix(in srgb, #2563EB 12%, var(--surface))", text: "color-mix(in srgb, #2563EB 60%, var(--text))" },
+  ativo:      { bg: "var(--success-bg)", text: "var(--success)" },
   cancelado:  { bg: "var(--surface-alt)", text: "var(--text-dim)" },
 };
 const BENEFICIO_STATUS_LABELS = { solicitado: "Solicitado", aprovado: "Aprovado", ativo: "Ativo", cancelado: "Cancelado" };
@@ -150,8 +150,8 @@ function BeneficiosSection({ colaboradorId, canWrite, currentUser }) {
 const SIGNATURE_STATUS_COLORS = {
   pendente_envio: { bg: "var(--surface-alt)", text: "var(--text-dim)" },
   enviado:        { bg: "var(--warning-bg)", text: "var(--warning)" },
-  assinado:       { bg: "#DCFCE7", text: "#16A34A" },
-  recusado:       { bg: "#FEE2E2", text: "#DC2626" },
+  assinado:       { bg: "var(--success-bg)", text: "var(--success)" },
+  recusado:       { bg: "var(--danger-bg)", text: "var(--danger)" },
   cancelado:      { bg: "var(--surface-alt)", text: "var(--text-dim)" },
 };
 const SIGNATURE_STATUS_LABELS = {
@@ -1802,7 +1802,7 @@ export function RHFuncionariosView({
             Registro de colaboradores · {stats.total} no total
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-2">
           <button
             onClick={handleExportCSV}
             disabled={filtered.length === 0}
@@ -2293,7 +2293,7 @@ export function RHFuncionariosView({
               </button>
               <button
                 onClick={confirmDelete.onConfirm}
-                style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, border: "none", background: "var(--danger)", color: "#FFF", cursor: "pointer" }}
+                style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, border: "none", background: "var(--danger)", color: "var(--on-danger)", cursor: "pointer" }}
               >
                 Excluir
               </button>

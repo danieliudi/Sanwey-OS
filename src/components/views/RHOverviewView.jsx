@@ -294,7 +294,7 @@ export function RHOverviewView({ currentUser, canWrite, onNavigate }) {
                 : <>{totalAtivos} colaborador{totalAtivos !== 1 ? "es" : ""} ativo{totalAtivos !== 1 ? "s" : ""}</>}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             <Button
               variant="secondary"
               icon={RefreshCcw}

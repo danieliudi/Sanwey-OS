@@ -609,7 +609,7 @@ export function LeadCreateModal({
                               cursor: "pointer", color: "var(--text)",
                             }}
                             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.borderColor = "#93C5FD"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "#DBEAFE"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.borderColor = "#DBEAFE"; }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
                               <div style={{ fontWeight: 600, fontSize: 12, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -667,10 +667,10 @@ export function LeadCreateModal({
               style={{
                 padding: "8px 12px",
                 borderRadius: 8,
-                background: "#FEF2F2",
-                color: "#B91C1C",
+                background: "var(--danger-bg)",
+                color: "var(--danger)",
                 fontSize: 12,
-                border: "1px solid #FECACA",
+                border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)",
                 marginBottom: 16,
               }}
             >

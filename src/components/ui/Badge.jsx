@@ -2,14 +2,14 @@ import React from "react";
 
 const VARIANTS = {
   default:   { bg: "var(--surface-alt)", color: "var(--text-dim)",   border: "var(--border)" },
-  urgent:    { bg: "#FEF3C7",            color: "#B45309",           border: "#FDE68A" },
-  critical:  { bg: "#FEF2F2",            color: "#B91C1C",           border: "#FECACA" },
-  gold:      { bg: "#FFFBE6",            color: "#9A7A00",           border: "#FFE680" },
+  urgent:    { bg: "var(--warning-bg)",  color: "var(--warning)",     border: "color-mix(in srgb, var(--warning) 35%, transparent)" },
+  critical:  { bg: "var(--danger-bg)",   color: "var(--danger)",      border: "color-mix(in srgb, var(--danger) 35%, transparent)" },
+  gold:      { bg: "color-mix(in srgb, #EAB308 14%, var(--surface))", color: "color-mix(in srgb, #EAB308 60%, var(--text))", border: "color-mix(in srgb, #EAB308 35%, transparent)" },
   neutral:   { bg: "var(--surface-alt)", color: "var(--text-faint)", border: "var(--border)" },
-  success:   { bg: "#F0FDF4",            color: "#15803D",           border: "#BBF7D0" },
+  success:   { bg: "var(--success-bg)",  color: "var(--success)",    border: "color-mix(in srgb, var(--success) 35%, transparent)" },
   dark:      { bg: "var(--text)",        color: "var(--surface)",    border: "var(--text)" },
-  admin:     { bg: "#EDE9FE",            color: "#5B21B6",           border: "#C4B5FD" },
-  secondary: { bg: "#EFF6FF",            color: "#1D4ED8",           border: "#BFDBFE" },
+  admin:     { bg: "color-mix(in srgb, #7C3AED 12%, var(--surface))", color: "color-mix(in srgb, #7C3AED 60%, var(--text))", border: "color-mix(in srgb, #7C3AED 35%, transparent)" },
+  secondary: { bg: "color-mix(in srgb, #2563EB 12%, var(--surface))", color: "color-mix(in srgb, #2563EB 60%, var(--text))", border: "color-mix(in srgb, #2563EB 35%, transparent)" },
 };
 
 export function Badge({ children, variant = "default", size = "sm", customColor }) {

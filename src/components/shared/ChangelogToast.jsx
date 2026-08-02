@@ -21,7 +21,7 @@ export function ChangelogToast({ items, onDismiss, onViewAll }) {
       style={{ bottom: 20, right: 20, width: 440, maxWidth: "92vw", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-pop)" }}
     >
       <div className="flex items-center gap-3" style={{ padding: "18px 20px 14px" }}>
-        <span className="shrink-0 flex items-center justify-center" style={{ width: 38, height: 38, borderRadius: 10, background: "#EFF6FF", color: "#1D4ED8" }}>
+        <span className="shrink-0 flex items-center justify-center" style={{ width: 38, height: 38, borderRadius: 10, background: "var(--accent-tint)", color: "var(--accent)" }}>
           <Sparkles size={18} />
         </span>
         <div className="flex-1 min-w-0">
@@ -50,7 +50,7 @@ export function ChangelogToast({ items, onDismiss, onViewAll }) {
         <button
           onClick={onViewAll}
           className="inline-flex items-center gap-1 font-bold cursor-pointer"
-          style={{ fontSize: 12.5, color: "#1D4ED8", background: "none", border: "none", padding: 0 }}
+          style={{ fontSize: 12.5, color: "var(--accent)", background: "none", border: "none", padding: 0 }}
         >
           Ver tudo que mudou <ArrowRight size={13} />
         </button>

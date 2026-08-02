@@ -16,6 +16,7 @@ function rowToChannel(r) {
     readOnly: Boolean(r.read_only),
     updatedAt: r.updated_at ?? null,
     lastReadAt: r.last_read_at ?? null,
+    archivedAt: r.archived_at ?? null,
     unreadCount: Number(r.unread_count) || 0,
     lastMessageBody: r.last_message_body ?? null,
     lastMessageAt: r.last_message_at ?? null,
@@ -43,6 +44,25 @@ function rowToMessage(r) {
   };
 }
 
+// Réplica mínima de channelTitle/attachment labels de ChatView.jsx — só o
+// necessário pro toast (spec seção 5), que não tem acesso ao componente de
+// tela (dispara de dentro do hook, reaproveitando o mesmo evento Realtime
+// que já atualiza unreadCount).
+function channelDisplayName(channel) {
+  if (!channel) return "Conversa";
+  if (channel.kind === "dm") return channel.dmPeerName || "Conversa";
+  return channel.name || "Canal";
+}
+
+function messagePreviewLabel(message) {
+  if (message.body) return message.body;
+  const first = message.attachments?.[0];
+  if (!first) return "";
+  if (first.type === "sticker") return "Figurinha";
+  if (first.type === "audio") return "Mensagem de áudio";
+  return "Anexo enviado";
+}
+
 function rowToDmCandidate(r) {
   return {
     id: r.id,
@@ -62,7 +82,13 @@ export function useChat({ userId } = {}) {
   const [dmCandidates, setDmCandidates] = useState([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState(null);
+  // Sinal do toast Nível 1 (spec seção 5) — um objeto novo a cada mensagem
+  // recebida de outra pessoa, pra quem consome (App.jsx) reagir com um
+  // useEffect ainda que o conteúdo textual se repita.
+  const [incomingMessage, setIncomingMessage] = useState(null);
   const activeRef = useRef(true);
+  const channelsRef = useRef(channels);
+  useEffect(() => { channelsRef.current = channels; }, [channels]);
 
   const enabled = isSupabaseConfigured && Boolean(userId);
 
@@ -88,19 +114,48 @@ export function useChat({ userId } = {}) {
     if (!enabled) { setChannels([]); setLoading(false); return () => { activeRef.current = false; }; }
     fetchChannels();
     const debouncedFetch = debounce(() => { if (activeRef.current) fetchChannels(); }, 400);
+    // Toast Nível 1 (spec seção 5) — reaproveita o MESMO evento Realtime que
+    // já dispara o debouncedFetch acima (não abre uma segunda subscription
+    // só pra saber "chegou mensagem nova"). Só busca a linha completa (join
+    // de autor) quando é de fato um INSERT de outra pessoa — update/delete e
+    // mensagem própria não geram toast.
+    const notifyIncoming = async (payload) => {
+      if (payload.eventType !== "INSERT" || !payload.new || payload.new.author_id === userId) return;
+      const { data } = await supabase
+        .from(MESSAGES_TABLE)
+        .select(MESSAGE_SELECT)
+        .eq("id", payload.new.id)
+        .maybeSingle();
+      if (!activeRef.current) return;
+      const message = rowToMessage(data || payload.new);
+      const channel = channelsRef.current.find(c => c.id === message.channelId);
+      setIncomingMessage({
+        messageId: message.id,
+        channelId: message.channelId,
+        channelName: channelDisplayName(channel),
+        senderName: message.authorName,
+        senderInitials: message.authorInitials,
+        senderAvatarBg: message.authorAvatarBg,
+        preview: messagePreviewLabel(message),
+        at: Date.now(),
+      });
+    };
     // Nome de canal único por instância — nome determinístico repetido entre
     // dois hooks derruba a conexão Realtime.
     const channelName = `chat-channels-${Math.random().toString(36).slice(2, 9)}`;
     const channel = supabase
       .channel(channelName)
-      .on("postgres_changes", { event: "*", schema: "public", table: MESSAGES_TABLE }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: MESSAGES_TABLE }, (payload) => {
+        debouncedFetch();
+        notifyIncoming(payload);
+      })
       .subscribe();
     return () => {
       activeRef.current = false;
       debouncedFetch.cancel();
       supabase.removeChannel(channel);
     };
-  }, [enabled, fetchChannels]);
+  }, [enabled, fetchChannels, userId]);
 
   useEffect(() => {
     if (!enabled) { setDmCandidates([]); return; }
@@ -113,12 +168,13 @@ export function useChat({ userId } = {}) {
     return () => { alive = false; };
   }, [enabled]);
 
-  const sendMessage = useCallback(async (channelId, body) => {
+  const sendMessage = useCallback(async (channelId, body, attachments = []) => {
     const text = (body || "").trim();
-    if (!channelId || !text) return null;
+    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+    if (!channelId || (!text && !hasAttachments)) return null;
     const { data, error: err } = await supabase
       .from(MESSAGES_TABLE)
-      .insert({ channel_id: channelId, author_id: userId, body: text })
+      .insert({ channel_id: channelId, author_id: userId, body: text, attachments: hasAttachments ? attachments : [] })
       .select(MESSAGE_SELECT)
       .single();
     if (err) throw err;
@@ -152,8 +208,36 @@ export function useChat({ userId } = {}) {
     return data;
   }, [fetchChannels]);
 
+  // Arquivamento por participante (spec seção 2) — mesmo caminho de update
+  // direto na própria linha que markRead já usa pra last_read_at (a policy
+  // chat_members_update_self não distingue coluna).
+  const archiveChannel = useCallback(async (channelId) => {
+    if (!enabled || !channelId) return;
+    const now = new Date().toISOString();
+    setChannels(prev => prev.map(c => c.id === channelId ? { ...c, archivedAt: now } : c));
+    const { error: err } = await supabase
+      .from("chat_channel_members")
+      .update({ archived_at: now })
+      .eq("channel_id", channelId)
+      .eq("user_id", userId);
+    if (err) { setError(err); fetchChannels(); }
+  }, [enabled, userId, fetchChannels]);
+
+  const unarchiveChannel = useCallback(async (channelId) => {
+    if (!enabled || !channelId) return;
+    setChannels(prev => prev.map(c => c.id === channelId ? { ...c, archivedAt: null } : c));
+    const { error: err } = await supabase
+      .from("chat_channel_members")
+      .update({ archived_at: null })
+      .eq("channel_id", channelId)
+      .eq("user_id", userId);
+    if (err) { setError(err); fetchChannels(); }
+  }, [enabled, userId, fetchChannels]);
+
+  // Arquivado = silenciado (decisão do Daniel) — não conta no badge fora da
+  // tela de Chat, mesmo com mensagens não lidas.
   const totalUnread = useMemo(
-    () => channels.reduce((sum, c) => sum + (c.unreadCount || 0), 0),
+    () => channels.reduce((sum, c) => sum + (c.archivedAt ? 0 : (c.unreadCount || 0)), 0),
     [channels],
   );
 
@@ -161,14 +245,17 @@ export function useChat({ userId } = {}) {
     channels,
     dmCandidates,
     totalUnread,
+    incomingMessage,
     loading,
     error,
     sendMessage,
     markRead,
     startDm,
     createChannel,
+    archiveChannel,
+    unarchiveChannel,
     refetch: fetchChannels,
-  }), [channels, dmCandidates, totalUnread, loading, error, sendMessage, markRead, startDm, createChannel, fetchChannels]);
+  }), [channels, dmCandidates, totalUnread, incomingMessage, loading, error, sendMessage, markRead, startDm, createChannel, archiveChannel, unarchiveChannel, fetchChannels]);
 }
 
 export function useChannelMessages(channelId) {

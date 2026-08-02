@@ -8,6 +8,7 @@ import {
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
+import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 import { useMarketingCampaigns }    from "../../hooks/use-marketing-campaigns";
 import { useRHStageFields } from "../../hooks/use-rh-stage-fields";
 import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
@@ -24,6 +25,7 @@ import { getInvalidFields } from "../../utils/field-validation";
 import { RHStageFieldInput } from "../rh-pipeline/RHStageFieldInput";
 import { DeliverableDetailDrawer } from "../campaign/DeliverableDetailDrawer";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
@@ -313,7 +315,7 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
           )}
 
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
 
           <button type="submit" disabled={saving || !title.trim() || !deadline}
@@ -330,7 +332,40 @@ function DeliverableCreateModal({ stageId, currentUser, users, campaigns, onAdd,
 /* ── Tabela ───────────────────────────────────────────────────── */
 function DeliverableTableView({ deliverables, stages, usersById, campaignsById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={deliverables}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma entrega encontrada."
+      title={(item) => item.title}
+      chips={(item) => {
+        const stage = (stages || DELIVERABLE_STAGES).find(s => s.id === item.stage);
+        const color = stage?.color || "var(--text-dim)";
+        const priColor = PRIORITY_COLORS[item.priority] || null;
+        return [
+          priColor && { label: PRIORITY_LABELS[item.priority] || item.priority, color: priColor },
+          { label: stage?.name || item.stage, color },
+        ];
+      }}
+      right={(item) => item.starred ? <Star size={13} style={{ color: "#F59E0B", fill: "#F59E0B" }} /> : null}
+      meta={(item) => {
+        const campaign = item.campaignId ? campaignsById.get(item.campaignId) : null;
+        return [item.requestNumber, campaign?.name].filter(Boolean).join(" · ") || "—";
+      }}
+      metaRight={(item) => {
+        const resolvedOwners = getDeliverableAssigneeIds(item).map(id => usersById.get(id)).filter(Boolean);
+        const isOverdue = item.deadline && new Date(item.deadline) < new Date();
+        return (
+          <>
+            {resolvedOwners.length > 0 && <AvatarStack users={resolvedOwners} size={18} max={2} />}
+            <span style={{ color: isOverdue ? "var(--danger)" : "var(--text-dim)", fontWeight: isOverdue ? 600 : 400 }}>
+              {item.deadline ? formatDateBR(item.deadline) : "—"}
+            </span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -374,7 +409,7 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
                   ) : "—"}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40` }}>
                     {stage?.name || item.stage}
                   </span>
                 </td>
@@ -395,6 +430,7 @@ function DeliverableTableView({ deliverables, stages, usersById, campaignsById, 
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -528,7 +564,7 @@ function DeliverableCalendarView({ deliverables, stages, onSelect }) {
                           onClick={() => onSelect(item)}
                           title={item.title}
                           className="text-left truncate text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ background: color + "18", color, border: `1px solid ${color}40`, cursor: "pointer" }}
+                          style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40`, cursor: "pointer" }}
                         >
                           {item.requestNumber ? `${item.requestNumber} ` : ""}{item.title}
                         </button>
@@ -630,7 +666,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
               style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
@@ -902,9 +938,9 @@ export function EntregasView({ user, users = [], notifyMentions }) {
           {/* Chip do deep-link "Presas em revisão" (Painel de Marketing) —
               fica visível mesmo com o painel de filtros fechado. */}
           {stuckOnly && (
-            <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: "1px solid #FED7AA", background: "#FFF7ED", color: "#D97706", fontSize: 11, fontWeight: 600 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)", background: "var(--warning-bg)", color: "var(--warning)", fontSize: 11, fontWeight: 600 }}>
               Presas em revisão · +3 dias
-              <button onClick={() => setStuckOnly(false)} style={{ display: "flex", color: "#D97706", background: "none", border: "none", cursor: "pointer", padding: 0 }} title="Limpar filtro">
+              <button onClick={() => setStuckOnly(false)} style={{ display: "flex", color: "var(--warning)", background: "none", border: "none", cursor: "pointer", padding: 0 }} title="Limpar filtro">
                 <X size={11} />
               </button>
             </span>
@@ -1025,11 +1061,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
-                    {stage.sla && <span className="text-xs" style={{ color: stage.color + "88" }}>SLA {stage.sla}d</span>}
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
+                    {stage.sla && <span className="text-xs" style={{ color: stageTextColorStrong(stage.color) }}>SLA {stage.sla}d</span>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stageItems.length}</span>
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stageItems.length}</span>
                     <div onClick={e => e.stopPropagation()}>
                       <KanbanColumnSortMenu
                         criteria={getSortCriteria(stage.id)}
@@ -1082,7 +1118,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                       <button
                         onClick={() => setQuickAddStage(stage.id)}
                         className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                        style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                        style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                       >
                         <Plus size={12} />
                         Nova entrega

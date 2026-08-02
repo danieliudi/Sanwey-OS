@@ -73,7 +73,7 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
         {!isConfigured && (
           <div
             className="flex items-start gap-2 text-xs px-3 py-2.5 rounded-lg mb-3"
-            style={{ background: "#FEF3C7", color: "#92400E" }}
+            style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
           >
             <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>Configure sua LLM nas Configurações → Integrações de IA</span>
@@ -129,7 +129,7 @@ export function ProposalPanel({ lead, currentUser, allLeads }) {
         {error && (
           <div
             className="flex items-start gap-2 text-sm px-3 py-2.5 rounded-lg mt-3"
-            style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FECACA" }}
+            style={{ background: "var(--danger-bg)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)" }}
           >
             <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
             <span>{error}</span>

@@ -243,8 +243,8 @@ function StageListCore({
                           // 3 estados: Ganho, Perdido, ou terminal neutro
                           // ("Concluído"/"Entregue") — nunca rotular neutro
                           // como Perdido (bug real já corrigido).
-                          background: stage.won ? "#E8F2EC" : stage.lost ? "#FEF2F2" : "#EFF6FF",
-                          color: stage.won ? "#1A6E35" : stage.lost ? "#B91C1C" : "#1D4ED8",
+                          background: stage.won ? "var(--success-bg)" : stage.lost ? "var(--danger-bg)" : "color-mix(in srgb, #2563EB 12%, var(--surface))",
+                          color: stage.won ? "var(--success)" : stage.lost ? "var(--danger)" : "color-mix(in srgb, #2563EB 60%, var(--text))",
                         }}
                       >
                         {stage.won ? "Ganho" : stage.lost ? "Perdido" : "Concluído"}
@@ -311,7 +311,7 @@ function StageListCore({
                 onClick={onReset}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer"
                 style={{ borderColor: "var(--border)", color: "var(--text-dim)", background: "var(--surface)" }}
-                onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.borderColor = "#FECACA"; }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.borderColor = "color-mix(in srgb, var(--danger) 35%, transparent)"; }}
                 onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.borderColor = "var(--border)"; }}
               >
                 <RotateCcw size={11} />

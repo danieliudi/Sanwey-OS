@@ -56,8 +56,8 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
     const cat = selected.category;
     return (
       <div
-        className="rounded-xl border bg-white p-3.5"
-        style={{ borderColor: "var(--border)", borderLeft: `3px solid ${cat ? clientCategoryColor(cat) : "var(--color-industria)"}` }}
+        className="rounded-xl border p-3.5"
+        style={{ background: "var(--surface)", borderColor: "var(--border)", borderLeft: `3px solid ${cat ? clientCategoryColor(cat) : "var(--color-industria)"}` }}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="font-bold leading-snug" style={{ fontSize: 15, color: "var(--text)", letterSpacing: "-0.01em" }}>
@@ -68,7 +68,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
               onClick={() => onChange?.(null)}
               title="Remover cliente"
               className="shrink-0"
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#CBD5E1", lineHeight: 1 }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", lineHeight: 1 }}
             >
               <X size={16} />
             </button>
@@ -123,7 +123,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
   // ── Estado B: buscando ──
   if (open) {
     return (
-      <div ref={boxRef} className="rounded-xl bg-white overflow-hidden" style={{ border: "1.5px solid var(--accent)" }}>
+      <div ref={boxRef} className="rounded-xl overflow-hidden" style={{ background: "var(--surface)", border: "1.5px solid var(--accent)" }}>
         <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: "1px solid var(--border)" }}>
           <Search size={15} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
           <input
@@ -134,7 +134,7 @@ export function ClientSelector({ value, client, clients = [], onChange, onCreate
             className="flex-1 text-sm outline-none"
             style={{ border: "none", color: "var(--text)", background: "transparent" }}
           />
-          <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#CBD5E1" }}>
+          <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)" }}>
             <X size={15} />
           </button>
         </div>

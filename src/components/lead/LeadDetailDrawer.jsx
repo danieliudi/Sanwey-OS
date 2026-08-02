@@ -35,7 +35,7 @@ import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { StageNavigator } from "../shared/StageNavigator";
 import { createPosvendaCaseFromLead } from "../../hooks/use-posvenda";
 
-export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions, pipelineTransitions }) {
+export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDelete, onAddActivity, allLeads, users, clients = [], onCreateClient, isManager, currentUser, onNavigateToPipelineBuilder, pipelines, notifyMentions, pipelineTransitions, offlineStatusById, onRetryOfflineActivity }) {
   const [stage, setStage] = useState(lead?.stage ?? null);
   const [sideTab, setSideTab] = useState("fase");
   const [mobileTab, setMobileTab] = useState("info");
@@ -294,6 +294,16 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
     const resolveMentionNames = (ids) => (ids || [])
       .map(id => (users || []).find(u => u.id === id)?.name)
       .filter(Boolean);
+    // Offline fase 1: status vem da fila local (pendingActivities) quando
+    // disponível — senão cai no metadado `pending:true` gravado direto no
+    // objeto em memória (ver use-leads.js addLeadActivity), que cobre o
+    // instante entre "acabou de criar offline" e a fila ainda não ter sido
+    // relida por use-offline-sync.
+    const resolveOfflineStatus = (id, pendingFlag) => {
+      const entry = offlineStatusById?.[id];
+      if (entry) return entry.status;
+      return pendingFlag ? "pending" : undefined;
+    };
     const merged = [
       ...notes.filter(n => !n.deletedAt).map((n, i) => {
         const author = n.userId ? (users || []).find(u => u.id === n.userId) : null;
@@ -308,6 +318,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           mentionedNames: resolveMentionNames(n.mentionedIds),
           createdAt: n.createdAt,
           editedAt: n.editedAt || null,
+          status: resolveOfflineStatus(n.id, n.pending),
         };
       }),
       ...activityComments.filter(c => !c.deletedAt).map((c, i) => {
@@ -323,11 +334,12 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
           mentionedNames: resolveMentionNames(c.mentionedIds),
           createdAt: c.timestamp || c.createdAt,
           editedAt: c.editedAt || null,
+          status: resolveOfflineStatus(c.id, c.pending),
         };
       }),
     ];
     return merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [lead, users]);
+  }, [lead, users, offlineStatusById]);
 
   const onUpdateComment = useCallback(async (id, patch) => {
     if (!lead || !onUpdate) return;
@@ -626,7 +638,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   de QA: 3 padrões de confirmação de exclusão distintos). */}
               {canDelete && confirmDelete && (
                 <div className="flex items-center gap-1">
-                  <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "#B91C1C", color: "#FFFFFF", border: "none" }}>
+                  <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none" }}>
                     {deleting ? "Excluindo…" : "Confirmar exclusão"}
                   </button>
                   <button onClick={() => setConfirmDelete(false)} className="px-2 py-1 rounded-lg text-xs cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
@@ -666,7 +678,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 onClick={() => setConfirmDelete(true)}
                 className="p-1.5 rounded-lg transition-colors duration-150 cursor-pointer"
                 style={{ color: "var(--text-dim)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                 aria-label="Excluir card"
                 title="Excluir card"
@@ -680,9 +692,9 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   onClick={handleDeleteConfirmed}
                   disabled={deleting}
                   className="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
-                  style={{ background: "#B91C1C", color: "#FFFFFF", border: "none", opacity: deleting ? 0.6 : 1 }}
-                  onMouseEnter={e => { if (!deleting) e.currentTarget.style.background = "#7F1D1D"; }}
-                  onMouseLeave={e => { if (!deleting) e.currentTarget.style.background = "#B91C1C"; }}
+                  style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", opacity: deleting ? 0.6 : 1 }}
+                  onMouseEnter={e => { if (!deleting) e.currentTarget.style.background = "color-mix(in srgb, var(--danger) 80%, black)"; }}
+                  onMouseLeave={e => { if (!deleting) e.currentTarget.style.background = "var(--danger)"; }}
                 >
                   {deleting ? "Excluindo…" : "Confirmar exclusão"}
                 </button>
@@ -1007,9 +1019,9 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                     <span style={{ color: "var(--text-dim)", minWidth: 12 }}>!</span>
                     <span style={{
                       fontWeight: 600,
-                      color: customValues.capture_priority === "Alta" ? "#DC2626"
-                        : customValues.capture_priority === "Média" ? "#E8920A"
-                        : "#16A34A"
+                      color: customValues.capture_priority === "Alta" ? "var(--danger)"
+                        : customValues.capture_priority === "Média" ? "var(--amber)"
+                        : "var(--success)"
                     }}>
                       {customValues.capture_priority}
                     </span>
@@ -1213,7 +1225,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
             </label>
             <Select value={stage || ""} onChange={handleStageChange} options={stageOptions} />
             {moveError && (
-              <div className="flex items-start gap-2 p-2.5 mt-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+              <div className="flex items-start gap-2 p-2.5 mt-2 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
                 <AlertCircle size={12} className="shrink-0 mt-0.5" />
                 <span>{moveError}</span>
               </div>
@@ -1414,6 +1426,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                 mentionableUsers={mentionableUsers}
                 onAddComment={handleAddComment}
                 onUpdateComment={onUpdateComment}
+                onRetryOfflineActivity={onRetryOfflineActivity}
                 isManager={isManager}
                 onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
                 onGoToIA={() => { setSideTab("ia"); setMobileTab("info"); }}
@@ -1440,6 +1453,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
               mentionableUsers={mentionableUsers}
               onAddComment={handleAddComment}
               onUpdateComment={onUpdateComment}
+              onRetryOfflineActivity={onRetryOfflineActivity}
               isManager={isManager}
               onNavigateToPipelineBuilder={onNavigateToPipelineBuilder}
               onGoToIA={() => setSideTab("ia")}
@@ -1583,7 +1597,7 @@ function SideTabs({ activeTab, onChange }) {
 // etapa livremente e sem acesso a comentários/@menção). ──────────────
 function MoveAndCommentsPanel({
   moveError, stageTargets, onMove,
-  commentsFeed, currentUser, mentionableUsers, onAddComment, onUpdateComment,
+  commentsFeed, currentUser, mentionableUsers, onAddComment, onUpdateComment, onRetryOfflineActivity,
   isManager, onNavigateToPipelineBuilder, onGoToIA,
   isWonStage, alreadySentToPosvenda, sendingToPosvenda, posvendaError, onSendToPosvenda,
 }) {
@@ -1593,7 +1607,7 @@ function MoveAndCommentsPanel({
         Mover para
       </div>
       {moveError && (
-        <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+        <div className="flex items-start gap-2 p-2.5 mb-2 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <AlertCircle size={12} className="shrink-0 mt-0.5" />
           {moveError}
         </div>
@@ -1641,6 +1655,7 @@ function MoveAndCommentsPanel({
           mentionableUsers={mentionableUsers}
           onAddComment={onAddComment}
           onUpdateComment={onUpdateComment}
+          onRetryOfflineActivity={onRetryOfflineActivity}
         />
       </div>
 
@@ -1861,7 +1876,7 @@ function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <AlertCircle size={13} className="shrink-0 mt-0.5" />
           {error}
         </div>
@@ -1918,7 +1933,7 @@ function AttachmentsPanel({ leadId, companyId, currentUser, companyColor }) {
                 onClick={() => remove(att)}
                 className="p-1.5 rounded-lg transition-colors"
                 style={{ color: "var(--text-dim)", background: "transparent", border: "none", cursor: "pointer" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--danger-bg)"; e.currentTarget.style.color = "var(--danger)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
                 title="Remover arquivo"
                 aria-label="Remover arquivo"
@@ -1978,7 +1993,7 @@ function ChecklistsPanel({ leadId, companyId, currentUser, companyColor }) {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+        <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <AlertCircle size={13} className="shrink-0 mt-0.5" />
           {error}
         </div>
@@ -2042,7 +2057,7 @@ function ChecklistsPanel({ leadId, companyId, currentUser, companyColor }) {
                 onClick={() => deleteChecklist(cl.id)}
                 className="p-1 rounded transition-colors shrink-0"
                 style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
-                onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
                 onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
                 title="Remover checklist"
               >
@@ -2056,7 +2071,7 @@ function ChecklistsPanel({ leadId, companyId, currentUser, companyColor }) {
                 <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--surface-alt)" }}>
                   <div
                     className="h-full rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%`, background: progress === 100 ? "#16A34A" : companyColor }}
+                    style={{ width: `${progress}%`, background: progress === 100 ? "var(--success)" : companyColor }}
                   />
                 </div>
               </div>
@@ -2091,7 +2106,7 @@ function ChecklistsPanel({ leadId, companyId, currentUser, companyColor }) {
                     onClick={() => removeItem(cl.id, it.id)}
                     className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all"
                     style={{ color: "var(--text-dim)", background: "none", border: "none", cursor: "pointer" }}
-                    onMouseEnter={e => { e.currentTarget.style.color = "#B91C1C"; }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "var(--danger)"; }}
                     onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
                     title="Remover item"
                   >
@@ -2179,9 +2194,9 @@ function PlaceholderPanel({ icon: Icon, title, hint }) {
 
 function CaptureRow({ label, value, mono, link, badge, hint }) {
   const dim = value === null || value === undefined || value === "";
-  const priorityColor = badge && value === "Alta" ? "#DC2626"
-    : badge && value === "Média" ? "#E8920A"
-    : badge && value === "Baixa" ? "#16A34A"
+  const priorityColor = badge && value === "Alta" ? "var(--danger)"
+    : badge && value === "Média" ? "var(--amber)"
+    : badge && value === "Baixa" ? "var(--success)"
     : null;
   return (
     <div>
@@ -2191,7 +2206,7 @@ function CaptureRow({ label, value, mono, link, badge, hint }) {
           <a href={link} style={{ color: "var(--accent)", textDecoration: "none" }}>{value}</a>
         ) : badge ? (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-            style={{ background: (priorityColor || "var(--text-dim)") + "14", color: priorityColor || "var(--text-dim)" }}>
+            style={{ background: `color-mix(in srgb, ${priorityColor || "var(--text-dim)"} 8%, transparent)`, color: priorityColor || "var(--text-dim)" }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: priorityColor || "var(--text-dim)" }} />
             {value}
           </span>

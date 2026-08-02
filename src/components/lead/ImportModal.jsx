@@ -520,7 +520,7 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
               </div>
 
               {parseError && (
-                <div style={{ background: "#FEF2F2", color: "#B91C1C", padding: "10px 14px", borderRadius: 8, fontSize: 13 }}>
+                <div style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "10px 14px", borderRadius: 8, fontSize: 13 }}>
                   {parseError}
                 </div>
               )}
@@ -631,14 +631,14 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                   <div
                     style={{
                       width: 56, height: 56, borderRadius: "50%",
-                      background: failedRows.length > 0 ? "#FEF2F2" : "#ECFDF5",
+                      background: failedRows.length > 0 ? "var(--danger-bg)" : "var(--success-bg)",
                       display: "flex", alignItems: "center",
                       justifyContent: "center", margin: "0 auto 16px",
                     }}
                   >
                     {failedRows.length > 0
-                      ? <X size={28} color="#DC2626" />
-                      : <Check size={28} color="#16A34A" />}
+                      ? <X size={28} color="var(--danger)" />
+                      : <Check size={28} color="var(--success)" />}
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
                     {failedRows.length > 0 ? "Importação concluída com falhas" : "Importação concluída!"}
@@ -652,15 +652,15 @@ export function ImportModal({ isOpen, onClose, users = [], currentUser, onAddLea
                     <div
                       style={{
                         marginTop: 16, textAlign: "left", maxWidth: 480, marginLeft: "auto", marginRight: "auto",
-                        background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: 12,
+                        background: "var(--danger-bg)", border: "1px solid color-mix(in srgb, var(--danger) 35%, transparent)", borderRadius: 10, padding: 12,
                         maxHeight: 180, overflowY: "auto",
                       }}
                     >
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#B91C1C", marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--danger)", marginBottom: 6 }}>
                         Linhas que falharam — corrija e importe novamente:
                       </div>
                       {failedRows.map((f, i) => (
-                        <div key={i} style={{ fontSize: 12, color: "#7F1D1D", marginBottom: 4 }}>
+                        <div key={i} style={{ fontSize: 12, color: "var(--danger)", marginBottom: 4 }}>
                           Linha {f.row} ({f.company}): {f.error}
                         </div>
                       ))}

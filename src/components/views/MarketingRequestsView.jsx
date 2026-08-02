@@ -16,15 +16,15 @@ import { CopyPublicLinkButton } from "../shared/CopyPublicLinkButton";
 import { PageHeader } from "../shared/PageHeader";
 
 const STATUS_CONFIG = {
-  pendente:   { label: "Pendente",   color: "#D97706", bg: "#FEF3C7", icon: Clock },
-  aprovado:   { label: "Aprovado",   color: "#16A34A", bg: "#DCFCE7", icon: CheckCircle2 },
-  rejeitado:  { label: "Rejeitado",  color: "#DC2626", bg: "#FEE2E2", icon: XCircle },
+  pendente:   { label: "Pendente",   color: "var(--warning)", bg: "var(--warning-bg)", icon: Clock },
+  aprovado:   { label: "Aprovado",   color: "var(--success)", bg: "var(--success-bg)", icon: CheckCircle2 },
+  rejeitado:  { label: "Rejeitado",  color: "var(--danger)", bg: "var(--danger-bg)", icon: XCircle },
 };
 
 const PRIORITY_COLORS = {
-  baixa: { color: "#16A34A", bg: "#DCFCE7" },
-  media: { color: "#D97706", bg: "#FEF3C7" },
-  alta:  { color: "#DC2626", bg: "#FEE2E2" },
+  baixa: { color: "var(--success)", bg: "var(--success-bg)" },
+  media: { color: "var(--warning)", bg: "var(--warning-bg)" },
+  alta:  { color: "var(--danger)", bg: "var(--danger-bg)" },
 };
 
 function StatusBadge({ status }) {
@@ -66,8 +66,8 @@ function CategoryBadge({ category }) {
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
       style={isCompra
-        ? { background: "#EDE9FE", color: "#7C3AED" }
-        : { background: "#EFF6FF", color: "#1D4ED8" }}
+        ? { background: "color-mix(in srgb, #7C3AED 12%, var(--surface))", color: "color-mix(in srgb, #7C3AED 60%, var(--text))" }
+        : { background: "color-mix(in srgb, #2563EB 12%, var(--surface))", color: "color-mix(in srgb, #2563EB 60%, var(--text))" }}
     >
       <Icon size={10} />
       {isCompra ? "Compra" : "Material"}
@@ -111,7 +111,7 @@ function RejectModal({ request, onConfirm, onClose }) {
             onClick={async () => { setSaving(true); await onConfirm(reason); }}
             disabled={saving}
             className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "#DC2626", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
+            style={{ background: "var(--danger)", color: "var(--on-danger)", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
           >
             {saving ? "Rejeitando…" : "Confirmar rejeição"}
           </button>
@@ -150,7 +150,7 @@ function ApproveModal({ request, onConfirm, onClose }) {
         </p>
 
         {isCompra ? (
-          <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "#EDE9FE", color: "#7C3AED" }}>
+          <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "color-mix(in srgb, #7C3AED 12%, var(--surface))", color: "color-mix(in srgb, #7C3AED 60%, var(--text))" }}>
             Solicitações de <strong>Compra</strong> vão direto pro Kanban de Compras — não tem escolha de destino
             aqui (Entrega/Tarefa só existe pra Material de Marketing).
           </p>
@@ -318,7 +318,7 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
             <button
               onClick={() => onApprove(request)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-              style={{ background: "#DCFCE7", color: "#15803D" }}
+              style={{ background: "var(--success-bg)", color: "var(--success)" }}
             >
               <CheckCircle2 size={13} />
               Aprovar
@@ -326,7 +326,7 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
             <button
               onClick={() => onReject(request)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-              style={{ background: "#FEE2E2", color: "#DC2626" }}
+              style={{ background: "var(--danger-bg)", color: "var(--danger)" }}
             >
               <XCircle size={13} />
               Rejeitar
@@ -335,19 +335,19 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
         )}
 
         {request.status === "aprovado" && request.deliverableId && (
-          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "#DCFCE7", color: "#15803D" }}>
+          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "var(--success-bg)", color: "var(--success)" }}>
             Entrega criada
           </span>
         )}
 
         {request.status === "aprovado" && request.taskId && (
-          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "#FEF3C7", color: "#B45309" }}>
+          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
             Tarefa criada
           </span>
         )}
 
         {request.status === "aprovado" && request.purchaseRequestId && (
-          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "#EDE9FE", color: "#7C3AED" }}>
+          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "color-mix(in srgb, #7C3AED 12%, var(--surface))", color: "color-mix(in srgb, #7C3AED 60%, var(--text))" }}>
             Compra criada
           </span>
         )}
@@ -357,7 +357,7 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
             onClick={() => onResendEmail(request)}
             disabled={sendingEmail}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
-            style={{ background: "#FEF3C7", color: "#D97706" }}
+            style={{ background: "var(--warning-bg)", color: "var(--warning)" }}
           >
             <RefreshCw size={13} /> {sendingEmail ? "Enviando…" : "Tentar enviar e-mail de novo"}
           </button>
@@ -387,13 +387,13 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
       )}
 
       {request.status === "rejeitado" && request.rejectionReason && (
-        <div className="mt-2 text-xs px-3 py-2 rounded-lg" style={{ background: "#FEE2E2", color: "#B91C1C" }}>
+        <div className="mt-2 text-xs px-3 py-2 rounded-lg" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           <strong>Motivo:</strong> {request.rejectionReason}
         </div>
       )}
 
       {request.status !== "pendente" && request.emailError && (
-        <div className="mt-2 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5" style={{ background: "#FEF3C7", color: "#92400E" }}>
+        <div className="mt-2 text-xs px-3 py-2 rounded-lg flex items-center gap-1.5" style={{ background: "var(--warning-bg)", color: "var(--warning)" }}>
           <AlertCircle size={12} /> Falha ao avisar o solicitante por e-mail: {request.emailError}
         </div>
       )}
@@ -534,7 +534,7 @@ export function MarketingRequestsView({ user, users }) {
 
       {/* Error */}
       {(error || actionError) && (
-        <div className="text-sm px-4 py-3 rounded-xl" style={{ background: "#FEE2E2", color: "#B91C1C" }}>
+        <div className="text-sm px-4 py-3 rounded-xl" style={{ background: "var(--danger-bg)", color: "var(--danger)" }}>
           {error || actionError}
         </div>
       )}

@@ -172,8 +172,8 @@ export function StageAdvancedModal({
                 <span
                   className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                   style={{
-                    background: stage.won ? "#E8F2EC" : "#FEF2F2",
-                    color: stage.won ? "#1A6E35" : "#B91C1C",
+                    background: stage.won ? "var(--success-bg)" : "var(--danger-bg)",
+                    color: stage.won ? "var(--success)" : "var(--danger)",
                   }}
                 >
                   {stage.won ? "Ganho" : "Perdido"}

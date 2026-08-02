@@ -18,6 +18,7 @@ import { CampaignDetailDrawer } from "../campaign/CampaignDetailDrawer";
 import { CampaignCalendar } from "../campaign/CampaignCalendar";
 import { useUsersById } from "../../hooks/use-users-by-id";
 import { formatK } from "../../utils/currency";
+import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 import { formatDateBR, localDateInputToISOString } from "../../utils/date";
 import { exportCampaignsToCSV } from "../../utils/export-csv";
 import { useAvailableHeight } from "../../hooks/use-available-height";
@@ -37,6 +38,7 @@ import { KanbanColumnSortMenu } from "../shared/KanbanColumnSortMenu";
 import { useKanbanColumnSort } from "../../hooks/use-kanban-sort";
 import { sortKanbanItems } from "../../utils/kanban-sort";
 import { AvatarStack } from "../shared/AvatarStack";
+import { MobileTableCards } from "../shared/MobileTableCards";
 import { AppToast } from "../shared/AppToast";
 import { useRecordViews } from "../../hooks/use-record-views";
 import { hasUnreadNotesComment } from "../../lib/comment-badge";
@@ -278,7 +280,7 @@ function CampaignCreateModal({ stageId, currentUser, users, onAdd, onClose, stag
           </div>
 
           {/* Lançamento + Encerramento */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 16 }}>
             <div>
               <label style={labelSt}>Data de lançamento</label>
               <input
@@ -448,7 +450,7 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
               style={{ borderColor: "var(--border-strong)", color: "var(--text)", background: "var(--surface)" }} />
           </div>
           {error && (
-            <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
+            <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 16 }}>{error}</div>
           )}
           <button type="submit" disabled={saving || !name.trim()}
             className="w-full font-semibold py-2.5 rounded-xl text-sm"
@@ -465,7 +467,38 @@ function NewStageModal({ existingKeys, nextOrderIdx, onAdd, onClose }) {
 
 function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+    <>
+    <MobileTableCards
+      rows={campaigns}
+      onRowClick={onRowClick}
+      emptyMessage="Nenhuma campanha encontrada."
+      title={(c) => c.name}
+      chips={(c) => {
+        const stage = (stages?.length ? stages : MARKETING_STAGES).find(s => s.id === c.stage);
+        const color = stage?.color || "var(--text-dim)";
+        return [{ label: stage?.name || c.stage, color }];
+      }}
+      right={(c) => (
+        <span className="flex items-center gap-1.5">
+          {c.starred && <Star size={12} style={{ color: "#F59E0B", fill: "#F59E0B" }} />}
+          <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>{c.budget > 0 ? formatK(c.budget) : "—"}</span>
+        </span>
+      )}
+      meta={(c) => {
+        const companies = (c.companyIds || []).map(id => COMPANIES[id]?.short).filter(Boolean).join("/");
+        return [companies, c.channel].filter(Boolean).join(" · ") || "—";
+      }}
+      metaRight={(c) => {
+        const resolvedOwners = getCampaignOwnerIds(c).map(id => usersById.get(id)).filter(Boolean);
+        return (
+          <>
+            {resolvedOwners.length > 0 && <AvatarStack users={resolvedOwners} size={18} max={2} />}
+            <span>{c.launchDate ? formatDateBR(c.launchDate) : "—"}</span>
+          </>
+        );
+      }}
+    />
+    <div className="hidden md:block rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
       <table className="w-full border-collapse">
         <thead>
           <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
@@ -511,7 +544,7 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{c.channel || "—"}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color: stageTextColor(color), border: `1px solid ${color}40` }}>
                     {stage?.name || c.stage}
                   </span>
                 </td>
@@ -531,6 +564,7 @@ function CampaignTableView({ campaigns, stages, usersById, onRowClick }) {
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -1064,11 +1098,11 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: stage.color, flexShrink: 0 }} />
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stage.name}</span>
-                    {totalBudget > 0 && <span className="text-xs font-semibold" style={{ color: stage.color + "99" }}>{formatK(totalBudget)}</span>}
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stage.name}</span>
+                    {totalBudget > 0 && <span className="text-xs font-semibold" style={{ color: stageTextColorStrong(stage.color) }}>{formatK(totalBudget)}</span>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm" style={{ color: stage.color }}>{stageCampaigns.length}</span>
+                    <span className="font-bold text-sm" style={{ color: stageTextColor(stage.color) }}>{stageCampaigns.length}</span>
                     <div onClick={e => e.stopPropagation()}>
                       <KanbanColumnSortMenu
                         criteria={getSortCriteria(stage.id)}
@@ -1118,7 +1152,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       <button
                         onClick={() => setQuickAddStage(stage.id)}
                         className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-                        style={{ background: stage.color + "18", color: stage.color, border: `1px dashed ${stage.color}44` }}
+                        style={{ background: stage.color + "18", color: stageTextColor(stage.color), border: `1px dashed ${stage.color}44` }}
                       >
                         <Plus size={12} />
                         Nova campanha

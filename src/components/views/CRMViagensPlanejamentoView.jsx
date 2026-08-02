@@ -279,7 +279,7 @@ function NovaVisitaModal({ clients, onCreateClient, onSave, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
             <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
@@ -419,10 +419,10 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
                 <Trash2 size={14} /> Excluir visita
               </button>
             ) : (
-              <div style={{ background: "#FEF2F2", borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 12, color: "#B91C1C", marginBottom: 8 }}>Excluir esta visita? Essa ação não pode ser desfeita. Se foi um engano, exclua e registre de novo.</div>
+              <div style={{ background: "var(--danger-bg)", borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 12, color: "var(--danger)", marginBottom: 8 }}>Excluir esta visita? Essa ação não pode ser desfeita. Se foi um engano, exclua e registre de novo.</div>
                 <div className="flex gap-2">
-                  <button onClick={handleExcluir} disabled={saving} style={{ flex: 1, background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+                  <button onClick={handleExcluir} disabled={saving} style={{ flex: 1, background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
                     {saving ? "Excluindo…" : "Confirmar exclusão"}
                   </button>
                   <button onClick={() => setConfirmandoExclusao(false)} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -437,7 +437,7 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
             <>
               {action === null && (
                 <div className="flex flex-col gap-2">
-                  <button onClick={() => setAction("realizado")} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--success)", color: "#FFF", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={() => setAction("realizado")} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--success)", color: "var(--on-success)", border: "none", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                     <Check size={14} /> Marcar como realizado
                   </button>
                   <button onClick={() => setAction("nao_realizado")} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--surface-alt)", color: "var(--danger)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
@@ -448,10 +448,10 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
                       <Trash2 size={14} /> Excluir
                     </button>
                   ) : (
-                    <div style={{ background: "#FEF2F2", borderRadius: 10, padding: 12 }}>
-                      <div style={{ fontSize: 12, color: "#B91C1C", marginBottom: 8 }}>Excluir esta visita? Essa ação não pode ser desfeita.</div>
+                    <div style={{ background: "var(--danger-bg)", borderRadius: 10, padding: 12 }}>
+                      <div style={{ fontSize: 12, color: "var(--danger)", marginBottom: 8 }}>Excluir esta visita? Essa ação não pode ser desfeita.</div>
                       <div className="flex gap-2">
-                        <button onClick={handleExcluir} disabled={saving} style={{ flex: 1, background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+                        <button onClick={handleExcluir} disabled={saving} style={{ flex: 1, background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
                           {saving ? "Excluindo…" : "Confirmar exclusão"}
                         </button>
                         <button onClick={() => setConfirmandoExclusao(false)} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -478,9 +478,9 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
                     <label style={LABEL_ST}>Resumo do que aconteceu</label>
                     <textarea value={resumoReal} onChange={(e) => setResumoReal(e.target.value)} rows={3} className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={INPUT_ST} />
                   </div>
-                  {error && <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
+                  {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
                   <div className="flex gap-2">
-                    <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--success)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+                    <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--success)", color: "var(--on-success)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
                       {saving ? "Salvando…" : "Confirmar"}
                     </button>
                     <button type="button" onClick={() => { setAction(null); setError(null); }} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -497,9 +497,9 @@ function VisitaDetalheModal({ registro, onMarcarRealizado, onMarcarNaoRealizado,
                     <label style={LABEL_ST}>Motivo *</label>
                     <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} placeholder="Por que a visita não aconteceu?" className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-none" style={INPUT_ST} />
                   </div>
-                  {error && <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
+                  {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>{error}</div>}
                   <div className="flex gap-2">
-                    <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--danger)", color: "#FFF", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
+                    <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--danger)", color: "var(--on-danger)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>
                       {saving ? "Salvando…" : "Confirmar"}
                     </button>
                     <button type="button" onClick={() => { setAction(null); setError(null); }} style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--text-dim)", cursor: "pointer" }}>
@@ -695,7 +695,7 @@ function NovaDespesaModal({ categorias, registros, ai, onSave, onClose }) {
             </div>
           </div>
 
-          {error && <div style={{ background: "#FEF2F2", color: "#B91C1C", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
+          {error && <div style={{ background: "var(--danger-bg)", color: "var(--danger)", borderRadius: 8, padding: "8px 12px", fontSize: 12, margin: "12px 0" }}>{error}</div>}
 
           <div className="flex gap-2 mt-4">
             <button type="submit" disabled={saving} style={{ flex: 1, background: "var(--accent)", color: "var(--on-accent)", borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700, border: "none", cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}>

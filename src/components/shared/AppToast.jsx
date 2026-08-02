@@ -18,8 +18,13 @@ const VARIANTS = {
 };
 
 const POSITIONS = {
-  "bottom-right": { bottom: 20, right: 20 },
+  "bottom-right": {}, // now handled via responsive className below (mobile-safe bottom offset)
   "top-right": { top: 16, right: 16 },
+};
+
+const POSITION_CLASSES = {
+  "bottom-right": "bottom-20 right-4 lg:bottom-5 lg:right-5",
+  "top-right": "",
 };
 
 export function AppToast({
@@ -38,7 +43,7 @@ export function AppToast({
 
   return (
     <div
-      className="fixed z-50 flex items-start gap-2.5 rounded-xl shadow-lg"
+      className={`fixed z-50 flex items-start gap-2.5 rounded-xl shadow-lg ${POSITION_CLASSES[position] ?? POSITION_CLASSES["bottom-right"]}`}
       style={{
         ...pos,
         maxWidth: 380,

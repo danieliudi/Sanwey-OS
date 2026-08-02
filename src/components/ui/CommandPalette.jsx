@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Handshake, Megaphone, Users } from "lucide-react";
+import { Search, Handshake, Megaphone, Users, X } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { MARKETING_STAGES } from "../../constants/marketing-pipelines";
 
@@ -304,9 +304,19 @@ export function CommandPalette({
             aria-autocomplete="list"
             aria-controls="cmd-results"
           />
-          <kbd style={{ fontSize: 10, color: "var(--text-faint)", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 4, padding: "2px 5px" }}>
+          <kbd className="hidden sm:inline-block" style={{ fontSize: 10, color: "var(--text-faint)", background: "var(--surface-alt)", border: "1px solid var(--border)", borderRadius: 4, padding: "2px 5px" }}>
             ESC
           </kbd>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-sm transition-colors shrink-0"
+            style={{ color: "var(--text-faint)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-faint)"; }}
+            aria-label="Fechar busca"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         {/* Results */}

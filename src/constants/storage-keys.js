@@ -20,4 +20,5 @@ export const STORAGE_KEYS = {
   agentsCoachmarkSeen: `gs_${V}_agents_coachmark_seen`,
   weeklyDigestLastSent: `gs_${V}_weekly_digest_last_sent`,
   dashboardWidgetPrefs: `gs_${V}_dashboard_widget_prefs`,
+  bottomNavPrefs: `gs_${V}_bottom_nav_prefs`,
 };

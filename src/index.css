@@ -28,6 +28,11 @@
   --warning:       #B45309;
   --danger:        #B91C1C;
 
+  /* Texto sobre fundo sólido success/danger — mesmo racional do --on-accent:
+     no dark os tons clareiam e texto branco fixo perde contraste. */
+  --on-success:    #FFFFFF;
+  --on-danger:     #FFFFFF;
+
   /* Shape */
   --radius-sm:     6px;
   --radius-md:     8px;
@@ -107,6 +112,8 @@
   --success:       #4ADE80;
   --warning:       #FBBF24;
   --danger:        #F87171;
+  --on-success:    #14251C;
+  --on-danger:     #2B1214;
   --amber:         #FBBF24;
   --amber-bg:      rgba(251, 191, 36, 0.12);
 
@@ -136,8 +143,11 @@
   --overlay-scrim: rgba(0,0,0,0.6);
 }
 
-/* Native form controls in dark mode */
-[data-theme="dark"] select {
+/* Native form controls in dark mode — sem isto, select/checkbox/radio nativos
+   renderizam claros no tema escuro */
+[data-theme="dark"] select,
+[data-theme="dark"] input[type="checkbox"],
+[data-theme="dark"] input[type="radio"] {
   color-scheme: dark;
 }
 

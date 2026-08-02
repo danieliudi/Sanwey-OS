@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Menu as MenuIcon, Settings as SettingsIcon, LogOut, ChevronDown,
 } from "lucide-react";
+import { useBottomNavPrefs } from "../../hooks/use-bottom-nav-prefs";
 
 // Mesma chave do Sidebar (versão desktop) — grupo recolhido num lugar já
 // aparece recolhido no outro, em vez de cada versão guardar seu próprio
@@ -40,7 +41,10 @@ const ROLE_LABELS = {
   rh: "RH", gerente_rh: "Gerente de RH",
 };
 
-function flattenNavGroups(navGroups) {
+// Exportada pra `BottomNavPrefsPanel` (Configurações → Barra inferior)
+// montar a mesma lista completa de módulos liberados pro cargo do usuário,
+// sem duplicar a lógica de achatar `navGroups`.
+export function flattenNavGroups(navGroups) {
   const map = new Map();
   for (const group of (navGroups || [])) {
     for (const item of (group.items || [])) map.set(item.id, item);
@@ -53,7 +57,7 @@ function flattenNavGroups(navGroups) {
 // RH como cargo ADICIONAL (não principal) nunca via as abas rápidas de RH
 // aqui embaixo, só através do menu completo (hambúrguer). Agora junta as
 // abas de todo cargo que o usuário acumula, sem repetir id.
-function getRoleTabs(roles, navGroups) {
+export function getRoleTabs(roles, navGroups) {
   const byId = flattenNavGroups(navGroups);
   const list = Array.isArray(roles) && roles.length ? roles : ["vendedor"];
   const seen = new Set();
@@ -199,9 +203,34 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
 }
 
 /* ── Main component ──────────────────────────────────────────── */
+// Limite aprovado no mockup mobile: 4 atalhos + Menu abaixo de 390px,
+// 5 + Menu no restante — mais que isso estoura a barra (rótulo colado,
+// item cortado). Excedentes continuam acessíveis pelo Menu, sem aviso.
+const NARROW_QUERY = "(max-width: 389px)";
+
 export function MobileBottomNav({ section, onSectionChange, roles, navGroups, currentUser, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const tabs = useMemo(() => getRoleTabs(roles, navGroups), [roles, navGroups]);
+  // Inicializa síncrono via matchMedia pra não piscar 5 abas no primeiro
+  // render de uma tela estreita.
+  const [isNarrow, setIsNarrow] = useState(() => window.matchMedia(NARROW_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_QUERY);
+    const onChange = (e) => setIsNarrow(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  const { selectedIds } = useBottomNavPrefs(currentUser?.id);
+  const tabs = useMemo(() => {
+    const all = (() => {
+      if (selectedIds && selectedIds.length) {
+        const byId = flattenNavGroups(navGroups);
+        const custom = selectedIds.map(id => byId.get(id)).filter(Boolean);
+        if (custom.length) return custom;
+      }
+      return getRoleTabs(roles, navGroups);
+    })();
+    return all.slice(0, isNarrow ? 4 : 5);
+  }, [selectedIds, roles, navGroups, isNarrow]);
 
   return (
     <>

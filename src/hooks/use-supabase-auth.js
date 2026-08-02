@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase, isSupabaseConfigured, cameFromInviteLink } from "../lib/supabase";
+import { clearAll as clearOfflineCache } from "./use-offline-cache";
 
 // Loads the current user's profile row (role, companies, avatarBg, initials).
 // Expects a `profiles` table keyed by auth.users.id — see README for SQL.
@@ -109,6 +110,10 @@ export function useSupabaseAuth() {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    // Fila/cache offline são escopados por sessão do navegador, não por
+    // usuário — sem limpar aqui, o próximo login neste aparelho herdaria
+    // leads cacheados/notas pendentes de quem saiu.
+    clearOfflineCache().catch(() => {});
   }, []);
 
   const updateAuthUser = useCallback(async (patch) => {
