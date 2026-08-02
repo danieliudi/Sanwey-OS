@@ -400,7 +400,7 @@ const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
-const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function dayKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1477,7 +1477,7 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
 
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const offset = (first.getDay() + 6) % 7;
+    const offset = first.getDay();
     const start = new Date(first);
     start.setDate(first.getDate() - offset);
     const days = [];
@@ -1516,7 +1516,7 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
       </div>
       <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
         {WEEKDAYS.map(w => (
-          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+          <div key={w} className="px-2 py-2 text-[10px] font-bold text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
@@ -1527,8 +1527,10 @@ function VagaCalendarView({ vagas, stages, onPillClick }) {
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "var(--border)", background: isToday ? "var(--warning-bg)" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
-              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+              style={{ borderColor: "var(--border)", background: "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={isToday
+                ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
               <div className="flex flex-col gap-0.5">
@@ -2569,7 +2571,7 @@ function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
 
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const offset = (first.getDay() + 6) % 7;
+    const offset = first.getDay();
     const start = new Date(first);
     start.setDate(first.getDate() - offset);
     const days = [];
@@ -2608,7 +2610,7 @@ function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
       </div>
       <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--border)" }}>
         {WEEKDAYS.map(w => (
-          <div key={w} className="px-2 py-2 text-[10px] font-bold uppercase text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
+          <div key={w} className="px-2 py-2 text-[10px] font-bold text-center" style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7" style={{ gridAutoRows: "minmax(88px, auto)" }}>
@@ -2619,8 +2621,10 @@ function CandidatoCalendarView({ candidatos, stages, onPillClick }) {
           const items = byDay.get(k) || [];
           return (
             <div key={i} className="p-1.5 border-r border-b flex flex-col gap-1"
-              style={{ borderColor: "var(--border)", background: isToday ? "var(--warning-bg)" : "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
-              <span className="text-xs font-semibold leading-none" style={{ color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)" }}>
+              style={{ borderColor: "var(--border)", background: "var(--surface)", opacity: inMonth ? 1 : 0.4 }}>
+              <span className="text-xs font-semibold leading-none" style={isToday
+                ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}>
                 {d.getDate()}
               </span>
               <div className="flex flex-col gap-0.5">

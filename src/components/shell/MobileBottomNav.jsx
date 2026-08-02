@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Menu as MenuIcon, Settings as SettingsIcon, LogOut, ChevronDown,
 } from "lucide-react";
@@ -203,17 +203,34 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
 }
 
 /* ── Main component ──────────────────────────────────────────── */
+// Limite aprovado no mockup mobile: 4 atalhos + Menu abaixo de 390px,
+// 5 + Menu no restante — mais que isso estoura a barra (rótulo colado,
+// item cortado). Excedentes continuam acessíveis pelo Menu, sem aviso.
+const NARROW_QUERY = "(max-width: 389px)";
+
 export function MobileBottomNav({ section, onSectionChange, roles, navGroups, currentUser, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // Inicializa síncrono via matchMedia pra não piscar 5 abas no primeiro
+  // render de uma tela estreita.
+  const [isNarrow, setIsNarrow] = useState(() => window.matchMedia(NARROW_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_QUERY);
+    const onChange = (e) => setIsNarrow(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
   const { selectedIds } = useBottomNavPrefs(currentUser?.id);
   const tabs = useMemo(() => {
-    if (selectedIds && selectedIds.length) {
-      const byId = flattenNavGroups(navGroups);
-      const custom = selectedIds.map(id => byId.get(id)).filter(Boolean);
-      if (custom.length) return custom;
-    }
-    return getRoleTabs(roles, navGroups);
-  }, [selectedIds, roles, navGroups]);
+    const all = (() => {
+      if (selectedIds && selectedIds.length) {
+        const byId = flattenNavGroups(navGroups);
+        const custom = selectedIds.map(id => byId.get(id)).filter(Boolean);
+        if (custom.length) return custom;
+      }
+      return getRoleTabs(roles, navGroups);
+    })();
+    return all.slice(0, isNarrow ? 4 : 5);
+  }, [selectedIds, roles, navGroups, isNarrow]);
 
   return (
     <>

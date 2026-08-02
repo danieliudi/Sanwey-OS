@@ -14,7 +14,7 @@ import { formatK } from "../../utils/currency";
 
 const STAGE_NAME = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
 const TERMINAL = new Set(["ganho", "perdido"]);
-const WEEKDAYS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -77,11 +77,11 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
     return map;
   }, [scopedLeads]);
 
-  // Constrói grid 6x7 do mês começando na segunda-feira.
+  // Constrói grid 6x7 do mês começando no domingo (padrão unificado da
+  // plataforma, decisão 5A).
   const grid = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    // getDay(): 0=dom 1=seg ... usamos seg=0 deslocando.
-    const offset = (first.getDay() + 6) % 7;
+    const offset = first.getDay();
     const start = new Date(first);
     start.setDate(first.getDate() - offset);
     const days = [];
@@ -153,7 +153,7 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
           {WEEKDAYS.map(w => (
             <div
               key={w}
-              className="px-2 py-2 text-[10px] font-bold uppercase text-center"
+              className="px-2 py-2 text-[10px] font-bold text-center"
               style={{ color: "var(--text-dim)", letterSpacing: "0.08em" }}
             >
               {w}
@@ -176,19 +176,19 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
                 className="text-left p-1.5 border-r border-b transition-colors cursor-pointer flex flex-col gap-1"
                 style={{
                   borderColor: "var(--border)",
-                  background: isSelected ? "color-mix(in srgb, #2563EB 12%, var(--surface))" : isToday ? "var(--warning-bg)" : "var(--surface)",
+                  background: isSelected ? "color-mix(in srgb, #2563EB 12%, var(--surface))" : "var(--surface)",
                   opacity: inMonth ? 1 : 0.4,
                 }}
                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "var(--surface-alt)"; }}
                 onMouseLeave={e => {
-                  if (!isSelected) e.currentTarget.style.background = isToday ? "var(--warning-bg)" : "var(--surface)";
+                  if (!isSelected) e.currentTarget.style.background = "var(--surface)";
                 }}
               >
                 <span
                   className="text-xs font-semibold leading-none"
-                  style={{
-                    color: isToday ? "var(--warning)" : inMonth ? "var(--text)" : "var(--text-dim)",
-                  }}
+                  style={isToday
+                    ? { width: 20, height: 20, borderRadius: "50%", alignSelf: "flex-start", display: "inline-flex", alignItems: "center", justifyContent: "center", background: "var(--accent)", color: "var(--on-accent)" }
+                    : { color: inMonth ? "var(--text)" : "var(--text-dim)" }}
                 >
                   {d.getDate()}
                 </span>

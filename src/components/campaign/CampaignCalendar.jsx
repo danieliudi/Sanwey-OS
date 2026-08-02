@@ -525,8 +525,8 @@ export function CampaignCalendar({
                         className="flex items-center justify-center text-xs font-semibold select-none"
                         style={{
                           width: 26, height: 26, borderRadius: "50%",
-                          background: isToday ? "var(--color-industria)" : "transparent",
-                          color: isToday ? "#FFF" : isCurrentMonth ? "var(--text)" : "#C5C9D0",
+                          background: isToday ? "var(--accent)" : "transparent",
+                          color: isToday ? "var(--on-accent)" : isCurrentMonth ? "var(--text)" : "#C5C9D0",
                           fontWeight: isToday ? 700 : 600,
                         }}
                       >

@@ -24,6 +24,14 @@
 
 export const CHANGELOG = [
   {
+    version: "4.11.0",
+    items: [
+      { kind: "novo", text: "Celular: ao abrir um card (RH, Marketing, Compras, Comex, Pós-venda), o botão \"Mover para →\" agora fica fixo no rodapé — sem precisar rolar até o fim pra mudar de etapa. Os detalhes do cabeçalho ficam atrás de \"+ detalhes\"." },
+      { kind: "ajuste", text: "Celular: a barra inferior mostra só os atalhos que cabem na tela (4 ou 5 + Menu) — nada mais fica cortado; os demais seguem no Menu." },
+      { kind: "ajuste", text: "Calendários unificados na plataforma toda: semana começa no domingo, e o dia de hoje aparece com um círculo na cor da sua frente." },
+    ],
+  },
+  {
     version: "4.10.4",
     items: [
       { kind: "correcao", text: "Modo escuro: o card de Cliente vinculado no Funil de Vendas não aparece mais como caixa branca com texto invisível." },

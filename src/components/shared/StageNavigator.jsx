@@ -1,5 +1,12 @@
-import React from "react";
+import React, { createContext, useContext, useEffect, useId, useRef } from "react";
 import { ArrowRight } from "lucide-react";
+
+// Registro consumido pelo SplitPanelDrawer: qualquer StageNavigator montado
+// dentro das colunas do drawer se anuncia aqui, e é isso que faz a barra
+// "Mover para" do mobile aparecer com os MESMOS destinos/handlers — sem os
+// 14 chamadores precisarem passar prop nova. Fora do drawer (ex:
+// LeadDetailDrawer) o contexto é null e nada muda.
+export const StageMoveRegistryContext = createContext(null);
 
 // "Mover para etapa" — padrão único da plataforma (alinhado à referência
 // Pipefy): lista completa das etapas restantes como pills coloridos
@@ -7,6 +14,21 @@ import { ArrowRight } from "lucide-react";
 // `targets` de acordo com as próprias regras de negócio (ex: excluir
 // etapas terminais, esconder a etapa atual).
 export function StageNavigator({ targets, onMove, getKey = (s) => s.stageKey ?? s.id, disabled = false }) {
+  const registry = useContext(StageMoveRegistryContext);
+  const id = useId();
+  // Props ficam num ref (atualizado a cada render) e o registro só
+  // acontece quando o navigator entra/sai — registrar com as props nas
+  // deps causaria loop de setState no drawer, já que os chamadores criam
+  // `targets`/`getKey` inline a cada render.
+  const propsRef = useRef(null);
+  propsRef.current = { targets, onMove, getKey, disabled };
+  const hasTargets = Boolean(targets?.length);
+
+  useEffect(() => {
+    if (!registry || !hasTargets) return;
+    return registry.register(id, propsRef);
+  }, [registry, hasTargets, id]);
+
   if (!targets?.length) return null;
 
   return (
