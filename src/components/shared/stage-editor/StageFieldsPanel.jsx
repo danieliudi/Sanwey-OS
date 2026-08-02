@@ -382,7 +382,7 @@ function FieldRow({ field, accent, busy, isFirst, isLast, onDelete, onRename, on
             <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               <button
                 onClick={() => onDelete(field.id)}
-                style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, border: "none", background: "var(--danger)", color: "#FFF", cursor: "pointer" }}
+                style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 5, border: "none", background: "var(--danger)", color: "var(--on-danger)", cursor: "pointer" }}
               >
                 Remover
               </button>

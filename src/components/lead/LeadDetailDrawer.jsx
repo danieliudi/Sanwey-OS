@@ -638,7 +638,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   de QA: 3 padrões de confirmação de exclusão distintos). */}
               {canDelete && confirmDelete && (
                 <div className="flex items-center gap-1">
-                  <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "var(--danger)", color: "#FFFFFF", border: "none" }}>
+                  <button onClick={handleDeleteConfirmed} disabled={deleting} className="px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none" }}>
                     {deleting ? "Excluindo…" : "Confirmar exclusão"}
                   </button>
                   <button onClick={() => setConfirmDelete(false)} className="px-2 py-1 rounded-lg text-xs cursor-pointer" style={{ background: "none", border: "none", color: "var(--text-dim)" }}>
@@ -692,7 +692,7 @@ export function LeadDetailDrawer({ lead, onClose, onStageMoved, onUpdate, onDele
                   onClick={handleDeleteConfirmed}
                   disabled={deleting}
                   className="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
-                  style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", opacity: deleting ? 0.6 : 1 }}
+                  style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", opacity: deleting ? 0.6 : 1 }}
                   onMouseEnter={e => { if (!deleting) e.currentTarget.style.background = "color-mix(in srgb, var(--danger) 80%, black)"; }}
                   onMouseLeave={e => { if (!deleting) e.currentTarget.style.background = "var(--danger)"; }}
                 >

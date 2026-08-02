@@ -297,7 +297,7 @@ function RecusarFeriasModal({ req, colaborador, busy, onConfirm, onClose }) {
           <button
             onClick={() => onConfirm(motivoLimpo)}
             disabled={busy || !motivoLimpo}
-            style={{ background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: busy || !motivoLimpo ? "default" : "pointer", opacity: busy || !motivoLimpo ? 0.6 : 1 }}
+            style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: busy || !motivoLimpo ? "default" : "pointer", opacity: busy || !motivoLimpo ? 0.6 : 1 }}
           >
             {busy ? "Recusando…" : "Confirmar recusa"}
           </button>
@@ -703,10 +703,10 @@ function FeriasDrawer({
 
       {canWrite && req.status === "pendente" && (
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={handleAprovarClick} disabled={busy} style={{ flex: 1, background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+          <button onClick={handleAprovarClick} disabled={busy} style={{ flex: 1, background: "var(--success)", color: "var(--on-success)", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
             Aprovar
           </button>
-          <button onClick={handleRecusarClick} disabled={busy} style={{ flex: 1, background: "var(--danger)", color: "#FFF", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+          <button onClick={handleRecusarClick} disabled={busy} style={{ flex: 1, background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
             Recusar
           </button>
         </div>

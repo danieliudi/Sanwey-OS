@@ -66,8 +66,8 @@ function CategoryBadge({ category }) {
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
       style={isCompra
-        ? { background: "#EDE9FE", color: "#7C3AED" }
-        : { background: "#EFF6FF", color: "#1D4ED8" }}
+        ? { background: "color-mix(in srgb, #7C3AED 12%, var(--surface))", color: "color-mix(in srgb, #7C3AED 60%, var(--text))" }
+        : { background: "color-mix(in srgb, #2563EB 12%, var(--surface))", color: "color-mix(in srgb, #2563EB 60%, var(--text))" }}
     >
       <Icon size={10} />
       {isCompra ? "Compra" : "Material"}
@@ -111,7 +111,7 @@ function RejectModal({ request, onConfirm, onClose }) {
             onClick={async () => { setSaving(true); await onConfirm(reason); }}
             disabled={saving}
             className="px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: "var(--danger)", color: "#fff", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
+            style={{ background: "var(--danger)", color: "var(--on-danger)", opacity: saving ? 0.6 : 1, cursor: saving ? "default" : "pointer" }}
           >
             {saving ? "Rejeitando…" : "Confirmar rejeição"}
           </button>
@@ -150,7 +150,7 @@ function ApproveModal({ request, onConfirm, onClose }) {
         </p>
 
         {isCompra ? (
-          <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "#EDE9FE", color: "#7C3AED" }}>
+          <p className="text-xs mb-4 rounded-lg px-3 py-2" style={{ background: "color-mix(in srgb, #7C3AED 12%, var(--surface))", color: "color-mix(in srgb, #7C3AED 60%, var(--text))" }}>
             Solicitações de <strong>Compra</strong> vão direto pro Kanban de Compras — não tem escolha de destino
             aqui (Entrega/Tarefa só existe pra Material de Marketing).
           </p>
@@ -347,7 +347,7 @@ function RequestCard({ request, onApprove, onReject, canWrite, onUpdateRequestNu
         )}
 
         {request.status === "aprovado" && request.purchaseRequestId && (
-          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "#EDE9FE", color: "#7C3AED" }}>
+          <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "color-mix(in srgb, #7C3AED 12%, var(--surface))", color: "color-mix(in srgb, #7C3AED 60%, var(--text))" }}>
             Compra criada
           </span>
         )}

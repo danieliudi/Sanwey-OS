@@ -51,7 +51,7 @@ function btnStyle(kind, disabled, big) {
   // big=true: alvo de toque ~40px pra ações de decisão de reembolso no celular
   const base = { display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 8, padding: big ? "10px 14px" : "5px 10px", fontSize: big ? 13 : 11, fontWeight: 700, border: "none", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.55 : 1, minHeight: big ? 40 : undefined };
   if (kind === "primary") return { ...base, background: "var(--accent)", color: "var(--on-accent)" };
-  if (kind === "danger")  return { ...base, background: "var(--danger)", color: "#FFF" };
+  if (kind === "danger")  return { ...base, background: "var(--danger)", color: "var(--on-danger)" };
   return { ...base, background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border)" };
 }
 

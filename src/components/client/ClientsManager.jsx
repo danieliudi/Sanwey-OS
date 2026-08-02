@@ -502,8 +502,8 @@ export function ClientsManager({ clients = [], loading, leads = [], onCreate, on
               Cancelar
             </button>
             <button onClick={async () => { await onDelete?.(confirmId); setConfirmId(null); }}
-              className="px-4 py-2 text-sm rounded-lg font-semibold text-white"
-              style={{ background: "var(--danger)", border: "none", cursor: "pointer" }}>
+              className="px-4 py-2 text-sm rounded-lg font-semibold"
+              style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", cursor: "pointer" }}>
               Excluir
             </button>
           </div>

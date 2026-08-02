@@ -167,7 +167,7 @@ export function MoveStageMenu({
               <div style={{ display: "flex", gap: 6 }}>
                 <button
                   onClick={e => { e.stopPropagation(); onDelete(); setMenuOpen(false); }}
-                  style={{ flex: 1, background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                  style={{ flex: 1, background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
                 >
                   Excluir
                 </button>

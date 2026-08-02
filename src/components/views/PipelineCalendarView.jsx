@@ -176,10 +176,10 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
                 className="text-left p-1.5 border-r border-b transition-colors cursor-pointer flex flex-col gap-1"
                 style={{
                   borderColor: "var(--border)",
-                  background: isSelected ? "#EFF6FF" : isToday ? "var(--warning-bg)" : "var(--surface)",
+                  background: isSelected ? "color-mix(in srgb, #2563EB 12%, var(--surface))" : isToday ? "var(--warning-bg)" : "var(--surface)",
                   opacity: inMonth ? 1 : 0.4,
                 }}
-                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#F8FAFC"; }}
+                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "var(--surface-alt)"; }}
                 onMouseLeave={e => {
                   if (!isSelected) e.currentTarget.style.background = isToday ? "var(--warning-bg)" : "var(--surface)";
                 }}
@@ -209,8 +209,8 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
 
         {/* Legenda */}
         <div className="px-4 py-2.5 flex items-center gap-4 flex-wrap text-[11px] border-t" style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}>
-          <LegendDot color="#047857" icon={CalendarCheck} label="Follow-up agendado" />
-          <LegendDot color="#1E3A8A" icon={CalendarClock} label="Previsão de fechamento" />
+          <LegendDot color="color-mix(in srgb, #047857 60%, var(--text))" icon={CalendarCheck} label="Follow-up agendado" />
+          <LegendDot color="color-mix(in srgb, #2563EB 60%, var(--text))" icon={CalendarClock} label="Previsão de fechamento" />
           <LegendDot color="var(--danger)" icon={AlertTriangle} label="Fechamento atrasado" />
         </div>
       </div>
@@ -243,8 +243,8 @@ export function PipelineCalendarView({ leads, onLeadClick, user, activeCompany }
 // ── helpers ─────────────────────────────────────────────────────────────────
 
 const EVENT_STYLE = {
-  followup: { bg: "#D1FAE5", color: "#047857", label: "Follow-up" },
-  close:    { bg: "#DBEAFE", color: "#1E3A8A", label: "Fechamento" },
+  followup: { bg: "color-mix(in srgb, #047857 14%, var(--surface))", color: "color-mix(in srgb, #047857 60%, var(--text))", label: "Follow-up" },
+  close:    { bg: "color-mix(in srgb, #2563EB 12%, var(--surface))", color: "color-mix(in srgb, #2563EB 60%, var(--text))", label: "Fechamento" },
   overdue:  { bg: "var(--danger-bg)", color: "var(--danger)", label: "Atrasado" },
 };
 

@@ -73,7 +73,7 @@ export function SplitPanelDrawer({ onClose, header, left, center, right, onDelet
                   onClick={handleDeleteConfirmed}
                   disabled={deleting}
                   className="px-3 min-h-10 flex items-center justify-center rounded-lg text-xs font-semibold cursor-pointer transition-colors"
-                  style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", opacity: deleting ? 0.6 : 1 }}
+                  style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", opacity: deleting ? 0.6 : 1 }}
                 >
                   {deleting ? "Excluindo…" : "Confirmar exclusão"}
                 </button>

@@ -1951,7 +1951,7 @@ function CandidatoDrawer({
             onClick={() => { onHire(candidato); onClose(); }}
             style={{
               background: "var(--success)",
-              color: "#FFF",
+              color: "var(--on-success)",
               border: "none",
               borderRadius: 8,
               padding: "6px 14px",
@@ -2088,7 +2088,7 @@ function CandidatoDrawer({
                 <button
                   onClick={confirmReprovacao}
                   disabled={savingStage || !motivoReprovacao.trim()}
-                  style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
+                  style={{ background: "var(--danger)", color: "var(--on-danger)", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", opacity: savingStage || !motivoReprovacao.trim() ? 0.6 : 1 }}
                 >
                   {savingStage ? "Salvando…" : "Confirmar reprovação"}
                 </button>
@@ -2198,7 +2198,7 @@ function ReprovacaoDropModal({ info, onConfirm, onClose }) {
             <button
               onClick={handleConfirm}
               disabled={saving || !motivo.trim()}
-              style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !motivo.trim() ? 0.6 : 1 }}
+              style={{ background: "var(--danger)", color: "var(--on-danger)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || !motivo.trim() ? 0.6 : 1 }}
             >
               {saving ? "Salvando…" : "Confirmar"}
             </button>
@@ -2307,7 +2307,7 @@ function BulkReprovarModal({ selectedCandidatos, temEtapaReprovacao, onConfirm, 
               <button
                 onClick={handleConfirm}
                 disabled={saving || total === 0}
-                style={{ background: "var(--danger)", color: "#FFF", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || total === 0 ? 0.6 : 1 }}
+                style={{ background: "var(--danger)", color: "var(--on-danger)", borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", opacity: saving || total === 0 ? 0.6 : 1 }}
               >
                 {saving ? "Processando…" : "Confirmar reprovação"}
               </button>
@@ -3400,7 +3400,7 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
                     <button
                       onClick={() => setBulkReprovarOpen(true)}
                       className="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5"
-                      style={{ background: "var(--danger)", color: "#FFF", border: "none" }}
+                      style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none" }}
                     >
                       <Mail size={13} /> Reprovar e enviar retorno
                     </button>

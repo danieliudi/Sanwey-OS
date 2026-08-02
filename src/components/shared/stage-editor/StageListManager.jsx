@@ -243,8 +243,8 @@ function StageListCore({
                           // 3 estados: Ganho, Perdido, ou terminal neutro
                           // ("Concluído"/"Entregue") — nunca rotular neutro
                           // como Perdido (bug real já corrigido).
-                          background: stage.won ? "var(--success-bg)" : stage.lost ? "var(--danger-bg)" : "#EFF6FF",
-                          color: stage.won ? "var(--success)" : stage.lost ? "var(--danger)" : "#1D4ED8",
+                          background: stage.won ? "var(--success-bg)" : stage.lost ? "var(--danger-bg)" : "color-mix(in srgb, #2563EB 12%, var(--surface))",
+                          color: stage.won ? "var(--success)" : stage.lost ? "var(--danger)" : "color-mix(in srgb, #2563EB 60%, var(--text))",
                         }}
                       >
                         {stage.won ? "Ganho" : stage.lost ? "Perdido" : "Concluído"}

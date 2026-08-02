@@ -546,17 +546,17 @@ export function PurchaseRequestDetailDrawer({
       </div>
 
       {supplierId && (
-        <div className="rounded-xl border p-4" style={{ borderColor: "#BFDBFE", background: "#EFF6FF" }}>
+        <div className="rounded-xl border p-4" style={{ borderColor: "color-mix(in srgb, #2563EB 35%, transparent)", background: "color-mix(in srgb, #2563EB 12%, var(--surface))" }}>
           <div className="flex items-center gap-2 mb-1.5">
-            <TrendingUp size={13} style={{ color: "#1D4ED8" }} />
-            <span className="text-xs font-bold" style={{ color: "#1D4ED8" }}>Comparar com ano passado</span>
+            <TrendingUp size={13} style={{ color: "color-mix(in srgb, #2563EB 60%, var(--text))" }} />
+            <span className="text-xs font-bold" style={{ color: "color-mix(in srgb, #2563EB 60%, var(--text))" }}>Comparar com ano passado</span>
           </div>
           {lastPrice ? (
-            <div className="text-xs" style={{ color: "#1E3A8A", lineHeight: 1.6 }}>
+            <div className="text-xs" style={{ color: "var(--text-dim)", lineHeight: 1.6 }}>
               Última compra paga a este fornecedor: <strong>{formatBRL(Number(lastPrice.total_value))}</strong> em{" "}
               {formatDateBR(lastPrice.paid_at)} (protocolo {lastPrice.request_number})
               {priceDiff != null && (
-                <div className="flex items-center gap-1 mt-1 font-semibold" style={{ color: priceDiff > 0 ? "var(--danger)" : priceDiff < 0 ? "var(--success)" : "#1E3A8A" }}>
+                <div className="flex items-center gap-1 mt-1 font-semibold" style={{ color: priceDiff > 0 ? "var(--danger)" : priceDiff < 0 ? "var(--success)" : "var(--text-dim)" }}>
                   {priceDiff > 0 ? <TrendingUp size={12} /> : priceDiff < 0 ? <TrendingDown size={12} /> : null}
                   {priceDiff === 0
                     ? "Mesmo valor da última compra"
@@ -565,9 +565,9 @@ export function PurchaseRequestDetailDrawer({
               )}
             </div>
           ) : lastPriceError ? (
-            <div className="text-xs" style={{ color: "#1E3A8A" }}>{lastPriceError}</div>
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>{lastPriceError}</div>
           ) : (
-            <div className="text-xs" style={{ color: "#1E3A8A" }}>Nenhuma compra paga anterior encontrada para este fornecedor e item.</div>
+            <div className="text-xs" style={{ color: "var(--text-dim)" }}>Nenhuma compra paga anterior encontrada para este fornecedor e item.</div>
           )}
         </div>
       )}
@@ -910,7 +910,7 @@ export function PurchaseRequestDetailDrawer({
               <div className="flex items-center gap-2">
                 <button onClick={handleReject} disabled={actionLoading}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ background: "var(--danger)", color: "#FFF", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
+                  style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", cursor: actionLoading ? "default" : "pointer", opacity: actionLoading ? 0.6 : 1 }}>
                   {actionLoading ? "Rejeitando…" : "Confirmar rejeição"}
                 </button>
                 <button onClick={() => { setShowReject(false); setRejectReason(""); }} disabled={actionLoading}

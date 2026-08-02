@@ -735,7 +735,7 @@ function AgentCard({ rule, lastRunAt, confirmingDelete, onEdit, onToggle, onDele
             <span className="text-[11px]" style={{ color: "var(--text)" }}>Excluir?</span>
             <button
               onClick={onDeleteConfirm}
-              style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+              style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
             >
               Excluir
             </button>

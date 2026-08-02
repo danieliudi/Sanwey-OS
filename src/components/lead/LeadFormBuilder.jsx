@@ -171,8 +171,10 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg transition-colors"
               style={{ color: "var(--text-dim)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               <X size={16} />
             </button>

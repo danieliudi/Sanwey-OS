@@ -55,7 +55,7 @@ import { cicloTipoLabel } from "../../utils/rh-feedback-cycles";
 
 const BENEFICIO_STATUS_COLORS = {
   solicitado: { bg: "var(--warning-bg)", text: "var(--warning)" },
-  aprovado:   { bg: "#DBEAFE", text: "#2563EB" },
+  aprovado:   { bg: "color-mix(in srgb, #2563EB 12%, var(--surface))", text: "color-mix(in srgb, #2563EB 60%, var(--text))" },
   ativo:      { bg: "var(--success-bg)", text: "var(--success)" },
   cancelado:  { bg: "var(--surface-alt)", text: "var(--text-dim)" },
 };
@@ -2293,7 +2293,7 @@ export function RHFuncionariosView({
               </button>
               <button
                 onClick={confirmDelete.onConfirm}
-                style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, border: "none", background: "var(--danger)", color: "#FFF", cursor: "pointer" }}
+                style={{ padding: "8px 16px", borderRadius: 10, fontSize: 13, fontWeight: 700, border: "none", background: "var(--danger)", color: "var(--on-danger)", cursor: "pointer" }}
               >
                 Excluir
               </button>

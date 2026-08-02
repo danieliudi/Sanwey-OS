@@ -347,7 +347,7 @@ function StickersPanel() {
               onClick={handleConfirmDelete}
               disabled={deleting}
               className="px-4 py-2 rounded-lg text-sm font-semibold"
-              style={{ background: "var(--danger)", color: "#fff", opacity: deleting ? 0.6 : 1 }}
+              style={{ background: "var(--danger)", color: "var(--on-danger)", opacity: deleting ? 0.6 : 1 }}
             >
               {deleting ? "Excluindo…" : "Excluir"}
             </button>
@@ -2115,9 +2115,10 @@ export function SettingsView({
             <button
               onClick={handleClearConfirm}
               disabled={clearTyped !== "LIMPAR"}
-              className="px-4 py-2 text-sm rounded-lg font-semibold text-white transition-opacity"
+              className="px-4 py-2 text-sm rounded-lg font-semibold transition-opacity"
               style={{
                 background: "var(--danger)",
+                color: "var(--on-danger)",
                 opacity: clearTyped === "LIMPAR" ? 1 : 0.4,
                 cursor: clearTyped === "LIMPAR" ? "pointer" : "not-allowed",
                 border: "none",

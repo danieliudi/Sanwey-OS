@@ -321,8 +321,8 @@ function ChecklistsTab({ deliverableId, canWrite, userId }) {
                 <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button onClick={() => canWrite && toggleItem(cl.id, it.id)}
                     style={{
-                      width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${it.done ? "var(--success)" : "#D1D5DB"}`,
-                      background: it.done ? "var(--success)" : "#FFF",
+                      width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${it.done ? "var(--success)" : "var(--border-strong)"}`,
+                      background: it.done ? "var(--success)" : "var(--surface)",
                       cursor: canWrite ? "pointer" : "default",
                       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                       transition: "all 0.15s",

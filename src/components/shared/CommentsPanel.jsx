@@ -332,7 +332,7 @@ export function CommentsPanel({ comments = [], currentUser, mentionableUsers = [
                           <button
                             onClick={() => handleDelete(c)}
                             className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
-                            style={{ background: "var(--danger)", color: "#FFF", border: "none", cursor: "pointer" }}
+                            style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", cursor: "pointer" }}
                           >
                             Excluir?
                           </button>

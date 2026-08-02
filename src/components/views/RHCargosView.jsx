@@ -471,7 +471,7 @@ function MovimentacaoCard({ mov, colaborador, isDirector, onAprovar, onRecusar, 
 
       {mov.status === "pendente" && isDirector && (
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button onClick={() => onAprovar(mov)} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--success)", color: "#FFF", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
+          <button onClick={() => onAprovar(mov)} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--success)", color: "var(--on-success)", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>
             <Check size={13} /> Aprovar
           </button>
           <button onClick={() => onRecusar(mov)} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--surface)", color: "var(--danger)", border: "1px solid var(--danger)", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 }}>

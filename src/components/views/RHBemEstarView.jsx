@@ -227,7 +227,7 @@ export function RHBemEstarView({ currentUser, canWrite }) {
                         <span style={{ fontSize: 11, color: "var(--text)", whiteSpace: "nowrap" }}>Excluir sessão e reservas?</span>
                         <button
                           onClick={() => { deletarSessao(s.id); setConfirmDeleteId(null); }}
-                          style={{ background: "var(--danger)", color: "#FFFFFF", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                          style={{ background: "var(--danger)", color: "var(--on-danger)", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
                         >
                           Excluir
                         </button>

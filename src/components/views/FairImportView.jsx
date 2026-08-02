@@ -333,10 +333,10 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           </div>
         </div>
         {importResult.errors.length > 0 && (
-          <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-sm max-w-md w-full">
-            <div className="font-semibold text-red-800 mb-2">Erros:</div>
+          <div className="p-4 rounded-xl border text-sm max-w-md w-full" style={{ background: "var(--danger-bg)", borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)" }}>
+            <div className="font-semibold mb-2" style={{ color: "var(--danger)" }}>Erros:</div>
             {importResult.errors.map((e, i) => (
-              <div key={i} className="text-red-700">{e.company}: {e.err}</div>
+              <div key={i} style={{ color: "var(--danger)" }}>{e.company}: {e.err}</div>
             ))}
           </div>
         )}
@@ -416,7 +416,7 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
               Planilha (.xlsx)
             </label>
             <div
-              className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-gray-50"
+              className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors"
               style={{ borderColor: "var(--border-strong)", background: "var(--surface-alt)" }}
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
@@ -441,8 +441,10 @@ export function FairImportView({ addLead, leads: existingLeads, users, currentUs
           <div className="flex items-end">
             <button
               onClick={reset}
-              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border transition-colors hover:bg-gray-50"
+              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border transition-colors"
               style={{ borderColor: "var(--border-strong)", color: "var(--text-dim)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
             >
               <RefreshCw size={14} />Trocar arquivo
             </button>
@@ -550,8 +552,10 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
   return (
     <div style={{ opacity: isDup ? 0.5 : 1 }}>
       <div
-        className="grid items-center px-3 py-2.5 hover:bg-gray-50 transition-colors"
+        className="grid items-center px-3 py-2.5 transition-colors"
         style={{ gridTemplateColumns: "32px 1fr 120px 140px 160px 100px 32px" }}
+        onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
       >
         {/* Checkbox */}
         <button
@@ -629,7 +633,12 @@ function ImportRow({ row, sellerOptions, companyOptions, expanded, onToggleExpan
         </div>
 
         {/* Expand */}
-        <button onClick={onToggleExpand} className="p-1 rounded hover:bg-gray-100 transition-colors">
+        <button
+          onClick={onToggleExpand}
+          className="p-1 rounded transition-colors"
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+        >
           {expanded ? <ChevronUp size={14} style={{ color: "var(--text-dim)" }} /> : <ChevronDown size={14} style={{ color: "var(--text-dim)" }} />}
         </button>
       </div>

@@ -158,7 +158,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
         <ChartCard title="Funil de Vendas por empresa" subtitle="Valor total e forecast ponderado">
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={pipelineByCompany} margin={{ top: 16, right: 12, left: -8, bottom: 0 }}>
-              <CartesianGrid stroke="#F3F4F6" vertical={false} />
+              <CartesianGrid stroke="var(--border)" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 10 }} tickFormatter={formatK} />
               <Tooltip formatter={(v) => formatK(v)} />
@@ -172,7 +172,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
         <ChartCard title="Funil de conversão" subtitle="Quantidade de leads por etapa">
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={funnelData} layout="vertical" margin={{ top: 8, right: 28, left: 12, bottom: 0 }}>
-              <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+              <CartesianGrid stroke="var(--border)" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 10 }} />
               <YAxis dataKey="stage" type="category" tick={{ fontSize: 11 }} width={90} />
               <Tooltip />
@@ -191,7 +191,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
         ) : (
           <ResponsiveContainer width="100%" height={Math.max(180, topLeads.length * 32 + 50)}>
             <BarChart data={topLeads} layout="vertical" margin={{ top: 8, right: 60, left: 12, bottom: 0 }}>
-              <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+              <CartesianGrid stroke="var(--border)" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={formatK} />
               <YAxis dataKey="company" type="category" tick={{ fontSize: 11 }} width={180} />
               <Tooltip formatter={(v) => formatK(v)} />
@@ -211,7 +211,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={sellerPerf} margin={{ top: 16, right: 12, left: -8, bottom: 0 }}>
-                <CartesianGrid stroke="#F3F4F6" vertical={false} />
+                <CartesianGrid stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip />
@@ -229,7 +229,7 @@ export function ExecutiveCharts({ leads, pipelines, users }) {
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={revenueByMonth} margin={{ top: 16, right: 16, left: -8, bottom: 0 }}>
-                <CartesianGrid stroke="#F3F4F6" />
+                <CartesianGrid stroke="var(--border)" />
                 <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={formatK} />
                 <Tooltip formatter={(v) => formatK(v)} />

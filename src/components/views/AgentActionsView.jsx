@@ -278,8 +278,8 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
             onClick={() => onResolve(action.id, "approved")}
             disabled={resolving === action.id}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-opacity"
-            style={{ background: "var(--success)", color: "#FFFFFF", opacity: resolving === action.id ? 0.6 : 1 }}
-            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "#155d2b"; }}
+            style={{ background: "var(--success)", color: "var(--on-success)", opacity: resolving === action.id ? 0.6 : 1 }}
+            onMouseEnter={e => { if (resolving !== action.id) e.currentTarget.style.background = "color-mix(in srgb, var(--success) 85%, var(--text))"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--success)"; }}
           >
             <CheckCircle2 size={12} />

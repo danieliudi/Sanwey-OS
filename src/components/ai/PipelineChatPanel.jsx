@@ -272,7 +272,7 @@ function PipelineMiniChart({ type, aggregate }) {
       <div className="w-full rounded-xl border p-2" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
         <ResponsiveContainer width="100%" height={Math.max(120, data.length * 28 + 20)}>
           <BarChart data={data} layout="vertical" margin={{ top: 4, right: 40, left: 8, bottom: 0 }}>
-            <CartesianGrid stroke="#F3F4F6" horizontal={false} />
+            <CartesianGrid stroke="var(--border)" horizontal={false} />
             <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={formatK} />
             <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={64} />
             <Tooltip formatter={(v) => formatK(v)} />
@@ -290,7 +290,7 @@ function PipelineMiniChart({ type, aggregate }) {
       <div className="w-full rounded-xl border p-2" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-            <CartesianGrid stroke="#F3F4F6" vertical={false} />
+            <CartesianGrid stroke="var(--border)" vertical={false} />
             <XAxis dataKey="name" tick={{ fontSize: 9 }} />
             <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
             <Tooltip />

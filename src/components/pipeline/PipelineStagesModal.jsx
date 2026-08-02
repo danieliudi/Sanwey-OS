@@ -222,7 +222,7 @@ export function PipelineStagesModal({
 
               <div
                 className="px-4 py-2.5 flex items-start gap-2 text-xs border-b"
-                style={{ background: "#EFF6FF", borderColor: "#BFDBFE", color: "#1E40AF" }}
+                style={{ background: "color-mix(in srgb, #2563EB 12%, var(--surface))", borderColor: "color-mix(in srgb, #2563EB 35%, transparent)", color: "color-mix(in srgb, #2563EB 60%, var(--text))" }}
               >
                 <Info size={12} className="shrink-0 mt-0.5" />
                 <span>

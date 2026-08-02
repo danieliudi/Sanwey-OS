@@ -220,7 +220,7 @@ function InitialsAvatar({ name, size = 32 }) {
 function statusConfig(status) {
   switch (status) {
     case "concluida":     return { label: "Concluída",     color: "var(--success)", bg: "var(--success-bg)" };
-    case "em_andamento":  return { label: "Em andamento",  color: "var(--accent)", bg: "#DBEAFE" };
+    case "em_andamento":  return { label: "Em andamento",  color: "color-mix(in srgb, #2563EB 60%, var(--text))", bg: "color-mix(in srgb, #2563EB 12%, var(--surface))" };
     default:              return { label: "Pendente",      color: "var(--warning)", bg: "var(--warning-bg)" };
   }
 }

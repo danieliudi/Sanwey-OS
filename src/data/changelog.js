@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.10.4",
+    items: [
+      { kind: "correcao", text: "Modo escuro: o card de Cliente vinculado no Funil de Vendas não aparece mais como caixa branca com texto invisível." },
+      { kind: "correcao", text: "Modo escuro: caixas de seleção e botões de opção agora acompanham o tema (antes ficavam brancos)." },
+      { kind: "correcao", text: "Modo escuro: botões Aprovar/Recusar e avisos coloridos legíveis de verdade — texto ajustado em ~30 pontos da plataforma." },
+      { kind: "correcao", text: "Modo escuro: faixas e etiquetas em tom pastel claro (Compras, editor de etapas, calendário do Funil, Novidades e outros) agora escurecem junto com o tema." },
+      { kind: "correcao", text: "Modo escuro: linhas de grade dos gráficos de Análise não ficam mais berrantes." },
+    ],
+  },
+  {
     version: "4.10.3",
     items: [
       { kind: "correcao", text: "Comex: a aba Exportação agora carrega as operações ao trocar de Importação — antes ficava sempre vazia.", roles: ["comex", "diretoria"] },
