@@ -24,6 +24,16 @@
 
 export const CHANGELOG = [
   {
+    version: "4.10.2",
+    items: [
+      { kind: "correcao", text: "Mobile: ícone do app não fica mais cortado com fundo preto ao abrir — agora tem fundo branco." },
+      { kind: "correcao", text: "Mobile: botões de cabeçalho (ex.: 'Novo Funcionário', 'Exportar CSV') não ficam mais cortados na borda da tela." },
+      { kind: "correcao", text: "Mobile: avisos e dicas de tela não ficam mais escondidos atrás do menu inferior." },
+      { kind: "correcao", text: "Mobile: abas 'Kanban/Tabela/Calendário/Análise' não ficam mais cortadas em telas pequenas — Pós-venda, Comex, Tarefas, Compras, Férias, Treinamentos, Recrutamento, Onboarding e Avaliação de Desempenho." },
+      { kind: "correcao", text: "Fornecedores (RH): texto de descrição não fica mais em cima do botão 'Novo fornecedor'." },
+    ],
+  },
+  {
     version: "4.10.1",
     items: [
       { kind: "correcao", text: "Chat: conversa arquivada não conta mais no aviso de mensagens não lidas do menu — arquivar agora silencia de verdade." },

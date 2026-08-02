@@ -1208,10 +1208,10 @@ function ComexBoard({ config, currentUser, users, canWrite, notifyMentions, head
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-              <ViewToggleButton active={viewMode === "kanban"}    onClick={() => setViewMode("kanban")}    icon={LayoutGrid}    label="Kanban" />
-              <ViewToggleButton active={viewMode === "table"}     onClick={() => setViewMode("table")}     icon={List}          label="Tabela" />
-              <ViewToggleButton active={viewMode === "calendar"}  onClick={() => setViewMode("calendar")}  icon={CalendarDays}  label="Calendário" />
-              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}    label="Análise" />
+              <ViewToggleButton active={viewMode === "kanban"}    onClick={() => setViewMode("kanban")}    icon={LayoutGrid}    label="Kanban" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "table"}     onClick={() => setViewMode("table")}     icon={List}          label="Tabela" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "calendar"}  onClick={() => setViewMode("calendar")}  icon={CalendarDays}  label="Calendário" iconOnlyMobile />
+              <ViewToggleButton active={viewMode === "analytics"} onClick={() => setViewMode("analytics")} icon={TrendingUp}    label="Análise" iconOnlyMobile />
             </div>
             {canWrite && <Button size="sm" icon={Plus} onClick={() => setShowCreate(true)}>Nova operação</Button>}
           </div>

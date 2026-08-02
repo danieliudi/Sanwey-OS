@@ -3167,10 +3167,10 @@ export function RHRecrutamentoView({ user, canWrite, canTriage, notifyMentions }
           {/* Toggle Kanban / Tabela / Calendário — como exibir o modo (Vagas/
               Candidatos) já escolhido no título, não o quê exibir. */}
           <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }} role="tablist">
-            <ViewToggleButton active={boardMode === "kanban"}   onClick={() => setBoardMode("kanban")}   icon={LayoutGrid}   label="Kanban" />
-            <ViewToggleButton active={boardMode === "table"}    onClick={() => setBoardMode("table")}    icon={List}         label="Tabela" />
-            <ViewToggleButton active={boardMode === "calendar"} onClick={() => setBoardMode("calendar")} icon={CalendarIcon} label="Calendário" />
-            <ViewToggleButton active={boardMode === "analytics"} onClick={() => setBoardMode("analytics")} icon={TrendingUp} label="Análise" />
+            <ViewToggleButton active={boardMode === "kanban"}   onClick={() => setBoardMode("kanban")}   icon={LayoutGrid}   label="Kanban" iconOnlyMobile />
+            <ViewToggleButton active={boardMode === "table"}    onClick={() => setBoardMode("table")}    icon={List}         label="Tabela" iconOnlyMobile />
+            <ViewToggleButton active={boardMode === "calendar"} onClick={() => setBoardMode("calendar")} icon={CalendarIcon} label="Calendário" iconOnlyMobile />
+            <ViewToggleButton active={boardMode === "analytics"} onClick={() => setBoardMode("analytics")} icon={TrendingUp} label="Análise" iconOnlyMobile />
           </div>
 
           {canWrite && (

@@ -639,7 +639,7 @@ export function RHFornecedoresView({ currentUser }) {
           </button>
         </div>
       </div>
-      <p className="text-sm" style={{ color: "var(--text-dim)", marginTop: -8 }}>
+      <p className="text-sm" style={{ color: "var(--text-dim)" }}>
         Convênio médico, seguradora, terceirizada de RH — cadastro, contrato (vigência/valor) e histórico de reajustes, renovações, faturas e orçamentos.
       </p>
 
