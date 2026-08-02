@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import {
   RotateCcw, Check, AlertTriangle, AlertCircle, Trash2, Database, Sparkles, Camera, Loader2,
   Bot, Key, Zap, ExternalLink, CheckCircle2, User, Bell, Sliders, Globe, X, UserCog, Link2, Copy, Users, Palette,
-  ShieldCheck, Image, Upload,
+  ShieldCheck, Image, Upload, PanelBottom, Menu as MenuIcon,
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { AvatarCropModal } from "../shared/AvatarCropModal";
@@ -19,6 +19,8 @@ import { useRHRecrutamento } from "../../hooks/use-rh-recrutamento";
 import { useChatStickers } from "../../hooks/use-chat-stickers";
 import { callAI } from "../../hooks/use-ai";
 import { friendlyAiErrorMessage } from "../../utils/ai-errors";
+import { useBottomNavPrefs, BOTTOM_NAV_MAX_SHORTCUTS } from "../../hooks/use-bottom-nav-prefs";
+import { getRoleTabs, flattenNavGroups } from "../shell/MobileBottomNav";
 
 // Mesmo critério de quem cria canal no Chat (chat_is_manager, migration
 // 20260812_chat_interno_fase1.sql) — replicado aqui (2ª ocorrência, também em
@@ -356,6 +358,100 @@ function StickersPanel() {
   );
 }
 
+// Escolha de até 4 atalhos da barra inferior mobile — localStorage por
+// usuário (docs/design-spec-atalhos-barra-inferior.md), sem tabela nova.
+// Sem seleção salva = comportamento atual (`getRoleTabs`), ninguém é afetado
+// até customizar. Limite de 4: opção não marcada fica desabilitada quando o
+// limite já foi atingido (mais simples de implementar sem risco de reordenar
+// a seleção do usuário à sua revelia).
+function BottomNavPrefsPanel({ currentUser, roles, navGroups }) {
+  const { selectedIds, setSelectedIds } = useBottomNavPrefs(currentUser?.id);
+  const items = useMemo(() => Array.from(flattenNavGroups(navGroups).values()), [navGroups]);
+  const defaultIds = useMemo(() => getRoleTabs(roles, navGroups).map(t => t.id), [roles, navGroups]);
+  const [draft, setDraft] = useState(() => (selectedIds && selectedIds.length ? selectedIds : defaultIds));
+  const [saved, setSaved] = useState(false);
+
+  const toggle = (id) => {
+    setSaved(false);
+    setDraft(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= BOTTOM_NAV_MAX_SHORTCUTS) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const previewItems = draft.map(id => items.find(i => i.id === id)).filter(Boolean);
+
+  return (
+    <Section
+      title="Barra inferior (mobile)"
+      description="Escolha até 4 atalhos fixos na barra de navegação do celular. 'Menu' continua sempre disponível como 5º item, com o restante das telas liberadas pro seu cargo."
+    >
+      <div className="rounded-xl border mb-4 overflow-hidden" style={{ borderColor: "var(--border)" }}>
+        <div className="flex" style={{ background: "var(--surface-alt)" }}>
+          {previewItems.map(({ id, label, icon: Icon }) => (
+            <div key={id} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 min-w-0">
+              <Icon size={20} strokeWidth={2.3} style={{ color: "var(--accent)" }} />
+              <span className="truncate" style={{ fontSize: 10, fontWeight: 600, color: "var(--accent)", maxWidth: "100%" }}>{label}</span>
+            </div>
+          ))}
+          {Array.from({ length: Math.max(0, BOTTOM_NAV_MAX_SHORTCUTS - previewItems.length) }).map((_, i) => (
+            <div key={`empty-${i}`} className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5">
+              <div style={{ width: 20, height: 20, borderRadius: 6, border: "1.5px dashed var(--border-strong)" }} />
+            </div>
+          ))}
+          <div className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5">
+            <MenuIcon size={20} style={{ color: "var(--text-dim)" }} />
+            <span style={{ fontSize: 10, fontWeight: 500, color: "var(--text-dim)" }}>Menu</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="text-xs mb-2" style={{ color: "var(--text-dim)" }}>
+        {draft.length}/{BOTTOM_NAV_MAX_SHORTCUTS} selecionados
+      </div>
+
+      <div className="mb-4" style={{ maxHeight: 320, overflowY: "auto" }}>
+        {items.map(({ id, label, icon: Icon }) => {
+          const checked = draft.includes(id);
+          const limitReached = !checked && draft.length >= BOTTOM_NAV_MAX_SHORTCUTS;
+          return (
+            <label
+              key={id}
+              className="flex items-center justify-between gap-3 py-2 px-1 rounded-lg"
+              style={{ opacity: limitReached ? 0.45 : 1, cursor: limitReached ? "not-allowed" : "pointer" }}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Icon size={16} style={{ color: "var(--text-dim)" }} />
+                <span className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{label}</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={limitReached}
+                onChange={() => toggle(id)}
+                className="w-4 h-4 shrink-0"
+                style={{ accentColor: "var(--accent)", cursor: limitReached ? "not-allowed" : "pointer" }}
+              />
+            </label>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button onClick={() => { setSelectedIds(draft); setSaved(true); }}>
+          Salvar
+        </Button>
+        {saved && (
+          <span className="text-xs flex items-center gap-1" style={{ color: "var(--success)" }}>
+            <Check size={13} /> Salvo
+          </span>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 const ROLE_LABEL = {
   admin:             "Administrador",
   gerente:           "Gerente Comercial",
@@ -396,6 +492,13 @@ const PERSONAL_TABS = [
   { id: "aparencia",     label: "Aparência",       icon: Palette },
 ];
 
+// Escolha da barra inferior mobile é relevante pra todo cargo (a barra
+// aparece pra qualquer um em telas <lg, gerente incluso) — empurrada
+// explicitamente nos dois ramos de `tabs` abaixo, mesmo padrão já usado
+// pra "Figurinhas" (isChatManager), em vez de depender do spread de
+// PERSONAL_TABS (que hoje já não repassa "Aparência" pro ramo gerente).
+const ATALHOS_TAB = { id: "atalhos", label: "Barra inferior", icon: PanelBottom };
+
 // Manager-only tabs added on top of the personal ones.
 const MANAGER_TABS = [
   { id: "preferencias", label: "Preferências",     icon: Sliders  },
@@ -409,6 +512,7 @@ export function SettingsView({
   onLoadAllDemoData, demoDataLoading = false, demoDataCounts = null,
   onUpdateUser, onUpdateAuthUser, onUpdateMockUser, supabaseEnabled,
   usersPanel, isManager = false, isMarketingManager = false, isRHManager = false, isComexManager = false, isAdmin = false,
+  roles, navGroups,
 }) {
   // Painel Executivo não é mais exclusivo do gerente Comercial — gerente de
   // Marketing/RH/Comex também acessa a aba Preferências, só que só enxerga
@@ -418,14 +522,16 @@ export function SettingsView({
   const [activeTab, setActiveTab] = useState("perfil");
   const tabs = useMemo(() => {
     if (!isManager && !canSeeExecutive) {
-      return isChatManager ? [...PERSONAL_TABS, { id: "figurinhas", label: "Figurinhas", icon: Image }] : PERSONAL_TABS;
+      const base = isChatManager ? [...PERSONAL_TABS, { id: "figurinhas", label: "Figurinhas", icon: Image }] : PERSONAL_TABS;
+      return [...base, ATALHOS_TAB];
     }
-    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Figurinhas, Usuários
+    // Manager order: Perfil, Preferências, Notificações, IA, Captura, Dados, Figurinhas, Barra inferior, Usuários
     const list = [PERSONAL_TABS[0]];
     list.push(MANAGER_TABS[0]);
     list.push(PERSONAL_TABS[1], PERSONAL_TABS[2]);
     if (isManager) list.push(MANAGER_TABS[1], MANAGER_TABS[2]);
     if (isChatManager) list.push({ id: "figurinhas", label: "Figurinhas", icon: Image });
+    list.push(ATALHOS_TAB);
     if (isAdmin) list.push({ id: "seguranca", label: "Segurança", icon: ShieldCheck });
     return usersPanel ? [...list, { id: "usuarios", label: "Usuários", icon: UserCog }] : list;
   }, [isManager, canSeeExecutive, usersPanel, isAdmin, isChatManager]);
@@ -1623,6 +1729,11 @@ export function SettingsView({
                   </p>
                 </Section>
               </div>
+            )}
+
+            {/* ── ATALHOS DA BARRA INFERIOR (mobile) ── */}
+            {activeTab === "atalhos" && (
+              <BottomNavPrefsPanel currentUser={currentUser} roles={roles} navGroups={navGroups} />
             )}
 
             {/* ── DADOS ── */}

@@ -24,6 +24,20 @@
 
 export const CHANGELOG = [
   {
+    version: "4.10.0",
+    items: [
+      { kind: "novo", text: "Chat: filtros rápidos (Todas, Não lidas, Canais, Diretas), conversa arquivada some da lista sem apagar nada, e no celular um botão flutuante abre uma conversa nova sem precisar rolar até o topo." },
+      { kind: "novo", text: "Chat: agora dá pra mandar mensagem de voz — segure o microfone pra gravar, solte pra enviar." },
+      { kind: "ajuste", text: "Chat: chegou mensagem nova enquanto você está em outra tela? Aparece um aviso rápido com o remetente, com atalho pra abrir a conversa direto." },
+    ],
+  },
+  {
+    version: "4.9.0",
+    items: [
+      { kind: "novo", text: "Barra de navegação do celular agora é personalizável — em Configurações → Barra inferior, escolha até 4 atalhos entre tudo que você já acessa na plataforma." },
+    ],
+  },
+  {
     version: "4.8.0",
     items: [
       { kind: "novo", text: "Funil de Vendas: seus negócios continuam visíveis mesmo sem internet (mostrando os últimos dados salvos), e dá pra registrar uma nota mesmo assim — ela fica marcada como \"vai enviar quando voltar o sinal\" e sincroniza sozinha ao reconectar." },

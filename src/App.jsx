@@ -302,8 +302,11 @@ export default function App() {
   } = useClients({ userId: currentUser?.id });
 
   // Só o total de não-lidas — o badge do Chat na navegação precisa disso em
-  // qualquer tela, não só dentro do próprio Chat.
-  const { totalUnread: chatUnread } = useChat({ userId: currentUser?.id });
+  // qualquer tela, não só dentro do próprio Chat. `incomingMessage` alimenta
+  // o toast Nível 1 (spec seção 5, docs/design-spec-chat-mobile-whatsapp.md)
+  // — reaproveita a MESMA subscription Realtime que já atualiza o badge, não
+  // abre uma segunda.
+  const { totalUnread: chatUnread, incomingMessage: chatIncomingMessage } = useChat({ userId: currentUser?.id });
 
   const { signals } = useMarketSignals();
 
@@ -401,6 +404,10 @@ export default function App() {
   // null (ver initialSelectedCampaignId/initialSelectedEmployeeId).
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  // Mesmo mecanismo pro toast de mensagem nova do Chat (spec seção 5) — o
+  // clique em "Abrir" precisa selecionar o canal certo dentro de ChatView,
+  // que mantém `selectedId` como state local (não sobe pro App.jsx).
+  const [selectedChatChannelId, setSelectedChatChannelId] = useState(null);
 
   // Mesmo mecanismo, agora pro painel de Conexões (Colaborador/Cliente): cada
   // grupo de conexão pode trocar de seção e abrir o registro específico na
@@ -906,6 +913,29 @@ export default function App() {
     const target = NOTIFICATION_LINK_SECTIONS[link.module];
     if (target) setSection(target);
   }, [leads, setSelectedLead, setSection, navigate]);
+
+  // Toast Nível 1 de mensagem nova do Chat (spec seção 5,
+  // docs/design-spec-chat-mobile-whatsapp.md) — só dispara quando quem
+  // recebeu não está na tela de Chat agora (não tem como saber daqui qual
+  // canal está aberto dentro de ChatView, que é state local; "não está no
+  // Chat" cobre o caso descrito na spec sem abrir uma segunda subscription
+  // só pra isso). Deliberadamente sem `section` nas deps: precisa avaliar o
+  // valor de `section` no momento em que a mensagem chega, não re-disparar
+  // quando o usuário troca de tela depois.
+  const [chatToast, setChatToast] = useState(null);
+  useEffect(() => {
+    if (!chatIncomingMessage) return;
+    if (section === "chat") return;
+    setChatToast(chatIncomingMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatIncomingMessage]);
+
+  const handleOpenChatToast = useCallback(() => {
+    if (!chatToast) return;
+    setSelectedChatChannelId(chatToast.channelId);
+    setSection("chat");
+    setChatToast(null);
+  }, [chatToast, setSection]);
 
   // Mantém o drawer em sync quando o lead aberto muda via realtime
   // (outra sessão editou) ou via update otimista local.
@@ -1668,7 +1698,13 @@ export default function App() {
           <Route path={ROUTES.chat} element={
             isAgencia
               ? <Navigate to={ROUTES.marketing} replace />
-              : <ChatView currentUser={currentUser} />
+              : (
+                <ChatView
+                  currentUser={currentUser}
+                  initialChannelId={selectedChatChannelId}
+                  onInitialChannelConsumed={() => setSelectedChatChannelId(null)}
+                />
+              )
           } />
           <Route path={ROUTES["commercial-overview"]} element={
             (isAgencia || isPureMarketing || isPureRH)
@@ -1873,6 +1909,8 @@ export default function App() {
               isRHManager={isRHManager}
               isComexManager={isComex || isDiretoria}
               isAdmin={isAdmin}
+              roles={currentUserRoles}
+              navGroups={navGroups}
               usersPanel={isManager ? (
                 <UserManagementView
                   users={users}
@@ -2136,6 +2174,17 @@ export default function App() {
             {screenTip.steps.map((s, i) => <li key={i}>{s}</li>)}
           </ol>
         </AppToast>
+      )}
+
+      {chatToast && !needRefresh && !agentsCoachmarkVisible && !screenTip && (
+        <AppToast
+          icon={MessageSquareText}
+          iconBadge
+          title={chatToast.channelName}
+          description={`${chatToast.senderName ? `${chatToast.senderName}: ` : ""}${(chatToast.preview || "").slice(0, 90)}`}
+          onDismiss={() => setChatToast(null)}
+          action={{ label: "Abrir", onClick: handleOpenChatToast }}
+        />
       )}
 
       <CommandPalette

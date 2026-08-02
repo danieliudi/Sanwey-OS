@@ -1,8 +1,9 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowLeft, File, FileImage, FileSpreadsheet, FileText, Hash, Image, Lock,
-  MessageSquare, Paperclip, Plus, Search, Send, Smile, Users, X,
+  Archive, ArchiveRestore, ArrowLeft, File, FileImage, FileSpreadsheet, FileText,
+  Hash, Image, Lock, Mic, MessageSquare, Pause, Paperclip, Play, Plus, Search,
+  Send, Smile, Users, X,
 } from "lucide-react";
 import { useChat, useChannelMessages } from "../../hooks/use-chat";
 import { useChatAttachments } from "../../hooks/use-chat-attachments";
@@ -18,6 +19,16 @@ const STICKERS_BUCKET = "chat-stickers";
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const ATTACHMENT_ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.gif,.webp";
+
+// Arrastar mais que isso pra esquerda antes de soltar o microfone cancela a
+// gravação sem enviar (spec seção 4).
+const AUDIO_CANCEL_DRAG_PX = 60;
+
+function formatClock(totalSeconds) {
+  const mm = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+  const ss = String(totalSeconds % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
+}
 
 // Réplica local do vocabulário ícone-por-mimetype/formatBytes de
 // LeadDetailDrawer.jsx:1756-1776 — 2ª ocorrência na plataforma (regra 4 do
@@ -173,10 +184,80 @@ function ChannelRow({ channel, selected, onSelect }) {
   );
 }
 
+// Mensagem de áudio (spec seção 4) — player com botão de play/pause sobre um
+// <audio> nativo escondido; barra decorativa estática no lugar da forma de
+// onda real (fora de escopo, spec seção 6).
+function ChatAudioAttachment({ attachment, own }) {
+  const { getSignedUrl } = useChatAttachments();
+  const [url, setUrl] = useState(null);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    let alive = true;
+    getSignedUrl(attachment.path).then(u => { if (alive) setUrl(u); });
+    return () => { alive = false; };
+  }, [attachment.path, getSignedUrl]);
+
+  const togglePlay = () => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) el.pause();
+    else el.play().catch(() => {});
+  };
+
+  return (
+    <div
+      className="flex items-center gap-2"
+      style={{ padding: "6px 8px", borderRadius: 10, background: own ? "rgba(255,255,255,0.15)" : "var(--surface-alt)", minWidth: 190 }}
+    >
+      <button
+        type="button"
+        onClick={togglePlay}
+        disabled={!url}
+        title={playing ? "Pausar" : "Reproduzir áudio"}
+        aria-label={playing ? "Pausar" : "Reproduzir áudio"}
+        className="flex items-center justify-center shrink-0 rounded-full"
+        style={{ width: 28, height: 28, border: "none", cursor: url ? "pointer" : "default", background: "var(--accent)", color: "var(--on-accent)" }}
+      >
+        {playing ? <Pause size={13} /> : <Play size={13} style={{ marginLeft: 1 }} />}
+      </button>
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+        <div className="flex-1" style={{ height: 3, borderRadius: 2, background: own ? "rgba(255,255,255,0.35)" : "var(--border)" }} />
+        <span className="shrink-0" style={{ fontSize: 10, color: own ? "var(--on-accent)" : "var(--text-faint)", opacity: own ? 0.85 : 1 }}>
+          {formatClock(Math.round(attachment.durationSeconds || 0))}
+        </span>
+      </div>
+      {url && (
+        <audio
+          ref={audioRef}
+          src={url}
+          hidden
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onEnded={() => setPlaying(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Dispatcher — áudio tem seu próprio player (hooks/fetch dedicados, ver
+// ChatAudioAttachment acima); os demais tipos seguem pro renderer abaixo.
+// Fica num componente à parte (em vez de um `if` antes dos hooks de
+// ChatFileOrImageAttachment) pra não violar a regra de hooks nem duplicar o
+// fetch de signed URL do áudio.
+function ChatAttachmentView({ attachment, own }) {
+  if (attachment.type === "audio") {
+    return <ChatAudioAttachment attachment={attachment} own={own} />;
+  }
+  return <ChatFileOrImageAttachment attachment={attachment} own={own} />;
+}
+
 // Card de anexo dentro da bolha — imagem inline (com URL assinada, bucket
 // privado) ou card ícone+nome+tamanho pra outros tipos. Cores adaptam se é
 // bolha própria (fundo var(--accent)) ou de terceiro (fundo var(--surface)).
-function ChatAttachmentView({ attachment, own }) {
+function ChatFileOrImageAttachment({ attachment, own }) {
   const { getSignedUrl } = useChatAttachments();
   const [url, setUrl] = useState(null);
   const isSticker = attachment.type === "sticker";
@@ -529,8 +610,11 @@ function NewConversationModal({ open, onClose, candidates, onPick }) {
   );
 }
 
-export function ChatView({ currentUser }) {
-  const { channels, dmCandidates, loading, markRead, sendMessage, startDm } = useChat({ userId: currentUser?.id });
+export function ChatView({ currentUser, initialChannelId, onInitialChannelConsumed }) {
+  const {
+    channels, dmCandidates, loading, markRead, sendMessage, startDm,
+    archiveChannel, unarchiveChannel,
+  } = useChat({ userId: currentUser?.id });
   const { uploadAttachment } = useChatAttachments();
   const { stickers, getPublicUrl: getStickerPublicUrl } = useChatStickers();
   const [selectedId, setSelectedId] = useState(null);
@@ -542,11 +626,27 @@ export function ChatView({ currentUser }) {
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [stickerOpen, setStickerOpen] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState([]);
+  // Filtros (spec seção 1) e "Arquivadas" (spec seção 2) — sem schema novo
+  // pros filtros, `archivedAt` já vem pronto de use-chat.js.
+  const [activeFilter, setActiveFilter] = useState("todas");
+  const [showArchived, setShowArchived] = useState(false);
+  // Gravação de áudio (spec seção 4).
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [recordCancelHint, setRecordCancelHint] = useState(false);
   const feedRef = useRef(null);
   const textareaRef = useRef(null);
   const emojiBtnRef = useRef(null);
   const stickerBtnRef = useRef(null);
   const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordStreamRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordStartXRef = useRef(null);
+  const recordCancelRef = useRef(false);
+  const recordSecondsRef = useRef(0);
+  const recordTimerRef = useRef(null);
+  const recordChannelIdRef = useRef(null);
 
   // No mobile, `MobileBottomNav` (App.jsx) fica fixa por cima dos últimos
   // 64px da viewport — abaixo do breakpoint "lg" (1024px, o mesmo usado por
@@ -565,8 +665,25 @@ export function ChatView({ currentUser }) {
   const selected = useMemo(() => channels.find(c => c.id === selectedId) || null, [channels, selectedId]);
   const { messages, loading: messagesLoading } = useChannelMessages(selectedId);
 
-  const canais = useMemo(() => channels.filter(c => c.kind === "canal"), [channels]);
-  const diretas = useMemo(() => channels.filter(c => c.kind === "dm"), [channels]);
+  const archivedChannels = useMemo(() => channels.filter(c => c.archivedAt), [channels]);
+  const activeChannels = useMemo(() => channels.filter(c => !c.archivedAt), [channels]);
+
+  const filterCounts = useMemo(() => ({
+    todas: activeChannels.length,
+    "nao-lidas": activeChannels.filter(c => c.unreadCount > 0).length,
+    canais: activeChannels.filter(c => c.kind === "canal").length,
+    diretas: activeChannels.filter(c => c.kind === "dm").length,
+  }), [activeChannels]);
+
+  const filteredChannels = useMemo(() => {
+    if (activeFilter === "nao-lidas") return activeChannels.filter(c => c.unreadCount > 0);
+    if (activeFilter === "canais") return activeChannels.filter(c => c.kind === "canal");
+    if (activeFilter === "diretas") return activeChannels.filter(c => c.kind === "dm");
+    return activeChannels;
+  }, [activeChannels, activeFilter]);
+
+  const canais = useMemo(() => filteredChannels.filter(c => c.kind === "canal"), [filteredChannels]);
+  const diretas = useMemo(() => filteredChannels.filter(c => c.kind === "dm"), [filteredChannels]);
 
   const manager = isManager(currentUser);
   const readOnlyForMe = Boolean(selected?.readOnly) && !manager;
@@ -577,6 +694,7 @@ export function ChatView({ currentUser }) {
     setPendingAttachments(prev => { prev.forEach(p => { if (p.previewUrl) URL.revokeObjectURL(p.previewUrl); }); return []; });
     setEmojiOpen(false);
     setStickerOpen(false);
+    cancelActiveRecording();
   }, [selectedId]);
 
   useEffect(() => {
@@ -586,7 +704,33 @@ export function ChatView({ currentUser }) {
   const handleSelect = (channelId) => {
     setSelectedId(channelId);
     setMobileShowThread(true);
+    setShowArchived(false);
     markRead(channelId);
+  };
+
+  // Deep-link vindo do toast de notificação (spec seção 5) — mesmo padrão já
+  // usado em App.jsx pra campanha/funcionário (initialSelectedCampaignId):
+  // consome o id assim que o canal aparece na lista e limpa de volta.
+  useEffect(() => {
+    if (!initialChannelId) return;
+    if (!channels.some(c => c.id === initialChannelId)) return;
+    handleSelect(initialChannelId);
+    onInitialChannelConsumed?.();
+  }, [initialChannelId, channels]);
+
+  const handleToggleArchive = async () => {
+    if (!selected) return;
+    try {
+      if (selected.archivedAt) {
+        await unarchiveChannel(selected.id);
+      } else {
+        await archiveChannel(selected.id);
+        setSelectedId(null);
+        setMobileShowThread(false);
+      }
+    } catch (e) {
+      setSendError(e?.message || "Não foi possível atualizar o arquivamento da conversa.");
+    }
   };
 
   const handleStartDm = async (targetId) => {
@@ -675,6 +819,135 @@ export function ChatView({ currentUser }) {
     });
   };
 
+  // Mensagem de áudio (spec seção 4) — segurar o ícone de microfone grava,
+  // soltar envia, arrastar mais de AUDIO_CANCEL_DRAG_PX pra esquerda antes de
+  // soltar cancela sem enviar. Cobre mouse (desktop) e touch (mobile), sem
+  // multi-touch/edge case exótico (fora de escopo, spec seção 6).
+  const stopRecordingTracks = () => {
+    clearInterval(recordTimerRef.current);
+    recordTimerRef.current = null;
+    recordStreamRef.current?.getTracks().forEach(t => t.stop());
+    recordStreamRef.current = null;
+    mediaRecorderRef.current = null;
+    audioChunksRef.current = [];
+  };
+
+  const cancelActiveRecording = () => {
+    if (!mediaRecorderRef.current) return;
+    recordCancelRef.current = true;
+    try { if (mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop(); } catch {}
+    stopRecordingTracks();
+    setRecording(false);
+    setRecordCancelHint(false);
+  };
+
+  const startRecording = async (clientX) => {
+    if (recording || readOnlyForMe || !selectedId || sending) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setSendError("Este navegador não permite gravar áudio.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : (MediaRecorder.isTypeSupported("audio/ogg") ? "audio/ogg" : "");
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      recordStreamRef.current = stream;
+      recordChannelIdRef.current = selectedId;
+      recordCancelRef.current = false;
+      recordStartXRef.current = clientX;
+      recordSecondsRef.current = 0;
+      setRecordSeconds(0);
+      setRecordCancelHint(false);
+      setSendError(null);
+      setRecording(true);
+      recordTimerRef.current = setInterval(() => {
+        recordSecondsRef.current += 1;
+        setRecordSeconds(recordSecondsRef.current);
+      }, 1000);
+    } catch (e) {
+      setSendError("Não foi possível acessar o microfone.");
+    }
+  };
+
+  const updateRecordingDrag = (clientX) => {
+    if (recordStartXRef.current == null) return;
+    const shouldCancel = (recordStartXRef.current - clientX) > AUDIO_CANCEL_DRAG_PX;
+    recordCancelRef.current = shouldCancel;
+    setRecordCancelHint(shouldCancel);
+  };
+
+  const finishRecording = async () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+    const canceled = recordCancelRef.current;
+    const durationSeconds = recordSecondsRef.current;
+    const channelId = recordChannelIdRef.current;
+
+    await new Promise(resolve => {
+      recorder.onstop = resolve;
+      if (recorder.state !== "inactive") recorder.stop(); else resolve();
+    });
+    const chunks = audioChunksRef.current;
+    // recorder.mimeType costuma vir com parâmetro de codec (ex.:
+    // "audio/webm;codecs=opus") mesmo quando só "audio/webm" foi pedido —
+    // o bucket (migration 20260815) só libera o mimetype base, sem esse
+    // sufixo, então corta antes de subir.
+    const baseMimeType = (recorder.mimeType || "audio/webm").split(";")[0].trim() || "audio/webm";
+    stopRecordingTracks();
+    setRecording(false);
+    setRecordCancelHint(false);
+
+    if (canceled || chunks.length === 0 || !channelId) return;
+
+    const blob = new Blob(chunks, { type: baseMimeType });
+    const ext = baseMimeType.includes("ogg") ? "ogg" : "webm";
+    // `File` (maiúsculo) é o ícone importado de lucide-react no topo deste
+    // arquivo — usa o construtor global explícito pra não colidir com ele.
+    const file = new window.File([blob], `audio-${Date.now()}.${ext}`, { type: baseMimeType });
+
+    setSending(true);
+    setSendError(null);
+    try {
+      const record = await uploadAttachment(file, channelId);
+      if (record) {
+        await sendMessage(channelId, "", [{
+          type: "audio", path: record.path, name: record.name,
+          size: record.size, mime: record.mime, durationSeconds,
+        }]);
+      }
+    } catch (e) {
+      setSendError(e?.message || "Não foi possível enviar o áudio.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Listeners globais só enquanto grava — o dedo/mouse não precisa continuar
+  // sobre o botão pra arrastar-pra-cancelar funcionar.
+  useEffect(() => {
+    if (!recording) return;
+    const onMove = (e) => updateRecordingDrag(e.touches ? e.touches[0].clientX : e.clientX);
+    const onUp = () => finishRecording();
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
+    };
+  }, [recording]);
+
+  useEffect(() => () => cancelActiveRecording(), []);
+
   const railGroup = (label, list) => {
     if (list.length === 0) return null;
     return (
@@ -705,29 +978,132 @@ export function ChatView({ currentUser }) {
           <h1 className="font-bold leading-tight mb-2" style={{ fontSize: 18, color: "var(--text)", letterSpacing: "-0.01em" }}>
             Chat
           </h1>
+          {/* Desktop mantém o botão de header — no mobile ele vira o FAB
+              fixo mais abaixo (spec seção 3), pra não competir por espaço
+              com os chips de filtro logo abaixo. */}
           <button
             type="button"
             onClick={() => setNewOpen(true)}
-            className="w-full flex items-center justify-center gap-1.5 rounded-md py-2 transition-opacity"
+            className="hidden lg:flex w-full items-center justify-center gap-1.5 rounded-md py-2 transition-opacity"
             style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
           >
             <Plus size={14} /> Nova conversa
           </button>
         </div>
 
+        {channels.length > 0 && (
+          <div className="flex gap-1.5 px-3 pb-2 shrink-0" style={{ overflowX: "auto" }}>
+            {[
+              ["todas", "Todas"],
+              ["nao-lidas", "Não lidas"],
+              ["canais", "Canais"],
+              ["diretas", "Diretas"],
+            ].map(([key, label]) => {
+              const active = activeFilter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => { setShowArchived(false); setActiveFilter(key); }}
+                  className="inline-flex items-center gap-1 rounded-full shrink-0"
+                  style={{
+                    padding: "5px 10px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                    background: active ? "var(--accent)" : "var(--surface-alt)",
+                    color: active ? "var(--on-accent)" : "var(--text-dim)",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {label}
+                  <span
+                    style={{
+                      fontSize: 10, fontWeight: 800, minWidth: 15, height: 15, padding: "0 4px",
+                      borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      background: active ? "rgba(255,255,255,0.25)" : "var(--surface)",
+                      color: active ? "var(--on-accent)" : "var(--text-faint)",
+                    }}
+                  >
+                    {filterCounts[key]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex-1 px-1.5 pb-2" style={{ minHeight: 0, overflowY: "auto" }}>
           {loading ? (
             <div className="px-2 py-3" style={{ fontSize: 12, color: "var(--text-faint)" }}>Carregando conversas…</div>
           ) : channels.length === 0 ? (
             <div className="px-2 py-3" style={{ fontSize: 12, color: "var(--text-faint)" }}>Nenhuma conversa ainda.</div>
+          ) : showArchived ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowArchived(false)}
+                className="w-full flex items-center gap-1.5 px-1 py-2 mb-1 text-left"
+                style={{ background: "transparent", border: "none", color: "var(--text-dim)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              >
+                <ArrowLeft size={14} /> Arquivadas
+              </button>
+              {archivedChannels.length === 0 ? (
+                <div className="px-2 py-3" style={{ fontSize: 12, color: "var(--text-faint)" }}>Nenhuma conversa arquivada.</div>
+              ) : (
+                <div className="flex flex-col gap-0.5">
+                  {archivedChannels.map(c => (
+                    <ChannelRow key={c.id} channel={c} selected={c.id === selectedId} onSelect={handleSelect} />
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             <>
-              {railGroup("Canais", canais)}
-              {railGroup("Diretas", diretas)}
+              {archivedChannels.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowArchived(true)}
+                  className="w-full flex items-center gap-2 px-2 py-2 mb-2 text-left rounded-md"
+                  style={{ background: "var(--surface-alt)", border: "none", cursor: "pointer" }}
+                  onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.97)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.filter = "brightness(1)"; }}
+                >
+                  <Archive size={14} style={{ color: "var(--text-dim)" }} />
+                  <span className="flex-1" style={{ fontSize: 12, fontWeight: 600, color: "var(--text-dim)" }}>Arquivadas</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-faint)" }}>{archivedChannels.length}</span>
+                </button>
+              )}
+              {canais.length === 0 && diretas.length === 0 ? (
+                <div className="px-2 py-3" style={{ fontSize: 12, color: "var(--text-faint)" }}>Nenhuma conversa neste filtro.</div>
+              ) : (
+                <>
+                  {railGroup("Canais", canais)}
+                  {railGroup("Diretas", diretas)}
+                </>
+              )}
             </>
           )}
         </div>
       </aside>
+
+      {!mobileShowThread && (
+        <button
+          type="button"
+          onClick={() => setNewOpen(true)}
+          title="Nova conversa"
+          aria-label="Nova conversa"
+          className="lg:hidden fixed flex items-center justify-center rounded-full active:scale-95 transition-transform"
+          style={{
+            bottom: 80, right: 20, width: 52, height: 52, zIndex: 40,
+            background: "var(--accent)", color: "var(--on-accent)",
+            border: "none", boxShadow: "var(--shadow-pop)", cursor: "pointer",
+          }}
+        >
+          <Plus size={22} />
+        </button>
+      )}
 
       <section
         className={`${mobileShowThread ? "flex" : "hidden"} lg:flex flex-col flex-1 min-w-0 rounded-lg border overflow-hidden`}
@@ -779,6 +1155,18 @@ export function ChatView({ currentUser }) {
                   )}
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={handleToggleArchive}
+                title={selected.archivedAt ? "Desarquivar conversa" : "Arquivar conversa"}
+                aria-label={selected.archivedAt ? "Desarquivar conversa" : "Arquivar conversa"}
+                className="flex items-center justify-center rounded-md shrink-0"
+                style={{ width: 28, height: 28, background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
+              >
+                {selected.archivedAt ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+              </button>
             </header>
 
             <div ref={feedRef} className="flex-1 flex flex-col gap-3 px-3 py-4" style={{ minHeight: 0, overflowY: "auto" }}>
@@ -858,88 +1246,128 @@ export function ChatView({ currentUser }) {
                   )}
 
                   <div className="flex items-end gap-2">
-                    <button
-                      ref={emojiBtnRef}
-                      type="button"
-                      onClick={() => setEmojiOpen(v => !v)}
-                      title="Emoji"
-                      aria-label="Emoji"
-                      className="flex items-center justify-center rounded-full shrink-0"
-                      style={{
-                        width: 32, height: 32, background: emojiOpen ? "var(--surface-alt)" : "transparent",
-                        border: "none", color: emojiOpen ? "var(--accent)" : "var(--text-dim)", cursor: "pointer",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                      onMouseLeave={e => { if (!emojiOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; } }}
-                    >
-                      <Smile size={18} />
-                    </button>
-                    <button
-                      ref={stickerBtnRef}
-                      type="button"
-                      onClick={() => setStickerOpen(v => !v)}
-                      title="Figurinha"
-                      aria-label="Figurinha"
-                      className="flex items-center justify-center rounded-full shrink-0"
-                      style={{
-                        width: 32, height: 32, background: stickerOpen ? "var(--surface-alt)" : "transparent",
-                        border: "none", color: stickerOpen ? "var(--accent)" : "var(--text-dim)", cursor: "pointer",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                      onMouseLeave={e => { if (!stickerOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; } }}
-                    >
-                      <Image size={18} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      title="Anexar arquivo"
-                      aria-label="Anexar arquivo"
-                      className="flex items-center justify-center rounded-full shrink-0"
-                      style={{ width: 32, height: 32, background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                    >
-                      <Paperclip size={18} />
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      hidden
-                      accept={ATTACHMENT_ACCEPT}
-                      onChange={e => { if (e.target.files?.length) handleFilesSelected(e.target.files); e.target.value = ""; }}
-                    />
-                    <textarea
-                      ref={textareaRef}
-                      value={draft}
-                      onChange={e => { setDraft(e.target.value); if (sendError) setSendError(null); }}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Escreva uma mensagem…"
-                      rows={2}
-                      className="flex-1 rounded-2xl border px-3.5 py-2.5 outline-none resize-none"
-                      style={{ fontSize: 13, lineHeight: 1.4, borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text)" }}
-                      onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
-                      onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSend}
-                      disabled={(!draft.trim() && pendingAttachments.length === 0) || sending}
-                      title="Enviar (Enter)"
-                      className="flex items-center justify-center rounded-full shrink-0 transition-opacity"
-                      style={{
-                        width: 34,
-                        height: 34,
-                        background: "var(--accent)",
-                        color: "var(--on-accent)",
-                        border: "none",
-                        cursor: (draft.trim() || pendingAttachments.length > 0) && !sending ? "pointer" : "default",
-                        opacity: (draft.trim() || pendingAttachments.length > 0) && !sending ? 1 : 0.4,
-                      }}
-                    >
-                      <Send size={14} />
-                    </button>
+                    {!recording && (
+                      <>
+                        <button
+                          ref={emojiBtnRef}
+                          type="button"
+                          onClick={() => setEmojiOpen(v => !v)}
+                          title="Emoji"
+                          aria-label="Emoji"
+                          className="flex items-center justify-center rounded-full shrink-0"
+                          style={{
+                            width: 32, height: 32, background: emojiOpen ? "var(--surface-alt)" : "transparent",
+                            border: "none", color: emojiOpen ? "var(--accent)" : "var(--text-dim)", cursor: "pointer",
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                          onMouseLeave={e => { if (!emojiOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; } }}
+                        >
+                          <Smile size={18} />
+                        </button>
+                        <button
+                          ref={stickerBtnRef}
+                          type="button"
+                          onClick={() => setStickerOpen(v => !v)}
+                          title="Figurinha"
+                          aria-label="Figurinha"
+                          className="flex items-center justify-center rounded-full shrink-0"
+                          style={{
+                            width: 32, height: 32, background: stickerOpen ? "var(--surface-alt)" : "transparent",
+                            border: "none", color: stickerOpen ? "var(--accent)" : "var(--text-dim)", cursor: "pointer",
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                          onMouseLeave={e => { if (!stickerOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; } }}
+                        >
+                          <Image size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          title="Anexar arquivo"
+                          aria-label="Anexar arquivo"
+                          className="flex items-center justify-center rounded-full shrink-0"
+                          style={{ width: 32, height: 32, background: "transparent", border: "none", color: "var(--text-dim)", cursor: "pointer" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-alt)"; e.currentTarget.style.color = "var(--accent)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                        >
+                          <Paperclip size={18} />
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          hidden
+                          accept={ATTACHMENT_ACCEPT}
+                          onChange={e => { if (e.target.files?.length) handleFilesSelected(e.target.files); e.target.value = ""; }}
+                        />
+                      </>
+                    )}
+
+                    {recording ? (
+                      <div
+                        className="flex-1 flex items-center gap-2 rounded-2xl px-3.5 py-2.5"
+                        style={{ background: "var(--surface-alt)", border: `1px solid ${recordCancelHint ? "var(--danger)" : "var(--border)"}` }}
+                      >
+                        <span className="animate-pulse shrink-0" style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--danger)" }} />
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>
+                          {formatClock(recordSeconds)}
+                        </span>
+                        <span className="flex-1 truncate" style={{ fontSize: 11, color: recordCancelHint ? "var(--danger)" : "var(--text-faint)" }}>
+                          {recordCancelHint ? "Solte para cancelar" : "◂ Arraste para a esquerda para cancelar"}
+                        </span>
+                      </div>
+                    ) : (
+                      <textarea
+                        ref={textareaRef}
+                        value={draft}
+                        onChange={e => { setDraft(e.target.value); if (sendError) setSendError(null); }}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Escreva uma mensagem…"
+                        rows={2}
+                        className="flex-1 rounded-2xl border px-3.5 py-2.5 outline-none resize-none"
+                        style={{ fontSize: 13, lineHeight: 1.4, borderColor: "var(--border)", background: "var(--surface-alt)", color: "var(--text)" }}
+                        onFocus={e => { e.currentTarget.style.borderColor = "var(--accent)"; }}
+                        onBlur={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+                      />
+                    )}
+
+                    {recording || (!draft.trim() && pendingAttachments.length === 0) ? (
+                      <button
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); startRecording(e.clientX); }}
+                        onTouchStart={e => { const t = e.touches[0]; if (t) startRecording(t.clientX); }}
+                        title="Segure para gravar áudio"
+                        aria-label="Gravar áudio"
+                        className="flex items-center justify-center rounded-full shrink-0"
+                        style={{
+                          width: 34, height: 34,
+                          background: recording ? "var(--danger)" : "var(--accent)",
+                          color: "var(--on-accent)", border: "none", cursor: sending ? "default" : "pointer",
+                          opacity: sending && !recording ? 0.4 : 1,
+                        }}
+                      >
+                        <Mic size={16} />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSend}
+                        disabled={(!draft.trim() && pendingAttachments.length === 0) || sending}
+                        title="Enviar (Enter)"
+                        className="flex items-center justify-center rounded-full shrink-0 transition-opacity"
+                        style={{
+                          width: 34,
+                          height: 34,
+                          background: "var(--accent)",
+                          color: "var(--on-accent)",
+                          border: "none",
+                          cursor: (draft.trim() || pendingAttachments.length > 0) && !sending ? "pointer" : "default",
+                          opacity: (draft.trim() || pendingAttachments.length > 0) && !sending ? 1 : 0.4,
+                        }}
+                      >
+                        <Send size={14} />
+                      </button>
+                    )}
                   </div>
 
                   <EmojiPopover

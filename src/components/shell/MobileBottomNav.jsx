@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import {
   Menu as MenuIcon, Settings as SettingsIcon, LogOut, ChevronDown,
 } from "lucide-react";
+import { useBottomNavPrefs } from "../../hooks/use-bottom-nav-prefs";
 
 // Mesma chave do Sidebar (versão desktop) — grupo recolhido num lugar já
 // aparece recolhido no outro, em vez de cada versão guardar seu próprio
@@ -40,7 +41,10 @@ const ROLE_LABELS = {
   rh: "RH", gerente_rh: "Gerente de RH",
 };
 
-function flattenNavGroups(navGroups) {
+// Exportada pra `BottomNavPrefsPanel` (Configurações → Barra inferior)
+// montar a mesma lista completa de módulos liberados pro cargo do usuário,
+// sem duplicar a lógica de achatar `navGroups`.
+export function flattenNavGroups(navGroups) {
   const map = new Map();
   for (const group of (navGroups || [])) {
     for (const item of (group.items || [])) map.set(item.id, item);
@@ -53,7 +57,7 @@ function flattenNavGroups(navGroups) {
 // RH como cargo ADICIONAL (não principal) nunca via as abas rápidas de RH
 // aqui embaixo, só através do menu completo (hambúrguer). Agora junta as
 // abas de todo cargo que o usuário acumula, sem repetir id.
-function getRoleTabs(roles, navGroups) {
+export function getRoleTabs(roles, navGroups) {
   const byId = flattenNavGroups(navGroups);
   const list = Array.isArray(roles) && roles.length ? roles : ["vendedor"];
   const seen = new Set();
@@ -201,7 +205,15 @@ function MobileMenuOverlay({ navGroups, section, onSectionChange, currentUser, o
 /* ── Main component ──────────────────────────────────────────── */
 export function MobileBottomNav({ section, onSectionChange, roles, navGroups, currentUser, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const tabs = useMemo(() => getRoleTabs(roles, navGroups), [roles, navGroups]);
+  const { selectedIds } = useBottomNavPrefs(currentUser?.id);
+  const tabs = useMemo(() => {
+    if (selectedIds && selectedIds.length) {
+      const byId = flattenNavGroups(navGroups);
+      const custom = selectedIds.map(id => byId.get(id)).filter(Boolean);
+      if (custom.length) return custom;
+    }
+    return getRoleTabs(roles, navGroups);
+  }, [selectedIds, roles, navGroups]);
 
   return (
     <>
