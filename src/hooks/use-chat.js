@@ -234,8 +234,10 @@ export function useChat({ userId } = {}) {
     if (err) { setError(err); fetchChannels(); }
   }, [enabled, userId, fetchChannels]);
 
+  // Arquivado = silenciado (decisão do Daniel) — não conta no badge fora da
+  // tela de Chat, mesmo com mensagens não lidas.
   const totalUnread = useMemo(
-    () => channels.reduce((sum, c) => sum + (c.unreadCount || 0), 0),
+    () => channels.reduce((sum, c) => sum + (c.archivedAt ? 0 : (c.unreadCount || 0)), 0),
     [channels],
   );
 

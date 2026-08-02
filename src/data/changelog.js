@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.10.1",
+    items: [
+      { kind: "correcao", text: "Chat: conversa arquivada não conta mais no aviso de mensagens não lidas do menu — arquivar agora silencia de verdade." },
+    ],
+  },
+  {
     version: "4.10.0",
     items: [
       { kind: "novo", text: "Chat: filtros rápidos (Todas, Não lidas, Canais, Diretas), conversa arquivada some da lista sem apagar nada, e no celular um botão flutuante abre uma conversa nova sem precisar rolar até o topo." },
