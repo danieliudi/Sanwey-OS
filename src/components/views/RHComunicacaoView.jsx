@@ -58,7 +58,7 @@ function ComunicadoComposer({ onSend }) {
           <label style={labelSt}>Mensagem</label>
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="Escreva o comunicado…" className="w-full text-sm rounded-xl border px-3 py-2 outline-none resize-y" style={inputSt} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
           <div>
             <label style={labelSt}>Enviar para</label>
             <select value={scopeType} onChange={(e) => { setScopeType(e.target.value); setScopeValue(""); }} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>
@@ -203,7 +203,7 @@ function NovaPesquisaModal({ onSave, onClose }) {
             </div>
           </div>
           {modo === "identificada" && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
               <div>
                 <label style={labelSt}>Enviar para</label>
                 <select value={scopeType} onChange={(e) => { setScopeType(e.target.value); setScopeValue(""); }} className="w-full text-sm rounded-xl border outline-none px-3 py-2" style={inputSt}>

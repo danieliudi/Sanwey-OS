@@ -74,10 +74,10 @@ function RHActivitiesPanel({ activities, currentUser, users }) {
       <ol className="space-y-3">
         {sorted.slice(0, 20).map((a, i) => (
           <li key={a.id ?? i} className="text-xs" style={{ color: "var(--text)" }}>
-            <div>
-              <span style={{ color: "var(--text-dim)" }}>{authorLabel(a.createdBy, currentUser, users)} </span>
-              {a.body}
+            <div className="truncate font-semibold" style={{ color: "var(--text-dim)" }}>
+              {authorLabel(a.createdBy, currentUser, users)}
             </div>
+            <div>{a.body}</div>
             <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
               {formatTimestamp(a.createdAt)}
             </div>

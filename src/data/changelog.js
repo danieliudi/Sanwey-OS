@@ -24,6 +24,17 @@
 
 export const CHANGELOG = [
   {
+    version: "4.10.3",
+    items: [
+      { kind: "correcao", text: "Comex: a aba Exportação agora carrega as operações ao trocar de Importação — antes ficava sempre vazia.", roles: ["comex", "diretoria"] },
+      { kind: "correcao", text: "Editor de etapas: o botão de fechar não some mais da tela em celulares pequenos." },
+      { kind: "correcao", text: "Mobile: menu \"Mover para etapa\" não fica mais parcialmente escondido atrás do menu inferior." },
+      { kind: "correcao", text: "Mobile: vários ajustes de texto cortado ou sobreposto — cards de Treinamentos e Bem-estar, etiquetas de etapa nas tabelas, campos de data em \"Nova campanha\" e formulários de Comunicação." },
+      { kind: "correcao", text: "Compras (celular): as etapas do quadro agora mostram a setinha de abrir/fechar, como os outros quadros." },
+      { kind: "correcao", text: "Textos corrigidos: \"sugestãoões\"/\"avaliaçãoões\" viraram \"sugestões\"/\"avaliações\", e etiquetas internas (ex.: \"industria\", \"negociacao\") agora aparecem com o nome certo." },
+    ],
+  },
+  {
     version: "4.10.2",
     items: [
       { kind: "correcao", text: "Mobile: ícone do app não fica mais cortado com fundo preto ao abrir — agora tem fundo branco." },

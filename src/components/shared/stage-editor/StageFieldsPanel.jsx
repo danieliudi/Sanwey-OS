@@ -584,7 +584,10 @@ export function StageFieldsPanel({
               </span>
               {headerBadge}
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            {/* ml-auto: com o X fora deste cluster (fix do X fora da tela em
+                360px), o justify-between do header passaria a centralizar este
+                bloco — o ml-auto devolve o alinhamento à direita do desktop. */}
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0 ml-auto">
               <button
                 onClick={() => setConditionsOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg cursor-pointer"
@@ -607,16 +610,17 @@ export function StageFieldsPanel({
                   Opções Avançadas
                 </button>
               )}
-              <button
-                onClick={onClose}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, lineHeight: 0 }}
-                onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
-                onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
-                aria-label="Fechar"
-              >
-                <X size={18} />
-              </button>
             </div>
+            <button
+              onClick={onClose}
+              className="shrink-0"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-dim)", padding: 4, lineHeight: 0 }}
+              onMouseEnter={e => { e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; }}
+              aria-label="Fechar"
+            >
+              <X size={18} />
+            </button>
           </div>
 
           {/* Corpo: sidebar de tipos + canvas */}

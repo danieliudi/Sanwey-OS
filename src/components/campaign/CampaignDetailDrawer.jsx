@@ -515,6 +515,11 @@ function ChecklistPanel({ campaign, onUpdate, readOnly }) {
           </div>
         ))}
       </div>
+      {items.length === 0 && !readOnly && (
+        <div className="text-xs text-center py-2 italic" style={{ color: "var(--text-dim)" }}>
+          Nenhum checklist criado ainda.
+        </div>
+      )}
       {!readOnly && (
         <div className="flex gap-2">
           <input

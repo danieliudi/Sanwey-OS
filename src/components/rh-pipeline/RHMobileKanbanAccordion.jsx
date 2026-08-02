@@ -31,7 +31,7 @@ export function RHMobileKanbanAccordion({
         return (
           <div key={stage.stageKey} className="rounded-xl overflow-hidden border" style={{ borderColor: stage.color + "28" }}>
             <button
-              className="w-full flex items-center justify-between px-4 py-3.5 cursor-pointer"
+              className="w-full flex items-center justify-between gap-2 px-4 py-3.5 cursor-pointer"
               style={{ background: stage.color + "12", border: "none" }}
               onClick={() => toggle(stage.stageKey)}
             >

@@ -23,7 +23,7 @@ import { forecastPrompt, funnelDiagnosisPrompt } from "../../constants/ai-prompt
 import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { StatCard } from "../ui/StatCard";
 import { EmptyState } from "../ui/EmptyState";
-import { formatK, formatM } from "../../utils/currency";
+import { formatK } from "../../utils/currency";
 import { isStale, weightedValue } from "../../utils/pipeline-metrics";
 import { ExecutiveCharts } from "./ExecutiveCharts";
 import { AnalyticsTab } from "./AnalyticsTab";
@@ -296,7 +296,7 @@ export function ExecutiveDashboard({
   const healthCards = [
     showComercialArea && {
       id: "comercial", label: "Comercial", color: "var(--text)",
-      value: formatM(totals.pipeline), sub: `${totals.stale} parado${totals.stale !== 1 ? "s" : ""}`,
+      value: formatK(totals.pipeline), sub: `${totals.stale} parado${totals.stale !== 1 ? "s" : ""}`,
     },
     showMarketingArea && {
       id: "marketing", label: "Marketing", color: "#7C3AED",
@@ -304,7 +304,7 @@ export function ExecutiveDashboard({
     },
     showRHArea && {
       id: "rh", label: "RH", color: "#0EA5E9",
-      value: vagasPublicadas, sub: `${avaliacoesPendentes} avaliação${avaliacoesPendentes !== 1 ? "ões" : ""} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
+      value: vagasPublicadas, sub: `${avaliacoesPendentes} avaliaç${avaliacoesPendentes !== 1 ? "ões" : "ão"} pendente${avaliacoesPendentes !== 1 ? "s" : ""}`,
     },
     showComexArea && {
       id: "comex", label: "Comex", color: "#0D9488",
@@ -444,8 +444,8 @@ export function ExecutiveDashboard({
                   Comercial
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <StatCard icon={HandCoins}    value={formatM(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
-                  <StatCard icon={TrendingUp}   value={formatM(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
+                  <StatCard icon={HandCoins}    value={formatK(totals.pipeline)} label="Funil de Vendas aberto"     sublabel="Em aberto" accent={"var(--text)"} />
+                  <StatCard icon={TrendingUp}   value={formatK(totals.forecast)} label="Forecast"            sublabel="Ponderado por etapa" />
                   <StatCard icon={CheckCircle2} value={formatK(totals.wonValue)} label="Receita realizada"   sublabel={`${totals.wonCount} ganhos`} />
                   <StatCard icon={Target}       value={`${totals.conversion}%`}  label="Conversão"           sublabel="Leads → ganhos" />
                   <StatCard icon={AlertCircle}  value={totals.stale}             label="Leads parados"       sublabel="SLA estourado" />

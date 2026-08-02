@@ -36,6 +36,7 @@ import {
 import { RHJornadaEditor, formatScheduleBlocks } from "../rh-pipeline/RHJornadaEditor";
 import { RHBenefitsPicker } from "../rh-pipeline/RHBenefitsPicker";
 import { RH_FRENTES, RH_FRENTE_LABELS, RH_FRENTE_COLORS } from "../../constants/rh-frentes";
+import { COMPANIES } from "../../constants/companies";
 import { formatBRL } from "../../utils/currency";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
@@ -870,7 +871,7 @@ function VagaCard({ vaga, candidatosCount, usersById }) {
         <div className="flex gap-1 flex-wrap" style={{ marginBottom: 6 }}>
           {vaga.company_ids.map((id) => (
             <span key={id} style={{ fontSize: 9, fontWeight: 700, color: RH_FRENTE_COLORS[id] || "var(--text-dim)", background: `${RH_FRENTE_COLORS[id] || "#888"}18`, borderRadius: 99, padding: "1px 7px" }}>
-              {RH_FRENTE_LABELS[id] || id}
+              {RH_FRENTE_LABELS[id] || COMPANIES[id]?.short || id}
             </span>
           ))}
         </div>
@@ -1034,7 +1035,7 @@ function VagaDrawer({
         </span>
         {(vaga.company_ids || []).map((id) => (
           <span key={id} style={{ fontSize: 11, fontWeight: 600, color: RH_FRENTE_COLORS[id] || "var(--text-dim)", background: `${RH_FRENTE_COLORS[id] || "#888"}18`, borderRadius: 99, padding: "2px 10px" }}>
-            {RH_FRENTE_LABELS[id] || id}
+            {RH_FRENTE_LABELS[id] || COMPANIES[id]?.short || id}
           </span>
         ))}
       </div>
@@ -1436,7 +1437,7 @@ function VagaTableView({ vagas, stages, candidatosByVaga, onRowClick }) {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -2527,7 +2528,7 @@ function CandidatoTableView({ candidatos, vagas, stages, onRowClick, selectable,
                 </td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{vagaTitle}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>

@@ -593,7 +593,7 @@ function ComexTableView({ operations, stages, columns, onRowClick }) {
                   </td>
                 ))}
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: st.color + "18", color: st.color, border: `1px solid ${st.color}40` }}>
                     {st.name}
                   </span>
                 </td>
@@ -1429,9 +1429,9 @@ export function ComexView({ currentUser, users = [], canWrite, notifyMentions })
   );
 
   return subView === "importacao" ? (
-    <ComexBoard config={IMPORT_CONFIG} currentUser={currentUser} users={users} canWrite={canWrite} notifyMentions={notifyMentions} headerExtra={subViewToggle} />
+    <ComexBoard key="comex-importacao" config={IMPORT_CONFIG} currentUser={currentUser} users={users} canWrite={canWrite} notifyMentions={notifyMentions} headerExtra={subViewToggle} />
   ) : (
-    <ComexBoard config={EXPORT_CONFIG} currentUser={currentUser} users={users} canWrite={canWrite} notifyMentions={notifyMentions} headerExtra={subViewToggle} />
+    <ComexBoard key="comex-exportacao" config={EXPORT_CONFIG} currentUser={currentUser} users={users} canWrite={canWrite} notifyMentions={notifyMentions} headerExtra={subViewToggle} />
   );
 }
 

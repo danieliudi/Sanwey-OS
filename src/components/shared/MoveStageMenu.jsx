@@ -90,7 +90,10 @@ export function MoveStageMenu({
     if (!menuOpen || !wrapRef.current || !dropdownRef.current) return;
     const btnRect = wrapRef.current.getBoundingClientRect();
     const menuRect = dropdownRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - btnRect.bottom;
+    // Abaixo de lg (1024px) o MobileBottomNav cobre os ~64px finais do viewport;
+    // sem reservar esse espaço o menu abre por cima da nav.
+    const navReserve = window.innerWidth < 1024 ? 72 : 0;
+    const spaceBelow = window.innerHeight - navReserve - btnRect.bottom;
     const openUpward = spaceBelow < menuRect.height + 12;
     const left = Math.max(8, Math.min(btnRect.right - menuRect.width, window.innerWidth - menuRect.width - 8));
     setPos(openUpward

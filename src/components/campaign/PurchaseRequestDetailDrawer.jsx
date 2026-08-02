@@ -236,7 +236,9 @@ export function PurchaseRequestDetailDrawer({
       return undefined;
     }
     getLastPurchasePrice(supplierId, purchase.itemName)
-      .then(res => { if (alive) { setLastPrice(res); setLastPriceError(null); } })
+      // Compra "paga" sem valor registrado não tem o que comparar — tratar
+      // como sem histórico evita "R$ 0 em — (protocolo )" no painel.
+      .then(res => { if (alive) { setLastPrice(res && res.total_value != null ? res : null); setLastPriceError(null); } })
       .catch(err => { if (alive) { setLastPrice(null); setLastPriceError(err.message || String(err)); } });
     return () => { alive = false; };
   }, [supplierId, purchase.itemName, getLastPurchasePrice]);

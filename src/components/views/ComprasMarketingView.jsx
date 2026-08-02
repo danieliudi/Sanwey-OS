@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ShoppingCart, Plus, LayoutGrid, List, CalendarDays as CalendarIcon, TrendingUp,
-  ChevronLeft, ChevronRight, X, XCircle, MessageCircle,
+  ChevronLeft, ChevronRight, ChevronDown, X, XCircle, MessageCircle,
 } from "lucide-react";
 import { useMarketingPurchaseRequests, PURCHASE_STAGES, PURCHASE_REJECTED_STAGE } from "../../hooks/use-marketing-purchase-requests";
 import { useMarketingSuppliers } from "../../hooks/use-marketing-suppliers";
@@ -375,6 +375,9 @@ function MobileKanban({ purchasesByStage, suppliersById, usersById, users, onCar
                     accentColor={color}
                   />
                 </div>
+                <div style={{ width: 26, height: 26, borderRadius: "50%", border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", color, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+                  <ChevronDown size={13} />
+                </div>
               </div>
             </button>
             {isOpen && (
@@ -428,7 +431,7 @@ function TableView({ purchases, suppliersById, usersById, users, onRowClick }) {
                 <td className="px-4 py-3 text-sm font-semibold text-right" style={{ color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{p.totalValue != null ? formatBRL(p.totalValue) : "—"}</td>
                 <td className="px-4 py-3 text-xs" style={{ color: "var(--text-dim)" }}>{formatDateBR(p.dueDate)}</td>
                 <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: color + "18", color, border: `1px solid ${color}40` }}>
                     {stageInfo?.name || p.stage}
                   </span>
                 </td>
@@ -777,7 +780,7 @@ export function ComprasMarketingView({ user, users = [], notifyMentions }) {
             className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer" style={{ background: "none", border: "none" }}>
             <span className="flex items-center gap-2 text-xs font-semibold" style={{ color: "var(--danger)" }}>
               <XCircle size={13} />
-              {rejectedPurchases.length} solicitação{rejectedPurchases.length !== 1 ? "ões" : ""} rejeitada{rejectedPurchases.length !== 1 ? "s" : ""}
+              {rejectedPurchases.length} solicitaç{rejectedPurchases.length !== 1 ? "ões" : "ão"} rejeitada{rejectedPurchases.length !== 1 ? "s" : ""}
             </span>
             <span className="text-xs font-semibold" style={{ color: "var(--danger)" }}>{showRejected ? "Ocultar" : "Ver"}</span>
           </button>

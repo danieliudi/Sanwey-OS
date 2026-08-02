@@ -6,6 +6,7 @@ import {
   Shield, GitMerge, Settings, Info, ExternalLink,
 } from "lucide-react";
 import { NEUTRAL } from "../../constants/companies";
+import { DEFAULT_PIPELINE_STAGES } from "../../constants/pipelines";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { AgentConfigModal } from "../agents/AgentConfigModal";
@@ -30,6 +31,8 @@ const PRIORITY = {
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+const STAGE_NAMES = Object.fromEntries(DEFAULT_PIPELINE_STAGES.map(s => [s.id, s.name]));
 
 // ── Action card ────────────────────────────────────────────────────────────
 function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onOpenCandidato }) {
@@ -62,7 +65,7 @@ function ActionCard({ action, agent, onResolve, resolving, onOpenFornecedor, onO
             {action.leads?.stage && (
               <span className="text-[10px] px-1.5 py-0.5 rounded-full"
                 style={{ background: "var(--surface-alt)", color: "var(--text-dim)" }}>
-                {action.leads.stage}
+                {STAGE_NAMES[action.leads.stage] || action.leads.stage}
               </span>
             )}
             {payload.days_stale && (
@@ -607,7 +610,7 @@ export function AgentActionsView({ currentUser, activeCompany, automations, filt
             {loading
               ? "Carregando sugestões…"
               : totalPending > 0
-              ? `${totalPending} sugestão${totalPending !== 1 ? "ões" : ""} pendente${totalPending !== 1 ? "s" : ""} aguardando decisão`
+              ? `${totalPending} sugest${totalPending !== 1 ? "ões" : "ão"} pendente${totalPending !== 1 ? "s" : ""} aguardando decisão`
               : "Nenhuma sugestão pendente — pipeline em dia"}
           </p>
         </div>

@@ -204,7 +204,7 @@ export function RHBemEstarView({ currentUser, canWrite }) {
             const isOpen = expanded.has(s.id);
             return (
               <div key={s.id} style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--surface)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--surface-alt)" }}>
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, padding: "12px 16px", background: "var(--surface-alt)" }}>
                   <button onClick={() => toggle(s.id)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>{s.titulo}</div>
                     <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>
@@ -218,7 +218,7 @@ export function RHBemEstarView({ currentUser, canWrite }) {
                       <AlertTriangle size={11} /> Sem horário
                     </span>
                   )}
-                  <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "var(--success-bg)" : "var(--surface)", borderRadius: 99, padding: "2px 10px" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: aberta ? "var(--success)" : "var(--text-dim)", background: aberta ? "var(--success-bg)" : "var(--surface)", borderRadius: 99, padding: "2px 10px", flexShrink: 0 }}>
                     {aberta ? "Aberta" : "Encerrada"}
                   </span>
                   {canWrite && (

@@ -13,6 +13,8 @@ export function ViewToggleButton({ active, onClick, icon: Icon, label, iconOnlyM
       onClick={onClick}
       role="tab"
       aria-selected={active}
+      title={label}
+      aria-label={label}
       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
       style={{
         background: active ? "var(--accent)" : "var(--surface)",
