@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.16.0",
+    items: [
+      { kind: "ajuste", text: "Tela de login redesenhada: agora é um único card centralizado, com um traço sutil e animado no fundo em vez do painel dividido de antes." },
+    ],
+  },
+  {
     version: "4.15.0",
     items: [
       { kind: "correcao", text: "Despesas: o campo \"Campanha relacionada\" voltou a mostrar as campanhas cadastradas — ficava vazio porque a lista não recarregava depois do login." },

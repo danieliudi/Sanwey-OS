@@ -206,6 +206,18 @@ body {
   @page { size: A4 landscape; margin: 1cm; }
 }
 
+/* Login: fio de fundo com movimento (ver LoginScreen.jsx) — traço único
+   animado via stroke-dashoffset, mesma técnica do mockup aprovado. */
+@keyframes login-fio-dash {
+  to { stroke-dashoffset: -1000; }
+}
+.login-fio-path {
+  animation: login-fio-dash 26s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-fio-path { animation: none; }
+}
+
 /* Impressão de documento avulso (ex.: proposta comercial) — imprime só o
    elemento .doc-print-only, mesmo estando dentro de um drawer/modal com
    várias outras seções ao redor. A orientação de página (retrato, diferente
