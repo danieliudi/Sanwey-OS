@@ -464,9 +464,13 @@ const ROLE_LABEL = {
   gerente_rh:        "Gerente de RH",
 };
 
+// "Vermelho" (vermelho da marca, Manual v4.0) é o preset 0 — vira o default
+// de fato desde que virou o token --accent padrão em index.css (03/08/2026).
+// "Carvão" continua disponível pra quem preferir neutro, só deixou de ser o
+// primeiro da lista.
 const ACCENT_PRESETS = [
+  { label: "Vermelho",  value: "#CC2936", hover: "#8B0000" },
   { label: "Carvão",    value: "#37352F", hover: "#2A2925" },
-  { label: "Vermelho",  value: "#C7212B", hover: "#8B1419" },
   { label: "Verde",     value: "#16A34A", hover: "#15803D" },
   { label: "Azul",      value: "#1D4ED8", hover: "#1E3A8A" },
   { label: "Roxo",      value: "#7C3AED", hover: "#6D28D9" },
@@ -474,14 +478,14 @@ const ACCENT_PRESETS = [
   { label: "Rosa",      value: "#DB2777", hover: "#BE185D" },
 ];
 
+// Antes só aplicava no claro (`if (!isDark)`) — mesmo bug do TopBar.jsx: um
+// acento customizado sumia ao entrar no escuro, revertendo pro default do
+// CSS. Aplicar sempre faz a escolha persistir nos dois temas.
 function applyAccentGlobal(accent, hover) {
-  const isDark = document.documentElement.dataset.theme === "dark";
   localStorage.setItem("sanwey-accent", accent);
   localStorage.setItem("sanwey-accent-hover", hover);
-  if (!isDark) {
-    document.documentElement.style.setProperty("--accent", accent);
-    document.documentElement.style.setProperty("--accent-hover", hover);
-  }
+  document.documentElement.style.setProperty("--accent", accent);
+  document.documentElement.style.setProperty("--accent-hover", hover);
 }
 
 // Personal tabs available to every authenticated user.
@@ -549,10 +553,10 @@ export function SettingsView({
 
   // ── Appearance / theme colors ────────────────────────────────────────
   const [accentColor, setAccentColor] = useState(
-    () => localStorage.getItem("sanwey-accent") || "#37352F"
+    () => localStorage.getItem("sanwey-accent") || "#CC2936"
   );
   const [hoverColor, setHoverColor] = useState(
-    () => localStorage.getItem("sanwey-accent-hover") || "#2A2925"
+    () => localStorage.getItem("sanwey-accent-hover") || "#8B0000"
   );
 
   const handleAccentPreset = (preset) => {

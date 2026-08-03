@@ -8,18 +8,20 @@ import { NotificationCenter } from "./NotificationCenter";
 const isMacPlatform = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent || navigator.platform || "");
 const SEARCH_SHORTCUT_LABEL = isMacPlatform ? "⌘K" : "Ctrl K";
 
-function applyCustomAccent(isDark) {
-  if (isDark) {
-    document.documentElement.style.removeProperty("--accent");
-    document.documentElement.style.removeProperty("--accent-hover");
-  } else {
-    const accent = localStorage.getItem("sanwey-accent");
-    const hover  = localStorage.getItem("sanwey-accent-hover");
-    if (accent) document.documentElement.style.setProperty("--accent", accent);
-    else        document.documentElement.style.removeProperty("--accent");
-    if (hover)  document.documentElement.style.setProperty("--accent-hover", hover);
-    else        document.documentElement.style.removeProperty("--accent-hover");
-  }
+// Antes removia --accent/--accent-hover ao entrar no escuro, revertendo pro
+// neutro do tema — sem isso, um acento pessoal customizado (Configurações >
+// Aparência) sumia à noite. O CSS de [data-theme="dark"] já traz o par
+// correto por tema (index.css), então aplicar o mesmo valor customizado nos
+// dois temas é a correção: quem nunca customizou nada continua herdando o
+// default do CSS (vermelho da marca, também no escuro); quem customizou
+// mantém a própria escolha ao alternar o tema.
+function applyCustomAccent() {
+  const accent = localStorage.getItem("sanwey-accent");
+  const hover  = localStorage.getItem("sanwey-accent-hover");
+  if (accent) document.documentElement.style.setProperty("--accent", accent);
+  else        document.documentElement.style.removeProperty("--accent");
+  if (hover)  document.documentElement.style.setProperty("--accent-hover", hover);
+  else        document.documentElement.style.removeProperty("--accent-hover");
 }
 
 function useTheme() {
@@ -33,7 +35,7 @@ function useTheme() {
       const next = !prev;
       document.documentElement.dataset.theme = next ? "dark" : "light";
       localStorage.setItem("ds-theme", next ? "dark" : "light");
-      applyCustomAccent(next);
+      applyCustomAccent();
       return next;
     });
   };
@@ -42,7 +44,7 @@ function useTheme() {
     const saved = localStorage.getItem("ds-theme");
     const isDark = saved === "dark";
     if (isDark) document.documentElement.dataset.theme = "dark";
-    applyCustomAccent(isDark);
+    applyCustomAccent();
   }, []);
 
   return { dark, toggle };

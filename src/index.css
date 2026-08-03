@@ -18,9 +18,12 @@
   --text-dim:      #57534E;
   --text-faint:    #706C65;
 
-  /* Action — único token white-label */
-  --accent:        #37352F;
-  --accent-hover:  #2A2925;
+  /* Action — único token white-label. Vermelho da marca (Manual v4.0) como
+     acento padrão da plataforma inteira — decidido com o Daniel 03/08/2026,
+     mockup e UI Kit aprovados na sessão. Continua white-label: quem
+     customizar em Configurações > Aparência sobrescreve. */
+  --accent:        #CC2936;
+  --accent-hover:  #8B0000;
   --on-accent:     #FFFFFF;
 
   /* Semantic status */
@@ -50,7 +53,7 @@
 
   /* Product tokens — identidade de empresa (não white-label) */
   --color-resibag:   #16A34A;
-  --color-industria: #C7212B;
+  --color-industria: #CC2936;
 
   /* Semantic extras */
   --amber:         #E8920A;
@@ -104,9 +107,13 @@
   --text:          #EBEBDF;
   --text-dim:      #B5B3A8;
   --text-faint:    #8C8882;
-  --accent:        #EBEBDF;
-  --accent-hover:  #FFFFFF;
-  --on-accent:     #1A1A18;
+  /* Vermelho intermediário — não o #CC2936 puro do claro (lido contra o
+     quase-preto #1A1A18, ficou apagado) nem clareado até salmão (1ª tentativa,
+     rejeitada). #D34752 é o meio-termo aprovado 03/08/2026. */
+  --accent:        #D34752;
+  --accent-hover:  #DA636C;
+  --on-accent:     #FFFFFF;
+  --color-industria: #D34752;
 
   /* Semantic colors — brighter for dark backgrounds */
   --success:       #4ADE80;

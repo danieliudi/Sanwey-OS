@@ -26,11 +26,11 @@ export const COMPANIES = {
     id: "industria",
     name: "Sanwey",
     short: "Sanwey",
-    primary: "#C7212B",
-    dark: "#8B1419",
+    primary: "#CC2936",
+    dark: "#8B0000",
     light: "#FBE9EB",
     active: "#D42830",
-    accent: "#C7212B",
+    accent: "#CC2936",
     description: "Fabricação de Sanbags e contentores flexíveis — atende carteira B2B complexa",
     focus: "Fabricação e parceria técnica",
   },
@@ -42,8 +42,8 @@ export const NEUTRAL = {
   warmWhite: "#FFFFFF",  // --surface
   lightGray: "#F7F6F3",  // --surface-alt
   sombra:    "#E9E8E5",  // --border
-  red:       "#C7212B",  // --color-industria (Indústria brand red)
-  redDark:   "#8B1419",  // red hover
+  red:       "#CC2936",  // --color-industria (Indústria brand red)
+  redDark:   "#8B0000",  // red hover
   redTint:   "#FBE9EB",  // red tint
   amber:     "#E8920A",
   amberBg:   "#FEF3C7",

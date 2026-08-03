@@ -343,7 +343,7 @@ export const AI_PROMPTS = [
   {
     category: "Estratégia comercial",
     icon: "🎯",
-    color: "#C7212B",
+    color: "#CC2936",
     bgColor: "#FBE9EB",
     prompts: [
       "Como responder à objeção 'não temos orçamento agora' sem perder o lead?",
