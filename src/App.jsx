@@ -1286,7 +1286,7 @@ export default function App() {
           { id: "clients",      label: "Clientes",   icon: Users },
           ...(isManager ? [{ id: "crossref", label: "Cross-sell", icon: Shuffle }] : []),
           { id: "explorer",     label: "Explorador", icon: Globe2 },
-          { id: "crm-viagens",  label: "Viagens & Reembolsos", icon: Plane },
+          { id: "crm-viagens",  label: "Viagens & Despesas", icon: Plane },
           ...(isComex || isDiretoria ? [{ id: "comex", label: "Comex", icon: Ship }] : []),
         ],
       });

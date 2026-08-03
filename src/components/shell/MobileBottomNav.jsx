@@ -249,7 +249,7 @@ export function MobileBottomNav({ section, onSectionChange, roles, navGroups, cu
             <button
               key={id}
               onClick={() => onSectionChange(id)}
-              className="flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-colors duration-200"
+              className="flex flex-col items-center justify-center flex-1 min-w-0 h-full gap-0.5 transition-colors duration-200"
               style={{
                 background: active ? "var(--surface-alt)" : "transparent",
                 border: "none",
@@ -274,7 +274,7 @@ export function MobileBottomNav({ section, onSectionChange, roles, navGroups, cu
         {/* Menu button */}
         <button
           onClick={() => setMenuOpen(true)}
-          className="flex flex-col items-center justify-center flex-1 h-full gap-0.5"
+          className="flex flex-col items-center justify-center flex-1 min-w-0 h-full gap-0.5"
           style={{
             background: "transparent", border: "none",
             color: "var(--text-dim)", cursor: "pointer",
