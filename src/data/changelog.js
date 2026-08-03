@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.13.2",
+    items: [
+      { kind: "ajuste", text: "Chat: os 4 filtros da lista de conversas (Todas/Não lidas/Canais/Diretas) viraram um único seletor — acabou o scroll horizontal feio na barra lateral." },
+    ],
+  },
+  {
     version: "4.13.1",
     items: [
       { kind: "ajuste", text: "\"Viagens & Reembolsos\" agora se chama \"Viagens & Despesas\" em toda a plataforma." },
