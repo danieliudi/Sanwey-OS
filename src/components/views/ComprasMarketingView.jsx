@@ -280,7 +280,7 @@ function KanbanBoard({ purchasesByStage, suppliersById, usersById, users, onCard
     <div className="hidden lg:block relative">
       <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
         <div className="flex gap-2 h-full" style={{ minWidth: `${PURCHASE_STAGES.length * 280}px` }}>
-          {PURCHASE_STAGES.map(stage => {
+          {PURCHASE_STAGES.map((stage, idx) => {
             const color = STAGE_COLORS[stage.id] || "var(--text-dim)";
             const items = purchasesByStage[stage.id] || [];
             const isOver = dragOverStage === stage.id;
@@ -295,7 +295,7 @@ function KanbanBoard({ purchasesByStage, suppliersById, usersById, users, onCard
                   minWidth: 272,
                   height: "100%",
                   overflow: "hidden",
-                  border: "1px solid var(--border)",
+                  borderRight: idx < PURCHASE_STAGES.length - 1 ? "1px solid var(--border)" : "none",
                   background: isOver ? color + "14" : "var(--surface-alt)",
                   boxShadow: isOver ? `0 0 0 2px ${color}30` : "none",
                 }}>

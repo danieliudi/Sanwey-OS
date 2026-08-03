@@ -24,6 +24,15 @@
 
 export const CHANGELOG = [
   {
+    version: "4.17.0",
+    items: [
+      { kind: "ajuste", text: "Ajustes visuais em toda a plataforma: cards com sombra só ao passar o mouse (mais planos em repouso), badges/etiquetas viraram pílula e botões ficaram um pouco mais altos e arredondados." },
+      { kind: "ajuste", text: "Painel comercial: a faixa de indicadores no topo (leads, funil, valor ganho, fit score) ganhou um visual mais limpo, sem caixinha de ícone." },
+      { kind: "ajuste", text: "Kanban: a linha entre as colunas ficou mais discreta em todos os boards." },
+      { kind: "novo", text: "Funcionários: nova opção para alternar a tabela entre densidade Confortável e Compacta.", roles: ["rh", "gerente_rh"] },
+    ],
+  },
+  {
     version: "4.16.0",
     items: [
       { kind: "ajuste", text: "Tela de login redesenhada: agora é um único card centralizado, com um traço sutil e animado no fundo em vez do painel dividido de antes." },

@@ -826,7 +826,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
           className="flex gap-2 h-full"
           style={{ minWidth: `${stages.length * 280}px` }}
         >
-          {stages.map(stage => {
+          {stages.map((stage, idx) => {
             const bucket = byStage[stage.id] || { leads: [], total: 0 };
             const isOver    = dragOverStage === stage.id;
             const isBlocked = blockedDrop === stage.id;
@@ -847,7 +847,7 @@ export function CRMView({ user, activeCompany, accessibleCompanies, onCompanyCha
                   minWidth: 272,
                   height: "100%",
                   overflow: "hidden",
-                  border: "1px solid var(--border)",
+                  borderRight: idx < stages.length - 1 ? "1px solid var(--border)" : "none",
                   background: isBlocked ? "var(--danger-bg)" : isOver && canAccept ? stage.color + "14" : "var(--surface-alt)",
                   boxShadow: isBlocked ? "0 0 0 2px color-mix(in srgb, var(--danger) 20%, transparent)" : isOver && canAccept ? `0 0 0 2px ${stage.color}40` : isOver && !canAccept ? "0 0 0 2px color-mix(in srgb, var(--danger) 35%, transparent)" : "none",
                 }}

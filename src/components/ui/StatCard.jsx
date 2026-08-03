@@ -1,7 +1,59 @@
 import React from "react";
 import { HelpTooltip } from "./HelpTooltip";
 
-export function StatCard({ icon: Icon, value, label, sublabel, accent, compact = false, trend, tooltip, valueColor }) {
+// variant="ruler" — tratamento "eyebrow + número grande" do mockup Focus
+// Flutter UI Kit (aprovado 03/08), reservado ao topo do Painel
+// (DashboardView.jsx) — o card com ícone continua o padrão em todo o
+// resto da plataforma (regra 4 do CLAUDE.md: StatCard não é reescrito
+// globalmente por causa de uma tela só).
+export function StatCard({ icon: Icon, value, label, sublabel, accent, compact = false, trend, tooltip, valueColor, variant = "card" }) {
+  if (variant === "ruler") {
+    return (
+      <div className="cursor-default">
+        <span
+          className="block rounded-full"
+          style={{ height: 3, width: 34, marginBottom: 10, background: accent || "var(--accent)" }}
+        />
+        <div
+          className="flex items-center gap-1.5 font-bold uppercase"
+          style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "var(--text-faint)" }}
+        >
+          {label}
+          <HelpTooltip text={tooltip} />
+          {trend !== undefined && (
+            <span
+              className="font-semibold px-1.5 py-0.5 rounded-full normal-case"
+              style={{
+                fontSize: 10.5, letterSpacing: "normal",
+                background: trend > 0 ? "var(--success-bg)" : trend < 0 ? "var(--danger-bg)" : "var(--surface-alt)",
+                color: trend > 0 ? "var(--success)" : trend < 0 ? "var(--danger)" : "var(--text-faint)",
+              }}
+            >
+              {trend > 0 ? "↑" : trend < 0 ? "↓" : "·"} {Math.abs(trend)}%
+            </span>
+          )}
+        </div>
+        <div
+          className="mnum leading-none"
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            fontWeight: 800,
+            fontSize: compact ? 26 : 34,
+            marginTop: 6,
+            letterSpacing: "-0.01em",
+            color: valueColor || "var(--text)",
+          }}
+        >
+          {value}
+        </div>
+        {sublabel && (
+          <div className="mt-0.5" style={{ fontSize: 11.5, color: "var(--text-faint)" }}>
+            {sublabel}
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div
       className="p-5 rounded-lg border transition-all duration-150 hover:shadow-md cursor-default"

@@ -1026,7 +1026,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
         <div className="hidden lg:block">
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-2 h-full" style={{ minWidth: `${stages.length * 280}px` }}>
-              {stages.map(stage => {
+              {stages.map((stage, idx) => {
                 const bucket = byStage[stage.stageKey] || { cases: [], total: 0 };
                 const isOver = dragOverStage === stage.stageKey;
                 return (
@@ -1038,7 +1038,7 @@ export function PosVendaView({ user, activeCompany, accessibleCompanies, onCompa
                     className="flex flex-col rounded-lg transition-all duration-150"
                     style={{
                       width: 272, minWidth: 272, height: "100%", overflow: "hidden",
-                      border: "1px solid var(--border)",
+                      borderRight: idx < stages.length - 1 ? "1px solid var(--border)" : "none",
                       background: isOver ? stage.color + "14" : "var(--surface-alt)",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none",
                     }}
