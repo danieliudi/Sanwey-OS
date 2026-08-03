@@ -284,7 +284,7 @@ export default function App() {
     syncMessage: offlineSyncMessage,
     dismissSyncMessage: dismissOfflineSyncMessage,
     retry: retryOfflineActivity,
-  } = useOfflineSync({ leads, updateLead: updateLeadRemote });
+  } = useOfflineSync({ leads, updateLead: updateLeadRemote, userId: currentUser?.id });
 
   const offlineStatusByActivityId = useMemo(() => {
     const map = {};

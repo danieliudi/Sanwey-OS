@@ -26,12 +26,11 @@ function rowToUser(r) {
     // escopar o que essa agência específica enxerga (ver migration
     // 20260718_marketing_agencia_supplier_scoping.sql). null = sem trava.
     supplierId: r.supplier_id || null,
-    // ai_config (chave de API de IA em texto plano) NUNCA deve ser mapeada
-    // aqui — este hook busca o roster inteiro (visível a colegas de
-    // departamento/gerentes via profiles_select), e nenhum lugar do app lê
-    // .aiConfig de outra entrada que não seja o próprio currentUser (que
-    // vem de um fetch separado, escopado só à própria linha, em
-    // use-supabase-auth.js). Achado da auditoria de plataforma.
+    // ai_config/calendar_token não vêm mais nesta linha — moraram em
+    // `profile_secrets` (RLS own-only), fora do alcance do roster. Antes
+    // dependia de um mapeamento manual pra não vazar (achado de segurança,
+    // ver migration 20260819_sec_profile_secrets_split.sql) — agora é
+    // estruturalmente impossível, a coluna nem existe mais em `profiles`.
     // Opt-out de notificação de @menção (FASE 4) — precisa viver no banco
     // (não em localStorage como o resto das preferências de notificação),
     // porque quem decide se cria a notificação é a RPC
@@ -120,7 +119,6 @@ export function useProfiles({ enabled = true } = {}) {
     if (patch.supervisorId !== undefined) dbPatch.supervisor_id = patch.supervisorId || null;
     if (patch.supplierId !== undefined) dbPatch.supplier_id = patch.supplierId || null;
     if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
-    if (patch.aiConfig !== undefined) dbPatch.ai_config = patch.aiConfig;
     // Campos de RH que também vivem em profiles pra quem tem login (ver
     // 20260706_rh_overview_colaboradores_sync.sql) — faltavam aqui, então o
     // "Editar" de Funcionários parecia salvar (estado otimista) mas nunca
@@ -131,9 +129,22 @@ export function useProfiles({ enabled = true } = {}) {
     if (patch.contract_type !== undefined) dbPatch.contract_type = patch.contract_type;
     if (patch.admission_date !== undefined) dbPatch.admission_date = patch.admission_date;
     if (patch.employee_status !== undefined) dbPatch.employee_status = patch.employee_status;
-    if (patch.salary !== undefined) dbPatch.salary = patch.salary;
 
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...patch } : u));
+    // ai_config vive em `profile_secrets` (own-only), não em `profiles` —
+    // ver migration 20260819_sec_profile_secrets_split.sql. RLS dessa
+    // tabela só permite id = auth.uid(), então esse upsert só funciona
+    // quando `id` é o próprio usuário logado (único caso real: Configurações).
+    if (patch.aiConfig !== undefined) {
+      const { error: secErr } = await supabase
+        .from("profile_secrets")
+        .upsert({ id, ai_config: patch.aiConfig, updated_at: new Date().toISOString() });
+      if (secErr) {
+        setError(secErr);
+        throw secErr;
+      }
+    }
+    if (Object.keys(dbPatch).length === 0) return;
     const { error: err } = await supabase.from("profiles").update(dbPatch).eq("id", id);
     if (err) {
       setError(err);
