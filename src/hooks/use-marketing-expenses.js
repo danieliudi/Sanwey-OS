@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 const TABLE = "marketing_expenses";
+const DELIVERABLES_TABLE = "marketing_expense_deliverables";
+const TASKS_TABLE = "marketing_expense_tasks";
 
 function rowToExpense(r) {
   return {
@@ -19,6 +21,12 @@ function rowToExpense(r) {
     createdBy:   r.created_by ?? null,
     createdAt:   r.created_at ?? null,
     updatedAt:   r.updated_at ?? null,
+    deliverableIds: Array.isArray(r.marketing_expense_deliverables)
+      ? r.marketing_expense_deliverables.map(x => x.deliverable_id)
+      : [],
+    taskIds: Array.isArray(r.marketing_expense_tasks)
+      ? r.marketing_expense_tasks.map(x => x.task_id)
+      : [],
   };
 }
 
@@ -59,7 +67,7 @@ export function useMarketingExpenses({ userId, role } = {}) {
     try {
       const { data, error: err } = await supabase
         .from(TABLE)
-        .select("*")
+        .select("*, marketing_expense_deliverables(deliverable_id), marketing_expense_tasks(task_id)")
         .order("created_at", { ascending: false });
       if (err) throw err;
       setExpenses((data || []).map(rowToExpense));
@@ -81,13 +89,43 @@ export function useMarketingExpenses({ userId, role } = {}) {
         if (payload.eventType === "INSERT") {
           setExpenses(prev => prev.some(e => e.id === payload.new.id) ? prev : [rowToExpense(payload.new), ...prev]);
         } else if (payload.eventType === "UPDATE") {
-          setExpenses(prev => prev.map(e => e.id === payload.new.id ? rowToExpense(payload.new) : e));
+          // payload.new nunca traz o embed de marketing_expense_deliverables/
+          // _tasks (Realtime não resolve joins) — preserva os arrays já
+          // carregados no estado local em vez de sobrescrever com [].
+          setExpenses(prev => prev.map(e => e.id === payload.new.id
+            ? { ...rowToExpense(payload.new), deliverableIds: e.deliverableIds, taskIds: e.taskIds }
+            : e));
         } else if (payload.eventType === "DELETE") {
           setExpenses(prev => prev.filter(e => e.id !== payload.old.id));
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  // Diff-sync de uma tabela de junção (marketing_expense_deliverables/_tasks) —
+  // deleta só o que saiu e insere só o que entrou, nunca apaga-e-recria tudo
+  // (evita um DELETE+INSERT desnecessário disparando Realtime pra quem não
+  // mudou nada).
+  const syncExpenseLinks = useCallback(async (table, idColumn, expenseId, oldIds = [], newIds = []) => {
+    const oldSet = new Set(oldIds);
+    const newSet = new Set(newIds);
+    const toAdd = newIds.filter(v => !oldSet.has(v));
+    const toRemove = oldIds.filter(v => !newSet.has(v));
+    if (toRemove.length > 0) {
+      const { error: err } = await supabase
+        .from(table)
+        .delete()
+        .eq("expense_id", expenseId)
+        .in(idColumn, toRemove);
+      if (err) throw err;
+    }
+    if (toAdd.length > 0) {
+      const { error: err } = await supabase
+        .from(table)
+        .insert(toAdd.map(v => ({ expense_id: expenseId, [idColumn]: v })));
+      if (err) throw err;
+    }
   }, []);
 
   const createExpense = useCallback(async (expense) => {
@@ -99,7 +137,23 @@ export function useMarketingExpenses({ userId, role } = {}) {
       .select()
       .single();
     if (err) throw err;
-    return rowToExpense(data);
+    const deliverableIds = expense.deliverableIds ?? [];
+    const taskIds = expense.taskIds ?? [];
+    if (deliverableIds.length > 0) {
+      const { error: dErr } = await supabase
+        .from(DELIVERABLES_TABLE)
+        .insert(deliverableIds.map(deliverable_id => ({ expense_id: data.id, deliverable_id })));
+      if (dErr) throw dErr;
+    }
+    if (taskIds.length > 0) {
+      const { error: tErr } = await supabase
+        .from(TASKS_TABLE)
+        .insert(taskIds.map(task_id => ({ expense_id: data.id, task_id })));
+      if (tErr) throw tErr;
+    }
+    const created = { ...rowToExpense(data), deliverableIds, taskIds };
+    setExpenses(prev => prev.some(e => e.id === created.id) ? prev : [created, ...prev]);
+    return created;
   }, [canWrite, userId]);
 
   const updateExpense = useCallback(async (id, patch) => {
@@ -110,8 +164,14 @@ export function useMarketingExpenses({ userId, role } = {}) {
     const row = expenseToRow(merged);
     const { error: err } = await supabase.from(TABLE).update(row).eq("id", id);
     if (err) throw err;
+    if ("deliverableIds" in patch) {
+      await syncExpenseLinks(DELIVERABLES_TABLE, "deliverable_id", id, current.deliverableIds, patch.deliverableIds ?? []);
+    }
+    if ("taskIds" in patch) {
+      await syncExpenseLinks(TASKS_TABLE, "task_id", id, current.taskIds, patch.taskIds ?? []);
+    }
     setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
-  }, [canWrite, expenses]);
+  }, [canWrite, expenses, syncExpenseLinks]);
 
   const deleteExpense = useCallback(async (id) => {
     if (!isSupabaseConfigured || !canWrite) return;
