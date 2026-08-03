@@ -8,8 +8,9 @@ código, não depois.
 
 Duas categorias de regra abaixo: **reaproveitamento obrigatório** (nunca
 reimplementar algo que já existe) e **processo de revisão** (design → frontend
-→ QA) pra tudo que for genuinamente novo. Reaproveitamento evita retrabalho por
-construção; revisão pega o que não dá pra generalizar.
+→ QA, mais Segurança quando aplicável — ver 3.1) pra tudo que for genuinamente
+novo. Reaproveitamento evita retrabalho por construção; revisão pega o que não
+dá pra generalizar.
 
 ---
 
@@ -136,11 +137,60 @@ porque passaram pelo QA.
    interação, campo sem opções configuradas renderizando vazio, saudação/
    rascunho de IA com variável ausente, guardrail de transição de etapa
    ignorado).
+4. **Segurança** (`security-agent`, condicional — só entra quando a mudança
+   toca schema/migration, RLS, Storage, edge function, ou qualquer rota de
+   escrita/autenticação) — ver 3.1 pro checklist completo.
 
-Se estiver rodando como sessão do Claude Code, os três papéis já existem como
-sub-agentes em `.claude/agents/design-agent.md` / `frontend-agent.md` /
-`qa-agent.md` (local ao ambiente, fora do Git) — use-os via `Agent`/`Task`.
-Se não estiverem disponíveis na sessão, siga a sequência acima manualmente.
+Se estiver rodando como sessão do Claude Code, os quatro papéis já existem
+como sub-agentes em `.claude/agents/design-agent.md` / `frontend-agent.md` /
+`qa-agent.md` / `security-agent.md` (local ao ambiente, fora do Git) — use-os
+via `Agent`/`Task`. Se não estiverem disponíveis na sessão, siga a sequência
+acima manualmente.
+
+### 3.1 QA multi-lente (mudança não-trivial) e o papel de Segurança
+
+Decidido com o Daniel em 03/08/2026, depois de uma entrega real (vínculo
+Despesas↔Entregas/Tarefas) onde a checagem de segurança da RLS nova
+(comparar contra o predicado já em produção na tabela-irmã, rodar
+`get_advisors` depois da migration) foi feita à mão pelo orquestrador em vez
+de ser parte formal do processo — daqui pra frente isso é regra, não
+lembrete pontual.
+
+**QA multi-lente** — pra mudança que não seja um ajuste cosmético isolado
+(mexeu em hook/componente compartilhado, criou tabela nova, mudou RLS, mudou
+fluxo de autenticação/aprovação), rode o QA como 2-3 revisores independentes
+em paralelo, cada um com uma lente diferente, em vez de uma passada única:
+fidelidade à spec (o que o `qa-agent` já faz), correção funcional/
+não-regressão, e uma passada adversarial que assume por padrão que tem
+problema e só aprova se não achar nenhum caso de borda que quebre. Só
+aprove se a maioria concordar. Isso custa mais tempo/tokens que uma passada
+só — reserve pra mudança de risco real, não pra ajuste de 1 linha.
+
+**Segurança (`security-agent`)** — 4º papel, acionado sempre que a mudança
+tocar schema/migration nova, policy RLS nova ou alterada, bucket/path de
+Storage, edge function, ou rota que aceite escrita de usuário
+não-autenticado (formulário público). Roda depois do `frontend-agent`,
+antes de considerar o item pronto. Só revisa (mesma regra do `qa-agent`:
+aprova ou devolve achado específico `arquivo:linha`) — nunca aplica
+migration nem corrige RLS direto; aplicar migration continua exigindo
+confirmação explícita do Daniel (regra 5). Checklist mínimo:
+
+- RLS habilitada em toda tabela nova (`ENABLE ROW LEVEL SECURITY`).
+- Policy nova compara com o predicado já em produção na tabela-irmã mais
+  próxima, não inventa um modelo de permissão do zero — foi assim que a RLS
+  de `marketing_expense_deliverables`/`marketing_expense_tasks` foi
+  validada, espelhando `marketing_expense_items`.
+- Isolamento por empresa/tenant onde o dado é escopado por empresa (classe
+  de bug já encontrada nesta plataforma: `clients` sem isolamento, Storage
+  cross-fornecedor).
+- Nenhum self-escalation — usuário alterando a própria role/aprovação via
+  UPDATE na própria linha (já aconteceu em `profiles`, `rh_ferias`).
+- Edge function valida JWT e autorização de papel/empresa antes de agir
+  (já aconteceu edge function sem essa checagem).
+- Rota pública (formulário sem login) não grava coluna arbitrária nem
+  permite abuso sem limite de taxa.
+- Roda `get_advisors` (Supabase MCP, tipo `security`) depois de qualquer
+  migration aplicada — nenhum achado novo introduzido pela mudança.
 
 ## 4. Extração sob demanda — quando (e quando não) criar algo em `shared/`
 
