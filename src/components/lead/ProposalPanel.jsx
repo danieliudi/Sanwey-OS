@@ -4,9 +4,13 @@ import { useAI } from "../../hooks/use-ai";
 import { proposalPrompt } from "../../constants/ai-prompts";
 import { COMPANIES } from "../../constants/companies";
 
-const RED = "#b5000b";
-const BORDER = "#E5E7EB";
-const BG = "#F1EDE8";
+// Antes hardcoded (#b5000b/#E5E7EB/#F1EDE8) — cor própria, nem o vermelho da
+// marca nem dark-mode aware; painel ficava claro fixo mesmo no escuro. Migrado
+// pros tokens compartilhados (achado na auditoria pós-implementação do
+// acento vermelho, 03/08/2026).
+const RED = "var(--accent)";
+const BORDER = "var(--border)";
+const BG = "var(--surface-alt)";
 
 // Injeta um <style> temporário só com a orientação de página (retrato) —
 // @page não pode ser condicionado por seletor de classe, então isso não dá

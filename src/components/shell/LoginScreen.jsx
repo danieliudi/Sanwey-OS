@@ -31,7 +31,13 @@ function translateAuthError(message) {
   return message;
 }
 
-const ACCENT_RED = "#CC2936";   // usado APENAS no painel esquerdo institucional (fundo escuro)
+// #D34752 (não o #CC2936 puro) — o painel é permanentemente escuro
+// (DARK_BG abaixo), mesmo problema de legibilidade já resolvido pro
+// --accent do tema escuro da plataforma (index.css): vermelho puro lido
+// contra quase-preto ficava apagado. Mesmo valor já aprovado, reaproveitado
+// aqui em vez de decidir um tom novo.
+const ACCENT_RED = "#D34752";   // usado APENAS no painel esquerdo institucional (fundo escuro)
+const ACCENT_RED_TINT = "color-mix(in srgb, " + ACCENT_RED + " 14%, transparent)";
 const DARK_BG    = "#1A1414";   // painel esquerdo
 const ACCENT     = "var(--accent)";     // painel direito — token white-label
 // Antes era um rgba fixo calcado no antigo default neutro do --accent
@@ -181,7 +187,7 @@ function ValuePoint({ icon: Icon, title, desc }) {
     <div className="flex items-start gap-3 py-4">
       <span
         className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-        style={{ background: "rgba(200, 32, 46, 0.12)", color: ACCENT_RED }}
+        style={{ background: ACCENT_RED_TINT, color: ACCENT_RED }}
       >
         <Icon size={17} />
       </span>
