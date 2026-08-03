@@ -8,7 +8,7 @@ import { friendlyError } from "../../utils/friendly-error";
 // login, agora por horário marcado — igual reserva de restaurante — em vez
 // da antiga fila FIFO. A pessoa escolhe um horário livre, informa contato
 // (e-mail e/ou WhatsApp) e recebe confirmação por e-mail.
-const ACCENT = "#C7212B";
+const ACCENT = "#CC2936";
 const UNIDADES = [
   { id: "", label: "Não informar" },
   { id: "sanwey", label: "Sanwey" },
@@ -236,7 +236,7 @@ function Shell({ children }) {
   return (
     <div style={{ minHeight: "100vh", background: "#F9FAFB", padding: "32px 16px", fontFamily: "'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       <div style={{ maxWidth: 480, margin: "0 auto", background: "#FFFFFF", borderRadius: 12, boxShadow: "var(--shadow-pop)", border: "1px solid #E5E7EB", padding: 32, position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "#C7212B" }} />
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "#CC2936" }} />
         {children}
       </div>
       <p style={{ textAlign: "center", color: "#9CA3AF", fontSize: 11, marginTop: 16 }}>© Grupo Sanwey · Bem-estar</p>

@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.14.0",
+    items: [
+      { kind: "novo", text: "A cor de destaque da plataforma (botões, item ativo do menu, ícones em foco) agora é o vermelho oficial da Sanwey em toda tela — inclusive no modo escuro, que antes voltava pro neutro." },
+      { kind: "correcao", text: "Configurações > Aparência: uma cor de destaque personalizada agora se mantém ao alternar entre claro e escuro, em vez de sumir no escuro." },
+    ],
+  },
+  {
     version: "4.13.2",
     items: [
       { kind: "ajuste", text: "Chat: os 4 filtros da lista de conversas (Todas/Não lidas/Canais/Diretas) viraram um único seletor — acabou o scroll horizontal feio na barra lateral." },

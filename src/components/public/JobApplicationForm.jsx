@@ -10,7 +10,7 @@ const ALLOWED_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
-const ACCENT = "#C7212B";
+const ACCENT = "#CC2936";
 const UNIDADES = [
   { id: "", label: "Não tenho preferência" },
   { id: "sanwey", label: "Sanwey" },
@@ -319,7 +319,7 @@ function Field({ label, hint, required, children }) {
   return (
     <div>
       <label htmlFor={labelable ? id : undefined} style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#201a1a", marginBottom: 2 }}>
-        {required && <span style={{ color: "#C7212B", marginRight: 4 }}>*</span>}
+        {required && <span style={{ color: "#CC2936", marginRight: 4 }}>*</span>}
         {label}
       </label>
       {hint && <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8 }}>{hint}</div>}
@@ -347,7 +347,7 @@ function ShellCard({ children }) {
         position: "relative",
         overflow: "hidden",
       }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "#C7212B" }} />
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "#CC2936" }} />
         {children}
       </div>
       <p style={{ textAlign: "center", color: "#9CA3AF", fontSize: 11, marginTop: 16 }}>

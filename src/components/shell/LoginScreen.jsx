@@ -31,10 +31,14 @@ function translateAuthError(message) {
   return message;
 }
 
-const ACCENT_RED = "#C7212B";   // usado APENAS no painel esquerdo institucional (fundo escuro)
+const ACCENT_RED = "#CC2936";   // usado APENAS no painel esquerdo institucional (fundo escuro)
 const DARK_BG    = "#1A1414";   // painel esquerdo
 const ACCENT     = "var(--accent)";     // painel direito — token white-label
-const ACCENT_RING = "rgba(55,53,47,0.10)";
+// Antes era um rgba fixo calcado no antigo default neutro do --accent
+// (#37352F) — ficava dessincronizado assim que o token mudasse (agora é
+// vermelho da marca). color-mix acompanha var(--accent) automaticamente,
+// mesmo padrão de anel de foco já usado em StageFieldInput.jsx.
+const ACCENT_RING = "color-mix(in srgb, var(--accent) 12%, transparent)";
 
 // LoginScreen com layout split institucional, espelhando o mockup novo:
 // - Esquerda escura com watermark grande do logo, headline e valores

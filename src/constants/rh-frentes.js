@@ -13,7 +13,7 @@ export const RH_FRENTE_LABELS = {
 };
 
 export const RH_FRENTE_COLORS = {
-  sanwey: "#C7212B",
+  sanwey: "#CC2936",
   resibag: "#1A6E35",
   montemor: "#6B5B95",
 };
