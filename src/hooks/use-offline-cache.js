@@ -45,22 +45,33 @@ export async function readLeadsSnapshot() {
   return { leads, cachedAt };
 }
 
-export async function enqueueActivity({ id, leadId, activity }) {
+// `userId` carimba o dono do item — sem isso, a fila é global do
+// navegador: usuário B logando no mesmo device depois de A sair sem
+// sincronizar herdava (e sincronizava, com o JWT de B) as notas de A
+// (achado de segurança M5, mistura de conteúdo/autoria entre usuários).
+export async function enqueueActivity({ id, leadId, activity, userId }) {
   const db = await getDB();
   await db.put(QUEUE_STORE, {
     id,
     leadId,
     activity,
+    userId: userId || null,
     status: "pending",
     error: null,
     createdAt: new Date().toISOString(),
   });
 }
 
-export async function listPending() {
+// Filtro estrito por igualdade — sem userId (auth ainda não resolveu) não
+// retorna nada, fail-safe. Itens legados sem `userId` (gravados antes desta
+// migração) nunca batem `=== userId` de ninguém real — ficam órfãos até o
+// próximo clearAll(), nunca sincronizam pra conta errada.
+export async function listPending(userId) {
   const db = await getDB();
   const rows = await db.getAll(QUEUE_STORE);
-  return rows.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  return rows
+    .filter(r => r.userId === userId)
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
 
 export async function updateStatus(id, status, error = null) {

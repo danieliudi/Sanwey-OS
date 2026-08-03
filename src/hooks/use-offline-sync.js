@@ -7,7 +7,7 @@ import { listPending, updateStatus, removeFromQueue } from "./use-offline-cache"
 // UI direto, só efeito colateral + um state pequeno pra quem monta o toast
 // (App.jsx) e pra quem precisa saber o status por item (LeadDetailDrawer,
 // via `pending`/retry).
-export function useOfflineSync({ leads, updateLead }) {
+export function useOfflineSync({ leads, updateLead, userId }) {
   const { isOnline } = useConnectivity();
   const [pending, setPending] = useState([]);
   const [syncMessage, setSyncMessage] = useState(null);
@@ -18,9 +18,15 @@ export function useOfflineSync({ leads, updateLead }) {
   leadsRef.current = leads;
   const updateLeadRef = useRef(updateLead);
   updateLeadRef.current = updateLead;
+  // Achado de segurança (M5): sem escopar por usuário, o sync aplicava
+  // notas enfileiradas pelo usuário anterior na sessão de quem loga
+  // depois no mesmo device — updateLead gravava com o JWT de quem está
+  // logado agora, atribuindo/vazando conteúdo de outra pessoa.
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   const refreshPending = useCallback(async () => {
-    const items = await listPending();
+    const items = await listPending(userIdRef.current);
     setPending(items);
     return items;
   }, []);
@@ -75,11 +81,17 @@ export function useOfflineSync({ leads, updateLead }) {
 
   // No mount: sincroniza já se a fila foi deixada de uma sessão anterior que
   // fechou antes de sincronizar (cobre o caso "abriu o app já online").
+  // Depende de `userId` (não `[]`) porque no primeiro render o auth ainda
+  // não resolveu — listPending/syncQueue ficariam sem dono e não fariam
+  // nada (fail-safe), então esperamos o id real chegar pra rodar uma vez.
+  const didInitialSyncRef = useRef(false);
   useEffect(() => {
+    if (!userId || didInitialSyncRef.current) return;
+    didInitialSyncRef.current = true;
     refreshPending();
     if (isOnline) syncQueue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userId]);
 
   // Transição offline → online.
   useEffect(() => {
@@ -94,7 +106,7 @@ export function useOfflineSync({ leads, updateLead }) {
   }, [syncMessage]);
 
   const retry = useCallback(async (id) => {
-    const items = await listPending();
+    const items = await listPending(userIdRef.current);
     const item = items.find(i => i.id === id);
     if (!item) return;
     const result = await syncItem(item);

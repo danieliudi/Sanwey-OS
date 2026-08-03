@@ -385,13 +385,13 @@ export function useLeads({ userId, role, companies } = {}) {
       // padrão online, documentado aqui pra não ser "corrigido" de volta.
       const activities = [...(lead.activities || []), { ...newActivity, pending: true }];
       setRemoteLeads(prev => prev.map(l => l.id === leadId ? { ...l, activities } : l));
-      await enqueueActivity({ id, leadId, activity: newActivity });
+      await enqueueActivity({ id, leadId, activity: newActivity, userId });
       return;
     }
 
     const activities = [...(lead.activities || []), newActivity];
     await updateLead(leadId, { activities });
-  }, [leads, updateLead, isOnline]);
+  }, [leads, updateLead, isOnline, userId]);
 
   const changeStage = useCallback(async (id, stage) => {
     const lead = leads.find(l => l.id === id);
