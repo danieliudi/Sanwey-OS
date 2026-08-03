@@ -1057,7 +1057,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
         <div className="hidden lg:block">
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-2 h-full" style={{ minWidth: `${kanbanStages.length * 280}px` }}>
-              {kanbanStages.map(stage => {
+              {kanbanStages.map((stage, idx) => {
                 const stageItems = tasksByStage[stage.id] || [];
                 const isOver     = dragOverStage === stage.id;
 
@@ -1067,7 +1067,7 @@ export function MarketingTarefasView({ user, users = [], notifyMentions }) {
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-lg transition-all duration-150"
-                    style={{ width: 272, minWidth: 272, overflow: "hidden", border: "1px solid var(--border)", background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
+                    style={{ width: 272, minWidth: 272, overflow: "hidden", borderRight: idx < kanbanStages.length - 1 ? "1px solid var(--border)" : "none", background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
                     {/* Arrastável pra reordenar etapas — canal de drag
                         separado do card (draggedColumnKey vs draggedItem),
                         stopPropagation nos handlers pra não vazar pro drag

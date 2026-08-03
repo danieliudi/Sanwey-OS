@@ -21,7 +21,7 @@ export function Badge({ children, variant = "default", size = "sm", customColor 
     : "px-2.5 py-1 text-xs";
   return (
     <span
-      className={`inline-flex items-center gap-1 ${cls} font-semibold rounded-sm border whitespace-nowrap`}
+      className={`inline-flex items-center gap-1 ${cls} font-semibold rounded-full border whitespace-nowrap`}
       style={{ background: v.bg, color: v.color, borderColor: v.border }}
     >
       {children}

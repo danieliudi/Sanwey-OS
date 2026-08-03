@@ -46,6 +46,8 @@ import { CurrencyInput } from "../ui/CurrencyInput";
 import { AppToast } from "../shared/AppToast";
 import { EntityProfileModal } from "../shared/EntityProfileModal";
 import { ConnectionsPanel } from "../shared/ConnectionsPanel";
+import { TableDensityToggle } from "../shared/TableDensityToggle";
+import { useTableDensity } from "../../hooks/use-table-density";
 import { csvRow, triggerDownload, formatDate as formatCSVDate } from "../../utils/export-csv";
 import { periodoExperienciaInfo, avisoPrevioEstimadoDias } from "../../utils/rh-compliance-dates";
 import { formatDateBR } from "../../utils/date";
@@ -1533,6 +1535,9 @@ export function RHFuncionariosView({
   onOpenFerias,
 }) {
   const { colaboradores, loading, createColaborador, updateColaborador, deleteColaborador } = useRHColaboradores({ userId: currentUser?.id });
+  const [density, setDensity] = useTableDensity("rh-funcionarios-table-density");
+  const cellPadY = density === "compact" ? "py-1.5" : "py-3";
+  const headPadY = density === "compact" ? "py-1.5" : "py-2.5";
   const [confirmDelete, setConfirmDelete] = useState(null); // { message, onConfirm }
   const [search, setSearch]         = useState("");
   const [filterDept, setFilterDept] = useState("all");
@@ -1803,6 +1808,7 @@ export function RHFuncionariosView({
           </p>
         </div>
         <div className="flex items-center flex-wrap gap-2">
+          <TableDensityToggle density={density} onChange={setDensity} />
           <button
             onClick={handleExportCSV}
             disabled={filtered.length === 0}
@@ -2062,7 +2068,7 @@ export function RHFuncionariosView({
             <table className="w-full border-collapse">
               <thead>
                 <tr style={{ background: "var(--surface-alt)", borderBottom: "1px solid var(--border)" }}>
-                  <th className="px-4 py-2.5" style={{ width: 36 }}>
+                  <th className={`px-4 ${headPadY}`} style={{ width: 36 }}>
                     <input
                       type="checkbox"
                       checked={pageAllSelected}
@@ -2074,7 +2080,7 @@ export function RHFuncionariosView({
                   {FUNC_TABLE_COLS.map((col) => (
                     <th
                       key={col.id || col.label}
-                      className="text-left px-4 py-2.5"
+                      className={`text-left px-4 ${headPadY}`}
                       style={{
                         fontSize: 10,
                         fontWeight: 600,
@@ -2106,7 +2112,7 @@ export function RHFuncionariosView({
                     onMouseEnter={(e) => { if (!isChecked) e.currentTarget.style.background = "var(--surface-alt)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = isChecked ? "var(--accent-tint)" : "transparent"; }}
                   >
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className={`px-4 ${cellPadY}`} onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={isChecked}
@@ -2114,7 +2120,7 @@ export function RHFuncionariosView({
                         style={{ cursor: "pointer", accentColor: "var(--accent)", display: "block" }}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${cellPadY}`}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <Avatar user={u} size={34} />
                         <div>
@@ -2137,25 +2143,25 @@ export function RHFuncionariosView({
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text)" }}>
+                    <td className={`px-4 ${cellPadY}`} style={{ fontSize: 12, color: "var(--text)" }}>
                       {u.job_title || "—"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${cellPadY}`}>
                       <FrenteBadge frente={u.frente} />
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    <td className={`px-4 ${cellPadY}`} style={{ fontSize: 12, color: "var(--text-dim)" }}>
                       {u.department || "—"}
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    <td className={`px-4 ${cellPadY}`} style={{ fontSize: 12, color: "var(--text-dim)" }}>
                       {contractLabel(u.contract_type)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${cellPadY}`}>
                       <StatusBadge statusId={u.employee_status || "ativo"} />
                     </td>
-                    <td className="px-4 py-3" style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    <td className={`px-4 ${cellPadY}`} style={{ fontSize: 12, color: "var(--text-dim)" }}>
                       {fmt(u.admission_date)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${cellPadY}`}>
                       <ChevronRight size={14} style={{ color: "var(--text-dim)", opacity: 0.5 }} />
                     </td>
                   </tr>

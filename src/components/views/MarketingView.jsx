@@ -1182,7 +1182,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
               className="flex gap-2 h-full"
               style={{ minWidth: `${kanbanStages.length * 280}px` }}
             >
-              {kanbanStages.map(stage => {
+              {kanbanStages.map((stage, idx) => {
                 const stageCampaigns = campaignsByStage[stage.id] || [];
                 const count       = stageCampaigns.length;
                 const totalBudget = stageCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
@@ -1200,7 +1200,7 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
                       minWidth: 272,
                       height: "100%",
                       overflow: "hidden",
-                      border: "1px solid var(--border)",
+                      borderRight: idx < kanbanStages.length - 1 ? "1px solid var(--border)" : "none",
                       background: "var(--surface-alt)",
                       boxShadow: isOver ? `0 0 0 2px ${stage.color}30` : "none",
                     }}

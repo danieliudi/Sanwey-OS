@@ -1,9 +1,9 @@
 import React from "react";
 
 const SIZES = {
-  sm: { padding: "px-3 py-1.5", font: "text-xs", iconSize: 14, gap: "gap-1.5" },
-  md: { padding: "px-4 py-2",   font: "text-sm", iconSize: 15, gap: "gap-2" },
-  lg: { padding: "px-5 py-2.5", font: "text-sm", iconSize: 16, gap: "gap-2" },
+  sm: { padding: "px-3 py-2",   font: "text-xs", iconSize: 14, gap: "gap-1.5" },
+  md: { padding: "px-4 py-2.5", font: "text-sm", iconSize: 15, gap: "gap-2" },
+  lg: { padding: "px-5 py-3",   font: "text-sm", iconSize: 16, gap: "gap-2" },
 };
 
 export function Button({
@@ -32,7 +32,7 @@ export function Button({
       className={`
         inline-flex items-center justify-center font-semibold border
         transition-all duration-150 cursor-pointer select-none
-        rounded-sm
+        rounded-lg
         disabled:opacity-50 disabled:cursor-not-allowed
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1
         active:scale-[0.97]

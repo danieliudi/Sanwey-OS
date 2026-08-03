@@ -644,7 +644,7 @@ function TreinamentoBoardColumn({
       onDragLeave={onColumnDragLeave}
       onDrop={() => onColumnDrop(stage.stageKey)}
       className="flex flex-col rounded-lg transition-all duration-150"
-      style={{ width: 272, minWidth: 272, height: boardHeight, overflow: "hidden", border: "1px solid var(--border)", background: "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none" }}
+      style={{ width: 272, minWidth: 272, height: boardHeight, overflow: "hidden", borderRight: stage.stageKey !== stages[stages.length - 1]?.stageKey ? "1px solid var(--border)" : "none", background: "var(--surface-alt)", boxShadow: isDragOver ? `0 0 0 2px ${stage.color}30` : "none" }}
     >
       {/* Arrastável pra reordenar etapas — canal de drag separado do drop de
           card acima (onColumnDrop/onColumnDragOver/onColumnDragLeave, props

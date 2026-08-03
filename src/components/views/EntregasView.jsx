@@ -1145,7 +1145,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
         <div className="hidden lg:block">
           <KanbanBoardScrollArea scrollRef={boardRef} height={boardHeight}>
             <div className="flex gap-2 h-full" style={{ minWidth: `${kanbanStages.length * 280}px` }}>
-              {kanbanStages.map(stage => {
+              {kanbanStages.map((stage, idx) => {
                 const stageItems = deliverablesByStage[stage.id] || [];
                 const isOver     = dragOverStage === stage.id;
 
@@ -1155,7 +1155,7 @@ export function EntregasView({ user, users = [], notifyMentions }) {
                     onDragLeave={handleDragLeave}
                     onDrop={() => handleDrop(stage.id)}
                     className="flex flex-col rounded-lg transition-all duration-150"
-                    style={{ width: 272, minWidth: 272, overflow: "hidden", border: "1px solid var(--border)", background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
+                    style={{ width: 272, minWidth: 272, overflow: "hidden", borderRight: idx < kanbanStages.length - 1 ? "1px solid var(--border)" : "none", background: isOver ? stage.color + "14" : "var(--surface-alt)", boxShadow: isOver ? `0 0 0 2px ${stage.color}40` : "none", height: "100%", flexShrink: 0 }}>
                     {/* Cabeçalho encostado no topo da coluna, sem gap/sombra
                         (Redesign v2) — ver CRMView.jsx pro mesmo padrão.
                         Arrastável pra reordenar etapas (substitui o
