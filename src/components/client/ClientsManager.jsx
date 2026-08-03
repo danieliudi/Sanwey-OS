@@ -551,7 +551,7 @@ function ClientDetailModal({
     },
     {
       key: "viagens",
-      label: "Viagens & Reembolsos",
+      label: "Viagens & Despesas",
       color: "#0891B2",
       items: data?.viagens || [],
       renderItem: (item) => {

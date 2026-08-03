@@ -24,6 +24,19 @@
 
 export const CHANGELOG = [
   {
+    version: "4.13.2",
+    items: [
+      { kind: "ajuste", text: "Chat: os 4 filtros da lista de conversas (Todas/Não lidas/Canais/Diretas) viraram um único seletor — acabou o scroll horizontal feio na barra lateral." },
+    ],
+  },
+  {
+    version: "4.13.1",
+    items: [
+      { kind: "ajuste", text: "\"Viagens & Reembolsos\" agora se chama \"Viagens & Despesas\" em toda a plataforma." },
+      { kind: "correcao", text: "Celular: os botões da barra inferior voltaram a ficar com larguras iguais — um atalho de nome longo não empurra mais os vizinhos." },
+    ],
+  },
+  {
     version: "4.13.0",
     items: [
       { kind: "ajuste", text: "Nomes e valores coloridos por etapa (chips \"Mover para\", cabeçalhos de coluna, etiquetas de tabela e calendário) agora são sempre legíveis — o fundo colorido continua igual, só o texto ganhou mais contraste. Vale também no modo escuro." },

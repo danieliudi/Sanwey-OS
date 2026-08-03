@@ -1,4 +1,4 @@
-// Helpers e mapas compartilhados entre as views de Viagens & Reembolsos
+// Helpers e mapas compartilhados entre as views de Viagens & Despesas
 // (Planejamento, Gestor, Relatórios) — evita 3 cópias divergentes das
 // mesmas regras de negócio (papéis comerciais, rótulos de status, etc).
 

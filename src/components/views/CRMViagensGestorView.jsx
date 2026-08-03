@@ -407,7 +407,7 @@ export function CRMViagensGestorView({ currentUser, users }) {
             <Plane size={18} style={{ color: "var(--accent)" }} />
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Viagens & Reembolsos</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>Viagens & Despesas</div>
             <div style={{ fontSize: 11, color: "var(--text-dim)" }}>Visão do gestor</div>
           </div>
         </div>

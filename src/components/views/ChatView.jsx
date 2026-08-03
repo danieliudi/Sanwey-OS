@@ -12,6 +12,7 @@ import { useAvailableHeight } from "../../hooks/use-available-height";
 import { supabase } from "../../lib/supabase";
 import { Modal } from "../ui/Modal";
 import { EmptyState } from "../ui/EmptyState";
+import { Combobox } from "../shared/Combobox";
 import { CHAT_EMOJI_CATEGORIES } from "../../constants/chat-emojis";
 import { findBannedWord } from "../../utils/language-filter";
 
@@ -675,6 +676,19 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
     diretas: activeChannels.filter(c => c.kind === "dm").length,
   }), [activeChannels]);
 
+  // Combobox único em vez de 4 pills lado a lado — na largura fixa de 240px
+  // da sidebar, os 4 pills com selo de contagem não cabiam numa linha e
+  // forçavam scroll horizontal (achado do Daniel, print de 03/08). Mesmo
+  // componente já usado nos filtros do Funil de Vendas — a contagem entra
+  // no próprio label em vez de badge separado, já que o Combobox não tem
+  // slot pra isso.
+  const filterOptions = useMemo(() => ([
+    { value: "todas", label: `Todas · ${filterCounts.todas}` },
+    { value: "nao-lidas", label: `Não lidas · ${filterCounts["nao-lidas"]}` },
+    { value: "canais", label: `Canais · ${filterCounts.canais}` },
+    { value: "diretas", label: `Diretas · ${filterCounts.diretas}` },
+  ]), [filterCounts]);
+
   const filteredChannels = useMemo(() => {
     if (activeFilter === "nao-lidas") return activeChannels.filter(c => c.unreadCount > 0);
     if (activeFilter === "canais") return activeChannels.filter(c => c.kind === "canal");
@@ -992,45 +1006,13 @@ export function ChatView({ currentUser, initialChannelId, onInitialChannelConsum
         </div>
 
         {channels.length > 0 && (
-          <div className="flex gap-1.5 px-3 pb-2 shrink-0" style={{ overflowX: "auto" }}>
-            {[
-              ["todas", "Todas"],
-              ["nao-lidas", "Não lidas"],
-              ["canais", "Canais"],
-              ["diretas", "Diretas"],
-            ].map(([key, label]) => {
-              const active = activeFilter === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => { setShowArchived(false); setActiveFilter(key); }}
-                  className="inline-flex items-center gap-1 rounded-full shrink-0"
-                  style={{
-                    padding: "5px 10px",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-                    background: active ? "var(--accent)" : "var(--surface-alt)",
-                    color: active ? "var(--on-accent)" : "var(--text-dim)",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {label}
-                  <span
-                    style={{
-                      fontSize: 10, fontWeight: 800, minWidth: 15, height: 15, padding: "0 4px",
-                      borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      background: active ? "rgba(255,255,255,0.25)" : "var(--surface)",
-                      color: active ? "var(--on-accent)" : "var(--text-faint)",
-                    }}
-                  >
-                    {filterCounts[key]}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="px-3 pb-2 shrink-0">
+            <Combobox
+              value={activeFilter}
+              onChange={(key) => { setShowArchived(false); setActiveFilter(key); }}
+              options={filterOptions}
+              size="sm"
+            />
           </div>
         )}
 
