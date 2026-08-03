@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.15.0",
+    items: [
+      { kind: "correcao", text: "Despesas: o campo \"Campanha relacionada\" voltou a mostrar as campanhas cadastradas — ficava vazio porque a lista não recarregava depois do login." },
+      { kind: "novo", text: "Despesas agora também pode se vincular a várias Entregas e várias Tarefas de Marketing, além da Campanha.", roles: ["marketing", "gerente_marketing", "agencia"] },
+    ],
+  },
+  {
     version: "4.14.0",
     items: [
       { kind: "novo", text: "A cor de destaque da plataforma (botões, item ativo do menu, ícones em foco) agora é o vermelho oficial da Sanwey em toda tela — inclusive no modo escuro, que antes voltava pro neutro." },
