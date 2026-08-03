@@ -6,7 +6,7 @@ import { friendlyError } from "../../utils/friendly-error";
 
 // Pesquisa anônima (Onda 4, item 11): página pública sem login. As respostas
 // NUNCA carregam identidade/contato — só o conteúdo das respostas é gravado.
-const ACCENT = "#C7212B";
+const ACCENT = "#CC2936";
 
 export default function PesquisaPublicaForm() {
   const { id } = useParams();
@@ -139,7 +139,7 @@ function Shell({ children }) {
   return (
     <div style={{ minHeight: "100vh", background: "#F9FAFB", padding: "32px 16px", fontFamily: "'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       <div style={{ maxWidth: 560, margin: "0 auto", background: "#FFFFFF", borderRadius: 12, boxShadow: "var(--shadow-pop)", border: "1px solid #E5E7EB", padding: 32, position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "#C7212B" }} />
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "#CC2936" }} />
         {children}
       </div>
       <p style={{ textAlign: "center", color: "#9CA3AF", fontSize: 11, marginTop: 16 }}>© Grupo Sanwey</p>

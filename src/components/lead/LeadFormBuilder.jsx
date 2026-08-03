@@ -164,7 +164,7 @@ export function LeadFormBuilder({ formConfig, onSave, onClose }) {
               onClick={handleSave}
               className="px-4 py-1.5 text-xs font-semibold rounded-lg text-white transition-colors"
               style={{ background: "var(--accent)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#8B1419"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#8B0000"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "var(--accent)"; }}
             >
               Salvar

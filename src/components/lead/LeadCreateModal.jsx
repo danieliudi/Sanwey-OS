@@ -695,7 +695,7 @@ export function LeadCreateModal({
               border: "none",
               cursor: isSubmitDisabled ? "not-allowed" : "pointer",
             }}
-            onMouseEnter={e => { if (!isSubmitDisabled) e.currentTarget.style.background = "#8B1419"; }}
+            onMouseEnter={e => { if (!isSubmitDisabled) e.currentTarget.style.background = "#8B0000"; }}
             onMouseLeave={e => { if (!isSubmitDisabled) e.currentTarget.style.background = isSubmitDisabled ? "#9CA3AF" : "var(--accent)"; }}
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
