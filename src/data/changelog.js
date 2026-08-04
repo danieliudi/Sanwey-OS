@@ -24,6 +24,20 @@
 
 export const CHANGELOG = [
   {
+    version: "4.20.0",
+    items: [
+      { kind: "novo", text: "Automações agora funcionam em Entregas, não só em Campanhas: escolha o quadro (\"Campanhas\" ou \"Entregas\") ao criar a regra, e as etapas mostradas passam a ser as daquele quadro específico." },
+      { kind: "novo", text: "Nova ação de automação \"Atribuir responsável\" — define automaticamente quem fica responsável por um card (substituindo ou somando aos responsáveis atuais) quando a regra dispara." },
+    ],
+  },
+  {
+    version: "4.19.0",
+    items: [
+      { kind: "novo", text: "Nova aba \"Tarefas Pessoais\" no menu Meu Espaço: uma lista de tarefas privada, só sua — nem gerente, nem admin, ninguém mais vê o que você anota lá. É opt-in: ative em Configurações → Meu perfil pra ela aparecer no menu. Tem visão em Lista (agrupada por Hoje/Esta semana/Sem data) e em Kanban (A Fazer/Fazendo/Feito)." },
+      { kind: "ajuste", text: "O menu lateral agora tem um único grupo \"Meu Espaço\" no topo, reunindo Minhas Tarefas, Chat e (pra quem tem ficha de colaborador) Meu RH — antes Meu RH ficava num grupo separado, mais abaixo." },
+    ],
+  },
+  {
     version: "4.18.2",
     items: [
       { kind: "correcao", text: "O anel de campos obrigatórios preenchidos no card de Entregas estava menor que o mesmo indicador em Funil de Vendas, Campanhas e RH — agora do mesmo tamanho em todos os Kanbans." },

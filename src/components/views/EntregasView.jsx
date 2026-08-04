@@ -3,10 +3,11 @@ import { useLocation } from "react-router-dom";
 import {
   Plus, X, Package, TrendingUp, ChevronDown, Star, Download,
   Filter, CalendarDays, LayoutGrid, List, Settings2, AlertCircle,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Zap,
 } from "lucide-react";
 import { DeliverableKanbanCard } from "../campaign/DeliverableKanbanCard";
 import { useMarketingDeliverables } from "../../hooks/use-marketing-deliverables";
+import { useAutomations } from "../../hooks/use-automations";
 import { reopenAfterMove } from "../../utils/reopen-after-move";
 import { stageTextColor, stageTextColorStrong } from "../../utils/stage-colors";
 import { useMarketingCampaigns }    from "../../hooks/use-marketing-campaigns";
@@ -691,6 +692,40 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const { campaigns } = useMarketingCampaigns({ userId: user?.id, role: user?.role, roles: user?.roles });
   const campaignsById = useMemo(() => new Map(campaigns.map(c => [c.id, c])), [campaigns]);
   const stageFields = useRHStageFields("marketing_deliverables");
+
+  // Automações (module="marketing", board="entregas") — antes só Campanhas
+  // (MarketingView.jsx) chamava evaluateAutomations; uma automação configurada
+  // pra Entregas (ex.: "quando mover pra Encaminhado à Agência, atribuir
+  // responsável") nunca disparava porque ninguém chamava o motor aqui. Mesmo
+  // padrão do fireAutomations de Campanhas: aplica patches, notifica sucesso.
+  // Instância própria do hook (App.jsx já tem a sua, AutomationsView.jsx
+  // também) — evaluateAutomations só lê `automations` do estado local, não
+  // há estado compartilhado que precise ser uma instância única.
+  const { evaluateAutomations } = useAutomations();
+  const [automationNotice, setAutomationNotice] = useState(null);
+  const fireAutomations = useCallback(async (deliverable, prev, eventType) => {
+    const { patches, notifications } = evaluateAutomations(deliverable, prev, eventType, "marketing", "entregas");
+    const failedRuleIds = new Set();
+    for (const p of (patches || [])) {
+      // `badges` não existe em marketing_deliverables — ação ignorada, mesmo
+      // tratamento do fireAutomations de Campanhas (MarketingView.jsx).
+      // stage/stageChangedAt/lastActivity são cuidados por changeStage.
+      const { stage: targetStage, stageChangedAt: _sc, lastActivity: _la, badges: _b, ...rest } = p.patch || {};
+      try {
+        if (targetStage && targetStage !== deliverable.stage) {
+          await changeStage(p.leadId, targetStage);
+        }
+        if (Object.keys(rest).length > 0) {
+          await updateDeliverable(p.leadId, rest);
+        }
+      } catch (err) {
+        failedRuleIds.add(p.ruleId);
+        console.error(`Automação "${p.ruleName}" falhou ao gravar:`, err);
+      }
+    }
+    const okNotifs = (notifications || []).filter(n => !failedRuleIds.has(n.ruleId));
+    if (okNotifs.length > 0) setAutomationNotice(okNotifs[okNotifs.length - 1].message || "Automação disparada");
+  }, [evaluateAutomations, changeStage, updateDeliverable]);
   // trailingRef mede o painel de analytics + texto de dica que vêm depois do
   // board, pra sobrar espaço suficiente pra eles também caberem (ver
   // use-available-height.js). marginBottom = 16, o respiro do próprio
@@ -811,14 +846,20 @@ export function EntregasView({ user, users = [], notifyMentions }) {
       return false;
     }
     setStageError(null);
+    const prev = { ...item };
     await changeStage(itemId, toStage);
+    // Automações (ex.: "Encaminhado à Agência" → atribuir agência como
+    // responsável) — fire-and-forget, mesmo padrão do handleStageChange de
+    // Campanhas (MarketingView.jsx): não bloqueia a mudança de etapa já
+    // gravada se a automação falhar.
+    fireAutomations({ ...item, stage: toStage }, prev, "stage_change");
     // Aviso de entrega concluída (P1.7 da auditoria) — dispara depois da
     // etapa já gravada, sem bloquear a mudança de etapa na falha do e-mail.
     if (toStage === "entregue" && item.requesterEmail) {
       sendCompleteEmail(itemId);
     }
     return true;
-  }, [deliverables, stageFields, changeStage, sendCompleteEmail]);
+  }, [deliverables, stageFields, changeStage, sendCompleteEmail, fireAutomations]);
 
   // Badge "X/Y campos obrigatórios" no card (auditoria 10.3).
   const getItemCompleteness = useCallback((item) => {
@@ -860,7 +901,8 @@ export function EntregasView({ user, users = [], notifyMentions }) {
   const handleQuickAdd = useCallback(async (item) => {
     const created = await createDeliverable(item);
     if (created?.id) sendSupplierNotifyEmail(created.id);
-  }, [createDeliverable, sendSupplierNotifyEmail]);
+    if (created) fireAutomations(created, null, "lead_created");
+  }, [createDeliverable, sendSupplierNotifyEmail, fireAutomations]);
 
   const handleUpdate = useCallback(async (id, patch) => {
     await updateDeliverable(id, patch);
@@ -901,6 +943,11 @@ export function EntregasView({ user, users = [], notifyMentions }) {
     {stageError && (
       <AppToast variant="danger" position="top-right" icon={AlertCircle} onDismiss={() => setStageError(null)}>
         {stageError}
+      </AppToast>
+    )}
+    {automationNotice && (
+      <AppToast variant="default" position="top-right" icon={Zap} onDismiss={() => setAutomationNotice(null)}>
+        {automationNotice}
       </AppToast>
     )}
     <div>

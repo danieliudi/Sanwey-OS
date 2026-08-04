@@ -1060,6 +1060,18 @@ export function SettingsView({
                   </button>
                 </Section>
 
+                <Section
+                  title="Tarefas Pessoais"
+                  description="Adiciona uma lista de tarefas privada, só sua, ao menu Meu Espaço."
+                >
+                  <ToggleRow
+                    label="Ativar Tarefas Pessoais"
+                    sublabel="Ninguém mais — nem gerentes, nem admin — vê o que você anota aqui."
+                    checked={Boolean(settings.personalTasksEnabled)}
+                    onChange={() => onUpdate({ personalTasksEnabled: !settings.personalTasksEnabled })}
+                  />
+                </Section>
+
                 <Section title="Alterar senha" description="Disponível apenas com autenticação ativa.">
                   <div className="space-y-3 mb-4">
                     <div>

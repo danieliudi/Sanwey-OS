@@ -10,6 +10,11 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
  *   id, name, companyId, module, enabled,
  *   trigger: {
  *     type: "stage_change" | "field_value" | "time_in_stage" | "pending_required_field" | "lead_created",
+ *     board?,                    // só module="marketing": "campanhas" | "entregas" — qual quadro
+ *                                // esta regra observa (AutomationsView.jsx > StepIdentification).
+ *                                // Ausente = "campanhas" (automações de marketing salvas antes de
+ *                                // Entregas ganhar automação, ou templates antigos) — nunca tratar
+ *                                // como "qualquer quadro", sempre como esse default explícito.
  *     fromStage?, toStage?,      // stage_change
  *     field?, operator?, value?, // field_value
  *     days?, stageId?,           // time_in_stage, pending_required_field (stageId opcional nesse último)
@@ -161,8 +166,12 @@ export function useAutomations({ userId } = {}) {
    * @param {object|null} prev   - previous entity state (null = newly created)
    * @param {string} eventType   - "stage_change" | "field_value" | "lead_created" | etc.
    * @param {"crm"|"marketing"|"universal"} [module="crm"] - scope filter
+   * @param {"campanhas"|"entregas"} [board] - só relevante quando module="marketing":
+   *   qual quadro disparou o evento. Quem chama passa isso explicitamente
+   *   (MarketingView.jsx passa "campanhas", EntregasView.jsx passa "entregas")
+   *   — indefinido só deveria acontecer em chamadas antigas/module="crm".
    */
-  const evaluateAutomations = useCallback((lead, prev, eventType, module = "crm") => {
+  const evaluateAutomations = useCallback((lead, prev, eventType, module = "crm", board) => {
     const patches = [];
     const notifications = [];
     const sideEffects = [];
@@ -175,6 +184,25 @@ export function useAutomations({ userId } = {}) {
       if (rule.companyId !== "all" && rule.companyId !== lead.companyId) continue;
 
       const { trigger } = rule;
+
+      // ── Isolamento por quadro (Campanhas vs. Entregas) ──────────────────
+      // Dentro do módulo "marketing" agora existem dois quadros que chamam
+      // evaluateAutomations (antes só Campanhas chamava) — uma regra criada
+      // pra um quadro nunca pode disparar no outro. Regra sem trigger.board
+      // salvo é sempre tratada como "campanhas" (toda automação de marketing
+      // criada antes de Entregas ganhar automação não tem esse campo —
+      // precisa continuar dando exatamente o mesmo resultado de antes).
+      // Regras "universal" cruzam módulos livremente (comportamento de
+      // sempre), MAS quando o gatilho é stage_change também respeitam o
+      // quadro do evento — ids de etapa podem colidir entre quadros (ex.:
+      // "revisao" existe tanto em Campanhas quanto em Entregas), então sem
+      // essa checagem uma automação universal de "mover pra Revisão"
+      // dispararia nos dois quadros por engano.
+      if (module === "marketing" && (ruleModule === "marketing" || trigger.type === "stage_change")) {
+        const ruleBoard  = rule.trigger?.board ?? "campanhas";
+        const eventBoard = board ?? "campanhas";
+        if (ruleBoard !== eventBoard) continue;
+      }
 
       // ── Trigger matching ──────────────────────────────────────────────────
       let triggered = false;
@@ -321,6 +349,31 @@ function runAction(action, rule, lead, { patches, notifications, sideEffects }) 
         ruleName: rule.name,
       });
     }
+  }
+
+  if (action.type === "assign_owner" && Array.isArray(action.assigneeIds) && action.assigneeIds.length > 0) {
+    // Nome do campo de responsável varia por domínio: leads (CRM) e
+    // campanhas usam owner/ownerIds (use-leads.js, use-marketing-campaigns.js);
+    // entregas usam assignee/assigneeIds (use-marketing-deliverables.js) —
+    // detectado pela forma do próprio objeto em vez de só rule.module/board,
+    // pra cobrir também automações "universal" que cruzam módulos.
+    const usesAssigneeShape = "assigneeIds" in lead || "assignee" in lead;
+    const idsField    = usesAssigneeShape ? "assigneeIds" : "ownerIds";
+    const singleField = usesAssigneeShape ? "assignee"    : "owner";
+    const current = Array.isArray(lead[idsField]) && lead[idsField].length
+      ? lead[idsField]
+      : (lead[singleField] ? [lead[singleField]] : []);
+    // "Substituir" (default) troca a lista inteira; "Adicionar" faz união
+    // com quem já está, sem duplicar.
+    const nextIds = action.mode === "add"
+      ? Array.from(new Set([...current, ...action.assigneeIds]))
+      : [...action.assigneeIds];
+    patches.push({
+      leadId: lead.id,
+      patch: { [idsField]: nextIds, [singleField]: nextIds[0] || null },
+      ruleId: rule.id,
+      ruleName: rule.name,
+    });
   }
 
   if (action.type === "notify") {
