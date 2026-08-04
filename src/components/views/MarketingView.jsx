@@ -619,7 +619,12 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
   // das regras cujo patch realmente gravou.
   const fireAutomations = useCallback(async (campaign, prev, eventType) => {
     if (!evaluateAutomations) return;
-    const { patches, notifications, sideEffects } = evaluateAutomations(campaign, prev, eventType, "marketing");
+    // board="campanhas" explícito — Entregas agora chama evaluateAutomations
+    // também (module="marketing"), então o motor precisa saber qual quadro
+    // disparou o evento pra isolar regras de um quadro do outro (ver
+    // use-automations.js). Automações antigas sem trigger.board salvo
+    // continuam == "campanhas" por padrão, então nada muda pra elas.
+    const { patches, notifications, sideEffects } = evaluateAutomations(campaign, prev, eventType, "marketing", "campanhas");
     const failedRuleIds = new Set();
     for (const p of (patches || [])) {
       // `badges` (add_badge) não existe em marketing_campaigns — ação ignorada.

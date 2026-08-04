@@ -1,22 +1,25 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Zap, Plus, Trash2, ToggleLeft, ToggleRight, ArrowRight,
   AlertCircle, Tag, MoveRight, Settings2, ChevronDown, ChevronUp, X, Info,
   Share2, Building2, GitBranch, CornerDownRight, ClipboardList,
-  Bot, MoreVertical, Clock, ArrowUpRight,
+  Bot, MoreVertical, Clock, ArrowUpRight, UserPlus,
 } from "lucide-react";
 import { COMPANIES } from "../../constants/companies";
 import { useEscToClose } from "../../hooks/use-esc-to-close";
 import { DEFAULT_PIPELINE_STAGES, defaultPipelines } from "../../constants/pipelines";
 import { AUTOMATION_TEMPLATES } from "../../constants/automation-templates";
-import { MARKETING_AUTOMATION_TEMPLATES, MARKETING_STAGES } from "../../constants/marketing-pipelines";
+import { MARKETING_AUTOMATION_TEMPLATES, MARKETING_STAGES, DELIVERABLE_STAGES } from "../../constants/marketing-pipelines";
 import { useAutomations } from "../../hooks/use-automations";
 import { useAgentRunsSummary } from "../../hooks/use-agent-runs-summary";
+import { useRHPipelineStages } from "../../hooks/use-rh-pipeline-stages";
+import { useProfiles } from "../../hooks/use-profiles";
 import { relativeTime } from "../../utils/date";
 import { EmptyState } from "../ui/EmptyState";
 import { Tabs } from "../shared/Tabs";
 import { Card, CardGrid } from "../shared/Card";
+import { AssigneeMultiSelect } from "../shared/AssigneeMultiSelect";
 import { AgentBuilderWizard } from "../agents/AgentBuilderWizard";
 
 const FILTER_AUTOMATION_STORAGE_KEY = "agentActionsFilterAutomationId";
@@ -34,10 +37,29 @@ const TRIGGER_TYPES = [
 const ACTION_TYPES = [
   { id: "move_stage",  label: "Mover para etapa",  icon: MoveRight,   desc: "Move o card automaticamente" },
   { id: "set_field",   label: "Alterar campo",     icon: Settings2,   desc: "Atualiza o valor de um campo" },
+  { id: "assign_owner", label: "Atribuir responsável", icon: UserPlus, desc: "Define quem é responsável pelo card" },
   { id: "add_badge",   label: "Adicionar badge",   icon: Tag,         desc: "Adiciona uma etiqueta visual ao card" },
   { id: "notify",      label: "Notificação/alerta",icon: AlertCircle, desc: "Exibe alerta no painel" },
   { id: "create_deliverable", label: "Criar entrega em Marketing", icon: Share2,     desc: "Aciona outra área — cria um card em Entregas" },
   { id: "enrich_cnpj",        label: "Enriquecer com CNPJ",        icon: Building2,  desc: "Busca setor/cidade/estado automaticamente" },
+];
+
+// "Quadro" — só relevante pra module="marketing" (StepIdentification). Cada
+// board tem seu próprio domain em rh_pipeline_stages, então o gatilho/ação
+// "Mudança de etapa" precisa saber qual conjunto de etapas oferecer.
+// Compras (ComprasMarketingView.jsx) e Despesas (DespesasView.jsx) ficam de
+// fora de propósito:
+// - Compras usa PURCHASE_STAGES hardcoded, não rh_pipeline_stages — exceção
+//   documentada (CLAUDE.md seção 2): etapas acopladas a RPCs de aprovação
+//   (approve_purchase_request/reject_purchase_request), não a um patch
+//   simples de coluna. Nem Compras chama evaluateAutomations hoje — meio-fiar
+//   o builder pra um quadro que nunca executa nada seria pior que não
+//   oferecer.
+// - Despesas (DespesasView.jsx) não tem conceito de etapa/Kanban nenhum —
+//   é status pendente/pago, uma tabela. Não existe "etapa" pra escolher.
+const BOARD_OPTIONS = [
+  { id: "campanhas", label: "Campanhas" },
+  { id: "entregas",  label: "Entregas" },
 ];
 
 const LEAD_FIELDS = [
@@ -180,17 +202,49 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser, 
     return Array.from(seen.values());
   }, [pipelines]);
 
-  // Lista combinada (CRM + Marketing) só pra resolver nome de etapa em
-  // exibição de automações já salvas (AutomationRow/AutomationDetail), que
-  // não sabem de antemão qual módulo cada regra pertence. Os ids de CRM e
-  // Marketing não colidem, então o merge é seguro.
-  const allStages = useMemo(() => {
-    const seen = new Map(crmStages.map(s => [s.id, s]));
-    for (const s of MARKETING_STAGES) {
-      if (!seen.has(s.id)) seen.set(s.id, s);
+  // Etapas de Campanhas — rh_pipeline_stages (domain="marketing") já é a
+  // fonte viva (MarketingView.jsx usa o mesmo hook pro próprio Kanban desde
+  // antes desta automação existir); MARKETING_STAGES é só o fallback
+  // estático de antes da customização por etapa existir, usado enquanto o
+  // domain ainda não carregou ou está vazio. Usar só MARKETING_STAGES aqui
+  // faria o builder ignorar qualquer etapa que o usuário já tenha
+  // renomeado/criado/excluído em Campanhas — mesma classe de bug que este
+  // trabalho corrige pra Entregas.
+  const { stages: dbCampanhaStages } = useRHPipelineStages("marketing");
+  const campanhaStages = useMemo(() => {
+    const mapped = dbCampanhaStages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, terminal: s.terminal }));
+    return mapped.length ? mapped : MARKETING_STAGES;
+  }, [dbCampanhaStages]);
+
+  // Etapas de Entregas — rh_pipeline_stages (domain="marketing_deliverables"),
+  // mesmo hook que EntregasView.jsx usa pro próprio Kanban (reaproveitado,
+  // não reescrito — CLAUDE.md seção 1). DELIVERABLE_STAGES é só o fallback
+  // estático equivalente ao MARKETING_STAGES acima.
+  const { stages: dbEntregaStages } = useRHPipelineStages("marketing_deliverables");
+  const entregaStages = useMemo(() => {
+    const mapped = dbEntregaStages.map(s => ({ id: s.stageKey, name: s.name, color: s.color, terminal: s.terminal }));
+    return mapped.length ? mapped : DELIVERABLE_STAGES;
+  }, [dbEntregaStages]);
+
+  // Usuários pra "Atribuir responsável" (AssigneeMultiSelect) — AutomationsView
+  // não recebe `users` como prop (App.jsx não passa), então busca direto,
+  // mesmo padrão que useAutomations() já sendo instanciado aqui em paralelo
+  // à instância de App.jsx.
+  const { users: allUsers } = useProfiles();
+
+  // Etapas do módulo+quadro de UMA regra específica — substitui o antigo
+  // `allStages` (merge fixo CRM+Marketing). Campanhas e Entregas podem ter
+  // stage_key iguais entre si (ex.: "revisao" existe nos dois quadros), então
+  // resolver por regra individual em vez de um merge único evita mostrar o
+  // nome de etapa errado numa automação salva.
+  const resolveStagesForRule = useCallback((rule) => {
+    const ruleModule = rule.module ?? "crm";
+    if (ruleModule === "marketing") {
+      const board = rule.trigger?.board ?? "campanhas";
+      return board === "entregas" ? entregaStages : campanhaStages;
     }
-    return Array.from(seen.values());
-  }, [crmStages]);
+    return crmStages;
+  }, [crmStages, campanhaStages, entregaStages]);
 
   return (
     <div className="space-y-6">
@@ -333,7 +387,8 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser, 
                   <AutomationRow
                     key={rule.id}
                     rule={rule}
-                    allStages={allStages}
+                    allStages={resolveStagesForRule(rule)}
+                    users={allUsers}
                     expanded={expandedId === rule.id}
                     onExpand={() => setExpandedId(id => id === rule.id ? null : rule.id)}
                     onToggle={() => toggleAutomation(rule.id)}
@@ -367,6 +422,9 @@ export function AutomationsView({ leads, pipelines, activeCompany, currentUser, 
       {showBuilder && (
         <AutomationBuilder
           crmStages={crmStages}
+          campanhaStages={campanhaStages}
+          entregaStages={entregaStages}
+          users={allUsers}
           initialRule={builderInitial}
           onSave={(rule) => { addAutomation(rule); closeBuilder(); }}
           onClose={closeBuilder}
@@ -394,13 +452,19 @@ function thenActionsOf(rule) {
   return [];
 }
 
-function actionSummary(a, allStages) {
+function actionSummary(a, allStages, users) {
   if (!a) return "—";
   if (a.type === "move_stage") {
     const stage = allStages.find(s => s.id === a.targetStage)?.name || a.targetStage;
     return `Mover para ${stage}`;
   }
   if (a.type === "set_field")  return `${a.field} = "${a.fieldValue}"`;
+  if (a.type === "assign_owner") {
+    const ids = a.assigneeIds || [];
+    const names = ids.map(id => (users || []).find(u => u.id === id)?.name).filter(Boolean);
+    const verb = a.mode === "add" ? "Adicionar" : "Definir";
+    return names.length > 0 ? `${verb} responsável: ${names.join(", ")}` : `${verb} responsável (ninguém selecionado)`;
+  }
   if (a.type === "add_badge")  return `Badge: ${a.badge}`;
   if (a.type === "notify")     return `Alerta: ${a.message}`;
   if (a.type === "create_deliverable") return `Entrega: "${a.deliverableTitle || "Onboarding: {empresa}"}"`;
@@ -422,7 +486,7 @@ function conditionGroupsSummary(groups) {
 
 // ── Automation row ────────────────────────────────────────────────────────────
 
-function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete }) {
+function AutomationRow({ rule, allStages, users, expanded, onExpand, onToggle, onDelete }) {
   const triggerType = TRIGGER_TYPES.find(t => t.id === rule.trigger?.type);
   const TriggerIcon = triggerType?.icon || Zap;
   const company     = COMPANY_OPTIONS.find(c => c.id === rule.companyId);
@@ -454,7 +518,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
 
   const actionLabel = thenActions.length > 1
     ? `${thenActions.length} ações`
-    : actionSummary(thenActions[0], allStages);
+    : actionSummary(thenActions[0], allStages, users);
 
   return (
     <div style={{ background: rule.enabled ? "var(--surface)" : "var(--surface-alt)" }}>
@@ -540,7 +604,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
           className="px-4 pb-4 pt-1"
           style={{ borderTop: "1px solid var(--surface-alt)" }}
         >
-          <AutomationDetail rule={rule} allStages={allStages} />
+          <AutomationDetail rule={rule} allStages={allStages} users={users} />
         </div>
       )}
     </div>
@@ -549,7 +613,7 @@ function AutomationRow({ rule, allStages, expanded, onExpand, onToggle, onDelete
 
 // ── Automation detail (expanded) ─────────────────────────────────────────────
 
-function AutomationDetail({ rule, allStages }) {
+function AutomationDetail({ rule, allStages, users }) {
   const t = rule.trigger;
   const thenActions = thenActionsOf(rule);
   const elseActions = rule.elseActions || [];
@@ -598,7 +662,7 @@ function AutomationDetail({ rule, allStages }) {
           {thenActions.map((a, i) => (
             <div key={i} className="text-xs" style={{ color: "var(--text-dim)" }}>
               <b style={{ color: "var(--text)" }}>{ACTION_TYPES.find(a2 => a2.id === a?.type)?.label || a?.type}</b>
-              {": "}{actionSummary(a, allStages)}
+              {": "}{actionSummary(a, allStages, users)}
             </div>
           ))}
         </div>
@@ -621,7 +685,7 @@ function AutomationDetail({ rule, allStages }) {
               {elseActions.map((a, i) => (
                 <div key={i} className="text-xs mt-1" style={{ color: "var(--text-dim)" }}>
                   <b style={{ color: "var(--text)" }}>{ACTION_TYPES.find(a2 => a2.id === a?.type)?.label || a?.type}</b>
-                  {": "}{actionSummary(a, allStages)}
+                  {": "}{actionSummary(a, allStages, users)}
                 </div>
               ))}
             </div>
@@ -831,7 +895,7 @@ const EMPTY_RULE = {
   elseActions: [],
 };
 
-function AutomationBuilder({ crmStages, initialRule, onSave, onClose }) {
+function AutomationBuilder({ crmStages, campanhaStages, entregaStages, users, initialRule, onSave, onClose }) {
   // initialRule vem dos templates (clique em "Usar template") ou de uma regra
   // antiga com `action` singular — normaliza pro shape novo (thenActions[]).
   const [rule, setRule] = useState(() => {
@@ -868,15 +932,25 @@ function AutomationBuilder({ crmStages, initialRule, onSave, onClose }) {
 
   const handleSave = () => {
     if (!canNext()) return;
-    onSave(rule);
+    // Limpa trigger.board se a regra não é mais module="marketing" (usuário
+    // escolheu Entregas, depois voltou pra CRM/Universal sem apagar o
+    // trigger) — inofensivo pro motor (evaluateAutomations só olha board
+    // quando o evento é module="marketing"), mas evita lixo no registro salvo.
+    const cleanRule = rule.module === "marketing" ? rule : { ...rule, trigger: { ...rule.trigger, board: undefined } };
+    onSave(cleanRule);
   };
 
   const setTrigger = (patch) => setRule(r => ({ ...r, trigger: { ...r.trigger, ...patch } }));
 
-  // Etapas do módulo escolhido em "Identificação" — antes disso o wizard
-  // sempre usava as etapas do CRM (funil de vendas), mesmo pra module="marketing"
-  // (bug real: escolher Marketing não trocava as opções de "De/Para etapa").
-  const moduleStages = rule.module === "marketing" ? MARKETING_STAGES : crmStages;
+  // Etapas do módulo (+ quadro, quando marketing) escolhido em "Identificação"
+  // — antes disso o wizard sempre usava as etapas do CRM (funil de vendas),
+  // mesmo pra module="marketing" (bug real: escolher Marketing não trocava
+  // as opções de "De/Para etapa"). trigger.board ausente = "campanhas"
+  // (mesmo default de todo lugar que lê board — automação de marketing
+  // salva antes de Entregas ganhar automação nunca tem esse campo).
+  const moduleStages = rule.module === "marketing"
+    ? ((rule.trigger?.board ?? "campanhas") === "entregas" ? entregaStages : campanhaStages)
+    : crmStages;
 
   return (
     <div
@@ -946,7 +1020,7 @@ function AutomationBuilder({ crmStages, initialRule, onSave, onClose }) {
             <StepConditions rule={rule} setRule={setRule} />
           )}
           {step === 3 && (
-            <StepActions rule={rule} allStages={moduleStages} setRule={setRule} hasConditions={hasConditions} />
+            <StepActions rule={rule} allStages={moduleStages} setRule={setRule} hasConditions={hasConditions} users={users} />
           )}
         </div>
 
@@ -1039,10 +1113,39 @@ function StepIdentification({ rule, setRule }) {
         </div>
         <p className="text-[10px] mt-1.5" style={{ color: "var(--text-dim)" }}>
           {(rule.module ?? "crm") === "crm" ? "Avalia leads no pipeline de CRM." :
-           (rule.module ?? "crm") === "marketing" ? "Avalia campanhas no Kanban de Marketing." :
+           (rule.module ?? "crm") === "marketing" ? `Avalia ${(rule.trigger?.board ?? "campanhas") === "entregas" ? "entregas no Kanban de Entregas" : "campanhas no Kanban de Marketing"}.` :
            "Avalia em todos os módulos."}
         </p>
       </div>
+      {(rule.module ?? "crm") === "marketing" && (
+        <div>
+          <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Quadro</label>
+          <div className="flex gap-2">
+            {BOARD_OPTIONS.map(b => {
+              const active = (rule.trigger?.board ?? "campanhas") === b.id;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setRule(r => ({ ...r, trigger: { ...r.trigger, board: b.id } }))}
+                  className="flex-1 py-2 text-xs font-semibold rounded-xl border transition-colors"
+                  style={{
+                    borderColor: active ? "var(--accent)" : "var(--border)",
+                    background:  "var(--surface-alt)",
+                    color:       active ? "var(--accent)" : "var(--text-dim)",
+                    cursor:      "pointer",
+                  }}
+                >
+                  {b.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+            Compras e Despesas ainda não têm automação disponível — Compras usa um motor de etapas próprio, acoplado às aprovações; Despesas não tem etapas/Kanban.
+          </p>
+        </div>
+      )}
       <div>
         <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text)" }}>Empresa</label>
         <select
@@ -1390,7 +1493,7 @@ function StepConditions({ rule, setRule }) {
 
 // ── Step: Ações (then / else) ────────────────────────────────────────────────
 
-function StepActions({ rule, allStages, setRule, hasConditions }) {
+function StepActions({ rule, allStages, setRule, hasConditions, users }) {
   const patchThen = (updater) => setRule(r => ({ ...r, thenActions: updater(r.thenActions) }));
   const patchElse = (updater) => setRule(r => ({ ...r, elseActions: updater(r.elseActions || []) }));
   const fields = rule.module === "marketing" ? MARKETING_FIELDS : LEAD_FIELDS;
@@ -1403,6 +1506,7 @@ function StepActions({ rule, allStages, setRule, hasConditions }) {
         setActions={patchThen}
         allStages={allStages}
         fields={fields}
+        users={users}
         allowEmpty={false}
       />
 
@@ -1414,6 +1518,7 @@ function StepActions({ rule, allStages, setRule, hasConditions }) {
             setActions={patchElse}
             allStages={allStages}
             fields={fields}
+            users={users}
             allowEmpty
           />
         </div>
@@ -1422,7 +1527,7 @@ function StepActions({ rule, allStages, setRule, hasConditions }) {
   );
 }
 
-function ActionListEditor({ title, actions, setActions, allStages, fields, allowEmpty }) {
+function ActionListEditor({ title, actions, setActions, allStages, fields, users, allowEmpty }) {
   const addAction = () => setActions(list => [...list, { ...EMPTY_ACTION }]);
   const removeAction = (i) => setActions(list => list.filter((_, j) => j !== i));
   const patchAction = (i, patch) => setActions(list => list.map((a, j) => j === i ? { ...a, ...patch } : a));
@@ -1488,14 +1593,55 @@ function ActionListEditor({ title, actions, setActions, allStages, fields, allow
             })}
           </div>
 
-          <ActionConfig action={action} allStages={allStages} fields={fields} setAction={(patch) => patchAction(i, patch)} />
+          <ActionConfig action={action} allStages={allStages} fields={fields} users={users} setAction={(patch) => patchAction(i, patch)} />
         </div>
       ))}
     </div>
   );
 }
 
-function ActionConfig({ action: a, allStages, fields, setAction }) {
+function ActionConfig({ action: a, allStages, fields, users, setAction }) {
+  if (a.type === "assign_owner") {
+    const mode = a.mode === "add" ? "add" : "replace";
+    return (
+      <div className="space-y-2">
+        <div>
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text)" }}>Responsáveis</label>
+          <AssigneeMultiSelect
+            value={a.assigneeIds || []}
+            onChange={ids => setAction({ assigneeIds: ids })}
+            options={users || []}
+            placeholder="Selecionar responsáveis…"
+          />
+        </div>
+        <div>
+          <label className="block text-[11px] font-semibold mb-1.5" style={{ color: "var(--text)" }}>Modo</label>
+          <div className="flex gap-1.5">
+            {[
+              { id: "replace", label: "Substituir responsáveis atuais" },
+              { id: "add",     label: "Adicionar aos atuais" },
+            ].map(o => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setAction({ mode: o.id })}
+                className="flex-1 py-1.5 px-2 text-[11px] font-semibold rounded-lg border transition-colors"
+                style={{
+                  borderColor: mode === o.id ? "var(--accent)" : "var(--border)",
+                  background:  "var(--surface-alt)",
+                  color:       mode === o.id ? "var(--accent)" : "var(--text-dim)",
+                  cursor:      "pointer",
+                }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (a.type === "move_stage") {
     return (
       <div>
@@ -1680,7 +1826,8 @@ function HowItWorks() {
           <p>As automações são <strong>regras compartilhadas com a equipe</strong> (salvas no banco, não só no seu navegador), avaliadas sempre que um card é atualizado — sem IA e sem custo por execução. Duas ações (criar entrega e enriquecer com CNPJ) chamam uma API real quando disparam; as demais são só lógica local.</p>
           <p><strong>Gatilhos disponíveis:</strong> mudança de etapa, valor de campo, tempo parado em etapa, campo obrigatório pendente há X dias, criação de card.</p>
           <p><strong>Condições (opcional):</strong> refine o gatilho com grupos de condições — condições no mesmo grupo exigem E, grupos diferentes são combinados por OU. Com condições, você pode definir ações para "então" (passou) e "senão" (não passou).</p>
-          <p><strong>Ações disponíveis:</strong> mover o card para outra etapa, alterar um campo, adicionar badge visual, exibir alerta, criar entrega em Marketing, ou enriquecer com dados de CNPJ — cada regra pode disparar mais de uma.</p>
+          <p><strong>Ações disponíveis:</strong> mover o card para outra etapa, alterar um campo, atribuir responsável (substituindo ou somando aos atuais), adicionar badge visual, exibir alerta, criar entrega em Marketing, ou enriquecer com dados de CNPJ — cada regra pode disparar mais de uma.</p>
+          <p><strong>Quadro (só Marketing):</strong> Campanhas e Entregas têm etapas próprias — escolha o quadro em "Identificação" antes de configurar o gatilho. Compras e Despesas ainda não têm automação disponível.</p>
           <p>As regras são avaliadas em sequência, na ordem de criação. Se múltiplas regras dispararem no mesmo evento, todas serão executadas.</p>
           <p className="font-medium" style={{ color: "#1E40AF" }}>Para automações que dependem de tempo (ex: 7 dias sem mover), o avaliador roda ao abrir o CRM ou ao interagir com um card.</p>
         </div>
@@ -1706,6 +1853,7 @@ function validateAction(a) {
   if (!a?.type) return false;
   if (a.type === "move_stage")         return Boolean(a.targetStage);
   if (a.type === "set_field")          return Boolean(a.field);
+  if (a.type === "assign_owner")       return Array.isArray(a.assigneeIds) && a.assigneeIds.length > 0;
   if (a.type === "add_badge")          return Boolean(a.badge);
   if (a.type === "notify")             return Boolean(a.message?.trim());
   if (a.type === "create_deliverable") return true; // título tem valor padrão
