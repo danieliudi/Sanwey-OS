@@ -86,6 +86,11 @@ export function NotificationCenter({
   const [open, setOpen] = useState(false);
   const [permissionFeedback, setPermissionFeedback] = useState(null);
   const [filter, setFilter] = useState("all");
+  // Dispensa só pela sessão (aba aberta) — some ao clicar no X, mas volta no
+  // próximo reload/login. Decisão explícita: não persistir em localStorage,
+  // pra continuar lembrando de vez em quando sem incomodar a cada abertura
+  // do painel dentro da mesma sessão.
+  const [permissionBannerDismissed, setPermissionBannerDismissed] = useState(false);
   const panelRef = useRef(null);
 
   const filterCounts = {
@@ -261,18 +266,33 @@ export function NotificationCenter({
             </div>
           )}
 
-          {/* Desktop permission banner */}
-          {desktopPermission === "default" && (
+          {/* Desktop permission banner — dispensável só pela sessão (Daniel,
+              04/08/2026): sem X, ficava insistindo toda vez que o painel
+              abria pra quem nunca ia ativar. Dispensar não persiste em
+              localStorage de propósito — volta a lembrar num reload/login
+              novo, em vez de sumir de vez. */}
+          {desktopPermission === "default" && !permissionBannerDismissed && (
             <div className="border-b" style={{ borderColor: "var(--border)", background: "var(--amber-bg)" }}>
-              <div className="flex items-center justify-between px-4 py-2.5 text-xs">
+              <div className="flex items-center justify-between gap-2 px-4 py-2.5 text-xs">
                 <span style={{ color: "var(--warning)" }}>Ativar notificações do navegador?</span>
-                <button
-                  onClick={handleRequestPermission}
-                  className="font-semibold px-2.5 py-1 rounded-lg"
-                  style={{ background: "var(--amber)", color: "#FFFFFF", border: "none", cursor: "pointer", fontSize: 11 }}
-                >
-                  Ativar
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={handleRequestPermission}
+                    className="font-semibold px-2.5 py-1 rounded-lg"
+                    style={{ background: "var(--amber)", color: "#FFFFFF", border: "none", cursor: "pointer", fontSize: 11 }}
+                  >
+                    Ativar
+                  </button>
+                  <button
+                    onClick={() => setPermissionBannerDismissed(true)}
+                    className="flex items-center justify-center rounded-lg"
+                    style={{ width: 22, height: 22, color: "var(--warning)", background: "none", border: "none", cursor: "pointer" }}
+                    aria-label="Dispensar aviso"
+                    title="Dispensar por agora"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
               </div>
               {permissionFeedback && (
                 <div className="px-4 pb-2.5 text-xs" style={{ color: "var(--warning)" }}>
