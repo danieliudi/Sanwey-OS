@@ -86,6 +86,11 @@ export function NotificationCenter({
   const [open, setOpen] = useState(false);
   const [permissionFeedback, setPermissionFeedback] = useState(null);
   const [filter, setFilter] = useState("all");
+  // Dispensa só pela sessão (aba aberta) — some ao clicar no X, mas volta no
+  // próximo reload/login. Decisão explícita: não persistir em localStorage,
+  // pra continuar lembrando de vez em quando sem incomodar a cada abertura
+  // do painel dentro da mesma sessão.
+  const [permissionBannerDismissed, setPermissionBannerDismissed] = useState(false);
   const panelRef = useRef(null);
 
   const filterCounts = {
@@ -174,10 +179,17 @@ export function NotificationCenter({
         )}
       </button>
 
-      {/* Dropdown panel — fixed on mobile (avoids overflow anchoring bug), absolute on desktop */}
+      {/* Dropdown panel — fixed on mobile (avoids overflow anchoring bug), absolute on desktop.
+          top-topbar (64px, mesmo valor de --topbar-height) — usava top-14 (56px), 8px acima do
+          fim real da TopBar. TopBar é sticky/z-30 e o painel só tem z-50 sem estar num portal,
+          então aquela faixa de 8px caía dentro da área que a TopBar (sticky, camada de composição
+          própria) pode pintar por cima — mesma classe de bug já corrigida em Modal.jsx via portal,
+          aqui a correção é só alinhar a origem do offset em vez de portal (o painel usa
+          `lg:absolute` ancorado no botão do sino — portal quebraria esse anchor sem recalcular
+          posição via getBoundingClientRect, escopo maior que este bug pontual). */}
       {open && (
         <div
-          className="fixed top-14 left-2 right-2 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[340px] flex flex-col rounded-2xl border overflow-hidden z-50"
+          className="fixed top-topbar left-2 right-2 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[340px] flex flex-col rounded-2xl border overflow-hidden z-50"
           style={{
             maxHeight: 480,
             background: "var(--surface)",
@@ -254,18 +266,33 @@ export function NotificationCenter({
             </div>
           )}
 
-          {/* Desktop permission banner */}
-          {desktopPermission === "default" && (
+          {/* Desktop permission banner — dispensável só pela sessão (Daniel,
+              04/08/2026): sem X, ficava insistindo toda vez que o painel
+              abria pra quem nunca ia ativar. Dispensar não persiste em
+              localStorage de propósito — volta a lembrar num reload/login
+              novo, em vez de sumir de vez. */}
+          {desktopPermission === "default" && !permissionBannerDismissed && (
             <div className="border-b" style={{ borderColor: "var(--border)", background: "var(--amber-bg)" }}>
-              <div className="flex items-center justify-between px-4 py-2.5 text-xs">
+              <div className="flex items-center justify-between gap-2 px-4 py-2.5 text-xs">
                 <span style={{ color: "var(--warning)" }}>Ativar notificações do navegador?</span>
-                <button
-                  onClick={handleRequestPermission}
-                  className="font-semibold px-2.5 py-1 rounded-lg"
-                  style={{ background: "var(--amber)", color: "#FFFFFF", border: "none", cursor: "pointer", fontSize: 11 }}
-                >
-                  Ativar
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={handleRequestPermission}
+                    className="font-semibold px-2.5 py-1 rounded-lg"
+                    style={{ background: "var(--amber)", color: "#FFFFFF", border: "none", cursor: "pointer", fontSize: 11 }}
+                  >
+                    Ativar
+                  </button>
+                  <button
+                    onClick={() => setPermissionBannerDismissed(true)}
+                    className="flex items-center justify-center rounded-lg"
+                    style={{ width: 22, height: 22, color: "var(--warning)", background: "none", border: "none", cursor: "pointer" }}
+                    aria-label="Dispensar aviso"
+                    title="Dispensar por agora"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
               </div>
               {permissionFeedback && (
                 <div className="px-4 pb-2.5 text-xs" style={{ color: "var(--warning)" }}>

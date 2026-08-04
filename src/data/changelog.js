@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.18.1",
+    items: [
+      { kind: "correcao", text: "Notificações: os botões de filtro (Tudo/Menções/Sistema) não ficam mais parcialmente cobertos pela barra superior em janelas mais estreitas." },
+      { kind: "ajuste", text: "Notificações: o aviso \"Ativar notificações do navegador?\" agora pode ser dispensado com um X — volta a aparecer só num próximo acesso." },
+    ],
+  },
+  {
     version: "4.18.0",
     items: [
       { kind: "novo", text: "Notificações: clicar em uma notificação agora leva direto até o card ou registro relacionado, em vez de só marcar como lida." },
