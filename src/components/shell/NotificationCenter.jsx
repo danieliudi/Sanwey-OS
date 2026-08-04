@@ -174,10 +174,17 @@ export function NotificationCenter({
         )}
       </button>
 
-      {/* Dropdown panel — fixed on mobile (avoids overflow anchoring bug), absolute on desktop */}
+      {/* Dropdown panel — fixed on mobile (avoids overflow anchoring bug), absolute on desktop.
+          top-topbar (64px, mesmo valor de --topbar-height) — usava top-14 (56px), 8px acima do
+          fim real da TopBar. TopBar é sticky/z-30 e o painel só tem z-50 sem estar num portal,
+          então aquela faixa de 8px caía dentro da área que a TopBar (sticky, camada de composição
+          própria) pode pintar por cima — mesma classe de bug já corrigida em Modal.jsx via portal,
+          aqui a correção é só alinhar a origem do offset em vez de portal (o painel usa
+          `lg:absolute` ancorado no botão do sino — portal quebraria esse anchor sem recalcular
+          posição via getBoundingClientRect, escopo maior que este bug pontual). */}
       {open && (
         <div
-          className="fixed top-14 left-2 right-2 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[340px] flex flex-col rounded-2xl border overflow-hidden z-50"
+          className="fixed top-topbar left-2 right-2 lg:absolute lg:top-full lg:left-auto lg:right-0 lg:mt-2 lg:w-[340px] flex flex-col rounded-2xl border overflow-hidden z-50"
           style={{
             maxHeight: 480,
             background: "var(--surface)",
