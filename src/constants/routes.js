@@ -51,6 +51,7 @@ export const ROUTES = {
   "rh-bem-estar":         "/rh/bem-estar",
   "rh-relatorios":        "/rh/relatorios",
   "meu-rh":               "/meu-rh",
+  "personal-tasks":       "/tarefas-pessoais",
   profile:                "/perfil",
 };
 

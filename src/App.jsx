@@ -6,7 +6,7 @@ import {
   Package, DollarSign, Users, BriefcaseBusiness, CalendarCheck,
   ClipboardCheck, GraduationCap, MessageSquareText, Plane, Inbox, Truck,
   ShoppingCart, CheckSquare, Building2, TrendingUp, Briefcase, HeartHandshake, Home,
-  FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle,
+  FileBarChart, RefreshCw, ListTodo, Handshake, Ship, MessageCircle, ListChecks,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { STORAGE_KEYS } from "./constants/storage-keys";
@@ -24,6 +24,7 @@ import { useLeads } from "./hooks/use-leads";
 import { useOfflineSync } from "./hooks/use-offline-sync";
 import { useClients } from "./hooks/use-clients";
 import { useChat } from "./hooks/use-chat";
+import { usePersonalTasks } from "./hooks/use-personal-tasks";
 import { useNotifications } from "./hooks/use-notifications";
 import { useServerNotifications } from "./hooks/use-server-notifications";
 import { useProfiles } from "./hooks/use-profiles";
@@ -101,6 +102,7 @@ import { RHComunicacaoView } from "./components/views/RHComunicacaoView";
 import { RHBemEstarView } from "./components/views/RHBemEstarView";
 import { RHRelatoriosView } from "./components/views/RHRelatoriosView";
 import { MeuRHView } from "./components/views/MeuRHView";
+import { PersonalTasksView } from "./components/views/PersonalTasksView";
 import { OnboardingModal } from "./components/onboarding/OnboardingModal";
 import { CommandPalette } from "./components/ui/CommandPalette";
 import { MobileBottomNav } from "./components/shell/MobileBottomNav";
@@ -312,6 +314,16 @@ export default function App() {
 
   const { crossReferrals, approve: approveCross, reject: rejectCross } = useCrossReferrals(leads);
   const { settings, update: updateSettings, reset: resetSettings } = useUserSettings();
+
+  // Tarefas Pessoais: opt-in (settings.personalTasksEnabled, default false)
+  // — `enabled` deixa o hook inerte (sem fetch/subscribe) pra quem não ligou
+  // a feature, que é a maioria por padrão. `openCount` alimenta o badge do
+  // item "Tarefas Pessoais" no menu, mesmo padrão do chatUnread acima.
+  const { openCount: personalTasksOpenCount } = usePersonalTasks({
+    userId: currentUser?.id,
+    enabled: Boolean(settings.personalTasksEnabled),
+  });
+
   const pipelineTransitions = usePipelineTransitions();
   const { evaluateAutomations, automations } = useAutomations();
 
@@ -1303,15 +1315,29 @@ export default function App() {
     // que antes só quem caía na rota "dashboard" tinha um link direto pra ela
     // (todo o resto usava "Visão Geral" pra ir pro dashboard antigo do
     // próprio módulo).
-    // Chat fica ao lado de Minhas Tarefas, fora de qualquer grupo: é
-    // utilitário do dia a dia de todo mundo, não feature de um módulo
-    // (mesma lógica que já vale pra Minhas Tarefas). Decidido com o Daniel
-    // no mockup do Chat.
+    // Chat fica ao lado de Minhas Tarefas, sempre presente: é utilitário do
+    // dia a dia de todo mundo, não feature de um módulo (mesma lógica que já
+    // vale pra Minhas Tarefas). Decidido com o Daniel no mockup do Chat.
+    // Grupo unificado "Meu Espaço" (mockup aprovado com o Daniel): antes
+    // existiam DOIS grupos separados — este (sem label visível) com Minhas
+    // Tarefas/Chat, e um segundo grupo, mais abaixo, literalmente rotulado
+    // "Meu Espaço" só com Meu RH. Consolidados num único grupo rotulado —
+    // Meu RH entra aqui embaixo, sob a MESMA condição de sempre
+    // (isRHUser||isDiretoria) && temFichaColaborador, sem ampliar nem reduzir
+    // quem já enxergava esse item. Tarefas Pessoais é opt-in
+    // (settings.personalTasksEnabled, Configurações → Meu perfil) — só
+    // aparece pra quem ligou a feature, item privado por usuário (RLS).
     groups.push({
-      label: null,
+      label: "Meu Espaço",
       items: [
         { id: "dashboard", label: "Minhas Tarefas", icon: CheckSquare },
         { id: "chat", label: "Chat", icon: MessageCircle, badge: chatUnread || undefined },
+        ...(settings.personalTasksEnabled
+          ? [{ id: "personal-tasks", label: "Tarefas Pessoais", icon: ListChecks, badge: personalTasksOpenCount || undefined }]
+          : []),
+        ...((isRHUser || isDiretoria) && temFichaColaborador
+          ? [{ id: "meu-rh", label: "Meu RH", icon: Home }]
+          : []),
       ],
     });
 
@@ -1406,14 +1432,10 @@ export default function App() {
     }
 
     // Quem é do RH/diretoria também é colaborador — tem holerite, ponto e
-    // férias próprios. O grupo acima não roda pra eles (já veem os boards de
-    // gestão), então "Meu RH" entra sozinho num grupo próprio.
-    if ((isRHUser || isDiretoria) && temFichaColaborador) {
-      groups.push({
-        label: "Meu Espaço",
-        items: [{ id: "meu-rh", label: "Meu RH", icon: Home }],
-      });
-    }
+    // férias próprios. O grupo "Meu Desenvolvimento" acima não roda pra eles
+    // (já veem os boards de gestão) — "Meu RH" pra essa população vive no
+    // grupo "Meu Espaço" no topo do menu (empurrado ali mesmo, junto de
+    // Minhas Tarefas/Chat/Tarefas Pessoais), não mais num grupo próprio aqui.
 
     // "Inteligência": Executivo/Agentes ficam sob isManager (gerente Comercial
     // + admin, mesmo escopo de sempre). Insights entra à parte sob
@@ -1465,7 +1487,7 @@ export default function App() {
     return groups
       .map(g => ({ ...g, items: g.items.filter(i => !ALL_MODULE_IDS.includes(i.id) || allowedModules.has(i.id)) }))
       .filter(g => g.items.length > 0);
-  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuColaboradorId, chatUnread]);
+  }, [isManager, isRHManager, canSeeExecutive, isInsightsUser, isMarketingUser, isPureMarketing, isAgencia, isRHUser, isPureRH, isComex, isPureComex, isPortalOnly, isDiretoria, allowedModules, automations, meuColaboradorId, chatUnread, settings.personalTasksEnabled, personalTasksOpenCount]);
 
   // Title shown in the slim top bar, derived from the active section.
   const sectionTitle = useMemo(() => {
@@ -1753,6 +1775,18 @@ export default function App() {
                   onInitialChannelConsumed={() => setSelectedChatChannelId(null)}
                 />
               )
+          } />
+          {/* Tarefas Pessoais: a rota em si não checa o opt-in
+              (settings.personalTasksEnabled) — só o item de menu depende
+              dele. Digitar a URL direto com a feature desligada não expõe
+              nada: personal_tasks é protegida por RLS (só o dono da linha
+              lê/escreve), então a tela renderiza vazia igual a qualquer
+              outra tela nova sem dado ainda. Mesmo critério do Chat acima
+              pra excluir Agência (fornecedor externo, escopo restrito). */}
+          <Route path={ROUTES["personal-tasks"]} element={
+            isAgencia
+              ? <Navigate to={ROUTES.marketing} replace />
+              : <PersonalTasksView currentUser={currentUser} />
           } />
           <Route path={ROUTES["commercial-overview"]} element={
             (isAgencia || isPureMarketing || isPureRH)
