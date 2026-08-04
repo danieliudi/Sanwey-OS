@@ -827,6 +827,7 @@ export function CRMViagensPlanejamentoView({ currentUser, clients = [], onCreate
           type: "reembolso_decidido",
           title: `Reembolso ${info?.label?.toLowerCase() || d.status_reembolso}`,
           body: `${d.descricao || "Despesa"} (${fmtMoney(d.valor)}) — ${info?.label || d.status_reembolso}${d.observacao_gestor ? `: ${d.observacao_gestor}` : "."}`,
+          link: { module: "crm_despesas", id: d.id },
         });
       }
       statusVistoRef.current.set(d.id, d.status_reembolso);

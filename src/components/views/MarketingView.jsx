@@ -644,7 +644,11 @@ export function MarketingView({ user, users = [], evaluateAutomations, pushNotif
           type: "automation",
           title: `Automação: ${n.ruleName}`,
           body: n.message,
-          campaignId: campaign.id,
+          // campaignId nunca foi um campo que createNotification desestrutura
+          // (só leadId/companyId/link) — era descartado em silêncio. `link`
+          // é o mecanismo genérico real, mesmo usado pelas notificações de
+          // @menção de campanha (CampaignDetailDrawer.jsx).
+          link: { module: "campaigns", id: campaign.id },
         });
       }
     });
