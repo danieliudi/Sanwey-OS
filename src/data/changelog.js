@@ -24,6 +24,13 @@
 
 export const CHANGELOG = [
   {
+    version: "4.18.0",
+    items: [
+      { kind: "novo", text: "Notificações: clicar em uma notificação agora leva direto até o card ou registro relacionado, em vez de só marcar como lida." },
+      { kind: "correcao", text: "Notificações: corrigido um problema visual que deixava os botões de filtro (Tudo/Menções/Sistema) quase invisíveis." },
+    ],
+  },
+  {
     version: "4.17.0",
     items: [
       { kind: "ajuste", text: "Ajustes visuais em toda a plataforma: cards com sombra só ao passar o mouse (mais planos em repouso), badges/etiquetas viraram pílula e botões ficaram um pouco mais altos e arredondados." },

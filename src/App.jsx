@@ -445,6 +445,7 @@ export default function App() {
           type: "marketing_request",
           title: "Nova solicitação de marketing",
           body: `${r.requesterName || "Alguém"} pediu "${r.title}"${r.department ? ` (${r.department})` : ""}.`,
+          link: { module: "marketing_requests", id: r.id },
         });
       } else {
         requestsVistosRef.current.add(r.id);
@@ -473,6 +474,7 @@ export default function App() {
           type: "ferias_solicitada",
           title: "Nova solicitação de férias/licença",
           body: `${r.profiles?.name || "Alguém"} solicitou ${tipo?.toLowerCase?.() || tipo}.`,
+          link: { module: "rh_ferias", id: r.id },
         });
       } else {
         feriasVistosRef.current.add(r.id);
@@ -505,6 +507,7 @@ export default function App() {
         type: "feedback_prazo",
         title: diasParaPrazo < 0 ? "Autoavaliação atrasada" : "Autoavaliação com prazo próximo",
         body: `Sua autoavaliação vence em ${new Date(f.period_end).toLocaleDateString("pt-BR")}. Preencha na aba Feedback.`,
+        link: { module: "rh_feedback", id: f.id },
       });
     }
   }, [meusCiclosFeedback, meuColaboradorId, pushNotification]);
@@ -530,6 +533,10 @@ export default function App() {
       complianceVistoRef.current.add(key);
       return true;
     };
+    // link.id de todo pushNotification abaixo é c.profileId, não c.id: a tela
+    // de Funcionários abre o card por id de PROFILE, não pelo id da linha
+    // rh_colaboradores (ver RHFuncionariosView.jsx:1553). profileId vem nulo
+    // pra colaborador sem login — cai no fallback de só trocar de seção.
     for (const c of colaboradoresParaLembretes) {
       if (c.employeeStatus !== "ativo") continue;
 
@@ -539,6 +546,7 @@ export default function App() {
           type: "compliance_experiencia",
           title: `Período de experiência vencendo (${exp.marco} dias)`,
           body: `${c.fullName}: faltam ${exp.diasRestantes} dia(s) pra decisão do marco de ${exp.marco} dias.`,
+          link: { module: "rh_funcionarios", id: c.profileId },
         });
       }
 
@@ -548,6 +556,7 @@ export default function App() {
           type: "compliance_aso",
           title: asoDias < 0 ? "ASO vencido" : "ASO vencendo",
           body: `${c.fullName}: exame periódico ${asoDias < 0 ? "venceu há " + Math.abs(asoDias) + " dia(s)" : "vence em " + asoDias + " dia(s)"}.`,
+          link: { module: "rh_funcionarios", id: c.profileId },
         });
       }
 
@@ -557,6 +566,7 @@ export default function App() {
           type: "compliance_contrato",
           title: contratoDias < 0 ? "Contrato temporário venceu" : "Fim de contrato temporário se aproximando",
           body: `${c.fullName}: contrato ${contratoDias < 0 ? "venceu há " + Math.abs(contratoDias) + " dia(s)" : "termina em " + contratoDias + " dia(s)"}.`,
+          link: { module: "rh_funcionarios", id: c.profileId },
         });
       }
 
@@ -568,16 +578,17 @@ export default function App() {
           type: "compliance_aprendiz",
           title: aprDias <= 0 ? "Contrato de aprendiz encerrado" : "Contrato de aprendiz encerrando",
           body: `${c.fullName}: contrato de aprendizagem ${aprDias < 0 ? "encerrou há " + Math.abs(aprDias) + " dia(s)" : "encerra em " + aprDias + " dia(s)"} — providencie efetivação/reposição.`,
+          link: { module: "rh_funcionarios", id: c.profileId },
         });
       }
 
       if (diasParaAniversario(c, hoje) === 0 && marcar(c.id, "aniversario")) {
-        pushNotification({ type: "aniversario", title: "Aniversário hoje 🎂", body: `Hoje é aniversário de ${c.fullName}.` });
+        pushNotification({ type: "aniversario", title: "Aniversário hoje 🎂", body: `Hoje é aniversário de ${c.fullName}.`, link: { module: "rh_funcionarios", id: c.profileId } });
       }
 
       if (diasParaBodasEmpresa(c, hoje) === 0 && marcar(c.id, "bodas_empresa")) {
         const anos = hoje.getFullYear() - new Date(c.admissionDate).getFullYear();
-        pushNotification({ type: "bodas_empresa", title: "Aniversário de empresa", body: `${c.fullName} completa ${anos} ano(s) de casa hoje.` });
+        pushNotification({ type: "bodas_empresa", title: "Aniversário de empresa", body: `${c.fullName} completa ${anos} ano(s) de casa hoje.`, link: { module: "rh_funcionarios", id: c.profileId } });
       }
     }
   }, [colaboradoresParaLembretes, isRHManager, pushNotification]);
@@ -610,6 +621,11 @@ export default function App() {
         type: "avaliacao_proxima",
         title: info.diasRestantes < 0 ? "Avaliação de desempenho atrasada" : "Avaliação de desempenho se aproximando",
         body: `${c.fullName}: próxima avaliação (${cicloTipoLabel(info.tipo)}) ${dueLabel}.`,
+        // Aponta pro funcionário (por profileId, não c.id — mesmo motivo do
+        // bloco de conformidade acima), não pra rh_feedback: nesse momento o
+        // ciclo ainda é só uma projeção (avaliacaoDiasParaProxima), não
+        // existe linha em rh_feedback pra abrir — só nasce quando é criado.
+        link: { module: "rh_funcionarios", id: c.profileId },
       });
       for (const dest of destinatarios) {
         sendRhEmail("avaliacao_proxima", dest.email, {
@@ -662,6 +678,7 @@ export default function App() {
         type: "contrato_fornecedor_vencendo",
         title: dias < 0 ? "Contrato com fornecedor vencido" : "Contrato com fornecedor vencendo",
         body: `${c.titulo}: ${dueLabel}.`,
+        link: { module: "rh_fornecedores", id: c.id },
       });
       const responsavel = c.responsavelId ? users.find((u) => u.id === c.responsavelId) : null;
       if (responsavel?.email) {
@@ -724,6 +741,7 @@ export default function App() {
         type: "reembolso_pendente_ha_dias",
         title: "Reembolso pendente há dias",
         body: `${d.categoria || "Despesa"} (${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(d.valor) || 0)}) está pendente há ${diasPendente} dias.`,
+        link: { module: "crm_despesas", id: d.id },
       });
     }
   }, [despesasParaLembretes, isManagerRole, pushNotification]);
@@ -778,6 +796,7 @@ export default function App() {
         type: "cross_sell",
         title: "Sugestão de cross-sell",
         body: `${c.companyName}: ${c.reason || "oportunidade entre frentes identificada"}.`,
+        link: { module: "crm_cross_sell", id: c.id },
       });
     }
   }, [crossReferrals, currentUserRoles, pushNotification]);
@@ -802,6 +821,7 @@ export default function App() {
       type: "weekly_digest",
       title: "Resumo semanal do pipeline",
       body: `${agg.totalLeads} negócios abertos, ${formatK(agg.openValue)} em aberto, ${agg.conversionRate}% de conversão.`,
+      link: { module: "pipeline_summary" },
     });
   }, [leads, users, isManagerRole, weeklyDigestLastSent, setWeeklyDigestLastSent, pushNotification]);
 
@@ -825,6 +845,7 @@ export default function App() {
         type: "new_candidato",
         title: "Novo candidato em processo seletivo",
         body: `${c.name} se candidatou.`,
+        link: { module: "rh_candidatos", id: c.id },
       });
     }
   }, [recrutamentoCandidatos, isRHUser, pushNotification]);
@@ -878,10 +899,10 @@ export default function App() {
     { skip: showOnboarding || needRefresh || agentsCoachmarkVisible || changelogItems.length > 0 }
   );
 
-  // Destino genérico de uma notificação de @menção — leva pra tela certa
-  // (e, no caso de leads, abre o card exato); os outros módulos ainda não
-  // têm um jeito central de reabrir o card específico a partir daqui, então
-  // por ora só navegam até a seção certa.
+  // Destino genérico de uma notificação (@menção OU gerador local via
+  // pushNotification/use-notifications.js) — leva pra tela certa e, pros
+  // módulos com estado "selecionado" hoisted aqui (ver
+  // notificationDeepLinkSetters logo abaixo), abre o card exato.
   const NOTIFICATION_LINK_SECTIONS = {
     campaigns: "marketing",
     deliverables: "marketing-entregas",
@@ -897,6 +918,26 @@ export default function App() {
     rh_movimentacoes: "rh-cargos",
     comex_import_operations: "comex",
     comex_export_operations: "comex",
+    rh_funcionarios: "rh-funcionarios",
+    rh_fornecedores: "rh-fornecedores",
+    crm_despesas: "crm-viagens",
+    crm_cross_sell: "crossref",
+    pipeline_summary: "crm",
+  };
+  // Módulos com abertura do card específico, não só a troca de seção — mesmo
+  // mecanismo de deep-link do Cmd-K (initialSelectedXId/onInitialXConsumed já
+  // plugados em cada tela, ver App.jsx:401-419). Os módulos fora deste mapa
+  // (deliverables, marketing_tasks, purchase_requests, marketing_requests,
+  // rh_vagas, rh_candidatos, rh_onboarding, comex_*, crm_despesas,
+  // crm_cross_sell, pipeline_summary) ainda não têm um estado "selecionado"
+  // hoisted aqui — ficam só na navegação de seção até ganharem um.
+  const notificationDeepLinkSetters = {
+    campaigns: setSelectedCampaignId,
+    rh_ferias: setSelectedFeriasId,
+    rh_feedback: setSelectedAvaliacaoId,
+    rh_treinamentos: setSelectedTreinamentoAtribuicaoId,
+    rh_movimentacoes: setSelectedMovimentacaoId,
+    rh_funcionarios: setSelectedEmployeeId,
   };
   const handleNotificationNavigate = useCallback((link) => {
     // Pesquisas identificadas (RH2-7): a página de resposta vive fora do
@@ -911,8 +952,15 @@ export default function App() {
       return;
     }
     const target = NOTIFICATION_LINK_SECTIONS[link.module];
-    if (target) setSection(target);
-  }, [leads, setSelectedLead, setSection, navigate]);
+    if (!target) return;
+    setSection(target);
+    const setDeepLinkId = notificationDeepLinkSetters[link.module];
+    if (link.id && setDeepLinkId) setDeepLinkId(link.id);
+  }, [
+    leads, setSelectedLead, setSection, navigate,
+    setSelectedCampaignId, setSelectedFeriasId, setSelectedAvaliacaoId,
+    setSelectedTreinamentoAtribuicaoId, setSelectedMovimentacaoId, setSelectedEmployeeId,
+  ]);
 
   // Toast Nível 1 de mensagem nova do Chat (spec seção 5,
   // docs/design-spec-chat-mobile-whatsapp.md) — só dispara quando quem
