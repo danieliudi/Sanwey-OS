@@ -98,7 +98,7 @@ function DeliverableKanbanCardImpl({
             agingDays={daysInStage}
             slaDays={stage?.sla}
             completeness={completeness}
-            completenessSize={22}
+            completenessSize={26}
             muted={isTerminal}
           />
           {priColor && (

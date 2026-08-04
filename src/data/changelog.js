@@ -24,6 +24,12 @@
 
 export const CHANGELOG = [
   {
+    version: "4.4.2",
+    items: [
+      { kind: "correcao", text: "O anel de campos obrigatórios preenchidos no card de Entregas estava menor que o mesmo indicador em Funil de Vendas, Campanhas e RH — agora do mesmo tamanho em todos os Kanbans." },
+    ],
+  },
+  {
     version: "4.4.1",
     items: [
       { kind: "correcao", text: "Despesas: o campo pra vincular uma campanha (opcional) não tinha rótulo e sumia da tela quando nenhuma campanha estava cadastrada ainda — agora sempre aparece, com rótulo claro.", roles: ["marketing", "gerente_marketing"] },
